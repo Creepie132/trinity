@@ -7,10 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useClient } from '@/hooks/useClients'
 import { usePayments } from '@/hooks/usePayments'
+import { useClientAdminStatus } from '@/hooks/useClientAdminStatus'
 import { CreatePaymentDialog } from '@/components/payments/CreatePaymentDialog'
+import { AssignAdminDialog } from './AssignAdminDialog'
 import { ClientSummary } from '@/types/database'
-import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User } from 'lucide-react'
+import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Shield, X } from 'lucide-react'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 
 interface ClientSheetProps {
   client: ClientSummary | null
@@ -21,9 +24,48 @@ interface ClientSheetProps {
 export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
   const { data: fullClient } = useClient(client?.id)
   const { data: payments } = usePayments(client?.id)
+  const { isAdmin, role, isLoading: adminStatusLoading, refetch: refetchAdminStatus } = useClientAdminStatus(client?.email)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [assignAdminDialogOpen, setAssignAdminDialogOpen] = useState(false)
+  const [isRemovingAdmin, setIsRemovingAdmin] = useState(false)
 
   if (!client) return null
+
+  const handleAssignAdmin = () => {
+    if (!client.email) {
+      toast.error('לא ניתן למנות ללא אימייל')
+      return
+    }
+    setAssignAdminDialogOpen(true)
+  }
+
+  const handleRemoveAdmin = async () => {
+    if (!client.email) return
+
+    setIsRemovingAdmin(true)
+    try {
+      const response = await fetch('/api/admin/assign', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: client.email }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error(data.error || 'שגיאה בהסרת הרשאות')
+        return
+      }
+
+      toast.success(data.message || 'ההרשאות הוסרו בהצלחה')
+      refetchAdminStatus()
+    } catch (error) {
+      console.error('Remove admin error:', error)
+      toast.error('שגיאה בהסרת הרשאות')
+    } finally {
+      setIsRemovingAdmin(false)
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -177,6 +219,45 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
               <div className="text-gray-600 whitespace-pre-wrap">{client.notes}</div>
             </div>
           )}
+
+          {/* Admin Assignment */}
+          <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
+            {adminStatusLoading ? (
+              <div className="text-center text-gray-500 py-2">טוען...</div>
+            ) : isAdmin ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <span className="font-semibold text-blue-900 dark:text-blue-100">
+                      {role === 'admin' ? 'מנהל מערכת' : 'מנהל'}
+                    </span>
+                  </div>
+                  <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100">
+                    {role === 'admin' ? 'גישה מלאה' : 'גישה מוגבלת'}
+                  </Badge>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 border-red-200 dark:border-red-800"
+                  onClick={handleRemoveAdmin}
+                  disabled={isRemovingAdmin}
+                >
+                  <X className="w-4 h-4 ml-2" />
+                  {isRemovingAdmin ? 'מסיר...' : 'הסר הרשאות'}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                onClick={handleAssignAdmin}
+                disabled={!client.email}
+              >
+                <Shield className="w-4 h-4 ml-2" />
+                מנה כמנהל
+              </Button>
+            )}
+          </div>
         </div>
       </SheetContent>
 
@@ -187,6 +268,16 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
         clientId={client.id}
         clientName={`${client.first_name} ${client.last_name}`}
       />
+
+      {/* Assign Admin Dialog */}
+      {client.email && (
+        <AssignAdminDialog
+          open={assignAdminDialogOpen}
+          onOpenChange={setAssignAdminDialogOpen}
+          clientEmail={client.email}
+          onSuccess={() => refetchAdminStatus()}
+        />
+      )}
     </Sheet>
   )
 }

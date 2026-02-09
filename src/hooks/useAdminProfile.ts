@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase-browser'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useAuth } from './useAuth'
 
 interface AdminProfile {
@@ -14,7 +14,7 @@ interface AdminProfile {
 
 export function useAdminProfile() {
   const { user } = useAuth()
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   const query = useQuery({
     queryKey: ['admin-profile', user?.id],

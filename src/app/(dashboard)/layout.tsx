@@ -9,21 +9,24 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col lg:flex-row-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Мобильный header — только на <1024px */}
       <MobileHeader />
 
-      {/* Sidebar — фиксированный справа на ≥1024px */}
-      <div className="hidden lg:block lg:w-64 lg:flex-shrink-0">
-        <Sidebar />
-      </div>
+      {/* Desktop: flex layout с sidebar справа (RTL) */}
+      <div className="lg:flex lg:h-screen">
+        {/* Main Content — первым для RTL, занимает всё свободное место */}
+        <main className="flex-1 overflow-y-auto lg:pt-0 pt-16">
+          <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
+            {children}
+          </div>
+        </main>
 
-      {/* Main Content — с отступом справа на десктопе */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
-          {children}
-        </div>
-      </main>
+        {/* Sidebar — sticky справа на ≥1024px */}
+        <aside className="hidden lg:block lg:w-64 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
+          <Sidebar />
+        </aside>
+      </div>
     </div>
   )
 }

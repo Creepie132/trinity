@@ -68,7 +68,7 @@ export function AdminSidebar() {
   const displayEmail = adminProfile?.email || user?.email || ''
 
   return (
-    <div className="w-64 h-full flex flex-col bg-gradient-to-b from-slate-800 to-slate-900 text-white border-l border-slate-700 shadow-lg">
+    <div className="w-64 h-full flex flex-col bg-gradient-to-b from-slate-800 to-slate-900 text-white shadow-lg">
       {/* Header */}
       <div className="p-6 pb-4 border-b border-slate-700 bg-slate-800">
         <div className="flex items-center gap-3">

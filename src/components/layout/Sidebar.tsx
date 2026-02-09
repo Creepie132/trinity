@@ -66,7 +66,7 @@ export function Sidebar() {
   })
 
   return (
-    <div className="w-64 h-full flex flex-col bg-gradient-to-b from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 border-l border-gray-200 dark:border-slate-700 shadow-lg">
+    <div className="w-64 h-full flex flex-col bg-gradient-to-b from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 shadow-lg">
       {/* Header */}
       <div className="p-6 pb-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center gap-3">

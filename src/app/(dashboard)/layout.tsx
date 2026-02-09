@@ -22,9 +22,8 @@ export default function DashboardLayout({
         
         {/* 1. Sidebar — ТЕПЕРЬ ПЕРВЫЙ В КОДЕ
           В RTL-режиме (как на скриншоте) первый элемент встает СПРАВА.
-          border-l отделяет его от основного контента, который находится слева.
         */}
-        <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 border-l border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 h-screen overflow-y-auto">
+        <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 bg-white dark:bg-slate-900 sticky top-0 h-screen overflow-y-auto">
           <Sidebar />
         </aside>
 

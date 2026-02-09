@@ -1,9 +1,10 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, ArrowLeft, Home } from 'lucide-react'
+import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, ArrowLeft, Home, Moon, Sun } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import {
   Sheet,
@@ -50,6 +51,24 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useAuth()
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+
+  useEffect(() => {
+    // Load theme from localStorage
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
+    if (savedTheme) {
+      setTheme(savedTheme)
+    } else {
+      setTheme('dark')
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(newTheme)
+    localStorage.setItem('theme', newTheme)
+    document.documentElement.classList.toggle('dark', newTheme === 'dark')
+  }
 
   const displayName =
     (user?.user_metadata?.full_name as string) ||
@@ -117,7 +136,7 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
               )
             })}
 
-            {/* Кнопка возврата в систему */}
+            {/* Кנопка возврата в систему */}
             <Separator className="my-4 bg-slate-700" />
             <Link
               href="/"
@@ -130,6 +149,25 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
               <span className="flex-1 text-green-300 font-semibold">חזרה למערכת</span>
               <ArrowLeft className="w-4 h-4 text-green-400" />
             </Link>
+
+            {/* Theme Toggle */}
+            <Separator className="my-4 bg-slate-700" />
+            <button
+              onClick={() => {
+                toggleTheme()
+                onClose()
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group text-slate-300 hover:bg-slate-700 hover:text-white active:scale-[0.98]"
+            >
+              <div className="p-1.5 rounded-lg bg-slate-700 group-hover:bg-yellow-900/30">
+                {theme === 'light' ? (
+                  <Moon className="w-5 h-5 text-slate-400" />
+                ) : (
+                  <Sun className="w-5 h-5 text-yellow-500" />
+                )}
+              </div>
+              <span className="flex-1 text-right">{theme === 'light' ? 'מצב כהה' : 'מצב בהיר'}</span>
+            </button>
           </nav>
 
           {/* User Profile */}

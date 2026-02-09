@@ -19,8 +19,8 @@ export function MobileAdminHeader() {
 
   return (
     <>
-      {/* Мобильный admin header — только на маленьких экранах */}
-      <header className="md:hidden sticky top-0 z-40 w-full bg-slate-800/95 backdrop-blur-lg border-b border-slate-700 shadow-lg">
+      {/* Мобильный admin header — только на <1024px */}
+      <header className="lg:hidden sticky top-0 z-40 w-full bg-slate-800/95 backdrop-blur-lg border-b border-slate-700 shadow-lg">
         <div className="flex items-center justify-between px-4 h-16">
           {/* Левая сторона: Бургер и кнопка "назад" */}
           <div className="flex items-center gap-1">

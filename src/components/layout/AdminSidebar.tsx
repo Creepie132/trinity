@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings } from 'lucide-react'
+import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, ArrowLeft } from 'lucide-react'
 
 const navigation = [
   {
@@ -50,27 +50,38 @@ export function AdminSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href
-          const Icon = item.icon
-          
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-              )}
-            >
-              <Icon className="w-5 h-5" />
-              {item.name}
-            </Link>
-          )
-        })}
+      <nav className="flex-1 p-4 space-y-2 flex flex-col">
+        <div className="flex-1 space-y-2">
+          {navigation.map((item) => {
+            const isActive = pathname === item.href
+            const Icon = item.icon
+            
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                )}
+              >
+                <Icon className="w-5 h-5" />
+                {item.name}
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* Кнопка возврата в систему */}
+        <Link
+          href="/"
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors border-2 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white hover:border-slate-500"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          חזרה למערכת
+        </Link>
       </nav>
 
       {/* Footer */}

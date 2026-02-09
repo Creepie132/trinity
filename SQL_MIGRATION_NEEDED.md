@@ -10,10 +10,14 @@
 
 ## Решение - выполни ОБА SQL запроса:
 
-### 1️⃣ Добавление full_name
+### 1️⃣ Добавление created_at, full_name
 Выполни следующий SQL запрос в **Supabase Dashboard → SQL Editor**:
 
 ```sql
+-- Add created_at field to admin_users table
+ALTER TABLE admin_users
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+
 -- Add full_name field to admin_users table
 ALTER TABLE admin_users
 ADD COLUMN IF NOT EXISTS full_name TEXT;
@@ -23,7 +27,8 @@ UPDATE admin_users
 SET full_name = 'Vlad Khalphin'
 WHERE email = 'creepie1357@gmail.com';
 
--- Add comment to the column
+-- Add comments to the columns
+COMMENT ON COLUMN admin_users.created_at IS 'Date when admin was added';
 COMMENT ON COLUMN admin_users.full_name IS 'Full name of the admin user';
 ```
 

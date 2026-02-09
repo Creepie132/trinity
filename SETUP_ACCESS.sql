@@ -12,26 +12,44 @@ WHERE email = 'creepie1357@gmail.com';
 
 -- 2️⃣ Добавляем колонки в admin_users (если их нет)
 ALTER TABLE admin_users
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE admin_users
 ADD COLUMN IF NOT EXISTS full_name TEXT;
 
 ALTER TABLE admin_users
-ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'admin' CHECK (role IN ('admin', 'moderator'));
+ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'admin';
+
+-- Добавляем CHECK constraint для role
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'admin_users_role_check'
+  ) THEN
+    ALTER TABLE admin_users 
+    ADD CONSTRAINT admin_users_role_check 
+    CHECK (role IN ('admin', 'moderator'));
+  END IF;
+END $$;
 
 -- 3️⃣ ВАРИАНТ А: Добавить себя как АДМИНА (рекомендуется)
 -- Заменит или создаст запись
 INSERT INTO admin_users (id, user_id, email, full_name, role, created_at)
-VALUES (
+SELECT 
   gen_random_uuid(),
-  (SELECT id FROM auth.users WHERE email = 'creepie1357@gmail.com' LIMIT 1),
-  'creepie1357@gmail.com',
+  id,
+  email,
   'Vlad Khalphin',
   'admin',
   NOW()
-)
+FROM auth.users 
+WHERE email = 'creepie1357@gmail.com'
 ON CONFLICT (user_id) DO UPDATE 
 SET 
   full_name = 'Vlad Khalphin',
-  role = 'admin';
+  role = 'admin',
+  created_at = COALESCE(admin_users.created_at, NOW());
 
 -- 4️⃣ Проверяем что ты добавлен в админы
 SELECT * FROM admin_users WHERE email = 'creepie1357@gmail.com';

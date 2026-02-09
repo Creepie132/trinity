@@ -21,14 +21,30 @@ Middleware блокирует доступ, потому что ты не в `ad
 -- ДОБАВИТЬ СЕБЯ КАК АДМИНА
 -- (даст доступ ко ВСЕЙ системе)
 
--- Добавляем колонки если их нет
+-- 1. Добавляем все недостающие колонки
+ALTER TABLE admin_users
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+
 ALTER TABLE admin_users
 ADD COLUMN IF NOT EXISTS full_name TEXT;
 
 ALTER TABLE admin_users
 ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'admin';
 
--- Добавляем тебя в админы
+-- 2. Добавляем CHECK constraint для role
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'admin_users_role_check'
+  ) THEN
+    ALTER TABLE admin_users 
+    ADD CONSTRAINT admin_users_role_check 
+    CHECK (role IN ('admin', 'moderator'));
+  END IF;
+END $$;
+
+-- 3. Добавляем тебя в админы
 INSERT INTO admin_users (id, user_id, email, full_name, role, created_at)
 SELECT 
   gen_random_uuid(),
@@ -42,9 +58,10 @@ WHERE email = 'creepie1357@gmail.com'
 ON CONFLICT (user_id) DO UPDATE 
 SET 
   full_name = 'Vlad Khalphin',
-  role = 'admin';
+  role = 'admin',
+  created_at = COALESCE(admin_users.created_at, NOW());
 
--- Проверяем результат
+-- 4. Проверяем результат
 SELECT * FROM admin_users WHERE email = 'creepie1357@gmail.com';
 ```
 

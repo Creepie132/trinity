@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
 
 const baseNavigation = [
+  { name: 'דשבורד', href: '/', icon: Home, requireFeature: null },
   { name: 'לקוחות', href: '/clients', icon: Users, requireFeature: null },
   { name: 'תשלומים', href: '/payments', icon: CreditCard, requireFeature: 'payments' },
   { name: 'הודעות SMS', href: '/sms', icon: MessageSquare, requireFeature: 'sms' },

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, Home, Moon, Sun } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { Separator } from '@/components/ui/separator'
 
 const navigation = [
@@ -39,6 +40,7 @@ const navigation = [
 export function AdminSidebar() {
   const pathname = usePathname()
   const { user } = useAuth()
+  const { adminProfile, isLoading } = useAdminProfile()
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
 
   useEffect(() => {
@@ -62,10 +64,8 @@ export function AdminSidebar() {
     document.documentElement.classList.toggle('dark', newTheme === 'dark')
   }
 
-  const displayName =
-    (user?.user_metadata?.full_name as string) ||
-    (user?.user_metadata?.name as string) ||
-    (user?.email ?? 'Admin')
+  const displayName = adminProfile?.full_name || user?.email?.split('@')[0] || 'Admin'
+  const displayEmail = adminProfile?.email || user?.email || ''
 
   return (
     <div className="w-64 h-full flex flex-col bg-gradient-to-b from-slate-800 to-slate-900 text-white border-l border-slate-700 shadow-lg">
@@ -158,11 +158,14 @@ export function AdminSidebar() {
             {displayName[0]?.toUpperCase() || 'A'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{displayName}</p>
-            <p className="text-xs text-purple-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
-              מנהל מערכת
-            </p>
+            {isLoading ? (
+              <p className="text-sm text-slate-400">טוען...</p>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-white truncate">{displayName}</p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">{displayEmail}</p>
+              </>
+            )}
           </div>
         </div>
       </div>

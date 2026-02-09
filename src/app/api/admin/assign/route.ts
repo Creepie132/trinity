@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { rateLimit, ADMIN_ASSIGN_RATE_LIMIT } from '@/lib/rate-limit'
 
 // POST: Assign admin/moderator role
 export async function POST(request: NextRequest) {
@@ -8,6 +9,21 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Rate limiting
+    const rateLimitResult = rateLimit(
+      `admin-assign:${user.email}`,
+      ADMIN_ASSIGN_RATE_LIMIT
+    )
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Too many admin assignment requests. Please slow down.',
+          retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
+        },
+        { status: 429 }
+      )
     }
 
     const { data: currentAdmin } = await supabase

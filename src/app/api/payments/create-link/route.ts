@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateTranzillaPaymentLink } from '@/lib/tranzilla'
 import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
+import { rateLimit, PAYMENT_RATE_LIMIT } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,28 @@ export async function POST(request: NextRequest) {
     const authResult = await checkAuthAndFeature('payments')
     if (!authResult.success) {
       return authResult.response
+    }
+
+    // ✅ Rate limiting
+    const rateLimitResult = rateLimit(
+      `payment:${authResult.data.email}`,
+      PAYMENT_RATE_LIMIT
+    )
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Too many requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': new Date(rateLimitResult.resetAt).toISOString(),
+          }
+        }
+      )
     }
 
     const { org_id } = authResult.data
@@ -30,6 +53,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Amount must be greater than 0' },
         { status: 400 }
+      )
+    }
+
+    // Security: Validate max amount (prevent abuse)
+    if (amount > 100000) {
+      return NextResponse.json(
+        { error: 'Amount exceeds maximum allowed (100,000 ILS)' },
+        { status: 400 }
+      )
+    }
+
+    // SECURITY FIX: Verify client belongs to user's organization
+    const { data: client, error: clientError } = await supabase
+      .from('clients')
+      .select('id, org_id')
+      .eq('id', client_id)
+      .eq('org_id', org_id)
+      .single()
+
+    if (clientError || !client) {
+      return NextResponse.json(
+        { error: 'Client not found or access denied' },
+        { status: 403 }
       )
     }
 
@@ -92,7 +138,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Create payment link error:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

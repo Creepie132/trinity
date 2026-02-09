@@ -55,20 +55,20 @@ export async function checkAuth(): Promise<
 
   const email = userData.user.email.toLowerCase()
 
-  // 2. Проверка админа
+  // 2. Проверка админа (case-insensitive)
   const { data: adminUser } = await supabase
     .from('admin_users')
     .select('email')
-    .eq('email', email)
+    .ilike('email', email)
     .maybeSingle()
 
   const isAdmin = !!adminUser
 
-  // 3. Получение org_id
+  // 3. Получение org_id (case-insensitive)
   const { data: orgUser, error: orgError } = await supabase
     .from('org_users')
     .select('org_id')
-    .eq('email', email)
+    .ilike('email', email)
     .maybeSingle()
 
   if (!isAdmin && (orgError || !orgUser?.org_id)) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
 import { sendSms } from '@/lib/inforu'
+import { rateLimit, SMS_RATE_LIMIT } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,28 @@ export async function POST(request: NextRequest) {
     const authResult = await checkAuthAndFeature('sms')
     if (!authResult.success) {
       return authResult.response
+    }
+
+    // ✅ Rate limiting
+    const rateLimitResult = rateLimit(
+      `sms:${authResult.data.email}`,
+      SMS_RATE_LIMIT
+    )
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Too many SMS requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': new Date(rateLimitResult.resetAt).toISOString(),
+          }
+        }
+      )
     }
 
     const { org_id, isAdmin } = authResult.data
@@ -22,8 +45,23 @@ export async function POST(request: NextRequest) {
     if (!phones || !Array.isArray(phones) || phones.length === 0) {
       return NextResponse.json({ error: 'phones array is required' }, { status: 400 })
     }
+
+    // Security: Limit phones array size (prevent abuse)
+    if (phones.length > 100) {
+      return NextResponse.json({ 
+        error: 'Too many recipients. Maximum 100 phones per request' 
+      }, { status: 400 })
+    }
+
     if (!message || message.trim().length === 0) {
       return NextResponse.json({ error: 'message is required' }, { status: 400 })
+    }
+
+    // Security: Limit message length (SMS standard)
+    if (message.length > 1000) {
+      return NextResponse.json({ 
+        error: 'Message too long. Maximum 1000 characters' 
+      }, { status: 400 })
     }
 
     // Отправляем SMS
@@ -72,7 +110,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('SMS send error:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

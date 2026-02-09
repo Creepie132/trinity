@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminSidebar } from '@/components/layout/AdminSidebar'
+import { MobileAdminHeader } from '@/components/layout/MobileAdminHeader'
 
 export default function AdminLayout({
   children,
@@ -58,13 +59,18 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="flex h-screen bg-slate-50">
-      {/* Admin Sidebar */}
-      <AdminSidebar />
+    <div className="flex flex-col md:flex-row h-screen bg-slate-50">
+      {/* Мобильный admin header — только на маленьких экранах */}
+      <MobileAdminHeader />
+
+      {/* Admin Sidebar — скрыт на мобильном */}
+      <div className="hidden md:block">
+        <AdminSidebar />
+      </div>
       
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto p-6 max-w-7xl">
+        <div className="container mx-auto p-4 md:p-6 max-w-7xl">
           {children}
         </div>
       </main>

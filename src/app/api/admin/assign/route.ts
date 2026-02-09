@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
-import { cookies } from 'next/headers'
+import { supabase } from '@/lib/supabase'
 
 // POST: Assign admin/moderator role
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
-    const cookieStore = await cookies()
-    
     // Check if current user is admin
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -53,11 +49,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Use service role key for admin operations
-    const supabaseAdmin = createClient()
-
     // Check if user is already an admin
-    const { data: existingAdmin } = await supabaseAdmin
+    const { data: existingAdmin } = await supabase
       .from('admin_users')
       .select('id, role')
       .eq('email', email)
@@ -65,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     if (existingAdmin) {
       // Update role
-      const { error: updateError } = await supabaseAdmin
+      const { error: updateError } = await supabase
         .from('admin_users')
         .update({ role })
         .eq('email', email)
@@ -84,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     // Get user_id from auth (we need to query differently)
     // For now, we'll use a workaround - query from org_users or create a helper
-    const { data: orgUser } = await supabaseAdmin
+    const { data: orgUser } = await supabase
       .from('org_users')
       .select('user_id')
       .eq('email', email)
@@ -99,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert new admin
-    const { error: insertError } = await supabaseAdmin
+    const { error: insertError } = await supabase
       .from('admin_users')
       .insert({
         user_id: userId,
@@ -127,8 +120,6 @@ export async function POST(request: NextRequest) {
 // DELETE: Remove admin/moderator role
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createClient()
-    
     // Check if current user is admin
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -157,10 +148,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'לא ניתן להסיר את עצמך' }, { status: 400 })
     }
 
-    // Use service role key
-    const supabaseAdmin = createClient()
-
-    const { error: deleteError } = await supabaseAdmin
+    const { error: deleteError } = await supabase
       .from('admin_users')
       .delete()
       .eq('email', email)

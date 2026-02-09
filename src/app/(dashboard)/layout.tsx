@@ -14,7 +14,7 @@ export default function DashboardLayout({
       <MobileHeader />
 
       {/* Desktop: flex layout с sidebar справа (RTL) */}
-      <div className="lg:flex lg:h-screen">
+      <div className="rg:flex lg:h-screen">
         {/* Main Content — первым для RTL, занимает всё свободное место */}
         <main className="flex-1 overflow-y-auto lg:pt-0 pt-16">
           <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
@@ -29,4 +29,5 @@ export default function DashboardLayout({
       </div>
     </div>
   )
+
 }

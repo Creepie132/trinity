@@ -1,6 +1,7 @@
 'use client'
 
 import { Sidebar } from '@/components/layout/Sidebar'
+import { MobileHeader } from '@/components/layout/MobileHeader'
 
 export default function DashboardLayout({
   children,
@@ -8,8 +9,11 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar - скрыт на мобильном */}
+    <div className="flex flex-col md:flex-row h-screen bg-gray-50">
+      {/* Мобильный header — только на маленьких экранах */}
+      <MobileHeader />
+
+      {/* Sidebar — скрыт на мобильном */}
       <div className="hidden md:block">
         <Sidebar />
       </div>

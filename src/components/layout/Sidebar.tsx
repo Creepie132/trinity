@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
+import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useFeatures } from '@/hooks/useFeatures'
 import { Separator } from '@/components/ui/separator'
 import { useState, useEffect } from 'react'
@@ -24,6 +25,7 @@ export function Sidebar() {
   const router = useRouter()
   const { user, signOut } = useAuth()
   const { data: isAdmin } = useIsAdmin()
+  const { adminProfile } = useAdminProfile()
   const features = useFeatures()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
 
@@ -43,10 +45,12 @@ export function Sidebar() {
     document.documentElement.classList.toggle('dark', newTheme === 'dark')
   }
 
-  const displayName =
-    (user?.user_metadata?.full_name as string) ||
-    (user?.user_metadata?.name as string) ||
-    null
+  // Если пользователь админ/модератор - берем имя из admin_users, иначе из user_metadata
+  const displayName = (isAdmin && adminProfile?.full_name)
+    ? adminProfile.full_name
+    : (user?.user_metadata?.full_name as string) ||
+      (user?.user_metadata?.name as string) ||
+      null
   
   const displayEmail = user?.email || ''
 

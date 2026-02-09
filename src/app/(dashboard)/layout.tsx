@@ -9,7 +9,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col lg:flex-row-reverse h-screen bg-gray-50">
+    <div className="flex flex-col lg:flex-row-h-screen bg-gray-50">
       {/* Мобильный header — только на <1024px */}
       <MobileHeader />
 

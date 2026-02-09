@@ -46,7 +46,9 @@ export function Sidebar() {
   const displayName =
     (user?.user_metadata?.full_name as string) ||
     (user?.user_metadata?.name as string) ||
-    (user?.email ?? '—')
+    null
+  
+  const displayEmail = user?.email || ''
 
   const onLogout = async () => {
     await signOut()
@@ -158,14 +160,17 @@ export function Sidebar() {
       <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
         <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800">
           <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg text-lg">
-            {displayName[0]?.toUpperCase() || '?'}
+            {(displayName?.[0] || displayEmail?.[0])?.toUpperCase() || '?'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayName}</p>
-            <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-              מחובר
-            </p>
+            {displayName ? (
+              <>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayName}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{displayEmail}</p>
+              </>
+            ) : (
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayEmail}</p>
+            )}
           </div>
         </div>
         <button

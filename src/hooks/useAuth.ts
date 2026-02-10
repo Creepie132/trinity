@@ -19,14 +19,27 @@ export function useAuth(): UseAuthResult {
   const [isLoading, setIsLoading] = useState(true)
 
   const loadAuth = async () => {
+    console.log('[useAuth] ========== START loadAuth ==========')
     setIsLoading(true)
 
     try {
+      console.log('[useAuth] Calling supabase.auth.getUser()...')
       const {
         data: { user },
+        error: getUserError
       } = await supabase.auth.getUser()
 
+      console.log('[useAuth] GetUser result:', { 
+        user: user ? { id: user.id, email: user.email } : null, 
+        error: getUserError 
+      })
+
+      if (getUserError) {
+        console.error('[useAuth] ❌ GetUser ERROR:', getUserError)
+      }
+
       if (!user) {
+        console.warn('[useAuth] ⚠️ No user found - setting everything to null')
         setUser(null)
         setOrgId(null)
         setIsAdmin(false)
@@ -34,11 +47,17 @@ export function useAuth(): UseAuthResult {
         return
       }
 
+      console.log('[useAuth] ✅ User found:', {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        created_at: user.created_at
+      })
+
       setUser(user)
 
-      console.log('[useAuth] Loading auth for user:', user.id)
-
       // Проверка admin (по user_id)
+      console.log('[useAuth] Checking admin status for user_id:', user.id)
       const { data: adminRow, error: adminError } = await supabase
         .from('admin_users')
         .select('email')
@@ -46,13 +65,15 @@ export function useAuth(): UseAuthResult {
         .maybeSingle()
 
       if (adminError) {
-        console.error('[useAuth] Admin check error:', adminError)
+        console.error('[useAuth] ❌ Admin check error:', adminError)
+      } else {
+        console.log('[useAuth] Admin check result:', adminRow ? '✅ IS ADMIN' : '❌ NOT ADMIN')
       }
 
       const isAdminUser = !!adminRow
-      console.log('[useAuth] Is admin:', isAdminUser)
 
       // Проверка org_users (по user_id)
+      console.log('[useAuth] Checking org_users for user_id:', user.id)
       const { data: orgRow, error: orgError } = await supabase
         .from('org_users')
         .select('org_id')
@@ -60,17 +81,24 @@ export function useAuth(): UseAuthResult {
         .maybeSingle()
 
       if (orgError) {
-        console.error('[useAuth] Org check error:', orgError)
+        console.error('[useAuth] ❌ Org check error:', orgError)
+      } else {
+        console.log('[useAuth] Org check result:', orgRow ? `✅ Found org_id: ${orgRow.org_id}` : '❌ NO ORG')
       }
 
       const userOrgId = orgRow?.org_id ?? null
-      console.log('[useAuth] Org ID:', userOrgId)
+
+      console.log('[useAuth] Final state:', {
+        isAdmin: isAdminUser,
+        orgId: userOrgId
+      })
 
       setIsAdmin(isAdminUser)
       setOrgId(userOrgId)
       setIsLoading(false)
+      console.log('[useAuth] ========== END loadAuth ==========')
     } catch (error) {
-      console.error('[useAuth] Load error:', error)
+      console.error('[useAuth] ❌❌❌ EXCEPTION:', error)
       setIsLoading(false)
     }
   }

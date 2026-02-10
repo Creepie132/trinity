@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, ChevronLeft } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useFeatures } from '@/hooks/useFeatures'
 import { Separator } from '@/components/ui/separator'
+import { UserProfileSheet } from '@/components/user/UserProfileSheet'
 import { useState, useEffect } from 'react'
 
 const baseNavigation = [
@@ -28,6 +29,7 @@ export function Sidebar() {
   const { adminProfile } = useAdminProfile()
   const features = useFeatures()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [profileOpen, setProfileOpen] = useState(false)
 
   useEffect(() => {
     // Load theme from localStorage
@@ -161,22 +163,32 @@ export function Sidebar() {
       </nav>
 
       {/* User Profile + Logout */}
-      <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
-        <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800">
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg text-lg">
+      <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 space-y-3">
+        {/* Clickable Profile */}
+        <button
+          onClick={() => setProfileOpen(true)}
+          className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800 hover:border-blue-200 dark:hover:border-blue-700 hover:shadow-md transition-all duration-200 group active:scale-[0.98]"
+        >
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg text-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
             {(displayName?.[0] || displayEmail?.[0])?.toUpperCase() || '?'}
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 text-right">
             {displayName ? (
               <>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayName}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{displayEmail}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{displayName}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">הפרופיל שלי</p>
               </>
             ) : (
-              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayEmail}</p>
+              <>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{displayEmail}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">הפרופיל שלי</p>
+              </>
             )}
           </div>
-        </div>
+          <ChevronLeft className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
+        </button>
+
+        {/* Logout Button */}
         <button
           onClick={onLogout}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 active:scale-[0.98] transition-all duration-200 border border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700"
@@ -185,6 +197,12 @@ export function Sidebar() {
           יציאה מהמערכת
         </button>
       </div>
+
+      {/* Profile Sheet */}
+      <UserProfileSheet 
+        open={profileOpen} 
+        onOpenChange={setProfileOpen} 
+      />
     </div>
   )
 }

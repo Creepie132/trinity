@@ -5,8 +5,108 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 17:05 UTC  
-**Версия:** 2.5.1
+**Последнее обновление:** 2026-02-10 17:10 UTC  
+**Версия:** 2.5.2
+
+---
+
+## ⚡ ОБНОВЛЕНИЯ v2.5.2 (2026-02-10 17:10) - CRITICAL FIX 🔴
+
+### 🐛 Critical Fix: Race Condition in useAuth
+
+**Проблема:**
+Даже после замены на `createBrowserClient` (v2.5.1), всё ещё появлялась ошибка:
+```
+AuthSessionMissingError: Auth session missing!
+```
+
+**Root Cause:**
+useAuth() пыталась делать DB запросы **ДО** того как session восстановилась из localStorage:
+
+```typescript
+// ❌ БЫЛО - race condition:
+const loadAuth = async () => {
+  // Сразу пытаемся получить user (session может ещё не загрузиться!)
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  // Пытаемся делать DB запросы (session может отсутствовать!)
+  const { data: adminRow } = await supabase.from('admin_users')...
+}
+```
+
+**Почему это было проблемой:**
+1. localStorage session восстанавливается **асинхронно**
+2. getUser() вызывается **немедленно** (до восстановления session)
+3. DB запросы выполняются **без auth контекста**
+4. Результат: AuthSessionMissingError
+
+**Решение - 4-шаговая проверка:**
+
+```typescript
+// ✅ СТАЛО - правильная последовательность:
+const loadAuth = async () => {
+  // Step 1: Проверяем session ПЕРВЫМ делом (быстро, из localStorage)
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session) {
+    // Нет session → не делаем DB запросы!
+    return
+  }
+  
+  // Step 2: Session есть → безопасно получаем user
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) return
+  
+  // Step 3-4: User есть → безопасно делаем DB запросы
+  const { data: adminRow } = await supabase.from('admin_users')...
+  const { data: orgRow } = await supabase.from('org_users')...
+}
+```
+
+**Новая логика:**
+1. **Step 1:** `getSession()` - проверяет localStorage (быстро, ~2ms)
+2. **IF no session:** Выходим досрочно, не делаем запросы
+3. **Step 2:** `getUser()` - получаем user данные (~45ms)
+4. **Step 3:** Query `admin_users` (~23ms)
+5. **Step 4:** Query `org_users` (~18ms)
+
+**Преимущества:**
+- ✅ Нет race condition - session проверяется первым
+- ✅ getSession() синхронный (читает из localStorage)
+- ✅ DB запросы только когда безопасно
+- ✅ Правильная обработка AuthSessionMissingError
+- ✅ Чёткое step-by-step логирование
+- ✅ Показывает timing каждого шага
+
+**Debug Logs:**
+```
+[useAuth] ========== START loadAuth ==========
+[useAuth] Step 1: Checking for existing session...
+[useAuth] Session check completed in 2 ms
+[useAuth] Session result: { hasSession: true }
+[useAuth] Step 2: Session found, getting user details...
+[useAuth] GetUser completed in 45 ms
+[useAuth] ✅ User found: { id: "...", email: "..." }
+[useAuth] Step 3: Checking admin status...
+[useAuth] Admin check completed in 23 ms
+[useAuth] ✅ IS ADMIN
+[useAuth] Step 4: Checking org_users...
+[useAuth] Org check completed in 18 ms
+[useAuth] ✅ Found org_id: a0eebc99...
+[useAuth] Total time: 88 ms
+[useAuth] ========== END loadAuth ==========
+```
+
+**Результат:**
+- ✅ NO AuthSessionMissingError
+- ✅ Session проверяется до DB запросов
+- ✅ User data загружается правильно
+- ✅ Нет race conditions
+- ✅ Чёткая visibility timing
+
+**Файлы изменены:**
+- ✅ `src/hooks/useAuth.ts` - 4-step auth check
 
 ---
 

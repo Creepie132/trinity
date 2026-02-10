@@ -1,11 +1,15 @@
-// src/app/auth/callback/route.ts
-import { NextResponse } from 'next/server'
+// src/app/callback/route.ts
+import { NextResponse, NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 
-export async function GET(request: Request) {
-  const url = new URL(request.url)
-  const code = url.searchParams.get('code')
+export async function GET(request: NextRequest) {
+  const { searchParams } = request.nextUrl
+  const code = searchParams.get('code')
+
+  // CRITICAL FIX: Always use request.nextUrl.origin for redirects
+  // This works on both localhost AND production (Vercel) automatically
+  const origin = request.nextUrl.origin
 
   const cookieStore = await cookies()
 
@@ -27,44 +31,43 @@ export async function GET(request: Request) {
     }
   )
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || url.origin
-
   if (!code) {
-    return NextResponse.redirect(new URL('/login', baseUrl))
+    return NextResponse.redirect(`${origin}/login`)
   }
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error || !data?.user) {
-    return NextResponse.redirect(new URL('/login', baseUrl))
+    console.error('Auth callback error:', error)
+    return NextResponse.redirect(`${origin}/login`)
   }
 
-  const email = data.user.email
-  if (!email) {
-    return NextResponse.redirect(new URL('/unauthorized', baseUrl))
+  const user = data.user
+  if (!user.id) {
+    return NextResponse.redirect(`${origin}/unauthorized`)
   }
 
-  // 1) admin?
+  // 1) Check if admin (use user_id, not email)
   const { data: admin } = await supabase
     .from('admin_users')
     .select('email')
-    .eq('email', email)
+    .eq('user_id', user.id)
     .maybeSingle()
 
   if (admin) {
-    return NextResponse.redirect(new URL('/admin', baseUrl))
+    return NextResponse.redirect(`${origin}/admin`)
   }
 
-  // 2) org user?
+  // 2) Check if org user (use user_id, not email)
   const { data: orgUser } = await supabase
     .from('org_users')
-    .select('org_id, email')
-    .eq('email', email)
+    .select('org_id')
+    .eq('user_id', user.id)
     .maybeSingle()
 
   if (orgUser) {
-    return NextResponse.redirect(new URL('/', baseUrl))
+    return NextResponse.redirect(`${origin}/`)
   }
 
-  return NextResponse.redirect(new URL('/unauthorized', baseUrl))
+  return NextResponse.redirect(`${origin}/unauthorized`)
 }

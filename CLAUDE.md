@@ -5,8 +5,84 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 15:15 UTC  
-**Версия:** 2.4.5
+**Последнее обновление:** 2026-02-10 15:22 UTC  
+**Версия:** 2.4.6
+
+---
+
+## ⚡ ОБНОВЛЕНИЯ v2.4.6 (2026-02-10 15:22)
+
+### ✨ Новая функция: Профиль пользователя + Enhanced Debug
+
+**Проблема:** 
+Пользователь видел "User ID: לא זמין" при добавлении клиента, что означает `user?.id === undefined`.
+
+**Решение:**
+Добавлен компонент UserProfileSheet для основной системы + подробное debug логирование.
+
+**Что добавлено:**
+
+1. **UserProfileSheet компонент:**
+   - Профиль для обычных пользователей (не админов)
+   - Отображение: имя, email, телефон, организация
+   - **Debug секция** с технической информацией:
+     - User ID
+     - Org ID
+     - Auth Status
+     - Is Admin
+   - Кнопка "רענן נתונים" для ручного refetch
+   - Красивый gradient дизайн
+   - Side: left (открывается слева)
+
+2. **Обновлён Sidebar:**
+   - Блок профиля теперь **кликабельный**
+   - Hover эффекты и анимации
+   - Иконка ChevronLeft для указания на действие
+   - При клике открывается UserProfileSheet
+   - Отображает имя пользователя (если есть)
+
+3. **Enhanced Debug в useAuth():**
+   ```typescript
+   console.log('[useAuth] ========== START loadAuth ==========')
+   console.log('[useAuth] Calling supabase.auth.getUser()...')
+   console.log('[useAuth] GetUser result:', { user, error })
+   console.log('[useAuth] ✅ User found:', { id, email, phone })
+   console.log('[useAuth] Checking admin status for user_id:', user.id)
+   console.log('[useAuth] Admin check result:', '✅ IS ADMIN' / '❌ NOT ADMIN')
+   console.log('[useAuth] Checking org_users for user_id:', user.id)
+   console.log('[useAuth] Org check result:', '✅ Found org_id' / '❌ NO ORG')
+   console.log('[useAuth] Final state:', { isAdmin, orgId })
+   console.log('[useAuth] ========== END loadAuth ==========')
+   ```
+
+**Debug информация помогает:**
+- ✅ Видеть каждый шаг загрузки auth
+- ✅ Определить где именно ошибка
+- ✅ Проверить правильность запросов к БД
+- ✅ Понять почему user undefined
+
+**Файлы:**
+- ✅ `src/components/user/UserProfileSheet.tsx` - новый компонент
+- ✅ `src/components/layout/Sidebar.tsx` - кликабельный профиль
+- ✅ `src/hooks/useAuth.ts` - подробные логи
+
+**Использование:**
+1. Откройте приложение (не админку)
+2. Внизу sidebar кликните на ваше имя/email
+3. Откроется Sheet слева с профилем
+4. Посмотрите секцию "מידע טכני (Debug)"
+5. Проверьте console logs (F12)
+
+**Debug секция показывает:**
+- User ID: `b9344b8c-7ccd-...` или `❌ לא זמין`
+- Org ID: `a0eebc99-9c0b-...` или `❌ לא זמין`
+- Auth Status: `✅ מחובר` или `❌ לא מחובר`
+- Is Admin: `✅ כן` או `❌ לא`
+
+**Если User ID недоступен:**
+- Смотрите console logs
+- Нажмите кнопку "רענן נתונים"
+- Проверьте что вы залогинены
 
 ---
 

@@ -14,6 +14,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 
+// Helper function to convert null to undefined for Avatar component
+const toAvatarSrc = (url: string | null): string | undefined => {
+  if (url === null) return undefined
+  return url
+}
+
 const baseNavigation = [
   { name: 'דשבורד', href: '/', icon: Home, requireFeature: null },
   { name: 'לקוחות', href: '/clients', icon: Users, requireFeature: null },
@@ -74,6 +80,9 @@ export function Sidebar() {
       null
   
   const displayEmail = user?.email || ''
+  
+  // Convert avatar URL from null to undefined for Avatar component compatibility
+  const avatarSrc: string | undefined = avatarUrl === null ? undefined : avatarUrl
 
   const onLogout = async () => {
     await signOut()
@@ -189,7 +198,7 @@ export function Sidebar() {
           className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800 hover:border-blue-200 dark:hover:border-blue-700 hover:shadow-md transition-all duration-200 group active:scale-[0.98]"
         >
           <Avatar className="w-11 h-11 shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
-            <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+            <AvatarImage src={avatarSrc} alt={displayName ?? undefined} />
             <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg">
               {(displayName?.[0] || displayEmail?.[0])?.toUpperCase() || '?'}
             </AvatarFallback>

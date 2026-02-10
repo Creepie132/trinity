@@ -12,6 +12,12 @@ import { AdminProfileSheet } from '@/components/admin/AdminProfileSheet'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { supabase } from '@/lib/supabase'
 
+// Helper function to convert null to undefined for Avatar component
+const toAvatarSrc = (url: string | null): string | undefined => {
+  if (url === null) return undefined
+  return url
+}
+
 const navigation = [
   {
     name: 'לוח בקרה',
@@ -87,6 +93,9 @@ export function AdminSidebar() {
 
   const displayName = adminProfile?.full_name || user?.email?.split('@')[0] || 'Admin'
   const displayEmail = adminProfile?.email || user?.email || ''
+  
+  // Convert avatar URL from null to undefined for Avatar component compatibility
+  const avatarSrc: string | undefined = avatarUrl === null ? undefined : avatarUrl
 
   return (
     <div className="w-64 h-full flex flex-col bg-gradient-to-b from-slate-800 to-slate-900 text-white shadow-lg">
@@ -179,7 +188,7 @@ export function AdminSidebar() {
           className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-700/50 border border-slate-600 hover:bg-slate-700 hover:border-blue-500/50 transition-all duration-200 group active:scale-[0.98]"
         >
           <Avatar className="w-11 h-11 shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
-            <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+            <AvatarImage src={avatarSrc} alt={displayName ?? undefined} />
             <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-600 text-white font-bold text-lg">
               {displayName[0]?.toUpperCase() || 'A'}
             </AvatarFallback>

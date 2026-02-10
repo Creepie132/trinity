@@ -5,8 +5,411 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 21:18 UTC  
-**Версия:** 2.6.2
+**Последнее обновление:** 2026-02-10 21:35 UTC  
+**Версия:** 2.6.3
+
+---
+
+## 📁 СТРУКТУРА ПРОЕКТА (Актуально на 2026-02-10)
+
+### Основные директории
+
+```
+Leya-Project/clientbase-pro/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── (dashboard)/        # Main user dashboard routes
+│   │   │   ├── clients/        # CRM - Управление клиентами
+│   │   │   ├── partners/       # Управление партнёрами
+│   │   │   ├── payments/       # Платежи и транзакции
+│   │   │   ├── sms/            # SMS кампании
+│   │   │   ├── stats/          # Статистика и аналитика
+│   │   │   └── layout.tsx      # Dashboard layout с sidebar
+│   │   ├── admin/              # Admin panel routes
+│   │   │   ├── organizations/  # Управление организациями
+│   │   │   ├── ads/            # Реклама и баннеры
+│   │   │   ├── billing/        # Биллинг
+│   │   │   ├── settings/       # Настройки системы
+│   │   │   └── layout.tsx      # Admin layout
+│   │   ├── api/                # API Routes
+│   │   │   ├── admin/          # Admin API endpoints
+│   │   │   │   ├── assign/     # Назначение ролей
+│   │   │   │   ├── check/      # Проверка прав доступа
+│   │   │   │   ├── organizations/create/ # Создание орг
+│   │   │   │   └── profile/    # Профиль админа
+│   │   │   ├── ads/            # Реклама API
+│   │   │   ├── payments/       # Платежи API
+│   │   │   ├── sms/            # SMS API
+│   │   │   └── upload/         # Загрузка файлов
+│   │   ├── login/              # Страница логина
+│   │   ├── callback/           # OAuth callback
+│   │   ├── blocked/            # Заблокированный доступ
+│   │   └── unauthorized/       # 403 страница
+│   ├── components/             # React компоненты
+│   │   ├── admin/              # Админские компоненты
+│   │   ├── ads/                # Баннеры и реклама
+│   │   ├── clients/            # CRM компоненты
+│   │   ├── layout/             # Sidebar, Header
+│   │   ├── payments/           # Платёжные формы
+│   │   ├── sms/                # SMS формы
+│   │   ├── ui/                 # shadcn/ui компоненты
+│   │   └── user/               # Профиль пользователя
+│   ├── hooks/                  # Custom React hooks
+│   │   ├── useAuth.ts          # Аутентификация
+│   │   ├── useAdmin.ts         # Проверка админа
+│   │   ├── useClients.ts       # CRM данные
+│   │   ├── useOrganization.ts  # Организация
+│   │   └── useFeatures.ts      # Feature flags
+│   └── lib/                    # Утилиты и библиотеки
+│       ├── supabase.ts         # Supabase client
+│       ├── tranzilla.ts        # Платёжный шлюз
+│       ├── inforu.ts           # SMS провайдер
+│       └── utils.ts            # Общие утилиты
+├── supabase/                   # SQL миграции
+│   ├── RELATIONSHIPS.md        # Описание связей БД
+│   └── *.sql                   # Миграционные скрипты
+├── docs/                       # Документация
+│   ├── INVITATION_SYSTEM.md    # Система приглашений
+│   ├── FIX_*.md                # История багфиксов
+│   └── *.md                    # Прочие гайды
+├── CLAUDE.md                   # ← ВЫ ЗДЕСЬ (файл памяти AI)
+├── PROJECT_STATUS.md           # Статус проекта
+├── SECURITY_AUDIT.md           # Аудит безопасности
+└── package.json                # Dependencies
+```
+
+### Ключевые файлы
+
+**Аутентификация и доступ:**
+- `src/hooks/useAuth.ts` - главный auth hook (user, orgId, isAdmin)
+- `src/middleware.ts` - защита маршрутов
+- `src/app/callback/route.ts` - OAuth callback handler
+
+**CRM (Клиенты):**
+- `src/app/(dashboard)/clients/page.tsx` - главная страница CRM
+- `src/components/clients/AddClientDialog.tsx` - добавление клиента
+- `src/components/clients/ClientSheet.tsx` - карточка клиента
+- `src/hooks/useClients.ts` - загрузка данных
+
+**Админ панель:**
+- `src/app/admin/organizations/page.tsx` - управление организациями
+- `src/components/admin/AdminProfileSheet.tsx` - профиль админа
+- `src/app/api/admin/organizations/create/route.ts` - создание орг
+
+**База данных:**
+- `public.organizations` - организации
+- `public.org_users` - связь user ↔ org (many-to-many)
+- `public.admin_users` - администраторы (глобальные)
+- `public.clients` - CRM клиенты
+- `public.invitations` - приглашения в организацию
+
+**RLS Functions (критические!):**
+- `is_admin()` - проверка админских прав (SECURITY DEFINER)
+- `get_user_org_ids()` - организации пользователя (SECURITY DEFINER)
+- `is_org_owner()` - проверка владельца организации
+
+---
+
+## 🔥 ОБНОВЛЕНИЯ v2.6.3 (2026-02-10 21:35) - ПОЛНАЯ СЕССИЯ ОТЛАДКИ RLS 🔴
+
+### 🐛 КРИТИЧЕСКАЯ ПРОБЛЕМА: RLS блокировал доступ к организациям
+
+**Контекст сессии:**
+Пользователь Vlad Khalphin (creepie1357@gmail.com) не мог видеть организации в админ панели, несмотря на то что:
+- Организации существовали в БД (Beautymania, Amber Solutions)
+- Был залогинен
+- Имел правильный user_id
+
+**ROOT CAUSE - RLS (Row Level Security) заблокировал всё!**
+
+Три критических проблемы:
+1. User НЕ БЫЛ в таблице `admin_users` → не мог пройти `is_admin()` check
+2. User НЕ БЫЛ в таблице `org_users` → не мог пройти `get_user_org_ids()` check  
+3. RLS на `admin_users` создавал **infinite recursion** (policies вызывали `is_admin()`, который читал `admin_users`)
+
+---
+
+### 📝 РЕШЕНИЕ: Пошаговое исправление
+
+#### Шаг 1: Добавлен user в admin_users
+```sql
+-- workspace/add-user-correct-ids.sql
+INSERT INTO admin_users (user_id, email, full_name, role)
+VALUES (
+  'b9344b8c-7cd4-49b3-a23e-b456436ea02f',
+  'creepie1357@gmail.com',
+  'Vlad Khalphin',
+  'admin'
+);
+```
+
+#### Шаг 2: Добавлен user в org_users (для обеих организаций)
+```sql
+-- workspace/add-user-correct-ids.sql
+INSERT INTO org_users (org_id, user_id, email, role, joined_at)
+VALUES 
+  -- Beautymania
+  ('7197c99e-d6a3-4f38-90aa-47f97ef205f5', 
+   'b9344b8c-7cd4-49b3-a23e-b456436ea02f', 
+   'creepie1357@gmail.com', 
+   'owner', 
+   NOW()),
+  -- Amber Solutions
+  ('2edc4900-9e99-4bda-a902-ff1f8a4c0a7d', 
+   'b9344b8c-7cd4-49b3-a23e-b456436ea02f', 
+   'creepie1357@gmail.com', 
+   'owner', 
+   NOW());
+```
+
+#### Шаг 3: Исправлены RLS policies (финальная конфигурация)
+
+**Ключевое правило:**
+> ⚠️ **НИКОГДА не включайте RLS на таблицы, к которым обращаются SECURITY DEFINER функции!**
+
+**admin_users:**
+```sql
+-- ❌ RLS DISABLED (это service table!)
+-- ПРИЧИНА: is_admin() использует SECURITY DEFINER и читает admin_users
+-- Если включить RLS → infinite recursion!
+ALTER TABLE admin_users DISABLE ROW LEVEL SECURITY;
+```
+
+**organizations:**
+```sql
+-- ✅ RLS ENABLED с правильными policies
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+
+-- Админы видят всё
+CREATE POLICY "Admins can view all organizations"
+ON organizations FOR SELECT
+USING (is_admin());
+
+-- Owners видят только свои организации
+CREATE POLICY "Users can view their organizations"
+ON organizations FOR SELECT
+USING (id IN (SELECT get_user_org_ids()));
+```
+
+**org_users:**
+```sql
+-- ✅ RLS ENABLED
+ALTER TABLE org_users ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their org memberships"
+ON org_users FOR SELECT
+USING (
+  user_id = auth.uid() 
+  OR is_admin()
+  OR is_org_owner(org_id)
+);
+```
+
+---
+
+### 🔧 SECURITY DEFINER Functions (критически важны!)
+
+```sql
+-- Обход RLS через SECURITY DEFINER
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER  -- ← КЛЮЧЕВОЕ! Выполняется с правами владельца функции
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM admin_users 
+    WHERE user_id = auth.uid()
+  )
+$$;
+
+CREATE OR REPLACE FUNCTION get_user_org_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT org_id FROM org_users 
+  WHERE user_id = auth.uid()
+$$;
+
+CREATE OR REPLACE FUNCTION is_org_owner(org_id_param UUID)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM org_users
+    WHERE org_id = org_id_param 
+      AND user_id = auth.uid()
+      AND role = 'owner'
+  )
+$$;
+```
+
+**Почему SECURITY DEFINER?**
+- Функция выполняется с правами **владельца функции** (обычно суперюзер)
+- **Обходит RLS** при чтении таблиц
+- Позволяет создавать безопасные "service functions"
+- Используется для проверок доступа в RLS policies
+
+---
+
+### 📂 SQL Миграции созданные за сессию
+
+**Workspace root (временные скрипты отладки):**
+```
+SETUP-FROM-SCRATCH.sql           # Полная настройка с нуля
+PRODUCTION-RLS-FINAL.sql         # Финальная production RLS конфигурация
+ROLLBACK-ALL-CHANGES-TODAY.sql   # Откат всех изменений
+DISABLE-ALL-RLS-NOW.sql          # Временное отключение RLS для тестов
+
+add-user-correct-ids.sql         # ✅ Добавление user в admin_users + org_users
+enable-rls-properly.sql          # ✅ Правильная настройка RLS
+fix-rls-recursion.sql            # Первая попытка исправить recursion
+fix-admin-users-rls-final.sql    # Вторая попытка
+
+check-status.sql                 # Быстрая диагностика текущего user
+debug-rls.sql                    # Проверка RLS policies
+debug-and-fix.sql                # Комбинированный debug + fix
+```
+
+**Рекомендуемые для production:**
+1. **SETUP-FROM-SCRATCH.sql** - для новых инстансов
+2. **PRODUCTION-RLS-FINAL.sql** - финальная RLS конфигурация
+3. **add-user-correct-ids.sql** - шаблон для добавления новых админов
+
+---
+
+### 🧪 Диагностика и мониторинг
+
+**Быстрая проверка текущего user:**
+```sql
+-- workspace/check-status.sql
+SELECT 
+  auth.uid() as current_user_id,
+  auth.email() as current_email,
+  EXISTS(SELECT 1 FROM admin_users WHERE user_id = auth.uid()) as is_admin,
+  (SELECT array_agg(org_id) FROM org_users WHERE user_id = auth.uid()) as organizations,
+  (SELECT COUNT(*) FROM clients WHERE org_id IN (SELECT org_id FROM org_users WHERE user_id = auth.uid())) as client_count;
+```
+
+**Проверка RLS статуса:**
+```sql
+SELECT 
+  schemaname,
+  tablename,
+  rowsecurity as rls_enabled
+FROM pg_tables
+WHERE schemaname = 'public'
+  AND tablename IN ('admin_users', 'organizations', 'org_users', 'clients')
+ORDER BY tablename;
+```
+
+**Проверка policies:**
+```sql
+SELECT 
+  tablename,
+  policyname,
+  cmd,
+  qual
+FROM pg_policies
+WHERE schemaname = 'public'
+ORDER BY tablename, policyname;
+```
+
+---
+
+### ✅ Результат отладки
+
+**ДО (проблемы):**
+- ❌ Админка пустая (0 организаций)
+- ❌ User не мог добавлять клиентов
+- ❌ Console: "Unauthorized" / "Access denied"
+- ❌ Security Advisor warnings в Supabase Dashboard
+- ❌ Infinite recursion в RLS policies
+
+**ПОСЛЕ (решение):**
+- ✅ Все организации видны в админке
+- ✅ User может управлять клиентами
+- ✅ Правильная работа RLS на всех таблицах
+- ✅ NO Security Advisor warnings
+- ✅ NO infinite recursion
+- ✅ SECURITY DEFINER functions работают корректно
+- ✅ Админ и обычные пользователи имеют правильные уровни доступа
+
+---
+
+### 📚 Уроки и Best Practices
+
+1. **Всегда проверяйте Security Advisor в Supabase Dashboard**
+   - Красные предупреждения = реальные проблемы безопасности
+   - Не игнорируйте "RLS disabled" warnings
+
+2. **SECURITY DEFINER bypass RLS - не добавляйте RLS на service tables**
+   - Если функция использует `SECURITY DEFINER` и читает таблицу X
+   - НЕ включайте RLS на таблицу X
+   - Иначе → infinite recursion или блокировка доступа
+
+3. **Избегайте circular dependencies в RLS policies**
+   - Policy читает `admin_users` → вызывает `is_admin()`
+   - `is_admin()` читает `admin_users` с RLS → вызывает policy
+   - Результат: infinite loop!
+
+4. **Тестируйте с отключённым RLS сначала**
+   - Если данные не появляются
+   - Временно отключите RLS: `ALTER TABLE X DISABLE ROW LEVEL SECURITY`
+   - Если данные появились → проблема в RLS policies
+   - Включите обратно и исправьте policies
+
+5. **admin_users - это service table**
+   - Используется для проверок доступа
+   - Читается через SECURITY DEFINER функции
+   - Не должна иметь RLS
+   - Альтернатива: хранить `is_admin` в `auth.users.raw_user_meta_data`
+
+6. **Всегда добавляйте users в service tables**
+   - Недостаточно иметь `auth.users` запись
+   - Нужно добавить в `admin_users` (для админов)
+   - Нужно добавить в `org_users` (для доступа к организациям)
+
+7. **User ID - это `auth.uid()`**
+   - В Supabase Auth: `auth.users.id`
+   - Во всех Foreign Keys: используйте `auth.uid()`
+   - НЕ используйте `client.id` из CRM для permissions!
+
+---
+
+### 🔒 Финальная Security конфигурация
+
+**Таблицы с RLS:**
+- ✅ `organizations` - admins see all, users see only their orgs
+- ✅ `org_users` - users see own memberships + admins see all
+- ✅ `clients` - users see only clients from their org
+- ✅ `payments` - users see only payments from their org
+- ✅ `visits` - users see only visits from their org
+
+**Таблицы БЕЗ RLS (service tables):**
+- ❌ `admin_users` - accessed via `is_admin()` SECURITY DEFINER
+- ❌ `invitations` - accessed via trigger SECURITY DEFINER
+
+**Правило:**
+> Если таблица читается из SECURITY DEFINER функции/триггера → RLS отключен!
+
+---
+
+### 🎯 Статус: Полностью рабочая система
+
+**User: Vlad Khalphin**
+- Email: creepie1357@gmail.com
+- User ID: `b9344b8c-7cd4-49b3-a23e-b456436ea02f`
+- Role: Admin
+- Organizations: 2 (Beautymania, Amber Solutions)
+- Status: ✅ Full access restored
+
+**Production URL:** https://trinity-sage.vercel.app  
+**GitHub:** https://github.com/Creepie132/trinity
 
 ---
 

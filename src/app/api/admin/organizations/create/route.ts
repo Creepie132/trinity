@@ -123,12 +123,15 @@ export async function POST(request: NextRequest) {
     console.log('[CREATE ORG]    - Client Email:', client.email)
     console.log('[CREATE ORG]    - ⚠️  DO NOT USE client.id for permissions!')
 
+    // CRITICAL: Normalize email to lowercase for consistency
+    const normalizedEmail = client.email.toLowerCase()
+
     // Create organization
     const { data: org, error: orgError } = await supabase
       .from('organizations')
       .insert({
         name,
-        email: client.email,
+        email: normalizedEmail,
         phone: client.phone || null,
         category,
         plan,
@@ -164,7 +167,7 @@ export async function POST(request: NextRequest) {
 
     // CRITICAL FIX: Lookup user in auth.users by EMAIL (not by client.id!)
     // The client.id from public.clients is DIFFERENT from auth.users.id
-    console.log('[CREATE ORG] 🔍 Looking up user in auth.users by email:', client.email)
+    console.log('[CREATE ORG] 🔍 Looking up user in auth.users by email:', normalizedEmail)
     
     const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers()
 
@@ -176,7 +179,7 @@ export async function POST(request: NextRequest) {
     // Find user by email (case-insensitive)
     // This returns the REAL auth user ID, NOT the CRM client ID
     const existingAuthUser = authUsers?.users?.find(
-      u => u.email?.toLowerCase() === client.email.toLowerCase()
+      u => u.email?.toLowerCase() === normalizedEmail
     )
 
     let assignmentResult = {
@@ -202,7 +205,7 @@ export async function POST(request: NextRequest) {
         .insert({
           org_id: org.id,
           user_id: existingAuthUser.id, // ← CRITICAL: Auth ID, NOT client.id
-          email: client.email,
+          email: normalizedEmail,
           role: 'owner',
           invited_at: new Date().toISOString(),
         })
@@ -222,21 +225,43 @@ export async function POST(request: NextRequest) {
         assignmentResult.authUserId = existingAuthUser.id
 
         // TASK 3: Email notification stub
-        // TODO: Send welcome email to ${client.email} using Resend
+        // TODO: Send welcome email to ${normalizedEmail} using Resend
         // Subject: "Welcome to ${org.name} - Your Organization is Ready!"
         // Template: organization-welcome
         // Variables: { organizationName: org.name, ownerName: `${client.first_name} ${client.last_name}`, loginUrl: process.env.NEXT_PUBLIC_APP_URL }
-        console.log('[CREATE ORG] 📧 TODO: Send welcome email to', client.email)
+        console.log('[CREATE ORG] 📧 TODO: Send welcome email to', normalizedEmail)
       }
     } else {
-      // User doesn't exist in auth.users → create invitation
-      console.log('[CREATE ORG] ℹ️  User NOT found in auth.users, creating invitation')
-      console.log('[CREATE ORG]    - Will be assigned automatically when they sign up')
+      // User doesn't exist in auth.users → create invitation AND org_users entry with user_id = null
+      console.log('[CREATE ORG] ℹ️  User NOT found in auth.users, creating invitation + org_users entry')
+      console.log('[CREATE ORG]    - Will be auto-linked when they sign up')
       
+      // CRITICAL: Create org_users entry with user_id = null (will be linked on first login)
+      const { error: orgUserError } = await supabase
+        .from('org_users')
+        .insert({
+          org_id: org.id,
+          user_id: null, // ← Will be filled by /api/org/link-user on first login
+          email: normalizedEmail,
+          role: 'owner',
+          invited_at: new Date().toISOString(),
+        })
+
+      if (orgUserError) {
+        console.error('[CREATE ORG] ❌ Error creating org_users entry:', orgUserError)
+        return NextResponse.json(
+          { error: `Failed to create org_users entry: ${orgUserError.message}` },
+          { status: 500 }
+        )
+      }
+
+      console.log('[CREATE ORG] ✅ Created org_users entry with user_id=null (will auto-link)')
+      
+      // Also create invitation for tracking purposes
       const { error: invitationError } = await supabase
         .from('invitations')
         .insert({
-          email: client.email,
+          email: normalizedEmail,
           org_id: org.id,
           role: 'owner',
           invited_by: user.id,
@@ -250,15 +275,15 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       } else {
-        console.log('[CREATE ORG] ✅ Invitation created for email:', client.email)
+        console.log('[CREATE ORG] ✅ Invitation created for email:', normalizedEmail)
         assignmentResult.invitation = true
 
         // TASK 3: Email notification stub
-        // TODO: Send invitation email to ${client.email} using Resend
+        // TODO: Send invitation email to ${normalizedEmail} using Resend
         // Subject: "You've been invited to join ${org.name}"
         // Template: organization-invitation
         // Variables: { organizationName: org.name, ownerName: `${client.first_name} ${client.last_name}`, invitationUrl: `${process.env.NEXT_PUBLIC_APP_URL}/login`, expiresAt: invitation.expires_at }
-        console.log('[CREATE ORG] 📧 TODO: Send invitation email to', client.email)
+        console.log('[CREATE ORG] 📧 TODO: Send invitation email to', normalizedEmail)
       }
     }
 

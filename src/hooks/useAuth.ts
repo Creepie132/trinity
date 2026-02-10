@@ -108,6 +108,34 @@ export function useAuth(): UseAuthResult {
 
       setUser(user)
 
+      // CRITICAL: Auto-link org_users.user_id after first login
+      // This fixes the issue where invitations create org_users with email but user_id = null
+      // After Google login, we need to link the auth.uid to the org_users entry
+      console.log('[useAuth] Step 2.5: Auto-linking org_users.user_id...')
+      try {
+        const linkResponse = await fetch('/api/org/link-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        
+        if (linkResponse.ok) {
+          const linkResult = await linkResponse.json()
+          console.log('[useAuth] ✅ Link-user result:', linkResult)
+          
+          if (linkResult.linked) {
+            console.log('[useAuth] 🔗 Successfully linked user_id to', linkResult.count, 'org(s)')
+          } else {
+            console.log('[useAuth] ℹ️  No pending links (already linked or no invitation)')
+          }
+        } else {
+          console.warn('[useAuth] ⚠️  Link-user failed:', await linkResponse.text())
+          // Non-fatal, continue
+        }
+      } catch (linkError) {
+        console.error('[useAuth] ❌ Link-user exception:', linkError)
+        // Non-fatal, continue
+      }
+
       // Step 3: Check admin status (safe to query DB now that we have confirmed session + user)
       console.log('[useAuth] Step 3: Checking admin status for user_id:', user.id)
       const adminStartTime = performance.now()

@@ -17,7 +17,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const { user, isLoading, refetch } = useAuth()
+  const { user, orgId, isLoading, refetch } = useAuth()
 
   useEffect(() => {
     console.log('[DashboardLayout] ===== MOUNTED =====')

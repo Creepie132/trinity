@@ -5,8 +5,237 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 17:20 UTC  
-**Версия:** 2.5.3
+**Последнее обновление:** 2026-02-10 19:22 UTC  
+**Версия:** 2.6.0
+
+---
+
+## ⚡ ОБНОВЛЕНИЯ v2.6.0 (2026-02-10 19:22) - Invitation System 📧
+
+### 🎉 NEW FEATURE: Pre-Assignment Invitation System
+
+**Цель:**
+Создать организацию и назначить существующего CRM-клиента владельцем, даже если он ещё **не логинился**. При первом входе через Google Auth (с совпадающим email) клиент автоматически подключается к своей организации.
+
+---
+
+### 📋 TASK 1: Update Admin UI (Client Selector)
+
+**Изменения в `src/app/admin/organizations/page.tsx`:**
+
+**БЫЛО:**
+```tsx
+<Input label="Owner Name" />
+<Input label="Owner Email" />
+<Input label="Owner Phone" />
+```
+
+**СТАЛО:**
+```tsx
+<Select label="Выберите клиента как владельца">
+  {clients.map(client => (
+    <SelectItem value={client.id}>
+      {client.first_name} {client.last_name} ({client.email})
+    </SelectItem>
+  ))}
+</Select>
+```
+
+**Функционал:**
+- ✅ Загружает **все клиенты с email** из `public.clients`
+- ✅ Отображение: `${first_name} ${last_name} (${email})`
+- ✅ Выбор клиента вместо ручного ввода
+- ✅ Hint: "Если клиент логинился → сразу назначается. Если нет → приглашение."
+
+---
+
+### 🗄️ TASK 2: Implement Pre-Assignment Logic (Invitation System)
+
+**Новый API endpoint:** `POST /api/admin/organizations/create`
+
+**Логика:**
+1. **Создать организацию** с данными из формы
+2. **Проверить:** существует ли user с этим email в `auth.users`
+   - Используется функция `get_user_by_email(email)`
+3. **IF YES (user exists):**
+   - ✅ Сразу вставить в `public.org_users` с `role='owner'`
+   - Response: `{ assignment: { immediate: true } }`
+4. **IF NO (user doesn't exist):**
+   - 📧 Создать запись в `public.invitations` (email, org_id, role='owner')
+   - Response: `{ assignment: { invitation: true } }`
+
+**Таблица `public.invitations`:**
+```sql
+CREATE TABLE public.invitations (
+  id UUID PRIMARY KEY,
+  email TEXT NOT NULL,
+  org_id UUID REFERENCES organizations(id),
+  role TEXT DEFAULT 'owner' CHECK (role IN ('owner', 'admin', 'staff')),
+  invited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '30 days'),
+  used BOOLEAN DEFAULT FALSE,
+  used_at TIMESTAMP WITH TIME ZONE,
+  invited_by UUID REFERENCES auth.users(id),
+  UNIQUE(email, org_id)
+);
+```
+
+**Helper function:**
+```sql
+CREATE FUNCTION get_user_by_email(email_param TEXT)
+RETURNS TABLE (id UUID, email TEXT, created_at TIMESTAMP)
+SECURITY DEFINER
+AS $$
+  -- Только админы могут вызывать эту функцию
+  -- Возвращает user из auth.users если существует
+$$;
+```
+
+---
+
+### ⚡ TASK 3: Database Trigger (Auto-Assignment on Login)
+
+**Trigger:** `on_auth_user_created_process_invitation`  
+**Event:** AFTER INSERT ON `auth.users`
+
+**Логика:**
+```sql
+CREATE FUNCTION process_invitation_on_signup()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- 1. Найти pending invitation для этого email
+  SELECT * FROM invitations 
+  WHERE email = NEW.email 
+    AND used = FALSE 
+    AND expires_at > NOW();
+  
+  -- 2. Если найдено → вставить в org_users
+  INSERT INTO org_users (org_id, user_id, email, role)
+  VALUES (invitation.org_id, NEW.id, NEW.email, invitation.role)
+  ON CONFLICT DO NOTHING;
+  
+  -- 3. Пометить invitation как использованное
+  UPDATE invitations
+  SET used = TRUE, used_at = NOW()
+  WHERE email = NEW.email AND used = FALSE;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**Результат:**
+- ✅ Клиент логинится через Google → trigger срабатывает
+- ✅ Автоматически вставляется в `org_users` с правильным `org_id`
+- ✅ Приглашение помечается как `used = TRUE`
+- ✅ Клиент сразу видит свою организацию в Dashboard
+
+---
+
+### 📁 Файлы
+
+**SQL Migrations:**
+- ✅ `supabase/create-invitations-table.sql` - таблица + trigger + RLS
+- ✅ `supabase/create-get-user-by-email-function.sql` - helper function
+
+**API Routes:**
+- ✅ `src/app/api/admin/organizations/create/route.ts` - новый endpoint
+
+**UI Components:**
+- ✅ `src/app/admin/organizations/page.tsx` - client selector + toast notifications
+
+**Documentation:**
+- ✅ `docs/INVITATION_SYSTEM.md` - полная документация
+
+---
+
+### 🎯 User Flow
+
+1. **Админ создаёт организацию:**
+   - Выбирает клиента из CRM (обязательно с email)
+   - Нажимает "Создать организацию"
+
+2. **Система проверяет:**
+   - Клиент залогинен? → Сразу назначается (toast: "Владелец назначен мгновенно!")
+   - Клиент НЕ логинился? → Создаётся приглашение (toast: "Приглашение создано, клиент будет назначен при первом входе")
+
+3. **Клиент логинится (Google Auth):**
+   - Trigger автоматически срабатывает
+   - Клиент видит свою организацию сразу после логина
+   - Никаких дополнительных действий не требуется
+
+---
+
+### 🔒 Security
+
+- ✅ **RLS на invitations:** только админы могут SELECT/INSERT/UPDATE
+- ✅ **UNIQUE(email, org_id):** нельзя создать дубликаты приглашений
+- ✅ **expires_at:** приглашения истекают через 30 дней
+- ✅ **SECURITY DEFINER:** trigger работает с повышенными правами
+- ✅ **Admin check:** `get_user_by_email()` вызывают только админы
+
+---
+
+### 🧪 Testing
+
+**Test 1: Клиент уже залогинен**
+1. Создать клиента `test1@example.com`
+2. Залогиниться как этот клиент (Google Auth)
+3. Админ создаёт org, выбирает `test1@example.com`
+4. ✅ Клиент сразу в `org_users`, нет invitation
+5. ✅ Toast: "Владелец назначен мгновенно"
+
+**Test 2: Клиент НЕ логинился**
+1. Создать клиента `test2@example.com`
+2. НЕ логиниться
+3. Админ создаёт org, выбирает `test2@example.com`
+4. ✅ Создаётся invitation
+5. ✅ Toast: "Приглашение создано"
+6. Клиент логинится через Google
+7. ✅ Trigger срабатывает → клиент в `org_users`
+8. ✅ Invitation помечен `used = TRUE`
+
+**Test 3: Expiration**
+1. Создать invitation с `expires_at` в прошлом
+2. Клиент логинится
+3. ✅ Trigger НЕ срабатывает (expired)
+4. ✅ Клиент не назначается
+
+---
+
+### 📊 Monitoring Queries
+
+**Pending Invitations:**
+```sql
+SELECT email, org_id, invited_at, expires_at
+FROM invitations
+WHERE used = FALSE
+ORDER BY invited_at DESC;
+```
+
+**Used Invitations:**
+```sql
+SELECT email, org_id, invited_at, used_at,
+       (used_at - invited_at) AS time_to_use
+FROM invitations
+WHERE used = TRUE
+ORDER BY used_at DESC;
+```
+
+**Cleanup Expired:**
+```sql
+SELECT cleanup_expired_invitations(); -- Returns count deleted
+```
+
+---
+
+### 🎉 Benefits
+
+1. **Zero Friction:** клиент логинится → сразу видит организацию
+2. **No Manual Work:** не нужно отправлять email или "accept invitation"
+3. **Future-Proof:** работает даже если клиент зайдёт через месяцы
+4. **Admin Control:** админ полностью контролирует доступ
+5. **Audit Trail:** `invited_at`, `used_at` для отслеживания
 
 ---
 

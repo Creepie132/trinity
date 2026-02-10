@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Switch } from '@/components/ui/switch'
+import { toast } from 'sonner'
 import { 
   Dialog,
   DialogContent,
@@ -51,10 +52,13 @@ export default function OrganizationsPage() {
   const [orgClients, setOrgClients] = useState<Array<{id: string, first_name: string, last_name: string, email: string | null}>>([])
   const [loadingClients, setLoadingClients] = useState(false)
 
+  // TASK 1: State for creating org with client assignment
+  const [allClients, setAllClients] = useState<Array<{id: string, first_name: string, last_name: string, email: string | null, org_id: string | null}>>([])
+  const [loadingAllClients, setLoadingAllClients] = useState(false)
+  const [selectedOwnerClientId, setSelectedOwnerClientId] = useState<string>('')
+
   const [newOrg, setNewOrg] = useState({
     name: '',
-    email: '',
-    phone: '',
     category: 'other',
     plan: 'basic',
   })
@@ -70,14 +74,74 @@ export default function OrganizationsPage() {
   const addUser = useAddOrgUser()
   const removeUser = useRemoveOrgUser()
 
+  // TASK 1 & 2: Load all clients when add dialog opens
+  useEffect(() => {
+    if (addDialogOpen) {
+      setLoadingAllClients(true)
+      supabase
+        .from('clients')
+        .select('id, first_name, last_name, email, org_id')
+        .not('email', 'is', null) // Only clients with email
+        .order('first_name')
+        .then(({ data, error }) => {
+          if (data && !error) {
+            setAllClients(data)
+          }
+          setLoadingAllClients(false)
+        })
+    } else {
+      setAllClients([])
+      setSelectedOwnerClientId('')
+      setNewOrg({ name: '', category: 'other', plan: 'basic' })
+    }
+  }, [addDialogOpen])
+
   const handleCreateOrg = async () => {
-    if (!newOrg.name || !newOrg.email) {
+    if (!newOrg.name || !newOrg.category || !newOrg.plan || !selectedOwnerClientId) {
       return
     }
 
-    await createOrg.mutateAsync(newOrg)
-    setAddDialogOpen(false)
-    setNewOrg({ name: '', email: '', phone: '', category: 'other', plan: 'basic' })
+    try {
+      // Call new API route for invitation system
+      const response = await fetch('/api/admin/organizations/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newOrg.name,
+          category: newOrg.category,
+          plan: newOrg.plan,
+          clientId: selectedOwnerClientId,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create organization')
+      }
+
+      // Success feedback
+      if (result.assignment.immediate) {
+        toast.success(`ארגון נוצר והבעלים הוקצה מיד!`, {
+          description: `${result.client.name} (${result.client.email}) כבר התחבר למערכת.`
+        })
+      } else if (result.assignment.invitation) {
+        toast.success(`ארגון נוצר והזמנה נשלחה!`, {
+          description: `${result.client.name} (${result.client.email}) יוקצה אוטומטית כאשר יתחבר עם Google.`
+        })
+      } else {
+        toast.success(`ארגון נוצר בהצלחה!`)
+      }
+
+      // Refresh data
+      createOrg.mutate({ ...newOrg, email: result.client.email })
+      
+      setAddDialogOpen(false)
+      setNewOrg({ name: '', category: 'other', plan: 'basic' })
+      setSelectedOwnerClientId('')
+    } catch (error: any) {
+      toast.error(`שגיאה: ${error.message}`)
+    }
   }
 
   const handleToggleFeature = (orgId: string, feature: 'sms' | 'payments' | 'analytics', enabled: boolean) => {
@@ -296,10 +360,38 @@ export default function OrganizationsPage() {
           <DialogHeader>
             <DialogTitle>הוסף ארגון חדש</DialogTitle>
             <DialogDescription>
-              צור ארגון חדש במערכת
+              צור ארגון חדש והקצה לקוח כבעלים. הלקוח יוקצה אוטומטית כאשר יתחבר עם Google.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* TASK 1: Client Selector (replaces Owner Name, Email, Phone) */}
+            <div>
+              <Label>בעלים (בחר לקוח מהמערכת) *</Label>
+              {loadingAllClients ? (
+                <div className="text-sm text-gray-500 py-2">טוען לקוחות...</div>
+              ) : allClients.length > 0 ? (
+                <Select value={selectedOwnerClientId} onValueChange={setSelectedOwnerClientId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="בחר לקוח" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allClients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.first_name} {client.last_name} ({client.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="text-sm text-gray-500 py-2 border rounded-md px-3 bg-gray-50">
+                  אין לקוחות עם אימייל במערכת
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                💡 אם הלקוח כבר התחבר: יוקצה מיד. אם לא: יוזמן ויוקצה אוטומטית בהתחברות הראשונה.
+              </p>
+            </div>
+
             <div>
               <Label>שם העסק *</Label>
               <Input
@@ -308,24 +400,7 @@ export default function OrganizationsPage() {
                 placeholder="שם העסק"
               />
             </div>
-            <div>
-              <Label>אימייל *</Label>
-              <Input
-                type="email"
-                value={newOrg.email}
-                onChange={(e) => setNewOrg({ ...newOrg, email: e.target.value })}
-                placeholder="email@example.com"
-              />
-            </div>
-            <div>
-              <Label>טלפון</Label>
-              <Input
-                type="tel"
-                value={newOrg.phone}
-                onChange={(e) => setNewOrg({ ...newOrg, phone: e.target.value })}
-                placeholder="050-1234567"
-              />
-            </div>
+            
             <div>
               <Label>קטגוריה</Label>
               <Select value={newOrg.category} onValueChange={(value) => setNewOrg({ ...newOrg, category: value })}>
@@ -360,7 +435,7 @@ export default function OrganizationsPage() {
             <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
               ביטול
             </Button>
-            <Button onClick={handleCreateOrg} disabled={!newOrg.name || !newOrg.email}>
+            <Button onClick={handleCreateOrg} disabled={!newOrg.name || !selectedOwnerClientId}>
               צור ארגון
             </Button>
           </DialogFooter>

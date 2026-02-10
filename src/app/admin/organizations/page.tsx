@@ -204,15 +204,15 @@ export default function OrganizationsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>שם הארגון</TableHead>
-                  <TableHead>קטגוריה</TableHead>
-                  <TableHead>תוכנית</TableHead>
-                  <TableHead>סטטוס</TableHead>
-                  <TableHead>SMS</TableHead>
-                  <TableHead>Payments</TableHead>
-                  <TableHead>Analytics</TableHead>
-                  <TableHead>תאריך</TableHead>
-                  <TableHead>פעולות</TableHead>
+                  <TableHead className="text-right">שם הארגון</TableHead>
+                  <TableHead className="text-right">קטגוריה</TableHead>
+                  <TableHead className="text-right">תוכנית</TableHead>
+                  <TableHead className="text-right">סטטוס</TableHead>
+                  <TableHead className="text-right">SMS</TableHead>
+                  <TableHead className="text-right">Payments</TableHead>
+                  <TableHead className="text-right">Analytics</TableHead>
+                  <TableHead className="text-right">תאריך</TableHead>
+                  <TableHead className="text-right">פעולות</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

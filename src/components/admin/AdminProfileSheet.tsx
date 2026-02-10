@@ -10,6 +10,9 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { User, Mail, Phone, Building2, Shield, CheckCircle2, XCircle } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/hooks/useAuth'
+import { AvatarUpload } from '@/components/profile/AvatarUpload'
+import { supabase } from '@/lib/supabase'
 
 interface AdminProfile {
   id: string
@@ -31,19 +34,45 @@ interface AdminProfileSheetProps {
 
 export function AdminProfileSheet({ open, onOpenChange }: AdminProfileSheetProps) {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [profile, setProfile] = useState<AdminProfile | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [loadingAvatar, setLoadingAvatar] = useState(true)
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
   })
+
+  // Load avatar URL from org_users
+  useEffect(() => {
+    if (user && open) {
+      setLoadingAvatar(true)
+      supabase
+        .from('org_users')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (data && !error) {
+            setAvatarUrl(data.avatar_url)
+          }
+          setLoadingAvatar(false)
+        })
+    }
+  }, [user, open])
 
   useEffect(() => {
     if (open) {
       fetchProfile()
     }
   }, [open])
+
+  const handleAvatarUpdate = (newUrl: string) => {
+    setAvatarUrl(newUrl)
+    queryClient.invalidateQueries({ queryKey: ['admin-profile'] })
+  }
 
   const fetchProfile = async () => {
     setIsLoading(true)
@@ -117,11 +146,17 @@ export function AdminProfileSheet({ open, onOpenChange }: AdminProfileSheetProps
           </div>
         ) : profile ? (
           <div className="space-y-6 py-6">
-            {/* Avatar & Role Badge */}
+            {/* Avatar Upload & Role Badge */}
             <div className="flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl border-2 border-blue-100 dark:border-slate-600">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold text-4xl shadow-2xl ring-4 ring-white dark:ring-slate-800">
-                {(formData.full_name || profile.email)[0]?.toUpperCase() || 'A'}
-              </div>
+              {loadingAvatar ? (
+                <div className="w-32 h-32 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+              ) : (
+                <AvatarUpload 
+                  currentAvatarUrl={avatarUrl}
+                  userName={formData.full_name || profile.email.split('@')[0]}
+                  onUploadSuccess={handleAvatarUpdate}
+                />
+              )}
               
               <div className="text-center space-y-2">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">

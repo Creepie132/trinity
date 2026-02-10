@@ -324,15 +324,15 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>מפרסם</TableHead>
-                  <TableHead>באנר</TableHead>
-                  <TableHead>קטגוריות יעד</TableHead>
-                  <TableHead>תקופה</TableHead>
-                  <TableHead>קליקים</TableHead>
-                  <TableHead>הצגות</TableHead>
-                  <TableHead>CTR</TableHead>
-                  <TableHead>סטטוס</TableHead>
-                  <TableHead>פעולות</TableHead>
+                  <TableHead className="text-right">מפרסם</TableHead>
+                  <TableHead className="text-right">באנר</TableHead>
+                  <TableHead className="text-right">קטגוריות יעד</TableHead>
+                  <TableHead className="text-right">תקופה</TableHead>
+                  <TableHead className="text-right">קליקים</TableHead>
+                  <TableHead className="text-right">הצגות</TableHead>
+                  <TableHead className="text-right">CTR</TableHead>
+                  <TableHead className="text-right">סטטוס</TableHead>
+                  <TableHead className="text-right">פעולות</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

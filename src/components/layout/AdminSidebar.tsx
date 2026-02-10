@@ -9,6 +9,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { Separator } from '@/components/ui/separator'
 import { AdminProfileSheet } from '@/components/admin/AdminProfileSheet'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { supabase } from '@/lib/supabase'
 
 const navigation = [
   {
@@ -44,6 +46,7 @@ export function AdminSidebar() {
   const { adminProfile, isLoading } = useAdminProfile()
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [profileOpen, setProfileOpen] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   useEffect(() => {
     // Load theme from localStorage
@@ -58,6 +61,22 @@ export function AdminSidebar() {
       document.documentElement.classList.add('dark')
     }
   }, [])
+
+  // Load avatar URL
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('org_users')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (data && !error) {
+            setAvatarUrl(data.avatar_url)
+          }
+        })
+    }
+  }, [user])
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light'
@@ -74,15 +93,15 @@ export function AdminSidebar() {
       {/* Header */}
       <div className="p-6 pb-4 border-b border-slate-700 bg-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
             <img
               src="/logo.png"
               alt="Trinity Admin"
-              className="w-7 h-7 object-contain"
+              className="w-12 h-12 object-contain"
             />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-white">
               Trinity Admin
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">Amber Solutions Systems</p>
@@ -159,9 +178,12 @@ export function AdminSidebar() {
           onClick={() => setProfileOpen(true)}
           className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-700/50 border border-slate-600 hover:bg-slate-700 hover:border-blue-500/50 transition-all duration-200 group active:scale-[0.98]"
         >
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold shadow-lg text-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
-            {displayName[0]?.toUpperCase() || 'A'}
-          </div>
+          <Avatar className="w-11 h-11 shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
+            <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+            <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-600 text-white font-bold text-lg">
+              {displayName[0]?.toUpperCase() || 'A'}
+            </AvatarFallback>
+          </Avatar>
           <div className="flex-1 min-w-0 text-right">
             {isLoading ? (
               <p className="text-sm text-slate-400">טוען...</p>

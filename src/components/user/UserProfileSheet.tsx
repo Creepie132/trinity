@@ -11,6 +11,8 @@ import { toast } from 'sonner'
 import { User, Mail, Phone, Building2, Shield, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/hooks/useOrganization'
+import { AvatarUpload } from '@/components/profile/AvatarUpload'
+import { supabase } from '@/lib/supabase'
 
 interface UserProfileSheetProps {
   open: boolean
@@ -20,9 +22,29 @@ interface UserProfileSheetProps {
 export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) {
   const { user, orgId, isAdmin, isLoading: authLoading, refetch } = useAuth()
   const { data: organization, isLoading: orgLoading } = useOrganization()
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [loadingAvatar, setLoadingAvatar] = useState(true)
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'משתמש'
   const displayEmail = user?.email || ''
+
+  // Load avatar URL from org_users
+  useEffect(() => {
+    if (user && open) {
+      setLoadingAvatar(true)
+      supabase
+        .from('org_users')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (data && !error) {
+            setAvatarUrl(data.avatar_url)
+          }
+          setLoadingAvatar(false)
+        })
+    }
+  }, [user, open])
 
   useEffect(() => {
     if (open) {
@@ -36,6 +58,12 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
       })
     }
   }, [open, user, orgId, authLoading, orgLoading])
+
+  const handleAvatarUpdate = (newUrl: string) => {
+    setAvatarUrl(newUrl)
+    // Optionally refetch auth data to update sidebar
+    refetch()
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -60,11 +88,17 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
           </div>
         ) : user ? (
           <div className="space-y-6 py-6">
-            {/* Avatar & User Info */}
+            {/* Avatar Upload & User Info */}
             <div className="flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl border-2 border-blue-100 dark:border-slate-600">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-4xl shadow-2xl ring-4 ring-white dark:ring-slate-800">
-                {displayName[0]?.toUpperCase() || 'U'}
-              </div>
+              {loadingAvatar ? (
+                <div className="w-32 h-32 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+              ) : (
+                <AvatarUpload 
+                  currentAvatarUrl={avatarUrl}
+                  userName={displayName}
+                  onUploadSuccess={handleAvatarUpdate}
+                />
+              )}
               
               <div className="text-center space-y-2">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">

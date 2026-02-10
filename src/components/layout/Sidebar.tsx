@@ -10,6 +10,8 @@ import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useFeatures } from '@/hooks/useFeatures'
 import { Separator } from '@/components/ui/separator'
 import { UserProfileSheet } from '@/components/user/UserProfileSheet'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 
 const baseNavigation = [
@@ -30,6 +32,7 @@ export function Sidebar() {
   const features = useFeatures()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [profileOpen, setProfileOpen] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   useEffect(() => {
     // Load theme from localStorage
@@ -39,6 +42,22 @@ export function Sidebar() {
       document.documentElement.classList.toggle('dark', savedTheme === 'dark')
     }
   }, [])
+
+  // Load avatar URL
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('org_users')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (data && !error) {
+            setAvatarUrl(data.avatar_url)
+          }
+        })
+    }
+  }, [user])
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light'
@@ -78,15 +97,15 @@ export function Sidebar() {
       {/* Header */}
       <div className="p-6 pb-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
             <img
               src="/logo.png"
               alt="Trinity"
-              className="w-7 h-7 object-contain"
+              className="w-12 h-12 object-contain"
             />
           </div>
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Trinity
             </h1>
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Amber Solutions Systems</p>
@@ -169,9 +188,12 @@ export function Sidebar() {
           onClick={() => setProfileOpen(true)}
           className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800 hover:border-blue-200 dark:hover:border-blue-700 hover:shadow-md transition-all duration-200 group active:scale-[0.98]"
         >
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg text-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
-            {(displayName?.[0] || displayEmail?.[0])?.toUpperCase() || '?'}
-          </div>
+          <Avatar className="w-11 h-11 shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
+            <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg">
+              {(displayName?.[0] || displayEmail?.[0])?.toUpperCase() || '?'}
+            </AvatarFallback>
+          </Avatar>
           <div className="flex-1 min-w-0 text-right">
             {displayName ? (
               <>

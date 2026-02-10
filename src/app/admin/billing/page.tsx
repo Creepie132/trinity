@@ -194,12 +194,12 @@ export default function BillingPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ארגון</TableHead>
-                  <TableHead>תוכנית</TableHead>
-                  <TableHead>סטטוס תשלום</TableHead>
-                  <TableHead>תאריך תשלום הבא</TableHead>
-                  <TableHead>סטטוס גישה</TableHead>
-                  <TableHead>פעולות</TableHead>
+                  <TableHead className="text-right">ארגון</TableHead>
+                  <TableHead className="text-right">תוכנית</TableHead>
+                  <TableHead className="text-right">סטטוס תשלום</TableHead>
+                  <TableHead className="text-right">תאריך תשלום הבא</TableHead>
+                  <TableHead className="text-right">סטטוס גישה</TableHead>
+                  <TableHead className="text-right">פעולות</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -1,29 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { rateLimit, ADMIN_ASSIGN_RATE_LIMIT } from '@/lib/rate-limit'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export const dynamic = 'force-dynamic'
 
 // POST: Assign admin/moderator role
 export async function POST(request: NextRequest) {
   try {
+    // Create server client with cookies
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: any) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: any) {
+            cookieStore.set({ name, value: '', ...options, maxAge: 0 })
+          },
+        },
+      }
+    )
+
     // Check if current user is admin
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Rate limiting
-    const rateLimitResult = rateLimit(
-      `admin-assign:${user.email}`,
-      ADMIN_ASSIGN_RATE_LIMIT
-    )
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { 
-          error: 'Too many admin assignment requests. Please slow down.',
-          retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
-        },
-        { status: 429 }
-      )
     }
 
     const { data: currentAdmin } = await supabase
@@ -136,6 +143,26 @@ export async function POST(request: NextRequest) {
 // DELETE: Remove admin/moderator role
 export async function DELETE(request: NextRequest) {
   try {
+    // Create server client with cookies
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: any) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: any) {
+            cookieStore.set({ name, value: '', ...options, maxAge: 0 })
+          },
+        },
+      }
+    )
+
     // Check if current user is admin
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {

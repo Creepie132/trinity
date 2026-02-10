@@ -71,11 +71,11 @@ export default function ClientsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>שם</TableHead>
-                <TableHead>טלפון</TableHead>
-                <TableHead>ביקור אחרון</TableHead>
-                <TableHead>סך ביקורים</TableHead>
-                <TableHead>סך תשלומים</TableHead>
+                <TableHead className="text-right">שם</TableHead>
+                <TableHead className="text-right">טלפון</TableHead>
+                <TableHead className="text-right">ביקור אחרון</TableHead>
+                <TableHead className="text-right">סך ביקורים</TableHead>
+                <TableHead className="text-right">סך תשלומים</TableHead>
                 <TableHead className="text-left">פעולות</TableHead>
               </TableRow>
             </TableHeader>

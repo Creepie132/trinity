@@ -40,7 +40,7 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
-        side="left" 
+        side="right" 
         className="w-full sm:max-w-md overflow-y-auto bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800"
       >
         <SheetHeader>

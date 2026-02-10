@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -38,6 +38,7 @@ import {
 import { Building2, Plus, Search, Eye, Trash, CheckCircle2, XCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { Organization } from '@/types/database'
+import { supabase } from '@/lib/supabase'
 
 export default function OrganizationsPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -46,6 +47,9 @@ export default function OrganizationsPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false)
   const [newUserEmail, setNewUserEmail] = useState('')
+  const [selectedClientId, setSelectedClientId] = useState<string>('')
+  const [orgClients, setOrgClients] = useState<Array<{id: string, first_name: string, last_name: string, email: string | null}>>([])
+  const [loadingClients, setLoadingClients] = useState(false)
 
   const [newOrg, setNewOrg] = useState({
     name: '',
@@ -89,15 +93,44 @@ export default function OrganizationsPage() {
     toggleActive.mutate({ orgId, isActive })
   }
 
+  // Load clients when dialog opens
+  useEffect(() => {
+    if (addUserDialogOpen && selectedOrgId) {
+      setLoadingClients(true)
+      supabase
+        .from('clients')
+        .select('id, first_name, last_name, email')
+        .eq('org_id', selectedOrgId)
+        .not('email', 'is', null) // Only clients with email
+        .order('first_name')
+        .then(({ data, error }) => {
+          if (data && !error) {
+            setOrgClients(data)
+          }
+          setLoadingClients(false)
+        })
+    } else {
+      setOrgClients([])
+      setSelectedClientId('')
+      setNewUserEmail('')
+    }
+  }, [addUserDialogOpen, selectedOrgId])
+
   const handleAddUser = async () => {
-    if (!selectedOrgId || !newUserEmail) return
+    // Support both manual email input and client selection
+    const emailToAdd = selectedClientId 
+      ? orgClients.find(c => c.id === selectedClientId)?.email 
+      : newUserEmail
+    
+    if (!selectedOrgId || !emailToAdd) return
     
     await addUser.mutateAsync({
       orgId: selectedOrgId,
-      email: newUserEmail,
+      email: emailToAdd,
     })
     
     setNewUserEmail('')
+    setSelectedClientId('')
     setAddUserDialogOpen(false)
   }
 
@@ -480,23 +513,55 @@ export default function OrganizationsPage() {
           <DialogHeader>
             <DialogTitle>הוסף משתמש</DialogTitle>
             <DialogDescription>
-              הזן כתובת אימייל של המשתמש החדש
+              בחר לקוח קיים או הזן אימייל ידנית
             </DialogDescription>
           </DialogHeader>
-          <div>
-            <Label>אימייל</Label>
-            <Input
-              type="email"
-              value={newUserEmail}
-              onChange={(e) => setNewUserEmail(e.target.value)}
-              placeholder="user@example.com"
-            />
+          <div className="space-y-4">
+            {/* Select from existing clients */}
+            <div>
+              <Label>בחר לקוח מהמערכת</Label>
+              {loadingClients ? (
+                <div className="text-sm text-gray-500 py-2">טוען לקוחות...</div>
+              ) : orgClients.length > 0 ? (
+                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="בחר לקוח" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {orgClients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.first_name} {client.last_name} ({client.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="text-sm text-gray-500 py-2 border rounded-md px-3 bg-gray-50">
+                  אין לקוחות עם אימייל בארגון זה
+                </div>
+              )}
+            </div>
+
+            {/* OR manual email input */}
+            <div>
+              <Label>או הזן אימייל ידנית</Label>
+              <Input
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => {
+                  setNewUserEmail(e.target.value)
+                  setSelectedClientId('') // Clear selection if typing manually
+                }}
+                placeholder="user@example.com"
+                disabled={!!selectedClientId} // Disable if client selected
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddUserDialogOpen(false)}>
               ביטול
             </Button>
-            <Button onClick={handleAddUser} disabled={!newUserEmail}>
+            <Button onClick={handleAddUser} disabled={!selectedClientId && !newUserEmail}>
               הוסף משתמש
             </Button>
           </DialogFooter>

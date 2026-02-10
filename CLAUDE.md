@@ -5,8 +5,254 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 21:35 UTC  
-**Версия:** 2.6.3
+**Последнее обновление:** 2026-02-10 21:41 UTC  
+**Версия:** 2.7.0
+
+---
+
+## ⚡ ОБНОВЛЕНИЯ v2.7.0 (2026-02-10 21:41) - Smart Organization Creation 🎯
+
+### 🎉 NEW FEATURE: Toggle Between Existing/New Client
+
+**Цель:**
+Улучшить UX создания организации - поддержка как существующих CRM клиентов, так и совершенно новых пользователей в одном диалоге.
+
+---
+
+### 📋 TASK 1: Frontend - Tabs для Existing vs New Client
+
+**Изменения в `src/app/admin/organizations/page.tsx`:**
+
+**Добавлено:**
+- **Tabs Component** - переключение между "לקוח קיים" (Existing Client) и "לקוח חדש" (New Client)
+- **State management:**
+  ```typescript
+  const [clientMode, setClientMode] = useState<'existing' | 'new'>('existing')
+  const [newClient, setNewClient] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+  })
+  ```
+
+**UI Layout:**
+
+**MODE: Existing Client (לקוח קיים)**
+- Select/Combobox с существующими клиентами из CRM
+- Фильтр: только клиенты с email
+- Display: `${first_name} ${last_name} (${email})`
+- Hint: "אם הלקוח כבר התחבר: יוקצה מיד..."
+
+**MODE: New Client (לקוח חדש)**
+- Input: First Name (required)
+- Input: Last Name (required)
+- Input: Email (required)
+- Input: Phone (optional)
+- Hint: "הלקוח יווצר במערכת CRM וישויך לארגון..."
+
+**Validation:**
+```typescript
+// Existing mode
+if (clientMode === 'existing' && !selectedOwnerClientId) return
+
+// New mode
+if (clientMode === 'new' && (!newClient.firstName || !newClient.lastName || !newClient.email)) return
+```
+
+**Button Disabled Conditions:**
+- Common: `!newOrg.name || isSubmitting`
+- Existing: `!selectedOwnerClientId`
+- New: `!newClient.firstName || !newClient.lastName || !newClient.email`
+
+---
+
+### 🗄️ TASK 2: Backend - Handle New Client Creation
+
+**Изменения в `src/app/api/admin/organizations/create/route.ts`:**
+
+**Новая логика:**
+
+```typescript
+const { name, category, plan, clientId, newClient } = body
+
+if (newClient) {
+  // MODE: New Client → Create in CRM first
+  const { data: createdClient } = await supabase
+    .from('clients')
+    .insert({
+      first_name: newClient.firstName,
+      last_name: newClient.lastName,
+      email: newClient.email,
+      phone: newClient.phone || null,
+      org_id: null, // Will update after org creation
+    })
+    .select()
+    .single()
+    
+  client = createdClient
+} else if (clientId) {
+  // MODE: Existing Client → Fetch from DB
+  const { data: existingClient } = await supabase
+    .from('clients')
+    .select('id, first_name, last_name, email, phone')
+    .eq('id', clientId)
+    .single()
+    
+  client = existingClient
+}
+```
+
+**Обновление org_id:**
+```typescript
+// После создания организации
+if (newClient) {
+  await supabase
+    .from('clients')
+    .update({ org_id: org.id })
+    .eq('id', client.id)
+}
+```
+
+**Сохранена правильная Auth Lookup:**
+- ✅ Lookup в `auth.users` по email (НЕ client.id!)
+- ✅ Используется `auth.users.id` для permissions
+- ✅ client.id только для display/reference
+- ✅ Invitation system работает для обоих режимов
+
+---
+
+### 📧 TASK 3: Email Notification Stub
+
+**Добавлены TODO комментарии для Resend:**
+
+**Welcome Email (immediate assignment):**
+```typescript
+// TODO: Send welcome email to ${client.email} using Resend
+// Subject: "Welcome to ${org.name} - Your Organization is Ready!"
+// Template: organization-welcome
+// Variables: { 
+//   organizationName: org.name, 
+//   ownerName: `${client.first_name} ${client.last_name}`, 
+//   loginUrl: process.env.NEXT_PUBLIC_APP_URL 
+// }
+```
+
+**Invitation Email (pending invitation):**
+```typescript
+// TODO: Send invitation email to ${client.email} using Resend
+// Subject: "You've been invited to join ${org.name}"
+// Template: organization-invitation
+// Variables: { 
+//   organizationName: org.name, 
+//   ownerName: `${client.first_name} ${client.last_name}`, 
+//   invitationUrl: `${process.env.NEXT_PUBLIC_APP_URL}/login`,
+//   expiresAt: invitation.expires_at 
+// }
+```
+
+**Где добавлено:**
+- ✅ После успешного assignment в `org_users`
+- ✅ После создания invitation
+
+---
+
+### 🎯 User Flow
+
+**Сценарий 1: Existing Client**
+1. Админ открывает "הוסף ארגון חדש"
+2. Выбирает tab "לקוח קיים"
+3. Выбирает клиента из dropdown
+4. Заполняет данные организации
+5. "צור ארגון" → создается org + auth lookup + assignment/invitation
+
+**Сценарий 2: New Client**
+1. Админ открывает "הוסף ארגון חדש"
+2. Выбирает tab "לקוח חדש"
+3. Вводит: First Name, Last Name, Email, Phone
+4. Заполняет данные организации
+5. "צור ארגון" → создается client в CRM → создается org → auth lookup → assignment/invitation → обновляется client.org_id
+
+**Toast Notifications:**
+- ✅ Immediate: "ארגון נוצר והבעלים הוקצה מיד!"
+- ✅ Invitation: "ארגון נוצר והזמנה נשלחה!"
+- ✅ Error: "שגיאה: [message]"
+
+---
+
+### 🔧 Fixes
+
+**1. Tabs Component Import Fix:**
+```typescript
+// БЫЛО (неправильно):
+import { Tabs as TabsPrimitive } from "radix-ui"
+
+// СТАЛО (правильно):
+import * as TabsPrimitive from "@radix-ui/react-tabs"
+```
+
+**2. Improved Dialog Layout:**
+- `max-w-2xl` - больше места для tabs
+- Better spacing между секциями
+- Grid layout для First Name / Last Name (2 columns)
+
+**3. Validation:**
+- Динамическая валидация на основе `clientMode`
+- Disabled button учитывает оба режима
+- Clear error messages
+
+---
+
+### 📁 Файлы изменены
+
+**Frontend:**
+- ✅ `src/app/admin/organizations/page.tsx` - tabs UI + state + validation
+- ✅ `src/components/ui/tabs.tsx` - fixed @radix-ui import
+
+**Backend:**
+- ✅ `src/app/api/admin/organizations/create/route.ts` - new client creation + email stubs
+
+---
+
+### ✅ Результат
+
+**UX Improvements:**
+- ✅ Single modal для всех сценариев создания org
+- ✅ Интуитивное переключение existing/new
+- ✅ Clear hints для каждого режима
+- ✅ Loading states для better feedback
+
+**Backend:**
+- ✅ Поддержка создания нового клиента
+- ✅ Правильная связь client ↔ org (org_id update)
+- ✅ Auth lookup работает для обоих режимов
+- ✅ Email stubs готовы для Resend integration
+
+**Code Quality:**
+- ✅ Type-safe state management
+- ✅ Proper error handling
+- ✅ Detailed logging
+- ✅ Comprehensive validation
+
+---
+
+### 🚀 Next Steps
+
+1. **Email Integration:**
+   - Настроить Resend API key
+   - Создать email templates (organization-welcome, organization-invitation)
+   - Заменить TODO на реальные вызовы Resend API
+
+2. **Testing:**
+   - Test existing client path
+   - Test new client path
+   - Test validation edge cases
+   - Test email triggers (when implemented)
+
+3. **Optional Enhancements:**
+   - Autocomplete для email (suggest existing)
+   - Duplicate email check (before creating new client)
+   - Bulk import (CSV with multiple new clients)
 
 ---
 

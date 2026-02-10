@@ -126,18 +126,15 @@ export function AdminSidebar() {
 
         {/* Кнопка возврата в систему */}
         <Separator className="my-4 bg-slate-700" />
-        <button
-          onClick={() => {
-            console.log('[AdminSidebar] חזרה למערכת clicked - navigating to /')
-            window.location.href = '/'
-          }}
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-2 border-green-500/30 hover:border-green-500/50 hover:bg-gradient-to-r hover:from-green-600/30 hover:to-emerald-600/30 active:scale-[0.98]"
+        <Link
+          href="/"
+          className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-2 border-green-500/30 hover:border-green-500/50 hover:bg-gradient-to-r hover:from-green-600/30 hover:to-emerald-600/30 active:scale-[0.98]"
         >
           <div className="p-1.5 rounded-lg bg-green-600/30">
             <Home className="w-5 h-5 flex-shrink-0 text-green-400" />
           </div>
           <span className="flex-1 text-green-300 font-semibold">חזרה למערכת</span>
-        </button>
+        </Link>
 
         {/* Theme Toggle */}
         <Separator className="my-4 bg-slate-700" />

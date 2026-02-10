@@ -38,14 +38,12 @@ export default function DashboardLayout({
       isLoading
     })
 
-    // If not loading and still no user, redirect to login
-    if (!isLoading && !user) {
-      console.warn('[DashboardLayout] No user after loading - redirecting to login')
-      router.push('/login')
-    }
-  }, [user, isLoading, router])
+    // Don't redirect here - middleware already handles auth checks
+    // This was causing logout on navigation
+  }, [user, isLoading])
 
-  // Show loading state while checking auth
+  // Show loading state while checking auth (but only for a short time)
+  // Don't block rendering - middleware already protects routes
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
@@ -55,11 +53,6 @@ export default function DashboardLayout({
         </div>
       </div>
     )
-  }
-
-  // Don't render if no user
-  if (!user) {
-    return null
   }
 
   return (

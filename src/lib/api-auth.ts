@@ -46,29 +46,30 @@ export async function checkAuth(): Promise<
 
   // 1. Проверка пользователя
   const { data: userData, error: userError } = await supabase.auth.getUser()
-  if (userError || !userData.user?.email) {
+  if (userError || !userData.user) {
     return {
       success: false,
       response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
     }
   }
 
-  const email = userData.user.email.toLowerCase()
+  const user = userData.user
+  const email = user.email || ''
 
-  // 2. Проверка админа (case-insensitive)
+  // 2. Проверка админа (FIXED: use user_id instead of email)
   const { data: adminUser } = await supabase
     .from('admin_users')
     .select('email')
-    .ilike('email', email)
+    .eq('user_id', user.id)
     .maybeSingle()
 
   const isAdmin = !!adminUser
 
-  // 3. Получение org_id (case-insensitive)
+  // 3. Получение org_id (FIXED: use user_id instead of email)
   const { data: orgUser, error: orgError } = await supabase
     .from('org_users')
     .select('org_id')
-    .ilike('email', email)
+    .eq('user_id', user.id)
     .maybeSingle()
 
   if (!isAdmin && (orgError || !orgUser?.org_id)) {

@@ -57,11 +57,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 2) Admin check
+  // 2) Admin check (use user_id instead of email)
   const { data: adminRow } = await supabase
     .from('admin_users')
     .select('email')
-    .eq('email', email)
+    .eq('user_id', user.id)
     .maybeSingle()
 
   const isAdmin = !!adminRow
@@ -75,11 +75,11 @@ export async function middleware(req: NextRequest) {
     return response
   }
 
-  // 3) Org user check
+  // 3) Org user check (use user_id instead of email - CRITICAL FIX!)
   const { data: orgRow } = await supabase
     .from('org_users')
-    .select('org_id, email')
-    .eq('email', email)
+    .select('org_id')
+    .eq('user_id', user.id)
     .maybeSingle()
 
   if (!orgRow && !isAdmin) {

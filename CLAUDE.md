@@ -5,8 +5,71 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 13:30 UTC  
-**Версия:** 2.4.1
+**Последнее обновление:** 2026-02-10 14:10 UTC  
+**Версия:** 2.4.2
+
+---
+
+## ⚡ ОБНОВЛЕНИЯ v2.4.2 (2026-02-10 14:10)
+
+### 🐛 Critical Fix: Removed Email-Based Queries (500 Error Fix)
+
+**Проблема:** Приложение выдавало 500 ошибку при загрузке orgId, что приводило к "Missing orgId 0"
+
+**Диагноз:**
+- Код пытался получить org_id по email вместо user_id
+- Это происходило в **3 критических местах**: middleware, api-auth, useAuth
+- Email-based запросы не используют Foreign Key и ненадёжны
+- Приводило к 500 ошибке → orgId = 0 → невозможность добавить клиента
+
+**Исправления:**
+
+1. **middleware.ts:**
+   - ✅ Изменено: `.eq('email', email)` → `.eq('user_id', user.id)`
+   - ✅ Применено для admin_users и org_users
+   - ✅ Теперь используется FK relationship правильно
+
+2. **src/lib/api-auth.ts:**
+   - ✅ Изменено: `.ilike('email', email)` → `.eq('user_id', user.id)`
+   - ✅ Убран case-insensitive поиск по email
+   - ✅ Прямой lookup по user_id (FK)
+   - ✅ Используется во всех защищённых API routes
+
+3. **src/hooks/useAuth.ts:**
+   - ✅ Уже исправлено в v2.4.1
+
+**Правильный паттерн:**
+```typescript
+// ✅ CORRECT - Query by Foreign Key
+const { data } = await supabase
+  .from('org_users')
+  .select('org_id')
+  .eq('user_id', user.id)  // <-- FK to auth.users(id)
+  .maybeSingle()
+
+// ❌ WRONG - Query by email (not FK)
+const { data } = await supabase
+  .from('org_users')
+  .select('org_id')
+  .eq('email', user.email)  // <-- Unreliable!
+  .maybeSingle()
+```
+
+**Impact:**
+- ✅ Middleware - auth checks на каждом request
+- ✅ API Routes - все защищённые endpoints
+- ✅ Client-side hooks - user context
+
+**Документация:**
+- ✅ `docs/FIX_PROFILES_TABLE_REMOVED.md` - детальное описание fix
+
+**Тестирование:**
+```sql
+-- Verify user has org_users record with user_id
+SELECT user_id, org_id, email 
+FROM org_users 
+WHERE user_id = auth.uid();
+```
 
 ---
 

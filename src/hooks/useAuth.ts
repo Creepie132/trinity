@@ -54,16 +54,17 @@ export function useAuth(): UseAuthResult {
       const { data: adminRow } = await supabase
         .from('admin_users')
         .select('email')
-        .eq('email', user.email)
+        .eq('user_id', user.id)
         .maybeSingle()
 
       const isAdminUser = !!adminRow
 
       // проверка org_users (для всех, включая админов)
+      // ВАЖНО: ищем по user_id, а не по email!
       const { data: orgRow } = await supabase
         .from('org_users')
         .select('org_id')
-        .eq('email', user.email)
+        .eq('user_id', user.id)
         .maybeSingle()
 
       cachedIsAdmin = isAdminUser

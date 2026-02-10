@@ -54,19 +54,32 @@ export function useClient(id?: string) {
 
 export function useAddClient() {
   const queryClient = useQueryClient()
-  const { orgId } = useAuth()
+  const { orgId, isLoading } = useAuth()
 
   return useMutation({
     mutationFn: async (client: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
-      if (!orgId) throw new Error('Missing orgId')
+      // Проверяем что orgId загружен и не null
+      if (isLoading) {
+        throw new Error('אנא המתן, הנתונים נטענים...')
+      }
+      
+      if (!orgId || orgId === '0') {
+        throw new Error('לא נמצא ארגון למשתמש הנוכחי. אנא פנה לתמיכה.')
+      }
+
+      console.log('Adding client with orgId:', orgId) // debug
 
       const { data, error } = await supabase
         .from('clients')
-        .insert([{ ...client, org_id: orgId }]) // <-- ВОТ ТУТ ОБЯЗАТЕЛЬНО
+        .insert([{ ...client, org_id: orgId }])
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
+      
       return data
     },
     onSuccess: () => {
@@ -74,6 +87,7 @@ export function useAddClient() {
       toast.success('הלקוח נוסף בהצלחה')
     },
     onError: (error: any) => {
+      console.error('Add client error:', error)
       toast.error('שגיאה בהוספת לקוח: ' + error.message)
     },
   })

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAddClient } from '@/hooks/useClients'
+import { useAuth } from '@/hooks/useAuth'
 
 interface AddClientDialogProps {
   open: boolean
@@ -14,6 +15,7 @@ interface AddClientDialogProps {
 }
 
 export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
+  const { orgId, isLoading: authLoading } = useAuth()
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -139,6 +141,13 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
             />
           </div>
 
+          {/* Warning if orgId is missing */}
+          {!authLoading && !orgId && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-800 dark:text-red-200">
+              ⚠️ לא נמצא ארגון למשתמש. אנא פנה לתמיכה.
+            </div>
+          )}
+
           <div className="flex gap-3 justify-end pt-4">
             <Button
               type="button"
@@ -147,8 +156,11 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
             >
               ביטול
             </Button>
-            <Button type="submit" disabled={addClient.isPending}>
-              {addClient.isPending ? 'שומר...' : 'שמור'}
+            <Button 
+              type="submit" 
+              disabled={addClient.isPending || authLoading || !orgId}
+            >
+              {authLoading ? 'טוען...' : addClient.isPending ? 'שומר...' : 'שמור'}
             </Button>
           </div>
         </form>

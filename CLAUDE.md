@@ -5,8 +5,90 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 15:38 UTC  
-**Версия:** 2.4.8
+**Последнее обновление:** 2026-02-10 15:50 UTC  
+**Версия:** 2.4.9
+
+---
+
+## ⚡ ОБНОВЛЕНИЯ v2.4.9 (2026-02-10 15:50) - CRITICAL FIX
+
+### 🐛 Critical Fix: Auth Not Loading When Navigating From Admin to CRM
+
+**Проблема:**
+- Пользователь логинится → попадает в админку (работает)
+- Нажимает "חזרה למערכת" → переход в CRM
+- Показывает "לא מחובר למערכת אנא התחבר מחדש" (Не подключен)
+- useAuth() не обновляется при navigation
+
+**Root Cause:**
+- useAuth() загружается только при initial mount
+- Client-side navigation из /admin в / не триггерит refetch
+- React hooks не перезагружаются при routing
+- onAuthStateChange не срабатывает для той же session
+
+**Решение:**
+
+1. **useAuth() - Pathname Monitoring:**
+```typescript
+import { usePathname } from 'next/navigation'
+
+const pathname = usePathname()
+
+useEffect(() => {
+  console.log('[useAuth] Pathname changed:', pathname)
+  if (!isLoading) {
+    loadAuth()  // Refetch on every route change!
+  }
+}, [pathname])
+```
+
+2. **Dashboard Layout - Unconditional Refetch:**
+```typescript
+useEffect(() => {
+  // ALWAYS refetch on mount (critical for /admin → / navigation)
+  refetch()
+}, [])
+```
+
+3. **UserProfileSheet - Better Loading Check:**
+```typescript
+// Don't show "not connected" while loading
+{!authLoading && user ? (
+  <Profile />
+) : (
+  <NotConnected />
+)}
+```
+
+**Изменения:**
+- ✅ `src/hooks/useAuth.ts` - следит за pathname, refetch при изменении
+- ✅ `src/app/(dashboard)/layout.tsx` - безусловный refetch при mount
+- ✅ `src/components/user/UserProfileSheet.tsx` - корректная проверка loading
+
+**Debug Logs:**
+```
+[useAuth] Pathname changed: /
+[useAuth] Current state before refetch: { hasUser: false, orgId: null }
+[useAuth] Triggering refetch due to pathname change...
+[useAuth] ========== START loadAuth ==========
+[useAuth] ✅ User found: { id: "...", email: "..." }
+[useAuth] ✅ Found org_id: ...
+[DashboardLayout] ===== MOUNTED =====
+[DashboardLayout] Forcing refetch on mount...
+```
+
+**Результат:**
+- ✅ Auth refetch при каждой навигации
+- ✅ User data загружается при переходе из админки
+- ✅ Нет ложных "not connected" сообщений
+- ✅ Session сохраняется между страницами
+
+**Тестирование:**
+1. Логин → попадаете в админку
+2. "חזרה למערכת" → переход в CRM
+3. Смотрите console (F12) - должны быть логи refetch
+4. Профиль показывает ваши данные
+5. Можете добавлять клиентов
 
 ---
 

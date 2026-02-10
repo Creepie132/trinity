@@ -104,13 +104,31 @@ export function useAuth(): UseAuthResult {
   }
 
   useEffect(() => {
+    console.log('[useAuth] useEffect triggered - initial mount')
     loadAuth()
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
+    console.log('[useAuth] Setting up onAuthStateChange listener...')
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[useAuth] Auth state changed:', {
+        event,
+        hasSession: !!session,
+        hasUser: !!session?.user
+      })
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        console.log('[useAuth] Session updated - reloading auth...')
+        loadAuth()
+      } else if (event === 'SIGNED_OUT') {
+        console.log('[useAuth] User signed out - clearing state')
+        setUser(null)
+        setOrgId(null)
+        setIsAdmin(false)
+      } else if (session?.user) {
+        console.log('[useAuth] Other event with user - reloading auth...')
         loadAuth()
       } else {
+        console.log('[useAuth] No session - clearing state')
         setUser(null)
         setOrgId(null)
         setIsAdmin(false)
@@ -118,6 +136,7 @@ export function useAuth(): UseAuthResult {
     })
 
     return () => {
+      console.log('[useAuth] Cleaning up - unsubscribing from auth changes')
       subscription.unsubscribe()
     }
   }, [])

@@ -1,7 +1,10 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileHeader } from '@/components/layout/MobileHeader'
+import { useAuth } from '@/hooks/useAuth'
 
 /**
  * DashboardLayout — основной макет.
@@ -13,6 +16,52 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const router = useRouter()
+  const { user, isLoading, refetch } = useAuth()
+
+  useEffect(() => {
+    console.log('[DashboardLayout] Mounted - checking auth...')
+    console.log('[DashboardLayout] User:', user?.id ? 'Present' : 'Missing')
+    console.log('[DashboardLayout] Loading:', isLoading)
+
+    // Force refetch on mount to ensure fresh auth data
+    if (!isLoading && !user) {
+      console.log('[DashboardLayout] User missing - forcing refetch...')
+      refetch()
+    }
+  }, [])
+
+  useEffect(() => {
+    console.log('[DashboardLayout] Auth state changed:', {
+      hasUser: !!user,
+      userId: user?.id,
+      isLoading
+    })
+
+    // If not loading and still no user, redirect to login
+    if (!isLoading && !user) {
+      console.warn('[DashboardLayout] No user after loading - redirecting to login')
+      router.push('/login')
+    }
+  }, [user, isLoading, router])
+
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-slate-600 dark:text-slate-400">טוען...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render if no user
+  if (!user) {
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col">
       {/* Мобильный header */}

@@ -45,22 +45,34 @@ export async function GET() {
     }
 
     // Get organization membership (if any)
-    const { data: orgData } = await supabase
+    const { data: orgUser } = await supabase
       .from('org_users')
-      .select(`
-        org_id,
-        role,
-        organizations (
-          id,
-          name,
-          phone
-        )
-      `)
+      .select('org_id, role')
       .eq('user_id', user.id)
       .maybeSingle()
 
+    let organization = null
+    let orgPhone = ''
+
+    if (orgUser?.org_id) {
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('id, name, phone')
+        .eq('id', orgUser.org_id)
+        .single()
+
+      if (orgData) {
+        organization = {
+          id: orgData.id,
+          name: orgData.name,
+          role: orgUser.role
+        }
+        orgPhone = orgData.phone || ''
+      }
+    }
+
     // Get phone from auth metadata or org
-    const phone = user.phone || orgData?.organizations?.phone || ''
+    const phone = user.phone || orgPhone
 
     return NextResponse.json({
       id: adminData.id,
@@ -68,11 +80,7 @@ export async function GET() {
       full_name: adminData.full_name,
       role: adminData.role,
       phone: phone,
-      organization: orgData ? {
-        id: orgData.organizations.id,
-        name: orgData.organizations.name,
-        role: orgData.role
-      } : null
+      organization: organization
     })
 
   } catch (error: any) {

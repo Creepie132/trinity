@@ -5,8 +5,141 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 17:10 UTC  
-**Версия:** 2.5.2
+**Последнее обновление:** 2026-02-10 17:20 UTC  
+**Версия:** 2.5.3
+
+---
+
+## ⚡ ОБНОВЛЕНИЯ v2.5.3 (2026-02-10 17:20) - Comprehensive Fix Pack
+
+### 🔧 TASK 1: Fix "Unauthorized" on מנה כמנהל Button
+
+**Проблема:**
+Кнопка "מנה כמנהל" (Make Admin/Manager) на странице клиентов возвращала "Unauthorized"
+
+**Root Cause:**
+`/api/admin/assign` использовал старый `supabase` клиент без cookies:
+```typescript
+// ❌ БЫЛО
+import { supabase } from '@/lib/supabase'
+```
+
+**Решение:**
+```typescript
+// ✅ СТАЛО
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+const cookieStore = await cookies()
+const supabase = createServerClient(..., { cookies })
+```
+
+**Результат:**
+- ✅ POST /api/admin/assign работает
+- ✅ DELETE /api/admin/assign работает
+- ✅ Админ может назначать роли
+- ✅ Session правильно читается из cookies
+
+---
+
+### 🔧 TASK 2: Move CRM Profile Modal to RIGHT
+
+**Проблема:**
+Profile sheet в CRM открывался слева (неправильно для RTL интерфейса)
+
+**Решение:**
+```typescript
+// БЫЛО: side="left"
+// СТАЛО: side="right"
+<SheetContent side="right">
+```
+
+**Результат:**
+- ✅ Profile sheet открывается справа
+- ✅ Соответствует поведению Admin Panel
+- ✅ Правильный RTL experience
+
+---
+
+### 🔧 TASK 3: Fix Clients Table Alignment
+
+**Проблема:**
+Headers таблицы клиентов были не выровнены с данными
+
+**Решение:**
+```typescript
+// Добавлено className="text-right" ко всем headers
+<TableHead className="text-right">שם</TableHead>
+<TableHead className="text-right">טלפון</TableHead>
+<TableHead className="text-right">ביקור אחרון</TableHead>
+<TableHead className="text-right">סך ביקורים</TableHead>
+<TableHead className="text-right">סך תשלומים</TableHead>
+<TableHead className="text-left">פעולות</TableHead> // Кнопки слева
+```
+
+**Результат:**
+- ✅ Headers выровнены с данными
+- ✅ Читаемая таблица
+- ✅ Правильный RTL layout
+
+---
+
+### 🔧 TASK 4: Improve "Add User to Org" in Admin Panel
+
+**Проблема:**
+При добавлении пользователя в организацию нужно было вручную вводить email
+
+**Улучшение:**
+Добавлен Select/Combobox с существующими клиентами:
+
+**Функции:**
+1. Загружает клиентов из выбранной организации
+2. Фильтрует только клиентов с email
+3. Select показывает: "Имя Фамилия (email)"
+4. Fallback на ручной ввод email если нет клиентов
+5. Input отключается если выбран клиент
+6. Loading state при загрузке
+
+**Код:**
+```typescript
+// Load clients when dialog opens
+useEffect(() => {
+  if (addUserDialogOpen && selectedOrgId) {
+    supabase
+      .from('clients')
+      .select('id, first_name, last_name, email')
+      .eq('org_id', selectedOrgId)
+      .not('email', 'is', null)
+      .order('first_name')
+  }
+}, [addUserDialogOpen, selectedOrgId])
+
+// UI
+<Select value={selectedClientId} onValueChange={setSelectedClientId}>
+  {orgClients.map(client => (
+    <SelectItem value={client.id}>
+      {client.first_name} {client.last_name} ({client.email})
+    </SelectItem>
+  ))}
+</Select>
+```
+
+**Результат:**
+- ✅ Dropdown с клиентами
+- ✅ Удобный выбор вместо ручного ввода
+- ✅ Показывает имя + email
+- ✅ Fallback на manual input
+- ✅ Loading state
+
+---
+
+**Файлы изменены:**
+1. `src/app/api/admin/assign/route.ts` - session from cookies (TASK 1)
+2. `src/components/user/UserProfileSheet.tsx` - side="right" (TASK 2)
+3. `src/app/(dashboard)/clients/page.tsx` - table alignment (TASK 3)
+4. `src/app/admin/organizations/page.tsx` - client select (TASK 4)
+
+**Все 4 задачи выполнены!** ✅
 
 ---
 

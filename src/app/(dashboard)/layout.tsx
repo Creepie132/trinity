@@ -20,15 +20,15 @@ export default function DashboardLayout({
   const { user, isLoading, refetch } = useAuth()
 
   useEffect(() => {
-    console.log('[DashboardLayout] Mounted - checking auth...')
-    console.log('[DashboardLayout] User:', user?.id ? 'Present' : 'Missing')
+    console.log('[DashboardLayout] ===== MOUNTED =====')
+    console.log('[DashboardLayout] User:', user?.id ? `Present (${user.id})` : 'Missing')
+    console.log('[DashboardLayout] Org ID:', orgId || 'Missing')
     console.log('[DashboardLayout] Loading:', isLoading)
 
-    // Force refetch on mount to ensure fresh auth data
-    if (!isLoading && !user) {
-      console.log('[DashboardLayout] User missing - forcing refetch...')
-      refetch()
-    }
+    // ALWAYS force refetch on mount to ensure fresh auth data
+    // This is critical when navigating from /admin to /
+    console.log('[DashboardLayout] Forcing refetch on mount...')
+    refetch()
   }, [])
 
   useEffect(() => {

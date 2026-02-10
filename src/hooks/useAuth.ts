@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 type UseAuthResult = {
@@ -13,6 +14,7 @@ type UseAuthResult = {
 }
 
 export function useAuth(): UseAuthResult {
+  const pathname = usePathname()
   const [user, setUser] = useState<any | null>(null)
   const [orgId, setOrgId] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
@@ -140,6 +142,22 @@ export function useAuth(): UseAuthResult {
       subscription.unsubscribe()
     }
   }, [])
+
+  // Refetch auth when pathname changes (navigation between pages)
+  useEffect(() => {
+    console.log('[useAuth] Pathname changed:', pathname)
+    console.log('[useAuth] Current state before refetch:', { 
+      hasUser: !!user, 
+      userId: user?.id,
+      orgId 
+    })
+    
+    // Force refetch on route change to ensure fresh auth data
+    if (!isLoading) {
+      console.log('[useAuth] Triggering refetch due to pathname change...')
+      loadAuth()
+    }
+  }, [pathname])
 
   const signOut = async () => {
     await supabase.auth.signOut()

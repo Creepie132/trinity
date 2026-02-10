@@ -43,7 +43,7 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
               <p className="text-slate-600 dark:text-slate-400">טוען פרופיל...</p>
             </div>
           </div>
-        ) : user ? (
+        ) : !authLoading && user ? (
           <div className="space-y-6 py-6">
             {/* Avatar & User Info */}
             <div className="flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl border-2 border-blue-100 dark:border-slate-600">

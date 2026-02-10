@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAddClient } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
+import { RefreshCw } from 'lucide-react'
 
 interface AddClientDialogProps {
   open: boolean
@@ -15,7 +16,7 @@ interface AddClientDialogProps {
 }
 
 export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
-  const { orgId, isLoading: authLoading } = useAuth()
+  const { orgId, isLoading: authLoading, user, refetch } = useAuth()
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -27,6 +28,16 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
   })
 
   const addClient = useAddClient()
+
+  // Debug: Log orgId when dialog opens
+  useEffect(() => {
+    if (open) {
+      console.log('[AddClientDialog] Dialog opened')
+      console.log('[AddClientDialog] User:', user?.id)
+      console.log('[AddClientDialog] OrgId:', orgId)
+      console.log('[AddClientDialog] Auth loading:', authLoading)
+    }
+  }, [open, user, orgId, authLoading])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -143,8 +154,28 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
 
           {/* Warning if orgId is missing */}
           {!authLoading && !orgId && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-800 dark:text-red-200">
-              ⚠️ לא נמצא ארגון למשתמש. אנא פנה לתמיכה.
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <span className="text-xl">⚠️</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-800 dark:text-red-200">
+                    לא נמצא ארגון למשתמש
+                  </p>
+                  <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                    User ID: {user?.id || 'לא זמין'}
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                className="w-full border-red-300 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900"
+              >
+                <RefreshCw className="w-4 h-4 ml-2" />
+                רענן נתונים
+              </Button>
             </div>
           )}
 

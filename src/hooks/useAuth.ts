@@ -9,28 +9,22 @@ type UseAuthResult = {
   isAdmin: boolean
   isLoading: boolean
   signOut: () => Promise<void>
+  refetch: () => Promise<void>
 }
-
-let cachedOrgId: string | null = null
-let cachedIsAdmin: boolean | null = null
 
 export function useAuth(): UseAuthResult {
   const [user, setUser] = useState<any | null>(null)
-  const [orgId, setOrgId] = useState<string | null>(cachedOrgId)
-  const [isAdmin, setIsAdmin] = useState<boolean>(cachedIsAdmin ?? false)
+  const [orgId, setOrgId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    let mounted = true
+  const loadAuth = async () => {
+    setIsLoading(true)
 
-    const loadAuth = async () => {
-      setIsLoading(true)
-
+    try {
       const {
         data: { user },
       } = await supabase.auth.getUser()
-
-      if (!mounted) return
 
       if (!user) {
         setUser(null)
@@ -42,51 +36,74 @@ export function useAuth(): UseAuthResult {
 
       setUser(user)
 
-      // если уже кэшировали — не идём в БД
-      if (cachedOrgId !== null || cachedIsAdmin !== null) {
-        setOrgId(cachedOrgId)
-        setIsAdmin(Boolean(cachedIsAdmin))
-        setIsLoading(false)
-        return
-      }
+      console.log('[useAuth] Loading auth for user:', user.id)
 
-      // проверка admin
-      const { data: adminRow } = await supabase
+      // Проверка admin (по user_id)
+      const { data: adminRow, error: adminError } = await supabase
         .from('admin_users')
         .select('email')
         .eq('user_id', user.id)
         .maybeSingle()
 
-      const isAdminUser = !!adminRow
+      if (adminError) {
+        console.error('[useAuth] Admin check error:', adminError)
+      }
 
-      // проверка org_users (для всех, включая админов)
-      // ВАЖНО: ищем по user_id, а не по email!
-      const { data: orgRow } = await supabase
+      const isAdminUser = !!adminRow
+      console.log('[useAuth] Is admin:', isAdminUser)
+
+      // Проверка org_users (по user_id)
+      const { data: orgRow, error: orgError } = await supabase
         .from('org_users')
         .select('org_id')
         .eq('user_id', user.id)
         .maybeSingle()
 
-      cachedIsAdmin = isAdminUser
-      cachedOrgId = orgRow?.org_id ?? null
+      if (orgError) {
+        console.error('[useAuth] Org check error:', orgError)
+      }
+
+      const userOrgId = orgRow?.org_id ?? null
+      console.log('[useAuth] Org ID:', userOrgId)
 
       setIsAdmin(isAdminUser)
-      setOrgId(orgRow?.org_id ?? null)
+      setOrgId(userOrgId)
+      setIsLoading(false)
+    } catch (error) {
+      console.error('[useAuth] Load error:', error)
       setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     loadAuth()
 
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadAuth()
+      } else {
+        setUser(null)
+        setOrgId(null)
+        setIsAdmin(false)
+      }
+    })
+
     return () => {
-      mounted = false
+      subscription.unsubscribe()
     }
   }, [])
 
   const signOut = async () => {
-    cachedOrgId = null
-    cachedIsAdmin = null
     await supabase.auth.signOut()
+    setUser(null)
+    setOrgId(null)
+    setIsAdmin(false)
     window.location.href = '/login'
+  }
+
+  const refetch = async () => {
+    await loadAuth()
   }
 
   return {
@@ -95,5 +112,6 @@ export function useAuth(): UseAuthResult {
     isAdmin,
     isLoading,
     signOut,
+    refetch,
   }
 }

@@ -26,15 +26,44 @@ export function useAuth(): UseAuthResult {
     setIsLoading(true)
 
     try {
-      console.log('[useAuth] Calling supabase.auth.getUser()...')
-      const startTime = performance.now()
+      // CRITICAL FIX: Check session FIRST before making any DB queries
+      // This prevents race condition where we try to fetch user before session is restored from localStorage
+      console.log('[useAuth] Step 1: Checking for existing session...')
+      const sessionStartTime = performance.now()
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      const sessionEndTime = performance.now()
+      
+      console.log('[useAuth] Session check completed in', Math.round(sessionEndTime - sessionStartTime), 'ms')
+      console.log('[useAuth] Session result:', {
+        hasSession: !!session,
+        sessionError: sessionError?.message
+      })
+
+      if (sessionError) {
+        console.error('[useAuth] ❌ Session ERROR:', sessionError)
+      }
+
+      // If no session exists, don't even try to get user or query DB
+      if (!session) {
+        console.warn('[useAuth] ⚠️ No session found - user not logged in')
+        setUser(null)
+        setOrgId(null)
+        setIsAdmin(false)
+        setIsLoading(false)
+        console.log('[useAuth] ========== END loadAuth (no session) ==========')
+        return
+      }
+
+      // Session exists, now safe to get user
+      console.log('[useAuth] Step 2: Session found, getting user details...')
+      const userStartTime = performance.now()
       const {
         data: { user },
         error: getUserError
       } = await supabase.auth.getUser()
-      const endTime = performance.now()
+      const userEndTime = performance.now()
 
-      console.log('[useAuth] GetUser completed in', Math.round(endTime - startTime), 'ms')
+      console.log('[useAuth] GetUser completed in', Math.round(userEndTime - userStartTime), 'ms')
       console.log('[useAuth] GetUser result:', { 
         user: user ? { 
           id: user.id, 
@@ -49,18 +78,19 @@ export function useAuth(): UseAuthResult {
         console.error('[useAuth] Error name:', getUserError.name)
         console.error('[useAuth] Error message:', getUserError.message)
         
-        // If AuthSessionMissingError - session not found in cookies/storage
+        // If AuthSessionMissingError despite session check - clear everything
         if (getUserError.name === 'AuthSessionMissingError') {
-          console.warn('[useAuth] 🔴 Auth session missing - user needs to login')
-          console.warn('[useAuth] This usually means:')
-          console.warn('[useAuth] 1. Session expired')
-          console.warn('[useAuth] 2. Cookies cleared')
-          console.warn('[useAuth] 3. Never logged in')
+          console.error('[useAuth] 🔴 AuthSessionMissingError AFTER session check - clearing state')
+          setUser(null)
+          setOrgId(null)
+          setIsAdmin(false)
+          setIsLoading(false)
+          return
         }
       }
 
       if (!user) {
-        console.warn('[useAuth] ⚠️ No user found - setting everything to null')
+        console.warn('[useAuth] ⚠️ No user found despite session - setting everything to null')
         setUser(null)
         setOrgId(null)
         setIsAdmin(false)
@@ -78,14 +108,17 @@ export function useAuth(): UseAuthResult {
 
       setUser(user)
 
-      // Проверка admin (по user_id)
-      console.log('[useAuth] Checking admin status for user_id:', user.id)
+      // Step 3: Check admin status (safe to query DB now that we have confirmed session + user)
+      console.log('[useAuth] Step 3: Checking admin status for user_id:', user.id)
+      const adminStartTime = performance.now()
       const { data: adminRow, error: adminError } = await supabase
         .from('admin_users')
         .select('email')
         .eq('user_id', user.id)
         .maybeSingle()
+      const adminEndTime = performance.now()
 
+      console.log('[useAuth] Admin check completed in', Math.round(adminEndTime - adminStartTime), 'ms')
       if (adminError) {
         console.error('[useAuth] ❌ Admin check error:', adminError)
       } else {
@@ -94,14 +127,17 @@ export function useAuth(): UseAuthResult {
 
       const isAdminUser = !!adminRow
 
-      // Проверка org_users (по user_id)
-      console.log('[useAuth] Checking org_users for user_id:', user.id)
+      // Step 4: Check org_users (safe to query DB)
+      console.log('[useAuth] Step 4: Checking org_users for user_id:', user.id)
+      const orgStartTime = performance.now()
       const { data: orgRow, error: orgError } = await supabase
         .from('org_users')
         .select('org_id')
         .eq('user_id', user.id)
         .maybeSingle()
+      const orgEndTime = performance.now()
 
+      console.log('[useAuth] Org check completed in', Math.round(orgEndTime - orgStartTime), 'ms')
       if (orgError) {
         console.error('[useAuth] ❌ Org check error:', orgError)
       } else {
@@ -119,7 +155,7 @@ export function useAuth(): UseAuthResult {
       setOrgId(userOrgId)
       setIsLoading(false)
       console.log('[useAuth] ========== END loadAuth ==========')
-      console.log('[useAuth] Total time:', Math.round(performance.now() - startTime), 'ms')
+      console.log('[useAuth] Total time:', Math.round(performance.now() - sessionStartTime), 'ms')
     } catch (error) {
       console.error('[useAuth] ❌❌❌ EXCEPTION:', error)
       setUser(null)

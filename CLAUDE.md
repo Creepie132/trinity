@@ -5,8 +5,114 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 19:22 UTC  
-**Версия:** 2.6.0
+**Последнее обновление:** 2026-02-10 19:55 UTC  
+**Версия:** 2.6.1
+
+---
+
+## ⚡ ОБНОВЛЕНИЯ v2.6.1 (2026-02-10 19:55) - CRITICAL BUG FIXES 🔴
+
+### 🐛 BUG 1: Duplicate Organizations (Double Submit)
+
+**Проблема:**
+Кнопка "צור ארגון" не блокировалась при клике → можно было создать несколько организаций одним кликом.
+
+**Решение:**
+```tsx
+// Добавлен state:
+const [isSubmitting, setIsSubmitting] = useState(false)
+
+// В handleCreateOrg:
+if (isSubmitting) return
+setIsSubmitting(true)
+try {
+  // ... create logic
+} finally {
+  setIsSubmitting(false)
+}
+
+// В кнопке:
+<Button disabled={!valid || isSubmitting}>
+  {isSubmitting ? (
+    <>
+      <Spinner />
+      יוצר...
+    </>
+  ) : 'צור ארגון'}
+</Button>
+```
+
+**Результат:**
+- ✅ Кнопка блокируется сразу после клика
+- ✅ Показывается spinner "יוצר..."
+- ✅ Кнопка "ביטול" тоже блокируется
+- ✅ Невозможно отправить дважды
+
+---
+
+### 🐛 BUG 2: "Access Denied" for Existing Users (CRITICAL!)
+
+**Проблема:**
+Если user **уже существует** в `auth.users` (уже логинился), система создавала запись в `invitations` вместо того чтобы сразу добавить в `org_users`.
+
+**Сценарий:**
+1. User `user@gmail.com` уже залогинен в системе
+2. Админ создаёт org, выбирает этого user как owner
+3. ❌ Система создавала invitation
+4. ❌ Trigger **не срабатывал** (user уже существует, INSERT не происходит)
+5. ❌ User логинится → видит "Access Denied" (нет записи в org_users)
+
+**Root Cause:**
+Старая логика использовала `supabase.rpc('get_user_by_email')`, которая не работала правильно.
+
+**Решение:**
+```typescript
+// ❌ БЫЛО (не работало):
+const { data: existingUsers } = await supabase.rpc('get_user_by_email', {
+  email_param: client.email
+})
+
+// ✅ СТАЛО (правильно):
+const { data: authUsers } = await supabase.auth.admin.listUsers()
+const existingUser = authUsers?.users?.find(
+  u => u.email?.toLowerCase() === client.email.toLowerCase()
+)
+
+if (existingUser) {
+  // User EXISTS → вставить СРАЗУ в org_users
+  await supabase.from('org_users').insert({
+    org_id: org.id,
+    user_id: existingUser.id,
+    email: client.email,
+    role: 'owner',
+  })
+  // НЕ создавать invitation!
+} else {
+  // User NOT EXISTS → создать invitation
+  await supabase.from('invitations').insert({ ... })
+}
+```
+
+**Изменения:**
+1. Используем `supabase.auth.admin.listUsers()` вместо RPC
+2. Case-insensitive поиск по email
+3. Если user найден → **сразу в org_users**, БЕЗ invitation
+4. Если не найден → создаём invitation (как раньше)
+5. Добавлены подробные логи и error handling
+
+**Результат:**
+- ✅ Existing users сразу назначаются (immediate assignment)
+- ✅ New users получают invitation (trigger сработает при первом логине)
+- ✅ Нет "Access Denied" для existing users
+- ✅ Логи показывают какой путь был выбран
+
+---
+
+**Файлы изменены:**
+- ✅ `src/app/admin/organizations/page.tsx` - isSubmitting state + disabled button
+- ✅ `src/app/api/admin/organizations/create/route.ts` - auth.admin.listUsers() logic
+
+**Priority:** CRITICAL - Production blocker исправлен
 
 ---
 

@@ -1,8 +1,40 @@
 # 📧 Invitation System - Pre-Assignment Feature
 
-**Version:** 1.0.0  
-**Date:** 2026-02-10  
-**Status:** ✅ Implemented
+**Version:** 1.0.1  
+**Date:** 2026-02-10 (Updated 19:55 UTC)  
+**Status:** ✅ Implemented + Critical Bug Fixes
+
+---
+
+## 🔴 Critical Bug Fixes (v1.0.1)
+
+### BUG 1: Duplicate Organizations (Double Submit)
+- **Problem:** Button not disabled on click → multiple orgs created
+- **Fix:** Added `isSubmitting` state, button disabled during API call
+- **Status:** ✅ Fixed
+
+### BUG 2: Access Denied for Existing Users (CRITICAL!)
+- **Problem:** Used `get_user_by_email()` RPC which didn't work correctly
+- **Scenario:** Existing user → invitation created → trigger never fires → Access Denied
+- **Fix:** Changed to `supabase.auth.admin.listUsers()` for proper user lookup
+- **Status:** ✅ Fixed
+
+**Updated Logic:**
+```typescript
+// Use auth.admin.listUsers() instead of RPC
+const { data: authUsers } = await supabase.auth.admin.listUsers()
+const existingUser = authUsers?.users?.find(
+  u => u.email?.toLowerCase() === email.toLowerCase()
+)
+
+if (existingUser) {
+  // User EXISTS → insert directly into org_users (NO invitation)
+  await supabase.from('org_users').insert({ ... })
+} else {
+  // User NOT EXISTS → create invitation
+  await supabase.from('invitations').insert({ ... })
+}
+```
 
 ---
 

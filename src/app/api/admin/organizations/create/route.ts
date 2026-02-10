@@ -82,11 +82,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TASK 2: Pre-Assignment Logic (Invitation System)
+    // BUG FIX 2: Pre-Assignment Logic (Invitation System)
     // Check if user with this email already exists in auth.users
-    const { data: existingUsers } = await supabase.rpc('get_user_by_email', {
-      email_param: client.email
-    })
+    // Use auth.admin.listUsers() instead of RPC function
+    const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers()
+
+    if (listError) {
+      console.error('Error listing users:', listError)
+      // Continue anyway, will create invitation
+    }
+
+    // Find user by email (case-insensitive)
+    const existingUser = authUsers?.users?.find(
+      u => u.email?.toLowerCase() === client.email.toLowerCase()
+    )
 
     let assignmentResult = {
       immediate: false,
@@ -94,9 +103,9 @@ export async function POST(request: NextRequest) {
       userId: null as string | null,
     }
 
-    if (existingUsers && existingUsers.length > 0) {
-      // User exists → assign immediately to org_users
-      const existingUser = existingUsers[0]
+    if (existingUser) {
+      // BUG FIX 2: User exists → assign immediately to org_users
+      console.log('[CREATE ORG] User exists in auth.users:', existingUser.id, existingUser.email)
       
       const { error: orgUserError } = await supabase
         .from('org_users')
@@ -110,13 +119,19 @@ export async function POST(request: NextRequest) {
 
       if (orgUserError) {
         console.error('Error assigning user to org:', orgUserError)
-        // Don't fail the request if org was created successfully
+        return NextResponse.json(
+          { error: `Failed to assign user: ${orgUserError.message}` },
+          { status: 500 }
+        )
       } else {
+        console.log('[CREATE ORG] ✅ User assigned immediately to org_users')
         assignmentResult.immediate = true
         assignmentResult.userId = existingUser.id
       }
     } else {
-      // User doesn't exist → create invitation
+      // BUG FIX 2: User doesn't exist → create invitation
+      console.log('[CREATE ORG] User does NOT exist in auth.users, creating invitation')
+      
       const { error: invitationError } = await supabase
         .from('invitations')
         .insert({
@@ -129,8 +144,12 @@ export async function POST(request: NextRequest) {
 
       if (invitationError) {
         console.error('Error creating invitation:', invitationError)
-        // Don't fail the request if org was created successfully
+        return NextResponse.json(
+          { error: `Failed to create invitation: ${invitationError.message}` },
+          { status: 500 }
+        )
       } else {
+        console.log('[CREATE ORG] ✅ Invitation created')
         assignmentResult.invitation = true
       }
     }

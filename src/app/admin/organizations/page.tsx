@@ -56,6 +56,7 @@ export default function OrganizationsPage() {
   const [allClients, setAllClients] = useState<Array<{id: string, first_name: string, last_name: string, email: string | null, org_id: string | null}>>([])
   const [loadingAllClients, setLoadingAllClients] = useState(false)
   const [selectedOwnerClientId, setSelectedOwnerClientId] = useState<string>('')
+  const [isSubmitting, setIsSubmitting] = useState(false) // BUG FIX 1: Prevent double submit
 
   const [newOrg, setNewOrg] = useState({
     name: '',
@@ -101,6 +102,13 @@ export default function OrganizationsPage() {
       return
     }
 
+    // BUG FIX 1: Prevent double submit
+    if (isSubmitting) {
+      return
+    }
+
+    setIsSubmitting(true)
+
     try {
       // Call new API route for invitation system
       const response = await fetch('/api/admin/organizations/create', {
@@ -141,6 +149,8 @@ export default function OrganizationsPage() {
       setSelectedOwnerClientId('')
     } catch (error: any) {
       toast.error(`שגיאה: ${error.message}`)
+    } finally {
+      setIsSubmitting(false) // BUG FIX 1: Reset submitting state
     }
   }
 
@@ -432,11 +442,25 @@ export default function OrganizationsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setAddDialogOpen(false)}
+              disabled={isSubmitting}
+            >
               ביטול
             </Button>
-            <Button onClick={handleCreateOrg} disabled={!newOrg.name || !selectedOwnerClientId}>
-              צור ארגון
+            <Button 
+              onClick={handleCreateOrg} 
+              disabled={!newOrg.name || !selectedOwnerClientId || isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2" />
+                  יוצר...
+                </>
+              ) : (
+                'צור ארגון'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

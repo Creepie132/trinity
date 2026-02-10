@@ -1,12 +1,60 @@
 # 📧 Invitation System - Pre-Assignment Feature
 
-**Version:** 1.0.1  
-**Date:** 2026-02-10 (Updated 19:55 UTC)  
+**Version:** 1.0.2  
+**Date:** 2026-02-10 (Updated 21:18 UTC)  
 **Status:** ✅ Implemented + Critical Bug Fixes
 
 ---
 
-## 🔴 Critical Bug Fixes (v1.0.1)
+## 🔴 Critical Bug Fixes
+
+### v1.0.2 (21:18 UTC) - User ID Mismatch 🔴 CRITICAL
+
+**Problem: Client ID ≠ Auth User ID**
+
+When selecting a CRM Client as Organization Owner:
+- `public.clients.id` = `9042...` (CRM database UUID)
+- `auth.users.id` = `90fd...` (Supabase Auth UUID)
+- **These are DIFFERENT UUIDs for the same email!**
+
+**Old Logic (WRONG):**
+```typescript
+const client = await supabase.from('clients').select('*').eq('id', clientId)
+await supabase.from('org_users').insert({
+  user_id: client.id // ❌ WRONG! CRM ID, not Auth ID
+})
+```
+
+**Result:** User logs in with auth.id `90fd...` but org_users has `9042...` → Access Denied
+
+**Fix:**
+1. Get client ONLY for email (ignore client.id)
+2. Lookup in auth.users by email (`auth.admin.listUsers()`)
+3. Use ONLY auth user.id for org_users insert
+
+```typescript
+// ✅ CORRECT
+const client = await getClient(clientId) // Get email only
+const authUsers = await supabase.auth.admin.listUsers()
+const authUser = authUsers.users.find(u => u.email === client.email)
+
+if (authUser) {
+  // Use AUTH USER ID (not client.id)
+  await supabase.from('org_users').insert({
+    user_id: authUser.id // ✅ Auth ID from auth.users
+  })
+}
+```
+
+**Changes:**
+- ✅ Detailed logging showing CRM ID vs Auth ID
+- ✅ Explicit comments: "DO NOT USE client.id for permissions"
+- ✅ Response includes both IDs for debugging
+- ✅ ALWAYS uses auth.users.id for org_users
+
+---
+
+### v1.0.1 (19:55 UTC) - Previous Fixes
 
 ### BUG 1: Duplicate Organizations (Double Submit)
 - **Problem:** Button not disabled on click → multiple orgs created

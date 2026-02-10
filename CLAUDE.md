@@ -5,8 +5,106 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 19:55 UTC  
-**Версия:** 2.6.1
+**Последнее обновление:** 2026-02-10 21:18 UTC  
+**Версия:** 2.6.2
+
+---
+
+## ⚡ ОБНОВЛЕНИЯ v2.6.2 (2026-02-10 21:18) - CRITICAL ID MISMATCH FIX 🔴
+
+### 🐛 CRITICAL: User ID Mismatch (Client vs Auth)
+
+**Проблема:**
+Выбирается **Client** из CRM (`public.clients`) как owner организации, но:
+- `public.clients.id` = `9042...` (CRM UUID)
+- `auth.users.id` = `90fd...` (Supabase Auth UUID для того же email)
+- Это **РАЗНЫЕ UUID** для одного и того же человека!
+
+**Старая логика (неправильная):**
+```typescript
+// ❌ ОПАСНОСТЬ: Использовался client.id для permissions
+const client = await supabase.from('clients').select('*').eq('id', clientId).single()
+await supabase.from('org_users').insert({
+  user_id: client.id // ← WRONG! This is CRM ID, not Auth ID
+})
+```
+
+**Результат:**
+- User логинится с auth.id = `90fd...`
+- В org_users записан user_id = `9042...` (CRM client.id)
+- User не может получить доступ → **Access Denied**
+
+---
+
+**Решение:**
+
+1. **Client ТОЛЬКО для email** (игнорировать client.id полностью)
+2. **Lookup в auth.users по email** через `auth.admin.listUsers()`
+3. **Использовать ТОЛЬКО auth user.id** для permissions
+
+```typescript
+// ✅ ПРАВИЛЬНО:
+// Step 1: Get client ONLY for email (ignore client.id)
+const client = await supabase.from('clients').select('email').eq('id', clientId).single()
+console.log('⚠️  Client CRM ID:', client.id, '← DO NOT USE for permissions')
+
+// Step 2: Lookup in auth.users by email
+const authUsers = await supabase.auth.admin.listUsers()
+const authUser = authUsers.users.find(u => u.email === client.email)
+
+// Step 3: Use AUTH USER ID (not client.id!)
+if (authUser) {
+  console.log('✅ Auth User ID:', authUser.id, '← USE THIS')
+  await supabase.from('org_users').insert({
+    user_id: authUser.id // ← CORRECT! Auth ID, not CRM ID
+  })
+}
+```
+
+---
+
+**Изменения:**
+
+1. **Подробные логи:**
+   ```
+   [CREATE ORG] ⚠️  Selected client from CRM:
+   [CREATE ORG]    - Client CRM ID: 9042... ← DO NOT USE for permissions
+   [CREATE ORG]    - Client Email: user@example.com
+   [CREATE ORG] 🔍 Looking up user in auth.users by email
+   [CREATE ORG] ✅ User found in auth.users:
+   [CREATE ORG]    - Auth User ID: 90fd... ← USE THIS
+   [CREATE ORG]    - Client CRM ID: 9042... ← IGNORE THIS
+   [CREATE ORG] ✅ User assigned with Auth ID: 90fd...
+   ```
+
+2. **Явные комментарии в коде:**
+   - `// CRITICAL: Use auth user ID, NOT client.id`
+   - `user_id: existingAuthUser.id // ← Auth ID, NOT client.id`
+
+3. **Response includes note:**
+   ```json
+   {
+     "assignment": {
+       "userId": "90fd...",
+       "authUserId": "90fd...",
+       "clientCrmId": "9042...",
+       "note": "userId is auth.users.id, NOT client.id"
+     }
+   }
+   ```
+
+---
+
+**Результат:**
+- ✅ ВСЕГДА используется auth.users.id для permissions
+- ✅ client.id используется ТОЛЬКО для display/reference
+- ✅ User может логиниться и видеть свою организацию
+- ✅ Нет Access Denied из-за ID mismatch
+
+**Файлы изменены:**
+- ✅ `src/app/api/admin/organizations/create/route.ts` - критический фикс + логи
+
+**Priority:** CRITICAL - без этого фикса permissions вообще не работают!
 
 ---
 

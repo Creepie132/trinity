@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get client details
+    // CRITICAL FIX: Get client ONLY for email, NEVER use client.id for permissions
+    // The client.id from public.clients is DIFFERENT from auth.users.id!
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('id, first_name, last_name, email, phone')
@@ -60,6 +61,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    console.log('[CREATE ORG] ⚠️  Selected client from CRM:')
+    console.log('[CREATE ORG]    - Client CRM ID:', client.id)
+    console.log('[CREATE ORG]    - Client Email:', client.email)
+    console.log('[CREATE ORG]    - ⚠️  DO NOT USE client.id for permissions!')
 
     // Create organization
     const { data: org, error: orgError } = await supabase
@@ -82,18 +88,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // BUG FIX 2: Pre-Assignment Logic (Invitation System)
-    // Check if user with this email already exists in auth.users
-    // Use auth.admin.listUsers() instead of RPC function
+    // CRITICAL FIX: Lookup user in auth.users by EMAIL (not by client.id!)
+    // The client.id from public.clients is DIFFERENT from auth.users.id
+    console.log('[CREATE ORG] 🔍 Looking up user in auth.users by email:', client.email)
+    
     const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers()
 
     if (listError) {
-      console.error('Error listing users:', listError)
+      console.error('[CREATE ORG] ❌ Error listing auth users:', listError)
       // Continue anyway, will create invitation
     }
 
     // Find user by email (case-insensitive)
-    const existingUser = authUsers?.users?.find(
+    // This returns the REAL auth user ID, NOT the CRM client ID
+    const existingAuthUser = authUsers?.users?.find(
       u => u.email?.toLowerCase() === client.email.toLowerCase()
     )
 
@@ -101,36 +109,48 @@ export async function POST(request: NextRequest) {
       immediate: false,
       invitation: false,
       userId: null as string | null,
+      authUserId: null as string | null,
+      clientCrmId: client.id, // For debugging only
     }
 
-    if (existingUser) {
-      // BUG FIX 2: User exists → assign immediately to org_users
-      console.log('[CREATE ORG] User exists in auth.users:', existingUser.id, existingUser.email)
+    if (existingAuthUser) {
+      // CRITICAL: User exists in auth.users → use AUTH USER ID (not client.id!)
+      console.log('[CREATE ORG] ✅ User found in auth.users:')
+      console.log('[CREATE ORG]    - Auth User ID:', existingAuthUser.id, '← USE THIS')
+      console.log('[CREATE ORG]    - Auth Email:', existingAuthUser.email)
+      console.log('[CREATE ORG]    - Client CRM ID:', client.id, '← IGNORE THIS')
+      console.log('[CREATE ORG]    - ⚠️  IMPORTANT: Using Auth ID, NOT Client ID!')
       
+      // CRITICAL: Insert into org_users with AUTH USER ID (existingAuthUser.id)
+      // NEVER use client.id here - it's a different UUID!
       const { error: orgUserError } = await supabase
         .from('org_users')
         .insert({
           org_id: org.id,
-          user_id: existingUser.id,
+          user_id: existingAuthUser.id, // ← CRITICAL: Auth ID, NOT client.id
           email: client.email,
           role: 'owner',
           invited_at: new Date().toISOString(),
         })
 
       if (orgUserError) {
-        console.error('Error assigning user to org:', orgUserError)
+        console.error('[CREATE ORG] ❌ Error assigning user to org:', orgUserError)
         return NextResponse.json(
           { error: `Failed to assign user: ${orgUserError.message}` },
           { status: 500 }
         )
       } else {
         console.log('[CREATE ORG] ✅ User assigned immediately to org_users')
+        console.log('[CREATE ORG]    - Inserted user_id:', existingAuthUser.id)
+        console.log('[CREATE ORG]    - org_id:', org.id)
         assignmentResult.immediate = true
-        assignmentResult.userId = existingUser.id
+        assignmentResult.userId = existingAuthUser.id
+        assignmentResult.authUserId = existingAuthUser.id
       }
     } else {
-      // BUG FIX 2: User doesn't exist → create invitation
-      console.log('[CREATE ORG] User does NOT exist in auth.users, creating invitation')
+      // User doesn't exist in auth.users → create invitation
+      console.log('[CREATE ORG] ℹ️  User NOT found in auth.users, creating invitation')
+      console.log('[CREATE ORG]    - Will be assigned automatically when they sign up')
       
       const { error: invitationError } = await supabase
         .from('invitations')
@@ -143,13 +163,13 @@ export async function POST(request: NextRequest) {
         })
 
       if (invitationError) {
-        console.error('Error creating invitation:', invitationError)
+        console.error('[CREATE ORG] ❌ Error creating invitation:', invitationError)
         return NextResponse.json(
           { error: `Failed to create invitation: ${invitationError.message}` },
           { status: 500 }
         )
       } else {
-        console.log('[CREATE ORG] ✅ Invitation created')
+        console.log('[CREATE ORG] ✅ Invitation created for email:', client.email)
         assignmentResult.invitation = true
       }
     }
@@ -158,13 +178,17 @@ export async function POST(request: NextRequest) {
       success: true,
       organization: org,
       client: {
-        id: client.id,
+        id: client.id, // CRM client ID (for display only)
         name: `${client.first_name} ${client.last_name}`,
         email: client.email,
       },
-      assignment: assignmentResult,
+      assignment: {
+        ...assignmentResult,
+        // NOTE: userId is the AUTH USER ID (from auth.users), NOT client.id
+        note: 'userId is the auth.users.id (Supabase Auth), NOT the CRM client.id',
+      },
       message: assignmentResult.immediate
-        ? 'Organization created and owner assigned immediately'
+        ? 'Organization created and owner assigned immediately (using Auth User ID)'
         : 'Organization created, invitation sent. Owner will be assigned on first login.',
     })
   } catch (error: any) {

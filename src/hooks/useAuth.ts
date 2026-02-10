@@ -46,6 +46,17 @@ export function useAuth(): UseAuthResult {
 
       if (getUserError) {
         console.error('[useAuth] ❌ GetUser ERROR:', getUserError)
+        console.error('[useAuth] Error name:', getUserError.name)
+        console.error('[useAuth] Error message:', getUserError.message)
+        
+        // If AuthSessionMissingError - session not found in cookies/storage
+        if (getUserError.name === 'AuthSessionMissingError') {
+          console.warn('[useAuth] 🔴 Auth session missing - user needs to login')
+          console.warn('[useAuth] This usually means:')
+          console.warn('[useAuth] 1. Session expired')
+          console.warn('[useAuth] 2. Cookies cleared')
+          console.warn('[useAuth] 3. Never logged in')
+        }
       }
 
       if (!user) {

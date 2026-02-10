@@ -1,6 +1,8 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// CRITICAL: Use createBrowserClient for Next.js App Router
+// This properly handles cookies and session storage
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)

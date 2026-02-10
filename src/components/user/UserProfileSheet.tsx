@@ -24,6 +24,19 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'משתמש'
   const displayEmail = user?.email || ''
 
+  useEffect(() => {
+    if (open) {
+      console.log('[UserProfileSheet] Opened with state:', {
+        hasUser: !!user,
+        userId: user?.id,
+        hasOrgId: !!orgId,
+        orgId: orgId,
+        authLoading,
+        orgLoading
+      })
+    }
+  }, [open, user, orgId, authLoading, orgLoading])
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
@@ -36,14 +49,16 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
           </SheetTitle>
         </SheetHeader>
 
-        {authLoading ? (
+        {authLoading || orgLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center space-y-3">
               <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-              <p className="text-slate-600 dark:text-slate-400">טוען פרופיל...</p>
+              <p className="text-slate-600 dark:text-slate-400">
+                {authLoading ? 'טוען פרופיל...' : 'טוען ארגון...'}
+              </p>
             </div>
           </div>
-        ) : !authLoading && user ? (
+        ) : user ? (
           <div className="space-y-6 py-6">
             {/* Avatar & User Info */}
             <div className="flex flex-col items-center gap-4 p-6 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl border-2 border-blue-100 dark:border-slate-600">

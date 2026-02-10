@@ -22,17 +22,25 @@ export function useAuth(): UseAuthResult {
 
   const loadAuth = async () => {
     console.log('[useAuth] ========== START loadAuth ==========')
+    console.log('[useAuth] Timestamp:', new Date().toISOString())
     setIsLoading(true)
 
     try {
       console.log('[useAuth] Calling supabase.auth.getUser()...')
+      const startTime = performance.now()
       const {
         data: { user },
         error: getUserError
       } = await supabase.auth.getUser()
+      const endTime = performance.now()
 
+      console.log('[useAuth] GetUser completed in', Math.round(endTime - startTime), 'ms')
       console.log('[useAuth] GetUser result:', { 
-        user: user ? { id: user.id, email: user.email } : null, 
+        user: user ? { 
+          id: user.id, 
+          email: user.email,
+          created_at: user.created_at 
+        } : null, 
         error: getUserError 
       })
 
@@ -46,6 +54,7 @@ export function useAuth(): UseAuthResult {
         setOrgId(null)
         setIsAdmin(false)
         setIsLoading(false)
+        console.log('[useAuth] ========== END loadAuth (no user) ==========')
         return
       }
 
@@ -99,8 +108,12 @@ export function useAuth(): UseAuthResult {
       setOrgId(userOrgId)
       setIsLoading(false)
       console.log('[useAuth] ========== END loadAuth ==========')
+      console.log('[useAuth] Total time:', Math.round(performance.now() - startTime), 'ms')
     } catch (error) {
       console.error('[useAuth] ❌❌❌ EXCEPTION:', error)
+      setUser(null)
+      setOrgId(null)
+      setIsAdmin(false)
       setIsLoading(false)
     }
   }

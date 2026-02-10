@@ -42,19 +42,8 @@ export default function DashboardLayout({
     // This was causing logout on navigation
   }, [user, isLoading])
 
-  // Show loading state while checking auth (but only for a short time)
   // Don't block rendering - middleware already protects routes
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-slate-600 dark:text-slate-400">טוען...</p>
-        </div>
-      </div>
-    )
-  }
-
+  // Just render content, useAuth will update when ready
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col">
       {/* Мобильный header */}

@@ -5,8 +5,99 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 16:30 UTC  
-**Версия:** 2.5.0
+**Последнее обновление:** 2026-02-10 17:05 UTC  
+**Версия:** 2.5.1
+
+---
+
+## ⚡ ОБНОВЛЕНИЯ v2.5.1 (2026-02-10 17:05) - CRITICAL FIX 🔴
+
+### 🐛 Critical Fix: AuthSessionMissingError - Session Not Persisting
+
+**Проблема:**
+Console показывал:
+```
+AuthSessionMissingError: Auth session missing!
+at ra._useSession (8a14b77f146843c8.js:37:12424)
+```
+- Пользователь логинится успешно
+- Но session **не сохраняется** между страницами
+- Cookies/localStorage не работают
+- Каждая загрузка страницы = новая session = нет auth
+
+**Root Cause:**
+```typescript
+// ❌ src/lib/supabase.ts использовал СТАРЫЙ клиент:
+import { createClient } from '@supabase/supabase-js'
+export const supabase = createClient(url, key)
+```
+
+**Почему это было проблемой:**
+- `createClient` из `@supabase/supabase-js` - **старая** библиотека
+- **НЕ работает** правильно с Next.js App Router (13+)
+- Не сохраняет session в cookies
+- Не использует localStorage fallback
+- Session теряется при навигации
+
+**Решение:**
+```typescript
+// ✅ СТАЛО - используем правильный клиент:
+import { createBrowserClient } from '@supabase/ssr'
+export const supabase = createBrowserClient(url, key)
+```
+
+**Почему это работает:**
+- `createBrowserClient` из `@supabase/ssr` - **новая** библиотека
+- Специально для Next.js 13+ App Router
+- Правильно работает с cookies API
+- Автоматический localStorage fallback
+- Session сохраняется между страницами
+- Совместим с Server и Client Components
+
+**Изменения:**
+
+1. **src/lib/supabase.ts:**
+```typescript
+// BEFORE
+import { createClient } from '@supabase/supabase-js'
+export const supabase = createClient(url, key)
+
+// AFTER
+import { createBrowserClient } from '@supabase/ssr'
+// CRITICAL: Use createBrowserClient for Next.js App Router
+// This properly handles cookies and session storage
+export const supabase = createBrowserClient(url, key)
+```
+
+2. **src/hooks/useAuth.ts:**
+```typescript
+// Enhanced error logging
+if (getUserError.name === 'AuthSessionMissingError') {
+  console.warn('[useAuth] 🔴 Auth session missing - user needs to login')
+  console.warn('[useAuth] This usually means:')
+  console.warn('[useAuth] 1. Session expired')
+  console.warn('[useAuth] 2. Cookies cleared')
+  console.warn('[useAuth] 3. Never logged in')
+}
+```
+
+**Результат:**
+- ✅ Login → session сохраняется в cookies
+- ✅ Navigate → session загружается из cookies
+- ✅ NO AuthSessionMissingError
+- ✅ User остаётся залогиненным
+- ✅ Refresh page → всё ещё logged in
+- ✅ Admin → CRM navigation → session persists
+
+**Тестирование:**
+1. Очистите cookies/localStorage (DevTools)
+2. Логин через Supabase
+3. Проверьте console - **НЕТ** AuthSessionMissingError
+4. Навигация admin → CRM → user загружается
+5. Refresh страницы → всё ещё logged in
+6. Проверьте cookies (DevTools) → должна быть `sb-*-auth-token`
+
+**ВАЖНО:** Эта ошибка была **критической** - без правильного клиента session вообще не работает в Next.js App Router!
 
 ---
 

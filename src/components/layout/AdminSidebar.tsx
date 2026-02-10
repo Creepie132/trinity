@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, Home, Moon, Sun } from 'lucide-react'
+import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, Home, Moon, Sun, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { Separator } from '@/components/ui/separator'
+import { AdminProfileSheet } from '@/components/admin/AdminProfileSheet'
 
 const navigation = [
   {
@@ -42,6 +43,7 @@ export function AdminSidebar() {
   const { user } = useAuth()
   const { adminProfile, isLoading } = useAdminProfile()
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+  const [profileOpen, setProfileOpen] = useState(false)
 
   useEffect(() => {
     // Load theme from localStorage
@@ -151,24 +153,34 @@ export function AdminSidebar() {
         </button>
       </nav>
 
-      {/* User Profile */}
+      {/* User Profile - Clickable */}
       <div className="p-4 border-t border-slate-700 bg-slate-800/50">
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50 border border-slate-600">
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold shadow-lg text-lg">
+        <button
+          onClick={() => setProfileOpen(true)}
+          className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-700/50 border border-slate-600 hover:bg-slate-700 hover:border-blue-500/50 transition-all duration-200 group active:scale-[0.98]"
+        >
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold shadow-lg text-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
             {displayName[0]?.toUpperCase() || 'A'}
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 text-right">
             {isLoading ? (
               <p className="text-sm text-slate-400">טוען...</p>
             ) : (
               <>
-                <p className="text-sm font-semibold text-white truncate">{displayName}</p>
-                <p className="text-xs text-slate-400 truncate mt-0.5">{displayEmail}</p>
+                <p className="text-sm font-semibold text-white truncate group-hover:text-blue-300 transition-colors">{displayName}</p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">הפרופיל שלי</p>
               </>
             )}
           </div>
-        </div>
+          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition-colors flex-shrink-0" />
+        </button>
       </div>
+
+      {/* Profile Sheet */}
+      <AdminProfileSheet 
+        open={profileOpen} 
+        onOpenChange={setProfileOpen} 
+      />
     </div>
   )
 }

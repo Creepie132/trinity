@@ -5,8 +5,87 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 15:22 UTC  
-**Версия:** 2.4.6
+**Последнее обновление:** 2026-02-10 15:30 UTC  
+**Версия:** 2.4.7
+
+---
+
+## ⚡ ОБНОВЛЕНИЯ v2.4.7 (2026-02-10 15:30) - CRITICAL FIX
+
+### 🐛 Critical Fix: Auth Not Loading When Navigating From Admin
+
+**Проблема:**
+- Пользователь залогинен в админке
+- Нажимает "חזרה למערכת" (Возврат в систему)
+- На главной странице показывает "לא מחובר למערכת" (Не подключен)
+- `user` объект `undefined`
+
+**Root Cause:**
+Навигация из `/admin` в `/` не триггерила reload auth:
+- useAuth() state не обновлялся при переходе
+- Session существовала, но не загружалась
+- onAuthStateChange не срабатывал при client-side navigation
+
+**Решение:**
+
+1. **Dashboard Layout (src/app/(dashboard)/layout.tsx):**
+   ```typescript
+   // Added auth guard on mount
+   useEffect(() => {
+     if (!isLoading && !user) {
+       refetch()  // Force reload
+     }
+   }, [])
+   
+   // Redirect if no user after loading
+   if (!isLoading && !user) {
+     router.push('/login')
+   }
+   
+   // Show loading state
+   if (isLoading) {
+     return <LoadingSpinner />
+   }
+   ```
+
+2. **useAuth() Hook:**
+   ```typescript
+   // Enhanced onAuthStateChange listener
+   supabase.auth.onAuthStateChange((event, session) => {
+     if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+       loadAuth()  // Reload on these events
+     }
+     // More verbose logging
+   })
+   ```
+
+3. **Admin Sidebar:**
+   ```typescript
+   // Changed from Link to button
+   <button onClick={() => {
+     window.location.href = '/'  // Full page reload
+   }}>
+     חזרה למערכת
+   </button>
+   ```
+
+**Файлы изменены:**
+- ✅ `src/app/(dashboard)/layout.tsx` - auth guard + refetch
+- ✅ `src/hooks/useAuth.ts` - better auth state change handling
+- ✅ `src/components/layout/AdminSidebar.tsx` - force reload
+
+**Результат:**
+- ✅ Auth загружается при переходе из админки
+- ✅ User session сохраняется между страницами
+- ✅ Нет "не подключен" после навигации
+- ✅ Debug logs показывают весь auth flow
+
+**Тестирование:**
+1. Зайдите в админку: `/admin`
+2. Нажмите "חזרה למערכת"
+3. Должна появиться страница загрузки
+4. Затем главная страница с вашим профилем
+5. Проверьте консоль - должны быть логи auth
 
 ---
 

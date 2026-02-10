@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -58,6 +59,15 @@ export default function OrganizationsPage() {
   const [selectedOwnerClientId, setSelectedOwnerClientId] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false) // BUG FIX 1: Prevent double submit
 
+  // TASK 1: Toggle between existing/new client
+  const [clientMode, setClientMode] = useState<'existing' | 'new'>('existing')
+  const [newClient, setNewClient] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+  })
+
   const [newOrg, setNewOrg] = useState({
     name: '',
     category: 'other',
@@ -93,12 +103,23 @@ export default function OrganizationsPage() {
     } else {
       setAllClients([])
       setSelectedOwnerClientId('')
+      setClientMode('existing')
+      setNewClient({ firstName: '', lastName: '', email: '', phone: '' })
       setNewOrg({ name: '', category: 'other', plan: 'basic' })
     }
   }, [addDialogOpen])
 
   const handleCreateOrg = async () => {
-    if (!newOrg.name || !newOrg.category || !newOrg.plan || !selectedOwnerClientId) {
+    // Validation based on mode
+    if (!newOrg.name || !newOrg.category || !newOrg.plan) {
+      return
+    }
+
+    if (clientMode === 'existing' && !selectedOwnerClientId) {
+      return
+    }
+
+    if (clientMode === 'new' && (!newClient.firstName || !newClient.lastName || !newClient.email)) {
       return
     }
 
@@ -110,16 +131,29 @@ export default function OrganizationsPage() {
     setIsSubmitting(true)
 
     try {
+      // TASK 2: Prepare payload based on mode
+      const payload = {
+        name: newOrg.name,
+        category: newOrg.category,
+        plan: newOrg.plan,
+        ...(clientMode === 'existing' 
+          ? { clientId: selectedOwnerClientId }
+          : { 
+              newClient: {
+                firstName: newClient.firstName,
+                lastName: newClient.lastName,
+                email: newClient.email,
+                phone: newClient.phone || null,
+              }
+            }
+        ),
+      }
+
       // Call new API route for invitation system
       const response = await fetch('/api/admin/organizations/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newOrg.name,
-          category: newOrg.category,
-          plan: newOrg.plan,
-          clientId: selectedOwnerClientId,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const result = await response.json()
@@ -147,6 +181,8 @@ export default function OrganizationsPage() {
       setAddDialogOpen(false)
       setNewOrg({ name: '', category: 'other', plan: 'basic' })
       setSelectedOwnerClientId('')
+      setNewClient({ firstName: '', lastName: '', email: '', phone: '' })
+      setClientMode('existing')
     } catch (error: any) {
       toast.error(`שגיאה: ${error.message}`)
     } finally {
@@ -366,81 +402,143 @@ export default function OrganizationsPage() {
 
       {/* Add Organization Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>הוסף ארגון חדש</DialogTitle>
             <DialogDescription>
-              צור ארגון חדש והקצה לקוח כבעלים. הלקוח יוקצה אוטומטית כאשר יתחבר עם Google.
+              צור ארגון חדש והקצה בעלים - בחר לקוח קיים או צור חדש
             </DialogDescription>
           </DialogHeader>
+          
           <div className="space-y-4">
-            {/* TASK 1: Client Selector (replaces Owner Name, Email, Phone) */}
-            <div>
-              <Label>בעלים (בחר לקוח מהמערכת) *</Label>
-              {loadingAllClients ? (
-                <div className="text-sm text-gray-500 py-2">טוען לקוחות...</div>
-              ) : allClients.length > 0 ? (
-                <Select value={selectedOwnerClientId} onValueChange={setSelectedOwnerClientId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="בחר לקוח" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allClients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.first_name} {client.last_name} ({client.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="text-sm text-gray-500 py-2 border rounded-md px-3 bg-gray-50">
-                  אין לקוחות עם אימייל במערכת
+            {/* TASK 1: Tabs for Existing vs New Client */}
+            <Tabs value={clientMode} onValueChange={(v) => setClientMode(v as 'existing' | 'new')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="existing">לקוח קיים</TabsTrigger>
+                <TabsTrigger value="new">לקוח חדש</TabsTrigger>
+              </TabsList>
+              
+              {/* Existing Client Tab */}
+              <TabsContent value="existing" className="space-y-4">
+                <div>
+                  <Label>בחר לקוח מהמערכת *</Label>
+                  {loadingAllClients ? (
+                    <div className="text-sm text-gray-500 py-2">טוען לקוחות...</div>
+                  ) : allClients.length > 0 ? (
+                    <Select value={selectedOwnerClientId} onValueChange={setSelectedOwnerClientId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="בחר לקוח" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allClients.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.first_name} {client.last_name} ({client.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="text-sm text-gray-500 py-2 border rounded-md px-3 bg-gray-50">
+                      אין לקוחות עם אימייל במערכת. עבור ל"לקוח חדש" כדי ליצור.
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 אם הלקוח כבר התחבר: יוקצה מיד. אם לא: יוזמן ויוקצה אוטומטית בהתחברות הראשונה.
+                  </p>
                 </div>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                💡 אם הלקוח כבר התחבר: יוקצה מיד. אם לא: יוזמן ויוקצה אוטומטית בהתחברות הראשונה.
-              </p>
-            </div>
+              </TabsContent>
 
-            <div>
-              <Label>שם העסק *</Label>
-              <Input
-                value={newOrg.name}
-                onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })}
-                placeholder="שם העסק"
-              />
-            </div>
-            
-            <div>
-              <Label>קטגוריה</Label>
-              <Select value={newOrg.category} onValueChange={(value) => setNewOrg({ ...newOrg, category: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="salon">מספרה</SelectItem>
-                  <SelectItem value="carwash">שטיפת רכב</SelectItem>
-                  <SelectItem value="clinic">מרפאה</SelectItem>
-                  <SelectItem value="restaurant">מסעדה</SelectItem>
-                  <SelectItem value="gym">חדר כושר</SelectItem>
-                  <SelectItem value="other">אחר</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>תוכנית</Label>
-              <Select value={newOrg.plan} onValueChange={(value) => setNewOrg({ ...newOrg, plan: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="basic">בסיסי</SelectItem>
-                  <SelectItem value="pro">מקצועי</SelectItem>
-                  <SelectItem value="enterprise">ארגוני</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* New Client Tab */}
+              <TabsContent value="new" className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>שם פרטי *</Label>
+                    <Input
+                      value={newClient.firstName}
+                      onChange={(e) => setNewClient({ ...newClient, firstName: e.target.value })}
+                      placeholder="שם פרטי"
+                    />
+                  </div>
+                  <div>
+                    <Label>שם משפחה *</Label>
+                    <Input
+                      value={newClient.lastName}
+                      onChange={(e) => setNewClient({ ...newClient, lastName: e.target.value })}
+                      placeholder="שם משפחה"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>אימייל *</Label>
+                  <Input
+                    type="email"
+                    value={newClient.email}
+                    onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div>
+                  <Label>טלפון</Label>
+                  <Input
+                    type="tel"
+                    value={newClient.phone}
+                    onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                    placeholder="050-1234567"
+                  />
+                </div>
+                <p className="text-xs text-gray-500">
+                  💡 הלקוח יווצר במערכת CRM וישויך לארגון החדש אוטומטית.
+                </p>
+              </TabsContent>
+            </Tabs>
+
+            {/* Organization Details (common for both modes) */}
+            <div className="border-t pt-4 space-y-4">
+              <h3 className="font-semibold text-sm">פרטי הארגון</h3>
+              
+              <div>
+                <Label>שם העסק *</Label>
+                <Input
+                  value={newOrg.name}
+                  onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })}
+                  placeholder="שם העסק"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>קטגוריה</Label>
+                  <Select value={newOrg.category} onValueChange={(value) => setNewOrg({ ...newOrg, category: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="salon">מספרה</SelectItem>
+                      <SelectItem value="carwash">שטיפת רכב</SelectItem>
+                      <SelectItem value="clinic">מרפאה</SelectItem>
+                      <SelectItem value="restaurant">מסעדה</SelectItem>
+                      <SelectItem value="gym">חדר כושר</SelectItem>
+                      <SelectItem value="other">אחר</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>תוכנית</Label>
+                  <Select value={newOrg.plan} onValueChange={(value) => setNewOrg({ ...newOrg, plan: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="basic">בסיסי</SelectItem>
+                      <SelectItem value="pro">מקצועי</SelectItem>
+                      <SelectItem value="enterprise">ארגוני</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           </div>
+
           <DialogFooter>
             <Button 
               variant="outline" 
@@ -451,7 +549,12 @@ export default function OrganizationsPage() {
             </Button>
             <Button 
               onClick={handleCreateOrg} 
-              disabled={!newOrg.name || !selectedOwnerClientId || isSubmitting}
+              disabled={
+                !newOrg.name || 
+                (clientMode === 'existing' && !selectedOwnerClientId) ||
+                (clientMode === 'new' && (!newClient.firstName || !newClient.lastName || !newClient.email)) ||
+                isSubmitting
+              }
             >
               {isSubmitting ? (
                 <>

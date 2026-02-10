@@ -34,35 +34,91 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, category, plan, clientId } = body
+    const { name, category, plan, clientId, newClient } = body
 
-    if (!name || !category || !plan || !clientId) {
+    if (!name || !category || !plan) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, category, plan, clientId' },
+        { error: 'Missing required fields: name, category, plan' },
         { status: 400 }
       )
     }
 
-    // CRITICAL FIX: Get client ONLY for email, NEVER use client.id for permissions
-    // The client.id from public.clients is DIFFERENT from auth.users.id!
-    const { data: client, error: clientError } = await supabase
-      .from('clients')
-      .select('id, first_name, last_name, email, phone')
-      .eq('id', clientId)
-      .single()
-
-    if (clientError || !client) {
-      return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+    // TASK 2: Handle both existing client and new client modes
+    let client: {
+      id: string
+      first_name: string
+      last_name: string
+      email: string
+      phone: string | null
     }
 
-    if (!client.email) {
+    if (newClient) {
+      // MODE: New Client - Create client first
+      console.log('[CREATE ORG] 📝 Creating new client:', newClient.email)
+
+      if (!newClient.firstName || !newClient.lastName || !newClient.email) {
+        return NextResponse.json(
+          { error: 'New client requires firstName, lastName, and email' },
+          { status: 400 }
+        )
+      }
+
+      // Create client in CRM (without org_id yet, will be assigned after org creation)
+      const { data: createdClient, error: createClientError } = await supabase
+        .from('clients')
+        .insert({
+          first_name: newClient.firstName,
+          last_name: newClient.lastName,
+          email: newClient.email,
+          phone: newClient.phone || null,
+          org_id: null, // Will be updated after org creation
+        })
+        .select('id, first_name, last_name, email, phone')
+        .single()
+
+      if (createClientError || !createdClient) {
+        console.error('[CREATE ORG] ❌ Error creating client:', createClientError)
+        return NextResponse.json(
+          { error: `Failed to create client: ${createClientError?.message}` },
+          { status: 500 }
+        )
+      }
+
+      console.log('[CREATE ORG] ✅ Client created with CRM ID:', createdClient.id)
+      client = createdClient
+    } else if (clientId) {
+      // MODE: Existing Client - Fetch from database
+      console.log('[CREATE ORG] 🔍 Fetching existing client:', clientId)
+
+      // CRITICAL FIX: Get client ONLY for email, NEVER use client.id for permissions
+      // The client.id from public.clients is DIFFERENT from auth.users.id!
+      const { data: existingClient, error: clientError } = await supabase
+        .from('clients')
+        .select('id, first_name, last_name, email, phone')
+        .eq('id', clientId)
+        .single()
+
+      if (clientError || !existingClient) {
+        return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+      }
+
+      if (!existingClient.email) {
+        return NextResponse.json(
+          { error: 'Client must have an email address' },
+          { status: 400 }
+        )
+      }
+
+      console.log('[CREATE ORG] ✅ Existing client found')
+      client = existingClient
+    } else {
       return NextResponse.json(
-        { error: 'Client must have an email address' },
+        { error: 'Either clientId or newClient must be provided' },
         { status: 400 }
       )
     }
 
-    console.log('[CREATE ORG] ⚠️  Selected client from CRM:')
+    console.log('[CREATE ORG] ⚠️  Client details:')
     console.log('[CREATE ORG]    - Client CRM ID:', client.id)
     console.log('[CREATE ORG]    - Client Email:', client.email)
     console.log('[CREATE ORG]    - ⚠️  DO NOT USE client.id for permissions!')
@@ -86,6 +142,24 @@ export async function POST(request: NextRequest) {
         { error: `Failed to create organization: ${orgError.message}` },
         { status: 500 }
       )
+    }
+
+    console.log('[CREATE ORG] ✅ Organization created:', org.id)
+
+    // TASK 2: If new client was created, update their org_id
+    if (newClient) {
+      console.log('[CREATE ORG] 📝 Updating client org_id to:', org.id)
+      const { error: updateClientError } = await supabase
+        .from('clients')
+        .update({ org_id: org.id })
+        .eq('id', client.id)
+
+      if (updateClientError) {
+        console.error('[CREATE ORG] ⚠️  Warning: Could not update client org_id:', updateClientError)
+        // Non-fatal, continue
+      } else {
+        console.log('[CREATE ORG] ✅ Client org_id updated')
+      }
     }
 
     // CRITICAL FIX: Lookup user in auth.users by EMAIL (not by client.id!)
@@ -146,6 +220,13 @@ export async function POST(request: NextRequest) {
         assignmentResult.immediate = true
         assignmentResult.userId = existingAuthUser.id
         assignmentResult.authUserId = existingAuthUser.id
+
+        // TASK 3: Email notification stub
+        // TODO: Send welcome email to ${client.email} using Resend
+        // Subject: "Welcome to ${org.name} - Your Organization is Ready!"
+        // Template: organization-welcome
+        // Variables: { organizationName: org.name, ownerName: `${client.first_name} ${client.last_name}`, loginUrl: process.env.NEXT_PUBLIC_APP_URL }
+        console.log('[CREATE ORG] 📧 TODO: Send welcome email to', client.email)
       }
     } else {
       // User doesn't exist in auth.users → create invitation
@@ -171,6 +252,13 @@ export async function POST(request: NextRequest) {
       } else {
         console.log('[CREATE ORG] ✅ Invitation created for email:', client.email)
         assignmentResult.invitation = true
+
+        // TASK 3: Email notification stub
+        // TODO: Send invitation email to ${client.email} using Resend
+        // Subject: "You've been invited to join ${org.name}"
+        // Template: organization-invitation
+        // Variables: { organizationName: org.name, ownerName: `${client.first_name} ${client.last_name}`, invitationUrl: `${process.env.NEXT_PUBLIC_APP_URL}/login`, expiresAt: invitation.expires_at }
+        console.log('[CREATE ORG] 📧 TODO: Send invitation email to', client.email)
       }
     }
 

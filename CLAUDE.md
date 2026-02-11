@@ -5,8 +5,80 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-11 14:24 UTC  
-**Версия:** 2.12.0
+**Последнее обновление:** 2026-02-11 22:10 UTC  
+**Версия:** 2.17.0
+
+---
+
+## 💳 ОБНОВЛЕНИЯ v2.17.0 (2026-02-11 22:10) - Stripe Payment Integration
+
+### 🎉 NEW FEATURES: Stripe как вторая платёжная система
+
+**Запрошено пользователем:**
+> "Добавь Stripe как платёжную систему параллельно с Tranzilla"
+
+**Реализовано:**
+
+#### ✅ 1. Установка пакетов
+```bash
+npm install stripe @stripe/stripe-js
+```
+
+#### ✅ 2. Stripe Client (`src/lib/stripe.ts`)
+- **Server-side:** `createStripeServerClient()` → Stripe API
+- **Client-side:** `getStripe()` → Stripe.js для фронтенда
+
+#### ✅ 3. API Routes
+- **`POST /api/payments/stripe-checkout`** — создание Checkout Session
+  - Принимает: amount, currency, clientName, clientEmail, clientId, orgId
+  - Возвращает: `{ url }` → Stripe Checkout URL
+  - success_url: `/payments?success=true&session_id={CHECKOUT_SESSION_ID}`
+  - cancel_url: `/payments?canceled=true`
+
+- **`POST /api/payments/stripe-webhook`** — обработка webhooks
+  - Event: `checkout.session.completed`
+  - Верификация: `stripe.webhooks.constructEvent`
+  - Запись в `payments`:
+    - `status: 'completed'`
+    - `payment_method: 'stripe'`
+    - `transaction_id: session.id`
+
+#### ✅ 4. UI Components
+- **`CreateStripePaymentDialog.tsx`** — диалог создания платежа
+  - Выбор клиента + сумма
+  - Вызов `/api/payments/stripe-checkout`
+  - Открытие Checkout в новом окне
+  - Фиолетовая кнопка (`bg-purple-600`)
+
+- **Payments Page** — две кнопки:
+  - "צור קישור תשלום (Tranzilla)" — синяя
+  - "צור קישור תשלום (Stripe)" — фиолетовая
+
+#### ✅ 5. Middleware Update
+- Добавлен `/api/payments/stripe-webhook` в исключения
+- Также добавлен `/landing` в PUBLIC_PATHS
+
+#### ✅ 6. Environment Variables
+```env
+STRIPE_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+**Отличия Stripe от Tranzilla:**
+- Stripe: мгновенный redirect на Stripe UI
+- Tranzilla: генерация платёжной ссылки → отправка клиенту
+- Stripe: webhook автоматически записывает payment
+- Tranzilla: callback + webhook для обновления статуса
+
+**Files Changed:**
+- ✅ `src/lib/stripe.ts` — клиенты Stripe
+- ✅ `src/app/api/payments/stripe-checkout/route.ts` — создание сессии
+- ✅ `src/app/api/payments/stripe-webhook/route.ts` — webhook handler
+- ✅ `src/components/payments/CreateStripePaymentDialog.tsx` — UI компонент
+- ✅ `src/app/(dashboard)/payments/page.tsx` — добавлена кнопка Stripe
+- ✅ `middleware.ts` — исключения для webhook
+- ✅ `.env.example` — Stripe переменные
 
 ---
 
@@ -4860,6 +4932,59 @@ Redirect после оплаты
 
 ---
 
+#### `POST /api/payments/stripe-checkout`
+Создание Stripe Checkout Session
+
+**Request:**
+```json
+{
+  "amount": 150.00,
+  "currency": "ILS",
+  "clientName": "John Doe",
+  "clientEmail": "john@example.com",
+  "clientId": "uuid",
+  "orgId": "uuid"
+}
+```
+
+**Response:**
+```json
+{
+  "url": "https://checkout.stripe.com/..."
+}
+```
+
+**Процесс:**
+1. Создаёт Stripe Checkout Session
+2. Возвращает URL для оплаты
+3. Frontend открывает URL в новом окне
+4. После оплаты: redirect на success_url
+5. Webhook обрабатывает платёж
+
+---
+
+#### `POST /api/payments/stripe-webhook`
+Webhook от Stripe
+
+**Events:**
+- `checkout.session.completed` — успешная оплата
+
+**Headers:**
+- `stripe-signature` — подпись для верификации
+
+**Процесс:**
+1. Верификация через `stripe.webhooks.constructEvent`
+2. Извлечение metadata (client_id, org_id)
+3. Запись в таблицу `payments`:
+   - `status: 'completed'`
+   - `payment_method: 'stripe'`
+   - `transaction_id: session.id`
+   - `amount: session.amount_total / 100`
+
+**⚠️ ВАЖНО:** Webhook должен быть в исключениях middleware!
+
+---
+
 ### SMS API
 
 #### `POST /api/sms/campaign`
@@ -5229,9 +5354,29 @@ Redirect после оплаты
 Создание платежа для конкретного клиента
 
 #### `CreatePaymentLinkDialog`
-Создание платежа с выбором клиента
+Создание платежа с выбором клиента (Tranzilla)
 
 **Результат:** Показ ссылки + кнопки (копировать, отправить SMS, открыть)
+
+---
+
+#### `CreateStripePaymentDialog`
+Создание платежа через Stripe Checkout
+
+**Процесс:**
+1. Выбор клиента + сумма
+2. Вызов `/api/payments/stripe-checkout`
+3. Получение Checkout URL
+4. Открытие в новом окне
+5. Webhook обрабатывает успешную оплату
+
+**Отличия от Tranzilla:**
+- Не создаёт платёжную ссылку
+- Мгновенный redirect на Stripe
+- Оплата в Stripe UI (не на нашем сайте)
+- Webhook автоматически записывает payment
+
+**Стиль кнопки:** `bg-purple-600` (отличается от Tranzilla)
 
 ---
 
@@ -5538,6 +5683,11 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 # Tranzilla (платежи)
 TRANZILLA_TERMINAL_ID=your_terminal_id
 TRANZILLA_API_KEY=your_api_key
+
+# Stripe (платежи)
+STRIPE_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 
 # InforU Mobile (SMS)
 INFORU_API_TOKEN=your_api_token

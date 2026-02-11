@@ -91,19 +91,18 @@ export async function POST(request: NextRequest) {
       const invoice = event.data.object as Stripe.Invoice
 
       // Get subscription details (can be string ID or Subscription object)
-      const subscriptionId = typeof invoice.subscription === 'string' 
-        ? invoice.subscription 
-        : (invoice.subscription as any)?.id
+      const subscriptionId = (invoice as any).subscription
+      const subId = typeof subscriptionId === 'string' ? subscriptionId : subscriptionId?.id
       
-      if (!subscriptionId) {
+      if (!subId) {
         console.log('[Stripe Webhook] Invoice not linked to subscription, skipping')
         return NextResponse.json({ received: true })
       }
 
       // Get subscription to extract metadata
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+      const subscription = await stripe.subscriptions.retrieve(subId)
       const session = await stripe.checkout.sessions.list({
-        subscription: subscriptionId,
+        subscription: subId,
         limit: 1,
       })
 

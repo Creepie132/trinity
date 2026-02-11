@@ -29,7 +29,7 @@ export default function AdminLayout({
 
         if (!response.ok || !data.isAdmin) {
           console.log('[Admin Layout] Not admin or error, redirecting to /')
-          router.push('/')
+          router.push('/dashboard')
           return
         }
 
@@ -37,7 +37,7 @@ export default function AdminLayout({
         setIsAdmin(true)
       } catch (error) {
         console.error('[Admin Layout] Check error:', error)
-        router.push('/')
+        router.push('/dashboard')
       } finally {
         setIsChecking(false)
       }

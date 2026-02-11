@@ -157,7 +157,7 @@ export function AdminSidebar() {
         {/* Кнопка возврата в систему */}
         <Separator className="my-4 bg-slate-700" />
         <Link
-          href="/"
+          href="/dashboard"
           className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-2 border-green-500/30 hover:border-green-500/50 hover:bg-gradient-to-r hover:from-green-600/30 hover:to-emerald-600/30 active:scale-[0.98]"
         >
           <div className="p-1.5 rounded-lg bg-green-600/30">

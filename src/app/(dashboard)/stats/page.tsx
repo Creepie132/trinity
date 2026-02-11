@@ -35,7 +35,7 @@ export default function StatsPage() {
       if (!features.isActive) {
         router.push('/blocked')
       } else if (!features.hasAnalytics) {
-        router.push('/')
+        router.push('/dashboard')
       }
     }
   }, [features.hasAnalytics, features.isActive, features.isLoading, router])

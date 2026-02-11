@@ -29,7 +29,7 @@ export default function SmsPage() {
       if (!features.isActive) {
         router.push('/blocked')
       } else if (!features.hasSms) {
-        router.push('/')
+        router.push('/dashboard')
       }
     }
   }, [features.hasSms, features.isActive, features.isLoading, router])

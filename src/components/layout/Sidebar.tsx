@@ -34,7 +34,7 @@ export function Sidebar() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   const baseNavigation = [
-    { name: t('nav.dashboard'), href: '/', icon: Home, requireFeature: null },
+    { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
     { name: t('nav.clients'), href: '/clients', icon: Users, requireFeature: null },
     { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: t('nav.sms'), href: '/sms', icon: MessageSquare, requireFeature: 'sms' },

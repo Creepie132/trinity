@@ -625,8 +625,19 @@ export default function LandingPage() {
               </a>
             </div>
 
-            {/* Language Switcher */}
+            {/* Language Switcher & Login */}
             <div className="flex items-center gap-4">
+              <a
+                href="/login"
+                className={`px-4 py-2 border rounded-lg font-medium transition-colors ${
+                  scrolled
+                    ? 'text-gray-700 hover:text-blue-900 border-gray-300 hover:border-blue-900'
+                    : 'text-white border-white/30 hover:bg-white/10'
+                }`}
+              >
+                {language === 'he' ? 'כניסה למערכת' : 'Вход в систему'}
+              </a>
+              
               <button
                 onClick={() => setLanguage(language === 'he' ? 'ru' : 'he')}
                 className={`px-3 py-1.5 text-sm font-medium border rounded-md transition-colors ${

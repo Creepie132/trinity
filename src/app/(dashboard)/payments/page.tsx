@@ -44,7 +44,7 @@ export default function PaymentsPage() {
       if (!features.isActive) {
         router.push('/blocked')
       } else if (!features.hasPayments) {
-        router.push('/')
+        router.push('/dashboard')
       }
     }
   }, [features.hasPayments, features.isActive, features.isLoading, router])

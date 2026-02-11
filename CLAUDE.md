@@ -5,8 +5,244 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-11 00:38 UTC  
-**Версия:** 2.9.0
+**Последнее обновление:** 2026-02-11 00:49 UTC  
+**Версия:** 2.10.0
+
+---
+
+## 📐 ОБНОВЛЕНИЯ v2.10.0 (2026-02-11 00:49) - Layout System (3 UI Styles) 🎨
+
+### 🎉 NEW FEATURE: 3 полностью разных стиля интерфейса
+
+**Запрошено пользователем:**
+> "Я не совсем это имею ввиду. Я не имею ввиду цвет, я имею ввиду сам дизайн."
+
+**Реализовано:** Система layout'ов с 3 кардинально разными стилями UI.
+
+---
+
+### 📐 Доступные Layout'ы
+
+| Layout | Описание | Особенности |
+|--------|----------|------------|
+| **קלאסי (Classic)** | Минималистичный, табличный | Borders, стандартные размеры, чистый дизайн |
+| **מודרני (Modern)** | Большие карточки, тени, градиенты | Rounded-2xl, shadows, крупный текст, spacious |
+| **צפוף (Compact)** | Плотный layout, больше данных | Маленькие иконки, меньше padding, max density |
+
+---
+
+### 🎨 Visual Differences
+
+#### Classic (текущий стиль):
+- **Cards:** `border border-gray-200 shadow-sm rounded-lg`
+- **Padding:** `p-6`
+- **Stats:** `text-3xl`
+- **Icons:** `w-6 h-6 p-3`
+- **Look:** Clean, professional, table-focused
+
+#### Modern (как на скриншоте):
+- **Cards:** `bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg`
+- **Padding:** `p-6` (но больше пространства между элементами)
+- **Stats:** `text-4xl`
+- **Icons:** `w-7 h-7 p-4 shadow-md`
+- **Look:** Premium, spacious, card-heavy
+
+#### Compact (плотный):
+- **Cards:** `border border-gray-200 rounded`
+- **Padding:** `p-4`
+- **Stats:** `text-2xl`
+- **Icons:** `w-5 h-5 p-2`
+- **Look:** Dense, information-rich, efficient
+
+---
+
+### 🛠️ Архитектура
+
+#### 1️⃣ ThemeContext расширен
+
+```typescript
+export type Layout = 'classic' | 'modern' | 'compact'
+
+interface ThemeContextType {
+  theme: Theme
+  setTheme: (theme: Theme) => void
+  layout: Layout  // NEW!
+  setLayout: (layout: Layout) => void  // NEW!
+}
+
+const setLayout = (newLayout: Layout) => {
+  setLayoutState(newLayout)
+  localStorage.setItem('trinity-layout', newLayout)
+  document.documentElement.setAttribute('data-layout', newLayout)
+}
+```
+
+---
+
+#### 2️⃣ CSS System
+
+**globals.css:**
+
+```css
+/* Layout-specific selectors */
+[data-layout="classic"] .stat-card {
+  @apply bg-white rounded-lg border border-gray-200 shadow-sm;
+}
+
+[data-layout="modern"] .stat-card {
+  @apply bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg;
+}
+
+[data-layout="modern"] .stat-icon {
+  @apply shadow-md scale-110;
+}
+
+[data-layout="compact"] .stat-card {
+  @apply bg-white rounded border border-gray-200 shadow-none;
+}
+
+[data-layout="compact"] .stat-value {
+  @apply text-2xl;
+}
+```
+
+**Как это работает:**
+1. User selects layout → `document.documentElement.setAttribute('data-layout', 'modern')`
+2. CSS selector `[data-layout="modern"]` активируется
+3. Все элементы с `.stat-card` получают новые стили
+4. Instant transformation! ✨
+
+---
+
+#### 3️⃣ Settings Page
+
+**Новая секция:** "📐 סגנון תצוגה (Layout)"
+
+**UI:**
+- 3 карточки в grid (md:grid-cols-3)
+- Каждая карточка:
+  - Icon (AlignJustify / LayoutGrid / Layers)
+  - Название + описание
+  - Visual preview (мини-версия layout'а)
+  - Check icon если выбрана
+- Tip: "סגנון התצוגה ישפיע על דשבורד, רשימת לקוחות, וכל העמודים במערכת"
+
+**Preview boxes:**
+- Classic: Horizontal lines (table-like)
+- Modern: 2x2 gradient boxes with shadows
+- Compact: 5 tight lines (dense)
+
+---
+
+#### 4️⃣ Dashboard Integration
+
+**Stat Cards - до:**
+```tsx
+<Card className="hover:shadow-lg transition-shadow">
+  <CardContent className="p-6">
+    <p className="text-3xl font-bold">...</p>
+  </CardContent>
+</Card>
+```
+
+**Stat Cards - после:**
+```tsx
+<Card className="stat-card">
+  <CardContent className={layout === 'compact' ? 'p-4' : 'p-6'}>
+    <p className={`font-bold stat-value ${
+      layout === 'modern' ? 'text-4xl' : 
+      layout === 'compact' ? 'text-2xl' : 
+      'text-3xl'
+    }`}>...</p>
+    <div className={`stat-icon ${
+      layout === 'modern' ? 'p-4 shadow-md' : 
+      layout === 'compact' ? 'p-2' : 
+      'p-3'
+    }`}>
+      <Icon className={layout === 'modern' ? 'w-7 h-7' : ...} />
+    </div>
+  </CardContent>
+</Card>
+```
+
+**Result:**
+- Classic → standard look
+- Modern → bigger, bolder, more shadows
+- Compact → smaller, tighter, more data
+
+---
+
+### 🎯 User Flow
+
+1. **Открой настройки:** `/settings` → секция "📐 סגנון תצוגה"
+2. **Выбери layout:**
+   - Click на "קלאסי" → минималистичный стиль
+   - Click на "מודרני" → крупные карточки с тенями
+   - Click на "צפוף" → плотный layout
+3. **Мгновенный эффект:** Dashboard transforms instantly
+4. **Сохранение:** localStorage → работает между сессиями
+
+---
+
+### 🎨 Combinations
+
+**6 цветовых тем × 3 layout'а = 18 уникальных комбинаций!**
+
+Examples:
+- Blue + Modern = Premium blue cards with shadows
+- Purple + Compact = Dense purple interface
+- Orange + Classic = Clean orange minimalism
+- Pink + Modern = Bold pink gradients
+
+---
+
+### 📁 Files Changed
+
+**MODIFIED:**
+- ✅ `src/contexts/ThemeContext.tsx` - Added Layout state/functions
+- ✅ `src/app/(dashboard)/settings/page.tsx` - Layout selector UI
+- ✅ `src/app/globals.css` - Layout-specific CSS rules
+- ✅ `src/app/(dashboard)/page.tsx` - Dashboard cards adapt to layout
+
+---
+
+### 🚀 Future Enhancements
+
+**Planned:**
+- [ ] Apply to Clients page (table vs card view in Modern)
+- [ ] Apply to Stats page (chart sizes adapt to layout)
+- [ ] Apply to SMS/Payments (form density)
+- [ ] Sidebar width adjust (narrow in Compact, wide in Modern)
+- [ ] Table row heights (Compact = smaller rows)
+- [ ] Font size global multiplier per layout
+
+**Easy to add more layouts:**
+```typescript
+const layouts = {
+  // ... existing
+  glassmorphic: {
+    name: 'זכוכית',
+    classes: 'backdrop-blur-lg bg-white/30 border-white/50',
+  },
+}
+```
+
+---
+
+### ✅ Result
+
+**BEFORE:**
+- Single fixed design
+- No customization beyond colors
+
+**AFTER:**
+- 3 distinct UI styles
+- Choose based on preference/use-case
+- Classic = efficient work
+- Modern = impressive demos
+- Compact = maximum data density
+- Saved between sessions
+- Works with color themes
 
 ---
 

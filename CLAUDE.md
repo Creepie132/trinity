@@ -5,8 +5,319 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-10 23:28 UTC  
-**Версия:** 2.8.0
+**Последнее обновление:** 2026-02-11 00:26 UTC  
+**Версия:** 2.8.1
+
+---
+
+## 🔥 ОБНОВЛЕНИЯ v2.8.1 (2026-02-11 00:26) - Database Signup Error + Org Data Leak 🔴
+
+### 🐛 КРИТИЧЕСКАЯ ПРОБЛЕМА #1: "Database error saving new user"
+
+**Контекст:**
+Пользователь отправил ссылку новому человеку. При попытке логина через Google OAuth:
+- Редирект на login с error: `server_error`
+- Description: `Database error saving new user`
+- User не может зарегистрироваться
+
+**ROOT CAUSE:**
+1. В v2.8.0 добавили CHECK constraint: `CHECK (email = lower(email))` на `org_users`
+2. Trigger `process_invitation_on_signup` вставляет email **с оригинальным case** из OAuth
+3. Если Google возвращает `User@Example.com` → constraint нарушается → signup блокируется ❌
+
+**Симптомы:**
+```
+URL: /login?error=server_error&error_code=unexpected_failure&error_description=Database%20error%20saving%20new%20user
+```
+
+**Решение:**
+
+#### Option 1: Remove Strict Constraint (implemented)
+
+**Файл:** `supabase/remove-strict-lowercase-constraint.sql`
+
+```sql
+-- Remove strict CHECK constraint
+ALTER TABLE org_users 
+DROP CONSTRAINT IF EXISTS org_users_email_lowercase;
+
+-- Add BEFORE INSERT/UPDATE trigger instead
+CREATE OR REPLACE FUNCTION normalize_org_users_email()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.email := lower(NEW.email);  -- Auto-lowercase on insert/update
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER normalize_org_users_email_trigger
+BEFORE INSERT OR UPDATE ON org_users
+FOR EACH ROW
+EXECUTE FUNCTION normalize_org_users_email();
+```
+
+**Преимущества:**
+- ✅ Signup работает с любым case email
+- ✅ Email автоматически нормализуется
+- ✅ Не блокирует OAuth flow
+- ✅ Более гибкий чем CHECK constraint
+
+#### Option 2: Fix Trigger to Use lower()
+
+**Файл:** `supabase/fix-trigger-lowercase-email.sql`
+
+```sql
+CREATE OR REPLACE FUNCTION process_invitation_on_signup()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_normalized_email TEXT;
+BEGIN
+  v_normalized_email := lower(NEW.email);  -- Normalize BEFORE insert
+  
+  -- Insert with lowercase email
+  INSERT INTO org_users (org_id, user_id, email, role)
+  VALUES (v_invitation.org_id, NEW.id, v_normalized_email, v_invitation.role)
+  ON CONFLICT (org_id, user_id) DO NOTHING;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+**Используем оба подхода:**
+1. Trigger auto-normalizes на BEFORE INSERT
+2. Application code тоже использует `.toLowerCase()`
+3. Double-safety: constraint удалён, но normalization работает
+
+---
+
+### 🐛 КРИТИЧЕСКАЯ ПРОБЛЕМА #2: Dashboard Shows ALL Organizations Data
+
+**Контекст:**
+User логинится в свою организацию, но на dashboard видит:
+- `totalClients` = **ВСЕ** клиенты из **ВСЕХ** организаций
+- `revenue` = сумма по всем организациям
+- `visits` = визиты всех клиентов
+
+**ROOT CAUSE:**
+Stats hooks (`useStats.ts`) НЕ фильтровали по `org_id`:
+
+```typescript
+// ❌ БЫЛО (загружало ВСЁ)
+const { count: totalClients } = await supabase
+  .from('clients')
+  .select('*', { count: 'exact', head: true })
+// NO .eq('org_id', orgId) !!!
+```
+
+**Решение:**
+
+Добавлен фильтр по `org_id` во все stats hooks:
+
+```typescript
+// ✅ СТАЛО (только своя org)
+import { useAuth } from './useAuth'
+
+export function useDashboardStats() {
+  const { orgId } = useAuth()  // Get current user's org
+  
+  return useQuery({
+    queryKey: ['dashboard-stats', orgId],
+    queryFn: async () => {
+      if (!orgId) return { totalClients: 0, ... }
+      
+      // Filter by org_id
+      const { count: totalClients } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', orgId)  // ← CRITICAL!
+        
+      // Visits: filter via clients.org_id (JOIN)
+      const { count: visitsThisMonth } = await supabase
+        .from('visits')
+        .select('*, clients!inner(org_id)', { count: 'exact', head: true })
+        .eq('clients.org_id', orgId)  // ← Filter through relationship
+        
+      // Payments: same approach
+      const { data: paymentsData } = await supabase
+        .from('payments')
+        .select('amount, clients!inner(org_id)')
+        .eq('clients.org_id', orgId)
+        
+      return { totalClients, visitsThisMonth, ... }
+    },
+    enabled: !!orgId,  // Only run if orgId exists
+  })
+}
+```
+
+**Изменённые функции:**
+
+1. **useDashboardStats**
+   - ✅ `totalClients` → `.eq('org_id', orgId)`
+   - ✅ `visitsThisMonth` → `.eq('clients.org_id', orgId)` (via JOIN)
+   - ✅ `revenueThisMonth` → `.eq('clients.org_id', orgId)` (via JOIN)
+   - ✅ `inactiveClients` → `.eq('org_id', orgId)`
+
+2. **useRevenueByMonth**
+   - ✅ Payments filtered by `.eq('clients.org_id', orgId)`
+
+3. **useVisitsByMonth**
+   - ✅ Visits filtered by `.eq('clients.org_id', orgId)`
+
+4. **useTopClients**
+   - ✅ Top 5 clients filtered by `.eq('org_id', orgId)`
+
+**JOIN Syntax для связанных таблиц:**
+
+Когда фильтруем по `org_id` через relationship:
+
+```typescript
+// visits.client_id → clients.id → clients.org_id
+.select('*, clients!inner(org_id)')  // !inner = INNER JOIN
+.eq('clients.org_id', orgId)         // Filter on joined table
+```
+
+**Важно:**
+- `!inner` = INNER JOIN (обязательно, иначе не сработает фильтр)
+- Без JOIN visits не имеют прямого `org_id`
+- Через `clients` table получаем доступ к `org_id`
+
+---
+
+### 📁 Files Changed
+
+**SQL Migrations:**
+- ✅ `supabase/remove-strict-lowercase-constraint.sql` - Remove CHECK, add trigger
+- ✅ `supabase/fix-trigger-lowercase-email.sql` - Update invitation trigger
+
+**Application Code:**
+- ✅ `src/hooks/useStats.ts` - Add org_id filter to all stats
+
+---
+
+### 🚀 Setup Instructions
+
+#### 1. Run SQL Migrations
+
+**Supabase SQL Editor:**
+
+```sql
+-- Migration 1: Fix email constraint
+DROP CONSTRAINT IF EXISTS org_users_email_lowercase FROM org_users;
+
+CREATE OR REPLACE FUNCTION normalize_org_users_email()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.email := lower(NEW.email);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER normalize_org_users_email_trigger
+BEFORE INSERT OR UPDATE ON org_users
+FOR EACH ROW
+EXECUTE FUNCTION normalize_org_users_email();
+
+-- Migration 2: Fix trigger
+-- (Run entire file: supabase/fix-trigger-lowercase-email.sql)
+```
+
+#### 2. Deploy to Vercel
+
+Code уже в GitHub → Vercel автоматически задеплоит.
+
+**Проверка:**
+1. Открой https://trinity-sage.vercel.app
+2. Попробуй signup с новым Google account → должно работать ✅
+3. Dashboard должен показывать только твои данные ✅
+
+---
+
+### ✅ Result
+
+**BEFORE (broken):**
+
+Problem 1:
+```
+1. New user clicks "Login with Google"
+2. Google OAuth → email with uppercase
+3. Trigger tries INSERT → CHECK constraint fails
+4. Signup blocked → "Database error" ❌
+```
+
+Problem 2:
+```
+1. User opens dashboard
+2. Stats load WITHOUT org_id filter
+3. Shows totalClients from ALL orgs → data leak ❌
+```
+
+**AFTER (fixed):**
+
+Problem 1:
+```
+1. New user clicks "Login with Google"
+2. Google OAuth → email with any case
+3. BEFORE INSERT trigger → auto-lowercase
+4. Signup succeeds ✅
+5. Auto-link system → user_id linked ✅
+```
+
+Problem 2:
+```
+1. User opens dashboard
+2. Stats load WITH org_id filter
+3. Shows only current org's data ✅
+4. No data leakage ✅
+```
+
+---
+
+### 🔒 Security Impact
+
+**Data Leak Fixed:**
+- **Severity:** HIGH (users could see other orgs' data)
+- **Scope:** Dashboard stats, revenue, client counts
+- **Fix:** Added mandatory org_id filter + enabled guard
+- **Status:** ✅ RESOLVED
+
+**Signup Block Fixed:**
+- **Severity:** CRITICAL (blocked new user signups)
+- **Scope:** Google OAuth flow
+- **Fix:** Removed strict constraint + added auto-normalize trigger
+- **Status:** ✅ RESOLVED
+
+---
+
+### 🧪 Testing
+
+**Test 1: New User Signup**
+
+1. Send login link to new user (not in system)
+2. User clicks "Login with Google"
+3. Selects Google account (e.g., `User@Gmail.com` with uppercase)
+4. ✅ Should redirect to dashboard (not error page)
+5. Check DB: `org_users` entry should exist with `email = 'user@gmail.com'` (lowercase)
+
+**Test 2: Dashboard Data Isolation**
+
+1. Create 2 orgs: Org A (10 clients), Org B (5 clients)
+2. Login as Org A user
+3. Dashboard should show: `totalClients = 10` ✅
+4. Login as Org B user
+5. Dashboard should show: `totalClients = 5` ✅
+6. NOT 15! (no cross-org data)
+
+**Test 3: Stats Filtering**
+
+1. Open Console (F12) → Network tab
+2. Refresh dashboard
+3. Check Supabase queries:
+   ```
+   GET /rest/v1/clients?select=*&org_id=eq.<uuid>
+   ```
+4. ✅ Should have `org_id=eq.` filter in URL
 
 ---
 

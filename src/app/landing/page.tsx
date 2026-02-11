@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, ChevronRight, Monitor, Bot, Globe, Code, Mail, MessageCircle, Send } from 'lucide-react'
+import { Menu, X, ChevronRight, Monitor, Bot, Globe, Code, Mail, MessageCircle, Send, Gift } from 'lucide-react'
 
 // Translations type
 interface Translations {
@@ -64,13 +64,31 @@ interface Translations {
   }
   orderModal: {
     title: string
-    planLabel: string
+    badge: string
     nameLabel: string
     emailLabel: string
     phoneLabel: string
+    businessLabel: string
+    categoryLabel: string
+    categoryPlaceholder: string
+    categories: string[]
     submit: string
     cancel: string
     successMessage: string
+  }
+  contactModal: {
+    title: string
+    nameLabel: string
+    emailLabel: string
+    businessLabel: string
+    messageLabel: string
+    messagePlaceholder: string
+    submit: string
+    cancel: string
+    successMessage: string
+  }
+  floatingButton: {
+    text: string
   }
   footer: {
     copyright: string
@@ -224,14 +242,32 @@ const translations: Record<'he' | 'ru', Translations> = {
       ],
     },
     orderModal: {
-      title: 'השלימו את הפרטים',
-      planLabel: 'תוכנית נבחרת',
+      title: 'הזמנת תוכנית',
+      badge: '!החודש הראשון חינם',
       nameLabel: 'שם מלא',
       emailLabel: 'אימייל',
       phoneLabel: 'טלפון',
-      submit: 'שלח',
+      businessLabel: 'שם העסק',
+      categoryLabel: 'קטגוריה',
+      categoryPlaceholder: 'בחר קטגוריה',
+      categories: ['מספרה', 'מכון רכב', 'קליניקה', 'מסעדה', 'חדר כושר', 'אחר'],
+      submit: 'שלחו בקשה',
       cancel: 'ביטול',
-      successMessage: 'תודה! ניצור איתך קשר בקרוב',
+      successMessage: '!הבקשה נשלחה בהצלחה נחזור אליכם תוך 24 שעות',
+    },
+    contactModal: {
+      title: 'צור קשר',
+      nameLabel: 'שם',
+      emailLabel: 'אימייל',
+      businessLabel: 'שם העסק',
+      messageLabel: 'הודעה',
+      messagePlaceholder: 'כתוב את ההודעה שלך כאן...',
+      submit: 'שלחו',
+      cancel: 'ביטול',
+      successMessage: '!ההודעה נשלחה',
+    },
+    floatingButton: {
+      text: '🎁 החודש הראשון חינם',
     },
     footer: {
       copyright: 'Amber Solutions Systems © 2026',
@@ -383,14 +419,32 @@ const translations: Record<'he' | 'ru', Translations> = {
       ],
     },
     orderModal: {
-      title: 'Заполните данные',
-      planLabel: 'Выбранный план',
+      title: 'Заказ плана',
+      badge: 'Первый месяц бесплатно!',
       nameLabel: 'Полное имя',
       emailLabel: 'Email',
       phoneLabel: 'Телефон',
+      businessLabel: 'Название бизнеса',
+      categoryLabel: 'Категория',
+      categoryPlaceholder: 'Выберите категорию',
+      categories: ['Салон', 'Автомойка', 'Клиника', 'Ресторан', 'Зал', 'Другое'],
+      submit: 'Отправить заявку',
+      cancel: 'Отмена',
+      successMessage: 'Заявка отправлена! Мы свяжемся в течение 24 часов',
+    },
+    contactModal: {
+      title: 'Связаться с нами',
+      nameLabel: 'Имя',
+      emailLabel: 'Email',
+      businessLabel: 'Название бизнеса',
+      messageLabel: 'Сообщение',
+      messagePlaceholder: 'Напишите ваше сообщение здесь...',
       submit: 'Отправить',
       cancel: 'Отмена',
-      successMessage: 'Спасибо! Мы свяжемся с вами в ближайшее время',
+      successMessage: 'Сообщение отправлено!',
+    },
+    floatingButton: {
+      text: '🎁 Первый месяц бесплатно',
     },
     footer: {
       copyright: 'Amber Solutions Systems © 2026',
@@ -403,9 +457,11 @@ export default function LandingPage() {
   const [language, setLanguage] = useState<'he' | 'ru'>('he')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [modalOpen, setModalOpen] = useState(false)
+  const [orderModalOpen, setOrderModalOpen] = useState(false)
+  const [contactModalOpen, setContactModalOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState('')
   const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
   const t = translations[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
 
@@ -447,9 +503,9 @@ export default function LandingPage() {
   }, [dir, language])
 
   // Handle order modal
-  const openModal = (planName: string) => {
+  const openOrderModal = (planName: string) => {
     setSelectedPlan(planName)
-    setModalOpen(true)
+    setOrderModalOpen(true)
   }
 
   const handleSubmitOrder = (e: React.FormEvent<HTMLFormElement>) => {
@@ -460,6 +516,8 @@ export default function LandingPage() {
       name: formData.get('name'),
       email: formData.get('email'),
       phone: formData.get('phone'),
+      business: formData.get('business'),
+      category: formData.get('category'),
       timestamp: new Date().toISOString(),
     }
     
@@ -469,7 +527,36 @@ export default function LandingPage() {
     localStorage.setItem('landing-orders', JSON.stringify(orders))
     
     // Close modal and show toast
-    setModalOpen(false)
+    setOrderModalOpen(false)
+    setToastMessage(t.orderModal.successMessage)
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 3000)
+  }
+
+  // Handle contact modal
+  const openContactModal = () => {
+    setContactModalOpen(true)
+  }
+
+  const handleSubmitContact = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const contactData = {
+      name: formData.get('name'),
+      email: formData.get('email'),
+      business: formData.get('business'),
+      message: formData.get('message'),
+      timestamp: new Date().toISOString(),
+    }
+    
+    // Save to localStorage
+    const contacts = JSON.parse(localStorage.getItem('landing-contacts') || '[]')
+    contacts.push(contactData)
+    localStorage.setItem('landing-contacts', JSON.stringify(contacts))
+    
+    // Close modal and show toast
+    setContactModalOpen(false)
+    setToastMessage(t.contactModal.successMessage)
     setShowToast(true)
     setTimeout(() => setShowToast(false), 3000)
   }
@@ -843,7 +930,7 @@ export default function LandingPage() {
 
                   {/* CTA Button */}
                   <button
-                    onClick={() => openModal(plan.name)}
+                    onClick={() => openOrderModal(plan.name)}
                     className={`w-full py-3 rounded-lg font-semibold transition-all ${
                       index === 0
                         ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -954,46 +1041,47 @@ export default function LandingPage() {
             </a>
 
             {/* Email Button */}
-            <a
-              href="mailto:ambersolutions.systems@gmail.com"
+            <button
+              onClick={openContactModal}
               className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white rounded-lg font-semibold border-2 border-white/30 hover:bg-white/20 transition-all"
             >
               <Mail size={20} />
               {t.cta.email}
-            </a>
+            </button>
           </div>
         </div>
       </section>
 
       {/* Order Modal */}
-      {modalOpen && (
+      {orderModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
-          onClick={() => setModalOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"
+          onClick={() => setOrderModalOpen(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-scale-in"
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-scale-in max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                {t.orderModal.title}
-              </h3>
-
-              <form onSubmit={handleSubmitOrder} className="space-y-4">
-                {/* Selected Plan */}
+              {/* Header with Close Button */}
+              <div className="flex justify-between items-start mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.orderModal.planLabel}
-                  </label>
-                  <input
-                    type="text"
-                    value={selectedPlan}
-                    readOnly
-                    className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg"
-                  />
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    {t.orderModal.title} {selectedPlan}
+                  </h3>
+                  <span className="inline-block mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-semibold">
+                    {t.orderModal.badge}
+                  </span>
                 </div>
+                <button
+                  onClick={() => setOrderModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
 
+              <form onSubmit={handleSubmitOrder} className="space-y-4 mt-6">
                 {/* Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1033,11 +1121,43 @@ export default function LandingPage() {
                   />
                 </div>
 
+                {/* Business Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.orderModal.businessLabel} *
+                  </label>
+                  <input
+                    type="text"
+                    name="business"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.orderModal.categoryLabel} *
+                  </label>
+                  <select
+                    name="category"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  >
+                    <option value="">{t.orderModal.categoryPlaceholder}</option>
+                    {t.orderModal.categories.map((cat, index) => (
+                      <option key={index} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Buttons */}
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setModalOpen(false)}
+                    onClick={() => setOrderModalOpen(false)}
                     className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
                   >
                     {t.orderModal.cancel}
@@ -1055,12 +1175,132 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed bottom-8 right-8 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg animate-slide-up z-50">
-          {t.orderModal.successMessage}
+      {/* Contact Modal */}
+      {contactModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"
+          onClick={() => setContactModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              {/* Header with Close Button */}
+              <div className="flex justify-between items-start mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  {t.contactModal.title}
+                </h3>
+                <button
+                  onClick={() => setContactModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitContact} className="space-y-4">
+                {/* Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.contactModal.nameLabel} *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.contactModal.emailLabel} *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Business Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.contactModal.businessLabel} *
+                  </label>
+                  <input
+                    type="text"
+                    name="business"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Message */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.contactModal.messageLabel} *
+                  </label>
+                  <textarea
+                    name="message"
+                    required
+                    rows={4}
+                    placeholder={t.contactModal.messagePlaceholder}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                  />
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setContactModalOpen(false)}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                  >
+                    {t.contactModal.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition-colors"
+                  >
+                    {t.contactModal.submit}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed bottom-8 right-8 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg animate-slide-up z-50 max-w-sm">
+          {toastMessage}
+        </div>
+      )}
+
+      {/* Floating Button - Desktop */}
+      <a
+        href="#pricing"
+        className="hidden md:block fixed right-0 top-1/2 -translate-y-1/2 bg-amber-500 text-white font-bold py-4 px-2 rounded-l-lg shadow-lg hover:bg-amber-600 transition-all z-40 animate-pulse-slow"
+        style={{
+          writingMode: 'vertical-rl',
+          textOrientation: 'mixed',
+        }}
+      >
+        {t.floatingButton.text}
+      </a>
+
+      {/* Floating Button - Mobile */}
+      <a
+        href="#pricing"
+        className="md:hidden fixed bottom-4 left-4 right-4 bg-amber-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-amber-600 transition-all z-40 text-center animate-pulse-slow"
+      >
+        {t.floatingButton.text}
+      </a>
 
       {/* Footer */}
       <footer className="bg-[#0F172A] text-white py-12">
@@ -1223,6 +1463,23 @@ export default function LandingPage() {
           }
           100% {
             transform: translateY(-50%);
+          }
+        }
+
+        /* Pulse animation for floating button */
+        .animate-pulse-slow {
+          animation: pulseSlow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulseSlow {
+          0%,
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.9;
+            transform: scale(1.02);
           }
         }
 

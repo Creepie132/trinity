@@ -288,6 +288,11 @@ const translations: Record<Language, Record<string, string>> = {
     'common.updatedAt': 'תאריך עדכון',
     'common.deleteConfirm': 'האם אתה בטוח שברצונך למחוק?',
     'common.cannotUndo': 'לא ניתן לבטל פעולה זו',
+    
+    // Error page
+    'error.message': 'משהו השתבש. אנא נסה שוב או פנה לתמיכה.',
+    'error.retry': 'נסה שוב',
+    'error.backHome': 'חזור לדף הבית',
   },
   ru: {
     // Navigation
@@ -562,6 +567,11 @@ const translations: Record<Language, Record<string, string>> = {
     'common.updatedAt': 'Дата обновления',
     'common.deleteConfirm': 'Вы уверены, что хотите удалить?',
     'common.cannotUndo': 'Это действие нельзя отменить',
+    
+    // Error page
+    'error.message': 'Что-то пошло не так. Пожалуйста, попробуйте снова или обратитесь в поддержку.',
+    'error.retry': 'Попробовать снова',
+    'error.backHome': 'Вернуться на главную',
   },
 }
 

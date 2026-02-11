@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertCircle } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function Error({
   error,
@@ -12,6 +13,8 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const { t } = useLanguage()
+
   useEffect(() => {
     // Log the error to an error reporting service
     console.error('Application error:', error)
@@ -25,12 +28,12 @@ export default function Error({
             <div className="bg-red-100 p-3 rounded-full">
               <AlertCircle className="w-6 h-6 text-red-600" />
             </div>
-            <CardTitle className="text-xl">שגיאה</CardTitle>
+            <CardTitle className="text-xl">{t('common.error')}</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-gray-600">
-            משהו השתבש. אנא נסה שוב או פנה לתמיכה.
+            {t('error.message')}
           </p>
           
           {process.env.NODE_ENV === 'development' && error.message && (
@@ -43,14 +46,14 @@ export default function Error({
 
           <div className="flex gap-2">
             <Button onClick={reset} className="flex-1">
-              נסה שוב
+              {t('error.retry')}
             </Button>
             <Button
               variant="outline"
               onClick={() => window.location.href = '/'}
               className="flex-1"
             >
-              חזור לדף הבית
+              {t('error.backHome')}
             </Button>
           </div>
         </CardContent>

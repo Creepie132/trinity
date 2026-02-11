@@ -9,11 +9,13 @@ import AdBanner from '@/components/ads/AdBanner'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 
 export default function Home() {
   const { data: stats, isLoading } = useDashboardStats()
   const features = useFeatures()
   const router = useRouter()
+  const { layout } = useTheme()
 
   // Check if organization is blocked
   useEffect(() => {
@@ -41,34 +43,50 @@ export default function Home() {
           {/* Stats Grid */}
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Always show: Total Clients */}
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
+            <Card className="stat-card">
+              <CardContent className={layout === 'compact' ? 'p-4' : 'p-6'}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">סה״כ לקוחות</p>
-                    <p className="text-3xl font-bold text-theme-primary mt-1">
+                    <p className={`text-gray-600 ${layout === 'compact' ? 'text-xs' : 'text-sm'}`}>
+                      סה״כ לקוחות
+                    </p>
+                    <p className={`font-bold text-theme-primary mt-1 stat-value ${
+                      layout === 'modern' ? 'text-4xl' : layout === 'compact' ? 'text-2xl' : 'text-3xl'
+                    }`}>
                       {stats?.totalClients || 0}
                     </p>
                   </div>
-                  <div className="bg-theme-primary bg-opacity-10 p-3 rounded-full">
-                    <Users className="w-6 h-6 text-theme-primary" />
+                  <div className={`bg-theme-primary bg-opacity-10 rounded-full stat-icon ${
+                    layout === 'modern' ? 'p-4 shadow-md' : layout === 'compact' ? 'p-2' : 'p-3'
+                  }`}>
+                    <Users className={`text-theme-primary ${
+                      layout === 'modern' ? 'w-7 h-7' : layout === 'compact' ? 'w-5 h-5' : 'w-6 h-6'
+                    }`} />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Always show: Visits This Month */}
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
+            <Card className="stat-card">
+              <CardContent className={layout === 'compact' ? 'p-4' : 'p-6'}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">ביקורים החודש</p>
-                    <p className="text-3xl font-bold text-green-600 mt-1">
+                    <p className={`text-gray-600 ${layout === 'compact' ? 'text-xs' : 'text-sm'}`}>
+                      ביקורים החודש
+                    </p>
+                    <p className={`font-bold text-green-600 mt-1 stat-value ${
+                      layout === 'modern' ? 'text-4xl' : layout === 'compact' ? 'text-2xl' : 'text-3xl'
+                    }`}>
                       {stats?.visitsThisMonth || 0}
                     </p>
                   </div>
-                  <div className="bg-green-100 p-3 rounded-full">
-                    <Calendar className="w-6 h-6 text-green-600" />
+                  <div className={`bg-green-100 rounded-full stat-icon ${
+                    layout === 'modern' ? 'p-4 shadow-md' : layout === 'compact' ? 'p-2' : 'p-3'
+                  }`}>
+                    <Calendar className={`text-green-600 ${
+                      layout === 'modern' ? 'w-7 h-7' : layout === 'compact' ? 'w-5 h-5' : 'w-6 h-6'
+                    }`} />
                   </div>
                 </div>
               </CardContent>
@@ -76,17 +94,25 @@ export default function Home() {
 
             {/* Show only if hasPayments */}
             {features.hasPayments && (
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
+              <Card className="stat-card">
+                <CardContent className={layout === 'compact' ? 'p-4' : 'p-6'}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">הכנסות החודש</p>
-                      <p className="text-3xl font-bold text-purple-600 mt-1">
+                      <p className={`text-gray-600 ${layout === 'compact' ? 'text-xs' : 'text-sm'}`}>
+                        הכנסות החודש
+                      </p>
+                      <p className={`font-bold text-purple-600 mt-1 stat-value ${
+                        layout === 'modern' ? 'text-4xl' : layout === 'compact' ? 'text-2xl' : 'text-3xl'
+                      }`}>
                         ₪{stats?.revenueThisMonth.toFixed(2) || '0.00'}
                       </p>
                     </div>
-                    <div className="bg-purple-100 p-3 rounded-full">
-                      <DollarSign className="w-6 h-6 text-purple-600" />
+                    <div className={`bg-purple-100 rounded-full stat-icon ${
+                      layout === 'modern' ? 'p-4 shadow-md' : layout === 'compact' ? 'p-2' : 'p-3'
+                    }`}>
+                      <DollarSign className={`text-purple-600 ${
+                        layout === 'modern' ? 'w-7 h-7' : layout === 'compact' ? 'w-5 h-5' : 'w-6 h-6'
+                      }`} />
                     </div>
                   </div>
                 </CardContent>
@@ -95,20 +121,30 @@ export default function Home() {
 
             {/* Show only if hasAnalytics */}
             {features.hasAnalytics && (
-              <Card className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
+              <Card className="stat-card">
+                <CardContent className={layout === 'compact' ? 'p-4' : 'p-6'}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">לקוחות לא פעילים</p>
-                      <p className="text-3xl font-bold text-orange-600 mt-1">
+                      <p className={`text-gray-600 ${layout === 'compact' ? 'text-xs' : 'text-sm'}`}>
+                        לקוחות לא פעילים
+                      </p>
+                      <p className={`font-bold text-orange-600 mt-1 stat-value ${
+                        layout === 'modern' ? 'text-4xl' : layout === 'compact' ? 'text-2xl' : 'text-3xl'
+                      }`}>
                         {stats?.inactiveClients || 0}
                       </p>
                     </div>
-                    <div className="bg-orange-100 p-3 rounded-full">
-                      <UserX className="w-6 h-6 text-orange-600" />
+                    <div className={`bg-orange-100 rounded-full stat-icon ${
+                      layout === 'modern' ? 'p-4 shadow-md' : layout === 'compact' ? 'p-2' : 'p-3'
+                    }`}>
+                      <UserX className={`text-orange-600 ${
+                        layout === 'modern' ? 'w-7 h-7' : layout === 'compact' ? 'w-5 h-5' : 'w-6 h-6'
+                      }`} />
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">30+ ימים ללא ביקור</p>
+                  <p className={`text-gray-500 mt-2 ${layout === 'compact' ? 'text-xs' : 'text-xs'}`}>
+                    30+ ימים ללא ביקור
+                  </p>
                 </CardContent>
               </Card>
             )}

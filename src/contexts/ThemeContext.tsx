@@ -3,10 +3,13 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 
 export type Theme = 'default' | 'purple' | 'green' | 'orange' | 'pink' | 'dark'
+export type Layout = 'classic' | 'modern' | 'compact'
 
 interface ThemeContextType {
   theme: Theme
   setTheme: (theme: Theme) => void
+  layout: Layout
+  setLayout: (layout: Layout) => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -58,13 +61,21 @@ const themes = {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('default')
+  const [layout, setLayoutState] = useState<Layout>('classic')
 
   useEffect(() => {
     // Load theme from localStorage
-    const saved = localStorage.getItem('trinity-theme') as Theme
-    if (saved && themes[saved]) {
-      setThemeState(saved)
-      applyTheme(saved)
+    const savedTheme = localStorage.getItem('trinity-theme') as Theme
+    if (savedTheme && themes[savedTheme]) {
+      setThemeState(savedTheme)
+      applyTheme(savedTheme)
+    }
+
+    // Load layout from localStorage
+    const savedLayout = localStorage.getItem('trinity-layout') as Layout
+    if (savedLayout && ['classic', 'modern', 'compact'].includes(savedLayout)) {
+      setLayoutState(savedLayout)
+      applyLayout(savedLayout)
     }
   }, [])
 
@@ -72,6 +83,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(newTheme)
     localStorage.setItem('trinity-theme', newTheme)
     applyTheme(newTheme)
+  }
+
+  const setLayout = (newLayout: Layout) => {
+    setLayoutState(newLayout)
+    localStorage.setItem('trinity-layout', newLayout)
+    applyLayout(newLayout)
   }
 
   const applyTheme = (themeName: Theme) => {
@@ -84,8 +101,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute('data-theme', themeName)
   }
 
+  const applyLayout = (layoutName: Layout) => {
+    // Add data attribute for CSS selectors
+    document.documentElement.setAttribute('data-layout', layoutName)
+  }
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, layout, setLayout }}>
       {children}
     </ThemeContext.Provider>
   )

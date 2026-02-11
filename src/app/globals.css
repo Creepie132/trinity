@@ -103,3 +103,54 @@
     background-color: var(--color-secondary);
   }
 }
+
+/* Layout-specific styles */
+@layer components {
+  /* Classic Layout (default) - minimal, table-focused */
+  [data-layout="classic"] .stat-card {
+    @apply bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow;
+  }
+  
+  /* Modern Layout - cards with shadows, gradients */
+  [data-layout="modern"] .stat-card {
+    @apply bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg hover:shadow-xl transition-all border-0;
+  }
+  
+  [data-layout="modern"] .stat-card .stat-icon {
+    @apply shadow-md scale-110;
+  }
+  
+  [data-layout="modern"] .stat-value {
+    @apply text-4xl;
+  }
+  
+  /* Compact Layout - dense, smaller spacing */
+  [data-layout="compact"] .stat-card {
+    @apply bg-white rounded border border-gray-200 shadow-none;
+  }
+  
+  [data-layout="compact"] .stat-card .p-6 {
+    @apply p-4;
+  }
+  
+  [data-layout="compact"] .stat-value {
+    @apply text-2xl;
+  }
+  
+  [data-layout="compact"] .stat-icon {
+    @apply p-2;
+  }
+  
+  /* Container spacing adjustments */
+  [data-layout="classic"] .container {
+    @apply max-w-7xl;
+  }
+  
+  [data-layout="modern"] .container {
+    @apply max-w-6xl;
+  }
+  
+  [data-layout="compact"] .container {
+    @apply max-w-full;
+  }
+}

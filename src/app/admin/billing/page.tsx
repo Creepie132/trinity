@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,14 +26,20 @@ import {
   AlertCircle,
   Lock,
   Unlock,
+  Plus,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Organization } from '@/types/database'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { CreateOrgSubscriptionDialog } from '@/components/admin/CreateOrgSubscriptionDialog'
+import { toast } from 'sonner'
+import { useSearchParams } from 'next/navigation'
 
 export default function BillingPage() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [statusFilter, setStatusFilter] = useState('all')
+  const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false)
+  const searchParams = useSearchParams()
 
   const { data: stats, isLoading: statsLoading } = useBillingStats()
   const { data: organizations, isLoading: orgsLoading } = useBillingOrganizations(statusFilter)
@@ -57,6 +63,18 @@ export default function BillingPage() {
       toggleActive.mutate({ orgId, isActive })
     }
   }
+
+  // Show success/failure message from Stripe callback
+  useEffect(() => {
+    const subscription = searchParams.get('subscription')
+    const canceled = searchParams.get('canceled')
+
+    if (subscription === 'success') {
+      toast.success(language === 'he' ? 'המנוי נוצר בהצלחה!' : 'Подписка успешно оформлена!')
+    } else if (canceled === 'true') {
+      toast.error(language === 'he' ? 'התשלום בוטל' : 'Платёж отменён')
+    }
+  }, [searchParams, language])
 
   const getBillingStatusBadge = (status: string) => {
     switch (status) {
@@ -110,9 +128,18 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">{t('admin.billing.title')}</h1>
-        <p className="text-gray-600 mt-1">{t('admin.billing.subtitle')}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">{t('admin.billing.title')}</h1>
+          <p className="text-gray-600 mt-1">{t('admin.billing.subtitle')}</p>
+        </div>
+        <Button 
+          onClick={() => setSubscriptionDialogOpen(true)}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          <Plus className="w-4 h-4 ml-2" />
+          {language === 'he' ? 'הוסף מנוי לארגון' : 'Оформить подписку организации'}
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -303,6 +330,12 @@ export default function BillingPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Subscription Dialog */}
+      <CreateOrgSubscriptionDialog 
+        open={subscriptionDialogOpen} 
+        onOpenChange={setSubscriptionDialogOpen} 
+      />
     </div>
   )
 }

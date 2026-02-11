@@ -106,12 +106,54 @@ export async function POST(request: NextRequest) {
         limit: 1,
       })
 
-      const clientId = session.data[0]?.metadata?.client_id
-      const orgId = session.data[0]?.metadata?.org_id
-      const clientName = session.data[0]?.metadata?.client_name
+      const metadata = session.data[0]?.metadata
+      const subscriptionType = metadata?.type
+      
+      // Handle organization subscription payment
+      if (subscriptionType === 'org_subscription') {
+        const orgId = metadata?.org_id
+        const plan = metadata?.plan
+        
+        if (!orgId) {
+          console.error('[Stripe Webhook] Missing org_id in org subscription')
+          return NextResponse.json({ error: 'Missing org metadata' }, { status: 400 })
+        }
+        
+        console.log('[Stripe Webhook] Processing org subscription payment:', {
+          orgId,
+          plan,
+          invoiceId: invoice.id,
+        })
+        
+        // Update organization billing status
+        const billingPaidUntil = new Date()
+        billingPaidUntil.setDate(billingPaidUntil.getDate() + 30) // +30 days
+        
+        const { error: orgError } = await supabase
+          .from('organizations')
+          .update({
+            billing_status: 'paid',
+            billing_due_date: billingPaidUntil.toISOString(),
+          })
+          .eq('id', orgId)
+        
+        if (orgError) {
+          console.error('[Stripe Webhook] Failed to update organization:', orgError)
+          return NextResponse.json({ error: 'Failed to update organization' }, { status: 500 })
+        }
+        
+        console.log('[Stripe Webhook] Organization billing updated:', { orgId, billingPaidUntil })
+        
+        return NextResponse.json({ received: true, org_id: orgId })
+      }
+      
+      // Handle client subscription payment
+      const clientId = metadata?.client_id
+      const orgId = metadata?.org_id
+      const clientName = metadata?.client_name
 
       if (!clientId || !orgId) {
-        console.error('[Stripe Webhook] Missing metadata from subscription')
+        console.error('[Stripe Webhook] Missing metadata from client subscription')
         return NextResponse.json({ error: 'Missing metadata' }, { status: 400 })
       }
 

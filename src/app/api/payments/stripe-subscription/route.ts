@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
       },
       product_data: {
         name: `Subscription for ${clientName}`,
-        description: `Trinity CRM - ${interval === 'month' ? 'Monthly' : interval === 'week' ? 'Weekly' : 'Yearly'} Subscription`,
       },
     })
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, ChevronRight, Monitor, Bot, Globe, Code, Mail } from 'lucide-react'
+import { Menu, X, ChevronRight, Monitor, Bot, Globe, Code, Mail, MessageCircle, Send } from 'lucide-react'
 
 // Translations type
 interface Translations {
@@ -48,6 +48,10 @@ interface Translations {
     subtitle: string
     whatsapp: string
     email: string
+  }
+  footer: {
+    copyright: string
+    location: string
   }
 }
 
@@ -144,6 +148,10 @@ const translations: Record<'he' | 'ru', Translations> = {
       whatsapp: 'דברו איתנו עכשיו',
       email: 'שלחו מייל',
     },
+    footer: {
+      copyright: 'Amber Solutions Systems © 2026',
+      location: 'אשקלון, ישראל',
+    },
   },
   ru: {
     nav: {
@@ -236,6 +244,10 @@ const translations: Record<'he' | 'ru', Translations> = {
       subtitle: 'Свяжитесь с нами и мы вместе создадим идеальное решение для вашего бизнеса',
       whatsapp: 'Поговорите с нами сейчас',
       email: 'Написать email',
+    },
+    footer: {
+      copyright: 'Amber Solutions Systems © 2026',
+      location: 'Ашкелон, Израиль',
     },
   },
 }
@@ -657,16 +669,61 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-400">
-            © 2026 Amber Solutions Systems. All rights reserved.
-          </p>
+      <footer className="bg-[#0F172A] text-white py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+            {/* Logo & Copyright */}
+            <div className="flex items-center gap-3">
+              <img
+                src="/logo.png"
+                alt="Amber Solutions Logo"
+                className="w-8 h-8 object-contain"
+              />
+              <div className="text-center md:text-start">
+                <p className="font-semibold">{t.footer.copyright}</p>
+                <p className="text-gray-400 text-sm mt-1">{t.footer.location}</p>
+              </div>
+            </div>
+
+            {/* Contact Links */}
+            <div className="flex gap-6">
+              <a
+                href="https://wa.me/972544858586"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
+                aria-label="WhatsApp"
+              >
+                <MessageCircle size={24} />
+              </a>
+              <a
+                href="mailto:ambersolutions.systems@gmail.com"
+                className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
+                aria-label="Email"
+              >
+                <Mail size={24} />
+              </a>
+              <a
+                href="https://t.me/yourtelegramusername"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
+                aria-label="Telegram"
+              >
+                <Send size={24} />
+              </a>
+            </div>
+          </div>
         </div>
       </footer>
 
       {/* Global Styles for Animations */}
       <style jsx global>{`
+        /* Smooth scroll */
+        html {
+          scroll-behavior: smooth;
+        }
+
         .fade-in-section {
           opacity: 0;
           transform: translateY(30px);

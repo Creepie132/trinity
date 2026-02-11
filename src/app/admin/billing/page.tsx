@@ -29,8 +29,10 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Organization } from '@/types/database'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function BillingPage() {
+  const { t } = useLanguage()
   const [statusFilter, setStatusFilter] = useState('all')
 
   const { data: stats, isLoading: statsLoading } = useBillingStats()
@@ -41,7 +43,7 @@ export default function BillingPage() {
   const toggleActive = useToggleOrgActive()
 
   const handleMarkAsPaid = (orgId: string) => {
-    if (confirm('האם לסמן תשלום כשולם?')) {
+    if (confirm(t('admin.billing.markPaidConfirm'))) {
       markAsPaid.mutate(orgId)
     }
   }
@@ -51,8 +53,7 @@ export default function BillingPage() {
   }
 
   const handleToggleActive = (orgId: string, isActive: boolean) => {
-    const action = isActive ? 'להפעיל' : 'לחסום'
-    if (confirm(`האם ${action} גישה לארגון זה?`)) {
+    if (confirm(t('admin.billing.toggleActiveConfirm'))) {
       toggleActive.mutate({ orgId, isActive })
     }
   }
@@ -63,27 +64,27 @@ export default function BillingPage() {
         return (
           <Badge className="bg-green-500 flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3" />
-            שולם
+            {t('admin.billing.paid')}
           </Badge>
         )
       case 'trial':
         return (
           <Badge className="bg-yellow-500 flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            תקופת ניסיון
+            {t('admin.billing.trial')}
           </Badge>
         )
       case 'overdue':
         return (
           <Badge variant="destructive" className="flex items-center gap-1">
             <AlertCircle className="w-3 h-3" />
-            באיחור
+            {t('admin.billing.overdue')}
           </Badge>
         )
       case 'cancelled':
         return (
           <Badge variant="secondary">
-            בוטל
+            {t('admin.billing.cancelled')}
           </Badge>
         )
       default:
@@ -92,12 +93,12 @@ export default function BillingPage() {
   }
 
   const getPlanLabel = (plan: string) => {
-    const labels: Record<string, string> = {
-      basic: 'בסיסי',
-      pro: 'מקצועי',
-      enterprise: 'ארגוני',
+    const planKeys: Record<string, string> = {
+      basic: 'admin.orgs.basic',
+      pro: 'admin.orgs.pro',
+      enterprise: 'admin.orgs.enterprise',
     }
-    return labels[plan] || plan
+    return t(planKeys[plan]) || plan
   }
 
   const isOverdue = (org: Organization) => {
@@ -110,8 +111,8 @@ export default function BillingPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">ניהול חיובים</h1>
-        <p className="text-gray-600 mt-1">מעקב אחר תשלומים ומנויים</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('admin.billing.title')}</h1>
+        <p className="text-gray-600 mt-1">{t('admin.billing.subtitle')}</p>
       </div>
 
       {/* Stats Cards */}
@@ -120,7 +121,7 @@ export default function BillingPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">שולמו</p>
+                <p className="text-sm text-gray-600">{t('admin.billing.paid')}</p>
                 <p className="text-3xl font-bold text-green-600 mt-1">
                   {stats?.paid || 0}
                 </p>
@@ -136,7 +137,7 @@ export default function BillingPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">בתקופת ניסיון</p>
+                <p className="text-sm text-gray-600">{t('admin.billing.trial')}</p>
                 <p className="text-3xl font-bold text-yellow-600 mt-1">
                   {stats?.trial || 0}
                 </p>
@@ -152,7 +153,7 @@ export default function BillingPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">באיחור</p>
+                <p className="text-sm text-gray-600">{t('admin.billing.overdue')}</p>
                 <p className="text-3xl font-bold text-red-600 mt-1">
                   {stats?.overdue || 0}
                 </p>
@@ -171,35 +172,35 @@ export default function BillingPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5" />
-              חיובים ומנויים
+              {t('admin.billing.title')}
             </CardTitle>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="סנן לפי סטטוס" />
+                <SelectValue placeholder={t('admin.billing.filterByStatus')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">הכל</SelectItem>
-                <SelectItem value="paid">שולם</SelectItem>
-                <SelectItem value="trial">תקופת ניסיון</SelectItem>
-                <SelectItem value="overdue">באיחור</SelectItem>
-                <SelectItem value="cancelled">בוטל</SelectItem>
+                <SelectItem value="all">{t('payments.all')}</SelectItem>
+                <SelectItem value="paid">{t('admin.billing.paid')}</SelectItem>
+                <SelectItem value="trial">{t('admin.billing.trial')}</SelectItem>
+                <SelectItem value="overdue">{t('admin.billing.overdue')}</SelectItem>
+                <SelectItem value="cancelled">{t('admin.billing.cancelled')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardHeader>
         <CardContent>
           {orgsLoading ? (
-            <div className="text-center py-12 text-gray-500">טוען נתונים...</div>
+            <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">ארגון</TableHead>
-                  <TableHead className="text-right">תוכנית</TableHead>
-                  <TableHead className="text-right">סטטוס תשלום</TableHead>
-                  <TableHead className="text-right">תאריך תשלום הבא</TableHead>
-                  <TableHead className="text-right">סטטוס גישה</TableHead>
-                  <TableHead className="text-right">פעולות</TableHead>
+                  <TableHead className="text-right">{t('admin.orgs.name')}</TableHead>
+                  <TableHead className="text-right">{t('admin.orgs.plan')}</TableHead>
+                  <TableHead className="text-right">{t('admin.billing.paid')}</TableHead>
+                  <TableHead className="text-right">{t('admin.billing.dueDate')}</TableHead>
+                  <TableHead className="text-right">{t('admin.orgs.status')}</TableHead>
+                  <TableHead className="text-right">{t('clients.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -246,7 +247,7 @@ export default function BillingPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={org.is_active ? 'default' : 'secondary'}>
-                        {org.is_active ? 'פעיל' : 'חסום'}
+                        {org.is_active ? t('admin.orgs.active') : t('admin.orgs.inactive')}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -259,7 +260,7 @@ export default function BillingPage() {
                             disabled={markAsPaid.isPending}
                           >
                             <CheckCircle2 className="w-4 h-4 ml-1" />
-                            סמן כשולם
+                            {t('admin.billing.markPaid')}
                           </Button>
                         )}
                         
@@ -271,7 +272,7 @@ export default function BillingPage() {
                             disabled={toggleActive.isPending}
                           >
                             <Lock className="w-4 h-4 ml-1" />
-                            חסום
+                            {t('admin.billing.block')}
                           </Button>
                         ) : (
                           <Button
@@ -281,7 +282,7 @@ export default function BillingPage() {
                             disabled={toggleActive.isPending}
                           >
                             <Unlock className="w-4 h-4 ml-1" />
-                            הפעל
+                            {t('admin.billing.activate')}
                           </Button>
                         )}
                       </div>
@@ -291,7 +292,7 @@ export default function BillingPage() {
                 {(!organizations || organizations.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12 text-gray-500">
-                      אין ארגונים
+                      {t('admin.billing.noOrgs')}
                     </TableCell>
                   </TableRow>
                 )}

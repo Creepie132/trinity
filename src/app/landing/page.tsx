@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, ChevronRight } from 'lucide-react'
+import { Menu, X, ChevronRight, Monitor, Bot, Globe, Code } from 'lucide-react'
 
 // Translations type
 interface Translations {
@@ -17,7 +17,21 @@ interface Translations {
     subtitle: string
     cta: string
   }
-  // Добавим остальные секции по мере поступления информации
+  services: {
+    title: string
+    items: {
+      title: string
+      description: string
+    }[]
+  }
+  whyCrm: {
+    title: string
+    article: string
+    stats: {
+      value: string
+      label: string
+    }[]
+  }
 }
 
 const translations: Record<'he' | 'ru', Translations> = {
@@ -34,6 +48,46 @@ const translations: Record<'he' | 'ru', Translations> = {
       subtitle: 'מערכות CRM, בוטים, אתרים ודפי נחיתה — הכל במקום אחד',
       cta: 'בואו נדבר',
     },
+    services: {
+      title: 'מה אנחנו מציעים',
+      items: [
+        {
+          title: 'מערכות CRM',
+          description: 'ניהול לקוחות, תשלומים, SMS ואנליטיקה',
+        },
+        {
+          title: 'בוטים חכמים',
+          description: 'בוטי טלגרם ו-WhatsApp לאוטומציה',
+        },
+        {
+          title: 'אתרים ודפי נחיתה',
+          description: 'עיצוב ופיתוח אתרים מותאמים אישית',
+        },
+        {
+          title: 'פתרונות תוכנה',
+          description: 'פיתוח מותאם אישית לצרכי העסק שלך',
+        },
+      ],
+    },
+    whyCrm: {
+      title: 'למה העסק שלך צריך מערכת CRM?',
+      article:
+        'רבים חושבים שמערכת CRM מיועדת רק לעסקים גדולים, אבל האמת היא שדווקא עסקים קטנים מרוויחים ממנה הכי הרבה. כשהעסק רק נפתח, קל לנהל 10-20 לקוחות בראש או באקסל. אבל ברגע שמגיעים ל-50 לקוחות ומעלה, דברים מתחילים ליפול בין הכיסאות: לקוחות שוכחים לשלם, תורים הולכים לאיבוד, ואין מושג מי הלקוחות הכי רווחיים. הזמן האידיאלי להתחיל עם CRM הוא עכשיו — לא כשכבר יש בעיה, אלא לפני שהיא מתחילה.',
+      stats: [
+        {
+          value: '67%',
+          label: 'מהעסקים הקטנים מדווחים על עלייה במכירות אחרי הטמעת CRM',
+        },
+        {
+          value: '3x',
+          label: 'שיפור בשימור לקוחות',
+        },
+        {
+          value: '50%',
+          label: 'חיסכון בזמן ניהול',
+        },
+      ],
+    },
   },
   ru: {
     nav: {
@@ -47,6 +101,46 @@ const translations: Record<'he' | 'ru', Translations> = {
       title: 'Технологические решения для малого бизнеса',
       subtitle: 'CRM системы, боты, сайты и лендинги — всё в одном месте',
       cta: 'Давайте поговорим',
+    },
+    services: {
+      title: 'Что мы предлагаем',
+      items: [
+        {
+          title: 'CRM системы',
+          description: 'Управление клиентами, платежи, SMS и аналитика',
+        },
+        {
+          title: 'Умные боты',
+          description: 'Telegram и WhatsApp боты для автоматизации',
+        },
+        {
+          title: 'Сайты и лендинги',
+          description: 'Дизайн и разработка персональных сайтов',
+        },
+        {
+          title: 'Программные решения',
+          description: 'Разработка под потребности вашего бизнеса',
+        },
+      ],
+    },
+    whyCrm: {
+      title: 'Почему вашему бизнесу нужна CRM система?',
+      article:
+        'Многие думают что CRM система нужна только крупным компаниям, но правда в том что именно малый бизнес получает от неё максимальную выгоду. Когда бизнес только открывается, легко управлять 10-20 клиентами в голове или в Excel. Но как только клиентов становится 50 и больше, начинают теряться данные: клиенты забывают платить, записи пропадают, и нет понимания кто самые прибыльные клиенты. Идеальное время начать с CRM — сейчас. Не когда проблема уже есть, а до того как она появится.',
+      stats: [
+        {
+          value: '67%',
+          label: 'малых бизнесов сообщают о росте продаж после внедрения CRM',
+        },
+        {
+          value: '3x',
+          label: 'улучшение удержания клиентов',
+        },
+        {
+          value: '50%',
+          label: 'экономия времени управления',
+        },
+      ],
     },
   },
 }
@@ -267,14 +361,98 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Services Section - Placeholder */}
-      <section id="services" className="py-20 bg-gray-50 fade-in-section">
+      {/* Why CRM Section */}
+      <section className="py-20 bg-gray-50 fade-in-section">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
-            {t.nav.services}
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
+            {t.whyCrm.title}
           </h2>
-          <div className="text-center text-gray-600">
-            <p className="text-lg">Секция в разработке - ожидаем контент...</p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            {/* Left Column - Article */}
+            <div className="bg-white rounded-xl shadow-md p-8">
+              <p className="text-lg text-gray-700 leading-relaxed">
+                {t.whyCrm.article}
+              </p>
+            </div>
+
+            {/* Right Column - Stats */}
+            <div className="space-y-6">
+              {t.whyCrm.stats.map((stat, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-xl shadow-md p-6 border-l-4 border-amber-500"
+                >
+                  <div className="text-4xl font-bold text-amber-600 mb-2">
+                    {stat.value}
+                  </div>
+                  <p className="text-gray-700 leading-relaxed">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Services Section */}
+      <section id="services" className="py-20 bg-white fade-in-section">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
+            {t.services.title}
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Service Card 1 - CRM */}
+            <div className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+              <div className="w-14 h-14 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                <Monitor className="w-7 h-7 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
+                {t.services.items[0].title}
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                {t.services.items[0].description}
+              </p>
+            </div>
+
+            {/* Service Card 2 - Bots */}
+            <div className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+              <div className="w-14 h-14 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                <Bot className="w-7 h-7 text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
+                {t.services.items[1].title}
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                {t.services.items[1].description}
+              </p>
+            </div>
+
+            {/* Service Card 3 - Websites */}
+            <div className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+              <div className="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                <Globe className="w-7 h-7 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
+                {t.services.items[2].title}
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                {t.services.items[2].description}
+              </p>
+            </div>
+
+            {/* Service Card 4 - Software */}
+            <div className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+              <div className="w-14 h-14 bg-amber-100 rounded-lg flex items-center justify-center mb-4">
+                <Code className="w-7 h-7 text-amber-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
+                {t.services.items[3].title}
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                {t.services.items[3].description}
+              </p>
+            </div>
           </div>
         </div>
       </section>

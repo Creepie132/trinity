@@ -12,10 +12,12 @@ import { Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function SmsPage() {
   const router = useRouter()
   const features = useFeatures()
+  const { t } = useLanguage()
   const [selectedCampaign, setSelectedCampaign] = useState<SmsCampaign | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
 
@@ -40,13 +42,13 @@ export default function SmsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-green-500">הושלם</Badge>
+        return <Badge className="bg-green-500">{t('sms.completed')}</Badge>
       case 'sending':
-        return <Badge className="bg-blue-500">שולח</Badge>
+        return <Badge className="bg-blue-500">{t('sms.sending')}</Badge>
       case 'failed':
-        return <Badge variant="destructive">נכשל</Badge>
+        return <Badge variant="destructive">{t('sms.failed')}</Badge>
       case 'draft':
-        return <Badge variant="secondary">טיוטה</Badge>
+        return <Badge variant="secondary">{t('sms.draft')}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -56,9 +58,9 @@ export default function SmsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">הודעות SMS</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('sms.title')}</h1>
         <p className="text-gray-600 mt-1">
-          נהל רסלות SMS ללקוחות
+          {t('sms.subtitle')}
         </p>
       </div>
 
@@ -67,22 +69,22 @@ export default function SmsPage() {
 
       {/* Campaigns History */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">היסטוריית רסלות</h2>
+        <h2 className="text-xl font-semibold mb-4">{t('sms.history')}</h2>
 
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
           {isLoading ? (
-            <div className="text-center py-12 text-gray-500">טוען...</div>
+            <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
           ) : campaigns && campaigns.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>שם</TableHead>
-                  <TableHead>תאריך</TableHead>
-                  <TableHead>מקבלים</TableHead>
-                  <TableHead>נשלחו</TableHead>
-                  <TableHead>נכשלו</TableHead>
-                  <TableHead>סטטוס</TableHead>
-                  <TableHead className="text-left">פעולות</TableHead>
+                  <TableHead>{t('common.name')}</TableHead>
+                  <TableHead>{t('common.date')}</TableHead>
+                  <TableHead>{t('sms.recipients')}</TableHead>
+                  <TableHead>{t('sms.sent')}</TableHead>
+                  <TableHead>{t('sms.failed')}</TableHead>
+                  <TableHead>{t('common.status')}</TableHead>
+                  <TableHead className="text-left">{t('clients.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -127,8 +129,8 @@ export default function SmsPage() {
             </Table>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-500 mb-4">אין רסלות</p>
-              <p className="text-sm text-gray-400">צור רסלה חדשה למעלה</p>
+              <p className="text-gray-500 mb-4">{t('sms.noCampaigns')}</p>
+              <p className="text-sm text-gray-400">{t('sms.createNew')}</p>
             </div>
           )}
         </div>

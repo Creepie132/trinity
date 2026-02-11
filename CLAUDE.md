@@ -5,8 +5,381 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-11 00:49 UTC  
-**Версия:** 2.10.0
+**Последнее обновление:** 2026-02-11 01:49 UTC  
+**Версия:** 2.11.0
+
+---
+
+## ⚙️ ОБНОВЛЕНИЯ v2.11.0 (2026-02-11 01:49) - Advanced Customization System 🔧
+
+### 🎉 NEW FEATURE: Полная кастомизация UI (12+ настроек)
+
+**Запрошено пользователем:**
+> "А можешь сейчас сделать вариант 2?"
+
+**Реализовано:** Система детальной кастомизации с контролем каждого аспекта интерфейса.
+
+---
+
+### ⚙️ Доступные настройки
+
+#### 1️⃣ Sidebar (Тפריט צד)
+- **Position:** Right (RTL) / Left (LTR)
+- **Width:** Narrow (240px) / Normal (288px) / Wide (320px)
+- **Collapsible:** Yes/No toggle
+
+#### 2️⃣ Cards (כרטיסים)
+- **Style:** Flat / Shadow / Border / Glassmorphic
+- **Roundness:** None (0px) / Small (4px) / Medium (8px) / Large (16px)
+- **Spacing:** Tight (0.5rem) / Normal (1rem) / Spacious (1.5rem)
+- **Live Preview** - видишь изменения сразу
+
+#### 3️⃣ Typography (טקסט)
+- **Font Size:** Small (14px) / Normal (16px) / Large (18px)
+- **Font Weight:** Light (300) / Normal (400) / Bold (600)
+
+#### 4️⃣ Tables (טבלאות)
+- **Style:** Minimal / Striped / Bordered / Cards
+- **Density:** Compact (py-2) / Normal (py-3) / Comfortable (py-4)
+
+#### 5️⃣ Animations (אנימציות)
+- **Enabled:** Yes/No toggle
+- **Speed:** Fast (150ms) / Normal (300ms) / Slow (500ms)
+
+---
+
+### 🛠️ Архитектура
+
+#### Extended ThemeContext
+
+```typescript
+export interface CustomizationSettings {
+  // Sidebar
+  sidebarPosition: 'right' | 'left'
+  sidebarWidth: 'narrow' | 'normal' | 'wide'
+  sidebarCollapsible: boolean
+  
+  // Cards
+  cardStyle: 'flat' | 'shadow' | 'border' | 'glassmorphic'
+  cardRoundness: 'none' | 'small' | 'medium' | 'large'
+  cardSpacing: 'tight' | 'normal' | 'spacious'
+  
+  // Typography
+  fontSize: 'small' | 'normal' | 'large'
+  fontWeight: 'light' | 'normal' | 'bold'
+  
+  // Tables
+  tableStyle: 'minimal' | 'striped' | 'bordered' | 'cards'
+  tableDensity: 'compact' | 'normal' | 'comfortable'
+  
+  // Animations
+  animations: boolean
+  transitionSpeed: 'fast' | 'normal' | 'slow'
+}
+
+// Functions
+updateCustomization(settings: Partial<CustomizationSettings>)
+resetCustomization() // Reset to defaults
+```
+
+**Storage:**
+- localStorage key: `trinity-customization`
+- Persists между сессиями
+- Загружается при mount
+
+---
+
+#### Data Attributes System
+
+**How it works:**
+
+```typescript
+// User changes setting
+updateCustomization({ cardStyle: 'glassmorphic' })
+
+// Applied to DOM
+document.documentElement.setAttribute('data-card-style', 'glassmorphic')
+
+// CSS selector activates
+[data-card-style="glassmorphic"] .custom-card {
+  @apply bg-white/80 backdrop-blur-lg shadow-lg;
+}
+```
+
+**Преимущества:**
+- Real-time updates (no page reload)
+- Clean separation (context → DOM → CSS)
+- Easy to extend (add new attribute)
+- Performance (CSS handles styling)
+
+---
+
+### 📄 New Page: /settings/customize
+
+**Path:** `/settings/customize` (התאמה מתקדמת)
+
+**UI Structure:**
+
+```
+Header
+├─ Back link → /settings
+├─ Title: "התאמה מתקדמת"
+└─ Reset Button → resetCustomization()
+
+6 Sections (Cards):
+├─ 🔲 Sidebar Settings
+│  ├─ Position (Select)
+│  ├─ Width (Select)
+│  └─ Collapsible (Switch)
+│
+├─ 🎴 Card Settings
+│  ├─ Style (Select)
+│  ├─ Roundness (Select)
+│  ├─ Spacing (Select)
+│  └─ Live Preview (mini card)
+│
+├─ 📝 Typography Settings
+│  ├─ Font Size (Select)
+│  └─ Font Weight (Select)
+│
+├─ 📊 Table Settings
+│  ├─ Style (Select)
+│  └─ Density (Select)
+│
+├─ ⚡ Animation Settings
+│  ├─ Enabled (Switch)
+│  └─ Speed (Select, if enabled)
+│
+└─ 💡 Info Card
+   └─ Tips about auto-save
+```
+
+**Components Used:**
+- Select (from shadcn/ui)
+- Switch (for toggles)
+- Card (sections)
+- Button (reset)
+
+---
+
+### 🎨 Visual Examples
+
+#### Card Styles:
+
+**Flat:**
+```css
+bg-white shadow-none border-0
+```
+Clean, minimal, no depth
+
+**Shadow:**
+```css
+bg-white shadow-md border-0
+```
+Material Design style
+
+**Border:**
+```css
+bg-white shadow-none border-2 border-gray-200
+```
+Outlined, lightweight
+
+**Glassmorphic:**
+```css
+bg-white/80 backdrop-blur-lg shadow-lg border border-gray-200/50
+```
+Modern, frosted glass effect
+
+---
+
+#### Table Styles:
+
+**Minimal:**
+- Только bottom border на rows
+
+**Striped:**
+- Alternating row colors (even rows bg-gray-50)
+
+**Bordered:**
+- Full borders on all cells
+
+**Cards:**
+- Each row as a card (для mobile)
+
+---
+
+#### Animations:
+
+**Disabled:**
+```css
+[data-animations="disabled"] * {
+  transition: none !important;
+  animation: none !important;
+}
+```
+For users who prefer reduced motion
+
+**Speed:**
+- Fast: 150ms (snappy)
+- Normal: 300ms (balanced)
+- Slow: 500ms (smooth)
+
+---
+
+### 🎯 User Flow
+
+1. **Main Settings** (`/settings`)
+   - See "🔧 התאמה מתקדמת" card
+   - Click "פתח התאמה מתקדמת"
+
+2. **Customization Page** (`/settings/customize`)
+   - 6 sections with all options
+   - Change settings via Select/Switch
+   - See live preview for cards
+   - Auto-saves on every change
+
+3. **Reset** (if needed)
+   - Click "איפוס להגדרות ברירת מחדל"
+   - All settings → defaults
+   - Instant update
+
+4. **Navigate away**
+   - Settings persist
+   - Apply everywhere in app
+
+---
+
+### 🌈 Combinations
+
+**Total customization options:**
+- 6 colors × 3 layouts × (sidebar: 2×3×2) × (cards: 4×4×3) × (typography: 3×3) × (tables: 4×3) × (animations: 2×3)
+- = **Hundreds of thousands** of unique combinations!
+
+**Popular Presets (future):**
+- **Minimal:** Flat cards, no shadows, compact tables
+- **Premium:** Glassmorphic cards, large roundness, slow animations
+- **Dense:** Narrow sidebar, tight spacing, compact density
+- **Accessible:** Large font, high contrast, disabled animations
+
+---
+
+### 📁 Files Changed
+
+**NEW:**
+- ✅ `src/app/(dashboard)/settings/customize/page.tsx` - Customization UI
+
+**MODIFIED:**
+- ✅ `src/contexts/ThemeContext.tsx` - Added CustomizationSettings
+- ✅ `src/app/(dashboard)/settings/page.tsx` - Link to customize
+- ✅ `src/app/globals.css` - CSS for all customizations
+
+---
+
+### 🚀 CSS Implementation
+
+**globals.css - New selectors:**
+
+```css
+/* Sidebar */
+[data-sidebar-width="narrow"] aside { @apply lg:w-60; }
+[data-sidebar-width="normal"] aside { @apply lg:w-72; }
+[data-sidebar-width="wide"] aside { @apply lg:w-80; }
+
+/* Cards */
+[data-card-style="flat"] .custom-card { @apply bg-white shadow-none; }
+[data-card-style="shadow"] .custom-card { @apply bg-white shadow-md; }
+[data-card-style="border"] .custom-card { @apply border-2 border-gray-200; }
+[data-card-style="glassmorphic"] .custom-card { 
+  @apply bg-white/80 backdrop-blur-lg; 
+}
+
+/* Roundness */
+[data-card-roundness="none"] .custom-card { @apply rounded-none; }
+[data-card-roundness="small"] .custom-card { @apply rounded; }
+[data-card-roundness="medium"] .custom-card { @apply rounded-lg; }
+[data-card-roundness="large"] .custom-card { @apply rounded-2xl; }
+
+/* Typography */
+[data-font-size="small"] { font-size: 14px; }
+[data-font-size="normal"] { font-size: 16px; }
+[data-font-size="large"] { font-size: 18px; }
+
+/* Tables */
+[data-table-style="striped"] table tbody tr:nth-child(even) {
+  @apply bg-gray-50;
+}
+
+/* Animations */
+[data-animations="disabled"] * {
+  transition: none !important;
+  animation: none !important;
+}
+
+[data-transition-speed="fast"] * {
+  transition-duration: 150ms !important;
+}
+```
+
+**Benefits:**
+- Declarative (one class, many variants)
+- Performant (CSS handles everything)
+- Maintainable (easy to add new options)
+- Predictable (data attribute → style)
+
+---
+
+### ✅ Result
+
+**BEFORE:**
+- Fixed presets (3 layouts × 6 colors)
+- Limited customization
+
+**AFTER:**
+- 12+ granular settings
+- Full control over:
+  - Sidebar appearance
+  - Card styling
+  - Typography scale
+  - Table presentation
+  - Animation behavior
+- Live preview
+- Persist between sessions
+- Reset to defaults button
+- Hebrew labels
+
+---
+
+### 🎨 Usage Examples
+
+**Minimal Setup:**
+```
+Sidebar: Narrow, Right
+Cards: Flat, None roundness, Tight spacing
+Typography: Small, Light
+Tables: Minimal, Compact
+Animations: Disabled
+```
+Result: Ultra-clean, data-dense interface
+
+**Premium Setup:**
+```
+Sidebar: Wide, Right
+Cards: Glassmorphic, Large roundness, Spacious
+Typography: Large, Bold
+Tables: Cards, Comfortable
+Animations: Enabled, Slow
+```
+Result: Modern, impressive, spacious UI
+
+**Balanced Setup (default):**
+```
+Sidebar: Normal, Right
+Cards: Shadow, Medium, Normal
+Typography: Normal, Normal
+Tables: Striped, Normal
+Animations: Enabled, Normal
+```
+Result: Professional, familiar feel
 
 ---
 

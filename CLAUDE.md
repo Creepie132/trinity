@@ -5,8 +5,420 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-11 01:49 UTC  
-**Версия:** 2.11.0
+**Последнее обновление:** 2026-02-11 14:24 UTC  
+**Версия:** 2.12.0
+
+---
+
+## 🌐 ОБНОВЛЕНИЯ v2.12.0 (2026-02-11 14:24) - i18n System + Settings Reorganization
+
+### 🎉 NEW FEATURES: Полная локализация + Реорганизация настроек
+
+**Запрошено пользователем:**
+> "Ты можешь это все упаковать в הגדרות по пунктам? Интерфейс и дизайн поместить в הגדרות - תצוגה, и добавить туда שפה. Ты сможешь перевести всю систему на русский язык, с изменением стороны отображения? Слева на право"
+
+**Реализовано:**
+1. ✅ Полная система i18n (עברית / Русский)
+2. ✅ Автоматическое переключение RTL ↔ LTR
+3. ✅ Реорганизация настроек по категориям
+4. ✅ Dark Mode toggle
+5. ✅ 80+ переведённых ключей
+
+---
+
+### 🌍 i18n System (LanguageContext)
+
+**Поддерживаемые языки:**
+
+| Язык | Code | Direction | Flag |
+|------|------|-----------|------|
+| עברית (Иврит) | `he` | RTL (справа налево) | 🇮🇱 |
+| Русский | `ru` | LTR (слева направо) | 🇷🇺 |
+
+**Как работает:**
+
+```typescript
+// LanguageContext
+const { language, setLanguage, t, dir } = useLanguage()
+
+// Перевод ключа
+t('settings.title') // → "הגדרות" (he) / "Настройки" (ru)
+
+// Текущее направление
+dir // → 'rtl' / 'ltr'
+
+// Сменить язык
+setLanguage('ru') // → Весь интерфейс мгновенно на русском
+```
+
+**Auto RTL/LTR:**
+
+```typescript
+// При смене языка
+setLanguage('ru') // Русский
+
+// Автоматически:
+document.documentElement.setAttribute('lang', 'ru')
+document.documentElement.setAttribute('dir', 'ltr')
+
+// CSS и Tailwind автоматически адаптируются:
+// - Sidebar слева (LTR)
+// - Text align left
+// - Icons flip correctly
+```
+
+---
+
+### 📚 Translation Coverage
+
+**Переведено 80+ ключей:**
+
+#### Navigation (`nav.*`)
+- `nav.dashboard` → דשבורד / Дашборд
+- `nav.clients` → לקוחות / Клиенты
+- `nav.payments` → תשלומים / Платежи
+- `nav.sms` → הודעות SMS / SMS сообщения
+- `nav.stats` → סטטיסטיקה / Статистика
+- `nav.partners` → הצעות שותפים / Партнёрские предложения
+- `nav.settings` → הגדרות / Настройки
+- `nav.admin` → ניהול / Админка
+
+#### Settings (`settings.*`)
+- `settings.title` → הגדרות / Настройки
+- `settings.display` → תצוגה / Внешний вид
+- `settings.language` → שפה / Язык
+
+#### Display (`display.*`)
+- `display.colorTheme` → ערכת נושא חזותית / Цветовая тема
+- `display.darkMode` → מצב כהה / Тёмная тема
+- `display.layout` → סגנון תצוגה / Стиль отображения
+
+#### Themes (`theme.*`)
+- `theme.default` → כחול (ברירת מחדל) / Синий (по умолчанию)
+- `theme.purple` → סגול / Фиолетовый
+- `theme.green` → ירוק / Зелёный
+
+#### Layouts (`layout.*`)
+- `layout.classic` → קלאסי / Классический
+- `layout.modern` → מודרני / Современный
+- `layout.compact` → צפוף / Компактный
+
+#### Dashboard (`dashboard.*`)
+- `dashboard.totalClients` → סה״כ לקוחות / Всего клиентов
+- `dashboard.visitsMonth` → ביקורים החודש / Визиты за месяц
+
+#### Common (`common.*`)
+- `common.save` → שמור / Сохранить
+- `common.cancel` → ביטול / Отмена
+- `common.back` → חזרה / Назад
+
+---
+
+### ⚙️ Settings Reorganization
+
+**OLD Structure (v2.11):**
+```
+/settings → One big page
+├─ Color themes
+├─ Layouts
+├─ Dark mode (missing!)
+├─ Advanced customization
+└─ Future settings
+```
+
+**NEW Structure (v2.12):**
+```
+/settings → Hub with categories
+├─ תצוגה (Display) → /settings/display
+│  ├─ 🌙 Dark Mode
+│  ├─ 🎨 Color Themes (6)
+│  ├─ 📐 Layouts (3)
+│  └─ 🔧 Advanced Customization (link)
+│
+├─ שפה (Language) → /settings/language
+│  ├─ עברית 🇮🇱 (RTL)
+│  ├─ Русский 🇷🇺 (LTR)
+│  └─ Direction preview
+│
+└─ הגדרות נוספות (Advanced Settings)
+   └─ Placeholder for future
+```
+
+**Benefits:**
+- ✅ Cleaner navigation
+- ✅ Logical grouping
+- ✅ Progressive disclosure
+- ✅ Localized labels
+- ✅ Easier to extend
+
+---
+
+### 🌙 Dark Mode
+
+**Implementation:**
+
+```typescript
+// ThemeContext extended
+const { darkMode, setDarkMode } = useTheme()
+
+// Toggle
+setDarkMode(true) // → document.documentElement.classList.add('dark')
+
+// Persists
+localStorage.setItem('trinity-dark-mode', 'true')
+```
+
+**UI:**
+
+Settings → Display → Dark Mode toggle
+- Moon icon (when dark)
+- Sun icon (when light)
+- Switch component
+- Instant visual feedback
+
+**CSS:**
+
+All components support dark mode:
+```css
+/* Tailwind dark: variants */
+<div className="bg-white dark:bg-slate-900">
+<p className="text-gray-900 dark:text-gray-100">
+```
+
+**Works with:**
+- ✅ All 6 color themes
+- ✅ All 3 layouts
+- ✅ Both languages (he/ru)
+- ✅ All customization options
+
+---
+
+### 📄 Page Details
+
+#### 1. Main Settings (`/settings`)
+
+**Layout:**
+- Grid with 2 category cards
+- Each card:
+  - Icon (Monitor/Globe)
+  - Title (translated)
+  - Description (translated)
+  - Arrow (flips based on direction)
+  - Hover effect (theme color)
+
+**Categories:**
+1. **תצוגה / Внешний вид** → `/settings/display`
+2. **שפה / Язык** → `/settings/language`
+
+---
+
+#### 2. Display Settings (`/settings/display`)
+
+**Sections:**
+
+**🌙 Dark Mode:**
+- Toggle switch
+- Moon/Sun icon
+- Instant apply
+
+**🎨 Color Theme:**
+- 6 cards in grid (2x3)
+- Color preview gradient
+- Translated names
+- Check icon on selected
+
+**📐 Layout:**
+- 3 cards in row
+- Icon (AlignJustify/LayoutGrid/Layers)
+- Visual preview
+- Translated descriptions
+
+**🔧 Advanced:**
+- Link to `/settings/customize`
+- Button with description
+
+---
+
+#### 3. Language Settings (`/settings/language`)
+
+**UI:**
+- 2 large cards (Hebrew / Russian)
+- Each card shows:
+  - Flag emoji (🇮🇱 / 🇷🇺)
+  - Language name (both scripts)
+  - Direction label (RTL/LTR)
+  - Text preview in correct direction
+  - Check icon on selected
+
+**Info Card:**
+- Blue background
+- Tip about direction switching
+- Translated to current language
+
+---
+
+### 🎯 User Flow
+
+**Hebrew User:**
+```
+1. Open /settings
+   → "הגדרות" (Settings)
+   → RTL layout
+
+2. Click "שפה" (Language)
+   → Language settings page
+
+3. Click Russian card
+   → Instant switch to LTR
+   → All labels → Русский
+   → Sidebar → left side
+
+4. Navigate anywhere
+   → Entire UI in Russian
+   → Left-to-right flow
+```
+
+**Russian User:**
+```
+1. Откройте /settings
+   → "Настройки" (Settings)
+   → LTR layout
+
+2. Нажмите "Язык"
+   → Страница языка
+
+3. Нажмите карточку עברית
+   → Мгновенный переход на RTL
+   → Все надписи → иврит
+   → Sidebar → справа
+
+4. Перейдите куда угодно
+   → Весь интерфейс на иврите
+   → Справа налево
+```
+
+---
+
+### 🔄 RTL ↔ LTR Switching
+
+**What Changes:**
+
+| Element | RTL (עברית) | LTR (Русский) |
+|---------|-------------|---------------|
+| Sidebar | Right side | Left side |
+| Text align | Right | Left |
+| Icons | Mirrored | Normal |
+| Arrows | ← | → |
+| Layout flow | Right-to-left | Left-to-right |
+| Number format | ١٢٣ | 123 |
+
+**CSS Handling:**
+
+Tailwind автоматически адаптируется:
+```html
+<!-- RTL -->
+<html dir="rtl" lang="he">
+  <aside class="lg:w-72"> <!-- Auto right in RTL -->
+
+<!-- LTR -->
+<html dir="ltr" lang="ru">
+  <aside class="lg:w-72"> <!-- Auto left in LTR -->
+```
+
+**No manual positioning needed!**
+
+---
+
+### 📁 Files Changed
+
+**NEW:**
+- ✅ `src/contexts/LanguageContext.tsx` - i18n system
+- ✅ `src/app/(dashboard)/settings/display/page.tsx` - Display settings
+- ✅ `src/app/(dashboard)/settings/language/page.tsx` - Language settings
+
+**MODIFIED:**
+- ✅ `src/contexts/ThemeContext.tsx` - Added darkMode
+- ✅ `src/app/(dashboard)/layout.tsx` - Added LanguageProvider
+- ✅ `src/app/(dashboard)/settings/page.tsx` - Reorganized as hub
+
+---
+
+### ✅ Result
+
+**BEFORE:**
+- Single language (Hebrew only)
+- Fixed RTL direction
+- Settings on one page
+- No dark mode
+- Manual theme switching
+
+**AFTER:**
+- 2 languages (עברית / Русский)
+- Auto RTL ↔ LTR switching
+- Organized settings categories
+- Dark mode toggle
+- All settings localized
+- Sidebar auto-repositions
+- Text auto-aligns
+- 80+ translated strings
+
+---
+
+### 🚀 Example Translations
+
+**Settings Page:**
+```typescript
+// Hebrew
+<h1>{t('settings.title')}</h1>
+// → "הגדרות"
+
+// Russian (after setLanguage('ru'))
+<h1>{t('settings.title')}</h1>
+// → "Настройки"
+```
+
+**Dashboard:**
+```typescript
+// Hebrew
+<p>{t('dashboard.totalClients')}</p>
+// → "סה״כ לקוחות"
+
+// Russian
+<p>{t('dashboard.totalClients')}</p>
+// → "Всего клиентов"
+```
+
+---
+
+### 🎨 Visual Examples
+
+**Hebrew Mode (RTL):**
+```
+┌──────────────────────────┐
+│  Settings     [Sidebar]  │  ← Sidebar справа
+│  הגדרות                  │  ← Text справа
+│                          │
+│  תצוגה                   │  ← Карточки RTL
+│  ← צבעים, עיצוב         │
+│                          │
+│  שפה                     │
+│  ← עברית / Русский       │
+└──────────────────────────┘
+```
+
+**Russian Mode (LTR):**
+```
+┌──────────────────────────┐
+│  [Sidebar]    Настройки  │  ← Sidebar слева
+│                          │  ← Text слева
+│                          │
+│  Внешний вид            →│  ← Карточки LTR
+│  Цвета, дизайн          →│
+│                          │
+│  Язык                   →│
+│  עברית / Русский        →│
+└──────────────────────────┘
+```
 
 ---
 

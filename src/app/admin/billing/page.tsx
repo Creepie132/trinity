@@ -221,12 +221,14 @@ export default function BillingPage() {
                         onValueChange={(value) => handleUpdatePlan(org.id, value)}
                       >
                         <SelectTrigger className="w-[130px]">
-                          <SelectValue />
+                          <SelectValue>
+                            {getPlanLabel(org.plan)}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="basic">בסיסי</SelectItem>
-                          <SelectItem value="pro">מקצועי</SelectItem>
-                          <SelectItem value="enterprise">ארגוני</SelectItem>
+                          <SelectItem value="basic">{t('admin.orgs.basic')}</SelectItem>
+                          <SelectItem value="pro">{t('admin.orgs.pro')}</SelectItem>
+                          <SelectItem value="enterprise">{t('admin.orgs.enterprise')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </TableCell>
@@ -238,11 +240,11 @@ export default function BillingPage() {
                         <div className={isOverdue(org) ? 'text-red-600 font-medium' : ''}>
                           {format(new Date(org.billing_due_date), 'dd/MM/yyyy')}
                           {isOverdue(org) && (
-                            <p className="text-xs text-red-500">איחור בתשלום</p>
+                            <p className="text-xs text-red-500">{t('admin.billing.paymentOverdue')}</p>
                           )}
                         </div>
                       ) : (
-                        <span className="text-gray-400">לא הוגדר</span>
+                        <span className="text-gray-400">{t('admin.billing.notSet')}</span>
                       )}
                     </TableCell>
                     <TableCell>

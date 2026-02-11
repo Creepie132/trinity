@@ -17,6 +17,7 @@ import { useClients } from '@/hooks/useClients'
 import { useCreatePaymentLink } from '@/hooks/usePayments'
 import { toast } from 'sonner'
 import { MessageSquare, Copy, ExternalLink } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface CreatePaymentLinkDialogProps {
   open: boolean
@@ -30,6 +31,7 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
   const [searchQuery, setSearchQuery] = useState('')
   const [paymentLink, setPaymentLink] = useState<string | null>(null)
 
+  const { t } = useLanguage()
   const { data: clients } = useClients()
   const createPayment = useCreatePaymentLink()
 
@@ -53,13 +55,13 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
     e.preventDefault()
 
     if (!selectedClientId) {
-      toast.error('בחר לקוח')
+      toast.error(t('payments.selectClient'))
       return
     }
 
     const amountNum = parseFloat(amount)
     if (isNaN(amountNum) || amountNum <= 0) {
-      toast.error('הזן סכום תקין')
+      toast.error(t('payments.amount'))
       return
     }
 
@@ -88,7 +90,7 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
   const copyLink = () => {
     if (paymentLink) {
       navigator.clipboard.writeText(paymentLink)
-      toast.success('הקישור הועתק ללוח')
+      toast.success(t('payments.linkCopied'))
     }
   }
 
@@ -109,22 +111,22 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>צור קישור לתשלום</DialogTitle>
+          <DialogTitle>{t('payments.createLink')}</DialogTitle>
         </DialogHeader>
 
         {!paymentLink ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="client">לקוח *</Label>
+              <Label htmlFor="client">{t('payments.client')} *</Label>
               <div className="space-y-2">
                 <Input
-                  placeholder="חפש לקוח..."
+                  placeholder={t('clients.search')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 <Select value={selectedClientId} onValueChange={setSelectedClientId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="בחר לקוח" />
+                    <SelectValue placeholder={t('payments.selectClient')} />
                   </SelectTrigger>
                   <SelectContent>
                     {filteredClients.map((client) => (
@@ -138,7 +140,7 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
             </div>
 
             <div>
-              <Label htmlFor="amount">סכום (₪) *</Label>
+              <Label htmlFor="amount">{t('payments.amount')} (₪) *</Label>
               <Input
                 id="amount"
                 type="number"
@@ -146,28 +148,28 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
                 min="0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="100.00"
+                placeholder={t('payments.amountPlaceholder')}
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="description">תיאור</Label>
+              <Label htmlFor="description">{t('payments.description')}</Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="תיאור התשלום (אופציונלי)"
+                placeholder={t('payments.descriptionPlaceholder')}
                 rows={3}
               />
             </div>
 
             <div className="flex gap-3 justify-end pt-4">
               <Button type="button" variant="outline" onClick={handleClose}>
-                ביטול
+                {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={createPayment.isPending}>
-                {createPayment.isPending ? 'יוצר...' : 'צור קישור'}
+                {createPayment.isPending ? t('payments.creating') : t('payments.createLink')}
               </Button>
             </div>
           </form>
@@ -175,23 +177,23 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
           <div className="space-y-4">
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
               <p className="text-sm text-green-800 font-semibold mb-2">
-                ✓ קישור התשלום נוצר בהצלחה!
+                ✓ {t('payments.successMessage')}
               </p>
               <p className="text-xs text-green-700">
-                שלח את הקישור ללקוח כדי שיוכל לשלם באופן מאובטח
+                {t('payments.sendLinkToClient')}
               </p>
             </div>
 
             {selectedClient && (
               <div className="text-sm text-gray-600">
-                <strong>לקוח:</strong> {selectedClient.first_name} {selectedClient.last_name}
+                <strong>{t('payments.client')}:</strong> {selectedClient.first_name} {selectedClient.last_name}
                 <br />
-                <strong>סכום:</strong> ₪{amount}
+                <strong>{t('payments.amount')}:</strong> ₪{amount}
               </div>
             )}
 
             <div>
-              <Label>קישור לתשלום</Label>
+              <Label>{t('payments.createLink')}</Label>
               <div className="flex gap-2 mt-1">
                 <Input value={paymentLink} readOnly className="flex-1 text-sm" />
               </div>
@@ -200,21 +202,21 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
             <div className="flex gap-2 pt-2">
               <Button type="button" onClick={copyLink} variant="outline" className="flex-1">
                 <Copy className="w-4 h-4 ml-2" />
-                העתק קישור
+                {t('payments.copyLink')}
               </Button>
               <Button type="button" onClick={sendSMS} variant="outline" className="flex-1">
                 <MessageSquare className="w-4 h-4 ml-2" />
-                שלח ב-SMS
+                {t('sms.send')} SMS
               </Button>
             </div>
 
             <div className="flex gap-3 justify-end pt-2">
               <Button type="button" variant="outline" onClick={handleClose}>
-                סגור
+                {t('common.close')}
               </Button>
               <Button type="button" onClick={openLink}>
                 <ExternalLink className="w-4 h-4 ml-2" />
-                פתח קישור
+                {t('payments.openLink')}
               </Button>
             </div>
           </div>

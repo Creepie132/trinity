@@ -108,7 +108,7 @@ export default function AdminDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">הכנסה חודשית</p>
+                <p className="text-sm text-gray-600">{t('admin.monthlyRevenue')}</p>
                 <p className="text-3xl font-bold text-orange-600 mt-1">
                   ₪{stats?.monthlyRevenue.toFixed(2) || '0.00'}
                 </p>
@@ -127,12 +127,12 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Server className="w-5 h-5" />
-              סטטוס שרתים
+              {t('admin.systemHealth')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {healthLoading ? (
-              <div className="text-center py-4 text-gray-500">בודק...</div>
+              <div className="text-center py-4 text-gray-500">{t('common.loading')}</div>
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -143,7 +143,7 @@ export default function AdminDashboard() {
                   <div className={`flex items-center gap-2 ${getStatusColor(health?.checks?.supabase)}`}>
                     {getStatusIcon(health?.checks?.supabase)}
                     <Badge variant={health?.checks?.supabase ? 'default' : 'destructive'}>
-                      {health?.checks?.supabase ? 'פעיל' : 'לא זמין'}
+                      {health?.checks?.supabase ? t('common.active') : t('common.notAvailable')}
                     </Badge>
                   </div>
                 </div>
@@ -156,7 +156,7 @@ export default function AdminDashboard() {
                   <div className={`flex items-center gap-2 ${getStatusColor(health?.checks?.api)}`}>
                     {getStatusIcon(health?.checks?.api)}
                     <Badge variant={health?.checks?.api ? 'default' : 'destructive'}>
-                      {health?.checks?.api ? 'פעיל' : 'לא זמין'}
+                      {health?.checks?.api ? t('common.active') : t('common.notAvailable')}
                     </Badge>
                   </div>
                 </div>
@@ -169,7 +169,7 @@ export default function AdminDashboard() {
                   <div className={`flex items-center gap-2 ${getStatusColor(health?.checks?.sms)}`}>
                     {getStatusIcon(health?.checks?.sms)}
                     <Badge variant={health?.checks?.sms ? 'default' : 'destructive'}>
-                      {health?.checks?.sms ? 'מחובר' : 'לא מוגדר'}
+                      {health?.checks?.sms ? t('admin.connected') : t('admin.notConfigured')}
                     </Badge>
                   </div>
                 </div>
@@ -182,13 +182,13 @@ export default function AdminDashboard() {
                   <div className={`flex items-center gap-2 ${getStatusColor(health?.checks?.payments)}`}>
                     {getStatusIcon(health?.checks?.payments)}
                     <Badge variant={health?.checks?.payments ? 'default' : 'destructive'}>
-                      {health?.checks?.payments ? 'מחובר' : 'לא מוגדר'}
+                      {health?.checks?.payments ? t('admin.connected') : t('admin.notConfigured')}
                     </Badge>
                   </div>
                 </div>
 
                 <div className="text-xs text-gray-500 text-center mt-4">
-                  עדכון אחרון: {health?.checks?.timestamp ? format(new Date(health.checks.timestamp), 'HH:mm:ss') : '-'}
+                  {t('admin.lastUpdate')}: {health?.checks?.timestamp ? format(new Date(health.checks.timestamp), 'HH:mm:ss') : '-'}
                 </div>
               </div>
             )}
@@ -200,12 +200,12 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="w-5 h-5" />
-              ארגונים אחרונים
+              {t('admin.recentOrgs')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {orgsLoading ? (
-              <div className="text-center py-4 text-gray-500">טוען...</div>
+              <div className="text-center py-4 text-gray-500">{t('common.loading')}</div>
             ) : (
               <div className="space-y-3">
                 {recentOrgs?.map((org) => (
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant={org.is_active ? 'default' : 'secondary'}>
-                        {org.is_active ? 'פעיל' : 'לא פעיל'}
+                        {org.is_active ? t('admin.orgs.active') : t('admin.orgs.inactive')}
                       </Badge>
                       <span className="text-xs text-gray-500">
                         {format(new Date(org.created_at), 'dd/MM/yyyy')}
@@ -226,7 +226,7 @@ export default function AdminDashboard() {
                 ))}
                 {(!recentOrgs || recentOrgs.length === 0) && (
                   <div className="text-center py-8 text-gray-500">
-                    אין ארגונים חדשים
+                    {t('admin.noNewOrgs')}
                   </div>
                 )}
               </div>
@@ -238,11 +238,11 @@ export default function AdminDashboard() {
       {/* Organizations Growth Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>ארגונים חדשים לפי חודש</CardTitle>
+          <CardTitle>{t('admin.newOrgsByMonth')}</CardTitle>
         </CardHeader>
         <CardContent>
           {chartLoading ? (
-            <div className="text-center py-12 text-gray-500">טוען גרף...</div>
+            <div className="text-center py-12 text-gray-500">{t('admin.loadingChart')}</div>
           ) : orgsByMonth && orgsByMonth.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={orgsByMonth}>

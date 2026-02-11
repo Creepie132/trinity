@@ -18,8 +18,10 @@ import { useClients } from '@/hooks/useClients'
 import { useCreateCampaign, useRecipientsCount } from '@/hooks/useSms'
 import { calculateSmsParts } from '@/lib/inforu'
 import { MessageSquare, Users, User, Clock } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export function NewCampaignForm() {
+  const { t } = useLanguage()
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
   const [filterType, setFilterType] = useState<'all' | 'single' | 'inactive_days'>('all')
@@ -71,43 +73,43 @@ export function NewCampaignForm() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>רסלה חדשה</CardTitle>
+          <CardTitle>{t('sms.newMessage')}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="name">שם הקמפיין *</Label>
+              <Label htmlFor="name">{t('sms.campaignName')} *</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="לדוגמה: תזכורת לביקור"
+                placeholder={t('sms.campaignNamePlaceholder')}
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="message">תוכן ההודעה *</Label>
+              <Label htmlFor="message">{t('sms.messageContent')} *</Label>
               <Textarea
                 id="message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="שלום! זו תזכורת..."
+                placeholder={t('sms.messageContentPlaceholder')}
                 rows={4}
                 required
               />
               <div className="flex justify-between text-sm text-gray-600 mt-1">
                 <span>
-                  {charCount} תווים ({smsParts} SMS)
+                  {charCount} {t('sms.charactersCount').replace('0', String(charCount)).replace('0', String(smsParts))}
                 </span>
                 <span className={charCount > 160 ? 'text-orange-600' : ''}>
-                  {charCount <= 160 ? 'הודעה בודדת' : 'הודעה מרובת חלקים'}
+                  {charCount <= 160 ? t('sms.singleMessage') : t('sms.multiPartMessage')}
                 </span>
               </div>
             </div>
 
             <div className="space-y-3">
-              <Label>סוג הרסלה</Label>
+              <Label>{t('sms.sendingType')}</Label>
 
               <div className="space-y-2">
                 {/* All */}
@@ -128,8 +130,8 @@ export function NewCampaignForm() {
                     />
                     <Users className="w-5 h-5 text-blue-600" />
                     <div className="flex-1">
-                      <div className="font-semibold">שלח לכולם</div>
-                      <div className="text-sm text-gray-600">שלח לכל הלקוחות במערכת</div>
+                      <div className="font-semibold">{t('sms.sendToAll')}</div>
+                      <div className="text-sm text-gray-600">{t('sms.sendToAllDesc')}</div>
                     </div>
                   </div>
                 </div>
@@ -152,15 +154,15 @@ export function NewCampaignForm() {
                     />
                     <User className="w-5 h-5 text-green-600" />
                     <div className="flex-1">
-                      <div className="font-semibold">שלח ללקוח אחד</div>
-                      <div className="text-sm text-gray-600">בחר לקוח ספציפי</div>
+                      <div className="font-semibold">{t('sms.sendToOne')}</div>
+                      <div className="text-sm text-gray-600">{t('sms.sendToOneDesc')}</div>
                     </div>
                   </div>
                   {filterType === 'single' && (
                     <div className="mt-3 mr-7">
                       <Select value={selectedClientId} onValueChange={setSelectedClientId}>
                         <SelectTrigger>
-                          <SelectValue placeholder="בחר לקוח" />
+                          <SelectValue placeholder={t('sms.selectClient')} />
                         </SelectTrigger>
                         <SelectContent>
                           {clients?.map((client) => (
@@ -192,13 +194,13 @@ export function NewCampaignForm() {
                     />
                     <Clock className="w-5 h-5 text-orange-600" />
                     <div className="flex-1">
-                      <div className="font-semibold">לקוחות לא פעילים</div>
-                      <div className="text-sm text-gray-600">לקוחות שלא ביקרו לאחרונה</div>
+                      <div className="font-semibold">{t('sms.sendToInactive')}</div>
+                      <div className="text-sm text-gray-600">{t('sms.sendToInactiveDesc')}</div>
                     </div>
                   </div>
                   {filterType === 'inactive_days' && (
                     <div className="mt-3 mr-7 flex items-center gap-2">
-                      <Label htmlFor="days">לא ביקרו במשך</Label>
+                      <Label htmlFor="days">{t('sms.inactiveDays')}</Label>
                       <Input
                         id="days"
                         type="number"
@@ -207,7 +209,7 @@ export function NewCampaignForm() {
                         className="w-20"
                         min="1"
                       />
-                      <span>ימים</span>
+                      <span>{t('sms.days')}</span>
                     </div>
                   )}
                 </div>
@@ -220,12 +222,12 @@ export function NewCampaignForm() {
                 <div className="flex items-center gap-2 text-blue-800">
                   <MessageSquare className="w-5 h-5" />
                   <span className="font-semibold">
-                    הודעה תישלח ל-{recipientsCount} מקבלים
+                    {t('sms.willBeSentTo').replace('{count}', String(recipientsCount))}
                   </span>
                 </div>
                 {smsParts > 1 && (
                   <div className="text-sm text-blue-700 mt-1">
-                    כל הודעה תישלח ב-{smsParts} חלקים (עלות: {smsParts}x)
+                    {t('sms.costPerMessage').replace(/{parts}/g, String(smsParts))}
                   </div>
                 )}
               </div>
@@ -240,7 +242,7 @@ export function NewCampaignForm() {
                   (filterType === 'single' && !selectedClientId)
                 }
               >
-                {createCampaign.isPending ? 'שולח...' : 'שלח'}
+                {createCampaign.isPending ? t('sms.sending') : t('sms.send')}
               </Button>
             </div>
           </form>
@@ -251,19 +253,19 @@ export function NewCampaignForm() {
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>אישור שליחה</AlertDialogTitle>
+            <AlertDialogTitle>{t('sms.confirmSend')}</AlertDialogTitle>
             <AlertDialogDescription>
-              האם אתה בטוח שברצונך לשלוח את ההודעה ל-{recipientsCount} מקבלים?
+              {t('sms.confirmMessage').replace('{count}', String(recipientsCount))}
               {smsParts > 1 && (
                 <div className="mt-2 text-orange-600">
-                  שים לב: כל הודעה תישלח ב-{smsParts} חלקים
+                  {t('sms.multiPartWarning').replace('{parts}', String(smsParts))}
                 </div>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirm}>שלח עכשיו</AlertDialogAction>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirm}>{t('sms.sendNow')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

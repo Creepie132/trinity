@@ -58,7 +58,7 @@ export function useFeatures(): Features {
     hasSms: organization.features?.sms ?? true,
     hasPayments: organization.features?.payments ?? true,
     hasAnalytics: organization.features?.analytics ?? true,
-    hasSubscriptions: organization.features?.subscriptions ?? false,
+    hasSubscriptions: (organization.features as any)?.subscriptions ?? false,
     isActive: organization.is_active ?? false,
     category: organization.category ?? 'other',
     isLoading: false,

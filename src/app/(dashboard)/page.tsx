@@ -161,32 +161,32 @@ export default function Home() {
 
       {/* Quick Actions */}
       <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">פעולות מהירות</h2>
+        <h2 className="text-xl font-semibold mb-4">{t('dashboard.quickActions')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link href="/clients">
             <Button variant="outline" className="w-full justify-between">
-              <span>לקוחות</span>
+              <span>{t('nav.clients')}</span>
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
 
           <Link href="/payments">
             <Button variant="outline" className="w-full justify-between">
-              <span>תשלומים</span>
+              <span>{t('nav.payments')}</span>
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
 
           <Link href="/sms">
             <Button variant="outline" className="w-full justify-between">
-              <span>הודעות SMS</span>
+              <span>{t('nav.sms')}</span>
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
 
           <Link href="/stats">
             <Button variant="outline" className="w-full justify-between">
-              <span>סטטיסטיקה</span>
+              <span>{t('nav.stats')}</span>
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
@@ -195,23 +195,23 @@ export default function Home() {
 
       {/* Getting Started */}
       <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-        <h2 className="text-xl font-semibold mb-4 text-blue-900">התחלה מהירה</h2>
+        <h2 className="text-xl font-semibold mb-4 text-blue-900">{t('dashboard.gettingStarted')}</h2>
         <ul className="space-y-2 text-gray-700">
           <li className="flex items-start gap-2">
             <span className="text-blue-600 font-bold">•</span>
-            <span>הוסף לקוחות חדשים בעמוד "לקוחות"</span>
+            <span>{t('dashboard.step1')}</span>
           </li>
           <li className="flex items-start gap-2">
             <span className="text-blue-600 font-bold">•</span>
-            <span>צור קישורי תשלום בעמוד "תשלומים"</span>
+            <span>{t('dashboard.step2')}</span>
           </li>
           <li className="flex items-start gap-2">
             <span className="text-blue-600 font-bold">•</span>
-            <span>שלח הודעות SMS ללקוחות בעמוד "הודעות SMS"</span>
+            <span>{t('dashboard.step3')}</span>
           </li>
           <li className="flex items-start gap-2">
             <span className="text-blue-600 font-bold">•</span>
-            <span>עקוב אחר הנתונים והגרפים בעמוד "סטטיסטיקה"</span>
+            <span>{t('dashboard.step4')}</span>
           </li>
         </ul>
       </div>
@@ -220,7 +220,7 @@ export default function Home() {
       <div className="text-center">
         <Link href="/stats">
           <Button size="lg">
-            צפה בסטטיסטיקה מלאה
+            {t('dashboard.viewFullStats')}
             <ArrowLeft className="w-4 h-4 mr-2" />
           </Button>
         </Link>

@@ -152,6 +152,13 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.revenueMonth': 'הכנסות החודש',
     'dashboard.inactiveClients': 'לקוחות לא פעילים',
     'dashboard.inactiveNote': '30+ ימים ללא ביקור',
+    'dashboard.quickActions': 'פעולות מהירות',
+    'dashboard.gettingStarted': 'התחלה מהירה',
+    'dashboard.step1': 'הוסף לקוחות חדשים בעמוד "לקוחות"',
+    'dashboard.step2': 'צור קישורי תשלום בעמוד "תשלומים"',
+    'dashboard.step3': 'שלח הודעות SMS ללקוחות בעמוד "הודעות SMS"',
+    'dashboard.step4': 'עקוב אחר הנתונים והגרפים בעמוד "סטטיסטיקה"',
+    'dashboard.viewFullStats': 'צפה בסטטיסטיקה מלאה',
     
     // Clients
     'clients.title': 'לקוחות',
@@ -431,6 +438,13 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.revenueMonth': 'Доход за месяц',
     'dashboard.inactiveClients': 'Неактивные клиенты',
     'dashboard.inactiveNote': '30+ дней без визита',
+    'dashboard.quickActions': 'Быстрые действия',
+    'dashboard.gettingStarted': 'Быстрый старт',
+    'dashboard.step1': 'Добавьте новых клиентов на странице "Клиенты"',
+    'dashboard.step2': 'Создайте ссылки для оплаты на странице "Платежи"',
+    'dashboard.step3': 'Отправляйте SMS клиентам на странице "SMS сообщения"',
+    'dashboard.step4': 'Отслеживайте данные и графики на странице "Статистика"',
+    'dashboard.viewFullStats': 'Посмотреть полную статистику',
     
     // Clients
     'clients.title': 'Клиенты',

@@ -24,7 +24,19 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.stats': 'סטטיסטיקה',
     'nav.partners': 'הצעות שותפים',
     'nav.settings': 'הגדרות',
-    'nav.admin': 'ניהול',
+    'nav.admin': 'פאנל ניהול',
+    'nav.darkMode': 'מצב כהה',
+    'nav.lightMode': 'מצב בהיר',
+    'nav.myProfile': 'הפרופיל שלי',
+    'nav.logout': 'יציאה מהמערכת',
+    'nav.backToMain': 'חזרה לדשבורד הראשי',
+    
+    // Admin Navigation
+    'admin.dashboard': 'לוח בקרה',
+    'admin.organizations': 'ארגונים',
+    'admin.billing': 'חיובים',
+    'admin.ads': 'פרסום',
+    'admin.settings': 'הגדרות',
     
     // Settings
     'settings.title': 'הגדרות',
@@ -104,7 +116,19 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.stats': 'Статистика',
     'nav.partners': 'Партнёрские предложения',
     'nav.settings': 'Настройки',
-    'nav.admin': 'Админка',
+    'nav.admin': 'Панель управления',
+    'nav.darkMode': 'Тёмная тема',
+    'nav.lightMode': 'Светлая тема',
+    'nav.myProfile': 'Мой профиль',
+    'nav.logout': 'Выйти из системы',
+    'nav.backToMain': 'Вернуться в главный дашборд',
+    
+    // Admin Navigation
+    'admin.dashboard': 'Панель управления',
+    'admin.organizations': 'Организации',
+    'admin.billing': 'Оплата',
+    'admin.ads': 'Реклама',
+    'admin.settings': 'Настройки',
     
     // Settings
     'settings.title': 'Настройки',

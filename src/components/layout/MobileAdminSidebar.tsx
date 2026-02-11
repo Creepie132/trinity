@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, ArrowLeft, Home, Moon, Sun } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useLanguage } from '@/contexts/LanguageContext'
 import {
   Sheet,
   SheetContent,
@@ -13,34 +14,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
-
-const navigation = [
-  {
-    name: 'לוח בקרה',
-    href: '/admin',
-    icon: LayoutDashboard,
-  },
-  {
-    name: 'ארגונים',
-    href: '/admin/organizations',
-    icon: Building2,
-  },
-  {
-    name: 'חיובים',
-    href: '/admin/billing',
-    icon: CreditCard,
-  },
-  {
-    name: 'פרסום',
-    href: '/admin/ads',
-    icon: Megaphone,
-  },
-  {
-    name: 'הגדרות',
-    href: '/admin/settings',
-    icon: Settings,
-  },
-]
 
 interface MobileAdminSidebarProps {
   isOpen: boolean
@@ -51,7 +24,36 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+
+  const navigation = [
+    {
+      name: t('admin.dashboard'),
+      href: '/admin',
+      icon: LayoutDashboard,
+    },
+    {
+      name: t('admin.organizations'),
+      href: '/admin/organizations',
+      icon: Building2,
+    },
+    {
+      name: t('admin.billing'),
+      href: '/admin/billing',
+      icon: CreditCard,
+    },
+    {
+      name: t('admin.ads'),
+      href: '/admin/ads',
+      icon: Megaphone,
+    },
+    {
+      name: t('admin.settings'),
+      href: '/admin/settings',
+      icon: Settings,
+    },
+  ]
 
   useEffect(() => {
     // Load theme from localStorage
@@ -146,7 +148,7 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
               <div className="p-1.5 rounded-lg bg-green-600/30">
                 <Home className="w-5 h-5 flex-shrink-0 text-green-400" />
               </div>
-              <span className="flex-1 text-green-300 font-semibold">חזרה למערכת</span>
+              <span className="flex-1 text-green-300 font-semibold">{t('nav.backToMain')}</span>
               <ArrowLeft className="w-4 h-4 text-green-400" />
             </Link>
 
@@ -166,7 +168,7 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
                   <Sun className="w-5 h-5 text-yellow-500" />
                 )}
               </div>
-              <span className="flex-1 text-right">{theme === 'light' ? 'מצב כהה' : 'מצב בהיר'}</span>
+              <span className="flex-1 text-right">{theme === 'light' ? t('nav.darkMode') : t('nav.lightMode')}</span>
             </button>
           </nav>
 

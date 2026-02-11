@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, Home, Moon, Sun, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
 import { AdminProfileSheet } from '@/components/admin/AdminProfileSheet'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -18,41 +19,42 @@ const toAvatarSrc = (url: string | null): string | undefined => {
   return url
 }
 
-const navigation = [
-  {
-    name: 'לוח בקרה',
-    href: '/admin',
-    icon: LayoutDashboard,
-  },
-  {
-    name: 'ארגונים',
-    href: '/admin/organizations',
-    icon: Building2,
-  },
-  {
-    name: 'חיובים',
-    href: '/admin/billing',
-    icon: CreditCard,
-  },
-  {
-    name: 'פרסום',
-    href: '/admin/ads',
-    icon: Megaphone,
-  },
-  {
-    name: 'הגדרות',
-    href: '/admin/settings',
-    icon: Settings,
-  },
-]
-
 export function AdminSidebar() {
   const pathname = usePathname()
   const { user } = useAuth()
   const { adminProfile, isLoading } = useAdminProfile()
+  const { t } = useLanguage()
   const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [profileOpen, setProfileOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
+  const navigation = [
+    {
+      name: t('admin.dashboard'),
+      href: '/admin',
+      icon: LayoutDashboard,
+    },
+    {
+      name: t('admin.organizations'),
+      href: '/admin/organizations',
+      icon: Building2,
+    },
+    {
+      name: t('admin.billing'),
+      href: '/admin/billing',
+      icon: CreditCard,
+    },
+    {
+      name: t('admin.ads'),
+      href: '/admin/ads',
+      icon: Megaphone,
+    },
+    {
+      name: t('admin.settings'),
+      href: '/admin/settings',
+      icon: Settings,
+    },
+  ]
 
   useEffect(() => {
     // Load theme from localStorage
@@ -161,7 +163,7 @@ export function AdminSidebar() {
           <div className="p-1.5 rounded-lg bg-green-600/30">
             <Home className="w-5 h-5 flex-shrink-0 text-green-400" />
           </div>
-          <span className="flex-1 text-green-300 font-semibold">חזרה למערכת</span>
+          <span className="flex-1 text-green-300 font-semibold">{t('nav.backToMain')}</span>
         </Link>
 
         {/* Theme Toggle */}
@@ -177,7 +179,7 @@ export function AdminSidebar() {
               <Sun className="w-5 h-5 text-yellow-500" />
             )}
           </div>
-          <span className="flex-1 text-right">{theme === 'light' ? 'מצב כהה' : 'מצב בהיר'}</span>
+          <span className="flex-1 text-right">{theme === 'light' ? t('nav.darkMode') : t('nav.lightMode')}</span>
         </button>
       </nav>
 
@@ -195,11 +197,11 @@ export function AdminSidebar() {
           </Avatar>
           <div className="flex-1 min-w-0 text-right">
             {isLoading ? (
-              <p className="text-sm text-slate-400">טוען...</p>
+              <p className="text-sm text-slate-400">{t('common.loading')}</p>
             ) : (
               <>
                 <p className="text-sm font-semibold text-white truncate group-hover:text-blue-300 transition-colors">{displayName}</p>
-                <p className="text-xs text-slate-400 truncate mt-0.5">הפרופיל שלי</p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">{t('nav.myProfile')}</p>
               </>
             )}
           </div>

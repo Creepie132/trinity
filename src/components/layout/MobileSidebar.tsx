@@ -8,6 +8,7 @@ import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useLanguage } from '@/contexts/LanguageContext'
 import {
   Sheet,
   SheetContent,
@@ -15,15 +16,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
-
-const baseNavigation = [
-  { name: 'דשבורד', href: '/', icon: Home, requireFeature: null },
-  { name: 'לקוחות', href: '/clients', icon: Users, requireFeature: null },
-  { name: 'תשלומים', href: '/payments', icon: CreditCard, requireFeature: 'payments' },
-  { name: 'הודעות SMS', href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
-  { name: 'סטטיסטיקה', href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
-  { name: 'הצעות שותפים', href: '/partners', icon: Gift, requireFeature: null },
-]
 
 interface MobileSidebarProps {
   isOpen: boolean
@@ -36,7 +28,17 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const { user, signOut } = useAuth()
   const { data: isAdmin } = useIsAdmin()
   const features = useFeatures()
+  const { t } = useLanguage()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+
+  const baseNavigation = [
+    { name: t('nav.dashboard'), href: '/', icon: Home, requireFeature: null },
+    { name: t('nav.clients'), href: '/clients', icon: Users, requireFeature: null },
+    { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
+    { name: t('nav.sms'), href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
+    { name: t('nav.stats'), href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
+    { name: t('nav.partners'), href: '/partners', icon: Gift, requireFeature: null },
+  ]
 
   useEffect(() => {
     // Load theme from localStorage
@@ -148,7 +150,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-800">
                     <Shield className="w-5 h-5 flex-shrink-0 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <span className="flex-1 text-purple-700 dark:text-purple-300 font-semibold">פאנל ניהול</span>
+                  <span className="flex-1 text-purple-700 dark:text-purple-300 font-semibold">{t('nav.admin')}</span>
                   <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
                 </Link>
               </>
@@ -170,7 +172,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   <Sun className="w-5 h-5 text-yellow-500" />
                 )}
               </div>
-              <span className="flex-1 text-right">{theme === 'light' ? 'מצב כהה' : 'מצב בהיר'}</span>
+              <span className="flex-1 text-right">{theme === 'light' ? t('nav.darkMode') : t('nav.lightMode')}</span>
             </button>
           </nav>
 
@@ -193,7 +195,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 active:scale-[0.98] transition-all duration-200 border border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700"
             >
               <LogOut className="w-4 h-4" />
-              יציאה מהמערכת
+              {t('nav.logout')}
             </button>
           </div>
         </div>

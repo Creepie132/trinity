@@ -15,6 +15,7 @@ import {
 import { Plus, Copy, ExternalLink, Eye } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
 import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
+import { CreateStripePaymentDialog } from '@/components/payments/CreateStripePaymentDialog'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -27,6 +28,7 @@ export default function PaymentsPage() {
   const features = useFeatures()
   const { t } = useLanguage()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [stripeDialogOpen, setStripeDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -91,10 +93,19 @@ export default function PaymentsPage() {
             {t('common.total')}: {payments?.length || 0} {t('payments.title')}
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="w-4 h-4 ml-2" />
-          {t('payments.createLink')}
-        </Button>
+        <div className="flex gap-3">
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="w-4 h-4 ml-2" />
+            {t('payments.createLink')} (Tranzilla)
+          </Button>
+          <Button 
+            onClick={() => setStripeDialogOpen(true)}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            <Plus className="w-4 h-4 ml-2" />
+            {t('payments.createLink')} (Stripe)
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -246,8 +257,9 @@ export default function PaymentsPage() {
         )}
       </div>
 
-      {/* Dialog */}
+      {/* Dialogs */}
       <CreatePaymentLinkDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <CreateStripePaymentDialog open={stripeDialogOpen} onOpenChange={setStripeDialogOpen} />
     </div>
   )
 }

@@ -1,21 +1,24 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const PUBLIC_PATHS = ['/login', '/unauthorized', '/blocked']
+const PUBLIC_PATHS = ['/login', '/unauthorized', '/blocked', '/landing']
 const CALLBACK_PATH = '/auth/callback'
 const WEBHOOK_PATH = '/api/payments/webhook'
+const STRIPE_WEBHOOK_PATH = '/api/payments/stripe-webhook'
 const HEALTH_PATH = '/api/health'
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Allow public routes + callback + webhook + health
+  // Allow public routes + callback + webhooks + health
   if (
     PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/')) ||
     pathname === CALLBACK_PATH ||
     pathname.startsWith(CALLBACK_PATH + '/') ||
     pathname === WEBHOOK_PATH ||
     pathname.startsWith(WEBHOOK_PATH + '/') ||
+    pathname === STRIPE_WEBHOOK_PATH ||
+    pathname.startsWith(STRIPE_WEBHOOK_PATH + '/') ||
     pathname === HEALTH_PATH
   ) {
     return NextResponse.next()

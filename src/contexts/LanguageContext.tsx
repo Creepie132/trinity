@@ -167,8 +167,12 @@ const translations: Record<Language, Record<string, string>> = {
     'clients.search': 'חיפוש לפי שם, טלפון או אימייל',
     'clients.searchPlaceholder': 'חיפוש...',
     'clients.name': 'שם',
+    'clients.firstName': 'שם פרטי',
+    'clients.lastName': 'שם משפחה',
     'clients.phone': 'טלפון',
     'clients.email': 'אימייל',
+    'clients.address': 'כתובת',
+    'clients.birthDate': 'תאריך לידה',
     'clients.lastVisit': 'ביקור אחרון',
     'clients.totalSpent': 'סה״כ הוצאות',
     'clients.visits': 'ביקורים',
@@ -186,6 +190,7 @@ const translations: Record<Language, Record<string, string>> = {
     'clients.service': 'שירות',
     'clients.amount': 'סכום',
     'clients.notes': 'הערות',
+    'clients.noOrgFound': 'לא נמצא ארגון למשתמש',
     
     // Payments
     'payments.title': 'תשלומים',
@@ -295,6 +300,8 @@ const translations: Record<Language, Record<string, string>> = {
     'common.updatedAt': 'תאריך עדכון',
     'common.deleteConfirm': 'האם אתה בטוח שברצונך למחוק?',
     'common.cannotUndo': 'לא ניתן לבטל פעולה זו',
+    'common.saving': 'שומר...',
+    'common.notAvailable': 'לא זמין',
     
     // Error page
     'error.message': 'משהו השתבש. אנא נסה שוב או פנה לתמיכה.',
@@ -453,8 +460,12 @@ const translations: Record<Language, Record<string, string>> = {
     'clients.search': 'Поиск по имени, телефону или email',
     'clients.searchPlaceholder': 'Поиск...',
     'clients.name': 'Имя',
+    'clients.firstName': 'Имя',
+    'clients.lastName': 'Фамилия',
     'clients.phone': 'Телефон',
     'clients.email': 'Email',
+    'clients.address': 'Адрес',
+    'clients.birthDate': 'Дата рождения',
     'clients.lastVisit': 'Последний визит',
     'clients.totalSpent': 'Всего потрачено',
     'clients.visits': 'Визиты',
@@ -472,6 +483,7 @@ const translations: Record<Language, Record<string, string>> = {
     'clients.service': 'Услуга',
     'clients.amount': 'Сумма',
     'clients.notes': 'Заметки',
+    'clients.noOrgFound': 'Организация для пользователя не найдена',
     
     // Payments
     'payments.title': 'Платежи',
@@ -581,6 +593,8 @@ const translations: Record<Language, Record<string, string>> = {
     'common.updatedAt': 'Дата обновления',
     'common.deleteConfirm': 'Вы уверены, что хотите удалить?',
     'common.cannotUndo': 'Это действие нельзя отменить',
+    'common.saving': 'Сохранение...',
+    'common.notAvailable': 'Недоступно',
     
     // Error page
     'error.message': 'Что-то пошло не так. Пожалуйста, попробуйте снова или обратитесь в поддержку.',

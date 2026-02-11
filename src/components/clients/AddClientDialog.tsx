@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAddClient } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { RefreshCw } from 'lucide-react'
 
 interface AddClientDialogProps {
@@ -17,6 +18,7 @@ interface AddClientDialogProps {
 
 export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
   const { orgId, isLoading: authLoading, user, refetch } = useAuth()
+  const { t } = useLanguage()
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -75,13 +77,13 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>הוסף לקוח חדש</DialogTitle>
+          <DialogTitle>{t('clients.addNew')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="first_name">שם פרטי *</Label>
+              <Label htmlFor="first_name">{t('clients.firstName')} *</Label>
               <Input
                 id="first_name"
                 value={formData.first_name}
@@ -91,7 +93,7 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
             </div>
 
             <div>
-              <Label htmlFor="last_name">שם משפחה *</Label>
+              <Label htmlFor="last_name">{t('clients.lastName')} *</Label>
               <Input
                 id="last_name"
                 value={formData.last_name}
@@ -102,7 +104,7 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
           </div>
 
           <div>
-            <Label htmlFor="phone">טלפון *</Label>
+            <Label htmlFor="phone">{t('clients.phone')} *</Label>
             <Input
               id="phone"
               type="tel"
@@ -114,7 +116,7 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
           </div>
 
           <div>
-            <Label htmlFor="email">אימייל</Label>
+            <Label htmlFor="email">{t('clients.email')}</Label>
             <Input
               id="email"
               type="email"
@@ -124,7 +126,7 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
           </div>
 
           <div>
-            <Label htmlFor="address">כתובת</Label>
+            <Label htmlFor="address">{t('clients.address')}</Label>
             <Input
               id="address"
               value={formData.address}
@@ -133,7 +135,7 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
           </div>
 
           <div>
-            <Label htmlFor="date_of_birth">תאריך לידה</Label>
+            <Label htmlFor="date_of_birth">{t('clients.birthDate')}</Label>
             <Input
               id="date_of_birth"
               type="date"
@@ -143,7 +145,7 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
           </div>
 
           <div>
-            <Label htmlFor="notes">הערות</Label>
+            <Label htmlFor="notes">{t('clients.notes')}</Label>
             <Textarea
               id="notes"
               value={formData.notes}
@@ -159,10 +161,10 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
                 <span className="text-xl">⚠️</span>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-red-800 dark:text-red-200">
-                    לא נמצא ארגון למשתמש
+                    {t('clients.noOrgFound')}
                   </p>
                   <p className="text-xs text-red-700 dark:text-red-300 mt-1">
-                    User ID: {user?.id || 'לא זמין'}
+                    User ID: {user?.id || t('common.notAvailable')}
                   </p>
                 </div>
               </div>
@@ -174,7 +176,7 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
                 className="w-full border-red-300 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900"
               >
                 <RefreshCw className="w-4 h-4 ml-2" />
-                רענן נתונים
+                {t('common.refresh')}
               </Button>
             </div>
           )}
@@ -185,13 +187,13 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              ביטול
+              {t('common.cancel')}
             </Button>
             <Button 
               type="submit" 
               disabled={addClient.isPending || authLoading || !orgId}
             >
-              {authLoading ? 'טוען...' : addClient.isPending ? 'שומר...' : 'שמור'}
+              {authLoading ? t('common.loading') : addClient.isPending ? t('common.saving') : t('common.save')}
             </Button>
           </div>
         </form>

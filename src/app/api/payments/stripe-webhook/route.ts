@@ -90,8 +90,11 @@ export async function POST(request: NextRequest) {
     if (event.type === 'invoice.paid') {
       const invoice = event.data.object as Stripe.Invoice
 
-      // Get subscription details
-      const subscriptionId = invoice.subscription as string
+      // Get subscription details (can be string ID or Subscription object)
+      const subscriptionId = typeof invoice.subscription === 'string' 
+        ? invoice.subscription 
+        : (invoice.subscription as any)?.id
+      
       if (!subscriptionId) {
         console.log('[Stripe Webhook] Invoice not linked to subscription, skipping')
         return NextResponse.json({ received: true })

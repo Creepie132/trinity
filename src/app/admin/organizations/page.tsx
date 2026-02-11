@@ -254,24 +254,24 @@ export default function OrganizationsPage() {
   }
 
   const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      salon: 'מספרה',
-      carwash: 'שטיפת רכב',
-      clinic: 'מרפאה',
-      restaurant: 'מסעדה',
-      gym: 'חדר כושר',
-      other: 'אחר',
+    const categoryKeys: Record<string, string> = {
+      salon: 'admin.orgs.salon',
+      carwash: 'admin.orgs.carwash',
+      clinic: 'admin.orgs.clinic',
+      restaurant: 'admin.orgs.restaurant',
+      gym: 'admin.orgs.gym',
+      other: 'admin.orgs.other',
     }
-    return labels[category] || category
+    return t(categoryKeys[category]) || category
   }
 
   const getPlanLabel = (plan: string) => {
-    const labels: Record<string, string> = {
-      basic: 'בסיסי',
-      pro: 'מקצועי',
-      enterprise: 'ארגוני',
+    const planKeys: Record<string, string> = {
+      basic: 'admin.orgs.basic',
+      pro: 'admin.orgs.pro',
+      enterprise: 'admin.orgs.enterprise',
     }
-    return labels[plan] || plan
+    return t(planKeys[plan]) || plan
   }
 
   return (
@@ -279,14 +279,14 @@ export default function OrganizationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">ניהול ארגונים</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('admin.orgs.title')}</h1>
           <p className="text-gray-600 mt-1">
-            סה״כ: {organizations?.length || 0} ארגונים
+            {t('admin.orgs.total')}: {organizations?.length || 0} {t('admin.orgs.organizations')}
           </p>
         </div>
         <Button onClick={() => setAddDialogOpen(true)}>
           <Plus className="w-4 h-4 ml-2" />
-          הוסף ארגון חדש
+          {t('admin.orgs.addNew')}
         </Button>
       </div>
 
@@ -294,7 +294,7 @@ export default function OrganizationsPage() {
       <div className="relative">
         <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
         <Input
-          placeholder="חפש לפי שם או אימייל..."
+          placeholder={t('admin.orgs.search')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pr-10"
@@ -306,25 +306,25 @@ export default function OrganizationsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5" />
-            כל הארגונים
+            {t('admin.orgs.all')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-12 text-gray-500">טוען נתונים...</div>
+            <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">שם הארגון</TableHead>
-                  <TableHead className="text-right">קטגוריה</TableHead>
-                  <TableHead className="text-right">תוכנית</TableHead>
-                  <TableHead className="text-right">סטטוס</TableHead>
+                  <TableHead className="text-right">{t('admin.orgs.name')}</TableHead>
+                  <TableHead className="text-right">{t('admin.orgs.category')}</TableHead>
+                  <TableHead className="text-right">{t('admin.orgs.plan')}</TableHead>
+                  <TableHead className="text-right">{t('admin.orgs.status')}</TableHead>
                   <TableHead className="text-right">SMS</TableHead>
                   <TableHead className="text-right">Payments</TableHead>
                   <TableHead className="text-right">Analytics</TableHead>
-                  <TableHead className="text-right">תאריך</TableHead>
-                  <TableHead className="text-right">פעולות</TableHead>
+                  <TableHead className="text-right">{t('admin.orgs.created')}</TableHead>
+                  <TableHead className="text-right">{t('clients.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -347,12 +347,12 @@ export default function OrganizationsPage() {
                         {org.is_active ? (
                           <>
                             <CheckCircle2 className="w-3 h-3" />
-                            פעיל
+                            {t('admin.orgs.active')}
                           </>
                         ) : (
                           <>
                             <XCircle className="w-3 h-3" />
-                            חסום
+                            {t('admin.orgs.inactive')}
                           </>
                         )}
                       </Badge>
@@ -392,7 +392,7 @@ export default function OrganizationsPage() {
                 {(!organizations || organizations.length === 0) && (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-12 text-gray-500">
-                      אין ארגונים במערכת
+                      {t('admin.orgs.noOrgs')}
                     </TableCell>
                   </TableRow>
                 )}
@@ -406,9 +406,9 @@ export default function OrganizationsPage() {
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>הוסף ארגון חדש</DialogTitle>
+            <DialogTitle>{t('admin.orgs.addDialog.title')}</DialogTitle>
             <DialogDescription>
-              צור ארגון חדש והקצה בעלים - בחר לקוח קיים או צור חדש
+              {t('admin.orgs.addDialog.desc')}
             </DialogDescription>
           </DialogHeader>
           
@@ -416,20 +416,20 @@ export default function OrganizationsPage() {
             {/* TASK 1: Tabs for Existing vs New Client */}
             <Tabs value={clientMode} onValueChange={(v) => setClientMode(v as 'existing' | 'new')}>
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="existing">לקוח קיים</TabsTrigger>
-                <TabsTrigger value="new">לקוח חדש</TabsTrigger>
+                <TabsTrigger value="existing">{t('admin.orgs.existingClient')}</TabsTrigger>
+                <TabsTrigger value="new">{t('admin.orgs.newClient')}</TabsTrigger>
               </TabsList>
               
               {/* Existing Client Tab */}
               <TabsContent value="existing" className="space-y-4">
                 <div>
-                  <Label>בחר לקוח מהמערכת *</Label>
+                  <Label>{t('admin.orgs.selectClient')} *</Label>
                   {loadingAllClients ? (
-                    <div className="text-sm text-gray-500 py-2">טוען לקוחות...</div>
+                    <div className="text-sm text-gray-500 py-2">{t('admin.orgs.loadingClients')}</div>
                   ) : allClients.length > 0 ? (
                     <Select value={selectedOwnerClientId} onValueChange={setSelectedOwnerClientId}>
                       <SelectTrigger>
-                        <SelectValue placeholder="בחר לקוח" />
+                        <SelectValue placeholder={t('admin.orgs.selectClientPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {allClients.map((client) => (
@@ -441,11 +441,11 @@ export default function OrganizationsPage() {
                     </Select>
                   ) : (
                     <div className="text-sm text-gray-500 py-2 border rounded-md px-3 bg-gray-50">
-                      אין לקוחות עם אימייל במערכת. עבור ל"לקוח חדש" כדי ליצור.
+                      {t('admin.orgs.noClientsWithEmail')}
                     </div>
                   )}
                   <p className="text-xs text-gray-500 mt-1">
-                    💡 אם הלקוח כבר התחבר: יוקצה מיד. אם לא: יוזמן ויוקצה אוטומטית בהתחברות הראשונה.
+                    {t('admin.orgs.autoAssignNote')}
                   </p>
                 </div>
               </TabsContent>
@@ -454,24 +454,24 @@ export default function OrganizationsPage() {
               <TabsContent value="new" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>שם פרטי *</Label>
+                    <Label>{t('clients.firstName')} *</Label>
                     <Input
                       value={newClient.firstName}
                       onChange={(e) => setNewClient({ ...newClient, firstName: e.target.value })}
-                      placeholder="שם פרטי"
+                      placeholder={t('clients.firstName')}
                     />
                   </div>
                   <div>
-                    <Label>שם משפחה *</Label>
+                    <Label>{t('clients.lastName')} *</Label>
                     <Input
                       value={newClient.lastName}
                       onChange={(e) => setNewClient({ ...newClient, lastName: e.target.value })}
-                      placeholder="שם משפחה"
+                      placeholder={t('clients.lastName')}
                     />
                   </div>
                 </div>
                 <div>
-                  <Label>אימייל *</Label>
+                  <Label>{t('clients.email')} *</Label>
                   <Input
                     type="email"
                     value={newClient.email}
@@ -480,7 +480,7 @@ export default function OrganizationsPage() {
                   />
                 </div>
                 <div>
-                  <Label>טלפון</Label>
+                  <Label>{t('clients.phone')}</Label>
                   <Input
                     type="tel"
                     value={newClient.phone}
@@ -489,51 +489,51 @@ export default function OrganizationsPage() {
                   />
                 </div>
                 <p className="text-xs text-gray-500">
-                  💡 הלקוח יווצר במערכת CRM וישויך לארגון החדש אוטומטית.
+                  {t('admin.orgs.clientCreatedNote')}
                 </p>
               </TabsContent>
             </Tabs>
 
             {/* Organization Details (common for both modes) */}
             <div className="border-t pt-4 space-y-4">
-              <h3 className="font-semibold text-sm">פרטי הארגון</h3>
+              <h3 className="font-semibold text-sm">{t('admin.orgs.orgDetails')}</h3>
               
               <div>
-                <Label>שם העסק *</Label>
+                <Label>{t('admin.orgs.businessName')} *</Label>
                 <Input
                   value={newOrg.name}
                   onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })}
-                  placeholder="שם העסק"
+                  placeholder={t('admin.orgs.businessNamePlaceholder')}
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>קטגוריה</Label>
+                  <Label>{t('admin.orgs.category')}</Label>
                   <Select value={newOrg.category} onValueChange={(value) => setNewOrg({ ...newOrg, category: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="salon">מספרה</SelectItem>
-                      <SelectItem value="carwash">שטיפת רכב</SelectItem>
-                      <SelectItem value="clinic">מרפאה</SelectItem>
-                      <SelectItem value="restaurant">מסעדה</SelectItem>
-                      <SelectItem value="gym">חדר כושר</SelectItem>
-                      <SelectItem value="other">אחר</SelectItem>
+                      <SelectItem value="salon">{t('admin.orgs.salon')}</SelectItem>
+                      <SelectItem value="carwash">{t('admin.orgs.carwash')}</SelectItem>
+                      <SelectItem value="clinic">{t('admin.orgs.clinic')}</SelectItem>
+                      <SelectItem value="restaurant">{t('admin.orgs.restaurant')}</SelectItem>
+                      <SelectItem value="gym">{t('admin.orgs.gym')}</SelectItem>
+                      <SelectItem value="other">{t('admin.orgs.other')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>תוכנית</Label>
+                  <Label>{t('admin.orgs.plan')}</Label>
                   <Select value={newOrg.plan} onValueChange={(value) => setNewOrg({ ...newOrg, plan: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="basic">בסיסי</SelectItem>
-                      <SelectItem value="pro">מקצועי</SelectItem>
-                      <SelectItem value="enterprise">ארגוני</SelectItem>
+                      <SelectItem value="basic">{t('admin.orgs.basic')}</SelectItem>
+                      <SelectItem value="pro">{t('admin.orgs.pro')}</SelectItem>
+                      <SelectItem value="enterprise">{t('admin.orgs.enterprise')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -547,7 +547,7 @@ export default function OrganizationsPage() {
               onClick={() => setAddDialogOpen(false)}
               disabled={isSubmitting}
             >
-              ביטול
+              {t('common.cancel')}
             </Button>
             <Button 
               onClick={handleCreateOrg} 
@@ -561,10 +561,10 @@ export default function OrganizationsPage() {
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2" />
-                  יוצר...
+                  {t('admin.orgs.creating')}
                 </>
               ) : (
-                'צור ארגון'
+                t('admin.orgs.createOrg')
               )}
             </Button>
           </DialogFooter>
@@ -575,7 +575,7 @@ export default function OrganizationsPage() {
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="left" className="w-[600px] overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>פרטי ארגון</SheetTitle>
+            <SheetTitle>{t('admin.orgs.orgDetailsSheet')}</SheetTitle>
           </SheetHeader>
           
           {selectedOrg && (
@@ -583,19 +583,19 @@ export default function OrganizationsPage() {
               {/* Basic Info */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">מידע כללי</CardTitle>
+                  <CardTitle className="text-lg">{t('admin.orgs.generalInfo')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label>שם הארגון</Label>
+                    <Label>{t('admin.orgs.name')}</Label>
                     <Input value={selectedOrg.name} disabled />
                   </div>
                   <div>
-                    <Label>אימייל</Label>
+                    <Label>{t('clients.email')}</Label>
                     <Input value={selectedOrg.email || ''} disabled />
                   </div>
                   <div>
-                    <Label>טלפון</Label>
+                    <Label>{t('clients.phone')}</Label>
                     <Input value={selectedOrg.phone || ''} disabled />
                   </div>
                   <div className="grid grid-cols-2 gap-4">

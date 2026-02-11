@@ -46,12 +46,12 @@ export default function Home() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">סה״כ לקוחות</p>
-                    <p className="text-3xl font-bold text-blue-600 mt-1">
+                    <p className="text-3xl font-bold text-theme-primary mt-1">
                       {stats?.totalClients || 0}
                     </p>
                   </div>
-                  <div className="bg-blue-100 p-3 rounded-full">
-                    <Users className="w-6 h-6 text-blue-600" />
+                  <div className="bg-theme-primary bg-opacity-10 p-3 rounded-full">
+                    <Users className="w-6 h-6 text-theme-primary" />
                   </div>
                 </div>
               </CardContent>

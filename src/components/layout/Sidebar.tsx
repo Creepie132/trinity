@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, ChevronLeft } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, ChevronLeft, Settings } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
@@ -27,6 +27,7 @@ const baseNavigation = [
   { name: 'הודעות SMS', href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
   { name: 'סטטיסטיקה', href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
   { name: 'הצעות שותפים', href: '/partners', icon: Gift, requireFeature: null },
+  { name: 'הגדרות', href: '/settings', icon: Settings, requireFeature: null },
 ]
 
 export function Sidebar() {

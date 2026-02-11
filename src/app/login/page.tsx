@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
   const supabase = createSupabaseBrowserClient()
@@ -25,7 +27,17 @@ export default function LoginPage() {
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-indigo-200/30 rounded-full blur-3xl" />
       </div>
 
-      <div className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-10 relative z-10 border border-white/20">
+      <div className="w-full max-w-md relative z-10">
+        {/* Back to Landing Button */}
+        <Link
+          href="/landing"
+          className="inline-flex items-center gap-2 mb-6 px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors group"
+        >
+          <ArrowRight className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          <span>חזור לדף הבית</span>
+        </Link>
+
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-white/20">
         {/* Логотип и заголовок */}
         <div className="flex flex-col items-center gap-4 mb-10">
           <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -81,6 +93,7 @@ export default function LoginPage() {
             <span>•</span>
             <span>🇮🇱 תמיכה בעברית</span>
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -40,20 +40,22 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { AdCampaign } from '@/types/database'
-
-const CATEGORIES = [
-  { value: 'salon', label: 'מספרות' },
-  { value: 'carwash', label: 'שטיפת רכב' },
-  { value: 'clinic', label: 'מרפאות' },
-  { value: 'restaurant', label: 'מסעדות' },
-  { value: 'gym', label: 'חדרי כושר' },
-  { value: 'other', label: 'אחר' },
-]
+import { useLanguage } from '@/contexts/LanguageContext'
 
 function AdsPageContent() {
+  const { t } = useLanguage()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<AdCampaign | null>(null)
   const [uploading, setUploading] = useState(false)
+
+  const CATEGORIES = [
+    { value: 'salon', label: t('admin.orgs.salon') },
+    { value: 'carwash', label: t('admin.orgs.carwash') },
+    { value: 'clinic', label: t('admin.orgs.clinic') },
+    { value: 'restaurant', label: t('admin.orgs.restaurant') },
+    { value: 'gym', label: t('admin.orgs.gym') },
+    { value: 'other', label: t('admin.orgs.other') },
+  ]
 
   const [newCampaign, setNewCampaign] = useState({
     advertiser_name: '',
@@ -147,7 +149,7 @@ function AdsPageContent() {
   }
 
   const handleDelete = (id: string, name: string) => {
-    if (confirm(`האם למחוק את הקמפיין "${name}"?`)) {
+    if (confirm(`${t('admin.ads.deleteConfirm')} "${name}"?`)) {
       deleteCampaign.mutate(id)
     }
   }
@@ -171,18 +173,18 @@ function AdsPageContent() {
     const end = new Date(campaign.end_date)
 
     if (!campaign.is_active) {
-      return { label: 'מושבת', variant: 'secondary' as const, icon: XCircle }
+      return { label: t('admin.ads.inactive'), variant: 'secondary' as const, icon: XCircle }
     }
     
     if (now < start) {
-      return { label: 'מתוכנן', variant: 'default' as const, icon: Clock }
+      return { label: t('admin.ads.scheduled'), variant: 'default' as const, icon: Clock }
     }
     
     if (now > end) {
-      return { label: 'הסתיים', variant: 'secondary' as const, icon: XCircle }
+      return { label: t('admin.ads.expired'), variant: 'secondary' as const, icon: XCircle }
     }
     
-    return { label: 'פעיל', variant: 'default' as const, icon: CheckCircle2 }
+    return { label: t('admin.ads.active'), variant: 'default' as const, icon: CheckCircle2 }
   }
 
   // Show errors if any
@@ -249,12 +251,12 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">ניהול פרסומות</h1>
-          <p className="text-gray-600 mt-1">קמפיינים ובאנרים פרסומיים</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('admin.ads.title')}</h1>
+          <p className="text-gray-600 mt-1">{t('admin.ads.subtitle')}</p>
         </div>
         <Button onClick={() => setAddDialogOpen(true)}>
           <Plus className="w-4 h-4 ml-2" />
-          הוסף קמפיין
+          {t('admin.ads.addNew')}
         </Button>
       </div>
 
@@ -264,7 +266,7 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">קמפיינים פעילים</p>
+                <p className="text-sm text-gray-600">{t('admin.ads.activeCampaigns')}</p>
                 <p className="text-3xl font-bold text-green-600 mt-1">
                   {stats?.activeCampaigns || 0}
                 </p>
@@ -280,7 +282,7 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">סה״כ קליקים החודש</p>
+                <p className="text-sm text-gray-600">{t('admin.ads.totalClicks')}</p>
                 <p className="text-3xl font-bold text-blue-600 mt-1">
                   {stats?.monthClicks || 0}
                 </p>
@@ -296,7 +298,7 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">CTR ממוצע</p>
+                <p className="text-sm text-gray-600">{t('admin.ads.ctr')}</p>
                 <p className="text-3xl font-bold text-purple-600 mt-1">
                   {stats?.avgCtr || '0.00'}%
                 </p>
@@ -314,25 +316,25 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Megaphone className="w-5 h-5" />
-            קמפיינים פרסומיים
+            {t('admin.ads.allCampaigns')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {campaignsLoading ? (
-            <div className="text-center py-12 text-gray-500">טוען נתונים...</div>
+            <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">מפרסם</TableHead>
-                  <TableHead className="text-right">באנר</TableHead>
-                  <TableHead className="text-right">קטגוריות יעד</TableHead>
-                  <TableHead className="text-right">תקופה</TableHead>
-                  <TableHead className="text-right">קליקים</TableHead>
-                  <TableHead className="text-right">הצגות</TableHead>
-                  <TableHead className="text-right">CTR</TableHead>
-                  <TableHead className="text-right">סטטוס</TableHead>
-                  <TableHead className="text-right">פעולות</TableHead>
+                  <TableHead className="text-right">{t('admin.ads.advertiser')}</TableHead>
+                  <TableHead className="text-right">{t('admin.ads.title')}</TableHead>
+                  <TableHead className="text-right">{t('admin.ads.categories')}</TableHead>
+                  <TableHead className="text-right">{t('admin.ads.dates')}</TableHead>
+                  <TableHead className="text-right">{t('admin.ads.clicks')}</TableHead>
+                  <TableHead className="text-right">{t('admin.ads.impressions')}</TableHead>
+                  <TableHead className="text-right">{t('admin.ads.ctr')}</TableHead>
+                  <TableHead className="text-right">{t('admin.orgs.status')}</TableHead>
+                  <TableHead className="text-right">{t('clients.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

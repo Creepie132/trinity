@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
 
   if (orgUser) {
-    return NextResponse.redirect(`${origin}/`)
+    return NextResponse.redirect(${origin}/dashboard)
   }
 
   return NextResponse.redirect(`${origin}/unauthorized`)

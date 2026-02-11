@@ -10,12 +10,14 @@ import { useFeatures } from '@/hooks/useFeatures'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function Home() {
   const { data: stats, isLoading } = useDashboardStats()
   const features = useFeatures()
   const router = useRouter()
   const { layout } = useTheme()
+  const { t } = useLanguage()
 
   // Check if organization is blocked
   useEffect(() => {
@@ -28,16 +30,16 @@ export default function Home() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">
-          ברוכים הבאים ל-Trinity
+          {t('dashboard.welcome')}
         </h1>
         <p className="text-gray-600 mt-2">
-          מערכת ניהול לקוחות, תשלומים והודעות SMS
+          {t('dashboard.subtitle')}
         </p>
       </div>
 
       {/* Stats Cards with Ad Banner */}
       {isLoading ? (
-        <div className="text-center py-12 text-gray-500">טוען נתונים...</div>
+        <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
       ) : (
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Stats Grid */}
@@ -48,7 +50,7 @@ export default function Home() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className={`text-gray-600 ${layout === 'compact' ? 'text-xs' : 'text-sm'}`}>
-                      סה״כ לקוחות
+                      {t('dashboard.totalClients')}
                     </p>
                     <p className={`font-bold text-theme-primary mt-1 stat-value ${
                       layout === 'modern' ? 'text-4xl' : layout === 'compact' ? 'text-2xl' : 'text-3xl'
@@ -73,7 +75,7 @@ export default function Home() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className={`text-gray-600 ${layout === 'compact' ? 'text-xs' : 'text-sm'}`}>
-                      ביקורים החודש
+                      {t('dashboard.visitsMonth')}
                     </p>
                     <p className={`font-bold text-green-600 mt-1 stat-value ${
                       layout === 'modern' ? 'text-4xl' : layout === 'compact' ? 'text-2xl' : 'text-3xl'
@@ -99,7 +101,7 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className={`text-gray-600 ${layout === 'compact' ? 'text-xs' : 'text-sm'}`}>
-                        הכנסות החודש
+                        {t('dashboard.revenueMonth')}
                       </p>
                       <p className={`font-bold text-purple-600 mt-1 stat-value ${
                         layout === 'modern' ? 'text-4xl' : layout === 'compact' ? 'text-2xl' : 'text-3xl'
@@ -126,7 +128,7 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className={`text-gray-600 ${layout === 'compact' ? 'text-xs' : 'text-sm'}`}>
-                        לקוחות לא פעילים
+                        {t('dashboard.inactiveClients')}
                       </p>
                       <p className={`font-bold text-orange-600 mt-1 stat-value ${
                         layout === 'modern' ? 'text-4xl' : layout === 'compact' ? 'text-2xl' : 'text-3xl'
@@ -143,7 +145,7 @@ export default function Home() {
                     </div>
                   </div>
                   <p className={`text-gray-500 mt-2 ${layout === 'compact' ? 'text-xs' : 'text-xs'}`}>
-                    30+ ימים ללא ביקור
+                    {t('dashboard.inactiveNote')}
                   </p>
                 </CardContent>
               </Card>

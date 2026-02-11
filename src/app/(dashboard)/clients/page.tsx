@@ -13,10 +13,12 @@ import { ClientSummary } from '@/types/database'
 import { format } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function ClientsPage() {
   const router = useRouter()
   const features = useFeatures()
+  const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<ClientSummary | null>(null)
@@ -41,14 +43,14 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">לקוחות</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('clients.title')}</h1>
           <p className="text-gray-600 mt-1">
-            סה״כ: {clients?.length || 0} לקוחות
+            {t('common.total')}: {clients?.length || 0} {t('clients.title')}
           </p>
         </div>
         <Button onClick={() => setAddDialogOpen(true)}>
           <Plus className="w-4 h-4 ml-2" />
-          הוסף לקוח
+          {t('clients.addNew')}
         </Button>
       </div>
 
@@ -56,7 +58,7 @@ export default function ClientsPage() {
       <div className="relative">
         <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
         <Input
-          placeholder="חפש לפי שם או טלפון..."
+          placeholder={t('clients.search')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pr-10"
@@ -66,17 +68,17 @@ export default function ClientsPage() {
       {/* Table */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="text-center py-12 text-gray-500">טוען...</div>
+          <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
         ) : clients && clients.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-right">שם</TableHead>
-                <TableHead className="text-right">טלפון</TableHead>
-                <TableHead className="text-right">ביקור אחרון</TableHead>
-                <TableHead className="text-right">סך ביקורים</TableHead>
-                <TableHead className="text-right">סך תשלומים</TableHead>
-                <TableHead className="text-left">פעולות</TableHead>
+                <TableHead className="text-right">{t('clients.name')}</TableHead>
+                <TableHead className="text-right">{t('clients.phone')}</TableHead>
+                <TableHead className="text-right">{t('clients.lastVisit')}</TableHead>
+                <TableHead className="text-right">{t('clients.visits')}</TableHead>
+                <TableHead className="text-right">{t('clients.totalSpent')}</TableHead>
+                <TableHead className="text-left">{t('clients.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -130,10 +132,10 @@ export default function ClientsPage() {
           </Table>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">אין לקוחות</p>
+            <p className="text-gray-500 mb-4">{t('clients.noClients')}</p>
             <Button onClick={() => setAddDialogOpen(true)}>
               <Plus className="w-4 h-4 ml-2" />
-              הוסף לקוח ראשון
+              {t('clients.addFirst')}
             </Button>
           </div>
         )}

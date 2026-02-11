@@ -19,11 +19,13 @@ import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function PaymentsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const features = useFeatures()
+  const { t } = useLanguage()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [startDate, setStartDate] = useState('')
@@ -53,27 +55,27 @@ export default function PaymentsPage() {
     const paymentId = searchParams.get('payment_id')
 
     if (status === 'success') {
-      toast.success('התשלום בוצע בהצלחה!')
+      toast.success(t('payments.successMessage'))
     } else if (status === 'failed') {
-      toast.error('התשלום נכשל')
+      toast.error(t('payments.failedMessage'))
     }
-  }, [searchParams])
+  }, [searchParams, t])
 
   const copyPaymentLink = (link: string) => {
     navigator.clipboard.writeText(link)
-    toast.success('הקישור הועתק ללוח')
+    toast.success(t('payments.linkCopied'))
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-green-500">שולם</Badge>
+        return <Badge className="bg-green-500">{t('payments.paid')}</Badge>
       case 'pending':
-        return <Badge className="bg-yellow-500">ממתין</Badge>
+        return <Badge className="bg-yellow-500">{t('payments.pending')}</Badge>
       case 'failed':
-        return <Badge variant="destructive">נכשל</Badge>
+        return <Badge variant="destructive">{t('payments.failed')}</Badge>
       case 'refunded':
-        return <Badge variant="secondary">הוחזר</Badge>
+        return <Badge variant="secondary">{t('payments.refunded')}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -84,14 +86,14 @@ export default function PaymentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">תשלומים</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('payments.title')}</h1>
           <p className="text-gray-600 mt-1">
-            סה״כ: {payments?.length || 0} תשלומים
+            {t('common.total')}: {payments?.length || 0} {t('payments.title')}
           </p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="w-4 h-4 ml-2" />
-          צור קישור לתשלום
+          {t('payments.createLink')}
         </Button>
       </div>
 
@@ -102,19 +104,19 @@ export default function PaymentsPage() {
             <div className="text-2xl font-bold text-green-600">
               ₪{stats.totalAmount.toFixed(2)}
             </div>
-            <div className="text-sm text-gray-600 mt-1">סך התשלומים החודש</div>
+            <div className="text-sm text-gray-600 mt-1">{t('payments.totalMonth')}</div>
           </div>
 
           <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
             <div className="text-2xl font-bold text-blue-600">{stats.count}</div>
-            <div className="text-sm text-gray-600 mt-1">עסקאות מוצלחות</div>
+            <div className="text-sm text-gray-600 mt-1">{t('payments.successfulTransactions')}</div>
           </div>
 
           <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
             <div className="text-2xl font-bold text-purple-600">
               ₪{stats.avgAmount.toFixed(2)}
             </div>
-            <div className="text-sm text-gray-600 mt-1">ממוצע לעסקה</div>
+            <div className="text-sm text-gray-600 mt-1">{t('payments.avgTransaction')}</div>
           </div>
         </div>
       )}
@@ -123,23 +125,23 @@ export default function PaymentsPage() {
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="text-sm font-medium mb-2 block">סטטוס</label>
+            <label className="text-sm font-medium mb-2 block">{t('payments.status')}</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">הכל</SelectItem>
-                <SelectItem value="pending">ממתין</SelectItem>
-                <SelectItem value="completed">שולם</SelectItem>
-                <SelectItem value="failed">נכשל</SelectItem>
-                <SelectItem value="refunded">הוחזר</SelectItem>
+                <SelectItem value="all">{t('payments.all')}</SelectItem>
+                <SelectItem value="pending">{t('payments.pending')}</SelectItem>
+                <SelectItem value="completed">{t('payments.paid')}</SelectItem>
+                <SelectItem value="failed">{t('payments.failed')}</SelectItem>
+                <SelectItem value="refunded">{t('payments.refunded')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">מתאריך</label>
+            <label className="text-sm font-medium mb-2 block">{t('payments.fromDate')}</label>
             <Input
               type="date"
               value={startDate}
@@ -148,7 +150,7 @@ export default function PaymentsPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">עד תאריך</label>
+            <label className="text-sm font-medium mb-2 block">{t('payments.toDate')}</label>
             <Input
               type="date"
               value={endDate}
@@ -161,17 +163,17 @@ export default function PaymentsPage() {
       {/* Table */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="text-center py-12 text-gray-500">טוען...</div>
+          <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
         ) : payments && payments.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>לקוח</TableHead>
-                <TableHead>סכום</TableHead>
-                <TableHead>סטטוס</TableHead>
-                <TableHead>אמצעי תשלום</TableHead>
-                <TableHead>תאריך</TableHead>
-                <TableHead className="text-left">פעולות</TableHead>
+                <TableHead>{t('payments.client')}</TableHead>
+                <TableHead>{t('payments.amount')}</TableHead>
+                <TableHead>{t('payments.status')}</TableHead>
+                <TableHead>{t('payments.method')}</TableHead>
+                <TableHead>{t('common.date')}</TableHead>
+                <TableHead className="text-left">{t('clients.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -180,7 +182,7 @@ export default function PaymentsPage() {
                   <TableCell className="font-medium">
                     {payment.clients
                       ? `${payment.clients.first_name} ${payment.clients.last_name}`
-                      : 'לא ידוע'}
+                      : t('payments.unknown')}
                   </TableCell>
                   <TableCell className="font-semibold text-lg">
                     ₪{Number(payment.amount).toFixed(2)}
@@ -188,7 +190,7 @@ export default function PaymentsPage() {
                   <TableCell>{getStatusBadge(payment.status)}</TableCell>
                   <TableCell>
                     {payment.payment_method === 'credit_card'
-                      ? 'כרטיס אשראי'
+                      ? t('payments.card')
                       : payment.payment_method || '-'}
                   </TableCell>
                   <TableCell>
@@ -204,7 +206,7 @@ export default function PaymentsPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => copyPaymentLink(payment.payment_link)}
-                            title="העתק קישור"
+                            title={t('payments.copyLink')}
                           >
                             <Copy className="w-4 h-4" />
                           </Button>
@@ -212,7 +214,7 @@ export default function PaymentsPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => window.open(payment.payment_link, '_blank')}
-                            title="פתח קישור"
+                            title={t('payments.openLink')}
                           >
                             <ExternalLink className="w-4 h-4" />
                           </Button>
@@ -222,7 +224,7 @@ export default function PaymentsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          title={`מזהה עסקה: ${payment.transaction_id}`}
+                          title={`${t('payments.transactionId')}: ${payment.transaction_id}`}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -235,10 +237,10 @@ export default function PaymentsPage() {
           </Table>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">אין תשלומים</p>
+            <p className="text-gray-500 mb-4">{t('payments.noPayments')}</p>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="w-4 h-4 ml-2" />
-              צור קישור לתשלום ראשון
+              {t('payments.createFirst')}
             </Button>
           </div>
         )}

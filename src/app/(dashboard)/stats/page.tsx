@@ -18,10 +18,12 @@ import {
 } from 'recharts'
 import { useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function StatsPage() {
   const router = useRouter()
   const features = useFeatures()
+  const { t } = useLanguage()
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: revenueData, isLoading: revenueLoading } = useRevenueByMonth()
   const { data: visitsData, isLoading: visitsLoading } = useVisitsByMonth()
@@ -41,7 +43,7 @@ export default function StatsPage() {
   if (statsLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-gray-500">טוען נתונים...</div>
+        <div className="text-gray-500">{t('common.loading')}</div>
       </div>
     )
   }
@@ -50,8 +52,8 @@ export default function StatsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">סטטיסטיקה</h1>
-        <p className="text-gray-600 mt-1">מבט כללי על העסק</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('stats.title')}</h1>
+        <p className="text-gray-600 mt-1">{t('stats.subtitle')}</p>
       </div>
 
       {/* Stats Cards */}
@@ -60,7 +62,7 @@ export default function StatsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">סה״כ לקוחות</p>
+                <p className="text-sm text-gray-600">{t('dashboard.totalClients')}</p>
                 <p className="text-3xl font-bold text-blue-600 mt-1">
                   {stats?.totalClients || 0}
                 </p>
@@ -76,7 +78,7 @@ export default function StatsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">ביקורים החודש</p>
+                <p className="text-sm text-gray-600">{t('dashboard.visitsMonth')}</p>
                 <p className="text-3xl font-bold text-green-600 mt-1">
                   {stats?.visitsThisMonth || 0}
                 </p>
@@ -92,7 +94,7 @@ export default function StatsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">הכנסות החודש</p>
+                <p className="text-sm text-gray-600">{t('dashboard.revenueMonth')}</p>
                 <p className="text-3xl font-bold text-purple-600 mt-1">
                   ₪{stats?.revenueThisMonth.toFixed(2) || '0.00'}
                 </p>
@@ -108,7 +110,7 @@ export default function StatsPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">לקוחות לא פעילים</p>
+                <p className="text-sm text-gray-600">{t('dashboard.inactiveClients')}</p>
                 <p className="text-3xl font-bold text-orange-600 mt-1">
                   {stats?.inactiveClients || 0}
                 </p>
@@ -117,7 +119,7 @@ export default function StatsPage() {
                 <UserX className="w-6 h-6 text-orange-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">30+ ימים ללא ביקור</p>
+            <p className="text-xs text-gray-500 mt-2">{t('dashboard.inactiveNote')}</p>
           </CardContent>
         </Card>
       </div>
@@ -127,12 +129,12 @@ export default function StatsPage() {
         {/* Revenue Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>הכנסות לפי חודש</CardTitle>
+            <CardTitle>{t('stats.revenueByMonth')}</CardTitle>
           </CardHeader>
           <CardContent>
             {revenueLoading ? (
               <div className="h-80 flex items-center justify-center">
-                <p className="text-gray-500">טוען...</p>
+                <p className="text-gray-500">{t('common.loading')}</p>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
@@ -141,10 +143,10 @@ export default function StatsPage() {
                   <XAxis dataKey="month" />
                   <YAxis />
                   <Tooltip
-                    formatter={(value: any) => [`₪${value.toFixed(2)}`, 'סכום']}
+                    formatter={(value: any) => [`₪${value.toFixed(2)}`, t('payments.amount')]}
                     labelStyle={{ direction: 'rtl' }}
                   />
-                  <Bar dataKey="amount" fill="#9333ea" name="הכנסות" />
+                  <Bar dataKey="amount" fill="#9333ea" name={t('stats.revenue')} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -154,12 +156,12 @@ export default function StatsPage() {
         {/* Visits Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>ביקורים לפי חודש</CardTitle>
+            <CardTitle>{t('stats.visitsByMonth')}</CardTitle>
           </CardHeader>
           <CardContent>
             {visitsLoading ? (
               <div className="h-80 flex items-center justify-center">
-                <p className="text-gray-500">טוען...</p>
+                <p className="text-gray-500">{t('common.loading')}</p>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
@@ -168,7 +170,7 @@ export default function StatsPage() {
                   <XAxis dataKey="month" />
                   <YAxis />
                   <Tooltip
-                    formatter={(value: any) => [value, 'ביקורים']}
+                    formatter={(value: any) => [value, t('clients.visits')]}
                     labelStyle={{ direction: 'rtl' }}
                   />
                   <Line
@@ -176,7 +178,7 @@ export default function StatsPage() {
                     dataKey="count"
                     stroke="#16a34a"
                     strokeWidth={2}
-                    name="ביקורים"
+                    name={t('clients.visits')}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -188,12 +190,12 @@ export default function StatsPage() {
       {/* Top Clients Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>5 הלקוחות המובילים</CardTitle>
+          <CardTitle>{t('stats.topClients')}</CardTitle>
         </CardHeader>
         <CardContent>
           {topLoading ? (
             <div className="h-80 flex items-center justify-center">
-              <p className="text-gray-500">טוען...</p>
+              <p className="text-gray-500">{t('common.loading')}</p>
             </div>
           ) : topClients && topClients.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
@@ -202,15 +204,15 @@ export default function StatsPage() {
                 <XAxis type="number" />
                 <YAxis dataKey="name" type="category" width={150} />
                 <Tooltip
-                  formatter={(value: any) => [`₪${value.toFixed(2)}`, 'סה״כ תשלומים']}
+                  formatter={(value: any) => [`₪${value.toFixed(2)}`, t('stats.totalPayments')]}
                   labelStyle={{ direction: 'rtl' }}
                 />
-                <Bar dataKey="amount" fill="#2563eb" name="סכום" />
+                <Bar dataKey="amount" fill="#2563eb" name={t('payments.amount')} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <div className="h-80 flex items-center justify-center">
-              <p className="text-gray-500">אין נתונים להצגה</p>
+              <p className="text-gray-500">{t('stats.noData')}</p>
             </div>
           )}
         </CardContent>

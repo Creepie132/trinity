@@ -250,13 +250,17 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Stats
     'stats.title': 'סטטיסטיקה',
-    'stats.subtitle': 'דוחות ונתונים סטטיסטיים',
+    'stats.subtitle': 'מבט כללי על העסק',
     'stats.revenue': 'הכנסות',
+    'stats.revenueByMonth': 'הכנסות לפי חודש',
+    'stats.visitsByMonth': 'ביקורים לפי חודש',
     'stats.byMonth': 'לפי חודש',
     'stats.byService': 'לפי שירות',
-    'stats.topClients': 'לקוחות מובילים',
+    'stats.topClients': '5 הלקוחות המובילים',
+    'stats.totalPayments': 'סה״כ תשלומים',
     'stats.trends': 'מגמות',
     'stats.export': 'ייצוא נתונים',
+    'stats.noData': 'אין נתונים להצגה',
     
     // Partners
     'partners.title': 'הצעות שותפים',
@@ -567,13 +571,17 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Stats
     'stats.title': 'Статистика',
-    'stats.subtitle': 'Отчёты и статистические данные',
+    'stats.subtitle': 'Общий обзор бизнеса',
     'stats.revenue': 'Доход',
+    'stats.revenueByMonth': 'Доход по месяцам',
+    'stats.visitsByMonth': 'Визиты по месяцам',
     'stats.byMonth': 'По месяцам',
     'stats.byService': 'По услугам',
-    'stats.topClients': 'Топ клиенты',
+    'stats.topClients': 'Топ 5 клиентов',
+    'stats.totalPayments': 'Всего платежей',
     'stats.trends': 'Тенденции',
     'stats.export': 'Экспорт данных',
+    'stats.noData': 'Нет данных для отображения',
     
     // Partners
     'partners.title': 'Партнёрские предложения',

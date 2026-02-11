@@ -153,4 +153,142 @@
   [data-layout="compact"] .container {
     @apply max-w-full;
   }
+  
+  /* Customization - Sidebar Width */
+  [data-sidebar-width="narrow"] aside {
+    @apply lg:w-60;
+  }
+  
+  [data-sidebar-width="normal"] aside {
+    @apply lg:w-72;
+  }
+  
+  [data-sidebar-width="wide"] aside {
+    @apply lg:w-80;
+  }
+  
+  /* Customization - Card Style */
+  [data-card-style="flat"] .custom-card {
+    @apply bg-white shadow-none border-0;
+  }
+  
+  [data-card-style="shadow"] .custom-card {
+    @apply bg-white shadow-md border-0;
+  }
+  
+  [data-card-style="border"] .custom-card {
+    @apply bg-white shadow-none border-2 border-gray-200;
+  }
+  
+  [data-card-style="glassmorphic"] .custom-card {
+    @apply bg-white/80 backdrop-blur-lg shadow-lg border border-gray-200/50;
+  }
+  
+  /* Customization - Card Roundness */
+  [data-card-roundness="none"] .custom-card {
+    @apply rounded-none;
+  }
+  
+  [data-card-roundness="small"] .custom-card {
+    @apply rounded;
+  }
+  
+  [data-card-roundness="medium"] .custom-card {
+    @apply rounded-lg;
+  }
+  
+  [data-card-roundness="large"] .custom-card {
+    @apply rounded-2xl;
+  }
+  
+  /* Customization - Card Spacing */
+  [data-card-spacing="tight"] .space-y-4 > * + * {
+    margin-top: 0.5rem !important;
+  }
+  
+  [data-card-spacing="normal"] .space-y-4 > * + * {
+    margin-top: 1rem !important;
+  }
+  
+  [data-card-spacing="spacious"] .space-y-4 > * + * {
+    margin-top: 1.5rem !important;
+  }
+  
+  /* Customization - Font Size */
+  [data-font-size="small"] {
+    font-size: 14px;
+  }
+  
+  [data-font-size="normal"] {
+    font-size: 16px;
+  }
+  
+  [data-font-size="large"] {
+    font-size: 18px;
+  }
+  
+  /* Customization - Font Weight */
+  [data-font-weight="light"] body {
+    font-weight: 300;
+  }
+  
+  [data-font-weight="normal"] body {
+    font-weight: 400;
+  }
+  
+  [data-font-weight="bold"] body {
+    font-weight: 600;
+  }
+  
+  /* Customization - Table Style */
+  [data-table-style="minimal"] table tbody tr {
+    @apply border-b border-gray-100;
+  }
+  
+  [data-table-style="striped"] table tbody tr:nth-child(even) {
+    @apply bg-gray-50;
+  }
+  
+  [data-table-style="bordered"] table {
+    @apply border border-gray-200;
+  }
+  
+  [data-table-style="bordered"] table td,
+  [data-table-style="bordered"] table th {
+    @apply border border-gray-200;
+  }
+  
+  /* Customization - Table Density */
+  [data-table-density="compact"] table td,
+  [data-table-density="compact"] table th {
+    @apply py-2;
+  }
+  
+  [data-table-density="normal"] table td,
+  [data-table-density="normal"] table th {
+    @apply py-3;
+  }
+  
+  [data-table-density="comfortable"] table td,
+  [data-table-density="comfortable"] table th {
+    @apply py-4;
+  }
+  
+  /* Customization - Animations */
+  [data-animations="disabled"] * {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  [data-transition-speed="fast"] * {
+    transition-duration: 150ms !important;
+  }
+  
+  [data-transition-speed="normal"] * {
+    transition-duration: 300ms !important;
+  }
+  
+  [data-transition-speed="slow"] * {
+    transition-duration: 500ms !important;
+  }
 }

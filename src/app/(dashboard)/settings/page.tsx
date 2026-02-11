@@ -2,8 +2,10 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import { useTheme, themes, Theme, Layout } from '@/contexts/ThemeContext'
-import { Check, LayoutGrid, Layers, AlignJustify } from 'lucide-react'
+import { Check, LayoutGrid, Layers, AlignJustify, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
 export default function SettingsPage() {
   const { theme, setTheme, layout, setLayout } = useTheme()
@@ -232,6 +234,31 @@ export default function SettingsPage() {
           <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg border border-blue-200 mt-4">
             💡 <strong>טיפ:</strong> סגנון התצוגה ישפיע על דשבורד, רשימת לקוחות, וכל העמודים במערכת
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Advanced Customization */}
+      <Card>
+        <CardHeader>
+          <CardTitle>🔧 התאמה מתקדמת</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-gray-600 text-sm">
+            רוצה שליטה מלאה על כל פרט בממשק? השתמש בהתאמה המתקדמת לשנות:
+          </p>
+          <ul className="text-sm text-gray-600 space-y-1 mr-4">
+            <li>• מיקום ורוחב תפריט הצד</li>
+            <li>• סגנון וצורת כרטיסים</li>
+            <li>• גודל ומשקל טקסט</li>
+            <li>• מראה וצפיפות טבלאות</li>
+            <li>• אנימציות ומעברים</li>
+          </ul>
+          <Link href="/settings/customize">
+            <Button variant="outline" className="w-full">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              פתח התאמה מתקדמת
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 

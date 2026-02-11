@@ -5,11 +5,53 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 export type Theme = 'default' | 'purple' | 'green' | 'orange' | 'pink' | 'dark'
 export type Layout = 'classic' | 'modern' | 'compact'
 
+export interface CustomizationSettings {
+  // Sidebar
+  sidebarPosition: 'right' | 'left'
+  sidebarWidth: 'narrow' | 'normal' | 'wide'
+  sidebarCollapsible: boolean
+  
+  // Cards
+  cardStyle: 'flat' | 'shadow' | 'border' | 'glassmorphic'
+  cardRoundness: 'none' | 'small' | 'medium' | 'large'
+  cardSpacing: 'tight' | 'normal' | 'spacious'
+  
+  // Typography
+  fontSize: 'small' | 'normal' | 'large'
+  fontWeight: 'light' | 'normal' | 'bold'
+  
+  // Tables
+  tableStyle: 'minimal' | 'striped' | 'bordered' | 'cards'
+  tableDensity: 'compact' | 'normal' | 'comfortable'
+  
+  // Animations
+  animations: boolean
+  transitionSpeed: 'fast' | 'normal' | 'slow'
+}
+
+const defaultCustomization: CustomizationSettings = {
+  sidebarPosition: 'right',
+  sidebarWidth: 'normal',
+  sidebarCollapsible: false,
+  cardStyle: 'shadow',
+  cardRoundness: 'medium',
+  cardSpacing: 'normal',
+  fontSize: 'normal',
+  fontWeight: 'normal',
+  tableStyle: 'striped',
+  tableDensity: 'normal',
+  animations: true,
+  transitionSpeed: 'normal',
+}
+
 interface ThemeContextType {
   theme: Theme
   setTheme: (theme: Theme) => void
   layout: Layout
   setLayout: (layout: Layout) => void
+  customization: CustomizationSettings
+  updateCustomization: (settings: Partial<CustomizationSettings>) => void
+  resetCustomization: () => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -62,6 +104,7 @@ const themes = {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('default')
   const [layout, setLayoutState] = useState<Layout>('classic')
+  const [customization, setCustomizationState] = useState<CustomizationSettings>(defaultCustomization)
 
   useEffect(() => {
     // Load theme from localStorage
@@ -76,6 +119,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (savedLayout && ['classic', 'modern', 'compact'].includes(savedLayout)) {
       setLayoutState(savedLayout)
       applyLayout(savedLayout)
+    }
+
+    // Load customization from localStorage
+    const savedCustomization = localStorage.getItem('trinity-customization')
+    if (savedCustomization) {
+      try {
+        const parsed = JSON.parse(savedCustomization)
+        setCustomizationState({ ...defaultCustomization, ...parsed })
+        applyCustomization({ ...defaultCustomization, ...parsed })
+      } catch (e) {
+        console.error('Failed to parse customization settings:', e)
+      }
     }
   }, [])
 
@@ -106,12 +161,52 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute('data-layout', layoutName)
   }
 
+  const applyCustomization = (settings: CustomizationSettings) => {
+    const root = document.documentElement
+    
+    // Apply data attributes for CSS selectors
+    root.setAttribute('data-sidebar-position', settings.sidebarPosition)
+    root.setAttribute('data-sidebar-width', settings.sidebarWidth)
+    root.setAttribute('data-card-style', settings.cardStyle)
+    root.setAttribute('data-card-roundness', settings.cardRoundness)
+    root.setAttribute('data-card-spacing', settings.cardSpacing)
+    root.setAttribute('data-font-size', settings.fontSize)
+    root.setAttribute('data-font-weight', settings.fontWeight)
+    root.setAttribute('data-table-style', settings.tableStyle)
+    root.setAttribute('data-table-density', settings.tableDensity)
+    root.setAttribute('data-animations', settings.animations ? 'enabled' : 'disabled')
+    root.setAttribute('data-transition-speed', settings.transitionSpeed)
+  }
+
+  const updateCustomization = (newSettings: Partial<CustomizationSettings>) => {
+    const updated = { ...customization, ...newSettings }
+    setCustomizationState(updated)
+    localStorage.setItem('trinity-customization', JSON.stringify(updated))
+    applyCustomization(updated)
+  }
+
+  const resetCustomization = () => {
+    setCustomizationState(defaultCustomization)
+    localStorage.setItem('trinity-customization', JSON.stringify(defaultCustomization))
+    applyCustomization(defaultCustomization)
+  }
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, layout, setLayout }}>
+    <ThemeContext.Provider value={{ 
+      theme, 
+      setTheme, 
+      layout, 
+      setLayout, 
+      customization, 
+      updateCustomization, 
+      resetCustomization 
+    }}>
       {children}
     </ThemeContext.Provider>
   )
 }
+
+export { defaultCustomization }
 
 export function useTheme() {
   const context = useContext(ThemeContext)

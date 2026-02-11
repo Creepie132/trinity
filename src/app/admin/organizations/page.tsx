@@ -41,8 +41,10 @@ import { Building2, Plus, Search, Eye, Trash, CheckCircle2, XCircle } from 'luci
 import { format } from 'date-fns'
 import { Organization } from '@/types/database'
 import { supabase } from '@/lib/supabase'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function OrganizationsPage() {
+  const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)

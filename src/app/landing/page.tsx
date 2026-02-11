@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, ChevronRight, Monitor, Bot, Globe, Code } from 'lucide-react'
+import { Menu, X, ChevronRight, Monitor, Bot, Globe, Code, Mail } from 'lucide-react'
 
 // Translations type
 interface Translations {
@@ -31,6 +31,23 @@ interface Translations {
       value: string
       label: string
     }[]
+  }
+  gallery: {
+    title: string
+    screenshot: string
+  }
+  reviews: {
+    title: string
+    items: {
+      text: string
+      author: string
+    }[]
+  }
+  cta: {
+    title: string
+    subtitle: string
+    whatsapp: string
+    email: string
   }
 }
 
@@ -88,6 +105,45 @@ const translations: Record<'he' | 'ru', Translations> = {
         },
       ],
     },
+    gallery: {
+      title: 'מהפרויקטים שלנו',
+      screenshot: 'צילום מסך',
+    },
+    reviews: {
+      title: 'מה הלקוחות שלנו אומרים',
+      items: [
+        {
+          text: 'שירות מעולה! המערכת שינתה את הדרך שבה אני מנהלת את העסק',
+          author: 'קסניה מ., BeautyMania',
+        },
+        {
+          text: 'הבוט בטלגרם חוסך לי שעות עבודה כל יום',
+          author: 'דוד ר., CarWash Pro',
+        },
+        {
+          text: 'סוף סוף מערכת שמבינה עברית ומתאימה לשוק הישראלי',
+          author: 'מירב ל., קליניקת שלום',
+        },
+        {
+          text: 'תוך שבוע כבר ראיתי שיפור בניהול הלקוחות',
+          author: 'אלכס ג., Barber House',
+        },
+        {
+          text: 'המחיר שווה כל שקל, חוסך לי הרבה כאב ראש',
+          author: 'נטלי ש., NailArt Studio',
+        },
+        {
+          text: 'צוות מקצועי ותמיכה מהירה',
+          author: 'יוסי כ., FitZone Gym',
+        },
+      ],
+    },
+    cta: {
+      title: 'מוכנים להתחיל?',
+      subtitle: 'צרו איתנו קשר ונבנה יחד את הפתרון המושלם לעסק שלכם',
+      whatsapp: 'דברו איתנו עכשיו',
+      email: 'שלחו מייל',
+    },
   },
   ru: {
     nav: {
@@ -141,6 +197,45 @@ const translations: Record<'he' | 'ru', Translations> = {
           label: 'экономия времени управления',
         },
       ],
+    },
+    gallery: {
+      title: 'Наши проекты',
+      screenshot: 'Скриншот',
+    },
+    reviews: {
+      title: 'Что говорят наши клиенты',
+      items: [
+        {
+          text: 'Отличный сервис! Система изменила то, как я управляю бизнесом',
+          author: 'Ксения М., BeautyMania',
+        },
+        {
+          text: 'Telegram бот экономит мне часы работы каждый день',
+          author: 'Давид Р., CarWash Pro',
+        },
+        {
+          text: 'Наконец-то система которая понимает иврит и подходит для израильского рынка',
+          author: 'Мирав Л., Клиника Шалом',
+        },
+        {
+          text: 'За неделю уже увидел улучшение в управлении клиентами',
+          author: 'Алекс Г., Barber House',
+        },
+        {
+          text: 'Цена стоит каждого шекеля, экономит мне много головной боли',
+          author: 'Наталья Ш., NailArt Studio',
+        },
+        {
+          text: 'Профессиональная команда и быстрая поддержка',
+          author: 'Йоси К., FitZone Gym',
+        },
+      ],
+    },
+    cta: {
+      title: 'Готовы начать?',
+      subtitle: 'Свяжитесь с нами и мы вместе создадим идеальное решение для вашего бизнеса',
+      whatsapp: 'Поговорите с нами сейчас',
+      email: 'Написать email',
     },
   },
 }
@@ -457,38 +552,106 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Gallery Section - Placeholder */}
+      {/* Gallery Section */}
       <section id="gallery" className="py-20 bg-white fade-in-section">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
-            {t.nav.gallery}
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
+            {t.gallery.title}
           </h2>
-          <div className="text-center text-gray-600">
-            <p className="text-lg">Секция в разработке - ожидаем контент...</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[1, 2, 3, 4].map((num) => (
+              <div key={num} className="group relative overflow-hidden rounded-xl shadow-lg">
+                <div className="aspect-video bg-gray-300 flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
+                  <span className="text-2xl font-semibold text-gray-600">
+                    {t.gallery.screenshot} {num}
+                  </span>
+                </div>
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Reviews Section - Placeholder */}
+      {/* Reviews Section */}
       <section id="reviews" className="py-20 bg-gray-50 fade-in-section">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
-            {t.nav.reviews}
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
+            {t.reviews.title}
           </h2>
-          <div className="text-center text-gray-600">
-            <p className="text-lg">Секция в разработке - ожидаем контент...</p>
+
+          <div className="relative max-h-[600px] overflow-hidden">
+            <div className="reviews-scroll space-y-6">
+              {/* First set of reviews */}
+              {t.reviews.items.map((review, index) => (
+                <div
+                  key={`review-1-${index}`}
+                  className="bg-white rounded-xl shadow-md p-6 mx-auto max-w-2xl"
+                >
+                  <p className="text-gray-700 text-lg leading-relaxed mb-4">
+                    "{review.text}"
+                  </p>
+                  <p className="text-amber-600 font-semibold">— {review.author}</p>
+                </div>
+              ))}
+              {/* Duplicate set for seamless loop */}
+              {t.reviews.items.map((review, index) => (
+                <div
+                  key={`review-2-${index}`}
+                  className="bg-white rounded-xl shadow-md p-6 mx-auto max-w-2xl"
+                >
+                  <p className="text-gray-700 text-lg leading-relaxed mb-4">
+                    "{review.text}"
+                  </p>
+                  <p className="text-amber-600 font-semibold">— {review.author}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Gradient overlays */}
+            <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-gray-50 to-transparent pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none"></div>
           </div>
         </div>
       </section>
 
-      {/* Contact Section - Placeholder */}
-      <section id="contact" className="py-20 bg-white fade-in-section">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
-            {t.nav.contact}
+      {/* CTA Section */}
+      <section
+        id="contact"
+        className="py-20 fade-in-section"
+        style={{
+          background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)',
+        }}
+      >
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
+            {t.cta.title}
           </h2>
-          <div className="text-center text-gray-600">
-            <p className="text-lg">Секция в разработке - ожидаем контент...</p>
+          <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
+            {t.cta.subtitle}
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            {/* WhatsApp Button */}
+            <a
+              href="https://wa.me/972544858586"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-amber-500 text-white rounded-lg font-semibold text-lg transition-all transform hover:scale-105 hover:shadow-amber"
+            >
+              {t.cta.whatsapp}
+              <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
+            </a>
+
+            {/* Email Button */}
+            <a
+              href="mailto:ambersolutions.systems@gmail.com"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white rounded-lg font-semibold border-2 border-white/30 hover:bg-white/20 transition-all"
+            >
+              <Mail size={20} />
+              {t.cta.email}
+            </a>
           </div>
         </div>
       </section>
@@ -540,6 +703,24 @@ export default function LandingPage() {
 
         .shadow-amber {
           box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
+        }
+
+        /* Reviews auto-scroll animation */
+        .reviews-scroll {
+          animation: scrollReviews 30s linear infinite;
+        }
+
+        .reviews-scroll:hover {
+          animation-play-state: paused;
+        }
+
+        @keyframes scrollReviews {
+          0% {
+            transform: translateY(0);
+          }
+          100% {
+            transform: translateY(-50%);
+          }
         }
 
         html[dir='rtl'] {

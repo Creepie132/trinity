@@ -92,6 +92,7 @@ export interface Organization {
     sms: boolean
     payments: boolean
     analytics: boolean
+    subscriptions?: boolean
   }
   billing_status: 'trial' | 'paid' | 'overdue' | 'cancelled'
   billing_due_date: string | null

@@ -54,9 +54,9 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
 
   const getIntervalLabel = (interval: Interval) => {
     const labels = {
-      month: language === 'he' ? 'חודשי' : 'Месячный',
-      week: language === 'he' ? 'שבועי' : 'Еженедельный',
-      year: language === 'he' ? 'שנתי' : 'Годовой',
+      month: t('subscriptions.monthly'),
+      week: t('subscriptions.weekly'),
+      year: t('subscriptions.yearly'),
     }
     return labels[interval]
   }
@@ -101,14 +101,14 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
       if (data.url) {
         // Open Stripe Checkout in new window
         window.open(data.url, '_blank')
-        toast.success(language === 'he' ? 'מעבר לעמוד התשלום...' : 'Переход к оплате...')
+        toast.success(t('common.loading'))
         handleClose()
       } else {
-        toast.error(language === 'he' ? 'שגיאה ביצירת מנוי' : 'Ошибка создания подписки')
+        toast.error(t('common.error'))
       }
     } catch (error) {
       console.error('Subscription error:', error)
-      toast.error(language === 'he' ? 'שגיאה ביצירת מנוי' : 'Ошибка создания подписки')
+      toast.error(t('common.error'))
     } finally {
       setLoading(false)
     }
@@ -127,7 +127,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {language === 'he' ? 'יצירת מנוי' : 'Создать подписку'} - Stripe
+            {t('subscriptions.createNew')} - Stripe
           </DialogTitle>
         </DialogHeader>
 
@@ -159,7 +159,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
 
           <div>
             <Label htmlFor="interval">
-              {language === 'he' ? 'תדירות תשלום' : 'Периодичность'}
+              {t('subscriptions.interval')}
             </Label>
             <Select value={interval} onValueChange={(value) => setInterval(value as Interval)}>
               <SelectTrigger>
@@ -175,7 +175,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
 
           <div>
             <Label htmlFor="amount">
-              {t('payments.amount')} (₪) *
+              {t('subscriptions.amount')} (₪) *
             </Label>
             <Input
               id="amount"
@@ -184,7 +184,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
               min="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder={language === 'he' ? 'הכנס סכום' : 'Введите сумму'}
+              placeholder={t('subscriptions.amountPlaceholder')}
               required
             />
           </div>
@@ -201,10 +201,10 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                  {language === 'he' ? 'יוצר...' : 'Создание...'}
+                  {t('subscriptions.creating')}
                 </>
               ) : (
-                language === 'he' ? 'צור מנוי' : 'Создать подписку'
+                t('subscriptions.create')
               )}
             </Button>
           </div>

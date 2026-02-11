@@ -302,6 +302,20 @@ const translations: Record<Language, Record<string, string>> = {
     'payments.sendLinkToClient': 'שלח את הקישור ללקוח כדי שיוכל לשלם באופן מאובטח',
     'payments.failedMessage': 'התשלום נכשל',
     'payments.creating': 'יוצר קישור...',
+    'payments.paymentSuccess': 'התשלום בוצע בהצלחה!',
+    'payments.paymentCanceled': 'התשלום בוטל',
+    
+    // Subscriptions
+    'subscriptions.create': 'צור מנוי',
+    'subscriptions.createNew': 'יצירת מנוי חדש',
+    'subscriptions.selectClient': 'בחר לקוח',
+    'subscriptions.amount': 'סכום',
+    'subscriptions.amountPlaceholder': 'הכנס סכום',
+    'subscriptions.interval': 'תדירות תשלום',
+    'subscriptions.monthly': 'חודשי',
+    'subscriptions.weekly': 'שבועי',
+    'subscriptions.yearly': 'שנתי',
+    'subscriptions.creating': 'יוצר...',
     
     // SMS
     'sms.title': 'הודעות SMS',
@@ -723,6 +737,20 @@ const translations: Record<Language, Record<string, string>> = {
     'payments.sendLinkToClient': 'Отправьте ссылку клиенту для безопасной оплаты',
     'payments.failedMessage': 'Ошибка платежа',
     'payments.creating': 'Создание ссылки...',
+    'payments.paymentSuccess': 'Платёж выполнен успешно!',
+    'payments.paymentCanceled': 'Платёж отменён',
+    
+    // Subscriptions
+    'subscriptions.create': 'Оформить подписку',
+    'subscriptions.createNew': 'Создать подписку',
+    'subscriptions.selectClient': 'Выберите клиента',
+    'subscriptions.amount': 'Сумма',
+    'subscriptions.amountPlaceholder': 'Введите сумму',
+    'subscriptions.interval': 'Период',
+    'subscriptions.monthly': 'Месячный',
+    'subscriptions.weekly': 'Еженедельный',
+    'subscriptions.yearly': 'Годовой',
+    'subscriptions.creating': 'Создание...',
     
     // SMS
     'sms.title': 'SMS сообщения',

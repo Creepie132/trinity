@@ -57,12 +57,17 @@ export default function PaymentsPage() {
   // Show success/failure message from callback
   useEffect(() => {
     const status = searchParams.get('status')
+    const success = searchParams.get('success')
+    const subscription = searchParams.get('subscription')
+    const canceled = searchParams.get('canceled')
     const paymentId = searchParams.get('payment_id')
 
-    if (status === 'success') {
-      toast.success(t('payments.successMessage'))
+    if (status === 'success' || success === 'true' || subscription === 'success') {
+      toast.success(t('payments.paymentSuccess'))
     } else if (status === 'failed') {
       toast.error(t('payments.failedMessage'))
+    } else if (canceled === 'true') {
+      toast.error(t('payments.paymentCanceled'))
     }
   }, [searchParams, t])
 
@@ -118,7 +123,7 @@ export default function PaymentsPage() {
               className="bg-green-600 hover:bg-green-700"
             >
               <Plus className="w-4 h-4 ml-2" />
-              צור מנוי
+              {t('subscriptions.create')}
             </Button>
           )}
         </div>

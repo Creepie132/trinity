@@ -21,8 +21,10 @@ import {
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { format } from 'date-fns'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function AdminDashboard() {
+  const { t } = useLanguage()
   const { data: stats, isLoading: statsLoading } = useAdminStats()
   const { data: recentOrgs, isLoading: orgsLoading } = useRecentOrganizations(5)
   const { data: orgsByMonth, isLoading: chartLoading } = useOrganizationsByMonth()
@@ -31,7 +33,7 @@ export default function AdminDashboard() {
   if (statsLoading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-gray-500">טוען נתונים...</div>
+        <div className="text-gray-500">{t('common.loading')}</div>
       </div>
     )
   }
@@ -48,8 +50,8 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">לוח בקרה - מערכת ניהול</h1>
-        <p className="text-gray-600 mt-1">מבט כללי על המערכת והארגונים</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('admin.welcome')}</h1>
+        <p className="text-gray-600 mt-1">{t('admin.subtitle')}</p>
       </div>
 
       {/* Stats Cards */}
@@ -58,7 +60,7 @@ export default function AdminDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">סה״כ ארגונים</p>
+                <p className="text-sm text-gray-600">{t('admin.totalOrgs')}</p>
                 <p className="text-3xl font-bold text-blue-600 mt-1">
                   {stats?.totalOrgs || 0}
                 </p>
@@ -74,7 +76,7 @@ export default function AdminDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">ארגונים פעילים</p>
+                <p className="text-sm text-gray-600">{t('admin.activeOrgs')}</p>
                 <p className="text-3xl font-bold text-green-600 mt-1">
                   {stats?.activeOrgs || 0}
                 </p>
@@ -90,7 +92,7 @@ export default function AdminDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">סה״כ עסקאות</p>
+                <p className="text-sm text-gray-600">{t('common.total')} {t('admin.billing.invoice')}</p>
                 <p className="text-3xl font-bold text-purple-600 mt-1">
                   {stats?.totalTransactions || 0}
                 </p>

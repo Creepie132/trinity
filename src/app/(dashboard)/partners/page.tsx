@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card'
 import { ExternalLink } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface AdCampaign {
   id: string
@@ -24,6 +25,7 @@ interface AdCampaign {
 export default function PartnersPage() {
   const router = useRouter()
   const features = useFeatures()
+  const { t } = useLanguage()
   const [campaigns, setCampaigns] = useState<AdCampaign[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -70,7 +72,7 @@ export default function PartnersPage() {
   if (loading) {
     return (
       <div className="p-8">
-        <h1 className="text-3xl font-bold mb-8">הצעות שותפים</h1>
+        <h1 className="text-3xl font-bold mb-8">{t('partners.title')}</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="p-4 animate-pulse">
@@ -87,9 +89,9 @@ export default function PartnersPage() {
   if (campaigns.length === 0) {
     return (
       <div className="p-8">
-        <h1 className="text-3xl font-bold mb-8">הצעות שותפים</h1>
+        <h1 className="text-3xl font-bold mb-8">{t('partners.title')}</h1>
         <Card className="p-12 text-center">
-          <p className="text-gray-500 text-lg">אין הצעות זמינות כרגע</p>
+          <p className="text-gray-500 text-lg">{t('partners.noOffers')}</p>
         </Card>
       </div>
     )
@@ -98,8 +100,8 @@ export default function PartnersPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">הצעות שותפים</h1>
-        <p className="text-gray-600">גלה מוצרים ושירותים מומלצים לעסק שלך</p>
+        <h1 className="text-3xl font-bold mb-2">{t('partners.title')}</h1>
+        <p className="text-gray-600">{t('partners.subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -122,7 +124,7 @@ export default function PartnersPage() {
                 variant="default"
               >
                 <ExternalLink className="ml-2 h-4 w-4" />
-                לפרטים
+                {t('partners.details')}
               </Button>
             </div>
           </Card>

@@ -39,12 +39,15 @@ const translations: Record<Language, Record<string, string>> = {
     'admin.settings': 'הגדרות',
     
     // Admin Dashboard
-    'admin.welcome': 'פאנל ניהול מערכת',
-    'admin.subtitle': 'ניהול ארגונים, משתמשים וחיובים',
+    'admin.welcome': 'לוח בקרה - מערכת ניהול',
+    'admin.subtitle': 'מבט כללי על המערכת והארגונים',
     'admin.totalOrgs': 'סה״כ ארגונים',
     'admin.activeOrgs': 'ארגונים פעילים',
     'admin.totalUsers': 'סה״כ משתמשים',
     'admin.monthlyRevenue': 'הכנסות חודשיות',
+    'admin.recentOrgs': 'ארגונים אחרונים',
+    'admin.growth': 'צמיחה',
+    'admin.systemHealth': 'מצב המערכת',
     
     // Admin Organizations
     'admin.orgs.title': 'ניהול ארגונים',
@@ -221,9 +224,10 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Partners
     'partners.title': 'הצעות שותפים',
-    'partners.subtitle': 'הצעות והטבות מיוחדות',
+    'partners.subtitle': 'גלה מוצרים ושירותים מומלצים לעסק שלך',
     'partners.noOffers': 'אין הצעות זמינות כרגע',
     'partners.checkLater': 'בדוק שוב מאוחר יותר',
+    'partners.details': 'לפרטים',
     
     // Common
     'common.loading': 'טוען נתונים...',
@@ -309,12 +313,15 @@ const translations: Record<Language, Record<string, string>> = {
     'admin.settings': 'Настройки',
     
     // Admin Dashboard
-    'admin.welcome': 'Панель управления системой',
-    'admin.subtitle': 'Управление организациями, пользователями и платежами',
+    'admin.welcome': 'Панель управления - Система управления',
+    'admin.subtitle': 'Общий обзор системы и организаций',
     'admin.totalOrgs': 'Всего организаций',
     'admin.activeOrgs': 'Активных организаций',
     'admin.totalUsers': 'Всего пользователей',
     'admin.monthlyRevenue': 'Месячный доход',
+    'admin.recentOrgs': 'Последние организации',
+    'admin.growth': 'Рост',
+    'admin.systemHealth': 'Состояние системы',
     
     // Admin Organizations
     'admin.orgs.title': 'Управление организациями',
@@ -491,9 +498,10 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Partners
     'partners.title': 'Партнёрские предложения',
-    'partners.subtitle': 'Специальные предложения и скидки',
+    'partners.subtitle': 'Откройте для себя рекомендуемые продукты и услуги для вашего бизнеса',
     'partners.noOffers': 'Нет доступных предложений',
     'partners.checkLater': 'Проверьте позже',
+    'partners.details': 'Подробнее',
     
     // Common
     'common.loading': 'Загрузка данных...',

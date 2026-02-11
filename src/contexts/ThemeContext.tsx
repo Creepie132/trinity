@@ -52,6 +52,8 @@ interface ThemeContextType {
   customization: CustomizationSettings
   updateCustomization: (settings: Partial<CustomizationSettings>) => void
   resetCustomization: () => void
+  darkMode: boolean
+  setDarkMode: (enabled: boolean) => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -105,6 +107,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('default')
   const [layout, setLayoutState] = useState<Layout>('classic')
   const [customization, setCustomizationState] = useState<CustomizationSettings>(defaultCustomization)
+  const [darkMode, setDarkModeState] = useState<boolean>(false)
 
   useEffect(() => {
     // Load theme from localStorage
@@ -131,6 +134,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         console.error('Failed to parse customization settings:', e)
       }
+    }
+
+    // Load dark mode from localStorage
+    const savedDarkMode = localStorage.getItem('trinity-dark-mode')
+    if (savedDarkMode === 'true') {
+      setDarkModeState(true)
+      applyDarkMode(true)
     }
   }, [])
 
@@ -191,6 +201,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyCustomization(defaultCustomization)
   }
 
+  const setDarkMode = (enabled: boolean) => {
+    setDarkModeState(enabled)
+    localStorage.setItem('trinity-dark-mode', enabled.toString())
+    applyDarkMode(enabled)
+  }
+
+  const applyDarkMode = (enabled: boolean) => {
+    if (enabled) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }
+
   return (
     <ThemeContext.Provider value={{ 
       theme, 
@@ -199,7 +223,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setLayout, 
       customization, 
       updateCustomization, 
-      resetCustomization 
+      resetCustomization,
+      darkMode,
+      setDarkMode
     }}>
       {children}
     </ThemeContext.Provider>

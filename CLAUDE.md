@@ -5,8 +5,292 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-11 00:26 UTC  
-**Версия:** 2.8.1
+**Последнее обновление:** 2026-02-11 00:38 UTC  
+**Версия:** 2.9.0
+
+---
+
+## 🎨 ОБНОВЛЕНИЯ v2.9.0 (2026-02-11 00:38) - Visual Theme System 🌈
+
+### 🎉 NEW FEATURE: Система визуальных тем
+
+**Запрошено пользователем:**
+> "А ты можешь добавить в הגדרות, возможность выбора Визуальных тем? Что бы они прям отличались?"
+
+**Реализовано:** Полноценная система тем с 6 яркими цветовыми схемами.
+
+---
+
+### 🎨 Доступные темы
+
+| Тема | Цвет Primary | Описание |
+|------|--------------|----------|
+| **כחול (ברירת מחדל)** | #3b82f6 (Blue) | Корпоративный синий |
+| **סגול** | #a855f7 (Purple) | Креативный фиолетовый |
+| **ירוק** | #22c55e (Green) | Свежий зеленый |
+| **כתום** | #f97316 (Orange) | Энергичный оранжевый |
+| **ורוד** | #ec4899 (Pink) | Яркий розовый |
+| **כהה (אינדיגו)** | #6366f1 (Indigo) | Темный индиго |
+
+---
+
+### 🛠️ Архитектура
+
+#### 1️⃣ ThemeContext
+
+**Файл:** `src/contexts/ThemeContext.tsx`
+
+```typescript
+export type Theme = 'default' | 'purple' | 'green' | 'orange' | 'pink' | 'dark'
+
+const themes = {
+  default: {
+    primary: '#3b82f6',
+    secondary: '#60a5fa',
+    accent: '#2563eb',
+    name: 'כחול (ברירת מחדל)',
+    gradient: 'from-blue-500 to-blue-600',
+  },
+  // ... other themes
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>('default')
+  
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme)
+    localStorage.setItem('trinity-theme', newTheme)  // Persist
+    applyTheme(newTheme)  // Apply CSS variables
+  }
+  
+  const applyTheme = (themeName: Theme) => {
+    document.documentElement.style.setProperty('--color-primary', ...)
+    document.documentElement.setAttribute('data-theme', themeName)
+  }
+}
+```
+
+**Функционал:**
+- ✅ Управление текущей темой
+- ✅ Сохранение в `localStorage`
+- ✅ Применение CSS variables
+- ✅ `data-theme` attribute для CSS selectors
+
+---
+
+#### 2️⃣ Settings Page
+
+**Файл:** `src/app/(dashboard)/settings/page.tsx`
+
+**Путь:** `/settings` (הגדרות)
+
+**UI:**
+- Grid с 6 карточками тем (2x3 на desktop, 1 колонка на mobile)
+- Каждая карточка:
+  - Color preview (градиент 24px высотой)
+  - Название темы на иврите
+  - Check icon если выбрана
+  - Hover + click для выбора
+- Live preview секция:
+  - Primary button preview
+  - Secondary card preview
+  - Accent badge preview
+
+**Code:**
+```typescript
+const { theme, setTheme } = useTheme()
+
+<button onClick={() => setTheme('purple')}>
+  <div className="bg-gradient-to-r from-purple-500 to-purple-600" />
+  סגול
+  {theme === 'purple' && <Check />}
+</button>
+```
+
+---
+
+#### 3️⃣ CSS Variables
+
+**Файл:** `src/app/globals.css`
+
+```css
+:root {
+  /* Theme colors (set dynamically by ThemeContext) */
+  --color-primary: #3b82f6;
+  --color-secondary: #60a5fa;
+  --color-accent: #2563eb;
+}
+
+@layer utilities {
+  .bg-theme-primary {
+    background-color: var(--color-primary);
+  }
+  .text-theme-primary {
+    color: var(--color-primary);
+  }
+  .hover\:bg-theme-primary:hover {
+    background-color: var(--color-primary);
+  }
+  /* ... etc */
+}
+```
+
+**Использование:**
+```tsx
+// Old way (hardcoded)
+<div className="bg-blue-500 text-blue-600">...</div>
+
+// New way (theme-aware)
+<div className="bg-theme-primary text-theme-primary">...</div>
+
+// Inline style (dynamic)
+<button style={{ backgroundColor: 'var(--color-primary)' }}>...</button>
+```
+
+---
+
+#### 4️⃣ Theme-Aware Components
+
+**Button Component:**
+
+Добавлен новый variant `theme`:
+
+```typescript
+// src/components/ui/button.tsx
+variant: {
+  default: "bg-primary text-primary-foreground",
+  theme: "bg-theme-primary text-white hover:opacity-90 shadow-md",  // NEW!
+  destructive: "bg-destructive text-white",
+  // ...
+}
+
+// Usage:
+<Button variant="theme">Click Me</Button>
+```
+
+**Dashboard Cards:**
+
+```typescript
+// src/app/(dashboard)/page.tsx
+<p className="text-3xl font-bold text-theme-primary">
+  {stats?.totalClients || 0}
+</p>
+<div className="bg-theme-primary bg-opacity-10 p-3 rounded-full">
+  <Users className="w-6 h-6 text-theme-primary" />
+</div>
+```
+
+---
+
+### 🎯 User Flow
+
+1. **Открыть настройки:**
+   - Sidebar → הגדרות (Settings icon)
+   - Или прямо: `/settings`
+
+2. **Выбрать тему:**
+   - Click на любую из 6 карточек
+   - Theme применяется **мгновенно** (без перезагрузки)
+
+3. **Live Preview:**
+   - Секция "תצוגה מקדימה" показывает как выглядят элементы
+   - Primary button, card, badges
+
+4. **Сохранение:**
+   - Автоматически в `localStorage`
+   - Сохраняется между сессиями
+   - Работает даже после logout/login
+
+---
+
+### 📁 Files Changed
+
+**NEW:**
+- ✅ `src/contexts/ThemeContext.tsx` - Theme management
+- ✅ `src/app/(dashboard)/settings/page.tsx` - Settings UI
+
+**MODIFIED:**
+- ✅ `src/app/(dashboard)/layout.tsx` - Added ThemeProvider
+- ✅ `src/app/globals.css` - CSS variables + utilities
+- ✅ `src/components/layout/Sidebar.tsx` - Settings nav item
+- ✅ `src/components/ui/button.tsx` - Theme variant
+- ✅ `src/app/(dashboard)/page.tsx` - Theme-aware cards
+
+---
+
+### 🎨 How Themes Work
+
+**1. User selects theme:**
+```typescript
+setTheme('purple')
+```
+
+**2. ThemeContext updates CSS variables:**
+```javascript
+document.documentElement.style.setProperty('--color-primary', '#a855f7')
+document.documentElement.style.setProperty('--color-secondary', '#c084fc')
+document.documentElement.style.setProperty('--color-accent', '#9333ea')
+document.documentElement.setAttribute('data-theme', 'purple')
+```
+
+**3. All theme-aware components automatically update:**
+- `.bg-theme-primary` → purple background
+- `.text-theme-primary` → purple text
+- `style={{ backgroundColor: 'var(--color-primary)' }}` → purple
+
+**4. Saved to localStorage:**
+```javascript
+localStorage.setItem('trinity-theme', 'purple')
+```
+
+**5. On next visit:**
+```javascript
+const saved = localStorage.getItem('trinity-theme')
+if (saved) applyTheme(saved)  // Restore theme
+```
+
+---
+
+### 🚀 Future Improvements
+
+**Planned:**
+- [ ] Apply theme colors to more components (badges, alerts, charts)
+- [ ] Dark mode toggle (separate from color themes)
+- [ ] Organization-level theme (all users see same theme)
+- [ ] Custom theme builder (choose any hex color)
+- [ ] Theme export/import for branding
+- [ ] Accessibility check (contrast ratios)
+
+**Easy to add more themes:**
+```typescript
+const themes = {
+  // ... existing themes
+  red: {
+    primary: '#ef4444',
+    secondary: '#f87171',
+    accent: '#dc2626',
+    name: 'אדום',
+    gradient: 'from-red-500 to-red-600',
+  },
+}
+```
+
+---
+
+### ✅ Result
+
+**BEFORE:**
+- Fixed blue color scheme
+- No customization
+- Same look for everyone
+
+**AFTER:**
+- 6 distinct themes
+- Visual customization in settings
+- Personal preference
+- Live preview
+- Saved between sessions
+- Affects entire UI (buttons, cards, icons)
 
 ---
 

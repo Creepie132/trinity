@@ -7,6 +7,7 @@ export interface Features {
   hasSms: boolean
   hasPayments: boolean
   hasAnalytics: boolean
+  hasSubscriptions: boolean
   isActive: boolean
   category: string
   isLoading: boolean
@@ -21,6 +22,7 @@ export function useFeatures(): Features {
       hasSms: false,
       hasPayments: false,
       hasAnalytics: false,
+      hasSubscriptions: false,
       isActive: false,
       category: 'other',
       isLoading: true,
@@ -33,6 +35,7 @@ export function useFeatures(): Features {
       hasSms: true,
       hasPayments: true,
       hasAnalytics: true,
+      hasSubscriptions: true,
       isActive: true,
       category: organization?.category ?? 'other',
       isLoading: false,
@@ -44,6 +47,7 @@ export function useFeatures(): Features {
       hasSms: false,
       hasPayments: false,
       hasAnalytics: false,
+      hasSubscriptions: false,
       isActive: false,
       category: 'other',
       isLoading: false,
@@ -54,6 +58,7 @@ export function useFeatures(): Features {
     hasSms: organization.features?.sms ?? true,
     hasPayments: organization.features?.payments ?? true,
     hasAnalytics: organization.features?.analytics ?? true,
+    hasSubscriptions: organization.features?.subscriptions ?? false,
     isActive: organization.is_active ?? false,
     category: organization.category ?? 'other',
     isLoading: false,

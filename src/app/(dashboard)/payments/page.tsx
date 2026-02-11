@@ -16,6 +16,8 @@ import { Plus, Copy, ExternalLink, Eye } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
 import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
 import { CreateStripePaymentDialog } from '@/components/payments/CreateStripePaymentDialog'
+import { CreateSubscriptionDialog } from '@/components/payments/CreateSubscriptionDialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -29,6 +31,7 @@ export default function PaymentsPage() {
   const { t } = useLanguage()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [stripeDialogOpen, setStripeDialogOpen] = useState(false)
+  const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -94,17 +97,30 @@ export default function PaymentsPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="w-4 h-4 ml-2" />
-            {t('payments.createLink')} (Tranzilla)
-          </Button>
-          <Button 
-            onClick={() => setStripeDialogOpen(true)}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            <Plus className="w-4 h-4 ml-2" />
-            {t('payments.createLink')} (Stripe)
-          </Button>
+          {features.hasPayments && (
+            <>
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="w-4 h-4 ml-2" />
+                {t('payments.createLink')} (Tranzilla)
+              </Button>
+              <Button 
+                onClick={() => setStripeDialogOpen(true)}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <Plus className="w-4 h-4 ml-2" />
+                {t('payments.createLink')} (Stripe)
+              </Button>
+            </>
+          )}
+          {features.hasSubscriptions && (
+            <Button 
+              onClick={() => setSubscriptionDialogOpen(true)}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="w-4 h-4 ml-2" />
+              צור מנוי
+            </Button>
+          )}
         </div>
       </div>
 
@@ -260,6 +276,7 @@ export default function PaymentsPage() {
       {/* Dialogs */}
       <CreatePaymentLinkDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       <CreateStripePaymentDialog open={stripeDialogOpen} onOpenChange={setStripeDialogOpen} />
+      <CreateSubscriptionDialog open={subscriptionDialogOpen} onOpenChange={setSubscriptionDialogOpen} />
     </div>
   )
 }

@@ -192,7 +192,7 @@ export default function OrganizationsPage() {
     }
   }
 
-  const handleToggleFeature = (orgId: string, feature: 'sms' | 'payments' | 'analytics', enabled: boolean) => {
+  const handleToggleFeature = (orgId: string, feature: 'sms' | 'payments' | 'analytics' | 'subscriptions', enabled: boolean) => {
     toggleFeature.mutate({ orgId, feature, enabled })
   }
 
@@ -323,6 +323,7 @@ export default function OrganizationsPage() {
                   <TableHead className="text-right">SMS</TableHead>
                   <TableHead className="text-right">Payments</TableHead>
                   <TableHead className="text-right">Analytics</TableHead>
+                  <TableHead className="text-right">מנויים</TableHead>
                   <TableHead className="text-right">{t('admin.orgs.created')}</TableHead>
                   <TableHead className="text-right">{t('clients.actions')}</TableHead>
                 </TableRow>
@@ -373,6 +374,12 @@ export default function OrganizationsPage() {
                       <Switch
                         checked={org.features?.analytics || false}
                         onCheckedChange={(checked) => handleToggleFeature(org.id, 'analytics', checked)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={org.features?.subscriptions || false}
+                        onCheckedChange={(checked) => handleToggleFeature(org.id, 'subscriptions', checked)}
                       />
                     </TableCell>
                     <TableCell>
@@ -636,6 +643,13 @@ export default function OrganizationsPage() {
                     <Switch
                       checked={selectedOrg.features?.analytics || false}
                       onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'analytics', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>מנויים (Subscriptions)</Label>
+                    <Switch
+                      checked={selectedOrg.features?.subscriptions || false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'subscriptions', checked)}
                     />
                   </div>
                 </CardContent>

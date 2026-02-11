@@ -70,7 +70,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const navigation = baseNavigation.filter((item) => {
     if (!item.requireFeature) return true
     
-    if (item.requireFeature === 'payments') return features.hasPayments
+    if (item.requireFeature === 'payments') return features.hasPayments || features.hasSubscriptions
     if (item.requireFeature === 'sms') return features.hasSms
     if (item.requireFeature === 'analytics') return features.hasAnalytics
     

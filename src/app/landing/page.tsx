@@ -8,6 +8,7 @@ interface Translations {
   nav: {
     about: string
     services: string
+    pricing: string
     gallery: string
     reviews: string
     contact: string
@@ -16,6 +17,7 @@ interface Translations {
     title: string
     subtitle: string
     cta: string
+    disclaimer: string
   }
   services: {
     title: string
@@ -49,6 +51,27 @@ interface Translations {
     whatsapp: string
     email: string
   }
+  pricing: {
+    title: string
+    subtitle: string
+    plans: {
+      name: string
+      price: string
+      features: string[]
+      cta: string
+      recommended?: string
+    }[]
+  }
+  orderModal: {
+    title: string
+    planLabel: string
+    nameLabel: string
+    emailLabel: string
+    phoneLabel: string
+    submit: string
+    cancel: string
+    successMessage: string
+  }
   footer: {
     copyright: string
     location: string
@@ -60,6 +83,7 @@ const translations: Record<'he' | 'ru', Translations> = {
     nav: {
       about: 'אודות',
       services: 'שירותים',
+      pricing: 'תמחור',
       gallery: 'גלריה',
       reviews: 'המלצות',
       contact: 'צור קשר',
@@ -68,6 +92,7 @@ const translations: Record<'he' | 'ru', Translations> = {
       title: 'פתרונות טכנולוגיים לעסקים קטנים',
       subtitle: 'מערכות CRM, בוטים, אתרים ודפי נחיתה — הכל במקום אחד',
       cta: 'בואו נדבר',
+      disclaimer: 'ללא התחייבות • החודש הראשון חינם',
     },
     services: {
       title: 'מה אנחנו מציעים',
@@ -148,6 +173,66 @@ const translations: Record<'he' | 'ru', Translations> = {
       whatsapp: 'דברו איתנו עכשיו',
       email: 'שלחו מייל',
     },
+    pricing: {
+      title: 'בחרו את התוכנית המתאימה',
+      subtitle: 'החודש הראשון חינם לכל התוכניות!',
+      plans: [
+        {
+          name: 'בסיסי',
+          price: '₪149/לחודש',
+          features: [
+            '✓ בסיס נתונים עד 200 לקוחות',
+            '✓ היסטוריית ביקורים',
+            '✗ קישורי תשלום',
+            '✗ רסלות SMS',
+            '✗ אנליטיקה',
+            '✓ משתמש אחד',
+            '✓ תמיכה באימייל',
+          ],
+          cta: 'התחילו בחינם',
+        },
+        {
+          name: 'מקצועי',
+          price: '₪299/לחודש',
+          features: [
+            '✓ בסיס נתונים עד 1000 לקוחות',
+            '✓ היסטוריית ביקורים',
+            '✓ קישורי תשלום',
+            '✓ SMS עד 500/חודש',
+            '✓ אנליטיקה וגרפים',
+            '✓ 3 משתמשים',
+            '✓ תמיכה בוואטסאפ',
+          ],
+          cta: 'התחילו בחינם',
+          recommended: 'מומלץ',
+        },
+        {
+          name: 'ארגוני',
+          price: '₪499/לחודש',
+          features: [
+            '✓ לקוחות ללא הגבלה',
+            '✓ היסטוריית ביקורים',
+            '✓ קישורי תשלום',
+            '✓ SMS ללא הגבלה',
+            '✓ אנליטיקה מתקדמת',
+            '✓ עד 10 משתמשים',
+            '✓ תמיכה עדיפות',
+            '✓ מיתוג (לוגו וצבעים)',
+          ],
+          cta: 'צרו קשר',
+        },
+      ],
+    },
+    orderModal: {
+      title: 'השלימו את הפרטים',
+      planLabel: 'תוכנית נבחרת',
+      nameLabel: 'שם מלא',
+      emailLabel: 'אימייל',
+      phoneLabel: 'טלפון',
+      submit: 'שלח',
+      cancel: 'ביטול',
+      successMessage: 'תודה! ניצור איתך קשר בקרוב',
+    },
     footer: {
       copyright: 'Amber Solutions Systems © 2026',
       location: 'אשקלון, ישראל',
@@ -157,6 +242,7 @@ const translations: Record<'he' | 'ru', Translations> = {
     nav: {
       about: 'О нас',
       services: 'Услуги',
+      pricing: 'Тарифы',
       gallery: 'Галерея',
       reviews: 'Отзывы',
       contact: 'Контакты',
@@ -165,6 +251,7 @@ const translations: Record<'he' | 'ru', Translations> = {
       title: 'Технологические решения для малого бизнеса',
       subtitle: 'CRM системы, боты, сайты и лендинги — всё в одном месте',
       cta: 'Давайте поговорим',
+      disclaimer: 'Без обязательств • Первый месяц бесплатно',
     },
     services: {
       title: 'Что мы предлагаем',
@@ -245,6 +332,66 @@ const translations: Record<'he' | 'ru', Translations> = {
       whatsapp: 'Поговорите с нами сейчас',
       email: 'Написать email',
     },
+    pricing: {
+      title: 'Выберите подходящий план',
+      subtitle: 'Первый месяц бесплатно на все планы!',
+      plans: [
+        {
+          name: 'Базовый',
+          price: '₪149/месяц',
+          features: [
+            '✓ База клиентов до 200',
+            '✓ История визитов',
+            '✗ Платёжные ссылки',
+            '✗ SMS рассылки',
+            '✗ Аналитика',
+            '✓ 1 пользователь',
+            '✓ Поддержка по Email',
+          ],
+          cta: 'Начать бесплатно',
+        },
+        {
+          name: 'Профессиональный',
+          price: '₪299/месяц',
+          features: [
+            '✓ База клиентов до 1000',
+            '✓ История визитов',
+            '✓ Платёжные ссылки',
+            '✓ SMS до 500/мес',
+            '✓ Аналитика и графики',
+            '✓ 3 пользователя',
+            '✓ Поддержка WhatsApp',
+          ],
+          cta: 'Начать бесплатно',
+          recommended: 'Рекомендуемый',
+        },
+        {
+          name: 'Корпоративный',
+          price: '₪499/месяц',
+          features: [
+            '✓ Безлимит клиентов',
+            '✓ История визитов',
+            '✓ Платёжные ссылки',
+            '✓ Безлимит SMS',
+            '✓ Продвинутая аналитика',
+            '✓ До 10 пользователей',
+            '✓ Приоритетная поддержка',
+            '✓ Брендинг (логотип и цвета)',
+          ],
+          cta: 'Связаться',
+        },
+      ],
+    },
+    orderModal: {
+      title: 'Заполните данные',
+      planLabel: 'Выбранный план',
+      nameLabel: 'Полное имя',
+      emailLabel: 'Email',
+      phoneLabel: 'Телефон',
+      submit: 'Отправить',
+      cancel: 'Отмена',
+      successMessage: 'Спасибо! Мы свяжемся с вами в ближайшее время',
+    },
     footer: {
       copyright: 'Amber Solutions Systems © 2026',
       location: 'Ашкелон, Израиль',
@@ -256,6 +403,9 @@ export default function LandingPage() {
   const [language, setLanguage] = useState<'he' | 'ru'>('he')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState('')
+  const [showToast, setShowToast] = useState(false)
   const t = translations[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
 
@@ -296,6 +446,34 @@ export default function LandingPage() {
     document.documentElement.setAttribute('lang', language)
   }, [dir, language])
 
+  // Handle order modal
+  const openModal = (planName: string) => {
+    setSelectedPlan(planName)
+    setModalOpen(true)
+  }
+
+  const handleSubmitOrder = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const orderData = {
+      plan: selectedPlan,
+      name: formData.get('name'),
+      email: formData.get('email'),
+      phone: formData.get('phone'),
+      timestamp: new Date().toISOString(),
+    }
+    
+    // Save to localStorage
+    const orders = JSON.parse(localStorage.getItem('landing-orders') || '[]')
+    orders.push(orderData)
+    localStorage.setItem('landing-orders', JSON.stringify(orders))
+    
+    // Close modal and show toast
+    setModalOpen(false)
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 3000)
+  }
+
   return (
     <div className={`min-h-screen font-sans ${dir === 'rtl' ? 'rtl' : 'ltr'}`} dir={dir}>
       {/* Navigation */}
@@ -333,6 +511,12 @@ export default function LandingPage() {
                 className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
               >
                 {t.nav.services}
+              </a>
+              <a
+                href="#pricing"
+                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+              >
+                {t.nav.pricing}
               </a>
               <a
                 href="#gallery"
@@ -398,6 +582,13 @@ export default function LandingPage() {
                   {t.nav.services}
                 </a>
                 <a
+                  href="#pricing"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
+                >
+                  {t.nav.pricing}
+                </a>
+                <a
                   href="#gallery"
                   onClick={() => setMobileMenuOpen(false)}
                   className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
@@ -426,29 +617,47 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section
-        className="relative min-h-screen flex items-center justify-center pt-16"
+        className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden"
         style={{
           background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)',
         }}
       >
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+        {/* Background Pattern */}
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+            backgroundSize: '40px 40px',
+          }}
+        ></div>
+
+        {/* Floating Shapes */}
+        <div className="absolute top-20 left-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute top-40 right-20 w-40 h-40 bg-blue-500/10 rounded-lg blur-3xl animate-float-delay"></div>
+        <div className="absolute bottom-32 left-1/4 w-36 h-36 bg-purple-500/10 rounded-full blur-3xl animate-float-delay-2"></div>
+        <div className="absolute bottom-20 right-1/3 w-28 h-28 bg-green-500/10 rounded-lg blur-3xl animate-float"></div>
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center relative z-10">
           <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 animate-slide-up">
             {t.hero.title}
           </h1>
           <p className="text-xl sm:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto animate-slide-up-delay">
             {t.hero.subtitle}
           </p>
-          <a
-            href="#contact"
-            className="inline-flex items-center gap-2 px-10 py-5 bg-amber-500 text-white rounded-lg font-semibold text-lg transition-all transform hover:scale-105 hover:shadow-amber animate-slide-up-delay-2"
-          >
-            {t.hero.cta}
-            <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
-          </a>
+          <div className="animate-slide-up-delay-2">
+            <a
+              href="#pricing"
+              className="inline-flex items-center gap-2 px-10 py-5 bg-amber-500 text-white rounded-lg font-semibold text-lg transition-all transform hover:scale-105 hover:shadow-amber"
+            >
+              {t.hero.cta}
+              <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
+            </a>
+            <p className="text-sm text-gray-400 mt-4">{t.hero.disclaimer}</p>
+          </div>
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce z-10">
           <div className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center">
             <div className="w-1 h-3 bg-white/50 rounded-full mt-2"></div>
           </div>
@@ -564,8 +773,96 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20 bg-white fade-in-section">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-4">
+            {t.pricing.title}
+          </h2>
+          <p className="text-xl text-amber-600 text-center mb-16 font-semibold">
+            {t.pricing.subtitle}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {t.pricing.plans.map((plan, index) => (
+              <div
+                key={index}
+                className={`relative bg-white rounded-2xl shadow-lg transition-all duration-300 hover:shadow-2xl ${
+                  plan.recommended ? 'md:scale-105 ring-2 ring-blue-500' : ''
+                }`}
+              >
+                {/* Recommended Badge */}
+                {plan.recommended && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-amber-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                      {plan.recommended}
+                    </span>
+                  </div>
+                )}
+
+                {/* Header */}
+                <div
+                  className={`p-6 rounded-t-2xl ${
+                    index === 0
+                      ? 'bg-gray-100'
+                      : index === 1
+                      ? 'bg-blue-600'
+                      : 'bg-slate-800'
+                  }`}
+                >
+                  <h3
+                    className={`text-2xl font-bold ${
+                      index === 0 ? 'text-gray-900' : 'text-white'
+                    }`}
+                  >
+                    {plan.name}
+                  </h3>
+                  <p
+                    className={`text-3xl font-bold mt-2 ${
+                      index === 0 ? 'text-gray-900' : 'text-white'
+                    }`}
+                  >
+                    {plan.price}
+                  </p>
+                </div>
+
+                {/* Features */}
+                <div className="p-6">
+                  <ul className="space-y-3 mb-6">
+                    {plan.features.map((feature, fIndex) => (
+                      <li
+                        key={fIndex}
+                        className={`flex items-start gap-2 ${
+                          feature.startsWith('✗') ? 'text-gray-400' : 'text-gray-700'
+                        }`}
+                      >
+                        <span className="flex-shrink-0">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* CTA Button */}
+                  <button
+                    onClick={() => openModal(plan.name)}
+                    className={`w-full py-3 rounded-lg font-semibold transition-all ${
+                      index === 0
+                        ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        : index === 1
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-slate-800 text-white hover:bg-slate-900'
+                    }`}
+                  >
+                    {plan.cta}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Gallery Section */}
-      <section id="gallery" className="py-20 bg-white fade-in-section">
+      <section id="gallery" className="py-20 bg-gray-50 fade-in-section">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
             {t.gallery.title}
@@ -587,7 +884,7 @@ export default function LandingPage() {
       </section>
 
       {/* Reviews Section */}
-      <section id="reviews" className="py-20 bg-gray-50 fade-in-section">
+      <section id="reviews" className="py-20 bg-white fade-in-section">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
             {t.reviews.title}
@@ -622,8 +919,8 @@ export default function LandingPage() {
             </div>
 
             {/* Gradient overlays */}
-            <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-gray-50 to-transparent pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none"></div>
+            <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white to-transparent pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
           </div>
         </div>
       </section>
@@ -667,6 +964,103 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Order Modal */}
+      {modalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
+          onClick={() => setModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                {t.orderModal.title}
+              </h3>
+
+              <form onSubmit={handleSubmitOrder} className="space-y-4">
+                {/* Selected Plan */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.orderModal.planLabel}
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedPlan}
+                    readOnly
+                    className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg"
+                  />
+                </div>
+
+                {/* Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.orderModal.nameLabel} *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.orderModal.emailLabel} *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t.orderModal.phoneLabel} *
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                  >
+                    {t.orderModal.cancel}
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition-colors"
+                  >
+                    {t.orderModal.submit}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed bottom-8 right-8 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg animate-slide-up z-50">
+          {t.orderModal.successMessage}
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="bg-[#0F172A] text-white py-12">
@@ -760,6 +1154,58 @@ export default function LandingPage() {
 
         .shadow-amber {
           box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
+        }
+
+        /* Floating shapes animation */
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+
+        .animate-float-delay {
+          animation: float 7s ease-in-out infinite 1s;
+        }
+
+        .animate-float-delay-2 {
+          animation: float 8s ease-in-out infinite 2s;
+        }
+
+        @keyframes float {
+          0%,
+          100% {
+            transform: translateY(0) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-30px) rotate(5deg);
+          }
+        }
+
+        /* Modal animations */
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        .animate-scale-in {
+          animation: scaleIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes scaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
 
         /* Reviews auto-scroll animation */

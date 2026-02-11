@@ -8,7 +8,8 @@ interface Translations {
   nav: {
     about: string
     services: string
-    portfolio: string
+    gallery: string
+    reviews: string
     contact: string
   }
   hero: {
@@ -24,26 +25,28 @@ const translations: Record<'he' | 'ru', Translations> = {
     nav: {
       about: 'אודות',
       services: 'שירותים',
-      portfolio: 'תיק עבודות',
+      gallery: 'גלריה',
+      reviews: 'המלצות',
       contact: 'צור קשר',
     },
     hero: {
-      title: 'Amber Solutions Systems',
-      subtitle: 'פתרונות טכנולוגיים מתקדמים לעסק שלך',
-      cta: 'צור קשר',
+      title: 'פתרונות טכנולוגיים לעסקים קטנים',
+      subtitle: 'מערכות CRM, בוטים, אתרים ודפי נחיתה — הכל במקום אחד',
+      cta: 'בואו נדבר',
     },
   },
   ru: {
     nav: {
       about: 'О нас',
       services: 'Услуги',
-      portfolio: 'Портфолио',
+      gallery: 'Галерея',
+      reviews: 'Отзывы',
       contact: 'Контакты',
     },
     hero: {
-      title: 'Amber Solutions Systems',
-      subtitle: 'Передовые технологические решения для вашего бизнеса',
-      cta: 'Связаться с нами',
+      title: 'Технологические решения для малого бизнеса',
+      subtitle: 'CRM системы, боты, сайты и лендинги — всё в одном месте',
+      cta: 'Давайте поговорим',
     },
   },
 }
@@ -51,8 +54,18 @@ const translations: Record<'he' | 'ru', Translations> = {
 export default function LandingPage() {
   const [language, setLanguage] = useState<'he' | 'ru'>('he')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const t = translations[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
+
+  // Handle scroll for header background
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // Intersection Observer for scroll animations
   useEffect(() => {
@@ -85,28 +98,57 @@ export default function LandingPage() {
   return (
     <div className={`min-h-screen font-sans ${dir === 'rtl' ? 'rtl' : 'ltr'}`} dir={dir}>
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200">
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? 'bg-white shadow-md'
+            : 'bg-transparent'
+        }`}
+      >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex-shrink-0">
-              <span className="text-2xl font-bold text-blue-900">
-                Amber Solutions
+            <div className="flex items-center gap-3">
+              <img
+                src="/logo.png"
+                alt="Amber Solutions Logo"
+                className="w-8 h-8 object-contain"
+              />
+              <span className={`text-xl font-bold transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}>
+                Amber Solutions Systems
               </span>
             </div>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
-              <a href="#about" className="text-gray-700 hover:text-blue-900 transition-colors">
+              <a
+                href="#about"
+                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+              >
                 {t.nav.about}
               </a>
-              <a href="#services" className="text-gray-700 hover:text-blue-900 transition-colors">
+              <a
+                href="#services"
+                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+              >
                 {t.nav.services}
               </a>
-              <a href="#portfolio" className="text-gray-700 hover:text-blue-900 transition-colors">
-                {t.nav.portfolio}
+              <a
+                href="#gallery"
+                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+              >
+                {t.nav.gallery}
               </a>
-              <a href="#contact" className="text-gray-700 hover:text-blue-900 transition-colors">
+              <a
+                href="#reviews"
+                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+              >
+                {t.nav.reviews}
+              </a>
+              <a
+                href="#contact"
+                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+              >
                 {t.nav.contact}
               </a>
             </div>
@@ -115,7 +157,11 @@ export default function LandingPage() {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setLanguage(language === 'he' ? 'ru' : 'he')}
-                className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-blue-900 border border-gray-300 rounded-md hover:border-blue-900 transition-colors"
+                className={`px-3 py-1.5 text-sm font-medium border rounded-md transition-colors ${
+                  scrolled
+                    ? 'text-gray-700 hover:text-blue-900 border-gray-300 hover:border-blue-900'
+                    : 'text-white border-white/30 hover:border-white hover:bg-white/10'
+                }`}
               >
                 {language === 'he' ? 'Русский' : 'עברית'}
               </button>
@@ -123,7 +169,9 @@ export default function LandingPage() {
               {/* Mobile menu button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 text-gray-700 hover:text-blue-900"
+                className={`md:hidden p-2 transition-colors ${
+                  scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'
+                }`}
               >
                 {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -132,33 +180,40 @@ export default function LandingPage() {
 
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
-            <div className="md:hidden py-4 border-t border-gray-200">
+            <div className={`md:hidden py-4 border-t ${scrolled ? 'border-gray-200' : 'border-white/20'}`}>
               <div className="flex flex-col gap-4">
                 <a
                   href="#about"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-gray-700 hover:text-blue-900 transition-colors"
+                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
                 >
                   {t.nav.about}
                 </a>
                 <a
                   href="#services"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-gray-700 hover:text-blue-900 transition-colors"
+                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
                 >
                   {t.nav.services}
                 </a>
                 <a
-                  href="#portfolio"
+                  href="#gallery"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-gray-700 hover:text-blue-900 transition-colors"
+                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
                 >
-                  {t.nav.portfolio}
+                  {t.nav.gallery}
+                </a>
+                <a
+                  href="#reviews"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
+                >
+                  {t.nav.reviews}
                 </a>
                 <a
                   href="#contact"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-gray-700 hover:text-blue-900 transition-colors"
+                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
                 >
                   {t.nav.contact}
                 </a>
@@ -176,15 +231,15 @@ export default function LandingPage() {
         }}
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 animate-fade-in">
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 animate-slide-up">
             {t.hero.title}
           </h1>
-          <p className="text-xl sm:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto animate-fade-in-delay">
+          <p className="text-xl sm:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto animate-slide-up-delay">
             {t.hero.subtitle}
           </p>
           <a
             href="#contact"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-900 rounded-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 animate-fade-in-delay-2"
+            className="inline-flex items-center gap-2 px-10 py-5 bg-amber-500 text-white rounded-lg font-semibold text-lg transition-all transform hover:scale-105 hover:shadow-amber animate-slide-up-delay-2"
           >
             {t.hero.cta}
             <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
@@ -224,11 +279,23 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Portfolio Section - Placeholder */}
-      <section id="portfolio" className="py-20 bg-white fade-in-section">
+      {/* Gallery Section - Placeholder */}
+      <section id="gallery" className="py-20 bg-white fade-in-section">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
-            {t.nav.portfolio}
+            {t.nav.gallery}
+          </h2>
+          <div className="text-center text-gray-600">
+            <p className="text-lg">Секция в разработке - ожидаем контент...</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Reviews Section - Placeholder */}
+      <section id="reviews" className="py-20 bg-gray-50 fade-in-section">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
+            {t.nav.reviews}
           </h2>
           <div className="text-center text-gray-600">
             <p className="text-lg">Секция в разработке - ожидаем контент...</p>
@@ -237,7 +304,7 @@ export default function LandingPage() {
       </section>
 
       {/* Contact Section - Placeholder */}
-      <section id="contact" className="py-20 bg-gray-50 fade-in-section">
+      <section id="contact" className="py-20 bg-white fade-in-section">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
             {t.nav.contact}
@@ -270,27 +337,31 @@ export default function LandingPage() {
           transform: translateY(0);
         }
 
-        .animate-fade-in {
-          animation: fadeIn 0.8s ease-out;
+        .animate-slide-up {
+          animation: slideUp 1s ease-out;
         }
 
-        .animate-fade-in-delay {
-          animation: fadeIn 0.8s ease-out 0.3s both;
+        .animate-slide-up-delay {
+          animation: slideUp 1s ease-out 0.2s both;
         }
 
-        .animate-fade-in-delay-2 {
-          animation: fadeIn 0.8s ease-out 0.6s both;
+        .animate-slide-up-delay-2 {
+          animation: slideUp 1s ease-out 0.4s both;
         }
 
-        @keyframes fadeIn {
+        @keyframes slideUp {
           from {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(50px);
           }
           to {
             opacity: 1;
             transform: translateY(0);
           }
+        }
+
+        .shadow-amber {
+          box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
         }
 
         html[dir='rtl'] {

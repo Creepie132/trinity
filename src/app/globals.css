@@ -309,85 +309,118 @@
   animation: fade-in 0.6s ease-out;
 }
 
-/* Animated login button - Orbit style */
-@property --angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
-@keyframes rotate-gradient {
-  from {
-    --angle: 0deg;
+/* Animated login button - Orbit style (comet trail) */
+@keyframes comet-orbit {
+  0% {
+    offset-distance: 0%;
   }
-  to {
-    --angle: 360deg;
+  100% {
+    offset-distance: 100%;
   }
 }
 
-@keyframes pulse-glow {
-  0%, 100% {
-    opacity: 0.5;
+@keyframes fade-trail {
+  0% {
+    opacity: 1;
   }
-  50% {
-    opacity: 0.8;
+  100% {
+    opacity: 0;
   }
+}
+
+.btn-orbit-container {
+  position: relative;
+  overflow: visible;
 }
 
 .btn-orbit-border {
+  position: absolute;
+  inset: -2px;
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+/* Comet effect using conic-gradient that rotates */
+.btn-orbit-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
   background: conic-gradient(
-    from var(--angle),
-    #fbbf24,
-    #3b82f6,
-    #a855f7,
-    #fbbf24
+    from 0deg,
+    transparent 0deg,
+    transparent 340deg,
+    rgba(251, 191, 36, 0.8) 350deg,
+    rgba(59, 130, 246, 0.6) 355deg,
+    rgba(168, 85, 247, 0.4) 358deg,
+    transparent 360deg
   );
-  animation: rotate-gradient 3s linear infinite;
+  animation: spin-border 3s linear infinite;
 }
 
-.btn-orbit-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
+@keyframes spin-border {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.btn-orbit-shadow {
-  box-shadow: 0 4px 20px rgba(251, 191, 36, 0.2);
-}
-
-.btn-orbit-shadow:hover {
-  box-shadow: 0 8px 30px rgba(251, 191, 36, 0.4), 0 0 40px rgba(59, 130, 246, 0.3);
-}
-
-/* Animated login button - Pulse style */
-@keyframes shimmer {
+/* Animated login button - Pulse style (shimmer + amber glow) */
+@keyframes shimmer-wave {
   0% {
-    transform: translateX(-100%);
+    transform: translateX(-150%);
   }
   100% {
-    transform: translateX(100%);
+    transform: translateX(150%);
   }
 }
 
-@keyframes pulse-shadow {
+@keyframes amber-pulse {
   0%, 100% {
-    box-shadow: 0 4px 20px rgba(147, 51, 234, 0.3);
+    box-shadow: 
+      0 4px 20px rgba(251, 191, 36, 0.3),
+      0 0 20px rgba(251, 191, 36, 0.2);
   }
   50% {
-    box-shadow: 0 8px 30px rgba(147, 51, 234, 0.5), 0 0 40px rgba(59, 130, 246, 0.3);
+    box-shadow: 
+      0 6px 30px rgba(251, 191, 36, 0.5),
+      0 0 40px rgba(251, 191, 36, 0.3);
   }
 }
 
 .btn-pulse-shimmer {
-  animation: shimmer 2s ease-in-out infinite;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  pointer-events: none;
+}
+
+.btn-pulse-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  animation: shimmer-wave 2s ease-in-out infinite;
 }
 
 .btn-pulse-glow {
-  animation: pulse-shadow 2s ease-in-out infinite;
+  animation: amber-pulse 2s ease-in-out infinite;
 }
 
 .btn-pulse-glow:hover {
-  animation: pulse-shadow 1s ease-in-out infinite;
-}
-
-.btn-pulse-glow:hover .btn-pulse-shimmer {
-  animation: shimmer 1s ease-in-out infinite;
+  animation: amber-pulse 1s ease-in-out infinite;
+  box-shadow: 
+    0 8px 40px rgba(251, 191, 36, 0.6),
+    0 0 50px rgba(251, 191, 36, 0.4);
 }

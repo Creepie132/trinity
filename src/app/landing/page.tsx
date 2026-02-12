@@ -658,10 +658,10 @@ export default function LandingPage() {
               <img
                 src="/logo.png"
                 alt="Amber Solutions Logo"
-                className="w-8 h-8 object-contain"
+                className="w-10 h-10 md:w-12 md:h-12 object-contain"
               />
               {/* Hide text on mobile, show on desktop */}
-              <span className={`hidden md:block text-xl font-bold transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}>
+              <span className={`hidden md:block text-2xl font-bold transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}>
                 Amber Solutions Systems
               </span>
             </div>

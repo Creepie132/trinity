@@ -24,10 +24,11 @@ export async function GET() {
       }
     )
 
-    // Get landing settings (public read)
+    // Get landing button style from app_settings
     const { data, error } = await supabase
-      .from('landing_settings')
-      .select('*')
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'landing_button_style')
       .single()
 
     if (error) {
@@ -38,7 +39,9 @@ export async function GET() {
       })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({
+      login_button_style: data?.value || 'orbit'
+    })
   } catch (error) {
     console.error('[API] Exception in GET /api/landing/settings:', error)
     return NextResponse.json(
@@ -71,19 +74,21 @@ export async function PATCH(request: NextRequest) {
     // Check if user is admin
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
+      console.error('[API] No user found - unauthorized')
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    const { data: adminUser } = await supabase
+    const { data: adminUser, error: adminError } = await supabase
       .from('admin_users')
       .select('user_id')
       .eq('user_id', user.id)
       .single()
 
-    if (!adminUser) {
+    if (adminError || !adminUser) {
+      console.error('[API] Admin check failed:', adminError)
       return NextResponse.json(
         { error: 'Admin access required' },
         { status: 403 }
@@ -94,59 +99,49 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const { login_button_style } = body
 
+    console.log('[API] Saving landing button style:', login_button_style)
+
     if (!login_button_style || !['orbit', 'pulse'].includes(login_button_style)) {
+      console.error('[API] Invalid style:', login_button_style)
       return NextResponse.json(
         { error: 'Invalid login_button_style. Must be "orbit" or "pulse"' },
         { status: 400 }
       )
     }
 
-    // Get first settings row
-    const { data: existingSettings } = await supabase
-      .from('landing_settings')
-      .select('id')
-      .single()
-
-    if (!existingSettings) {
-      // Create if doesn't exist
-      const { data, error } = await supabase
-        .from('landing_settings')
-        .insert({ login_button_style })
-        .select()
-        .single()
-
-      if (error) {
-        console.error('[API] Error creating landing settings:', error)
-        return NextResponse.json(
-          { error: 'Failed to create settings' },
-          { status: 500 }
-        )
-      }
-
-      return NextResponse.json(data)
-    }
-
-    // Update existing
+    // Upsert into app_settings (key-value pattern)
     const { data, error } = await supabase
-      .from('landing_settings')
-      .update({ login_button_style })
-      .eq('id', existingSettings.id)
+      .from('app_settings')
+      .upsert(
+        {
+          key: 'landing_button_style',
+          value: login_button_style,
+          updated_at: new Date().toISOString()
+        },
+        {
+          onConflict: 'key'
+        }
+      )
       .select()
       .single()
 
     if (error) {
-      console.error('[API] Error updating landing settings:', error)
+      console.error('[API] Error upserting landing settings:', error)
       return NextResponse.json(
-        { error: 'Failed to update settings' },
+        { error: 'Failed to save settings', details: error.message },
         { status: 500 }
       )
     }
 
-    return NextResponse.json(data)
+    console.log('[API] Successfully saved landing settings:', data)
+    return NextResponse.json({ 
+      success: true,
+      login_button_style 
+    })
   } catch (error) {
     console.error('[API] Exception in PATCH /api/landing/settings:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

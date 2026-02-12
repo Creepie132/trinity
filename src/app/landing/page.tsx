@@ -13,6 +13,22 @@ interface Translations {
     reviews: string
     contact: string
   }
+  about: {
+    title: string
+    company: string
+    companyName: string
+    field: string
+    fieldDescription: string
+    whoWeAre: string
+    whoWeAreText: string
+    whyTitle: string
+    whyItems: string[]
+    contact: {
+      whatsapp: string
+      email: string
+      location: string
+    }
+  }
   hero: {
     title: string
     subtitle: string
@@ -105,6 +121,28 @@ const translations: Record<'he' | 'ru', Translations> = {
       gallery: 'גלריה',
       reviews: 'המלצות',
       contact: 'צור קשר',
+    },
+    about: {
+      title: 'אודות',
+      company: 'שם החברה',
+      companyName: 'Amber Solutions Systems',
+      field: 'תחום',
+      fieldDescription: 'פיתוח מערכות CRM וטכנולוגיות לעסקים קטנים ובינוניים',
+      whoWeAre: 'מי אנחנו',
+      whoWeAreText: 'Amber Solutions Systems היא חברת טכנולוגיה ישראלית המתמחה בפיתוח פתרונות דיגיטליים לעסקים. המערכת שלנו, Trinity, נבנתה מהיסוד כדי לתת מענה לצרכים האמיתיים של בעלי עסקים — ניהול לקוחות, תשלומים, תקשורת ושיווק במקום אחד.',
+      whyTitle: 'למה Trinity',
+      whyItems: [
+        'מערכת אחת לכל העסק — לקוחות, תשלומים, SMS, ניתוח נתונים',
+        'ממשק בעברית ורוסית — מותאם לשוק הישראלי',
+        'סליקה מאובטחת — אינטגרציה עם טרנזילה ו-Stripe',
+        'גישה מכל מקום — מחשב, טאבלט ונייד',
+        'תמיכה אישית — אנחנו כאן בשבילך',
+      ],
+      contact: {
+        whatsapp: 'WhatsApp: 054-4858586',
+        email: 'Email: ambersolutions.systems@gmail.com',
+        location: 'אשקלון, ישראל',
+      },
     },
     hero: {
       title: 'פתרונות טכנולוגיים לעסקים קטנים',
@@ -282,6 +320,28 @@ const translations: Record<'he' | 'ru', Translations> = {
       gallery: 'Галерея',
       reviews: 'Отзывы',
       contact: 'Контакты',
+    },
+    about: {
+      title: 'О нас',
+      company: 'Компания',
+      companyName: 'Amber Solutions Systems',
+      field: 'Направление',
+      fieldDescription: 'Разработка CRM-систем и технологий для малого и среднего бизнеса',
+      whoWeAre: 'О нас',
+      whoWeAreText: 'Amber Solutions Systems — израильская технологическая компания, специализирующаяся на разработке цифровых решений для бизнеса. Наша система Trinity создана с нуля, чтобы закрыть реальные потребности владельцев бизнеса — управление клиентами, платежи, коммуникация и маркетинг в одном месте.',
+      whyTitle: 'Почему Trinity',
+      whyItems: [
+        'Одна система для всего бизнеса — клиенты, платежи, SMS, аналитика',
+        'Интерфейс на иврите и русском — адаптирован для израильского рынка',
+        'Безопасные платежи — интеграция с Tranzilla и Stripe',
+        'Доступ отовсюду — компьютер, планшет и телефон',
+        'Персональная поддержка — мы всегда на связи',
+      ],
+      contact: {
+        whatsapp: 'WhatsApp: 054-4858586',
+        email: 'Email: ambersolutions.systems@gmail.com',
+        location: 'Ашкелон, Израиль',
+      },
     },
     hero: {
       title: 'Технологические решения для малого бизнеса',
@@ -762,15 +822,95 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* About Section - Placeholder */}
-      <section id="about" className="py-20 bg-white fade-in-section">
+      {/* About Section */}
+      <section id="about" className="py-20 bg-gradient-to-br from-gray-50 to-white fade-in-section">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-12">
-            {t.nav.about}
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
+            {t.about.title}
           </h2>
-          <div className="text-center text-gray-600">
-            {/* Контент будет добавлен позже */}
-            <p className="text-lg">Секция в разработке - ожидаем контент...</p>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
+            {/* Company Info Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 border-t-4 border-blue-500">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Monitor className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">{t.about.company}</h3>
+              </div>
+              <p className="text-xl font-semibold text-blue-600 mb-4">
+                {t.about.companyName}
+              </p>
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-sm font-semibold text-gray-500 mb-2">{t.about.field}</p>
+                <p className="text-gray-700 leading-relaxed">
+                  {t.about.fieldDescription}
+                </p>
+              </div>
+            </div>
+
+            {/* Who We Are Card */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 border-t-4 border-amber-500">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <Globe className="w-6 h-6 text-amber-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">{t.about.whoWeAre}</h3>
+              </div>
+              <p className="text-gray-700 leading-relaxed">
+                {t.about.whoWeAreText}
+              </p>
+            </div>
+          </div>
+
+          {/* Why Trinity */}
+          <div className="bg-gradient-to-br from-blue-900 to-indigo-900 rounded-2xl shadow-2xl p-8 lg:p-12 text-white">
+            <h3 className="text-2xl sm:text-3xl font-bold mb-8 text-center">
+              {t.about.whyTitle}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {t.about.whyItems.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-3 bg-white/10 backdrop-blur-sm rounded-lg p-4 hover:bg-white/20 transition-colors"
+                >
+                  <div className="flex-shrink-0 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center mt-0.5">
+                    <ChevronRight size={16} className={dir === 'rtl' ? 'rotate-180' : ''} />
+                  </div>
+                  <p className="text-white/90 leading-relaxed">{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Contact Info */}
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-green-50 rounded-xl p-6 text-center border-2 border-green-200">
+              <MessageCircle className="w-8 h-8 text-green-600 mx-auto mb-3" />
+              <p className="text-gray-700 font-semibold">{t.about.contact.whatsapp}</p>
+              <a
+                href="https://wa.me/972544858586"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-green-600 hover:text-green-700 text-sm mt-2 inline-block"
+              >
+                {language === 'he' ? 'שלח הודעה' : 'Написать'}
+              </a>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-6 text-center border-2 border-blue-200">
+              <Mail className="w-8 h-8 text-blue-600 mx-auto mb-3" />
+              <p className="text-gray-700 font-semibold break-all">{t.about.contact.email}</p>
+              <a
+                href="mailto:ambersolutions.systems@gmail.com"
+                className="text-blue-600 hover:text-blue-700 text-sm mt-2 inline-block"
+              >
+                {language === 'he' ? 'שלח מייל' : 'Написать'}
+              </a>
+            </div>
+            <div className="bg-amber-50 rounded-xl p-6 text-center border-2 border-amber-200">
+              <Globe className="w-8 h-8 text-amber-600 mx-auto mb-3" />
+              <p className="text-gray-700 font-semibold">{t.about.contact.location}</p>
+            </div>
           </div>
         </div>
       </section>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Menu, X, ChevronRight, Monitor, Bot, Globe, Code, Mail, MessageCircle, Send, Gift } from 'lucide-react'
+import { AnimatedLoginButton } from '@/components/landing/AnimatedLoginButton'
 
 // Translations type
 interface Translations {
@@ -688,19 +689,19 @@ export default function LandingPage() {
 
             {/* Language Switcher & Login */}
             <div className="flex items-center gap-2 md:gap-4">
-              {/* Login button - compact on mobile */}
-              <a
-                href="/login"
-                className={`px-3 md:px-4 py-1.5 md:py-2 border rounded-lg text-sm md:text-base font-medium transition-colors ${
-                  scrolled
-                    ? 'text-gray-700 hover:text-blue-900 border-gray-300 hover:border-blue-900'
-                    : 'text-white border-white/30 hover:bg-white/10'
-                }`}
-              >
-                {/* Short text on mobile, full text on desktop */}
-                <span className="md:hidden">{language === 'he' ? 'כניסה' : 'Вход'}</span>
-                <span className="hidden md:inline">{language === 'he' ? 'כניסה למערכת' : 'Вход в систему'}</span>
-              </a>
+              {/* Animated login button - compact on mobile */}
+              <div className="hidden md:block">
+                <AnimatedLoginButton href="/login">
+                  {language === 'he' ? 'כניסה למערכת' : 'Вход в систему'}
+                </AnimatedLoginButton>
+              </div>
+              
+              {/* Compact button for mobile */}
+              <div className="md:hidden">
+                <AnimatedLoginButton href="/login" mobile>
+                  {language === 'he' ? 'כניסה' : 'Вход'}
+                </AnimatedLoginButton>
+              </div>
               
               {/* Language switcher - compact on mobile */}
               <button

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Menu, X, ChevronRight, ChevronUp, Monitor, Bot, Globe, Code, Mail, MessageCircle, Send, Gift } from 'lucide-react'
-import { AnimatedLoginButton } from '@/components/landing/AnimatedLoginButton'
+import { PrismButton } from '@/components/landing/PrismButton'
 
 // Translations type
 interface Translations {
@@ -524,35 +524,8 @@ export default function LandingPage() {
   const [selectedPlan, setSelectedPlan] = useState('')
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
-  const [loginButtonStyle, setLoginButtonStyle] = useState<'orbit' | 'pulse'>('orbit')
   const t = translations[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
-
-  // Load login button style from settings
-  useEffect(() => {
-    const loadLoginButtonStyle = async () => {
-      try {
-        console.log('[Landing] Loading button style...')
-        const response = await fetch('/api/landing/settings')
-        console.log('[Landing] Response status:', response.status)
-        
-        if (response.ok) {
-          const data = await response.json()
-          console.log('[Landing] Settings data:', data)
-          const style = data.login_button_style || 'orbit'
-          console.log('[Landing] Setting button style to:', style)
-          setLoginButtonStyle(style)
-        } else {
-          console.error('[Landing] Failed to load settings, status:', response.status)
-        }
-      } catch (error) {
-        console.error('[Landing] Error loading login button style:', error)
-        // Keep default 'orbit' on error
-      }
-    }
-
-    loadLoginButtonStyle()
-  }, [])
 
   // Handle scroll for header background and scroll-to-top button
   useEffect(() => {
@@ -726,18 +699,18 @@ export default function LandingPage() {
 
             {/* Language Switcher & Login */}
             <div className="flex items-center gap-2 md:gap-4">
-              {/* Animated login button - compact on mobile */}
+              {/* Prism login button - compact on mobile */}
               <div className="hidden md:block">
-                <AnimatedLoginButton href="/login" style={loginButtonStyle}>
-                  {language === 'he' ? 'כניסה למערכת ✨' : 'Вход в систему ✨'}
-                </AnimatedLoginButton>
+                <PrismButton href="/login">
+                  {language === 'he' ? 'כניסה למערכת' : 'Войти в систему'}
+                </PrismButton>
               </div>
               
               {/* Compact button for mobile */}
               <div className="md:hidden">
-                <AnimatedLoginButton href="/login" mobile style={loginButtonStyle}>
-                  {language === 'he' ? 'כניסה ✨' : 'Вход ✨'}
-                </AnimatedLoginButton>
+                <PrismButton href="/login" mobile>
+                  {language === 'he' ? 'כניסה' : 'Вход'}
+                </PrismButton>
               </div>
               
               {/* Language switcher - compact on mobile */}

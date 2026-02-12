@@ -69,12 +69,16 @@ NEXT_PUBLIC_TRANZILLA_TERMINAL=ambersol
 - `sum` - Amount (e.g., 150.50)
 - `currency=1` - ILS
 - `cred_type=1` - Credit card
-- `lang=he` - Hebrew interface
-- `TranzilaPW` - Terminal password
+- `lang=il` - Hebrew interface
 - `contact` - Payment ID (for tracking)
 - `success_url_address` - Redirect on success
 - `fail_url_address` - Redirect on failure
 - `notify_url_address` - Webhook callback
+
+**SECURITY NOTE:** 
+- ❌ `TranzilaPW` is NOT included in iframe URLs (security risk!)
+- ✅ Terminal password is only for server-side API calls
+- ✅ iframe URLs are public and safe to share with customers
 
 ---
 
@@ -107,6 +111,11 @@ NEXT_PUBLIC_TRANZILLA_TERMINAL=ambersol
 **Token Link Additional Parameters:**
 - `create_token=1` - Request token creation
 - Terminal: `ambersoltok` (different from regular terminal)
+- Language: `lang=il` (Hebrew)
+
+**SECURITY NOTE:** 
+- ❌ `TranzilaPW` is NOT included in token iframe URLs
+- ✅ Token creation happens securely on Tranzilla's servers
 
 ---
 

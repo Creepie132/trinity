@@ -32,17 +32,16 @@ const TRANZILLA_IFRAME_URL = 'https://direct.tranzila.com/ambersol/iframenew.php
 
 /**
  * Generate payment link for Tranzilla hosted iframe
+ * SECURITY: TranzilaPW is NOT included in public iframe URLs
  */
 export function generateTranzillaPaymentLink(params: TranzillaPaymentParams): string {
   const terminalId = process.env.TRANZILLA_TERMINAL_ID || 'ambersol'
-  const terminalPassword = process.env.TRANZILLA_TERMINAL_PASSWORD || ''
   
   const queryParams = new URLSearchParams({
     sum: params.amount.toFixed(2),
     currency: params.currency || '1', // 1 = ILS
     cred_type: '1', // Credit card
-    lang: 'he',
-    TranzilaPW: terminalPassword,
+    lang: 'il', // Hebrew language
     contact: params.orderId,
   })
 
@@ -93,17 +92,16 @@ export function parseTranzillaWebhook(data: TranzillaWebhookData) {
 
 /**
  * Generate tokenization request link (for recurring payments)
+ * SECURITY: TranzilaPW is NOT included in public iframe URLs
  */
 export function generateTranzillaTokenLink(params: TranzillaPaymentParams): string {
   const tokenTerminal = process.env.TRANZILLA_TOKEN_TERMINAL || 'ambersoltok'
-  const tokenPassword = process.env.TRANZILLA_TOKEN_PASSWORD || ''
   
   const queryParams = new URLSearchParams({
     sum: params.amount.toFixed(2),
     currency: params.currency || '1', // 1 = ILS
     cred_type: '1', // Credit card
-    lang: 'he',
-    TranzilaPW: tokenPassword,
+    lang: 'il', // Hebrew language
     contact: params.orderId,
     create_token: '1', // Request token creation
   })

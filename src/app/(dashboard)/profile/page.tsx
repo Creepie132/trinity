@@ -17,9 +17,9 @@ import { User, Building2, Calendar, Globe, Moon, Sun, LogOut } from 'lucide-reac
 import { format } from 'date-fns'
 
 export default function ProfilePage() {
-  const { user, orgId, signOut } = useAuth()
-  const { data: organization } = useOrganization()
-  const { language, setLanguage, t } = useLanguage()
+  const { user, orgId, signOut, isLoading: authLoading } = useAuth()
+  const { data: organization, isLoading: orgLoading } = useOrganization()
+  const { language, setLanguage } = useLanguage()
   const { darkMode, setDarkMode } = useTheme()
   const router = useRouter()
   const [userRole, setUserRole] = useState<string>('')
@@ -27,7 +27,7 @@ export default function ProfilePage() {
 
   // Load user role and joined date
   useEffect(() => {
-    if (!orgId || !user) return
+    if (!orgId || !user || authLoading) return
 
     supabase
       .from('org_users')
@@ -41,7 +41,7 @@ export default function ProfilePage() {
           setJoinedAt(data.joined_at)
         }
       })
-  }, [orgId, user])
+  }, [orgId, user, authLoading])
 
   const handleLogout = async () => {
     await signOut()
@@ -57,7 +57,7 @@ export default function ProfilePage() {
     return labels[role]?.[language] || role
   }
 
-  if (!user) {
+  if (authLoading || !user) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">

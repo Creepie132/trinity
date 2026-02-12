@@ -523,8 +523,27 @@ export default function LandingPage() {
   const [selectedPlan, setSelectedPlan] = useState('')
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const [loginButtonStyle, setLoginButtonStyle] = useState<'orbit' | 'pulse'>('orbit')
   const t = translations[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
+
+  // Load login button style from settings
+  useEffect(() => {
+    const loadLoginButtonStyle = async () => {
+      try {
+        const response = await fetch('/api/landing/settings')
+        if (response.ok) {
+          const data = await response.json()
+          setLoginButtonStyle(data.login_button_style || 'orbit')
+        }
+      } catch (error) {
+        console.error('Error loading login button style:', error)
+        // Keep default 'orbit' on error
+      }
+    }
+
+    loadLoginButtonStyle()
+  }, [])
 
   // Handle scroll for header background
   useEffect(() => {
@@ -691,15 +710,15 @@ export default function LandingPage() {
             <div className="flex items-center gap-2 md:gap-4">
               {/* Animated login button - compact on mobile */}
               <div className="hidden md:block">
-                <AnimatedLoginButton href="/login">
-                  {language === 'he' ? 'כניסה למערכת' : 'Вход в систему'}
+                <AnimatedLoginButton href="/login" style={loginButtonStyle}>
+                  {language === 'he' ? 'כניסה למערכת ✨' : 'Вход в систему ✨'}
                 </AnimatedLoginButton>
               </div>
               
               {/* Compact button for mobile */}
               <div className="md:hidden">
-                <AnimatedLoginButton href="/login" mobile>
-                  {language === 'he' ? 'כניסה' : 'Вход'}
+                <AnimatedLoginButton href="/login" mobile style={loginButtonStyle}>
+                  {language === 'he' ? 'כניסה ✨' : 'Вход ✨'}
                 </AnimatedLoginButton>
               </div>
               

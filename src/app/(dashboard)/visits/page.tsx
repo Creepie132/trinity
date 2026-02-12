@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, CheckCircle, XCircle, Calendar, Clock } from 'lucide-react'
+import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
 import { CompleteVisitPaymentDialog } from '@/components/visits/CompleteVisitPaymentDialog'
+import { CalendarView } from '@/components/visits/CalendarView'
 import { format } from 'date-fns'
 import {
   Select,
@@ -28,9 +29,9 @@ interface Visit {
   id: string
   client_id: string
   org_id: string
-  service: string
+  service_type: string
   scheduled_at: string
-  duration: number
+  duration_minutes: number
   price: number
   status: string
   notes: string | null
@@ -55,6 +56,8 @@ export default function VisitsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
   // Check organization status
   useEffect(() => {
@@ -213,7 +216,32 @@ export default function VisitsPage() {
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* View Mode Toggle */}
+      <div className="flex justify-center">
+        <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1">
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className={viewMode === 'list' ? 'bg-theme-primary text-white' : 'text-gray-700 dark:text-gray-300'}
+          >
+            <List className="w-4 h-4 ml-2" />
+            {t('visits.listView')}
+          </Button>
+          <Button
+            variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('calendar')}
+            className={viewMode === 'calendar' ? 'bg-theme-primary text-white' : 'text-gray-700 dark:text-gray-300'}
+          >
+            <CalendarDays className="w-4 h-4 ml-2" />
+            {t('visits.calendarView')}
+          </Button>
+        </div>
+      </div>
+
+      {/* Filters (only show in list view) */}
+      {viewMode === 'list' && (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Search */}
         <div className="relative md:col-span-2">
@@ -253,12 +281,14 @@ export default function VisitsPage() {
           </SelectContent>
         </Select>
       </div>
+      )}
 
-      {/* Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-        {isLoading ? (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
-        ) : visits.length > 0 ? (
+      {/* List View */}
+      {viewMode === 'list' && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          {isLoading ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
+          ) : visits.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 dark:bg-gray-800">
@@ -278,7 +308,7 @@ export default function VisitsPage() {
                   <TableCell className="font-medium text-gray-900 dark:text-gray-100">
                     {visit.clients.first_name} {visit.clients.last_name}
                   </TableCell>
-                  <TableCell className="text-gray-700 dark:text-gray-300">{getServiceLabel(visit.service)}</TableCell>
+                  <TableCell className="text-gray-700 dark:text-gray-300">{getServiceLabel(visit.service_type)}</TableCell>
                   <TableCell className="text-gray-700 dark:text-gray-300">
                     {format(new Date(visit.scheduled_at), 'dd/MM/yyyy')}
                   </TableCell>
@@ -330,10 +360,31 @@ export default function VisitsPage() {
             </Button>
           </div>
         )}
-      </div>
+        </div>
+      )}
+
+      {/* Calendar View */}
+      {viewMode === 'calendar' && (
+        <CalendarView
+          visits={visits || []}
+          onVisitClick={(visit) => {
+            setSelectedVisit(visit)
+            setPaymentDialogOpen(true)
+          }}
+          onDateClick={(date) => {
+            setSelectedDate(date)
+            setAddDialogOpen(true)
+          }}
+          serviceColors={{}} // Will be loaded from settings
+        />
+      )}
 
       {/* Dialogs */}
-      <CreateVisitDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+      <CreateVisitDialog 
+        open={addDialogOpen} 
+        onOpenChange={setAddDialogOpen}
+        preselectedDate={selectedDate}
+      />
       <CompleteVisitPaymentDialog 
         visit={selectedVisit} 
         open={paymentDialogOpen} 

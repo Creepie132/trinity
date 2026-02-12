@@ -30,6 +30,7 @@ interface CreateVisitDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   preselectedClientId?: string
+  preselectedDate?: Date | null
 }
 
 const services = [
@@ -55,7 +56,7 @@ const durations = [
   { value: 120, labelKey: 'duration.120min' },
 ]
 
-export function CreateVisitDialog({ open, onOpenChange, preselectedClientId }: CreateVisitDialogProps) {
+export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, preselectedDate }: CreateVisitDialogProps) {
   const { t } = useLanguage()
   const { orgId } = useAuth()
   const router = useRouter()
@@ -65,7 +66,7 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId }: C
   const [formData, setFormData] = useState({
     clientId: preselectedClientId || '',
     service: '',
-    date: '',
+    date: preselectedDate ? preselectedDate.toISOString().split('T')[0] : '',
     time: '',
     duration: 60,
     price: '',

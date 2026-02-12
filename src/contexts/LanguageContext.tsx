@@ -317,6 +317,17 @@ const translations: Record<Language, Record<string, string>> = {
     'visits.paymentMethod.stripe': 'Stripe',
     'visits.processPayment': 'עבד תשלום',
     'visits.processing': 'מעבד...',
+    'visits.listView': 'רשימה',
+    'visits.calendarView': 'לוח שנה',
+    'visits.today': 'היום',
+    'visits.week': 'שבוע',
+    'visits.previousWeek': 'שבוע קודם',
+    'visits.nextWeek': 'שבוע הבא',
+    
+    // Settings - Service Colors
+    'settings.serviceColors': 'צבעי שירותים',
+    'settings.serviceColors.desc': 'התאם צבעים לכל סוג שירות',
+    'settings.serviceColors.save': 'שמור צבעים',
     
     // Services (for visits)
     'service.haircut': 'תספורת',
@@ -854,6 +865,17 @@ const translations: Record<Language, Record<string, string>> = {
     'visits.paymentMethod.stripe': 'Stripe',
     'visits.processPayment': 'Обработать платёж',
     'visits.processing': 'Обработка...',
+    'visits.listView': 'Список',
+    'visits.calendarView': 'Календарь',
+    'visits.today': 'Сегодня',
+    'visits.week': 'Неделя',
+    'visits.previousWeek': 'Предыдущая неделя',
+    'visits.nextWeek': 'Следующая неделя',
+    
+    // Settings - Service Colors
+    'settings.serviceColors': 'Цвета услуг',
+    'settings.serviceColors.desc': 'Настройте цвета для каждого типа услуги',
+    'settings.serviceColors.save': 'Сохранить цвета',
     
     // Services (for visits)
     'service.haircut': 'Стрижка',

@@ -28,7 +28,7 @@ export function Sidebar() {
   const { data: isAdmin } = useIsAdmin()
   const { adminProfile } = useAdminProfile()
   const features = useFeatures()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [profileOpen, setProfileOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)

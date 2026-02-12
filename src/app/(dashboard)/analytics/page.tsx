@@ -246,7 +246,7 @@ export default function AnalyticsPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => `₪${value.toFixed(2)}`} />
+                  <Tooltip formatter={((value: any) => `₪${Number(value).toFixed(2)}`) as any} />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
@@ -264,7 +264,7 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="date" stroke="#6b7280" />
                   <YAxis stroke="#6b7280" />
                   <Tooltip 
-                    formatter={(value: number) => `₪${value.toFixed(2)}`}
+                    formatter={((value: any) => `₪${Number(value).toFixed(2)}`) as any}
                     contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', color: '#fff' }}
                   />
                   <Legend />

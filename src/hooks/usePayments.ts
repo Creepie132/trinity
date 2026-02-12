@@ -13,6 +13,8 @@ interface CreatePaymentLinkParams {
 
 interface PaymentsFilters {
   status?: string
+  paymentMethod?: string
+  clientId?: string
   startDate?: string
   endDate?: string
 }
@@ -38,8 +40,16 @@ export function usePayments(clientId?: string, filters?: PaymentsFilters) {
         query = query.eq('client_id', clientId)
       }
 
+      if (filters?.clientId) {
+        query = query.eq('client_id', filters.clientId)
+      }
+
       if (filters?.status && filters.status !== 'all') {
         query = query.eq('status', filters.status)
+      }
+
+      if (filters?.paymentMethod) {
+        query = query.eq('payment_method', filters.paymentMethod)
       }
 
       if (filters?.startDate) {

@@ -43,12 +43,12 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('clients.title')}</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('clients.title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             {t('common.total')}: {clients?.length || 0} {t('clients.title')}
           </p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
+        <Button onClick={() => setAddDialogOpen(true)} className="bg-theme-primary text-white hover:opacity-90">
           <Plus className="w-4 h-4 ml-2" />
           {t('clients.addNew')}
         </Button>
@@ -56,51 +56,51 @@ export default function ClientsPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
         <Input
           placeholder={t('clients.search')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pr-10"
+          className="pr-10 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
         />
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
         ) : clients && clients.length > 0 ? (
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="text-right">{t('clients.name')}</TableHead>
-                <TableHead className="text-right">{t('clients.phone')}</TableHead>
-                <TableHead className="text-right">{t('clients.lastVisit')}</TableHead>
-                <TableHead className="text-right">{t('clients.visits')}</TableHead>
-                <TableHead className="text-right">{t('clients.totalSpent')}</TableHead>
-                <TableHead className="text-left">{t('clients.actions')}</TableHead>
+              <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.name')}</TableHead>
+                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.phone')}</TableHead>
+                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.lastVisit')}</TableHead>
+                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.visits')}</TableHead>
+                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.totalSpent')}</TableHead>
+                <TableHead className="text-left text-gray-700 dark:text-gray-300">{t('clients.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {clients.map((client) => (
                 <TableRow
                   key={client.id}
-                  className="cursor-pointer hover:bg-gray-50"
+                  className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
                   onClick={() => handleClientClick(client)}
                 >
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium text-gray-900 dark:text-gray-100">
                     {client.first_name} {client.last_name}
                   </TableCell>
-                  <TableCell>{client.phone}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-gray-700 dark:text-gray-300">{client.phone}</TableCell>
+                  <TableCell className="text-gray-700 dark:text-gray-300">
                     {client.last_visit
                       ? format(new Date(client.last_visit), 'dd/MM/yyyy')
                       : '-'}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{client.total_visits}</Badge>
+                    <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{client.total_visits}</Badge>
                   </TableCell>
-                  <TableCell className="font-semibold text-green-600">
+                  <TableCell className="font-semibold text-green-600 dark:text-green-400">
                     ₪{client.total_paid}
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
@@ -109,18 +109,21 @@ export default function ClientsPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => handleClientClick(client)}
+                        className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <MessageSquare className="w-4 h-4" />
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <CreditCard className="w-4 h-4" />
                       </Button>
@@ -132,8 +135,8 @@ export default function ClientsPage() {
           </Table>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">{t('clients.noClients')}</p>
-            <Button onClick={() => setAddDialogOpen(true)}>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">{t('clients.noClients')}</p>
+            <Button onClick={() => setAddDialogOpen(true)} className="bg-theme-primary text-white hover:opacity-90">
               <Plus className="w-4 h-4 ml-2" />
               {t('clients.addFirst')}
             </Button>

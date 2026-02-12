@@ -58,8 +58,8 @@ export default function SmsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">{t('sms.title')}</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('sms.title')}</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           {t('sms.subtitle')}
         </p>
       </div>
@@ -69,48 +69,48 @@ export default function SmsPage() {
 
       {/* Campaigns History */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">{t('sms.history')}</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100">{t('sms.history')}</h2>
 
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           {isLoading ? (
-            <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
           ) : campaigns && campaigns.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>{t('common.name')}</TableHead>
-                  <TableHead>{t('common.date')}</TableHead>
-                  <TableHead>{t('sms.recipients')}</TableHead>
-                  <TableHead>{t('sms.sent')}</TableHead>
-                  <TableHead>{t('sms.failed')}</TableHead>
-                  <TableHead>{t('common.status')}</TableHead>
-                  <TableHead className="text-left">{t('clients.actions')}</TableHead>
+                <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                  <TableHead className="text-gray-700 dark:text-gray-300">{t('common.name')}</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">{t('common.date')}</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">{t('sms.recipients')}</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">{t('sms.sent')}</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">{t('sms.failed')}</TableHead>
+                  <TableHead className="text-gray-700 dark:text-gray-300">{t('common.status')}</TableHead>
+                  <TableHead className="text-left text-gray-700 dark:text-gray-300">{t('clients.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {campaigns.map((campaign) => (
                   <TableRow
                     key={campaign.id}
-                    className="cursor-pointer hover:bg-gray-50"
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
                     onClick={() => handleCampaignClick(campaign)}
                   >
-                    <TableCell className="font-medium">{campaign.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium text-gray-900 dark:text-gray-100">{campaign.name}</TableCell>
+                    <TableCell className="text-gray-700 dark:text-gray-300">
                       {campaign.sent_at
                         ? format(new Date(campaign.sent_at), 'dd/MM/yyyy HH:mm')
                         : format(new Date(campaign.created_at), 'dd/MM/yyyy HH:mm')}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{campaign.recipients_count}</Badge>
+                      <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{campaign.recipients_count}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge className="bg-green-500">{campaign.sent_count}</Badge>
+                      <Badge className="bg-green-500 dark:bg-green-600">{campaign.sent_count}</Badge>
                     </TableCell>
                     <TableCell>
                       {campaign.failed_count > 0 ? (
                         <Badge variant="destructive">{campaign.failed_count}</Badge>
                       ) : (
-                        <span className="text-gray-400">0</span>
+                        <span className="text-gray-400 dark:text-gray-500">0</span>
                       )}
                     </TableCell>
                     <TableCell>{getStatusBadge(campaign.status)}</TableCell>
@@ -119,6 +119,7 @@ export default function SmsPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => handleCampaignClick(campaign)}
+                        className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -129,8 +130,8 @@ export default function SmsPage() {
             </Table>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-500 mb-4">{t('sms.noCampaigns')}</p>
-              <p className="text-sm text-gray-400">{t('sms.createNew')}</p>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">{t('sms.noCampaigns')}</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">{t('sms.createNew')}</p>
             </div>
           )}
         </div>

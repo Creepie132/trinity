@@ -40,6 +40,7 @@ export function Sidebar() {
     { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: t('nav.sms'), href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
     { name: t('nav.stats'), href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
+    { name: language === 'he' ? 'דוחות' : 'Отчёты', href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
     { name: t('nav.partners'), href: '/partners', icon: Gift, requireFeature: null },
     { name: t('nav.settings'), href: '/settings', icon: Settings, requireFeature: null },
     { name: language === 'he' ? 'פרופיל' : 'Профиль', href: '/profile', icon: UserIcon, requireFeature: null },

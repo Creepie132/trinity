@@ -33,11 +33,15 @@ export default function PaymentsPage() {
   const [stripeDialogOpen, setStripeDialogOpen] = useState(false)
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all')
+  const [clientFilter, setClientFilter] = useState('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
 
   const { data: payments, isLoading } = usePayments(undefined, {
     status: statusFilter,
+    paymentMethod: paymentMethodFilter !== 'all' ? paymentMethodFilter : undefined,
+    clientId: clientFilter !== 'all' ? clientFilter : undefined,
     startDate,
     endDate,
   })
@@ -132,20 +136,20 @@ export default function PaymentsPage() {
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-            <div className="text-2xl font-bold text-green-600">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               ₪{stats.totalAmount.toFixed(2)}
             </div>
-            <div className="text-sm text-gray-600 mt-1">{t('payments.totalMonth')}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('payments.totalMonth')}</div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-            <div className="text-2xl font-bold text-blue-600">{stats.count}</div>
-            <div className="text-sm text-gray-600 mt-1">{t('payments.successfulTransactions')}</div>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.count}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('payments.successfulTransactions')}</div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-            <div className="text-2xl font-bold text-purple-600">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
               ₪{stats.avgAmount.toFixed(2)}
             </div>
             <div className="text-sm text-gray-600 mt-1">{t('payments.avgTransaction')}</div>
@@ -154,78 +158,111 @@ export default function PaymentsPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
-            <label className="text-sm font-medium mb-2 block">{t('payments.status')}</label>
+            <label className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">{t('payments.filterByStatus')}</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('payments.all')}</SelectItem>
-                <SelectItem value="pending">{t('payments.pending')}</SelectItem>
-                <SelectItem value="completed">{t('payments.paid')}</SelectItem>
-                <SelectItem value="failed">{t('payments.failed')}</SelectItem>
-                <SelectItem value="refunded">{t('payments.refunded')}</SelectItem>
+              <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+                <SelectItem value="all" className="text-gray-900 dark:text-white">{t('payments.all')}</SelectItem>
+                <SelectItem value="pending" className="text-gray-900 dark:text-white">{t('payments.pending')}</SelectItem>
+                <SelectItem value="completed" className="text-gray-900 dark:text-white">{t('payments.paid')}</SelectItem>
+                <SelectItem value="failed" className="text-gray-900 dark:text-white">{t('payments.failed')}</SelectItem>
+                <SelectItem value="refunded" className="text-gray-900 dark:text-white">{t('payments.refunded')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">{t('payments.fromDate')}</label>
+            <label className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">{t('payments.filterByMethod')}</label>
+            <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
+              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+                <SelectItem value="all" className="text-gray-900 dark:text-white">{t('payments.all')}</SelectItem>
+                <SelectItem value="cash" className="text-gray-900 dark:text-white">💵 {t('payments.method.cash')}</SelectItem>
+                <SelectItem value="bit" className="text-gray-900 dark:text-white">📱 {t('payments.method.bit')}</SelectItem>
+                <SelectItem value="credit_card" className="text-gray-900 dark:text-white">💳 {t('payments.method.credit')}</SelectItem>
+                <SelectItem value="stripe" className="text-gray-900 dark:text-white">🟣 Stripe</SelectItem>
+                <SelectItem value="bank_transfer" className="text-gray-900 dark:text-white">🏦 {t('payments.method.bankTransfer')}</SelectItem>
+                <SelectItem value="phone_credit" className="text-gray-900 dark:text-white">📞 {t('payments.method.phoneCredit')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">{t('payments.fromDate')}</label>
             <Input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">{t('payments.toDate')}</label>
+            <label className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">{t('payments.toDate')}</label>
             <Input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
             />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">{t('payments.filterByClient')}</label>
+            <Select value={clientFilter} onValueChange={setClientFilter}>
+              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+                <SelectItem value="all" className="text-gray-900 dark:text-white">{t('payments.all')}</SelectItem>
+                {/* Client options will be populated dynamically */}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
         ) : payments && payments.length > 0 ? (
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>{t('payments.client')}</TableHead>
-                <TableHead>{t('payments.amount')}</TableHead>
-                <TableHead>{t('payments.status')}</TableHead>
-                <TableHead>{t('payments.method')}</TableHead>
-                <TableHead>{t('common.date')}</TableHead>
-                <TableHead className="text-left">{t('clients.actions')}</TableHead>
+              <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <TableHead className="text-gray-700 dark:text-gray-300">{t('payments.client')}</TableHead>
+                <TableHead className="text-gray-700 dark:text-gray-300">{t('payments.amount')}</TableHead>
+                <TableHead className="text-gray-700 dark:text-gray-300">{t('payments.status')}</TableHead>
+                <TableHead className="text-gray-700 dark:text-gray-300">{t('payments.method')}</TableHead>
+                <TableHead className="text-gray-700 dark:text-gray-300">{t('common.date')}</TableHead>
+                <TableHead className="text-left text-gray-700 dark:text-gray-300">{t('clients.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {payments.map((payment: any) => (
-                <TableRow key={payment.id}>
-                  <TableCell className="font-medium">
+                <TableRow key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700">
+                  <TableCell className="font-medium text-gray-900 dark:text-gray-100">
                     {payment.clients
                       ? `${payment.clients.first_name} ${payment.clients.last_name}`
                       : t('payments.unknown')}
                   </TableCell>
-                  <TableCell className="font-semibold text-lg">
+                  <TableCell className="font-semibold text-lg text-gray-900 dark:text-gray-100">
                     ₪{Number(payment.amount).toFixed(2)}
                   </TableCell>
                   <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-gray-700 dark:text-gray-300">
                     {payment.payment_method === 'credit_card'
                       ? t('payments.card')
                       : payment.payment_method || '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-gray-700 dark:text-gray-300">
                     {payment.paid_at
                       ? format(new Date(payment.paid_at), 'dd/MM/yyyy HH:mm')
                       : format(new Date(payment.created_at), 'dd/MM/yyyy HH:mm')}

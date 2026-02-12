@@ -114,17 +114,4 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map)$).*)'],
 }
-```
 
-Ключевые изменения:
-- `CALLBACK_PATH` теперь `/callback` (не `/auth/callback`)
-- `/` обрабатывается отдельно
-- `/.well-known` добавлен для Apple Pay
-```
-git add .
-```
-```
-git commit -m "Fix middleware callback path"
-```
-```
-git push

@@ -15,6 +15,8 @@ export interface Organization {
     sms: boolean
     payments: boolean
     analytics: boolean
+    subscriptions?: boolean
+    visits?: boolean
   }
   billing_status: string
   billing_due_date: string | null

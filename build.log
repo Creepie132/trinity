@@ -1,8 +1,0 @@
-⚠ Installing TypeScript as it was not found while loading "next.config.ts".
-
-Installing devDependencies (yarn):
-- typescript
-
-yarn add v1.22.22
-info No lockfile found.
-[1/4] Resolving packages...

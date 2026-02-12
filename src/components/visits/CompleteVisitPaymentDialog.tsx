@@ -14,8 +14,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { toast } from 'sonner'
+import { Check } from 'lucide-react'
 import { Banknote, Smartphone, CreditCard, Building2, Phone, Zap } from 'lucide-react'
 
 interface Visit {
@@ -238,33 +238,32 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
           {/* Payment method selection */}
           <div className="space-y-3">
             <Label className="text-gray-900 dark:text-gray-100">{t('visits.selectPaymentMethod')}</Label>
-            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+            <div className="space-y-2">
               {paymentMethods.map((method) => {
                 const Icon = method.icon
                 return (
                   <div
                     key={method.value}
-                    className={`flex items-center space-x-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
                       paymentMethod === method.value
                         ? 'border-theme-primary bg-theme-primary bg-opacity-5'
                         : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                     }`}
                     onClick={() => setPaymentMethod(method.value)}
                   >
-                    <RadioGroupItem value={method.value} id={method.value} />
-                    <div className="flex items-center gap-3 flex-1">
+                    <div className="flex items-center gap-3">
                       <span className="text-2xl">{method.emoji}</span>
-                      <Label
-                        htmlFor={method.value}
-                        className="cursor-pointer text-gray-900 dark:text-gray-100"
-                      >
+                      <span className="cursor-pointer text-gray-900 dark:text-gray-100">
                         {t(method.labelKey)}
-                      </Label>
+                      </span>
                     </div>
+                    {paymentMethod === method.value && (
+                      <Check className="w-5 h-5 text-theme-primary" />
+                    )}
                   </div>
                 )
               })}
-            </RadioGroup>
+            </div>
           </div>
 
           {/* Note for credit and stripe */}

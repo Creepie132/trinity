@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, ChevronRight, Monitor, Bot, Globe, Code, Mail, MessageCircle, Send, Gift } from 'lucide-react'
+import { Menu, X, ChevronRight, ChevronUp, Monitor, Bot, Globe, Code, Mail, MessageCircle, Send, Gift } from 'lucide-react'
 import { AnimatedLoginButton } from '@/components/landing/AnimatedLoginButton'
 
 // Translations type
@@ -518,6 +518,7 @@ export default function LandingPage() {
   const [language, setLanguage] = useState<'he' | 'ru'>('he')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [showScrollTop, setShowScrollTop] = useState(false)
   const [orderModalOpen, setOrderModalOpen] = useState(false)
   const [contactModalOpen, setContactModalOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState('')
@@ -531,13 +532,21 @@ export default function LandingPage() {
   useEffect(() => {
     const loadLoginButtonStyle = async () => {
       try {
+        console.log('[Landing] Loading button style...')
         const response = await fetch('/api/landing/settings')
+        console.log('[Landing] Response status:', response.status)
+        
         if (response.ok) {
           const data = await response.json()
-          setLoginButtonStyle(data.login_button_style || 'orbit')
+          console.log('[Landing] Settings data:', data)
+          const style = data.login_button_style || 'orbit'
+          console.log('[Landing] Setting button style to:', style)
+          setLoginButtonStyle(style)
+        } else {
+          console.error('[Landing] Failed to load settings, status:', response.status)
         }
       } catch (error) {
-        console.error('Error loading login button style:', error)
+        console.error('[Landing] Error loading login button style:', error)
         // Keep default 'orbit' on error
       }
     }
@@ -545,14 +554,23 @@ export default function LandingPage() {
     loadLoginButtonStyle()
   }, [])
 
-  // Handle scroll for header background
+  // Handle scroll for header background and scroll-to-top button
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50)
+      setShowScrollTop(window.scrollY > 300)
     }
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+  
+  // Scroll to top function
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    })
+  }
 
   // Intersection Observer for scroll animations
   useEffect(() => {
@@ -661,7 +679,7 @@ export default function LandingPage() {
                 className="w-10 h-10 md:w-12 md:h-12 object-contain"
               />
               {/* Hide text on mobile, show on desktop */}
-              <span className={`hidden md:block text-2xl font-bold transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}>
+              <span className={`hidden md:block text-lg font-bold whitespace-nowrap transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}>
                 Amber Solutions Systems
               </span>
             </div>
@@ -1669,6 +1687,17 @@ export default function LandingPage() {
           direction: ltr;
         }
       `}</style>
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-20 md:bottom-6 left-6 z-50 w-12 h-12 bg-amber-500 hover:bg-amber-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 animate-fade-in"
+          aria-label="Scroll to top"
+        >
+          <ChevronUp className="w-6 h-6" />
+        </button>
+      )}
     </div>
   )
 }

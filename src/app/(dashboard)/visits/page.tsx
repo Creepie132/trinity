@@ -389,7 +389,7 @@ export default function VisitsPage() {
         <CalendarView
           visits={visits || []}
           onVisitClick={(visit) => {
-            setSelectedVisit(visit)
+            setSelectedVisit(visit as any)
             setPaymentDialogOpen(true)
           }}
           onDateClick={(date) => {

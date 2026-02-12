@@ -323,6 +323,7 @@ const translations: Record<Language, Record<string, string>> = {
     'visits.week': 'שבוע',
     'visits.previousWeek': 'שבוע קודם',
     'visits.nextWeek': 'שבוע הבא',
+    'visits.tapToAdd': 'הקש כדי להוסיף ביקור',
     
     // Settings - Service Colors
     'settings.serviceColors': 'צבעי שירותים',
@@ -871,6 +872,7 @@ const translations: Record<Language, Record<string, string>> = {
     'visits.week': 'Неделя',
     'visits.previousWeek': 'Предыдущая неделя',
     'visits.nextWeek': 'Следующая неделя',
+    'visits.tapToAdd': 'Нажмите чтобы добавить визит',
     
     // Settings - Service Colors
     'settings.serviceColors': 'Цвета услуг',

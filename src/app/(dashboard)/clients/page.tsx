@@ -24,8 +24,19 @@ export default function ClientsPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<ClientSummary | null>(null)
   const [clientSheetOpen, setClientSheetOpen] = useState(false)
+  const [showLoading, setShowLoading] = useState(true)
 
   const { data: clients, isLoading } = useClients(searchQuery)
+
+  // Prevent loading flicker with minimum delay
+  useEffect(() => {
+    if (!isLoading) {
+      const timer = setTimeout(() => setShowLoading(false), 500)
+      return () => clearTimeout(timer)
+    } else {
+      setShowLoading(true)
+    }
+  }, [isLoading])
 
   // Check organization status
   useEffect(() => {
@@ -39,8 +50,8 @@ export default function ClientsPage() {
     setClientSheetOpen(true)
   }
 
-  // Show loading screen while fetching data
-  if (isLoading) {
+  // Show loading screen while fetching data (with minimum delay to prevent flicker)
+  if (showLoading) {
     return <LoadingScreen />
   }
 

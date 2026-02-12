@@ -43,6 +43,7 @@ export default function VisitsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [serviceColors, setServiceColors] = useState<Record<string, string>>({})
+  const [showLoading, setShowLoading] = useState(true)
 
   // Check organization status and feature access
   useEffect(() => {
@@ -70,6 +71,16 @@ export default function VisitsPage() {
         })
     }
   }, [orgId])
+
+  // Prevent loading flicker with minimum delay
+  useEffect(() => {
+    if (!isLoading) {
+      const timer = setTimeout(() => setShowLoading(false), 500)
+      return () => clearTimeout(timer)
+    } else {
+      setShowLoading(true)
+    }
+  }, [isLoading])
 
   // Fetch visits
   const { data: visits = [], isLoading, refetch } = useQuery({
@@ -205,8 +216,8 @@ export default function VisitsPage() {
     }
   }
 
-  // Show loading screen while fetching data
-  if (isLoading) {
+  // Show loading screen while fetching data (with minimum delay to prevent flicker)
+  if (showLoading) {
     return <LoadingScreen />
   }
 

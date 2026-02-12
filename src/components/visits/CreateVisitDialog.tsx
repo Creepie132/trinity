@@ -105,23 +105,28 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
     setIsSubmitting(true)
 
     try {
-      // Combine date and time
-      const scheduledAt = new Date(`${formData.date}T${formData.time}`)
+      // Call API route instead of direct insert
+      const response = await fetch('/api/visits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clientId: formData.clientId,
+          service: formData.service,
+          date: formData.date,
+          time: formData.time,
+          duration: formData.duration,
+          price: formData.price,
+          notes: formData.notes,
+        }),
+      })
 
-      const { error } = await supabase
-        .from('visits')
-        .insert({
-          client_id: formData.clientId,
-          org_id: orgId,
-          service_type: formData.service,
-          scheduled_at: scheduledAt.toISOString(),
-          duration_minutes: formData.duration,
-          price: parseFloat(formData.price),
-          notes: formData.notes || null,
-          status: 'scheduled',
-        })
+      const data = await response.json()
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create visit')
+      }
 
       toast.success(t('common.success'))
       onOpenChange(false)
@@ -137,9 +142,9 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
         price: '',
         notes: '',
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating visit:', error)
-      toast.error(t('common.error'))
+      toast.error(error.message || t('common.error'))
     } finally {
       setIsSubmitting(false)
     }

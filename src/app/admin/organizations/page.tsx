@@ -405,6 +405,7 @@ export default function OrganizationsPage() {
                   <TableHead className="text-right">Payments</TableHead>
                   <TableHead className="text-right">Analytics</TableHead>
                   <TableHead className="text-right">מנויים</TableHead>
+                  <TableHead className="text-right">ביקורים</TableHead>
                   <TableHead className="text-right">{t('admin.orgs.created')}</TableHead>
                   <TableHead className="text-right">{t('clients.actions')}</TableHead>
                 </TableRow>
@@ -461,6 +462,12 @@ export default function OrganizationsPage() {
                       <Switch
                         checked={org.features?.subscriptions || false}
                         onCheckedChange={(checked) => handleToggleFeature(org.id, 'subscriptions', checked)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={org.features?.visits !== false}
+                        onCheckedChange={(checked) => handleToggleFeature(org.id, 'visits', checked)}
                       />
                     </TableCell>
                     <TableCell>
@@ -731,6 +738,13 @@ export default function OrganizationsPage() {
                     <Switch
                       checked={selectedOrg.features?.subscriptions || false}
                       onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'subscriptions', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>ביקורים (Visits)</Label>
+                    <Switch
+                      checked={selectedOrg.features?.visits !== false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'visits', checked)}
                     />
                   </div>
                 </CardContent>

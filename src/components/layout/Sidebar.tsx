@@ -36,7 +36,7 @@ export function Sidebar() {
   const baseNavigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
     { name: t('nav.clients'), href: '/clients', icon: Users, requireFeature: null },
-    { name: language === 'he' ? 'ביקורים' : 'Визиты', href: '/visits', icon: Calendar, requireFeature: null },
+    { name: language === 'he' ? 'ביקורים' : 'Визиты', href: '/visits', icon: Calendar, requireFeature: 'visits' },
     { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: t('nav.sms'), href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
     { name: t('nav.stats'), href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
@@ -102,6 +102,7 @@ export function Sidebar() {
     if (item.requireFeature === 'payments') return features.hasPayments || features.hasSubscriptions
     if (item.requireFeature === 'sms') return features.hasSms
     if (item.requireFeature === 'analytics') return features.hasAnalytics
+    if (item.requireFeature === 'visits') return features.hasVisits
     
     return true
   })

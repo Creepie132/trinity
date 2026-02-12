@@ -58,13 +58,34 @@ export default function VisitsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [serviceColors, setServiceColors] = useState<Record<string, string>>({})
 
-  // Check organization status
+  // Check organization status and feature access
   useEffect(() => {
-    if (!features.isLoading && !features.isActive) {
-      router.push('/blocked')
+    if (!features.isLoading) {
+      if (!features.isActive) {
+        router.push('/blocked')
+      } else if (!features.hasVisits) {
+        router.push('/dashboard')
+      }
     }
-  }, [features.isActive, features.isLoading, router])
+  }, [features.isActive, features.hasVisits, features.isLoading, router])
+
+  // Load service colors from organization settings
+  useEffect(() => {
+    if (orgId) {
+      supabase
+        .from('organizations')
+        .select('settings')
+        .eq('id', orgId)
+        .single()
+        .then(({ data }) => {
+          if (data?.settings?.serviceColors) {
+            setServiceColors(data.settings.serviceColors)
+          }
+        })
+    }
+  }, [orgId])
 
   // Fetch visits
   const { data: visits = [], isLoading, refetch } = useQuery({
@@ -375,7 +396,7 @@ export default function VisitsPage() {
             setSelectedDate(date)
             setAddDialogOpen(true)
           }}
-          serviceColors={{}} // Will be loaded from settings
+          serviceColors={serviceColors}
         />
       )}
 

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users } from 'lucide-react'
+import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -29,6 +29,13 @@ export default function SettingsPage() {
       icon: Users,
       title: 'משתמשים',
       description: 'ניהול משתמשי הארגון והרשאות גישה',
+    },
+    {
+      id: 'service-colors',
+      href: '/settings/service-colors',
+      icon: Palette,
+      title: t('settings.serviceColors'),
+      description: t('settings.serviceColors.desc'),
     },
   ]
 

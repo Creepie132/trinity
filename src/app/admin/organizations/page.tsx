@@ -37,7 +37,7 @@ import {
   useAddOrgUser,
   useRemoveOrgUser,
 } from '@/hooks/useAdmin'
-import { Building2, Plus, Search, Eye, Trash, CheckCircle2, XCircle } from 'lucide-react'
+import { Building2, Plus, Search, Eye, Trash, CheckCircle2, XCircle, Gift } from 'lucide-react'
 import { format } from 'date-fns'
 import { Organization } from '@/types/database'
 import { supabase } from '@/lib/supabase'
@@ -55,6 +55,7 @@ export default function OrganizationsPage() {
   const [selectedClientId, setSelectedClientId] = useState<string>('')
   const [orgClients, setOrgClients] = useState<Array<{id: string, first_name: string, last_name: string, email: string | null}>>([])
   const [loadingClients, setLoadingClients] = useState(false)
+  const [seedingData, setSeedingData] = useState(false)
 
   // TASK 1: State for creating org with client assignment
   const [allClients, setAllClients] = useState<Array<{id: string, first_name: string, last_name: string, email: string | null, org_id: string | null}>>([])
@@ -299,6 +300,37 @@ export default function OrganizationsPage() {
       window.location.reload()
     } catch (error: any) {
       toast.error(`שגיאה: ${error.message}`)
+    }
+  }
+
+  const handleSeedTestData = async () => {
+    if (!confirm('זה ימלא את ארגון Test ב-25 לקוחות, 80 ביקורים ו-40 תשלומים. להמשיך?')) return
+    
+    setSeedingData(true)
+    
+    try {
+      const response = await fetch('/api/admin/seed-test-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        toast.error(result.error || 'שגיאה במילוי נתונים')
+        return
+      }
+
+      toast.success(result.message || 'נתוני בדיקה נוצרו בהצלחה!', {
+        description: `${result.data.clients} לקוחות, ${result.data.visits} ביקורים, ${result.data.payments} תשלומים`
+      })
+      
+      // Close sheet to show updates
+      setSheetOpen(false)
+    } catch (error: any) {
+      toast.error(`שגיאה: ${error.message}`)
+    } finally {
+      setSeedingData(false)
     }
   }
 
@@ -730,6 +762,40 @@ export default function OrganizationsPage() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Test Data Seeder - Only for "Test" organization */}
+              {selectedOrg.name === 'Test' && (
+                <Card className="border-yellow-200 bg-yellow-50">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2 text-yellow-800">
+                      <Gift className="w-5 h-5" />
+                      נתוני בדיקה
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-yellow-700 mb-4">
+                      מלא את הארגון ב-25 לקוחות, 80 ביקורים ו-40 תשלומים לצורך צילומי מסך
+                    </p>
+                    <Button 
+                      className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
+                      onClick={handleSeedTestData}
+                      disabled={seedingData}
+                    >
+                      {seedingData ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2" />
+                          יוצר נתונים...
+                        </>
+                      ) : (
+                        <>
+                          <Gift className="w-4 h-4 ml-2" />
+                          מלא נתוני בדיקה
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Users */}
               <Card>

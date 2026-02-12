@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import {
   Dialog,
   DialogContent,
@@ -49,7 +49,7 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
   const { t } = useLanguage()
   const { orgId } = useAuth()
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   const [paymentMethod, setPaymentMethod] = useState<string>('cash')
   const [isProcessing, setIsProcessing] = useState(false)

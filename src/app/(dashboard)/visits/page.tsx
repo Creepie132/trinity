@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
 import { CompleteVisitPaymentDialog } from '@/components/visits/CompleteVisitPaymentDialog'
 import { format } from 'date-fns'
@@ -47,7 +47,7 @@ export default function VisitsPage() {
   const features = useFeatures()
   const { t } = useLanguage()
   const { orgId } = useAuth()
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)

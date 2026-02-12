@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useQuery } from '@tanstack/react-query'
 import {
   Dialog,
@@ -56,7 +56,7 @@ export function CreateVisitDialog({ open, onOpenChange }: CreateVisitDialogProps
   const { t } = useLanguage()
   const { orgId } = useAuth()
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({

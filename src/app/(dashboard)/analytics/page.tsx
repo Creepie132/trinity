@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -29,7 +29,7 @@ export default function AnalyticsPage() {
   const features = useFeatures()
   const { t } = useLanguage()
   const { orgId } = useAuth()
-  const supabase = createClient()
+  const supabase = createSupabaseBrowserClient()
 
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all')
   const [periodFilter, setPeriodFilter] = useState<string>('monthly')

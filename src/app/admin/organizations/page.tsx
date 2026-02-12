@@ -194,7 +194,7 @@ export default function OrganizationsPage() {
     }
   }
 
-  const handleToggleFeature = (orgId: string, feature: 'sms' | 'payments' | 'analytics' | 'subscriptions', enabled: boolean) => {
+  const handleToggleFeature = (orgId: string, feature: 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits', enabled: boolean) => {
     toggleFeature.mutate({ orgId, feature, enabled })
   }
 

@@ -1,5 +1,7 @@
 /**
  * Tranzilla Payment Gateway Integration
+ * Terminal: ambersol (one-time payments)
+ * Token Terminal: ambersoltok (recurring payments)
  * Docs: https://www.tranzilla.com/docs/
  */
 
@@ -7,50 +9,59 @@ interface TranzillaPaymentParams {
   amount: number
   currency?: string
   orderId: string
-  callbackUrl: string
+  successUrl?: string
+  failUrl?: string
+  notifyUrl?: string
   description?: string
 }
 
 interface TranzillaWebhookData {
   Response: string // '000' = success
+  index?: string // Transaction ID
+  sum?: string
+  ccno?: string // Masked card number (last 4 digits)
   ConfirmationCode?: string
   tranmode?: string
-  sum?: string
   currency?: string
   PDFurl?: string
   [key: string]: any
 }
 
-const TRANZILLA_API_URL = 'https://sandbox.tranzilla.co.il/cgi-bin/tranzilla71u.cgi'
+// Production iframe URL
+const TRANZILLA_IFRAME_URL = 'https://direct.tranzila.com/ambersol/iframenew.php'
 
 /**
- * Generate payment link for Tranzilla hosted page
+ * Generate payment link for Tranzilla hosted iframe
  */
 export function generateTranzillaPaymentLink(params: TranzillaPaymentParams): string {
-  const terminalId = process.env.TRANZILLA_TERMINAL_ID || 'sandbox'
+  const terminalId = process.env.TRANZILLA_TERMINAL_ID || 'ambersol'
+  const terminalPassword = process.env.TRANZILLA_TERMINAL_PASSWORD || ''
   
   const queryParams = new URLSearchParams({
-    supplier: terminalId,
     sum: params.amount.toFixed(2),
     currency: params.currency || '1', // 1 = ILS
     cred_type: '1', // Credit card
-    tranmode: 'A', // Authorization + Capture
-    nologo: '1',
     lang: 'he',
-    TranzilaPW: process.env.TRANZILLA_API_KEY || '',
+    TranzilaPW: terminalPassword,
     contact: params.orderId,
-    // Success/Fail redirects
-    success_url_address: params.callbackUrl + '?status=success',
-    fail_url_address: params.callbackUrl + '?status=failed',
-    // Webhook notification
-    notify_url_address: params.callbackUrl.replace('/callback', '/webhook'),
   })
+
+  // Add callback URLs if provided
+  if (params.successUrl) {
+    queryParams.set('success_url_address', params.successUrl)
+  }
+  if (params.failUrl) {
+    queryParams.set('fail_url_address', params.failUrl)
+  }
+  if (params.notifyUrl) {
+    queryParams.set('notify_url_address', params.notifyUrl)
+  }
 
   if (params.description) {
     queryParams.set('remarks', params.description)
   }
 
-  return `${TRANZILLA_API_URL}?${queryParams.toString()}`
+  return `${TRANZILLA_IFRAME_URL}?${queryParams.toString()}`
 }
 
 /**
@@ -70,13 +81,49 @@ export function parseTranzillaWebhook(data: TranzillaWebhookData) {
   
   return {
     success: isSuccess,
-    transactionId: data.ConfirmationCode || null,
+    transactionId: data.index || data.ConfirmationCode || null,
     amount: data.sum ? parseFloat(data.sum) : null,
     currency: data.currency || 'ILS',
     responseCode: data.Response,
+    cardNumber: data.ccno || null, // Last 4 digits
     pdfUrl: data.PDFurl || null,
     rawData: data,
   }
+}
+
+/**
+ * Generate tokenization request link (for recurring payments)
+ */
+export function generateTranzillaTokenLink(params: TranzillaPaymentParams): string {
+  const tokenTerminal = process.env.TRANZILLA_TOKEN_TERMINAL || 'ambersoltok'
+  const tokenPassword = process.env.TRANZILLA_TOKEN_PASSWORD || ''
+  
+  const queryParams = new URLSearchParams({
+    sum: params.amount.toFixed(2),
+    currency: params.currency || '1', // 1 = ILS
+    cred_type: '1', // Credit card
+    lang: 'he',
+    TranzilaPW: tokenPassword,
+    contact: params.orderId,
+    create_token: '1', // Request token creation
+  })
+
+  // Add callback URLs if provided
+  if (params.successUrl) {
+    queryParams.set('success_url_address', params.successUrl)
+  }
+  if (params.failUrl) {
+    queryParams.set('fail_url_address', params.failUrl)
+  }
+  if (params.notifyUrl) {
+    queryParams.set('notify_url_address', params.notifyUrl)
+  }
+
+  if (params.description) {
+    queryParams.set('remarks', params.description)
+  }
+
+  return `https://direct.tranzila.com/${tokenTerminal}/iframenew.php?${queryParams.toString()}`
 }
 
 /**

@@ -26,31 +26,36 @@ async function handleWebhook(request: NextRequest) {
       webhookData = Object.fromEntries(searchParams)
     }
 
-    console.log('Tranzilla webhook received:', webhookData)
+    console.log('[Tranzilla Webhook] Raw data:', webhookData)
 
     const parsed = parseTranzillaWebhook(webhookData)
+    console.log('[Tranzilla Webhook] Parsed:', parsed)
 
-    // paymentId приходит из contact / order_id (как у тебя)
+    // Tranzilla sends payment ID in 'contact' field
     const paymentId = webhookData.contact || webhookData.order_id
     if (!paymentId) {
+      console.error('[Tranzilla Webhook] Missing payment ID in webhook data')
       return NextResponse.json({ error: 'Payment ID not found' }, { status: 400 })
     }
 
-    // 1) СНАЧАЛА находим org_id этого платежа
+    console.log('[Tranzilla Webhook] Processing payment:', paymentId)
+
+    // 1) Find payment and its org_id
     const { data: existingPayment, error: findError } = await supabaseAdmin
       .from('payments')
-      .select('id, org_id')
+      .select('id, org_id, amount')
       .eq('id', paymentId)
       .single()
 
     if (findError || !existingPayment) {
-      console.error('Payment not found:', findError)
+      console.error('[Tranzilla Webhook] Payment not found:', findError)
       return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
     }
 
     const orgId = existingPayment.org_id
 
-    // 2) Готовим updateData
+    // 2) Prepare update data
+    // Response: '000' = success, anything else = failed
     const updateData: any = {
       status: parsed.success ? 'completed' : 'failed',
       transaction_id: parsed.transactionId ?? null,
@@ -58,9 +63,15 @@ async function handleWebhook(request: NextRequest) {
 
     if (parsed.success) {
       updateData.paid_at = new Date().toISOString()
+      console.log(`[Tranzilla Webhook] ✅ Payment ${paymentId} completed (Response: 000)`)
+      console.log(`[Tranzilla Webhook] Transaction ID: ${parsed.transactionId}`)
+      console.log(`[Tranzilla Webhook] Amount: ${parsed.amount} ${parsed.currency}`)
+      console.log(`[Tranzilla Webhook] Card: ***${parsed.cardNumber}`)
+    } else {
+      console.log(`[Tranzilla Webhook] ❌ Payment ${paymentId} failed (Response: ${parsed.responseCode})`)
     }
 
-    // 3) Обновляем строго внутри org
+    // 3) Update payment within org
     const { data: payment, error: updateError } = await supabaseAdmin
       .from('payments')
       .update(updateData)
@@ -70,17 +81,18 @@ async function handleWebhook(request: NextRequest) {
       .single()
 
     if (updateError) {
-      console.error('Failed to update payment:', updateError)
+      console.error('[Tranzilla Webhook] Failed to update payment:', updateError)
       return NextResponse.json({ error: 'Failed to update payment' }, { status: 500 })
     }
 
-    console.log('Payment updated successfully:', payment)
+    console.log('[Tranzilla Webhook] Payment updated successfully')
 
     return NextResponse.json({
       success: true,
       payment_id: paymentId,
       status: updateData.status,
       transaction_id: updateData.transaction_id,
+      response_code: parsed.responseCode,
     })
   } catch (error: any) {
     console.error('Webhook processing error:', error)

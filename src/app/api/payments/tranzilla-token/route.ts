@@ -1,13 +1,19 @@
+// src/app/api/payments/tranzilla-token/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { generateTranzillaPaymentLink } from '@/lib/tranzilla'
+import { generateTranzillaTokenLink } from '@/lib/tranzilla'
 import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
 import { rateLimit, PAYMENT_RATE_LIMIT } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * Create Tranzilla tokenization link for recurring payments
+ * Terminal: ambersoltok
+ * Creates token for future charges without entering card details again
+ */
 export async function POST(request: NextRequest) {
   try {
-    // ✅ Проверка авторизации и доступа к фиче "payments"
+    // ✅ Check auth and payments feature
     const authResult = await checkAuthAndFeature('payments')
     if (!authResult.success) {
       return authResult.response
@@ -15,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     // ✅ Rate limiting
     const rateLimitResult = rateLimit(
-      `payment:${authResult.data.email}`,
+      `payment-token:${authResult.data.email}`,
       PAYMENT_RATE_LIMIT
     )
     if (!rateLimitResult.success) {
@@ -39,7 +45,7 @@ export async function POST(request: NextRequest) {
     const supabase = await getSupabaseServerClient()
 
     const body = await request.json()
-    const { client_id, amount, description, visit_id } = body
+    const { client_id, amount, description } = body
 
     // Validation
     if (!client_id || !amount) {
@@ -56,7 +62,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Security: Validate max amount (prevent abuse)
+    // Security: max amount check
     if (amount > 100000) {
       return NextResponse.json(
         { error: 'Amount exceeds maximum allowed (100,000 ILS)' },
@@ -64,7 +70,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // SECURITY FIX: Verify client belongs to user's organization
+    // Verify client belongs to user's organization
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('id, org_id')
@@ -79,65 +85,71 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Создаём payment с org_id
+    // Create payment record with token_requested flag
     const { data: payment, error: dbError } = await supabase
       .from('payments')
       .insert([
         {
           org_id,
           client_id,
-          visit_id: visit_id || null,
           amount,
           currency: 'ILS',
           status: 'pending',
           provider: 'tranzilla',
           payment_method: 'credit_card',
+          metadata: { token_requested: true }, // Flag for token creation
         },
       ])
       .select()
       .single()
 
     if (dbError) {
-      console.error('Database error:', dbError)
+      console.error('[Token] Database error:', dbError)
       return NextResponse.json(
         { error: 'Failed to create payment record' },
         { status: 500 }
       )
     }
 
-    // Generate Tranzilla payment link
+    console.log('[Token] Payment record created:', payment.id)
+
+    // Generate Tranzilla tokenization link
     const origin = request.nextUrl.origin
 
-    const paymentLink = generateTranzillaPaymentLink({
+    const tokenLink = generateTranzillaTokenLink({
       amount,
       currency: '1', // ILS
       orderId: payment.id,
-      successUrl: `${origin}/payments?success=true`,
+      successUrl: `${origin}/payments?success=true&token=true`,
       failUrl: `${origin}/payments?failed=true`,
       notifyUrl: `${origin}/api/payments/webhook`,
-      description: description || 'תשלום',
+      description: description || 'רישום כרטיס אשראי',
     })
 
-    // Update payment record
+    console.log('[Token] Token link generated')
+
+    // Update payment record with token link
     const { error: updateError } = await supabase
       .from('payments')
-      .update({ payment_link: paymentLink })
+      .update({ payment_link: tokenLink })
       .eq('id', payment.id)
       .eq('org_id', org_id)
 
     if (updateError) {
-      console.error('Failed to update payment link:', updateError)
+      console.error('[Token] Failed to update payment link:', updateError)
     }
 
     return NextResponse.json({
       success: true,
       payment_id: payment.id,
-      payment_link: paymentLink,
+      token_link: tokenLink,
       amount,
       currency: 'ILS',
+      terminal: 'ambersoltok',
+      note: 'This link creates a token for recurring payments',
     })
   } catch (error: any) {
-    console.error('Create payment link error:', error)
+    console.error('[Token] Create token link error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

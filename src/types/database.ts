@@ -11,15 +11,8 @@ export interface Client {
   updated_at: string
 }
 
-export interface Visit {
-  id: string
-  client_id: string
-  visit_date: string
-  service_description: string
-  amount: number
-  notes: string | null
-  created_at: string
-}
+// Visit type moved to src/types/visits.ts
+// Use: import { Visit } from '@/types/visits'
 
 export interface Payment {
   id: string

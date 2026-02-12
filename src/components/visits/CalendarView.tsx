@@ -5,20 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Clock, Calendar } from 'lucide-react'
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, addDays, subDays, isToday, isSameDay } from 'date-fns'
-
-interface Visit {
-  id: string
-  client_id: string
-  service_type: string
-  scheduled_at: string
-  duration_minutes: number
-  price: number
-  status: string
-  clients: {
-    first_name: string
-    last_name: string
-  }
-}
+import { Visit } from '@/types/visits'
 
 interface CalendarViewProps {
   visits: Visit[]

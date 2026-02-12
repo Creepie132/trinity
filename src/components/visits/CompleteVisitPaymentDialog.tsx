@@ -17,18 +17,7 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { Check } from 'lucide-react'
 import { Banknote, Smartphone, CreditCard, Building2, Phone, Zap } from 'lucide-react'
-
-interface Visit {
-  id: string
-  client_id: string
-  service: string
-  price: number
-  clients: {
-    first_name: string
-    last_name: string
-    email?: string
-  }
-}
+import { Visit } from '@/types/visits'
 
 interface CompleteVisitPaymentDialogProps {
   visit: Visit | null
@@ -91,8 +80,8 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             clientId: visit.client_id,
-            amount: visit.price,
-            description: `${t(getServiceLabelKey(visit.service))} - ${visit.clients.first_name} ${visit.clients.last_name}`,
+            amount: visit.price || 0,
+            description: `${t(getServiceLabelKey(visit.service_type || visit.service || 'other'))} - ${visit.clients?.first_name} ${visit.clients?.last_name}`,
           }),
         })
 
@@ -121,9 +110,9 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             clientId: visit.client_id,
-            amount: visit.price,
-            clientName: `${visit.clients.first_name} ${visit.clients.last_name}`,
-            clientEmail: visit.clients.email || '',
+            amount: visit.price || 0,
+            clientName: `${visit.clients?.first_name} ${visit.clients?.last_name}`,
+            clientEmail: visit.clients?.email || '',
             orgId,
           }),
         })
@@ -159,10 +148,10 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
         .insert({
           client_id: visit.client_id,
           org_id: orgId,
-          amount: visit.price,
+          amount: visit.price || 0,
           payment_method: paymentMethodMap[paymentMethod],
           status: 'completed',
-          description: `${t(getServiceLabelKey(visit.service))} - ${visit.clients.first_name} ${visit.clients.last_name}`,
+          description: `${t(getServiceLabelKey(visit.service_type || visit.service || 'other'))} - ${visit.clients?.first_name} ${visit.clients?.last_name}`,
         })
 
       if (paymentError) throw paymentError
@@ -222,27 +211,27 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
           <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-3">
             {/* Large price on top for mobile */}
             <div className="text-center md:hidden">
-              <div className="text-4xl font-bold text-theme-primary mb-1">₪{visit.price}</div>
+              <div className="text-4xl font-bold text-theme-primary mb-1">₪{visit.price || 0}</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">{t('payments.amount')}</div>
             </div>
             
             <div className="flex justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">{t('visits.client')}:</span>
               <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                {visit.clients.first_name} {visit.clients.last_name}
+                {visit.clients?.first_name} {visit.clients?.last_name}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">{t('visits.service')}:</span>
               <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                {t(getServiceLabelKey(visit.service))}
+                {t(getServiceLabelKey(visit.service_type || visit.service || 'other'))}
               </span>
             </div>
             
             {/* Desktop price */}
             <div className="hidden md:flex justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">{t('payments.amount')}:</span>
-              <span className="text-lg font-bold text-theme-primary">₪{visit.price}</span>
+              <span className="text-lg font-bold text-theme-primary">₪{visit.price || 0}</span>
             </div>
           </div>
 

@@ -24,24 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-
-interface Visit {
-  id: string
-  client_id: string
-  org_id: string
-  service_type: string
-  scheduled_at: string
-  duration_minutes: number
-  price: number
-  status: string
-  notes: string | null
-  clients: {
-    first_name: string
-    last_name: string
-    phone: string
-    email?: string
-  }
-}
+import { Visit } from '@/types/visits'
 
 export default function VisitsPage() {
   const router = useRouter()

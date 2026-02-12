@@ -192,7 +192,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                       }}
                     >
                       <div className="font-semibold">{format(new Date(visit.scheduled_at), 'HH:mm')}</div>
-                      <div className="truncate">{visit.clients.first_name} {visit.clients.last_name}</div>
+                      <div className="truncate">{visit.clients?.first_name} {visit.clients?.last_name}</div>
                       <div className="truncate opacity-90">{getServiceLabel(visit.service_type)}</div>
                     </div>
                   ))}
@@ -221,7 +221,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
 
               {/* Client Name */}
               <div className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                {visit.clients.first_name} {visit.clients.last_name}
+                {visit.clients?.first_name} {visit.clients?.last_name}
               </div>
 
               {/* Service */}
@@ -237,9 +237,9 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
 
               {/* Duration & Price */}
               <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-                <span>{visit.duration_minutes} דק׳</span>
+                <span>{visit.duration_minutes || 0} דק׳</span>
                 <span className="text-2xl font-bold" style={{ color: getServiceColor(visit.service_type) }}>
-                  ₪{visit.price}
+                  ₪{visit.price || 0}
                 </span>
               </div>
             </div>

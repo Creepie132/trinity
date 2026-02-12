@@ -119,9 +119,9 @@ export default function VisitsPage() {
       if (searchQuery) {
         const lowerQuery = searchQuery.toLowerCase()
         return data.filter((visit: Visit) => 
-          visit.clients.first_name.toLowerCase().includes(lowerQuery) ||
-          visit.clients.last_name.toLowerCase().includes(lowerQuery) ||
-          visit.clients.phone.includes(searchQuery)
+          (visit.clients?.first_name || '').toLowerCase().includes(lowerQuery) ||
+          (visit.clients?.last_name || '').toLowerCase().includes(lowerQuery) ||
+          (visit.clients?.phone || '').includes(searchQuery)
         )
       }
 
@@ -351,7 +351,7 @@ export default function VisitsPage() {
                 {visits.map((visit) => (
                   <TableRow key={visit.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <TableCell className="font-medium text-gray-900 dark:text-gray-100">
-                      {visit.clients.first_name} {visit.clients.last_name}
+                      {visit.clients?.first_name} {visit.clients?.last_name}
                     </TableCell>
                     <TableCell className="text-gray-700 dark:text-gray-300">{getServiceLabel(visit.service_type)}</TableCell>
                     <TableCell className="text-gray-700 dark:text-gray-300">
@@ -363,8 +363,8 @@ export default function VisitsPage() {
                         {format(new Date(visit.scheduled_at), 'HH:mm')}
                       </div>
                     </TableCell>
-                    <TableCell className="text-gray-700 dark:text-gray-300">{visit.duration_minutes} דק׳</TableCell>
-                    <TableCell className="font-bold text-theme-primary">₪{visit.price}</TableCell>
+                    <TableCell className="text-gray-700 dark:text-gray-300">{visit.duration_minutes || 0} דק׳</TableCell>
+                    <TableCell className="font-bold text-theme-primary">₪{visit.price || 0}</TableCell>
                     <TableCell>{getStatusBadge(visit.status)}</TableCell>
                     <TableCell>
                       <div className="flex gap-2 justify-start">
@@ -416,7 +416,7 @@ export default function VisitsPage() {
                   {/* Header - Client Name */}
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">
-                      {visit.clients.first_name} {visit.clients.last_name}
+                      {visit.clients?.first_name} {visit.clients?.last_name}
                     </h3>
                     {getStatusBadge(visit.status)}
                   </div>
@@ -436,12 +436,12 @@ export default function VisitsPage() {
                       <Clock className="w-4 h-4" />
                       {format(new Date(visit.scheduled_at), 'HH:mm')}
                     </div>
-                    <span>{visit.duration_minutes} דק׳</span>
+                    <span>{visit.duration_minutes || 0} דק׳</span>
                   </div>
 
                   {/* Price */}
                   <div className="text-2xl font-bold text-theme-primary">
-                    ₪{visit.price}
+                    ₪{visit.price || 0}
                   </div>
 
                   {/* Actions - Full Width Buttons */}

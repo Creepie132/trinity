@@ -47,6 +47,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/unauthorized`)
   }
 
+  // AUTO-LINK: Link user_id to org_users by email (if invited)
+  console.log('[Callback] Auto-linking user_id for email:', user.email)
+  try {
+    const { data: linkedRows, error: linkError } = await supabase
+      .from('org_users')
+      .update({ user_id: user.id })
+      .eq('email', user.email)
+      .is('user_id', null)
+      .select('org_id, email, role')
+    
+    if (linkError) {
+      console.error('[Callback] Auto-link error:', linkError)
+    } else if (linkedRows && linkedRows.length > 0) {
+      console.log('[Callback] ✅ Auto-linked user to', linkedRows.length, 'organization(s)')
+      console.log('[Callback] Organizations:', linkedRows.map(r => r.org_id))
+    } else {
+      console.log('[Callback] No pending invitations for this email')
+    }
+  } catch (e) {
+    console.error('[Callback] Auto-link exception:', e)
+    // Non-fatal, continue
+  }
+
   // 1) Check if admin (use user_id, not email)
   const { data: admin } = await supabase
     .from('admin_users')

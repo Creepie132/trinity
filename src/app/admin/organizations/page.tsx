@@ -51,6 +51,7 @@ export default function OrganizationsPage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false)
   const [newUserEmail, setNewUserEmail] = useState('')
+  const [newUserRole, setNewUserRole] = useState<'owner' | 'manager' | 'user'>('user')
   const [selectedClientId, setSelectedClientId] = useState<string>('')
   const [orgClients, setOrgClients] = useState<Array<{id: string, first_name: string, last_name: string, email: string | null}>>([])
   const [loadingClients, setLoadingClients] = useState(false)
@@ -236,20 +237,68 @@ export default function OrganizationsPage() {
     
     if (!selectedOrgId || !emailToAdd) return
     
-    await addUser.mutateAsync({
-      orgId: selectedOrgId,
-      email: emailToAdd,
-    })
-    
-    setNewUserEmail('')
-    setSelectedClientId('')
-    setAddUserDialogOpen(false)
+    try {
+      const response = await fetch('/api/org/invite-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          org_id: selectedOrgId,
+          email: emailToAdd,
+          role: newUserRole,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        toast.error(result.error || 'שגיאה בהוספת משתמש')
+        return
+      }
+
+      toast.success(result.message || 'המשתמש נוסף בהצלחה')
+      
+      // Refresh org users list
+      if (orgUsers) {
+        // Trigger refetch (assuming React Query)
+        window.location.reload() // Simple reload for now
+      }
+      
+      setNewUserEmail('')
+      setSelectedClientId('')
+      setNewUserRole('user')
+      setAddUserDialogOpen(false)
+    } catch (error: any) {
+      toast.error(`שגיאה: ${error.message}`)
+    }
   }
 
-  const handleRemoveUser = (userId: string) => {
+  const handleRemoveUser = async (userEmail: string) => {
     if (!selectedOrgId) return
-    if (confirm('האם למחוק משתמש זה?')) {
-      removeUser.mutate({ userId, orgId: selectedOrgId })
+    if (!confirm('האם אתה בטוח שברצונך להסיר משתמש זה?')) return
+    
+    try {
+      const response = await fetch('/api/org/invite-user', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          org_id: selectedOrgId,
+          email: userEmail,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        toast.error(result.error || 'שגיאה בהסרת משתמש')
+        return
+      }
+
+      toast.success(result.message || 'המשתמש הוסר בהצלחה')
+      
+      // Refresh org users list
+      window.location.reload()
+    } catch (error: any) {
+      toast.error(`שגיאה: ${error.message}`)
     }
   }
 
@@ -689,7 +738,7 @@ export default function OrganizationsPage() {
                     משתמשים
                     <Button size="sm" onClick={() => setAddUserDialogOpen(true)}>
                       <Plus className="w-4 h-4 ml-1" />
-                      הוסף
+                      הוסף משתמש
                     </Button>
                   </CardTitle>
                 </CardHeader>
@@ -697,25 +746,36 @@ export default function OrganizationsPage() {
                   <div className="space-y-2">
                     {orgUsers?.map((user) => (
                       <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-medium">{user.email}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{user.email}</p>
+                            {user.user_id ? (
+                              <Badge variant="default" className="bg-green-100 text-green-700 text-xs">
+                                מחובר
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 text-xs">
+                                ממתין
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500">
-                            {user.role === 'owner' ? 'בעלים' : user.role === 'admin' ? 'מנהל' : 'צוות'}
+                            {user.role === 'owner' ? 'בעלים' : 
+                             user.role === 'manager' ? 'מנהל' : 
+                             'משתמש'}
                           </p>
                         </div>
-                        {user.role !== 'owner' && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleRemoveUser(user.id)}
-                          >
-                            <Trash className="w-4 h-4 text-red-500" />
-                          </Button>
-                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleRemoveUser(user.email)}
+                        >
+                          <Trash className="w-4 h-4 text-red-500" />
+                        </Button>
                       </div>
                     ))}
                     {(!orgUsers || orgUsers.length === 0) && (
-                      <div className="text-center py-4 text-gray-500">אין משתמשים</div>
+                      <div className="text-center py-4 text-gray-500">אין משתמשים בארגון</div>
                     )}
                   </div>
                 </CardContent>
@@ -729,9 +789,9 @@ export default function OrganizationsPage() {
       <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>הוסף משתמש</DialogTitle>
+            <DialogTitle>הוסף משתמש לארגון</DialogTitle>
             <DialogDescription>
-              בחר לקוח קיים או הזן אימייל ידנית
+              הזן אימייל ובחר הרשאה. המשתמש יחובר אוטומטית בכניסה הראשונה.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -762,7 +822,7 @@ export default function OrganizationsPage() {
 
             {/* OR manual email input */}
             <div>
-              <Label>או הזן אימייל ידנית</Label>
+              <Label>או הזן אימייל ידנית *</Label>
               <Input
                 type="email"
                 value={newUserEmail}
@@ -773,6 +833,40 @@ export default function OrganizationsPage() {
                 placeholder="user@example.com"
                 disabled={!!selectedClientId} // Disable if client selected
               />
+            </div>
+
+            {/* Role Selection */}
+            <div>
+              <Label>תפקיד *</Label>
+              <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as 'owner' | 'manager' | 'user')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="owner">
+                    <div>
+                      <p className="font-semibold">בעלים</p>
+                      <p className="text-xs text-gray-500">גישה מלאה לכל המערכת</p>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="manager">
+                    <div>
+                      <p className="font-semibold">מנהל</p>
+                      <p className="text-xs text-gray-500">ניהול לקוחות ותשלומים</p>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="user">
+                    <div>
+                      <p className="font-semibold">משתמש</p>
+                      <p className="text-xs text-gray-500">צפייה בלבד</p>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800">
+              💡 המשתמש יקבל גישה אוטומטית בכניסה הראשונה עם Google
             </div>
           </div>
           <DialogFooter>

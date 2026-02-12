@@ -328,6 +328,8 @@ const translations: Record<Language, Record<string, string>> = {
     'service.haircutColoring': 'תספורת + צבע',
     'service.hairTreatment': 'טיפול שיער',
     'service.consultation': 'ייעוץ',
+    'service.meeting': 'פגישה',
+    'service.advertising': 'פרסום',
     'service.other': 'אחר',
     
     // Duration options
@@ -863,6 +865,8 @@ const translations: Record<Language, Record<string, string>> = {
     'service.haircutColoring': 'Стрижка + окрашивание',
     'service.hairTreatment': 'Уход за волосами',
     'service.consultation': 'Консультация',
+    'service.meeting': 'Встреча',
+    'service.advertising': 'Реклама',
     'service.other': 'Другое',
     
     // Duration options

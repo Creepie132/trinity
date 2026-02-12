@@ -29,6 +29,7 @@ import { toast } from 'sonner'
 interface CreateVisitDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  preselectedClientId?: string
 }
 
 const services = [
@@ -41,6 +42,8 @@ const services = [
   { value: 'haircutColoring', labelKey: 'service.haircutColoring' },
   { value: 'hairTreatment', labelKey: 'service.hairTreatment' },
   { value: 'consultation', labelKey: 'service.consultation' },
+  { value: 'meeting', labelKey: 'service.meeting' },
+  { value: 'advertising', labelKey: 'service.advertising' },
   { value: 'other', labelKey: 'service.other' },
 ]
 
@@ -52,7 +55,7 @@ const durations = [
   { value: 120, labelKey: 'duration.120min' },
 ]
 
-export function CreateVisitDialog({ open, onOpenChange }: CreateVisitDialogProps) {
+export function CreateVisitDialog({ open, onOpenChange, preselectedClientId }: CreateVisitDialogProps) {
   const { t } = useLanguage()
   const { orgId } = useAuth()
   const router = useRouter()
@@ -60,7 +63,7 @@ export function CreateVisitDialog({ open, onOpenChange }: CreateVisitDialogProps
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
-    clientId: '',
+    clientId: preselectedClientId || '',
     service: '',
     date: '',
     time: '',
@@ -109,9 +112,9 @@ export function CreateVisitDialog({ open, onOpenChange }: CreateVisitDialogProps
         .insert({
           client_id: formData.clientId,
           org_id: orgId,
-          service: formData.service,
+          service_type: formData.service,
           scheduled_at: scheduledAt.toISOString(),
-          duration: formData.duration,
+          duration_minutes: formData.duration,
           price: parseFloat(formData.price),
           notes: formData.notes || null,
           status: 'scheduled',

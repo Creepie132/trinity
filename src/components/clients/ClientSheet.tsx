@@ -9,6 +9,7 @@ import { useClient } from '@/hooks/useClients'
 import { usePayments } from '@/hooks/usePayments'
 import { useClientAdminStatus } from '@/hooks/useClientAdminStatus'
 import { CreatePaymentDialog } from '@/components/payments/CreatePaymentDialog'
+import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
 import { AssignAdminDialog } from './AssignAdminDialog'
 import { ClientSummary } from '@/types/database'
 import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Shield, X } from 'lucide-react'
@@ -26,6 +27,7 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
   const { data: payments } = usePayments(client?.id)
   const { isAdmin, role, isLoading: adminStatusLoading, refetch: refetchAdminStatus } = useClientAdminStatus(client?.email)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [visitDialogOpen, setVisitDialogOpen] = useState(false)
   const [assignAdminDialogOpen, setAssignAdminDialogOpen] = useState(false)
   const [isRemovingAdmin, setIsRemovingAdmin] = useState(false)
 
@@ -135,7 +137,11 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
               <MessageSquare className="w-4 h-4 ml-2" />
               שלח SMS
             </Button>
-            <Button size="sm" variant="outline">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => setVisitDialogOpen(true)}
+            >
               <Calendar className="w-4 h-4 ml-2" />
               הוסף ביקור
             </Button>
@@ -278,6 +284,13 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
           onSuccess={() => refetchAdminStatus()}
         />
       )}
+
+      {/* Create Visit Dialog */}
+      <CreateVisitDialog
+        open={visitDialogOpen}
+        onOpenChange={setVisitDialogOpen}
+        preselectedClientId={client.id}
+      />
     </Sheet>
   )
 }

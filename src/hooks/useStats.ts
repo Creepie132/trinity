@@ -38,19 +38,24 @@ export function useDashboardStats() {
         .from('visits')
         .select('*, clients!inner(org_id)', { count: 'exact', head: true })
         .eq('clients.org_id', orgId)
-        .gte('visit_date', firstDay.toISOString())
-        .lte('visit_date', lastDay.toISOString())
+        .gte('scheduled_at', firstDay.toISOString())
+        .lte('scheduled_at', lastDay.toISOString())
 
       // Revenue this month (filtered by org_id via clients.org_id)
+      // Use created_at for payments that don't have paid_at (like Stripe)
       const { data: paymentsData } = await supabase
         .from('payments')
-        .select('amount, clients!inner(org_id)')
+        .select('amount, created_at, paid_at, clients!inner(org_id)')
         .eq('clients.org_id', orgId)
         .eq('status', 'completed')
-        .gte('paid_at', firstDay.toISOString())
-        .lte('paid_at', lastDay.toISOString())
 
-      const revenueThisMonth = paymentsData?.reduce(
+      // Filter by date in JS (use paid_at if exists, otherwise created_at)
+      const filteredPayments = paymentsData?.filter((p: any) => {
+        const paymentDate = new Date(p.paid_at || p.created_at)
+        return paymentDate >= firstDay && paymentDate <= lastDay
+      }) || []
+
+      const revenueThisMonth = filteredPayments.reduce(
         (sum, p) => sum + Number(p.amount),
         0
       ) || 0

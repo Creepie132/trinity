@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileHeader } from '@/components/layout/MobileHeader'
+import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { useAuth } from '@/hooks/useAuth'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 
@@ -43,8 +44,11 @@ export default function DashboardLayout({
     // This was causing logout on navigation
   }, [user, isLoading])
 
-  // Don't block rendering - middleware already protects routes
-  // Just render content, useAuth will update when ready
+  // Show loading screen while checking auth
+  if (isLoading) {
+    return <LoadingScreen />
+  }
+
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col">

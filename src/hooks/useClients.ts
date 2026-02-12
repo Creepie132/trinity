@@ -5,11 +5,11 @@ import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 
 export function useClients(searchQuery?: string) {
-  const { orgId, isLoading } = useAuth()
+  const { orgId } = useAuth()
 
   return useQuery({
     queryKey: ['clients', orgId, searchQuery],
-    enabled: !!orgId && !isLoading,
+    enabled: !!orgId,
     queryFn: async () => {
       let query = supabase
         .from('client_summary')
@@ -31,11 +31,11 @@ export function useClients(searchQuery?: string) {
 }
 
 export function useClient(id?: string) {
-  const { orgId, isLoading } = useAuth()
+  const { orgId } = useAuth()
 
   return useQuery({
     queryKey: ['client', orgId, id],
-    enabled: !!orgId && !!id && !isLoading,
+    enabled: !!orgId && !!id,
     queryFn: async () => {
       if (!id) return null
 

@@ -206,17 +206,26 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-white dark:bg-gray-800">
-        <DialogHeader>
-          <DialogTitle className="text-gray-900 dark:text-gray-100">{t('visits.completeTitle')}</DialogTitle>
-          <DialogDescription className="text-gray-600 dark:text-gray-400">
-            {t('visits.paymentDetails')}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-md md:max-h-[90vh] h-full md:h-auto bg-white dark:bg-gray-800 p-0 md:p-6">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 z-10 p-4 md:p-0 border-b md:border-b-0 border-gray-200 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-xl md:text-2xl text-gray-900 dark:text-gray-100">{t('visits.completeTitle')}</DialogTitle>
+            <DialogDescription className="text-sm md:text-base text-gray-600 dark:text-gray-400">
+              {t('visits.paymentDetails')}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-4">
+        <div className="flex flex-col h-full md:h-auto">
+          <div className="flex-1 overflow-y-auto p-4 md:p-0 space-y-4">
           {/* Visit details */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-2">
+          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-3">
+            {/* Large price on top for mobile */}
+            <div className="text-center md:hidden">
+              <div className="text-4xl font-bold text-theme-primary mb-1">₪{visit.price}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">{t('payments.amount')}</div>
+            </div>
+            
             <div className="flex justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">{t('visits.client')}:</span>
               <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -229,7 +238,9 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
                 {t(getServiceLabelKey(visit.service))}
               </span>
             </div>
-            <div className="flex justify-between">
+            
+            {/* Desktop price */}
+            <div className="hidden md:flex justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">{t('payments.amount')}:</span>
               <span className="text-lg font-bold text-theme-primary">₪{visit.price}</span>
             </div>
@@ -238,7 +249,32 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
           {/* Payment method selection */}
           <div className="space-y-3">
             <Label className="text-gray-900 dark:text-gray-100">{t('visits.selectPaymentMethod')}</Label>
-            <div className="space-y-2">
+            
+            {/* Mobile: 2 columns grid with big cards */}
+            <div className="grid grid-cols-2 md:hidden gap-3">
+              {paymentMethods.map((method) => (
+                <div
+                  key={method.value}
+                  className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all min-h-[100px] ${
+                    paymentMethod === method.value
+                      ? 'border-theme-primary bg-theme-primary bg-opacity-10'
+                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                  }`}
+                  onClick={() => setPaymentMethod(method.value)}
+                >
+                  <span className="text-3xl mb-2">{method.emoji}</span>
+                  <span className="text-xs text-center text-gray-900 dark:text-gray-100 font-medium">
+                    {t(method.labelKey)}
+                  </span>
+                  {paymentMethod === method.value && (
+                    <Check className="w-4 h-4 text-theme-primary mt-1" />
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {/* Desktop: stacked list */}
+            <div className="hidden md:block space-y-2">
               {paymentMethods.map((method) => {
                 const Icon = method.icon
                 return (
@@ -274,13 +310,14 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
               </p>
             </div>
           )}
+          </div>
 
-          {/* Actions */}
-          <div className="flex flex-col gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+          {/* Actions - Fixed at bottom on mobile */}
+          <div className="sticky md:static bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 md:p-0 border-t border-gray-200 dark:border-gray-700 mt-4 md:pt-4 flex flex-col gap-2">
             <Button
               onClick={handleCompleteWithPayment}
               disabled={isProcessing}
-              className="w-full bg-theme-primary text-white hover:opacity-90"
+              className="w-full h-11 md:h-10 bg-theme-primary text-white hover:opacity-90"
             >
               {isProcessing ? t('visits.processing') : t('visits.completeAndPay')}
             </Button>
@@ -289,7 +326,7 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
               variant="outline"
               onClick={handleCompleteWithoutPayment}
               disabled={isProcessing}
-              className="w-full border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="w-full h-11 md:h-10 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               {t('visits.completeWithoutPayment')}
             </Button>
@@ -298,7 +335,7 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
               variant="ghost"
               onClick={() => onOpenChange(false)}
               disabled={isProcessing}
-              className="w-full text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="w-full h-11 md:h-10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               {t('common.cancel')}
             </Button>

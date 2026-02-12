@@ -147,15 +147,18 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
-        <DialogHeader>
-          <DialogTitle className="text-gray-900 dark:text-gray-100">{t('visits.createNew')}</DialogTitle>
-          <DialogDescription className="text-gray-600 dark:text-gray-400">
-            {t('visits.subtitle')}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] md:max-h-[90vh] h-full md:h-auto overflow-y-auto bg-white dark:bg-gray-800 p-0 md:p-6">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 z-10 p-4 md:p-0 border-b md:border-b-0 border-gray-200 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-xl md:text-2xl text-gray-900 dark:text-gray-100">{t('visits.createNew')}</DialogTitle>
+            <DialogDescription className="text-sm md:text-base text-gray-600 dark:text-gray-400">
+              {t('visits.subtitle')}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full md:h-auto">
+          <div className="flex-1 overflow-y-auto p-4 md:p-0 space-y-4">
           {/* Client selection */}
           <div className="space-y-2">
             <Label htmlFor="client" className="text-gray-900 dark:text-gray-100">
@@ -296,21 +299,23 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
             />
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+          </div>
+
+          {/* Actions - Fixed at bottom on mobile */}
+          <div className="sticky md:static bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 md:p-0 border-t border-gray-200 dark:border-gray-700 mt-4 md:pt-4 flex flex-col md:flex-row md:justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
-              className="border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="w-full md:w-auto h-11 md:h-10 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               {t('common.cancel')}
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-theme-primary text-white hover:opacity-90"
+              className="w-full md:w-auto h-11 md:h-10 bg-theme-primary text-white hover:opacity-90"
             >
               {isSubmitting ? t('visits.creating') : t('common.add')}
             </Button>

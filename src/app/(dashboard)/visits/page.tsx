@@ -72,16 +72,6 @@ export default function VisitsPage() {
     }
   }, [orgId])
 
-  // Prevent loading flicker with minimum delay
-  useEffect(() => {
-    if (!isLoading) {
-      const timer = setTimeout(() => setShowLoading(false), 500)
-      return () => clearTimeout(timer)
-    } else {
-      setShowLoading(true)
-    }
-  }, [isLoading])
-
   // Fetch visits
   const { data: visits = [], isLoading, refetch } = useQuery({
     queryKey: ['visits', orgId, dateFilter, statusFilter, searchQuery],
@@ -141,6 +131,16 @@ export default function VisitsPage() {
     },
     enabled: !!orgId,
   })
+
+  // Prevent loading flicker with minimum delay
+  useEffect(() => {
+    if (!isLoading) {
+      const timer = setTimeout(() => setShowLoading(false), 500)
+      return () => clearTimeout(timer)
+    } else {
+      setShowLoading(true)
+    }
+  }, [isLoading])
 
   const getServiceLabel = (service: string): string => {
     const serviceMap: Record<string, string> = {

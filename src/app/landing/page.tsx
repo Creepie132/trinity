@@ -640,7 +640,8 @@ export default function LandingPage() {
                 alt="Amber Solutions Logo"
                 className="w-8 h-8 object-contain"
               />
-              <span className={`text-xl font-bold transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}>
+              {/* Hide text on mobile, show on desktop */}
+              <span className={`hidden md:block text-xl font-bold transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}>
                 Amber Solutions Systems
               </span>
             </div>
@@ -686,27 +687,33 @@ export default function LandingPage() {
             </div>
 
             {/* Language Switcher & Login */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
+              {/* Login button - compact on mobile */}
               <a
                 href="/login"
-                className={`px-4 py-2 border rounded-lg font-medium transition-colors ${
+                className={`px-3 md:px-4 py-1.5 md:py-2 border rounded-lg text-sm md:text-base font-medium transition-colors ${
                   scrolled
                     ? 'text-gray-700 hover:text-blue-900 border-gray-300 hover:border-blue-900'
                     : 'text-white border-white/30 hover:bg-white/10'
                 }`}
               >
-                {language === 'he' ? 'כניסה למערכת' : 'Вход в систему'}
+                {/* Short text on mobile, full text on desktop */}
+                <span className="md:hidden">{language === 'he' ? 'כניסה' : 'Вход'}</span>
+                <span className="hidden md:inline">{language === 'he' ? 'כניסה למערכת' : 'Вход в систему'}</span>
               </a>
               
+              {/* Language switcher - compact on mobile */}
               <button
                 onClick={() => setLanguage(language === 'he' ? 'ru' : 'he')}
-                className={`px-3 py-1.5 text-sm font-medium border rounded-md transition-colors ${
+                className={`px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm font-medium border rounded-md transition-colors ${
                   scrolled
                     ? 'text-gray-700 hover:text-blue-900 border-gray-300 hover:border-blue-900'
                     : 'text-white border-white/30 hover:border-white hover:bg-white/10'
                 }`}
               >
-                {language === 'he' ? 'Русский' : 'עברית'}
+                {/* Short text on mobile */}
+                <span className="md:hidden">{language === 'he' ? 'RU' : 'HE'}</span>
+                <span className="hidden md:inline">{language === 'he' ? 'Русский' : 'עברית'}</span>
               </button>
 
               {/* Mobile menu button */}

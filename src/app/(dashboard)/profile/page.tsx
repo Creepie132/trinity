@@ -18,7 +18,7 @@ import { format } from 'date-fns'
 
 export default function ProfilePage() {
   const { user, orgId, signOut } = useAuth()
-  const { data: organization } = useOrganization(orgId || undefined)
+  const { data: organization } = useOrganization()
   const { language, setLanguage, t } = useLanguage()
   const { darkMode, setDarkMode } = useTheme()
   const router = useRouter()

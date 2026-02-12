@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Sparkles, Check, Loader2 } from 'lucide-react'
-import { useToast } from '@/hooks/useToast'
+import { toast } from 'sonner'
 
 type LoginButtonStyle = 'orbit' | 'pulse'
 
@@ -12,7 +12,6 @@ export default function LandingSettingsPage() {
   const [selectedStyle, setSelectedStyle] = useState<LoginButtonStyle>('orbit')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const { toast } = useToast()
 
   // Load current settings
   useEffect(() => {
@@ -48,17 +47,10 @@ export default function LandingSettingsPage() {
       }
 
       setSelectedStyle(style)
-      toast({
-        title: 'הגדרות נשמרו',
-        description: 'סגנון כפתור הכניסה עודכן בהצלחה'
-      })
+      toast.success('סגנון כפתור הכניסה עודכן בהצלחה')
     } catch (error) {
       console.error('Error saving landing settings:', error)
-      toast({
-        title: 'שגיאה',
-        description: 'לא ניתן לשמור את ההגדרות',
-        variant: 'destructive'
-      })
+      toast.error('לא ניתן לשמור את ההגדרות')
     } finally {
       setIsSaving(false)
     }

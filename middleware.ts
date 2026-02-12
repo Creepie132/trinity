@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const PUBLIC_PATHS = ['/login', '/unauthorized', '/blocked', '/landing', '/']
-const CALLBACK_PATH = '/auth/callback'
+const PUBLIC_PATHS = ['/login', '/unauthorized', '/blocked', '/landing']
+const CALLBACK_PATH = '/callback'
 const WEBHOOK_PATH = '/api/payments/webhook'
 const STRIPE_WEBHOOK_PATH = '/api/payments/stripe-webhook'
 const HEALTH_PATH = '/api/health'
@@ -10,16 +10,22 @@ const HEALTH_PATH = '/api/health'
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Allow public routes + callback + webhooks + health
+  // Allow root page
+  if (pathname === '/') {
+    return NextResponse.next()
+  }
+
+  // Allow public routes
   if (
     PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/')) ||
     pathname === CALLBACK_PATH ||
-    pathname.startsWith(CALLBACK_PATH + '/') ||
+    pathname.startsWith(CALLBACK_PATH + '?') ||
     pathname === WEBHOOK_PATH ||
     pathname.startsWith(WEBHOOK_PATH + '/') ||
     pathname === STRIPE_WEBHOOK_PATH ||
     pathname.startsWith(STRIPE_WEBHOOK_PATH + '/') ||
-    pathname === HEALTH_PATH
+    pathname === HEALTH_PATH ||
+    pathname.startsWith('/.well-known')
   ) {
     return NextResponse.next()
   }
@@ -43,7 +49,6 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // 1) Session check
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -60,7 +65,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 2) Admin check (use user_id instead of email)
   const { data: adminRow } = await supabase
     .from('admin_users')
     .select('email')
@@ -78,7 +82,6 @@ export async function middleware(req: NextRequest) {
     return response
   }
 
-  // 3) Org user check (use user_id instead of email - CRITICAL FIX!)
   const { data: orgRow } = await supabase
     .from('org_users')
     .select('org_id')
@@ -91,7 +94,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 4) Organization active check (skip for admins and /blocked page)
   if (orgRow && !isAdmin && pathname !== '/blocked') {
     const { data: organization } = await supabase
       .from('organizations')
@@ -112,3 +114,17 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map)$).*)'],
 }
+```
+
+Ключевые изменения:
+- `CALLBACK_PATH` теперь `/callback` (не `/auth/callback`)
+- `/` обрабатывается отдельно
+- `/.well-known` добавлен для Apple Pay
+```
+git add .
+```
+```
+git commit -m "Fix middleware callback path"
+```
+```
+git push

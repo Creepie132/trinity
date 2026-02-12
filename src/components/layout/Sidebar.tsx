@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, ChevronLeft, Settings } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, ChevronLeft, Settings, User as UserIcon } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
@@ -41,6 +41,7 @@ export function Sidebar() {
     { name: t('nav.stats'), href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
     { name: t('nav.partners'), href: '/partners', icon: Gift, requireFeature: null },
     { name: t('nav.settings'), href: '/settings', icon: Settings, requireFeature: null },
+    { name: language === 'he' ? 'פרופיל' : 'Профиль', href: '/profile', icon: UserIcon, requireFeature: null },
   ]
 
   useEffect(() => {

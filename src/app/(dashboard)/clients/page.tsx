@@ -15,17 +15,39 @@ import { useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function ClientsPage() {
   const router = useRouter()
   const features = useFeatures()
   const { t } = useLanguage()
+  const { orgId } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<ClientSummary | null>(null)
   const [clientSheetOpen, setClientSheetOpen] = useState(false)
 
-  const { data: clients, isLoading } = useClients(searchQuery)
+  const { data: clients, isLoading, error: clientsError } = useClients(searchQuery)
+
+  // DEBUG: Log orgId
+  useEffect(() => {
+    console.log('[ClientsPage] DEBUG - orgId:', orgId)
+  }, [orgId])
+
+  // DEBUG: Direct query to check if clients exist
+  useEffect(() => {
+    const debugClients = async () => {
+      console.log('[ClientsPage] DEBUG - Running direct query...')
+      const { data, error } = await supabase.from('clients').select('*').limit(5)
+      console.log('[ClientsPage] DEBUG - Direct query data:', data)
+      console.log('[ClientsPage] DEBUG - Direct query error:', error)
+      console.log('[ClientsPage] DEBUG - Clients from hook:', clients)
+      console.log('[ClientsPage] DEBUG - isLoading:', isLoading)
+      console.log('[ClientsPage] DEBUG - clientsError:', clientsError)
+    }
+    debugClients()
+  }, [clients, isLoading, clientsError])
 
   // Check organization status
   useEffect(() => {

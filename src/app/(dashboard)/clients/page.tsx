@@ -14,6 +14,7 @@ import { format } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { LoadingScreen } from '@/components/ui/LoadingScreen'
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -36,6 +37,11 @@ export default function ClientsPage() {
   const handleClientClick = (client: ClientSummary) => {
     setSelectedClient(client)
     setClientSheetOpen(true)
+  }
+
+  // Show loading screen while fetching data
+  if (isLoading) {
+    return <LoadingScreen />
   }
 
   return (
@@ -67,9 +73,7 @@ export default function ClientsPage() {
 
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-        {isLoading ? (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
-        ) : clients && clients.length > 0 ? (
+        {clients && clients.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

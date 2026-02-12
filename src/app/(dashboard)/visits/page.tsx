@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Visit } from '@/types/visits'
+import { LoadingScreen } from '@/components/ui/LoadingScreen'
 
 export default function VisitsPage() {
   const router = useRouter()
@@ -204,6 +205,11 @@ export default function VisitsPage() {
     }
   }
 
+  // Show loading screen while fetching data
+  if (isLoading) {
+    return <LoadingScreen />
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -331,9 +337,7 @@ export default function VisitsPage() {
         <>
           {/* Desktop Table (hidden on mobile) */}
           <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            {isLoading ? (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
-            ) : visits.length > 0 ? (
+            {visits.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50 dark:bg-gray-800">
@@ -405,9 +409,7 @@ export default function VisitsPage() {
 
           {/* Mobile Cards (visible only on mobile) */}
           <div className="md:hidden space-y-3">
-            {isLoading ? (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
-            ) : visits.length > 0 ? (
+            {visits.length > 0 ? (
               visits.map((visit) => (
                 <div
                   key={visit.id}

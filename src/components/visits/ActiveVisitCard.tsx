@@ -117,7 +117,7 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
     try {
       await addService.mutateAsync({
         visit_id: visit.id,
-        service_id: null, // null for custom services
+        service_id: undefined,
         service_name: customService.name,
         service_name_ru: customService.name, // Same for custom
         price: parseFloat(customService.price),

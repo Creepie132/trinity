@@ -1,3 +1,25 @@
+// Visit Service (additional service added to visit)
+export interface VisitService {
+  id: string
+  visit_id: string
+  service_id?: string
+  service_name: string
+  service_name_ru?: string
+  price: number
+  duration_minutes: number
+  created_at: string
+}
+
+// DTO for creating visit service
+export interface CreateVisitServiceDTO {
+  visit_id: string
+  service_id?: string
+  service_name: string
+  service_name_ru?: string
+  price: number
+  duration_minutes: number
+}
+
 // Unified Visit type for entire application
 export interface Visit {
   id: string
@@ -7,6 +29,7 @@ export interface Visit {
   service_id?: string // New field - FK to services table
   service?: string // Legacy field, kept for compatibility
   scheduled_at: string
+  started_at?: string // When visit actually started (in_progress)
   duration_minutes?: number
   price?: number
   status: string
@@ -29,4 +52,5 @@ export interface Visit {
     description?: string | null
     description_ru?: string | null
   }
+  visit_services?: VisitService[] // Additional services
 }

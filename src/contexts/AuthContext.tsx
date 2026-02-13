@@ -19,11 +19,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [orgId, setOrgId] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
 
   const loadAuth = async () => {
-    setIsLoading(true)
-
     try {
+      setIsLoading(true)
+      setHasError(false)
+
       // Step 1: Check session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
@@ -69,49 +71,88 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setOrgId(userOrgId)
       setIsLoading(false)
     } catch (error) {
+      console.error('[AuthProvider] Error in loadAuth:', error)
+      // Don't block render on auth error
       setUser(null)
       setOrgId(null)
       setIsAdmin(false)
       setIsLoading(false)
+      setHasError(true)
     }
   }
 
   useEffect(() => {
-    // Load auth once on mount
-    loadAuth()
+    // Wrap everything in try-catch to prevent crashes
+    try {
+      // Load auth once on mount
+      loadAuth().catch((err) => {
+        console.error('[AuthProvider] loadAuth failed in useEffect:', err)
+        setIsLoading(false)
+        setHasError(true)
+      })
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only reload on significant events
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        if (event === 'SIGNED_OUT') {
-          setUser(null)
-          setOrgId(null)
-          setIsAdmin(false)
-          setIsLoading(false)
-        } else {
-          loadAuth()
+      // Listen for auth state changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        try {
+          // Only reload on significant events
+          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+            if (event === 'SIGNED_OUT') {
+              setUser(null)
+              setOrgId(null)
+              setIsAdmin(false)
+              setIsLoading(false)
+            } else {
+              loadAuth().catch((err) => {
+                console.error('[AuthProvider] loadAuth failed in onAuthStateChange:', err)
+                setIsLoading(false)
+                setHasError(true)
+              })
+            }
+          }
+          // Ignore TOKEN_REFRESHED, INITIAL_SESSION, etc. - they don't need reload
+        } catch (err) {
+          console.error('[AuthProvider] Error in onAuthStateChange handler:', err)
+        }
+      })
+
+      return () => {
+        try {
+          subscription.unsubscribe()
+        } catch (err) {
+          console.error('[AuthProvider] Error unsubscribing:', err)
         }
       }
-      // Ignore TOKEN_REFRESHED, INITIAL_SESSION, etc. - they don't need reload
-    })
-
-    return () => {
-      subscription.unsubscribe()
+    } catch (err) {
+      console.error('[AuthProvider] Error in useEffect setup:', err)
+      setIsLoading(false)
+      setHasError(true)
     }
   }, []) // No dependencies - run once on mount only
 
   const signOut = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setOrgId(null)
-    setIsAdmin(false)
-    window.location.href = '/login'
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      setOrgId(null)
+      setIsAdmin(false)
+      window.location.href = '/login'
+    } catch (err) {
+      console.error('[AuthProvider] signOut error:', err)
+      // Still redirect to login even if signOut fails
+      window.location.href = '/login'
+    }
   }
 
   const refetch = async () => {
-    await loadAuth()
+    try {
+      await loadAuth()
+    } catch (err) {
+      console.error('[AuthProvider] refetch error:', err)
+    }
   }
+
+  // Always render children, even if auth fails
+  // This prevents blank screen on auth errors
 
   return (
     <AuthContext.Provider
@@ -132,7 +173,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    // Don't throw error - return safe defaults to prevent crash
+    console.warn('[useAuth] Called outside AuthProvider - returning defaults')
+    return {
+      user: null,
+      orgId: null,
+      isAdmin: false,
+      isLoading: false,
+      signOut: async () => {},
+      refetch: async () => {},
+    }
   }
   return context
 }

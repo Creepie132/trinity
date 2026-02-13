@@ -293,7 +293,7 @@ export function QuickSaleDialog({ open, onClose }: QuickSaleDialogProps) {
                   <SelectValue placeholder={t('inventory.sellDialog.client')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {clients?.map((client) => (
+                  {clients?.data?.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.first_name} {client.last_name}
                     </SelectItem>

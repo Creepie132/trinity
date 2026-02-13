@@ -165,7 +165,7 @@ export function NewCampaignForm() {
                           <SelectValue placeholder={t('sms.selectClient')} />
                         </SelectTrigger>
                         <SelectContent>
-                          {clients?.map((client) => (
+                          {clients?.data?.map((client) => (
                             <SelectItem key={client.id} value={client.id}>
                               {client.first_name} {client.last_name} - {client.phone}
                             </SelectItem>

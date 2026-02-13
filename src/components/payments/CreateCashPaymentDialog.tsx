@@ -58,7 +58,7 @@ export function CreateCashPaymentDialog({ open, onOpenChange }: CreateCashPaymen
 
     setIsProcessing(true)
     try {
-      const client = clients?.find((c) => c.id === clientId)
+      const client = clients?.data?.find((c) => c.id === clientId)
 
       const { error } = await supabase
         .from('payments')
@@ -105,7 +105,7 @@ export function CreateCashPaymentDialog({ open, onOpenChange }: CreateCashPaymen
                 <SelectValue placeholder={t('visits.selectClient')} />
               </SelectTrigger>
               <SelectContent>
-                {clients?.map((client) => (
+                {clients?.data?.map((client) => (
                   <SelectItem key={client.id} value={client.id}>
                     {client.first_name} {client.last_name}
                     {client.phone && ` - ${client.phone}`}

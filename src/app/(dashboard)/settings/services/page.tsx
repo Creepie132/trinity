@@ -1,254 +1,211 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { useLanguage } from '@/contexts/LanguageContext'
-import { useServices, useDeleteService } from '@/hooks/useServices'
-import { CreateServiceDialog } from '@/components/services/CreateServiceDialog'
-import { ArrowRight, Plus, Edit, Trash2, Package } from 'lucide-react'
-import Link from 'next/link'
-import { toast } from 'sonner'
-import type { Service } from '@/types/services'
+import { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useServices } from '@/hooks/useServices';
+import { Service } from '@/types/services';
+import { Button } from '@/components/ui/button';
+import { Plus, Search, Clock, DollarSign } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { CreateServiceDialog } from '@/components/services/CreateServiceDialog';
+import { ServiceDetailSheet } from '@/components/services/ServiceDetailSheet';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
-export default function ServicesPage() {
-  const { t, language } = useLanguage()
-  const { data: services, isLoading } = useServices()
-  const deleteService = useDeleteService()
+export default function ServicesSettingsPage() {
+  const { t, language } = useLanguage();
+  const { organization } = useOrganization();
+  const { data: services, isLoading } = useServices(organization?.id || '');
 
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedService, setSelectedService] = useState<Service | null>(null)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
 
-  const handleEdit = (service: Service) => {
-    setSelectedService(service)
-    setDialogOpen(true)
-  }
-
-  const handleDelete = async (service: Service) => {
-    const confirmText = language === 'he' 
-      ? `האם למחוק את השירות "${service.name}"?`
-      : `Удалить услугу "${service.name}"?`
+  // Filter services based on search query
+  const filteredServices = services?.filter(service => {
+    const name = language === 'he' ? service.name : service.name_ru;
+    const description = language === 'he' ? service.description : service.description_ru;
+    const query = searchQuery.toLowerCase();
     
-    if (!confirm(confirmText)) return
+    return (
+      name.toLowerCase().includes(query) ||
+      description?.toLowerCase().includes(query)
+    );
+  });
 
-    try {
-      await deleteService.mutateAsync(service.id)
-      toast.success(t('common.success'))
-    } catch (error: any) {
-      toast.error(error.message || t('common.error'))
-    }
-  }
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false)
-    setSelectedService(null)
+  if (isLoading) {
+    return <LoadingScreen />;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto p-6 max-w-6xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
-            <Link href="/settings" className="hover:text-theme-primary">
-              {t('settings.title')}
-            </Link>
-            <ArrowRight className="w-4 h-4" />
-            <span>{t('services.title')}</span>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {t('services.title')}
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            ניהול רשימת השירותים של הארגון
-          </p>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">{t('services.title')}</h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          {t('services.description')}
+        </p>
+      </div>
+
+      {/* Actions Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Input
+            placeholder={t('services.searchPlaceholder')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="w-4 h-4 mr-2" />
           {t('services.newService')}
         </Button>
       </div>
 
-      {/* Services Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            {t('services.title')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              {t('common.loading')}
-            </div>
-          ) : !services || services.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                {t('services.emptyState')}
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
-                {t('services.emptyState.desc')}
-              </p>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                {t('services.newService')}
-              </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              {/* Desktop Table */}
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('services.name')}</TableHead>
-                      <TableHead className="text-right">{t('services.price')}</TableHead>
-                      <TableHead className="text-right">{t('services.duration')}</TableHead>
-                      <TableHead className="text-right">{t('services.color')}</TableHead>
-                      <TableHead className="text-right">{t('common.actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {services.map((service) => (
-                      <TableRow key={service.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
-                              {service.name}
-                            </p>
-                            {service.name_ru && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
-                                {service.name_ru}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {service.price ? `₪${service.price.toFixed(2)}` : '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {service.duration_minutes} {t('common.minutes')}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <div
-                              className="w-6 h-6 rounded border border-gray-300 dark:border-gray-600"
-                              style={{ backgroundColor: service.color }}
-                            />
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {service.color}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleEdit(service)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDelete(service)}
-                              className="text-red-600 hover:text-red-700 dark:text-red-400"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+      {/* Services Grid/Table */}
+      {filteredServices && filteredServices.length > 0 ? (
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    {t('services.color')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    {t('services.name')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    {t('services.price')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    {t('services.duration')}
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    {t('services.description')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredServices.map((service) => {
+                  const name = language === 'he' ? service.name : service.name_ru;
+                  const description = language === 'he' ? service.description : service.description_ru;
 
-              {/* Mobile Cards */}
-              <div className="md:hidden space-y-3">
-                {services.map((service) => (
-                  <Card key={service.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                            {service.name}
-                          </h3>
-                          {service.name_ru && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {service.name_ru}
-                            </p>
-                          )}
-                        </div>
+                  return (
+                    <tr
+                      key={service.id}
+                      onClick={() => setSelectedService(service)}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div
-                          className="w-8 h-8 rounded border border-gray-300 dark:border-gray-600"
+                          className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600"
                           style={{ backgroundColor: service.color }}
                         />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">
-                            {t('services.price')}:
-                          </span>
-                          <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
-                            {service.price ? `₪${service.price.toFixed(2)}` : '-'}
-                          </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {name}
                         </div>
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">
-                            {t('services.duration')}:
-                          </span>
-                          <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
-                            {service.duration_minutes} {t('common.minutes')}
-                          </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-gray-100">
+                          <DollarSign className="w-4 h-4" />
+                          ₪{service.price.toFixed(2)}
                         </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEdit(service)}
-                          className="flex-1"
-                        >
-                          <Edit className="w-4 h-4 mr-2" />
-                          {t('services.edit')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDelete(service)}
-                          className="flex-1 text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          {t('services.delete')}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-gray-100">
+                          <Clock className="w-4 h-4" />
+                          {service.duration_minutes} {t('common.minutes')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                          {description || '-'}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-      {/* Create/Edit Dialog */}
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {filteredServices.map((service) => {
+              const name = language === 'he' ? service.name : service.name_ru;
+              const description = language === 'he' ? service.description : service.description_ru;
+
+              return (
+                <div
+                  key={service.id}
+                  onClick={() => setSelectedService(service)}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-12 h-12 rounded-full border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
+                        style={{ backgroundColor: service.color }}
+                      />
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                          {name}
+                        </h3>
+                        {description && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">
+                            {description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <DollarSign className="w-4 h-4" />
+                      ₪{service.price.toFixed(2)}
+                    </div>
+                    <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                      <Clock className="w-4 h-4" />
+                      {service.duration_minutes} {t('common.minutes')}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            {searchQuery ? t('services.noResultsFound') : t('services.noServicesYet')}
+          </p>
+          {!searchQuery && (
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('services.createFirst')}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Dialogs */}
       <CreateServiceDialog
-        open={dialogOpen}
-        onClose={handleCloseDialog}
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
+
+      <ServiceDetailSheet
         service={selectedService}
+        open={!!selectedService}
+        onOpenChange={(open) => !open && setSelectedService(null)}
       />
     </div>
-  )
+  );
 }

@@ -290,7 +290,7 @@ export function ServiceDetailSheet({ service, open, onOpenChange }: ServiceDetai
           <AlertDialogHeader>
             <AlertDialogTitle>{t('services.deleteConfirm')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('services.deleteConfirmMessage', { name: serviceName })}
+              {`${t('services.deleteConfirmMessage')} ${serviceName}?`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

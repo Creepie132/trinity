@@ -6,6 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useQuery } from '@tanstack/react-query'
+import { useServices } from '@/hooks/useServices'
 import {
   Dialog,
   DialogContent,
@@ -33,7 +34,8 @@ interface CreateVisitDialogProps {
   preselectedDate?: Date | null
 }
 
-const services = [
+// Default services (fallback if organization has no custom services)
+const defaultServices = [
   { value: 'haircut', labelKey: 'service.haircut' },
   { value: 'coloring', labelKey: 'service.coloring' },
   { value: 'smoothing', labelKey: 'service.smoothing' },
@@ -57,10 +59,13 @@ const durations = [
 ]
 
 export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, preselectedDate }: CreateVisitDialogProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { orgId } = useAuth()
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
+
+  // Load custom services from database
+  const { data: customServices } = useServices()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
@@ -72,6 +77,31 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
     price: '',
     notes: '',
   })
+
+  // Use custom services if available, otherwise fallback to default
+  const services = (customServices && customServices.length > 0) 
+    ? customServices 
+    : defaultServices.map(s => ({ 
+        id: s.value, 
+        name: t(s.labelKey), 
+        duration_minutes: 60, 
+        price: undefined 
+      }))
+
+  // Handle service selection (auto-fill price and duration if available)
+  const handleServiceChange = (serviceId: string) => {
+    const selectedService = customServices?.find((s) => s.id === serviceId)
+    if (selectedService) {
+      setFormData({
+        ...formData,
+        service: serviceId,
+        price: selectedService.price?.toString() || '',
+        duration: selectedService.duration_minutes,
+      })
+    } else {
+      setFormData({ ...formData, service: serviceId })
+    }
+  }
 
   // Fetch clients
   const { data: clients = [] } = useQuery({
@@ -197,19 +227,20 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
             </Label>
             <Select
               value={formData.service}
-              onValueChange={(value) => setFormData({ ...formData, service: value })}
+              onValueChange={handleServiceChange}
             >
               <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                 <SelectValue placeholder={t('visits.selectService')} />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                {services.map((service) => (
+                {services.map((service: any) => (
                   <SelectItem 
-                    key={service.value} 
-                    value={service.value}
+                    key={service.id} 
+                    value={service.id}
                     className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
                   >
-                    {t(service.labelKey)}
+                    {service.name}
+                    {service.price && ` - ₪${service.price}`}
                   </SelectItem>
                 ))}
               </SelectContent>

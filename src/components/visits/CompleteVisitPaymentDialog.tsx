@@ -30,6 +30,7 @@ import { Visit } from '@/types/visits'
 import { Product } from '@/types/inventory'
 import { BarcodeScanner } from '@/components/inventory/BarcodeScanner'
 import { CareInstructionsButtons } from '@/components/care-instructions/CareInstructionsButtons'
+import { useVisitServices } from '@/hooks/useVisitServices'
 
 interface CompleteVisitPaymentDialogProps {
   visit: Visit | null
@@ -53,11 +54,12 @@ const paymentMethods = [
 ]
 
 export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: CompleteVisitPaymentDialogProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { orgId } = useAuth()
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
   const { data: products } = useProducts()
+  const { data: visitServices } = useVisitServices(visit?.id || '')
 
   const [paymentMethod, setPaymentMethod] = useState<string>('cash')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -393,6 +395,24 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
                   {t(getServiceLabelKey(visit.service_type || visit.service || 'other'))}
                 </span>
               </div>
+
+              {/* Additional Services */}
+              {visitServices && visitServices.length > 0 && (
+                <div className="border-t border-gray-200 dark:border-gray-600 pt-3 mt-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{t('visits.additionalServices')}:</p>
+                  <div className="space-y-1">
+                    {visitServices.map((service) => {
+                      const serviceName = language === 'he' ? service.service_name : (service.service_name_ru || service.service_name);
+                      return (
+                        <div key={service.id} className="flex justify-between text-sm">
+                          <span className="text-gray-700 dark:text-gray-300">{serviceName}</span>
+                          <span className="text-gray-900 dark:text-gray-100 font-medium">₪{service.price.toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               
               {/* Desktop price */}
               <div className="hidden md:flex justify-between">

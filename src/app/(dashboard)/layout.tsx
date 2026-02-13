@@ -34,9 +34,10 @@ export default function DashboardLayout({
 
           {/* 2. Main Content — СКРОЛЛИТСЯ ОТДЕЛЬНО
             overflow-y-auto позволяет контенту скроллиться независимо от sidebar
+            min-h-screen prevents layout shift
           */}
           <main className="flex-1 overflow-y-auto h-screen pt-16 lg:pt-0">
-            <div className="container mx-auto p-4 lg:p-8 max-w-7xl">
+            <div className="container mx-auto p-4 lg:p-8 max-w-7xl min-h-screen">
               {children}
             </div>
           </main>

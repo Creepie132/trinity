@@ -8,6 +8,7 @@ export function useDashboardStats() {
 
   return useQuery({
     queryKey: ['dashboard-stats', orgId],
+    staleTime: 30000, // 30 seconds - reduce DB load
     queryFn: async () => {
       // CRITICAL: Require orgId to prevent showing data from all orgs
       if (!orgId) {

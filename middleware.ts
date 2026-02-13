@@ -65,11 +65,19 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  const { data: adminRow } = await supabase
-    .from('admin_users')
-    .select('email')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  // Optimize: Run admin and org checks in parallel (1 request instead of 2)
+  const [{ data: adminRow }, { data: orgRow }] = await Promise.all([
+    supabase
+      .from('admin_users')
+      .select('email')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('org_users')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+  ])
 
   const isAdmin = !!adminRow
 
@@ -82,18 +90,13 @@ export async function middleware(req: NextRequest) {
     return response
   }
 
-  const { data: orgRow } = await supabase
-    .from('org_users')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
   if (!orgRow && !isAdmin) {
     const url = req.nextUrl.clone()
     url.pathname = '/unauthorized'
     return NextResponse.redirect(url)
   }
 
+  // Check org status only if orgRow exists and user is not admin
   if (orgRow && !isAdmin && pathname !== '/blocked') {
     const { data: organization } = await supabase
       .from('organizations')

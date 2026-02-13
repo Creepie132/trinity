@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useServices } from '@/hooks/useServices'
 import {
   Dialog,
@@ -63,6 +63,7 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
   const { orgId } = useAuth()
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
+  const queryClient = useQueryClient()
 
   // Load custom services from database
   const { data: customServices } = useServices()
@@ -167,8 +168,11 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
       }
 
       toast.success(t('common.success'))
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['visits'] })
+      
       onOpenChange(false)
-      router.refresh()
       
       // Reset form
       setFormData({

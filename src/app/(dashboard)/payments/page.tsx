@@ -12,26 +12,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Copy, ExternalLink, Eye } from 'lucide-react'
+import { Plus, Copy, ExternalLink, Eye, Banknote } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
 import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
 import { CreateStripePaymentDialog } from '@/components/payments/CreateStripePaymentDialog'
 import { CreateSubscriptionDialog } from '@/components/payments/CreateSubscriptionDialog'
+import { CreateCashPaymentDialog } from '@/components/payments/CreateCashPaymentDialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function PaymentsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const features = useFeatures()
+  const { data: isAdmin } = useIsAdmin()
   const { t } = useLanguage()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [stripeDialogOpen, setStripeDialogOpen] = useState(false)
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false)
+  const [cashDialogOpen, setCashDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all')
   const [clientFilter, setClientFilter] = useState('all')
@@ -105,29 +109,40 @@ export default function PaymentsPage() {
             {t('common.total')}: {payments?.length || 0} {t('payments.title')}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col md:flex-row gap-3">
           {features.hasPayments && (
             <>
-              <Button onClick={() => setDialogOpen(true)}>
+              <Button onClick={() => setDialogOpen(true)} className="w-full md:w-auto">
                 <Plus className="w-4 h-4 ml-2" />
-                {t('payments.createLink')} (Tranzilla)
+                {t('payments.createLink')}
               </Button>
-              <Button 
-                onClick={() => setStripeDialogOpen(true)}
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                <Plus className="w-4 h-4 ml-2" />
-                {t('payments.createLink')} (Stripe)
-              </Button>
+              {isAdmin && (
+                <Button 
+                  onClick={() => setStripeDialogOpen(true)}
+                  className="bg-purple-600 hover:bg-purple-700 w-full md:w-auto"
+                >
+                  <Plus className="w-4 h-4 ml-2" />
+                  Stripe
+                </Button>
+              )}
             </>
           )}
           {features.hasSubscriptions && (
             <Button 
               onClick={() => setSubscriptionDialogOpen(true)}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-indigo-600 hover:bg-indigo-700 w-full md:w-auto"
             >
               <Plus className="w-4 h-4 ml-2" />
               {t('subscriptions.create')}
+            </Button>
+          )}
+          {features.hasPayments && (
+            <Button 
+              onClick={() => setCashDialogOpen(true)}
+              className="bg-green-600 hover:bg-green-700 w-full md:w-auto"
+            >
+              <Banknote className="w-4 h-4 ml-2" />
+              {t('payments.cashPayment')}
             </Button>
           )}
         </div>
@@ -319,6 +334,7 @@ export default function PaymentsPage() {
       <CreatePaymentLinkDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       <CreateStripePaymentDialog open={stripeDialogOpen} onOpenChange={setStripeDialogOpen} />
       <CreateSubscriptionDialog open={subscriptionDialogOpen} onOpenChange={setSubscriptionDialogOpen} />
+      <CreateCashPaymentDialog open={cashDialogOpen} onOpenChange={setCashDialogOpen} />
     </div>
   )
 }

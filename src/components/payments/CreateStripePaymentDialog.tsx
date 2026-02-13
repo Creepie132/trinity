@@ -1,5 +1,6 @@
-import { useQueryClient } from '@tantml:parameter>query'
 'use client'
+
+import { useQueryClient } from '@tanstack/react-query'
 
 import { useState, useMemo } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'

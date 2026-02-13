@@ -21,14 +21,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { useProducts } from '@/hooks/useProducts'
+import { useProducts, useLowStockProducts } from '@/hooks/useProducts'
 import { useFeatures } from '@/hooks/useFeatures'
-import { Package, Plus, Camera, Search } from 'lucide-react'
+import { Package, Plus, Camera, Search, ShoppingCart, RotateCcw } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { CreateProductDialog } from '@/components/inventory/CreateProductDialog'
 import { ProductDetailSheet } from '@/components/inventory/ProductDetailSheet'
 import { BarcodeScanner } from '@/components/inventory/BarcodeScanner'
+import { QuickSaleDialog } from '@/components/inventory/QuickSaleDialog'
+import { ReturnProductDialog } from '@/components/inventory/ReturnProductDialog'
 import type { Product } from '@/types/inventory'
 
 type StockFilter = 'all' | 'low' | 'out'
@@ -45,8 +47,11 @@ export default function InventoryPage() {
   const [scannerOpen, setScannerOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
+  const [quickSaleOpen, setQuickSaleOpen] = useState(false)
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false)
 
   const { data: products, isLoading } = useProducts(searchQuery)
+  const { data: lowStockProducts } = useLowStockProducts()
 
   // Feature check
   useEffect(() => {
@@ -119,7 +124,7 @@ export default function InventoryPage() {
             {t('inventory.title')}
           </h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">{t('inventory.newProduct')}</span>
@@ -133,8 +138,55 @@ export default function InventoryPage() {
             <Camera className="w-4 h-4" />
             <span className="hidden sm:inline">{t('inventory.scanBarcode')}</span>
           </Button>
+          <Button
+            onClick={() => setQuickSaleOpen(true)}
+            variant="outline"
+            className="gap-2"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('inventory.quickSale')}</span>
+          </Button>
+          <Button
+            onClick={() => setReturnDialogOpen(true)}
+            variant="outline"
+            className="gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('inventory.return')}</span>
+          </Button>
         </div>
       </div>
+
+      {/* Low Stock Alert */}
+      {lowStockProducts && lowStockProducts.length > 0 && (
+        <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                  <Package className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-yellow-900 dark:text-yellow-100">
+                    {t('inventory.lowStockAlert')}
+                  </h3>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                    {t('inventory.lowStockAlert.desc').replace('{count}', lowStockProducts.length.toString())}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setStockFilter('low')}
+                className="border-yellow-300 dark:border-yellow-700 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-100 dark:hover:bg-yellow-900/30"
+              >
+                {t('inventory.lowStockAlert.view')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card className="bg-white dark:bg-gray-800">
@@ -339,6 +391,16 @@ export default function InventoryPage() {
           setSelectedProduct(null)
         }}
         product={selectedProduct}
+      />
+
+      <QuickSaleDialog
+        open={quickSaleOpen}
+        onClose={() => setQuickSaleOpen(false)}
+      />
+
+      <ReturnProductDialog
+        open={returnDialogOpen}
+        onClose={() => setReturnDialogOpen(false)}
       />
     </div>
   )

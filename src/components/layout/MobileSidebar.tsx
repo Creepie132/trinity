@@ -8,6 +8,7 @@ import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useLowStockProducts } from '@/hooks/useProducts'
 import { useLanguage } from '@/contexts/LanguageContext'
 import {
   Sheet,
@@ -28,6 +29,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const { user, signOut } = useAuth()
   const { data: isAdmin } = useIsAdmin()
   const features = useFeatures()
+  const { data: lowStockProducts } = useLowStockProducts()
   const { t } = useLanguage()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
 
@@ -135,6 +137,11 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                     )} />
                   </div>
                   <span className="flex-1">{item.name}</span>
+                  {item.href === '/inventory' && lowStockProducts && lowStockProducts.length > 0 && (
+                    <span className="flex items-center justify-center px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full min-w-[1.5rem]">
+                      {lowStockProducts.length}
+                    </span>
+                  )}
                   {isActive && (
                     <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />
                   )}

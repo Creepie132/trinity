@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useLowStockProducts } from '@/hooks/useProducts'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
 import { UserProfileSheet } from '@/components/user/UserProfileSheet'
@@ -28,6 +29,7 @@ export function Sidebar() {
   const { data: isAdmin } = useIsAdmin()
   const { adminProfile } = useAdminProfile()
   const features = useFeatures()
+  const { data: lowStockProducts } = useLowStockProducts()
   const { t, language } = useLanguage()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [profileOpen, setProfileOpen] = useState(false)
@@ -157,6 +159,11 @@ export function Sidebar() {
                 )} />
               </div>
               <span className="flex-1">{item.name}</span>
+              {item.href === '/inventory' && lowStockProducts && lowStockProducts.length > 0 && (
+                <span className="flex items-center justify-center px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full min-w-[1.5rem]">
+                  {lowStockProducts.length}
+                </span>
+              )}
               {isActive && (
                 <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />
               )}

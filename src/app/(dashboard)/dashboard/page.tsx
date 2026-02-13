@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useDashboardStats } from '@/hooks/useStats'
-import { Users, Calendar, DollarSign, UserX, ArrowLeft } from 'lucide-react'
+import { useLowStockProducts } from '@/hooks/useProducts'
+import { Users, Calendar, DollarSign, UserX, ArrowLeft, Package } from 'lucide-react'
 import AdBanner from '@/components/ads/AdBanner'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useRouter } from 'next/navigation'
@@ -14,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function Home() {
   const { data: stats, isLoading } = useDashboardStats()
+  const { data: lowStockProducts } = useLowStockProducts()
   const features = useFeatures()
   const router = useRouter()
   const { layout } = useTheme()
@@ -149,6 +151,38 @@ export default function Home() {
                   </p>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Low Stock Alert - if hasInventory */}
+            {features.hasInventory && lowStockProducts && lowStockProducts.length > 0 && (
+              <Link href="/inventory">
+                <Card className="stat-card bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 min-h-[128px] hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardContent className={layout === 'compact' ? 'p-4' : 'p-6'}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={`text-yellow-700 dark:text-yellow-300 ${layout === 'compact' ? 'text-xs' : 'text-sm'}`}>
+                          {t('inventory.lowStockAlert')}
+                        </p>
+                        <p className={`font-bold text-yellow-600 dark:text-yellow-400 mt-1 stat-value ${
+                          layout === 'modern' ? 'text-4xl' : layout === 'compact' ? 'text-2xl' : 'text-3xl'
+                        }`}>
+                          {lowStockProducts.length}
+                        </p>
+                      </div>
+                      <div className={`bg-yellow-100 dark:bg-yellow-900/30 rounded-full stat-icon ${
+                        layout === 'modern' ? 'p-4 shadow-md' : layout === 'compact' ? 'p-2' : 'p-3'
+                      }`}>
+                        <Package className={`text-yellow-600 dark:text-yellow-400 ${
+                          layout === 'modern' ? 'w-7 h-7' : layout === 'compact' ? 'w-5 h-5' : 'w-6 h-6'
+                        }`} />
+                      </div>
+                    </div>
+                    <p className={`text-yellow-600 dark:text-yellow-400 mt-2 ${layout === 'compact' ? 'text-xs' : 'text-xs'}`}>
+                      {t('inventory.lowStockAlert.view')}
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
             )}
           </div>
 

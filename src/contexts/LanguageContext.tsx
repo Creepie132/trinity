@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 
@@ -1070,7 +1070,6 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Services Management
     'services.title': 'Услуги',
-    'services.description': 'Управление услугами организации',
     'services.newService': 'Добавить услугу',
     'services.editService': 'Редактировать услугу',
     'services.name': 'Название услуги',

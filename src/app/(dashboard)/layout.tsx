@@ -1,54 +1,22 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileHeader } from '@/components/layout/MobileHeader'
-import { LoadingScreen } from '@/components/ui/LoadingScreen'
-import { useAuth } from '@/hooks/useAuth'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 
 /**
  * DashboardLayout — основной макет.
  * Учитывая использование RTL (иврит), Sidebar должен идти ПЕРВЫМ в DOM,
  * чтобы отображаться в ПРАВОЙ части экрана на десктопе.
+ * 
+ * Middleware уже проверяет сессию — layout не дублирует эту логику.
+ * Каждая страница сама управляет своей загрузкой.
  */
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const router = useRouter()
-  const { user, orgId, isLoading, refetch } = useAuth()
-
-  useEffect(() => {
-    console.log('[DashboardLayout] ===== MOUNTED =====')
-    console.log('[DashboardLayout] User:', user?.id ? `Present (${user.id})` : 'Missing')
-    console.log('[DashboardLayout] Org ID:', orgId || 'Missing')
-    console.log('[DashboardLayout] Loading:', isLoading)
-
-    // ALWAYS force refetch on mount to ensure fresh auth data
-    // This is critical when navigating from /admin to /
-    console.log('[DashboardLayout] Forcing refetch on mount...')
-    refetch()
-  }, [])
-
-  useEffect(() => {
-    console.log('[DashboardLayout] Auth state changed:', {
-      hasUser: !!user,
-      userId: user?.id,
-      isLoading
-    })
-
-    // Don't redirect here - middleware already handles auth checks
-    // This was causing logout on navigation
-  }, [user, isLoading])
-
-  // Show loading screen while checking auth
-  if (isLoading) {
-    return <LoadingScreen />
-  }
-
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col">

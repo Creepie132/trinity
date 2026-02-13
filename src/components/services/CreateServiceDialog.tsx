@@ -32,7 +32,7 @@ const DEFAULT_COLORS = [
 
 export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogProps) {
   const { t } = useLanguage();
-  const { organization } = useOrganization();
+  const { data: organization } = useOrganization();
   const createService = useCreateService();
 
   const [formData, setFormData] = useState<CreateServiceDTO>({

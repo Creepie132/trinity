@@ -27,7 +27,7 @@ export default function Home() {
   }, [features.isActive, features.isLoading, router])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
           {t('dashboard.welcome')}
@@ -45,7 +45,7 @@ export default function Home() {
           {/* Stats Grid */}
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Always show: Total Clients */}
-            <Card className="stat-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <Card className="stat-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 min-h-[128px]">
               <CardContent className={layout === 'compact' ? 'p-4' : 'p-6'}>
                 <div className="flex items-center justify-between">
                   <div>
@@ -70,7 +70,7 @@ export default function Home() {
             </Card>
 
             {/* Always show: Visits This Month */}
-            <Card className="stat-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <Card className="stat-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 min-h-[128px]">
               <CardContent className={layout === 'compact' ? 'p-4' : 'p-6'}>
                 <div className="flex items-center justify-between">
                   <div>
@@ -96,7 +96,7 @@ export default function Home() {
 
             {/* Show only if hasPayments */}
             {features.hasPayments && (
-              <Card className="stat-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <Card className="stat-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 min-h-[128px]">
                 <CardContent className={layout === 'compact' ? 'p-4' : 'p-6'}>
                   <div className="flex items-center justify-between">
                     <div>
@@ -123,7 +123,7 @@ export default function Home() {
 
             {/* Show only if hasAnalytics */}
             {features.hasAnalytics && (
-              <Card className="stat-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <Card className="stat-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 min-h-[128px]">
                 <CardContent className={layout === 'compact' ? 'p-4' : 'p-6'}>
                   <div className="flex items-center justify-between">
                     <div>

@@ -404,6 +404,18 @@ const translations: Record<Language, Record<string, string>> = {
     'inventory.lowStockAlert.desc': 'יש {count} מוצרים עם מלאי נמוך',
     'inventory.lowStockAlert.view': 'צפה במוצרים',
     
+    // Services Management
+    'services.title': 'שירותים',
+    'services.newService': 'הוסף שירות',
+    'services.name': 'שם השירות',
+    'services.price': 'מחיר',
+    'services.duration': 'משך (דקות)',
+    'services.color': 'צבע',
+    'services.edit': 'ערוך',
+    'services.delete': 'מחק',
+    'services.emptyState': 'אין שירותים',
+    'services.emptyState.desc': 'התחל להוסיף שירותים למערכת',
+    
     // Settings - Service Colors
     'settings.serviceColors': 'צבעי שירותים',
     'settings.serviceColors.desc': 'התאם צבעים לכל סוג שירות',
@@ -1031,6 +1043,18 @@ const translations: Record<Language, Record<string, string>> = {
     'inventory.lowStockAlert': 'Низкие остатки',
     'inventory.lowStockAlert.desc': '{count} товаров с низкими остатками',
     'inventory.lowStockAlert.view': 'Посмотреть товары',
+    
+    // Services Management
+    'services.title': 'Услуги',
+    'services.newService': 'Добавить услугу',
+    'services.name': 'Название услуги',
+    'services.price': 'Цена',
+    'services.duration': 'Длительность (мин)',
+    'services.color': 'Цвет',
+    'services.edit': 'Редактировать',
+    'services.delete': 'Удалить',
+    'services.emptyState': 'Нет услуг',
+    'services.emptyState.desc': 'Начните добавлять услуги в систему',
     
     // Settings - Service Colors
     'settings.serviceColors': 'Цвета услуг',

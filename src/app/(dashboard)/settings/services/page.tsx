@@ -14,7 +14,7 @@ import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export default function ServicesSettingsPage() {
   const { t, language } = useLanguage();
-  const { organization } = useOrganization();
+  const { data: organization } = useOrganization();
   const { data: services, isLoading } = useServices(organization?.id || '');
 
   const [searchQuery, setSearchQuery] = useState('');

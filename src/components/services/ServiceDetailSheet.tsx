@@ -131,7 +131,7 @@ export function ServiceDetailSheet({ service, open, onOpenChange }: ServiceDetai
                       <DollarSign className="w-4 h-4" />
                       {t('services.price')}
                     </div>
-                    <div className="text-2xl font-bold">₪{service.price.toFixed(2)}</div>
+                    <<div className="text-2xl font-bold">₪{(service.price || 0).toFixed(2)}</div>
                   </div>
 
                   <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">

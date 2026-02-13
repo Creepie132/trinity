@@ -44,7 +44,7 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.name_ru.trim()) {
+    if (!formData.name.trim() || !(formData.name_ru || '').trim()) {
       toast.error(t('services.errors.nameRequired'));
       return;
     }

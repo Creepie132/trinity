@@ -413,8 +413,15 @@ export async function POST(request: Request) {
 
     if (productsError || !createdProducts) {
       console.error('[Seed] Products error:', productsError)
+      console.error('[Seed] Products error details:', JSON.stringify(productsError, null, 2))
+      console.error('[Seed] Sample product record:', JSON.stringify(productRecords[0], null, 2))
       return NextResponse.json(
-        { error: 'Failed to create products', details: productsError?.message },
+        { 
+          error: 'Failed to create products', 
+          details: productsError?.message,
+          code: productsError?.code,
+          hint: productsError?.hint 
+        },
         { status: 500 }
       )
     }

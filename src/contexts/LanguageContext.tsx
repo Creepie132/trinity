@@ -275,6 +275,8 @@ const translations: Record<Language, Record<string, string>> = {
     'visits.selectService': 'בחר שירות',
     'visits.date': 'תאריך',
     'visits.time': 'שעה',
+    'visits.duration': 'משך זמן',
+    'visits.price': 'מחיר',
     'visits.notes': 'הערות',
     'visits.status': 'סטטוס',
     'visits.status.scheduled': 'מתוכנן',
@@ -993,6 +995,8 @@ const translations: Record<Language, Record<string, string>> = {
     'visits.selectService': 'Выберите услугу',
     'visits.date': 'Дата',
     'visits.time': 'Время',
+    'visits.duration': 'Продолжительность',
+    'visits.price': 'Цена',
     'visits.notes': 'Заметки',
     'visits.status': 'Статус',
     'visits.status.scheduled': 'Запланирован',
@@ -1496,5 +1500,3 @@ export function useLanguage() {
   }
   return context
 }
-
-

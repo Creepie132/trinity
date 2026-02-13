@@ -406,7 +406,6 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Services Management
     'services.title': 'שירותים',
-    'services.description': 'ניהול שירותי הארגון',
     'services.newService': 'הוסף שירות',
     'services.editService': 'ערוך שירות',
     'services.name': 'שם השירות',
@@ -1082,7 +1081,6 @@ const translations: Record<Language, Record<string, string>> = {
     'services.duration': 'Длительность',
     'services.color': 'Цвет',
     'services.description': 'Описание',
-    'services.descriptionRu': 'Описание (русский)',
     'services.descriptionPlaceholder': 'Краткое описание услуги...',
     'services.descriptionRuPlaceholder': 'Краткое описание услуги...',
     'services.edit': 'Редактировать',

@@ -30,6 +30,8 @@ export function CreateCareInstructionDialog({ open, onOpenChange }: CreateCareIn
   const createInstruction = useCreateCareInstruction();
   const { data: services } = useServices();
 
+  const [inputMode, setInputMode] = useState<'manual' | 'upload'>('manual');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<CreateCareInstructionDTO>({
     title: '',
     title_ru: '',
@@ -102,8 +104,69 @@ export function CreateCareInstructionDialog({ open, onOpenChange }: CreateCareIn
             </Select>
           </div>
 
-          {/* Title (Hebrew) */}
-          <div className="space-y-2">
+          {/* Input Mode Tabs */}
+          <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={() => setInputMode('manual')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                inputMode === 'manual'
+                  ? 'border-b-2 border-theme-primary text-theme-primary'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              {t('careInstructions.writeManually')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('upload')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                inputMode === 'upload'
+                  ? 'border-b-2 border-theme-primary text-theme-primary'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              {t('careInstructions.uploadPDF')}
+            </button>
+          </div>
+
+          {/* Upload PDF Mode */}
+          {inputMode === 'upload' && (
+            <div className="space-y-2 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+              <Label htmlFor="pdf-file">{t('careInstructions.selectPDFFile')}</Label>
+              <Input
+                id="pdf-file"
+                type="file"
+                accept=".pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setSelectedFile(file);
+                    // Auto-fill title from filename
+                    if (!formData.title) {
+                      const fileName = file.name.replace('.pdf', '');
+                      setFormData(prev => ({ ...prev, title: fileName, title_ru: fileName }));
+                    }
+                  }
+                }}
+                className="cursor-pointer"
+              />
+              {selectedFile && (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {t('common.selected')}: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
+                </p>
+              )}
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('careInstructions.pdfUploadNote')}
+              </p>
+            </div>
+          )}
+
+          {/* Manual Input Mode */}
+          {inputMode === 'manual' && (
+            <>
+              {/* Title (Hebrew) */}
+              <div className="space-y-2">
             <Label htmlFor="title">{t('careInstructions.instructionTitle')} (עברית)</Label>
             <Input
               id="title"
@@ -149,6 +212,8 @@ export function CreateCareInstructionDialog({ open, onOpenChange }: CreateCareIn
               rows={6}
             />
           </div>
+            </>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-4">

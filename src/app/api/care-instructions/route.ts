@@ -126,6 +126,8 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[API] POST /api/care-instructions error:', error)
+      console.error('[API] POST /api/care-instructions body:', body)
+      console.error('[API] POST /api/care-instructions org_id:', orgUser.org_id)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 

@@ -3,6 +3,7 @@
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileHeader } from '@/components/layout/MobileHeader'
 import { ThemeProvider } from '@/contexts/ThemeContext'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 /**
  * DashboardLayout — основной макет.
@@ -37,7 +38,9 @@ export default function DashboardLayout({
           */}
           <main className="flex-1 overflow-y-auto h-screen pt-16 lg:pt-0">
             <div className="container mx-auto p-4 lg:p-8 max-w-7xl min-h-screen">
-              {children}
+              <ErrorBoundary>
+                {children}
+              </ErrorBoundary>
             </div>
           </main>
 

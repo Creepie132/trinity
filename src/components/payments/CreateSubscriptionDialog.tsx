@@ -33,7 +33,8 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
   const [loading, setLoading] = useState(false)
 
   const { t, language } = useLanguage()
-  const { data: clients } = useClients()
+  const { data: clientsData } = useClients()
+  const clients = clientsData?.data || []
   const { orgId } = useAuth()
 
   // Filter clients based on search

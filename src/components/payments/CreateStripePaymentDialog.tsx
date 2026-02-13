@@ -32,7 +32,8 @@ export function CreateStripePaymentDialog({ open, onOpenChange }: CreateStripePa
   const [loading, setLoading] = useState(false)
 
   const { t } = useLanguage()
-  const { data: clients } = useClients()
+  const { data: clientsData } = useClients()
+  const clients = clientsData?.data || []
   const { orgId } = useAuth()
 
   // Filter clients based on search

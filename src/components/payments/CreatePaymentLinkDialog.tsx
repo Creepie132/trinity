@@ -32,7 +32,8 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
   const [paymentLink, setPaymentLink] = useState<string | null>(null)
 
   const { t } = useLanguage()
-  const { data: clients } = useClients()
+  const { data: clientsData } = useClients()
+  const clients = clientsData?.data || []
   const createPayment = useCreatePaymentLink()
 
   // Filter clients based on search

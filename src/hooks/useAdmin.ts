@@ -273,7 +273,7 @@ export function useToggleOrgFeature() {
       enabled 
     }: { 
       orgId: string
-      feature: 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits'
+      feature: 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits' | 'inventory'
       enabled: boolean 
     }) => {
       // Get current features

@@ -9,6 +9,7 @@ export interface Features {
   hasAnalytics: boolean
   hasSubscriptions: boolean
   hasVisits: boolean
+  hasInventory: boolean
   isActive: boolean
   category: string
   isLoading: boolean
@@ -25,6 +26,7 @@ export function useFeatures(): Features {
       hasAnalytics: false,
       hasSubscriptions: false,
       hasVisits: false,
+      hasInventory: false,
       isActive: false,
       category: 'other',
       isLoading: true,
@@ -39,6 +41,7 @@ export function useFeatures(): Features {
       hasAnalytics: true,
       hasSubscriptions: true,
       hasVisits: true,
+      hasInventory: true,
       isActive: true,
       category: organization?.category ?? 'other',
       isLoading: false,
@@ -52,6 +55,7 @@ export function useFeatures(): Features {
       hasAnalytics: false,
       hasSubscriptions: false,
       hasVisits: false,
+      hasInventory: false,
       isActive: false,
       category: 'other',
       isLoading: false,
@@ -64,6 +68,7 @@ export function useFeatures(): Features {
     hasAnalytics: organization.features?.analytics ?? true,
     hasSubscriptions: organization.features?.subscriptions ?? false,
     hasVisits: organization.features?.visits ?? true,
+    hasInventory: organization.features?.inventory ?? false,
     isActive: organization.is_active ?? false,
     category: organization.category ?? 'other',
     isLoading: false,

@@ -194,7 +194,7 @@ export default function OrganizationsPage() {
     }
   }
 
-  const handleToggleFeature = (orgId: string, feature: 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits', enabled: boolean) => {
+  const handleToggleFeature = (orgId: string, feature: 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits' | 'inventory', enabled: boolean) => {
     toggleFeature.mutate({ orgId, feature, enabled })
   }
 
@@ -406,6 +406,7 @@ export default function OrganizationsPage() {
                   <TableHead className="text-right">Analytics</TableHead>
                   <TableHead className="text-right">מנויים</TableHead>
                   <TableHead className="text-right">ביקורים</TableHead>
+                  <TableHead className="text-right">מלאי</TableHead>
                   <TableHead className="text-right">{t('admin.orgs.created')}</TableHead>
                   <TableHead className="text-right">{t('clients.actions')}</TableHead>
                 </TableRow>
@@ -468,6 +469,12 @@ export default function OrganizationsPage() {
                       <Switch
                         checked={org.features?.visits !== false}
                         onCheckedChange={(checked) => handleToggleFeature(org.id, 'visits', checked)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={org.features?.inventory || false}
+                        onCheckedChange={(checked) => handleToggleFeature(org.id, 'inventory', checked)}
                       />
                     </TableCell>
                     <TableCell>
@@ -745,6 +752,13 @@ export default function OrganizationsPage() {
                     <Switch
                       checked={selectedOrg.features?.visits !== false}
                       onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'visits', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>מלאי (Inventory)</Label>
+                    <Switch
+                      checked={selectedOrg.features?.inventory || false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'inventory', checked)}
                     />
                   </div>
                 </CardContent>

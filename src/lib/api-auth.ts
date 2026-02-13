@@ -131,7 +131,7 @@ export async function checkAuth(): Promise<
  */
 export function checkFeature(
   organization: any,
-  featureName: 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits'
+  featureName: 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits' | 'inventory'
 ): { hasAccess: boolean; response?: NextResponse } {
   // Админы имеют доступ ко всему
   if (!organization) {
@@ -158,7 +158,7 @@ export function checkFeature(
  * Комбинированная проверка: авторизация + фича
  */
 export async function checkAuthAndFeature(
-  featureName: 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits'
+  featureName: 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits' | 'inventory'
 ): Promise<
   | { success: true; data: AuthCheckResult }
   | { success: false; response: NextResponse }

@@ -6,7 +6,7 @@ import { useServices } from '@/hooks/useServices';
 import { useVisitServices, useAddVisitService, useRemoveVisitService, useUpdateVisitStatus } from '@/hooks/useVisitServices';
 import { Visit } from '@/types/visits';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, Clock, DollarSign, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Clock, DollarSign, CheckCircle, XCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -109,84 +109,109 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
       toast.success(t('visits.cancelVisit') + ' ✓');
       setShowCancelDialog(false);
     } catch (error) {
-      console.error('Error canceling visit:', error);
+      console.error('Error cancelling visit:', error);
       toast.error(t('errors.somethingWentWrong'));
     }
   };
 
+  const totalPrice = (visit.price || 0) + (visitServices?.reduce((sum, s) => sum + (s.price || 0), 0) || 0);
+  const totalDuration = (visit.duration_minutes || 0) + (visitServices?.reduce((sum, s) => sum + (s.duration_minutes || 0), 0) || 0);
+
   const clientName = `${visit.clients?.first_name} ${visit.clients?.last_name}`;
-  const totalPrice = visit.price || 0;
-  const totalDuration = visit.duration_minutes || 0;
 
   return (
     <>
-      <Card className="border-2 border-green-500 dark:border-green-600 bg-green-50 dark:bg-green-900/20">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-green-600 dark:text-green-400 animate-pulse" />
-              <span>{t('visits.activeVisit')}</span>
+      {/* Compact Active Visit Card */}
+      <div className="bg-amber-50 dark:bg-amber-900/20 border-r-4 border-amber-500 p-4 space-y-3">
+        {/* Desktop: Single row layout */}
+        <div className="hidden md:flex md:items-center md:justify-between md:gap-4">
+          {/* Left: Client, Service, Timer */}
+          <div className="flex items-center gap-4 flex-1">
+            <div className="font-semibold text-gray-900 dark:text-gray-100">
+              {clientName}
             </div>
-            <div className="text-lg font-mono text-green-700 dark:text-green-300">
-              {elapsedTime}
+            <div className="text-gray-700 dark:text-gray-300">
+              {visit.service_type}
             </div>
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {/* Client Info */}
-          <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{t('visits.client')}</p>
-            <p className="text-xl font-bold">{clientName}</p>
-          </div>
-
-          {/* Main Service */}
-          <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{t('visits.mainService')}</p>
-            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-              <p className="font-semibold">{visit.service_type}</p>
-            </div>
-          </div>
-
-          {/* Additional Services */}
-          {visitServices && visitServices.length > 0 && (
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{t('visits.additionalServices')}</p>
-              <div className="space-y-2">
+            
+            {/* Additional Services as chips */}
+            {visitServices && visitServices.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap">
                 {visitServices.map((service) => {
                   const serviceName = language === 'he' ? service.service_name : (service.service_name_ru || service.service_name);
-                  
                   return (
-                    <div
+                    <Badge
                       key={service.id}
-                      className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-between"
+                      variant="secondary"
+                      className="text-xs h-5 px-2 bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100"
                     >
-                      <div>
-                        <p className="font-semibold">{serviceName}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          ₪{service.price.toFixed(2)} • {service.duration_minutes} {t('common.minutes')}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      {serviceName}
+                      <button
                         onClick={() => handleRemoveService(service.id)}
-                        disabled={removeService.isPending}
+                        className="ml-1 hover:text-red-600"
                       >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
-                    </div>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
                   );
                 })}
               </div>
+            )}
+            
+            <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-mono font-semibold">
+              <Clock className="w-4 h-4" />
+              {elapsedTime}
             </div>
-          )}
+          </div>
 
-          {/* Add Service */}
-          <div className="flex gap-2">
+          {/* Right: Total Price */}
+          <div className="flex items-center gap-1 text-xl font-bold text-green-700 dark:text-green-400">
+            <DollarSign className="w-5 h-5" />
+            ₪{totalPrice.toFixed(2)}
+          </div>
+        </div>
+
+        {/* Mobile: Two rows layout */}
+        <div className="md:hidden space-y-2">
+          {/* Row 1: Info */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-semibold text-gray-900 dark:text-gray-100">{clientName}</div>
+              <div className="text-sm text-gray-700 dark:text-gray-300">{visit.service_type}</div>
+              {visitServices && visitServices.length > 0 && (
+                <div className="flex gap-1 mt-1">
+                  {visitServices.map((service) => {
+                    const serviceName = language === 'he' ? service.service_name : (service.service_name_ru || service.service_name);
+                    return (
+                      <Badge
+                        key={service.id}
+                        variant="secondary"
+                        className="text-xs h-5 px-1"
+                      >
+                        {serviceName}
+                        <button onClick={() => handleRemoveService(service.id)} className="ml-1">
+                          <X className="w-2 h-2" />
+                        </button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-mono text-sm">
+              <Clock className="w-3 h-3" />
+              {elapsedTime}
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons Row */}
+        <div className="flex items-center gap-2">
+          {/* Add Service Dropdown */}
+          <div className="flex gap-1 flex-1 md:flex-initial">
             <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder={t('visits.selectServiceToAdd')} />
+              <SelectTrigger className="h-8 text-sm bg-white dark:bg-gray-700 border-amber-300 dark:border-amber-700">
+                <SelectValue placeholder={`+ ${t('visits.addService')}`} />
               </SelectTrigger>
               <SelectContent>
                 {services?.map((service) => {
@@ -202,52 +227,40 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
             <Button
               onClick={handleAddService}
               disabled={addService.isPending || !selectedServiceId}
-              className="bg-blue-600 hover:bg-blue-700"
+              size="sm"
+              className="h-8 px-2 bg-blue-600 hover:bg-blue-700"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              {t('visits.addService')}
+              <Plus className="w-4 h-4" />
             </Button>
           </div>
 
-          {/* Totals */}
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
-              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm mb-1">
-                <DollarSign className="w-4 h-4" />
-                {t('visits.totalPrice')}
-              </div>
-              <div className="text-2xl font-bold">₪{totalPrice.toFixed(2)}</div>
-            </div>
+          {/* Finish Button */}
+          <Button
+            onClick={onFinish}
+            size="sm"
+            className="h-8 text-sm bg-green-600 hover:bg-green-700 px-3"
+          >
+            <CheckCircle className="w-4 h-4 md:mr-1" />
+            <span className="hidden md:inline">{t('visits.finishVisit')}</span>
+          </Button>
 
-            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
-              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm mb-1">
-                <Clock className="w-4 h-4" />
-                {t('visits.totalDuration')}
-              </div>
-              <div className="text-2xl font-bold">{totalDuration} {t('common.minutes')}</div>
-            </div>
-          </div>
+          {/* Cancel Button */}
+          <Button
+            onClick={() => setShowCancelDialog(true)}
+            size="sm"
+            variant="destructive"
+            className="h-8 text-sm px-3"
+          >
+            <XCircle className="w-4 h-4 md:mr-1" />
+            <span className="hidden md:inline">{t('visits.cancelVisit')}</span>
+          </Button>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-4">
-            <Button
-              onClick={onFinish}
-              className="flex-1 bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              {t('visits.finishVisit')}
-            </Button>
-            <Button
-              onClick={() => setShowCancelDialog(true)}
-              variant="destructive"
-              className="flex-1"
-            >
-              <XCircle className="w-4 h-4 mr-2" />
-              {t('visits.cancelVisit')}
-            </Button>
+          {/* Mobile: Total Price */}
+          <div className="md:hidden flex items-center gap-1 font-bold text-green-700 dark:text-green-400 ml-auto">
+            ₪{totalPrice.toFixed(2)}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>

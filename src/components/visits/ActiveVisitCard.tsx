@@ -7,6 +7,8 @@ import { useVisitServices, useAddVisitService, useRemoveVisitService, useUpdateV
 import { Visit } from '@/types/visits';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -14,6 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Plus, Clock, DollarSign, CheckCircle, XCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -43,6 +52,12 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
   const [elapsedTime, setElapsedTime] = useState<string>('00:00:00');
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string>('');
+  const [showCustomServiceForm, setShowCustomServiceForm] = useState(false);
+  const [customService, setCustomService] = useState({
+    name: '',
+    price: '',
+    duration: '',
+  });
 
   // Timer effect
   useEffect(() => {
@@ -93,6 +108,31 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
     }
   };
 
+  const handleAddCustomService = async () => {
+    if (!customService.name || !customService.price || !customService.duration) {
+      toast.error(t('visits.fillAllFields'));
+      return;
+    }
+
+    try {
+      await addService.mutateAsync({
+        visit_id: visit.id,
+        service_id: null, // null for custom services
+        service_name: customService.name,
+        service_name_ru: customService.name, // Same for custom
+        price: parseFloat(customService.price),
+        duration_minutes: parseInt(customService.duration),
+      });
+
+      toast.success(t('visits.addService') + ' ✓');
+      setShowCustomServiceForm(false);
+      setCustomService({ name: '', price: '', duration: '' });
+    } catch (error) {
+      console.error('Error adding custom service:', error);
+      toast.error(t('errors.somethingWentWrong'));
+    }
+  };
+
   const handleRemoveService = async (serviceId: string) => {
     try {
       await removeService.mutateAsync(serviceId);
@@ -118,6 +158,14 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
   const totalDuration = (visit.duration_minutes || 0) + (visitServices?.reduce((sum, s) => sum + (s.duration_minutes || 0), 0) || 0);
 
   const clientName = `${visit.clients?.first_name} ${visit.clients?.last_name}`;
+  
+  // Get service name from services table or fallback to service_type
+  const getServiceName = () => {
+    if (visit.services) {
+      return language === 'he' ? visit.services.name : (visit.services.name_ru || visit.services.name);
+    }
+    return visit.service_type || '';
+  };
 
   return (
     <>
@@ -131,7 +179,7 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
               {clientName}
             </div>
             <div className="text-gray-700 dark:text-gray-300">
-              {visit.service_type}
+              {getServiceName()}
             </div>
             
             {/* Additional Services as chips */}
@@ -177,7 +225,7 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
           <div className="flex items-center justify-between">
             <div>
               <div className="font-semibold text-gray-900 dark:text-gray-100">{clientName}</div>
-              <div className="text-sm text-gray-700 dark:text-gray-300">{visit.service_type}</div>
+              <div className="text-sm text-gray-700 dark:text-gray-300">{getServiceName()}</div>
               {visitServices && visitServices.length > 0 && (
                 <div className="flex gap-1 mt-1">
                   {visitServices.map((service) => {
@@ -207,21 +255,43 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
 
         {/* Action Buttons Row */}
         <div className="flex items-center gap-2">
-          {/* Add Service Dropdown */}
+          {/* Add Service Dropdown with Two Sections */}
           <div className="flex gap-1 flex-1 md:flex-initial">
-            <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+            <Select 
+              value={selectedServiceId} 
+              onValueChange={(value) => {
+                if (value === 'custom') {
+                  setShowCustomServiceForm(true);
+                  setSelectedServiceId('');
+                } else {
+                  setSelectedServiceId(value);
+                }
+              }}
+            >
               <SelectTrigger className="h-8 text-sm bg-white dark:bg-gray-700 border-amber-300 dark:border-amber-700">
                 <SelectValue placeholder={`+ ${t('visits.addService')}`} />
               </SelectTrigger>
               <SelectContent>
+                {/* Section 1: Regular Services */}
+                <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                  {t('visits.regularService')}
+                </div>
                 {services?.map((service) => {
                   const serviceName = language === 'he' ? service.name : (service.name_ru || service.name);
                   return (
                     <SelectItem key={service.id} value={service.id}>
-                      {serviceName} - ₪{service.price?.toFixed(2) || '0.00'}
+                      {serviceName} - ₪{service.price?.toFixed(2) || '0.00'} • {service.duration_minutes} {t('common.minutes')}
                     </SelectItem>
                   );
                 })}
+                
+                {/* Section 2: Custom Service */}
+                <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 mt-2 border-t border-gray-200 dark:border-gray-700">
+                  {t('visits.oneTimeService')}
+                </div>
+                <SelectItem value="custom">
+                  <span className="font-medium">✏️ {t('visits.customService')}</span>
+                </SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -261,6 +331,56 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
           </div>
         </div>
       </div>
+
+      {/* Custom Service Form Dialog */}
+      <Dialog open={showCustomServiceForm} onOpenChange={setShowCustomServiceForm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('visits.addCustomService')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="service-name">{t('visits.serviceName')}</Label>
+              <Input
+                id="service-name"
+                value={customService.name}
+                onChange={(e) => setCustomService({ ...customService, name: e.target.value })}
+                placeholder={t('visits.enterServiceName')}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="service-price">{t('visits.price')}</Label>
+                <Input
+                  id="service-price"
+                  type="number"
+                  value={customService.price}
+                  onChange={(e) => setCustomService({ ...customService, price: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="service-duration">{t('visits.duration')} ({t('common.minutes')})</Label>
+                <Input
+                  id="service-duration"
+                  type="number"
+                  value={customService.duration}
+                  onChange={(e) => setCustomService({ ...customService, duration: e.target.value })}
+                  placeholder="60"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCustomServiceForm(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleAddCustomService} disabled={addService.isPending}>
+              {t('visits.addService')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>

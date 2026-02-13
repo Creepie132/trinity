@@ -88,6 +88,10 @@ export default function VisitsPage() {
             last_name,
             phone,
             email
+          ),
+          services (
+            name,
+            name_ru
           )
         `)
         .eq('org_id', orgId)

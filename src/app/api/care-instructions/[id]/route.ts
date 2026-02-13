@@ -8,9 +8,11 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,7 +45,6 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { id } = params
 
     const { data: instruction, error } = await supabase
       .from('care_instructions')
@@ -71,9 +72,11 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -104,8 +107,6 @@ export async function DELETE(
     if (orgError || !orgUser) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
-
-    const { id } = params
 
     const { data: instruction, error } = await supabase
       .from('care_instructions')

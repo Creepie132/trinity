@@ -112,7 +112,9 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
               <div className="text-sm text-gray-600">ביקורים</div>
             </div>
             <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">₪{client.total_paid}</div>
+              <div className="text-2xl font-bold text-green-600">
+                ₪{Number(client.total_paid || 0).toFixed(2)}
+              </div>
               <div className="text-sm text-gray-600">סך תשלומים</div>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg">

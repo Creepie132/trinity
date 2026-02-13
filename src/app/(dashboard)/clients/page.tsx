@@ -105,7 +105,7 @@ export default function ClientsPage() {
                     <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{client.total_visits}</Badge>
                   </TableCell>
                   <TableCell className="font-semibold text-green-600 dark:text-green-400">
-                    ₪{client.total_paid}
+                    ₪{Number(client.total_paid || 0).toFixed(2)}
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-2">

@@ -3,6 +3,7 @@
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileHeader } from '@/components/layout/MobileHeader'
 import { ThemeProvider } from '@/contexts/ThemeContext'
+import { AuthProvider } from '@/contexts/AuthContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 /**
@@ -19,33 +20,35 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <ThemeProvider>
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col">
-        {/* Мобильный header */}
-        <MobileHeader />
+    <AuthProvider>
+      <ThemeProvider>
+        <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col">
+          {/* Мобильный header */}
+          <MobileHeader />
 
-        <div className="flex-1 lg:flex lg:h-screen overflow-hidden">
-          
-          {/* 1. Sidebar — ФИКСИРОВАННЫЙ ПРИ СКРОЛЛЕ
-            sticky top-0 h-screen делает его зафиксированным
-          */}
-          <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
-            <Sidebar />
-          </aside>
+          <div className="flex-1 lg:flex lg:h-screen overflow-hidden">
+            
+            {/* 1. Sidebar — ФИКСИРОВАННЫЙ ПРИ СКРОЛЛЕ
+              sticky top-0 h-screen делает его зафиксированным
+            */}
+            <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
+              <Sidebar />
+            </aside>
 
-          {/* 2. Main Content — СКРОЛЛИТСЯ ОТДЕЛЬНО
-            overflow-y-auto позволяет контенту скроллиться независимо от sidebar
-          */}
-          <main className="flex-1 overflow-y-auto h-screen pt-16 lg:pt-0">
-            <div className="container mx-auto p-4 lg:p-8 max-w-7xl min-h-screen">
-              <ErrorBoundary>
-                {children}
-              </ErrorBoundary>
-            </div>
-          </main>
+            {/* 2. Main Content — СКРОЛЛИТСЯ ОТДЕЛЬНО
+              overflow-y-auto позволяет контенту скроллиться независимо от sidebar
+            */}
+            <main className="flex-1 overflow-y-auto h-screen pt-16 lg:pt-0">
+              <div className="container mx-auto p-4 lg:p-8 max-w-7xl min-h-screen">
+                <ErrorBoundary>
+                  {children}
+                </ErrorBoundary>
+              </div>
+            </main>
 
+          </div>
         </div>
-      </div>
-    </ThemeProvider>
+      </ThemeProvider>
+    </AuthProvider>
   )
 }

@@ -3,7 +3,8 @@ export interface Visit {
   id: string
   org_id?: string
   client_id: string
-  service_type: string
+  service_type: string // Legacy field - will be deprecated in favor of service_id
+  service_id?: string // New field - FK to services table
   service?: string // Legacy field, kept for compatibility
   scheduled_at: string
   duration_minutes?: number
@@ -17,5 +18,15 @@ export interface Visit {
     last_name: string
     phone?: string
     email?: string
+  }
+  services?: {
+    id: string
+    name: string
+    name_ru: string
+    price: number
+    duration_minutes: number
+    color: string
+    description?: string | null
+    description_ru?: string | null
   }
 }

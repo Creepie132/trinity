@@ -45,11 +45,11 @@ export function useUpdateService() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateServiceDTO }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: UpdateServiceDTO }) => {
       const response = await fetch(`/api/services/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(updates),
       })
 
       if (!response.ok) {

@@ -60,11 +60,12 @@ export async function POST(request: NextRequest) {
     console.log('[API /api/visits POST] Organization ID:', org_id)
 
     // Extract and validate fields
-    const { clientId, service, date, time, duration, price, notes } = body
+    const { clientId, service, serviceId, date, time, duration, price, notes } = body
     
     console.log('[API /api/visits POST] Extracted fields:', {
       clientId,
       service,
+      serviceId,
       date,
       time,
       duration,
@@ -78,8 +79,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'חסר מזהה לקוח' }, { status: 400 })
     }
     
-    if (!service) {
-      console.error('[API /api/visits POST] Missing service')
+    // Support both service (legacy) and serviceId (new)
+    if (!service && !serviceId) {
+      console.error('[API /api/visits POST] Missing service or serviceId')
       return NextResponse.json({ error: 'חסר סוג שירות' }, { status: 400 })
     }
     
@@ -98,15 +100,22 @@ export async function POST(request: NextRequest) {
     console.log('[API /api/visits POST] Scheduled at (ISO):', scheduled_at)
 
     // Prepare insert data
-    const insertData = {
+    const insertData: any = {
       client_id: clientId,
       org_id: org_id,
-      service_type: service,
       scheduled_at: scheduled_at,
       duration_minutes: parseInt(duration) || 60,
       price: parseFloat(price),
       notes: notes || null,
       status: 'scheduled',
+    }
+
+    // Add service field (either service_id or service_type for backward compatibility)
+    if (serviceId) {
+      insertData.service_id = serviceId
+      insertData.service_type = service || 'custom' // Keep service_type for compatibility
+    } else {
+      insertData.service_type = service
     }
 
     console.log('[API /api/visits POST] Insert data:', JSON.stringify(insertData, null, 2))

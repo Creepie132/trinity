@@ -70,7 +70,8 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     clientId: preselectedClientId || '',
-    service: '',
+    serviceId: '',
+    service: '', // Legacy field for backward compatibility
     date: preselectedDate ? preselectedDate.toISOString().split('T')[0] : '',
     time: '',
     duration: 60,
@@ -84,22 +85,28 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
     : defaultServices.map(s => ({ 
         id: s.value, 
         name: t(s.labelKey), 
+        name_ru: t(s.labelKey),
         duration_minutes: 60, 
         price: undefined 
       }))
 
   // Handle service selection (auto-fill price and duration if available)
   const handleServiceChange = (serviceId: string) => {
-    const selectedService = customServices?.find((s) => s.id === serviceId)
+    const selectedService = services.find((s: any) => s.id === serviceId)
     if (selectedService) {
       setFormData({
         ...formData,
-        service: serviceId,
+        serviceId: serviceId,
+        service: selectedService.id, // Legacy compatibility
         price: selectedService.price?.toString() || '',
-        duration: selectedService.duration_minutes,
+        duration: selectedService.duration_minutes || 60,
       })
     } else {
-      setFormData({ ...formData, service: serviceId })
+      setFormData({ 
+        ...formData, 
+        serviceId: serviceId,
+        service: serviceId 
+      })
     }
   }
 
@@ -127,7 +134,7 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
       return
     }
 
-    if (!formData.clientId || !formData.service || !formData.date || !formData.time || !formData.price) {
+    if (!formData.clientId || !formData.serviceId || !formData.date || !formData.time || !formData.price) {
       toast.error(t('common.required'))
       return
     }
@@ -143,7 +150,8 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
         },
         body: JSON.stringify({
           clientId: formData.clientId,
-          service: formData.service,
+          serviceId: formData.serviceId, // New field
+          service: formData.service, // Legacy field for compatibility
           date: formData.date,
           time: formData.time,
           duration: formData.duration,
@@ -165,6 +173,7 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
       // Reset form
       setFormData({
         clientId: '',
+        serviceId: '',
         service: '',
         date: '',
         time: '',
@@ -226,23 +235,26 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
               {t('visits.service')} *
             </Label>
             <Select
-              value={formData.service}
+              value={formData.serviceId}
               onValueChange={handleServiceChange}
             >
               <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                 <SelectValue placeholder={t('visits.selectService')} />
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                {services.map((service: any) => (
-                  <SelectItem 
-                    key={service.id} 
-                    value={service.id}
-                    className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-                  >
-                    {service.name}
-                    {service.price && ` - ₪${service.price}`}
-                  </SelectItem>
-                ))}
+                {services.map((service: any) => {
+                  const serviceName = language === 'he' ? service.name : (service.name_ru || service.name)
+                  return (
+                    <SelectItem 
+                      key={service.id} 
+                      value={service.id}
+                      className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
+                    >
+                      {serviceName}
+                      {service.price && ` - ₪${service.price}`}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           </div>

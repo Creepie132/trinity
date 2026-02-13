@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, Calendar, Package } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -34,6 +34,8 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const baseNavigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
     { name: t('nav.clients'), href: '/clients', icon: Users, requireFeature: null },
+    { name: t('nav.visits'), href: '/visits', icon: Calendar, requireFeature: 'visits' },
+    { name: t('nav.inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
     { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: t('nav.sms'), href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
     { name: t('nav.stats'), href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
@@ -73,6 +75,8 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     if (item.requireFeature === 'payments') return features.hasPayments || features.hasSubscriptions
     if (item.requireFeature === 'sms') return features.hasSms
     if (item.requireFeature === 'analytics') return features.hasAnalytics
+    if (item.requireFeature === 'visits') return features.hasVisits
+    if (item.requireFeature === 'inventory') return features.hasInventory
     
     return true
   })

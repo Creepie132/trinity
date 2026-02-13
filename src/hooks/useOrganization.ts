@@ -17,6 +17,7 @@ export interface Organization {
     analytics: boolean
     subscriptions?: boolean
     visits?: boolean
+    inventory?: boolean
   }
   billing_status: string
   billing_due_date: string | null

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, ChevronRight, ChevronUp, Monitor, Bot, Globe, Code, Mail, MessageCircle, Send, Gift } from 'lucide-react'
+import { Menu, X, ChevronRight, ChevronUp, Monitor, Bot, Globe, Code, Mail, MessageCircle, Facebook, Gift } from 'lucide-react'
 import { PrismButton } from '@/components/landing/PrismButton'
 
 // Translations type
@@ -135,7 +135,7 @@ const translations: Record<'he' | 'ru', Translations> = {
       whyItems: [
         'מערכת אחת לכל העסק — לקוחות, תשלומים, SMS, ניתוח נתונים',
         'ממשק בעברית ורוסית — מותאם לשוק הישראלי',
-        'סליקה מאובטחת — אינטגרציה עם טרנזילה ו-Stripe',
+        'תמיכה בכרטיסי אשראי (Visa, Mastercard, Amex), Google Pay, Apple Pay והוראות קבע',
         'גישה מכל מקום — מחשב, טאבלט ונייד',
         'תמיכה אישית — אנחנו כאן בשבילך',
       ],
@@ -334,7 +334,7 @@ const translations: Record<'he' | 'ru', Translations> = {
       whyItems: [
         'Одна система для всего бизнеса — клиенты, платежи, SMS, аналитика',
         'Интерфейс на иврите и русском — адаптирован для израильского рынка',
-        'Безопасные платежи — интеграция с Tranzilla и Stripe',
+        'Поддержка кредитных карт (Visa, Mastercard, Amex), Google Pay, Apple Pay и рекуррентные платежи',
         'Доступ отовсюду — компьютер, планшет и телефон',
         'Персональная поддержка — мы всегда на связи',
       ],
@@ -841,9 +841,9 @@ export default function LandingPage() {
       </section>
 
       {/* About Section */}
-      <section id="about" className="py-20 bg-gradient-to-br from-gray-50 to-white fade-in-section">
+      <section id="about" className={`bg-gradient-to-br from-gray-50 to-white fade-in-section ${language === 'ru' ? 'py-24 mt-8' : 'py-20'}`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
+          <h2 className={`text-3xl sm:text-4xl font-bold text-gray-900 text-center ${language === 'ru' ? 'mb-20' : 'mb-16'}`}>
             {t.about.title}
           </h2>
 
@@ -903,28 +903,36 @@ export default function LandingPage() {
 
           {/* Contact Info */}
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-green-50 rounded-xl p-6 text-center border-2 border-green-200">
-              <MessageCircle className="w-8 h-8 text-green-600 mx-auto mb-3" />
-              <p className="text-gray-700 font-semibold">{t.about.contact.whatsapp}</p>
-              <a
-                href="https://wa.me/972544858586"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-green-600 hover:text-green-700 text-sm mt-2 inline-block"
-              >
-                {language === 'he' ? 'שלח הודעה' : 'Написать'}
-              </a>
-            </div>
-            <div className="bg-blue-50 rounded-xl p-6 text-center border-2 border-blue-200">
-              <Mail className="w-8 h-8 text-blue-600 mx-auto mb-3" />
-              <p className="text-gray-700 font-semibold break-all">{t.about.contact.email}</p>
-              <a
-                href="mailto:ambersolutions.systems@gmail.com"
-                className="text-blue-600 hover:text-blue-700 text-sm mt-2 inline-block"
-              >
-                {language === 'he' ? 'שלח מייל' : 'Написать'}
-              </a>
-            </div>
+            {/* WhatsApp Button */}
+            <a
+              href="https://wa.me/972544858586"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-green-50 rounded-xl p-6 text-center border-2 border-green-200 hover:border-green-400 hover:shadow-lg transition-all duration-300 group"
+            >
+              <MessageCircle className="w-12 h-12 text-green-600 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+              <button className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-all shadow-md hover:shadow-xl animate-pulse">
+                {language === 'he' ? 'דברו איתנו' : 'Написать нам'}
+              </button>
+            </a>
+
+            {/* Email Button - Scroll to Form */}
+            <button
+              onClick={() => {
+                const formSection = document.getElementById('contact-form');
+                if (formSection) {
+                  formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+              className="bg-blue-50 rounded-xl p-6 text-center border-2 border-blue-200 hover:border-blue-400 hover:shadow-lg transition-all duration-300 group"
+            >
+              <Mail className="w-12 h-12 text-blue-600 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+              <div className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-xl inline-block">
+                {language === 'he' ? 'שלחו הודעה' : 'Отправить сообщение'}
+              </div>
+            </button>
+
+            {/* Location */}
             <div className="bg-amber-50 rounded-xl p-6 text-center border-2 border-amber-200">
               <Globe className="w-8 h-8 text-amber-600 mx-auto mb-3" />
               <p className="text-gray-700 font-semibold">{t.about.contact.location}</p>
@@ -1351,6 +1359,7 @@ export default function LandingPage() {
           onClick={() => setContactModalOpen(false)}
         >
           <div
+            id="contact-form"
             className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-scale-in"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1391,6 +1400,20 @@ export default function LandingPage() {
                     type="email"
                     name="email"
                     required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {language === 'he' ? 'טלפון' : 'Телефон'} *
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    placeholder="05X-XXX-XXXX"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   />
                 </div>
@@ -1507,13 +1530,13 @@ export default function LandingPage() {
                 <Mail size={24} />
               </a>
               <a
-                href="https://t.me/yourtelegramusername"
+                href="https://www.facebook.com/profile.php?id=61587546885536"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
-                aria-label="Telegram"
+                aria-label="Facebook"
               >
-                <Send size={24} />
+                <Facebook size={24} />
               </a>
             </div>
           </div>

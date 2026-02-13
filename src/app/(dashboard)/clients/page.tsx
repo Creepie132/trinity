@@ -21,11 +21,18 @@ export default function ClientsPage() {
   const features = useFeatures()
   const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(1)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<ClientSummary | null>(null)
   const [clientSheetOpen, setClientSheetOpen] = useState(false)
 
-  const { data: clients, isLoading } = useClients(searchQuery)
+  const pageSize = 25
+  const { data: clientsData, isLoading } = useClients(searchQuery, page, pageSize)
+  const clients = clientsData?.data || []
+  const totalCount = clientsData?.count || 0
+  const totalPages = Math.ceil(totalCount / pageSize)
+  const from = (page - 1) * pageSize + 1
+  const to = Math.min(page * pageSize, totalCount)
 
   // Check organization status
   useEffect(() => {
@@ -144,6 +151,84 @@ export default function ClientsPage() {
               <Plus className="w-4 h-4 ml-2" />
               {t('clients.addFirst')}
             </Button>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {clients.length > 0 && totalPages > 1 && (
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-4">
+            {/* Stats */}
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {t('common.showing')} {from}-{to} {t('common.outOf')} {totalCount}
+            </div>
+
+            {/* Desktop Pagination */}
+            <div className="hidden sm:flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                {t('common.previous')}
+              </Button>
+
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number
+                if (totalPages <= 5) {
+                  pageNum = i + 1
+                } else if (page <= 3) {
+                  pageNum = i + 1
+                } else if (page >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i
+                } else {
+                  pageNum = page - 2 + i
+                }
+
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={page === pageNum ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPage(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                )
+              })}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                {t('common.next')}
+              </Button>
+            </div>
+
+            {/* Mobile Pagination */}
+            <div className="flex sm:hidden items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                «
+              </Button>
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {page} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                »
+              </Button>
+            </div>
           </div>
         )}
       </div>

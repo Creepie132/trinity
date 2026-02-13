@@ -4,18 +4,22 @@ import { Client, ClientSummary } from '@/types/database'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 
-export function useClients(searchQuery?: string) {
+export function useClients(searchQuery?: string, page: number = 1, pageSize: number = 25) {
   const { orgId } = useAuth()
 
   return useQuery({
-    queryKey: ['clients', orgId, searchQuery],
+    queryKey: ['clients', orgId, searchQuery, page, pageSize],
     enabled: !!orgId,
     queryFn: async () => {
+      const from = (page - 1) * pageSize
+      const to = page * pageSize - 1
+
       let query = supabase
         .from('client_summary')
-        .select('*')
-        .eq('org_id', orgId) // <-- важно: фильтр по организации
+        .select('*', { count: 'exact' })
+        .eq('org_id', orgId)
         .order('created_at', { ascending: false })
+        .range(from, to)
 
       if (searchQuery && searchQuery.trim()) {
         query = query.or(
@@ -23,9 +27,9 @@ export function useClients(searchQuery?: string) {
         )
       }
 
-      const { data, error } = await query
+      const { data, error, count } = await query
       if (error) throw error
-      return data as ClientSummary[]
+      return { data: data as ClientSummary[], count: count || 0 }
     },
   })
 }

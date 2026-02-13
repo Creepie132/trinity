@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCreateService } from '@/hooks/useServices';
 import { CreateServiceDTO } from '@/types/services';
-import { useOrganization } from '@/hooks/useOrganization';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,11 +31,9 @@ const DEFAULT_COLORS = [
 
 export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogProps) {
   const { t } = useLanguage();
-  const { data: organization } = useOrganization();
   const createService = useCreateService();
 
   const [formData, setFormData] = useState<CreateServiceDTO>({
-    org_id: organization?.id || '',
     name: '',
     name_ru: '',
     price: 0,
@@ -47,38 +44,29 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!organization?.id) {
-      toast.error(t('errors.organizationNotFound'));
-      return;
-    }
-
     if (!formData.name.trim() || !formData.name_ru.trim()) {
       toast.error(t('services.errors.nameRequired'));
       return;
     }
 
-    if (formData.price < 0) {
+    if (formData.price && formData.price < 0) {
       toast.error(t('services.errors.priceInvalid'));
       return;
     }
 
-    if (formData.duration_minutes < 1) {
+    if (formData.duration_minutes && formData.duration_minutes < 1) {
       toast.error(t('services.errors.durationInvalid'));
       return;
     }
 
     try {
-      await createService.mutateAsync({
-        ...formData,
-        org_id: organization.id,
-      });
+      await createService.mutateAsync(formData);
 
       toast.success(t('services.created'));
       onOpenChange(false);
       
       // Reset form
       setFormData({
-        org_id: organization.id,
         name: '',
         name_ru: '',
         price: 0,

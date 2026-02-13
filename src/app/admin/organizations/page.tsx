@@ -304,7 +304,7 @@ export default function OrganizationsPage() {
   }
 
   const handleSeedTestData = async () => {
-    if (!confirm('זה ימלא את ארגון Test ב-25 לקוחות, 80 ביקורים ו-40 תשלומים. להמשיך?')) return
+    if (!confirm('זה ימלא את ארגון Test ב-25 לקוחות, 80 ביקורים, 40 תשלומים ו-13 מוצרים. להמשיך?')) return
     
     setSeedingData(true)
     
@@ -322,7 +322,7 @@ export default function OrganizationsPage() {
       }
 
       toast.success(result.message || 'נתוני בדיקה נוצרו בהצלחה!', {
-        description: `${result.data.clients} לקוחות, ${result.data.visits} ביקורים, ${result.data.payments} תשלומים`
+        description: `${result.data.clients} לקוחות, ${result.data.visits} ביקורים, ${result.data.payments} תשלומים, ${result.data.products} מוצרים`
       })
       
       // Close sheet to show updates

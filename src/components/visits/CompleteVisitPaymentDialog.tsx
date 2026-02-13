@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Check, Plus, Trash2, Camera, Package } from 'lucide-react'
+import { Check, Plus, Trash2, Camera, Package, ChevronDown } from 'lucide-react'
 import { Banknote, Smartphone, CreditCard, Building2, Phone, Zap } from 'lucide-react'
 import { Visit } from '@/types/visits'
 import { Product } from '@/types/inventory'
@@ -546,60 +546,34 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
               )}
             </div>
 
-            {/* Payment method selection */}
+            {/* Payment method selection - Dropdown */}
             <div className="space-y-3">
               <Label className="text-gray-900 dark:text-gray-100">{t('visits.selectPaymentMethod')}</Label>
               
-              {/* Mobile: 2 columns grid with big cards */}
-              <div className="grid grid-cols-2 md:hidden gap-3">
-                {paymentMethods.map((method) => (
-                  <div
-                    key={method.value}
-                    className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all min-h-[100px] ${
-                      paymentMethod === method.value
-                        ? 'border-theme-primary bg-theme-primary bg-opacity-10'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                    }`}
-                    onClick={() => setPaymentMethod(method.value)}
-                  >
-                    <span className="text-3xl mb-2">{method.emoji}</span>
-                    <span className="text-xs text-center text-gray-900 dark:text-gray-100 font-medium">
-                      {t(method.labelKey)}
-                    </span>
-                    {paymentMethod === method.value && (
-                      <Check className="w-4 h-4 text-theme-primary mt-1" />
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Desktop: stacked list */}
-              <div className="hidden md:block space-y-2">
-                {paymentMethods.map((method) => {
-                  const Icon = method.icon
-                  return (
-                    <div
-                      key={method.value}
-                      className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                        paymentMethod === method.value
-                          ? 'border-theme-primary bg-theme-primary bg-opacity-5'
-                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                      }`}
-                      onClick={() => setPaymentMethod(method.value)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{method.emoji}</span>
-                        <span className="cursor-pointer text-gray-900 dark:text-gray-100">
-                          {t(method.labelKey)}
-                        </span>
-                      </div>
-                      {paymentMethod === method.value && (
-                        <Check className="w-5 h-5 text-theme-primary" />
-                      )}
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger className="w-full h-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                  <SelectValue>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">
+                        {paymentMethods.find(m => m.value === paymentMethod)?.emoji}
+                      </span>
+                      <span>
+                        {t(paymentMethods.find(m => m.value === paymentMethod)?.labelKey || 'visits.selectPaymentMethod')}
+                      </span>
                     </div>
-                  )
-                })}
-              </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {paymentMethods.map((method) => (
+                    <SelectItem key={method.value} value={method.value}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{method.emoji}</span>
+                        <span>{t(method.labelKey)}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Note for credit and stripe */}
@@ -626,9 +600,9 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
               <Button
                 onClick={handleCompleteWithPayment}
                 disabled={isProcessing}
-                className="w-full h-11 md:h-10 bg-theme-primary text-white hover:opacity-90"
+                className="w-full h-11 md:h-10 bg-green-600 text-white hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
               >
-                {isProcessing ? t('visits.processing') : t('visits.completeAndPay')}
+                {isProcessing ? t('visits.processing') : t('visits.confirmPayment')}
               </Button>
               
               <Button

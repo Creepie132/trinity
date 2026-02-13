@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays } from 'lucide-react'
+import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -206,6 +206,26 @@ export default function VisitsPage() {
     }
   }
 
+  const handleStartVisit = async (visitId: string) => {
+    try {
+      const { error } = await supabase
+        .from('visits')
+        .update({ 
+          status: 'in_progress',
+          started_at: new Date().toISOString()
+        })
+        .eq('id', visitId)
+
+      if (error) throw error
+
+      toast.success(t('visits.startVisit') + ' ✓')
+      refetch()
+    } catch (error) {
+      console.error('Error starting visit:', error)
+      toast.error(t('common.error'))
+    }
+  }
+
   // Show loading screen while fetching data
   if (isLoading) {
     return <LoadingScreen />
@@ -377,9 +397,17 @@ export default function VisitsPage() {
                           <>
                             <Button
                               size="sm"
+                              onClick={() => handleStartVisit(visit.id)}
+                              className="bg-green-600 text-white hover:bg-green-700"
+                            >
+                              <Play className="w-3 h-3 ml-1" />
+                              {t('visits.startVisit')}
+                            </Button>
+                            <Button
+                              size="sm"
                               variant="outline"
                               onClick={() => handleCompleteVisit(visit)}
-                              className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/30"
+                              className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
                             >
                               <CheckCircle className="w-3 h-3 ml-1" />
                               {t('visits.complete')}
@@ -394,6 +422,11 @@ export default function VisitsPage() {
                               {t('visits.cancel')}
                             </Button>
                           </>
+                        )}
+                        {visit.status === 'in_progress' && (
+                          <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                            {t('visits.inProgress')}...
+                          </div>
                         )}
                       </div>
                     </TableCell>

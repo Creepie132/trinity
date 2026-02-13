@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useOrganization } from '@/hooks/useOrganization';
 import { useServices } from '@/hooks/useServices';
 import { Service } from '@/types/services';
 import { Button } from '@/components/ui/button';
@@ -14,8 +13,7 @@ import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export default function ServicesSettingsPage() {
   const { t, language } = useLanguage();
-  const { data: organization } = useOrganization();
-  const { data: services, isLoading } = useServices(organization?.id || '');
+  const { data: services, isLoading } = useServices();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);

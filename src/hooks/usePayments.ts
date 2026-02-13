@@ -22,7 +22,6 @@ interface PaymentsFilters {
 export function usePayments(clientId?: string, filters?: PaymentsFilters) {
   return useQuery({
     queryKey: ['payments', clientId, filters],
-    staleTime: 30000, // 30 seconds - reduce unnecessary refetches
     queryFn: async () => {
       let query = supabase
         .from('payments')

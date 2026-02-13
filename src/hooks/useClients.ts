@@ -7,17 +7,14 @@ import { useAuth } from '@/hooks/useAuth'
 export function useClients(searchQuery?: string) {
   const { orgId } = useAuth()
 
-  const result = useQuery({
+  return useQuery({
     queryKey: ['clients', orgId, searchQuery],
     enabled: !!orgId,
-    staleTime: 30000, // 30 seconds - don't refetch if data is fresh
     queryFn: async () => {
-      // Optimize: Load directly from clients table (fast, no JOIN)
-      // Statistics will be loaded separately/lazily if needed
       let query = supabase
-        .from('clients')
-        .select('id, first_name, last_name, phone, email, created_at, last_visit_date, org_id')
-        .eq('org_id', orgId)
+        .from('client_summary')
+        .select('*')
+        .eq('org_id', orgId) // <-- важно: фильтр по организации
         .order('created_at', { ascending: false })
 
       if (searchQuery && searchQuery.trim()) {
@@ -27,16 +24,10 @@ export function useClients(searchQuery?: string) {
       }
 
       const { data, error } = await query
-      console.log('useClients data:', data, 'error:', error, 'isLoading:', result.isLoading)
       if (error) throw error
-      
-      // Return clients as ClientSummary-compatible (statistics can be loaded separately)
-      return data as any[]
+      return data as ClientSummary[]
     },
   })
-
-  console.log('useClients data:', result.data, 'error:', result.error, 'isLoading:', result.isLoading)
-  return result
 }
 
 export function useClient(id?: string) {

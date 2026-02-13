@@ -26,7 +26,9 @@ export interface CareInstruction {
   org_id: string
   service_id?: string
   title: string
+  title_ru?: string
   content: string
+  content_ru?: string
   is_active: boolean
   created_at: string
   
@@ -63,7 +65,9 @@ export interface UpdateServiceDTO {
 export interface CreateCareInstructionDTO {
   service_id?: string
   title: string
+  title_ru?: string
   content: string
+  content_ru?: string
 }
 
 /**
@@ -72,6 +76,8 @@ export interface CreateCareInstructionDTO {
 export interface UpdateCareInstructionDTO {
   service_id?: string
   title?: string
+  title_ru?: string
   content?: string
+  content_ru?: string
   is_active?: boolean
 }

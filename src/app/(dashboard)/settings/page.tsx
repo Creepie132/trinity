@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package } from 'lucide-react'
+import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -29,6 +29,13 @@ export default function SettingsPage() {
       icon: Package,
       title: t('services.title'),
       description: t('services.emptyState.desc'),
+    },
+    {
+      id: 'care-instructions',
+      href: '/settings/care-instructions',
+      icon: FileText,
+      title: t('careInstructions.title'),
+      description: t('careInstructions.noInstructions'),
     },
     {
       id: 'users',

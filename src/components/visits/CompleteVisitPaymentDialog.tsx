@@ -29,6 +29,7 @@ import { Banknote, Smartphone, CreditCard, Building2, Phone, Zap } from 'lucide-
 import { Visit } from '@/types/visits'
 import { Product } from '@/types/inventory'
 import { BarcodeScanner } from '@/components/inventory/BarcodeScanner'
+import { CareInstructionsButtons } from '@/components/care-instructions/CareInstructionsButtons'
 
 interface CompleteVisitPaymentDialogProps {
   visit: Visit | null
@@ -570,6 +571,15 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
                   💡 {t('payments.sendLinkToClient')}
                 </p>
               </div>
+            )}
+
+            {/* Care Instructions */}
+            {visit && (
+              <CareInstructionsButtons
+                serviceType={visit.service_type}
+                clientName={`${visit.clients?.first_name} ${visit.clients?.last_name}`}
+                clientPhone={visit.clients?.phone}
+              />
             )}
             </div>
 

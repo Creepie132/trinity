@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useUpdateService, useDeleteService } from '@/hooks/useServices';
 import { Service, UpdateServiceDTO } from '@/types/services';
@@ -64,8 +63,6 @@ export function ServiceDetailSheet({ service, open, onOpenChange }: ServiceDetai
       price: service.price,
       duration_minutes: service.duration_minutes,
       color: service.color,
-      description: service.description || '',
-      description_ru: service.description_ru || '',
     });
     setIsEditing(true);
   };
@@ -108,7 +105,6 @@ export function ServiceDetailSheet({ service, open, onOpenChange }: ServiceDetai
   };
 
   const serviceName = language === 'he' ? service.name : service.name_ru;
-  const serviceDescription = language === 'he' ? service.description : service.description_ru;
 
   return (
     <>
@@ -158,24 +154,6 @@ export function ServiceDetailSheet({ service, open, onOpenChange }: ServiceDetai
                     <p className="text-lg font-medium mt-1">{service.name_ru}</p>
                   </div>
                 </div>
-
-                {/* Descriptions */}
-                {(service.description || service.description_ru) && (
-                  <div className="space-y-3">
-                    {service.description && (
-                      <div>
-                        <Label className="text-xs text-gray-500 dark:text-gray-400">{t('services.description')} (עברית)</Label>
-                        <p className="text-sm mt-1 whitespace-pre-wrap">{service.description}</p>
-                      </div>
-                    )}
-                    {service.description_ru && (
-                      <div>
-                        <Label className="text-xs text-gray-500 dark:text-gray-400">{t('services.descriptionRu')} (Русский)</Label>
-                        <p className="text-sm mt-1 whitespace-pre-wrap">{service.description_ru}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-4">
@@ -271,28 +249,6 @@ export function ServiceDetailSheet({ service, open, onOpenChange }: ServiceDetai
                     value={formData.color || service.color}
                     onChange={(e) => handleChange('color', e.target.value)}
                     className="w-full h-10 mt-2"
-                  />
-                </div>
-
-                {/* Description (Hebrew) */}
-                <div className="space-y-2">
-                  <Label htmlFor="edit-description">{t('services.description')} (עברית)</Label>
-                  <Textarea
-                    id="edit-description"
-                    value={formData.description || ''}
-                    onChange={(e) => handleChange('description', e.target.value)}
-                    rows={3}
-                  />
-                </div>
-
-                {/* Description (Russian) */}
-                <div className="space-y-2">
-                  <Label htmlFor="edit-description-ru">{t('services.descriptionRu')} (Русский)</Label>
-                  <Textarea
-                    id="edit-description-ru"
-                    value={formData.description_ru || ''}
-                    onChange={(e) => handleChange('description_ru', e.target.value)}
-                    rows={3}
                   />
                 </div>
 

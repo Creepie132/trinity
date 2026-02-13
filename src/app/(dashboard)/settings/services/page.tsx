@@ -21,14 +21,8 @@ export default function ServicesSettingsPage() {
 
   // Filter services based on search query
   const filteredServices = services?.filter(service => {
-    const name = language === 'he' ? service.name : service.name_ru;
-    const description = language === 'he' ? service.description : service.description_ru;
-    const query = searchQuery.toLowerCase();
-    
-    return (
-      name.toLowerCase().includes(query) ||
-      description?.toLowerCase().includes(query)
-    );
+    const name = language === 'he' ? service.name : (service.name_ru || service.name);
+    return name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   if (isLoading) {
@@ -82,15 +76,11 @@ export default function ServicesSettingsPage() {
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     {t('services.duration')}
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t('services.description')}
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredServices.map((service) => {
-                  const name = language === 'he' ? service.name : service.name_ru;
-                  const description = language === 'he' ? service.description : service.description_ru;
+                  const name = language === 'he' ? service.name : (service.name_ru || service.name);
 
                   return (
                     <tr
@@ -112,18 +102,13 @@ export default function ServicesSettingsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-gray-100">
                           <DollarSign className="w-4 h-4" />
-                          ₪{service.price.toFixed(2)}
+                          ₪{service.price?.toFixed(2) || '0.00'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-gray-100">
                           <Clock className="w-4 h-4" />
                           {service.duration_minutes} {t('common.minutes')}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                          {description || '-'}
                         </div>
                       </td>
                     </tr>
@@ -136,8 +121,7 @@ export default function ServicesSettingsPage() {
           {/* Mobile Card View */}
           <div className="md:hidden space-y-4">
             {filteredServices.map((service) => {
-              const name = language === 'he' ? service.name : service.name_ru;
-              const description = language === 'he' ? service.description : service.description_ru;
+              const name = language === 'he' ? service.name : (service.name_ru || service.name);
 
               return (
                 <div
@@ -145,29 +129,20 @@ export default function ServicesSettingsPage() {
                   onClick={() => setSelectedService(service)}
                   className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-12 h-12 rounded-full border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
-                        style={{ backgroundColor: service.color }}
-                      />
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                          {name}
-                        </h3>
-                        {description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">
-                            {description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className="w-12 h-12 rounded-full border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
+                      style={{ backgroundColor: service.color }}
+                    />
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                      {name}
+                    </h3>
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-gray-100">
                       <DollarSign className="w-4 h-4" />
-                      ₪{service.price.toFixed(2)}
+                      ₪{service.price?.toFixed(2) || '0.00'}
                     </div>
                     <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                       <Clock className="w-4 h-4" />

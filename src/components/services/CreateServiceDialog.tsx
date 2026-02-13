@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCreateService } from '@/hooks/useServices';
 import { CreateServiceDTO } from '@/types/services';
@@ -43,8 +42,6 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
     price: 0,
     duration_minutes: 60,
     color: DEFAULT_COLORS[0],
-    description: '',
-    description_ru: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,8 +84,6 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
         price: 0,
         duration_minutes: 60,
         color: DEFAULT_COLORS[0],
-        description: '',
-        description_ru: '',
       });
     } catch (error) {
       console.error('Error creating service:', error);
@@ -185,30 +180,6 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
               value={formData.color}
               onChange={(e) => handleChange('color', e.target.value)}
               className="w-full h-10 mt-2"
-            />
-          </div>
-
-          {/* Description (Hebrew) */}
-          <div className="space-y-2">
-            <Label htmlFor="description">{t('services.description')} (עברית) ({t('common.optional')})</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleChange('description', e.target.value)}
-              placeholder={t('services.descriptionPlaceholder')}
-              rows={3}
-            />
-          </div>
-
-          {/* Description (Russian) */}
-          <div className="space-y-2">
-            <Label htmlFor="description_ru">{t('services.descriptionRu')} (Русский) ({t('common.optional')})</Label>
-            <Textarea
-              id="description_ru"
-              value={formData.description_ru}
-              onChange={(e) => handleChange('description_ru', e.target.value)}
-              placeholder={t('services.descriptionRuPlaceholder')}
-              rows={3}
             />
           </div>
 

@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 export function useClients(searchQuery?: string) {
   const { orgId } = useAuth()
 
-  return useQuery({
+  const result = useQuery({
     queryKey: ['clients', orgId, searchQuery],
     enabled: !!orgId,
     queryFn: async () => {
@@ -24,10 +24,14 @@ export function useClients(searchQuery?: string) {
       }
 
       const { data, error } = await query
+      console.log('useClients data:', data, 'error:', error, 'isLoading:', result.isLoading)
       if (error) throw error
       return data as ClientSummary[]
     },
   })
+
+  console.log('useClients data:', result.data, 'error:', result.error, 'isLoading:', result.isLoading)
+  return result
 }
 
 export function useClient(id?: string) {

@@ -10,7 +10,7 @@ import { Plus, Search, Clock, DollarSign } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreateServiceDialog } from '@/components/services/CreateServiceDialog';
 import { ServiceDetailSheet } from '@/components/services/ServiceDetailSheet';
-import { LoadingScreen } from '@/components/LoadingScreen';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export default function ServicesSettingsPage() {
   const { t, language } = useLanguage();

@@ -15,6 +15,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
 import { CompleteVisitPaymentDialog } from '@/components/visits/CompleteVisitPaymentDialog'
 import { CalendarView } from '@/components/visits/CalendarView'
+import { VisitCard } from '@/components/visits/VisitCard'
 import { format } from 'date-fns'
 import {
   Select,
@@ -407,66 +408,15 @@ export default function VisitsPage() {
           )}
           </div>
 
-          {/* Mobile Cards (visible only on mobile) */}
+          {/* Mobile Cards (visible only on mobile) - Using VisitCard component */}
           <div className="md:hidden space-y-3">
             {visits.length > 0 ? (
               visits.map((visit) => (
-                <div
+                <VisitCard
                   key={visit.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3"
-                >
-                  {/* Header - Client Name */}
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">
-                      {visit.clients?.first_name} {visit.clients?.last_name}
-                    </h3>
-                    {getStatusBadge(visit.status)}
-                  </div>
-
-                  {/* Service */}
-                  <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <span className="font-medium">{getServiceLabel(visit.service_type)}</span>
-                  </div>
-
-                  {/* Date & Time */}
-                  <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {format(new Date(visit.scheduled_at), 'dd/MM/yyyy')}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {format(new Date(visit.scheduled_at), 'HH:mm')}
-                    </div>
-                    <span>{visit.duration_minutes || 0} דק׳</span>
-                  </div>
-
-                  {/* Price */}
-                  <div className="text-2xl font-bold text-theme-primary">
-                    ₪{visit.price || 0}
-                  </div>
-
-                  {/* Actions - Full Width Buttons */}
-                  {visit.status === 'scheduled' && (
-                    <div className="grid grid-cols-2 gap-2 pt-2">
-                      <Button
-                        onClick={() => handleCompleteVisit(visit)}
-                        className="w-full h-11 bg-green-600 text-white hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
-                      >
-                        <CheckCircle className="w-4 h-4 ml-2" />
-                        {t('visits.complete')}
-                      </Button>
-                      <Button
-                        onClick={() => handleCancelVisit(visit.id)}
-                        variant="outline"
-                        className="w-full h-11 border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
-                      >
-                        <XCircle className="w-4 h-4 ml-2" />
-                        {t('visits.cancel')}
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                  visit={visit}
+                  onComplete={handleCompleteVisit}
+                />
               ))
             ) : (
               <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">

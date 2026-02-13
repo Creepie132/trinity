@@ -6,6 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useProducts } from '@/hooks/useProducts'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,7 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
   const { orgId } = useAuth()
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
+  const queryClient = useQueryClient()
   const { data: products } = useProducts()
   const { data: visitServices } = useVisitServices(visit?.id || '')
 
@@ -164,9 +166,13 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
       }
 
       toast.success(t('common.success'))
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['visits'] })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      
       onOpenChange(false)
       setSelectedProducts([])
-      router.refresh()
     } catch (error) {
       console.error('Error completing visit:', error)
       toast.error(t('common.error'))
@@ -224,9 +230,13 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
         // Open payment link
         window.open(payment_url, '_blank')
         toast.success(t('payments.successMessage'))
+        
+        // Invalidate queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ['visits'] })
+        queryClient.invalidateQueries({ queryKey: ['payments'] })
+        
         onOpenChange(false)
         setSelectedProducts([])
-        router.refresh()
         return
       }
 
@@ -275,9 +285,13 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
         // Open Stripe checkout
         window.open(url, '_blank')
         toast.success(t('payments.successMessage'))
+        
+        // Invalidate queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ['visits'] })
+        queryClient.invalidateQueries({ queryKey: ['payments'] })
+        
         onOpenChange(false)
         setSelectedProducts([])
-        router.refresh()
         return
       }
 
@@ -329,9 +343,13 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
       }
 
       toast.success(t('common.success'))
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['visits'] })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      
       onOpenChange(false)
       setSelectedProducts([])
-      router.refresh()
     } catch (error) {
       console.error('Error processing payment:', error)
       toast.error(t('common.error'))

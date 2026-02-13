@@ -16,6 +16,7 @@ import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
 import { CompleteVisitPaymentDialog } from '@/components/visits/CompleteVisitPaymentDialog'
 import { CalendarView } from '@/components/visits/CalendarView'
 import { VisitCard } from '@/components/visits/VisitCard'
+import { ActiveVisitCard } from '@/components/visits/ActiveVisitCard'
 import { format } from 'date-fns'
 import {
   Select,
@@ -373,65 +374,79 @@ export default function VisitsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visits.map((visit) => (
-                  <TableRow key={visit.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <TableCell className="font-medium text-gray-900 dark:text-gray-100">
-                      {visit.clients?.first_name} {visit.clients?.last_name}
-                    </TableCell>
-                    <TableCell className="text-gray-700 dark:text-gray-300">{getServiceLabel(visit.service_type)}</TableCell>
-                    <TableCell className="text-gray-700 dark:text-gray-300">
-                      {format(new Date(visit.scheduled_at), 'dd/MM/yyyy')}
-                    </TableCell>
-                    <TableCell className="text-gray-700 dark:text-gray-300">
-                      <div className="flex items-center gap-1 justify-end">
-                        <Clock className="w-3 h-3" />
-                        {format(new Date(visit.scheduled_at), 'HH:mm')}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-gray-700 dark:text-gray-300">{visit.duration_minutes || 0} דק׳</TableCell>
-                    <TableCell className="font-bold text-theme-primary">₪{visit.price || 0}</TableCell>
-                    <TableCell>{getStatusBadge(visit.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2 justify-start">
-                        {visit.status === 'scheduled' && (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleStartVisit(visit.id)}
-                              className="bg-green-600 text-white hover:bg-green-700"
-                            >
-                              <Play className="w-3 h-3 ml-1" />
-                              {t('visits.startVisit')}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCompleteVisit(visit)}
-                              className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
-                            >
-                              <CheckCircle className="w-3 h-3 ml-1" />
-                              {t('visits.complete')}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCancelVisit(visit.id)}
-                              className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30"
-                            >
-                              <XCircle className="w-3 h-3 ml-1" />
-                              {t('visits.cancel')}
-                            </Button>
-                          </>
-                        )}
-                        {visit.status === 'in_progress' && (
-                          <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                            {t('visits.inProgress')}...
+                {visits.map((visit) => {
+                  // Render ActiveVisitCard for in_progress visits
+                  if (visit.status === 'in_progress') {
+                    return (
+                      <TableRow key={visit.id} className="bg-amber-50 dark:bg-amber-900/10">
+                        <TableCell colSpan={8} className="p-4">
+                          <div className="border-2 border-amber-400 dark:border-amber-600 rounded-lg">
+                            <ActiveVisitCard 
+                              visit={visit} 
+                              onFinish={() => handleCompleteVisit(visit)} 
+                            />
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  }
+                  
+                  // Regular row for other statuses
+                  return (
+                    <TableRow key={visit.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <TableCell className="font-medium text-gray-900 dark:text-gray-100">
+                        {visit.clients?.first_name} {visit.clients?.last_name}
+                      </TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">{getServiceLabel(visit.service_type)}</TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">
+                        {format(new Date(visit.scheduled_at), 'dd/MM/yyyy')}
+                      </TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Clock className="w-3 h-3" />
+                          {format(new Date(visit.scheduled_at), 'HH:mm')}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">{visit.duration_minutes || 0} דק׳</TableCell>
+                      <TableCell className="font-bold text-theme-primary">₪{visit.price || 0}</TableCell>
+                      <TableCell>{getStatusBadge(visit.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2 justify-start">
+                          {visit.status === 'scheduled' && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => handleStartVisit(visit.id)}
+                                className="bg-green-600 text-white hover:bg-green-700"
+                              >
+                                <Play className="w-3 h-3 ml-1" />
+                                {t('visits.startVisit')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCompleteVisit(visit)}
+                                className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+                              >
+                                <CheckCircle className="w-3 h-3 ml-1" />
+                                {t('visits.complete')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCancelVisit(visit.id)}
+                                className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30"
+                              >
+                                <XCircle className="w-3 h-3 ml-1" />
+                                {t('visits.cancel')}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           ) : (

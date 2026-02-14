@@ -3,6 +3,9 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
+  const requestId = Math.random().toString(36).substring(7)
+  console.log(`[CREATE ORG ${requestId}] 🚀 API called at ${new Date().toISOString()}`)
+  
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -131,6 +134,49 @@ export async function POST(request: NextRequest) {
     // CRITICAL: Normalize email to lowercase for consistency
     const normalizedEmail = client.email.toLowerCase()
 
+    // BUG FIX: Check for duplicate organization before INSERT
+    console.log('[CREATE ORG] 🔍 Checking for existing organization with name:', name)
+    const { data: existing, error: checkError } = await supabase
+      .from('organizations')
+      .select('*')
+      .ilike('name', name)
+      .maybeSingle()
+
+    if (existing) {
+      console.log('[CREATE ORG] ⚠️  DUPLICATE DETECTED! Returning existing org:', existing.id)
+      console.log('[CREATE ORG]    - Name:', existing.name)
+      console.log('[CREATE ORG]    - This prevents double-click / race condition bugs')
+      
+      // Check if user is already assigned
+      const { data: existingOrgUser } = await supabase
+        .from('org_users')
+        .select('*')
+        .eq('org_id', existing.id)
+        .eq('email', normalizedEmail)
+        .maybeSingle()
+      
+      return NextResponse.json({
+        success: true,
+        organization: existing,
+        client: {
+          id: client.id,
+          name: `${client.first_name} ${client.last_name}`,
+          email: client.email,
+        },
+        assignment: {
+          immediate: !!existingOrgUser?.user_id,
+          invitation: !existingOrgUser?.user_id,
+          userId: existingOrgUser?.user_id || null,
+          authUserId: existingOrgUser?.user_id || null,
+          clientCrmId: client.id,
+          note: 'Duplicate request detected, returned existing organization',
+        },
+        message: 'Organization already exists (duplicate prevented)',
+      })
+    }
+
+    console.log('[CREATE ORG] ✅ No duplicate found, creating new organization')
+
     // Create organization
     const { data: org, error: orgError } = await supabase
       .from('organizations')
@@ -145,7 +191,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (orgError) {
-      console.error('Error creating organization:', orgError)
+      console.error('[CREATE ORG] ❌ Error creating organization:', orgError)
       return NextResponse.json(
         { error: `Failed to create organization: ${orgError.message}` },
         { status: 500 }

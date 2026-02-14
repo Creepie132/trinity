@@ -30,13 +30,13 @@ import {
   useAllOrganizations,
   useOrganization,
   useOrgUsers,
-  useCreateOrganization,
   useUpdateOrganization,
   useToggleOrgFeature,
   useToggleOrgActive,
   useAddOrgUser,
   useRemoveOrgUser,
 } from '@/hooks/useAdmin'
+import { useQueryClient } from '@tanstack/react-query'
 import { Building2, Plus, Search, Eye, Trash, CheckCircle2, XCircle, Gift } from 'lucide-react'
 import { format } from 'date-fns'
 import { Organization } from '@/types/database'
@@ -78,11 +78,11 @@ export default function OrganizationsPage() {
     plan: 'basic',
   })
 
+  const queryClient = useQueryClient()
   const { data: organizations, isLoading } = useAllOrganizations(searchQuery)
   const { data: selectedOrg } = useOrganization(selectedOrgId || undefined)
   const { data: orgUsers } = useOrgUsers(selectedOrgId || undefined)
   
-  const createOrg = useCreateOrganization()
   const updateOrg = useUpdateOrganization()
   const toggleFeature = useToggleOrgFeature()
   const toggleActive = useToggleOrgActive()
@@ -114,24 +114,32 @@ export default function OrganizationsPage() {
   }, [addDialogOpen])
 
   const handleCreateOrg = async () => {
+    const callId = Math.random().toString(36).substring(7)
+    console.log(`[FRONTEND ${callId}] handleCreateOrg called at ${new Date().toISOString()}`)
+    
     // Validation based on mode
     if (!newOrg.name || !newOrg.category || !newOrg.plan) {
+      console.log(`[FRONTEND ${callId}] ❌ Validation failed: missing org details`)
       return
     }
 
     if (clientMode === 'existing' && !selectedOwnerClientId) {
+      console.log(`[FRONTEND ${callId}] ❌ Validation failed: no client selected`)
       return
     }
 
     if (clientMode === 'new' && (!newClient.firstName || !newClient.lastName || !newClient.email)) {
+      console.log(`[FRONTEND ${callId}] ❌ Validation failed: incomplete new client data`)
       return
     }
 
     // BUG FIX 1: Prevent double submit
     if (isSubmitting) {
+      console.log(`[FRONTEND ${callId}] ⚠️  BLOCKED: Already submitting!`)
       return
     }
 
+    console.log(`[FRONTEND ${callId}] ✅ Starting org creation...`)
     setIsSubmitting(true)
 
     try {
@@ -179,8 +187,8 @@ export default function OrganizationsPage() {
         toast.success(`ארגון נוצר בהצלחה!`)
       }
 
-      // Refresh data
-      createOrg.mutate({ ...newOrg, email: result.client.email })
+      // Refresh organizations list
+      queryClient.invalidateQueries({ queryKey: ['admin', 'organizations'] })
       
       setAddDialogOpen(false)
       setNewOrg({ name: '', category: 'other', plan: 'basic' })
@@ -653,6 +661,7 @@ export default function OrganizationsPage() {
               {t('common.cancel')}
             </Button>
             <Button 
+              type="button"
               onClick={handleCreateOrg} 
               disabled={
                 !newOrg.name || 

@@ -26,10 +26,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true)
       setHasError(false)
 
+      // FIX: Timeout after 5 seconds to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.warn('[AuthProvider] loadAuth timeout - stopping spinner')
+        setUser(null)
+        setOrgId(null)
+        setIsAdmin(false)
+        setIsLoading(false)
+        setHasError(true)
+      }, 5000)
+
       // Step 1: Check session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
       if (sessionError || !session) {
+        clearTimeout(timeoutId)
         setUser(null)
         setOrgId(null)
         setIsAdmin(false)
@@ -41,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { user }, error: getUserError } = await supabase.auth.getUser()
 
       if (getUserError || !user) {
+        clearTimeout(timeoutId)
         setUser(null)
         setOrgId(null)
         setIsAdmin(false)
@@ -69,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setIsAdmin(isAdminUser)
       setOrgId(userOrgId)
+      clearTimeout(timeoutId)
       setIsLoading(false)
     } catch (error) {
       console.error('[AuthProvider] Error in loadAuth:', error)

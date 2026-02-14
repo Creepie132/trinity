@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
@@ -8,6 +8,26 @@ import { ArrowRight } from 'lucide-react'
 export default function LoginPage() {
   const supabase = createSupabaseBrowserClient()
   const [loading, setLoading] = useState(false)
+
+  // FIX: Clear stale supabase cookies on login page load
+  useEffect(() => {
+    const clearStaleCookies = () => {
+      // Get all cookies
+      const cookies = document.cookie.split(';')
+      
+      // Clear all supabase-related cookies
+      cookies.forEach((cookie) => {
+        const cookieName = cookie.split('=')[0].trim()
+        if (cookieName.startsWith('sb-') || cookieName.includes('supabase')) {
+          // Delete cookie by setting expiry to past
+          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+          console.log('[login] Cleared stale cookie:', cookieName)
+        }
+      })
+    }
+
+    clearStaleCookies()
+  }, [])
 
   const signIn = async () => {
     setLoading(true)

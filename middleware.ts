@@ -49,10 +49,30 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // CRITICAL: ONLY check session - no DB queries
-  const { data: { session } } = await supabase.auth.getSession()
+  // FIX: Handle stale/invalid auth cookies
+  let session = null
+  try {
+    const result = await supabase.auth.getSession()
+    session = result.data.session
+  } catch (error) {
+    // If getSession throws error (stale cookies, invalid JWT, etc.)
+    // Clear all supabase cookies and redirect to login
+    console.error('[middleware] getSession error (clearing cookies):', error)
+    
+    // Clear all supabase-related cookies
+    const cookiesToClear = req.cookies.getAll().filter(
+      (cookie) => cookie.name.startsWith('sb-') || cookie.name.includes('supabase')
+    )
+    
+    const redirectResponse = NextResponse.redirect(new URL('/login', req.url))
+    cookiesToClear.forEach((cookie) => {
+      redirectResponse.cookies.delete(cookie.name)
+    })
+    
+    return redirectResponse
+  }
 
-  // No session → redirect to login
+  // No session or invalid session → redirect to login
   if (!session) {
     const url = req.nextUrl.clone()
     url.pathname = '/login'

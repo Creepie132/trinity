@@ -158,7 +158,7 @@ export default function PaymentsPage() {
             if (value === 'subscription') setSubscriptionDialogOpen(true)
             if (value === 'cash') setCashDialogOpen(true)
           }}>
-            <SelectTrigger className="w-full bg-theme-primary text-white hover:opacity-90">
+            <SelectTrigger className="w-full bg-theme-primary text-gray-900 hover:opacity-90">
               <Plus className="w-4 h-4 ml-2" />
               <SelectValue placeholder={t('payments.selectPaymentMethod')} />
             </SelectTrigger>

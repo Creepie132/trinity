@@ -55,22 +55,32 @@ export async function POST(request: Request) {
 
     console.log('[Seed] Admin verified:', user.email)
 
-    // Find "Test" organization
-    const { data: testOrg, error: orgError } = await supabase
+    // Get orgId from request body
+    const body = await request.json()
+    const { orgId } = body
+
+    if (!orgId) {
+      return NextResponse.json(
+        { error: 'orgId is required in request body' },
+        { status: 400 }
+      )
+    }
+
+    // Verify organization exists
+    const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select('id, name')
-      .eq('name', 'Test')
+      .eq('id', orgId)
       .maybeSingle()
 
-    if (orgError || !testOrg) {
+    if (orgError || !org) {
       return NextResponse.json(
-        { error: 'Organization "Test" not found' },
+        { error: 'Organization not found' },
         { status: 404 }
       )
     }
 
-    const orgId = testOrg.id
-    console.log('[Seed] Found Test organization:', orgId)
+    console.log('[Seed] Target organization:', org.name, orgId)
 
     // Israeli names and data
     const clients = [
@@ -433,7 +443,7 @@ export async function POST(request: Request) {
       success: true,
       message: 'נתוני בדיקה נוצרו בהצלחה',
       data: {
-        organization: testOrg.name,
+        organization: org.name,
         org_id: orgId,
         clients: clientIds.length,
         visits: createdVisits.length,

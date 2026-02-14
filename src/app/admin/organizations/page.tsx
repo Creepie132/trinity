@@ -55,7 +55,7 @@ export default function OrganizationsPage() {
   const [selectedClientId, setSelectedClientId] = useState<string>('')
   const [orgClients, setOrgClients] = useState<Array<{id: string, first_name: string, last_name: string, email: string | null}>>([])
   const [loadingClients, setLoadingClients] = useState(false)
-  const [seedingData, setSeedingData] = useState(false)
+  const [seedingOrgId, setSeedingOrgId] = useState<string | null>(null)
 
   // TASK 1: State for creating org with client assignment
   const [allClients, setAllClients] = useState<Array<{id: string, first_name: string, last_name: string, email: string | null, org_id: string | null}>>([])
@@ -311,15 +311,16 @@ export default function OrganizationsPage() {
     }
   }
 
-  const handleSeedTestData = async () => {
-    if (!confirm('זה ימלא את ארגון Test ב-25 לקוחות, 80 ביקורים, 40 תשלומים ו-13 מוצרים. להמשיך?')) return
+  const handleSeedTestData = async (orgId: string, orgName: string) => {
+    if (!confirm(`זה ימלא את ארגון "${orgName}" ב-25 לקוחות, 80 ביקורים, 40 תשלומים ו-13 מוצרים. להמשיך?`)) return
     
-    setSeedingData(true)
+    setSeedingOrgId(orgId)
     
     try {
       const response = await fetch('/api/admin/seed-test-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId }),
       })
 
       const result = await response.json()
@@ -332,13 +333,10 @@ export default function OrganizationsPage() {
       toast.success(result.message || 'נתוני בדיקה נוצרו בהצלחה!', {
         description: `${result.data.clients} לקוחות, ${result.data.visits} ביקורים, ${result.data.payments} תשלומים, ${result.data.products} מוצרים`
       })
-      
-      // Close sheet to show updates
-      setSheetOpen(false)
     } catch (error: any) {
       toast.error(`שגיאה: ${error.message}`)
     } finally {
-      setSeedingData(false)
+      setSeedingOrgId(null)
     }
   }
 
@@ -490,13 +488,29 @@ export default function OrganizationsPage() {
                       {format(new Date(org.created_at), 'dd/MM/yyyy')}
                     </TableCell>
                     <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleViewOrg(org.id)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewOrg(org.id)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleSeedTestData(org.id, org.name)}
+                          disabled={seedingOrgId === org.id}
+                          className="bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200"
+                          title="מלא נתוני בדיקה"
+                        >
+                          {seedingOrgId === org.id ? (
+                            <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Gift className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -809,40 +823,6 @@ export default function OrganizationsPage() {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Test Data Seeder - Only for "Test" organization */}
-              {selectedOrg.name === 'Test' && (
-                <Card className="border-yellow-200 bg-yellow-50">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2 text-yellow-800">
-                      <Gift className="w-5 h-5" />
-                      נתוני בדיקה
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-yellow-700 mb-4">
-                      מלא את הארגון ב-25 לקוחות, 80 ביקורים ו-40 תשלומים לצורך צילומי מסך
-                    </p>
-                    <Button 
-                      className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
-                      onClick={handleSeedTestData}
-                      disabled={seedingData}
-                    >
-                      {seedingData ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2" />
-                          יוצר נתונים...
-                        </>
-                      ) : (
-                        <>
-                          <Gift className="w-4 h-4 ml-2" />
-                          מלא נתוני בדיקה
-                        </>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
 
               {/* Users */}
               <Card>

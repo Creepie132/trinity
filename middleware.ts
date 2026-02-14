@@ -49,72 +49,22 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // CRITICAL: ONLY check session - no DB queries
+  const { data: { session } } = await supabase.auth.getSession()
 
-  if (!user) {
+  // No session → redirect to login
+  if (!session) {
     const url = req.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('next', pathname)
     return NextResponse.redirect(url)
   }
 
-  const email = user.email
-  if (!email) {
-    const url = req.nextUrl.clone()
-    url.pathname = '/unauthorized'
-    return NextResponse.redirect(url)
-  }
-
-  // Optimize: Run admin and org checks in parallel (1 request instead of 2)
-  const [{ data: adminRow }, { data: orgRow }] = await Promise.all([
-    supabase
-      .from('admin_users')
-      .select('email')
-      .eq('user_id', user.id)
-      .maybeSingle(),
-    supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-  ])
-
-  const isAdmin = !!adminRow
-
-  if (pathname.startsWith('/admin')) {
-    if (!isAdmin) {
-      const url = req.nextUrl.clone()
-      url.pathname = '/unauthorized'
-      return NextResponse.redirect(url)
-    }
-    return response
-  }
-
-  if (!orgRow && !isAdmin) {
-    const url = req.nextUrl.clone()
-    url.pathname = '/unauthorized'
-    return NextResponse.redirect(url)
-  }
-
-  // Check org status only if orgRow exists and user is not admin
-  if (orgRow && !isAdmin && pathname !== '/blocked') {
-    const { data: organization } = await supabase
-      .from('organizations')
-      .select('is_active')
-      .eq('id', orgRow.org_id)
-      .maybeSingle()
-
-    if (organization && !organization.is_active) {
-      const url = req.nextUrl.clone()
-      url.pathname = '/blocked'
-      return NextResponse.redirect(url)
-    }
-  }
-
+  // Session exists → allow request
+  // All other checks (admin, org_users, org status) happen on client side
   return response
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|map)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
-

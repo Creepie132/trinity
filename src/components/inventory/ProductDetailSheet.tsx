@@ -27,7 +27,7 @@ export function ProductDetailSheet({
   product,
   onEdit,
 }: ProductDetailSheetProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { data: transactions } = useInventoryTransactions(product?.id)
   const deleteProduct = useDeleteProduct()
 

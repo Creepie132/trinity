@@ -67,7 +67,7 @@ export function useFeatures(): Features {
   }
 
   return {
-    hasClients: organization.features?.clients ?? true,
+    hasClients: (organization.features as any)?.clients ?? true,
     hasSms: organization.features?.sms ?? true,
     hasPayments: organization.features?.payments ?? true,
     hasAnalytics: organization.features?.analytics ?? true,

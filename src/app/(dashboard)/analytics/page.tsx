@@ -236,8 +236,33 @@ export default function AnalyticsPage() {
                     data={paymentMethodsData}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
-                    label={((props: any) => `${getMethodLabel(props.name || '')} (${((props.percent || 0) * 100).toFixed(0)}%)`) as any}
+                    labelLine={{
+                      stroke: '#fff',
+                      strokeWidth: 2
+                    }}
+                    label={((props: any) => {
+                      const RADIAN = Math.PI / 180
+                      const radius = props.innerRadius + (props.outerRadius - props.innerRadius) * 1.3
+                      const x = props.cx + radius * Math.cos(-props.midAngle * RADIAN)
+                      const y = props.cy + radius * Math.sin(-props.midAngle * RADIAN)
+                      
+                      return (
+                        <text
+                          x={x}
+                          y={y}
+                          fill="white"
+                          textAnchor={x > props.cx ? 'start' : 'end'}
+                          dominantBaseline="central"
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            textShadow: '0 0 4px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)'
+                          }}
+                        >
+                          {`${getMethodLabel(props.name || '')} (${((props.percent || 0) * 100).toFixed(0)}%)`}
+                        </text>
+                      )
+                    }) as any}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
@@ -246,7 +271,10 @@ export default function AnalyticsPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={((value: any) => `₪${Number(value).toFixed(2)}`) as any} />
+                  <Tooltip 
+                    formatter={((value: any) => `₪${Number(value).toFixed(2)}`) as any}
+                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', color: '#fff' }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>

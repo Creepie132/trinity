@@ -192,7 +192,7 @@ const translations: Record<'he' | 'ru', Translations> = {
       ],
     },
     gallery: {
-      title: 'מהפרויקטים שלנו',
+      title: 'פרויקטים שלנו',
       screenshot: 'צילום מסך',
     },
     reviews: {
@@ -902,7 +902,7 @@ export default function LandingPage() {
           </div>
 
           {/* Contact Info */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {/* WhatsApp Button */}
             <a
               href="https://wa.me/972544858586"
@@ -931,12 +931,6 @@ export default function LandingPage() {
                 {language === 'he' ? 'שלחו הודעה' : 'Отправить сообщение'}
               </div>
             </button>
-
-            {/* Location */}
-            <div className="bg-amber-50 rounded-xl p-6 text-center border-2 border-amber-200">
-              <Globe className="w-8 h-8 text-amber-600 mx-auto mb-3" />
-              <p className="text-gray-700 font-semibold">{t.about.contact.location}</p>
-            </div>
           </div>
         </div>
       </section>
@@ -1134,12 +1128,12 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map((num) => (
-              <div key={num} className="group relative overflow-hidden rounded-xl shadow-lg">
-                <div className="aspect-video bg-gray-300 flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
-                  <span className="text-2xl font-semibold text-gray-600">
-                    {t.gallery.screenshot} {num}
-                  </span>
-                </div>
+              <div key={num} className="group relative overflow-hidden rounded-xl shadow-lg border-2 border-gray-200">
+                <img 
+                  src={`/screenshot-${num}.jpg`}
+                  alt={`${t.gallery.screenshot} ${num}`}
+                  className="w-full h-auto transition-transform duration-300 group-hover:scale-105"
+                />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
               </div>
             ))}

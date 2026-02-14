@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select'
 import { useCreateProduct } from '@/hooks/useProducts'
 import { toast } from 'sonner'
-import { Camera } from 'lucide-react'
+import { Camera, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { BarcodeScanner } from './BarcodeScanner'
 import type { CreateProductDTO } from '@/types/inventory'
@@ -32,7 +32,7 @@ interface CreateProductDialogProps {
 }
 
 export function CreateProductDialog({ open, onClose }: CreateProductDialogProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const createProduct = useCreateProduct()
   const [scannerOpen, setScannerOpen] = useState(false)
 
@@ -102,8 +102,22 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
     <>
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('inventory.newProduct')}</DialogTitle>
+          <DialogHeader className="relative">
+            <Button
+              type="button"
+              onClick={onClose}
+              variant="ghost"
+              size="icon"
+              className="absolute top-0 right-0 h-11 w-11 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              aria-label={t('common.back')}
+            >
+              {language === 'he' ? (
+                <ArrowRight className="h-6 w-6" />
+              ) : (
+                <ArrowLeft className="h-6 w-6" />
+              )}
+            </Button>
+            <DialogTitle className="pr-12">{t('inventory.newProduct')}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">

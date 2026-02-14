@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { useInventoryTransactions } from '@/hooks/useInventory'
 import { useDeleteProduct } from '@/hooks/useProducts'
 import { toast } from 'sonner'
-import { Package, Edit, Trash, ShoppingCart, Plus, Clock } from 'lucide-react'
+import { Package, Edit, Trash, ShoppingCart, Plus, Clock, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { format } from 'date-fns'
 import type { Product } from '@/types/inventory'
@@ -97,8 +97,21 @@ export function ProductDetailSheet({
           side="right"
           className="w-full sm:max-w-xl overflow-y-auto bg-white dark:bg-gray-900"
         >
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
+          <SheetHeader className="relative">
+            <Button
+              onClick={onClose}
+              variant="ghost"
+              size="icon"
+              className="absolute top-0 right-0 h-11 w-11 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label={t('common.back')}
+            >
+              {language === 'he' ? (
+                <ArrowRight className="h-6 w-6" />
+              ) : (
+                <ArrowLeft className="h-6 w-6" />
+              )}
+            </Button>
+            <SheetTitle className="flex items-center gap-2 pr-12">
               <Package className="w-5 h-5" />
               {t('inventory.details')}
             </SheetTitle>

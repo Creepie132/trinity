@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { ArrowRight, ArrowLeft } from 'lucide-react'
 
 interface CreateVisitDialogProps {
   open: boolean
@@ -197,8 +198,22 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] md:max-h-[90vh] h-full md:h-auto overflow-y-auto bg-white dark:bg-gray-800 p-0 md:p-6">
         <div className="sticky top-0 bg-white dark:bg-gray-800 z-10 p-4 md:p-0 border-b md:border-b-0 border-gray-200 dark:border-gray-700">
-          <DialogHeader>
-            <DialogTitle className="text-xl md:text-2xl text-gray-900 dark:text-gray-100">{t('visits.createNew')}</DialogTitle>
+          <DialogHeader className="relative">
+            <Button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              variant="ghost"
+              size="icon"
+              className="absolute top-0 right-0 h-11 w-11 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+              aria-label={t('common.back')}
+            >
+              {language === 'he' ? (
+                <ArrowRight className="h-6 w-6" />
+              ) : (
+                <ArrowLeft className="h-6 w-6" />
+              )}
+            </Button>
+            <DialogTitle className="text-xl md:text-2xl text-gray-900 dark:text-gray-100 pr-12">{t('visits.createNew')}</DialogTitle>
             <DialogDescription className="text-sm md:text-base text-gray-600 dark:text-gray-400">
               {t('visits.subtitle')}
             </DialogDescription>

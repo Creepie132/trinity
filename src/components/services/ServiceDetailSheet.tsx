@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useUpdateService, useDeleteService } from '@/hooks/useServices';
 import { Service, UpdateServiceDTO } from '@/types/services';
-import { Edit2, Trash2, Save, X, Loader2, Clock, DollarSign } from 'lucide-react';
+import { Edit2, Trash2, Save, X, Loader2, Clock, DollarSign, ArrowRight, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -110,8 +110,21 @@ export function ServiceDetailSheet({ service, open, onOpenChange }: ServiceDetai
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center justify-between">
+          <SheetHeader className="relative">
+            <Button
+              onClick={() => onOpenChange(false)}
+              variant="ghost"
+              size="icon"
+              className="absolute top-0 right-0 h-11 w-11 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label={t('common.back')}
+            >
+              {language === 'he' ? (
+                <ArrowRight className="h-6 w-6" />
+              ) : (
+                <ArrowLeft className="h-6 w-6" />
+              )}
+            </Button>
+            <SheetTitle className="flex items-center justify-between pr-12">
               {isEditing ? t('services.editService') : serviceName}
               <div
                 className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600"

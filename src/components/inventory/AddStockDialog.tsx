@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCreateTransaction } from '@/hooks/useInventory'
 import { toast } from 'sonner'
+import { ArrowRight, ArrowLeft } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import type { Product } from '@/types/inventory'
 
@@ -24,7 +25,7 @@ interface AddStockDialogProps {
 }
 
 export function AddStockDialog({ open, onClose, product }: AddStockDialogProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const createTransaction = useCreateTransaction()
 
   const [quantity, setQuantity] = useState(1)
@@ -71,8 +72,22 @@ export function AddStockDialog({ open, onClose, product }: AddStockDialogProps) 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t('inventory.addStockDialog.title')}</DialogTitle>
+        <DialogHeader className="relative">
+          <Button
+            type="button"
+            onClick={onClose}
+            variant="ghost"
+            size="icon"
+            className="absolute top-0 right-0 h-11 w-11 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label={t('common.back')}
+          >
+            {language === 'he' ? (
+              <ArrowRight className="h-6 w-6" />
+            ) : (
+              <ArrowLeft className="h-6 w-6" />
+            )}
+          </Button>
+          <DialogTitle className="pr-12">{t('inventory.addStockDialog.title')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Check, Plus, Trash2, Camera, Package, ChevronDown } from 'lucide-react'
+import { Check, Plus, Trash2, Camera, Package, ChevronDown, ArrowRight, ArrowLeft } from 'lucide-react'
 import { Banknote, Smartphone, CreditCard, Building2, Phone, Zap } from 'lucide-react'
 import { Visit } from '@/types/visits'
 import { Product } from '@/types/inventory'
@@ -381,10 +381,23 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md md:max-h-[90vh] h-full md:h-auto bg-white dark:bg-gray-800 p-0 md:p-6">
-          <div className="sticky top-0 bg-white dark:bg-gray-800 z-10 p-4 md:p-0 border-b md:border-b-0 border-gray-200 dark:border-gray-700">
-            <DialogHeader>
-              <DialogTitle className="text-xl md:text-2xl text-gray-900 dark:text-gray-100">{t('visits.completeTitle')}</DialogTitle>
+        <DialogContent className="max-w-md h-full md:h-auto max-h-[95vh] bg-white dark:bg-gray-800 p-0 flex flex-col">
+          <div className="sticky top-0 bg-white dark:bg-gray-800 z-20 p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+            <DialogHeader className="relative">
+              <Button
+                onClick={() => onOpenChange(false)}
+                variant="ghost"
+                size="icon"
+                className="absolute top-0 right-0 h-11 w-11 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                aria-label={t('common.back')}
+              >
+                {language === 'he' ? (
+                  <ArrowRight className="h-6 w-6" />
+                ) : (
+                  <ArrowLeft className="h-6 w-6" />
+                )}
+              </Button>
+              <DialogTitle className="text-xl md:text-2xl text-gray-900 dark:text-gray-100 pr-12">{t('visits.completeTitle')}</DialogTitle>
               <DialogDescription className="text-sm md:text-base text-gray-600 dark:text-gray-400">
                 {t('visits.paymentDetails')}
               </DialogDescription>
@@ -533,17 +546,6 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
                 </div>
               )}
 
-              {/* Total Amount */}
-              {selectedProducts.length > 0 && (
-                <div className="flex justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded border-2 border-blue-300 dark:border-blue-700">
-                  <span className="text-base font-bold text-blue-900 dark:text-blue-100">
-                    {t('inventory.sellDialog.total')}:
-                  </span>
-                  <span className="text-xl font-bold text-blue-900 dark:text-blue-100">
-                    ₪{totalAmount.toFixed(2)}
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* Payment method selection - Dropdown */}
@@ -595,8 +597,18 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
             )}
             </div>
 
-            {/* Actions - Fixed at bottom on mobile */}
-            <div className="sticky md:static bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 md:p-0 border-t border-gray-200 dark:border-gray-700 mt-4 md:pt-4 flex flex-col gap-2">
+            {/* Actions - Fixed at bottom with total amount */}
+            <div className="sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 space-y-3">
+              {/* Total Amount - Always visible above buttons */}
+              <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded border-2 border-blue-300 dark:border-blue-700">
+                <span className="text-base font-bold text-blue-900 dark:text-blue-100">
+                  {t('inventory.sellDialog.total')}:
+                </span>
+                <span className="text-xl font-bold text-blue-900 dark:text-blue-100">
+                  ₪{totalAmount.toFixed(2)}
+                </span>
+              </div>
+              
               <Button
                 onClick={handleCompleteWithPayment}
                 disabled={isProcessing}

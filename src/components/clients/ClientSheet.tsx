@@ -16,7 +16,7 @@ import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
 import { AssignAdminDialog } from './AssignAdminDialog'
 import { ClientSummary } from '@/types/database'
 import { Visit } from '@/types/visits'
-import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Shield, X, Clock } from 'lucide-react'
+import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Shield, X, Clock, ArrowRight, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 
@@ -27,7 +27,7 @@ interface ClientSheetProps {
 }
 
 export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const supabase = createSupabaseBrowserClient()
   const { data: fullClient } = useClient(client?.id)
   const { data: payments } = usePayments(client?.id)
@@ -122,8 +122,21 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto bg-gray-800 text-gray-100">
-        <SheetHeader>
-          <SheetTitle className="text-2xl text-gray-100">
+        <SheetHeader className="relative">
+          <Button
+            onClick={() => onOpenChange(false)}
+            variant="ghost"
+            size="icon"
+            className="absolute top-0 right-0 h-11 w-11 rounded-full hover:bg-gray-700"
+            aria-label={t('common.back')}
+          >
+            {language === 'he' ? (
+              <ArrowRight className="h-6 w-6" />
+            ) : (
+              <ArrowLeft className="h-6 w-6" />
+            )}
+          </Button>
+          <SheetTitle className="text-2xl text-gray-100 pr-12">
             {client.first_name} {client.last_name}
           </SheetTitle>
         </SheetHeader>

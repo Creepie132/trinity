@@ -367,7 +367,8 @@ export default function OrganizationsPage() {
         </div>
         <Button onClick={() => setAddDialogOpen(true)}>
           <Plus className="w-4 h-4 ml-2" />
-          {t('admin.orgs.addNew')}
+          <span className="hidden sm:inline">{t('admin.orgs.addNew')}</span>
+          <span className="sm:hidden">{t('admin.orgs.addNewShort')}</span>
         </Button>
       </div>
 

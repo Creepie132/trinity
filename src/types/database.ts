@@ -82,6 +82,7 @@ export interface Organization {
   plan: 'basic' | 'pro' | 'enterprise'
   is_active: boolean
   features: {
+    clients?: boolean
     sms: boolean
     payments: boolean
     analytics: boolean

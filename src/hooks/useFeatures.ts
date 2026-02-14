@@ -4,6 +4,7 @@ import { useOrganization } from './useOrganization'
 import { useIsAdmin } from './useIsAdmin'
 
 export interface Features {
+  hasClients: boolean
   hasSms: boolean
   hasPayments: boolean
   hasAnalytics: boolean
@@ -21,6 +22,7 @@ export function useFeatures(): Features {
 
   if (orgLoading || adminLoading) {
     return {
+      hasClients: false,
       hasSms: false,
       hasPayments: false,
       hasAnalytics: false,
@@ -36,6 +38,7 @@ export function useFeatures(): Features {
   // Админ видит всё
   if (isAdmin) {
     return {
+      hasClients: true,
       hasSms: true,
       hasPayments: true,
       hasAnalytics: true,
@@ -50,6 +53,7 @@ export function useFeatures(): Features {
 
   if (!organization) {
     return {
+      hasClients: false,
       hasSms: false,
       hasPayments: false,
       hasAnalytics: false,
@@ -63,6 +67,7 @@ export function useFeatures(): Features {
   }
 
   return {
+    hasClients: organization.features?.clients ?? true,
     hasSms: organization.features?.sms ?? true,
     hasPayments: organization.features?.payments ?? true,
     hasAnalytics: organization.features?.analytics ?? true,

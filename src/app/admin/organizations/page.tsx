@@ -194,7 +194,7 @@ export default function OrganizationsPage() {
     }
   }
 
-  const handleToggleFeature = (orgId: string, feature: 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits' | 'inventory', enabled: boolean) => {
+  const handleToggleFeature = (orgId: string, feature: 'clients' | 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits' | 'inventory', enabled: boolean) => {
     toggleFeature.mutate({ orgId, feature, enabled })
   }
 
@@ -720,6 +720,13 @@ export default function OrganizationsPage() {
                   <CardTitle className="text-lg">פיצ'רים</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <Label>לקוחות (Clients)</Label>
+                    <Switch
+                      checked={selectedOrg.features?.clients !== false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'clients', checked)}
+                    />
+                  </div>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <Label>SMS Campaigns</Label>
                     <Switch

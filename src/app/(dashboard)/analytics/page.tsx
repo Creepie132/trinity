@@ -34,12 +34,16 @@ export default function AnalyticsPage() {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>('all')
   const [periodFilter, setPeriodFilter] = useState<string>('monthly')
 
-  // Check organization status
+  // Check organization status and feature access
   useEffect(() => {
-    if (!features.isLoading && !features.isActive) {
-      router.push('/blocked')
+    if (!features.isLoading) {
+      if (!features.isActive) {
+        router.push('/blocked')
+      } else if (!features.hasAnalytics) {
+        router.push('/dashboard')
+      }
     }
-  }, [features.isActive, features.isLoading, router])
+  }, [features.isActive, features.hasAnalytics, features.isLoading, router])
 
   // Fetch payments data
   const { data: paymentsData = [], isLoading } = useQuery({

@@ -34,12 +34,16 @@ export default function ClientsPage() {
   const from = (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, totalCount)
 
-  // Check organization status
+  // Check organization status and feature access
   useEffect(() => {
-    if (!features.isLoading && !features.isActive) {
-      router.push('/blocked')
+    if (!features.isLoading) {
+      if (!features.isActive) {
+        router.push('/blocked')
+      } else if (!features.hasClients) {
+        router.push('/dashboard')
+      }
     }
-  }, [features.isActive, features.isLoading, router])
+  }, [features.isActive, features.hasClients, features.isLoading, router])
 
   const handleClientClick = (client: ClientSummary) => {
     setSelectedClient(client)

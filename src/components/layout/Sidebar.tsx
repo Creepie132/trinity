@@ -37,7 +37,7 @@ export function Sidebar() {
 
   const baseNavigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
-    { name: t('nav.clients'), href: '/clients', icon: Users, requireFeature: null },
+    { name: t('nav.clients'), href: '/clients', icon: Users, requireFeature: 'clients' },
     { name: language === 'he' ? 'ביקורים' : 'Визиты', href: '/visits', icon: Calendar, requireFeature: 'visits' },
     { name: t('nav.inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
     { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
@@ -102,11 +102,12 @@ export function Sidebar() {
   const navigation = baseNavigation.filter((item) => {
     if (!item.requireFeature) return true
     
-    if (item.requireFeature === 'payments') return features.hasPayments || features.hasSubscriptions
-    if (item.requireFeature === 'sms') return features.hasSms
-    if (item.requireFeature === 'analytics') return features.hasAnalytics
-    if (item.requireFeature === 'visits') return features.hasVisits
-    if (item.requireFeature === 'inventory') return features.hasInventory
+    if (item.requireFeature === 'clients') return features.hasClients !== false
+    if (item.requireFeature === 'payments') return features.hasPayments === true
+    if (item.requireFeature === 'sms') return features.hasSms === true
+    if (item.requireFeature === 'analytics') return features.hasAnalytics === true
+    if (item.requireFeature === 'visits') return features.hasVisits !== false
+    if (item.requireFeature === 'inventory') return features.hasInventory === true
     
     return true
   })

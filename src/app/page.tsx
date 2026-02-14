@@ -7,9 +7,9 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // Simple client-side redirect to login
+    // Simple client-side redirect to landing page
     // No server-side DB calls = no timeout
-    router.replace('/login')
+    router.replace('/landing')
   }, [router])
 
   return null

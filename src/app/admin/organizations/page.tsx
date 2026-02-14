@@ -506,7 +506,7 @@ export default function OrganizationsPage() {
 
       {/* Add Organization Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('admin.orgs.addDialog.title')}</DialogTitle>
             <DialogDescription>
@@ -554,7 +554,7 @@ export default function OrganizationsPage() {
 
               {/* New Client Tab */}
               <TabsContent value="new" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>{t('clients.firstName')} *</Label>
                     <Input
@@ -609,7 +609,7 @@ export default function OrganizationsPage() {
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>{t('admin.orgs.category')}</Label>
                   <Select value={newOrg.category} onValueChange={(value) => setNewOrg({ ...newOrg, category: value })}>
@@ -675,7 +675,7 @@ export default function OrganizationsPage() {
 
       {/* Organization Details Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="left" className="w-[600px] overflow-y-auto">
+        <SheetContent side="left" className="w-full max-w-[95vw] sm:w-[600px] sm:max-w-[600px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>{t('admin.orgs.orgDetailsSheet')}</SheetTitle>
           </SheetHeader>
@@ -700,7 +700,7 @@ export default function OrganizationsPage() {
                     <Label>{t('clients.phone')}</Label>
                     <Input value={selectedOrg.phone || ''} disabled />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label>קטגוריה</Label>
                       <Badge variant="outline" className="mt-2">{getCategoryLabel(selectedOrg.category)}</Badge>
@@ -719,42 +719,42 @@ export default function OrganizationsPage() {
                   <CardTitle className="text-lg">פיצ'רים</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <Label>SMS Campaigns</Label>
                     <Switch
                       checked={selectedOrg.features?.sms || false}
                       onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'sms', checked)}
                     />
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <Label>Payments</Label>
                     <Switch
                       checked={selectedOrg.features?.payments || false}
                       onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'payments', checked)}
                     />
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <Label>Analytics</Label>
                     <Switch
                       checked={selectedOrg.features?.analytics || false}
                       onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'analytics', checked)}
                     />
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <Label>מנויים (Subscriptions)</Label>
                     <Switch
                       checked={selectedOrg.features?.subscriptions || false}
                       onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'subscriptions', checked)}
                     />
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <Label>ביקורים (Visits)</Label>
                     <Switch
                       checked={selectedOrg.features?.visits !== false}
                       onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'visits', checked)}
                     />
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <Label>מלאי (Inventory)</Label>
                     <Switch
                       checked={selectedOrg.features?.inventory || false}
@@ -770,24 +770,26 @@ export default function OrganizationsPage() {
                   <CardTitle className="text-lg">ניהול גישה</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {selectedOrg.is_active ? (
-                    <Button 
-                      variant="destructive" 
-                      className="w-full"
-                      onClick={() => handleToggleActive(selectedOrg.id, false)}
-                    >
-                      <XCircle className="w-4 h-4 ml-2" />
-                      חסום גישה
-                    </Button>
-                  ) : (
-                    <Button 
-                      className="w-full"
-                      onClick={() => handleToggleActive(selectedOrg.id, true)}
-                    >
-                      <CheckCircle2 className="w-4 h-4 ml-2" />
-                      הפעל גישה
-                    </Button>
-                  )}
+                  <div className="flex flex-col gap-2">
+                    {selectedOrg.is_active ? (
+                      <Button 
+                        variant="destructive" 
+                        className="w-full"
+                        onClick={() => handleToggleActive(selectedOrg.id, false)}
+                      >
+                        <XCircle className="w-4 h-4 ml-2" />
+                        חסום גישה
+                      </Button>
+                    ) : (
+                      <Button 
+                        className="w-full"
+                        onClick={() => handleToggleActive(selectedOrg.id, true)}
+                      >
+                        <CheckCircle2 className="w-4 h-4 ml-2" />
+                        הפעל גישה
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -828,21 +830,21 @@ export default function OrganizationsPage() {
               {/* Users */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center justify-between">
-                    משתמשים
-                    <Button size="sm" onClick={() => setAddUserDialogOpen(true)}>
+                  <CardTitle className="text-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <span>משתמשים</span>
+                    <Button size="sm" onClick={() => setAddUserDialogOpen(true)} className="w-full sm:w-auto">
                       <Plus className="w-4 h-4 ml-1" />
                       הוסף משתמש
                     </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
+                  <div className="space-y-2 overflow-x-auto">
                     {orgUsers?.map((user) => (
-                      <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{user.email}</p>
+                      <div key={user.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-2 min-w-[280px]">
+                        <div className="flex-1 w-full">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium break-all">{user.email}</p>
                             {user.user_id ? (
                               <Badge variant="default" className="bg-green-100 text-green-700 text-xs">
                                 מחובר
@@ -863,6 +865,7 @@ export default function OrganizationsPage() {
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleRemoveUser(user.email)}
+                          className="w-full sm:w-auto"
                         >
                           <Trash className="w-4 h-4 text-red-500" />
                         </Button>

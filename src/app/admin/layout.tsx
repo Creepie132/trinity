@@ -64,14 +64,16 @@ export default function AdminLayout({
       <MobileAdminHeader />
 
       {/* Desktop: flex layout с sidebar справа (RTL) */}
-      <div className="flex-1 lg:flex lg:h-screen overflow-hidden">
-        {/* Admin Sidebar — ПЕРВЫЙ для RTL (отображается справа) */}
-        <aside className="hidden lg:block lg:w-64 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
-          <AdminSidebar />
+      <div className="flex-1 lg:flex">
+        {/* Admin Sidebar — ПЕРВЫЙ для RTL (отображается справа), sticky, full height */}
+        <aside className="hidden lg:block lg:w-64 lg:flex-shrink-0">
+          <div className="sticky top-0 h-screen overflow-y-auto">
+            <AdminSidebar />
+          </div>
         </aside>
 
-        {/* Main Content — ВТОРОЙ для RTL (отображается слева) */}
-        <main className="flex-1 overflow-y-auto pt-16 lg:pt-0">
+        {/* Main Content — ВТОРОЙ для RTL (отображается слева), scrollable */}
+        <main className="flex-1 overflow-y-auto pt-16 lg:pt-0 min-h-screen">
           <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
             {children}
           </div>

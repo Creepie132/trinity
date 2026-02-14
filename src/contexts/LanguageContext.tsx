@@ -174,6 +174,8 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language.desc': 'שפת ממשק וכיוון תצוגה',
     'settings.advanced': 'הגדרות נוספות',
     'settings.advanced.desc': 'הגדרות מתקדמות יתווספו בעתיד',
+    'settings.users': 'משתמשים',
+    'settings.users.desc': 'ניהול משתמשי הארגון והרשאות גישה',
     
     // Display Settings
     'display.title': 'הגדרות תצוגה',
@@ -484,7 +486,7 @@ const translations: Record<Language, Record<string, string>> = {
     'careInstructions.updated': 'ההוראה עודכנה בהצלחה',
     'careInstructions.deleted': 'ההוראה נמחקה בהצלחה',
     'careInstructions.deleteConfirm': 'למחוק הוראה זו?',
-    'careInstructions.sendInstructions': 'שלח הוראות טיפול',
+    'careInstructions.sendInstructions': 'שליחת קובץ',
     'careInstructions.downloadPDF': 'הורד PDF',
     'careInstructions.sendWhatsApp': 'שלח בוואטסאפ',
     'careInstructions.noInstructions': 'אין הוראות טיפול',
@@ -518,6 +520,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Payments
     'payments.title': 'תשלומים',
+    'payments.selectPaymentMethod': 'בחר אמצעי תשלום',
     'payments.subtitle': 'ניהול תשלומים והכנסות',
     'payments.addNew': 'הוסף תשלום',
     'payments.createLink': 'צור קישור לתשלום',
@@ -896,6 +899,8 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.language.desc': 'Язык интерфейса и направление текста',
     'settings.advanced': 'Дополнительные настройки',
     'settings.advanced.desc': 'Будут добавлены в будущем',
+    'settings.users': 'Пользователи',
+    'settings.users.desc': 'Управление пользователями организации и правами доступа',
     
     // Display Settings
     'display.title': 'Настройки внешнего вида',
@@ -1205,7 +1210,7 @@ const translations: Record<Language, Record<string, string>> = {
     'careInstructions.updated': 'Инструкция успешно обновлена',
     'careInstructions.deleted': 'Инструкция успешно удалена',
     'careInstructions.deleteConfirm': 'Удалить эту инструкцию?',
-    'careInstructions.sendInstructions': 'Отправить инструкции по уходу',
+    'careInstructions.sendInstructions': 'Отправка файла',
     'careInstructions.downloadPDF': 'Скачать PDF',
     'careInstructions.sendWhatsApp': 'Отправить в WhatsApp',
     'careInstructions.noInstructions': 'Нет инструкций по уходу',
@@ -1239,6 +1244,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Payments
     'payments.title': 'Платежи',
+    'payments.selectPaymentMethod': 'Выберите способ оплаты',
     'payments.subtitle': 'Управление платежами и доходами',
     'payments.addNew': 'Добавить платёж',
     'payments.createLink': 'Создать ссылку на оплату',

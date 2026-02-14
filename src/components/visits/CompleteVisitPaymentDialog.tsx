@@ -397,7 +397,7 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
             <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-3">
               {/* Large price on top for mobile */}
               <div className="text-center md:hidden">
-                <div className="text-4xl font-bold text-theme-primary mb-1">₪{visit.price || 0}</div>
+                <div className="text-4xl font-bold text-theme-primary mb-1 break-words overflow-wrap-anywhere">₪{visit.price || 0}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">{t('payments.amount')}</div>
               </div>
               

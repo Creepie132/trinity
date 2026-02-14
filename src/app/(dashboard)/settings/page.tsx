@@ -41,8 +41,8 @@ export default function SettingsPage() {
       id: 'users',
       href: '/settings/users',
       icon: Users,
-      title: 'משתמשים',
-      description: 'ניהול משתמשי הארגון והרשאות גישה',
+      title: t('settings.users'),
+      description: t('settings.users.desc'),
     },
     {
       id: 'service-colors',

@@ -138,7 +138,12 @@ export default function BillingPage() {
           className="bg-green-600 hover:bg-green-700"
         >
           <Plus className="w-4 h-4 ml-2" />
-          {language === 'he' ? 'הוסף מנוי לארגון' : 'Оформить подписку организации'}
+          <span className="hidden sm:inline">
+            {language === 'he' ? 'הוסף מנוי לארגון' : 'Оформить подписку организации'}
+          </span>
+          <span className="sm:hidden">
+            {language === 'he' ? 'הוסף מנוי' : 'Оформить'}
+          </span>
         </Button>
       </div>
 

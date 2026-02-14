@@ -124,11 +124,10 @@ export default function InventoryPage() {
             {t('inventory.title')}
           </h1>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="hidden md:flex flex-wrap gap-2">
           <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('inventory.newProduct')}</span>
-            <span className="sm:hidden">{t('common.add')}</span>
+            {t('inventory.newProduct')}
           </Button>
           <Button
             onClick={() => setScannerOpen(true)}
@@ -402,6 +401,15 @@ export default function InventoryPage() {
         open={returnDialogOpen}
         onClose={() => setReturnDialogOpen(false)}
       />
+
+      {/* Mobile FAB (Floating Action Button) */}
+      <button
+        onClick={() => setCreateDialogOpen(true)}
+        className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-theme-primary text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50"
+        aria-label={t('inventory.newProduct')}
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </div>
   )
 }

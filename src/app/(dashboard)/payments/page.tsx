@@ -101,25 +101,28 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-6 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      {/* Header - Mobile centered, Desktop left-aligned */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        {/* Title - centered on mobile, left on desktop */}
+        <div className="text-center md:text-right">
           <h1 className="text-3xl font-bold text-gray-900">{t('payments.title')}</h1>
           <p className="text-gray-600 mt-1">
             {t('common.total')}: {payments?.length || 0} {t('payments.title')}
           </p>
         </div>
-        <div className="flex flex-col md:flex-row gap-3">
+
+        {/* Desktop buttons */}
+        <div className="hidden md:flex flex-wrap gap-3">
           {features.hasPayments && (
             <>
-              <Button onClick={() => setDialogOpen(true)} className="w-full md:w-auto">
+              <Button onClick={() => setDialogOpen(true)}>
                 <Plus className="w-4 h-4 ml-2" />
                 {t('payments.createLink')}
               </Button>
               {isAdmin && (
                 <Button 
                   onClick={() => setStripeDialogOpen(true)}
-                  className="bg-purple-600 hover:bg-purple-700 w-full md:w-auto"
+                  className="bg-purple-600 hover:bg-purple-700"
                 >
                   <Plus className="w-4 h-4 ml-2" />
                   Stripe
@@ -130,7 +133,7 @@ export default function PaymentsPage() {
           {features.hasSubscriptions && (
             <Button 
               onClick={() => setSubscriptionDialogOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 w-full md:w-auto"
+              className="bg-indigo-600 hover:bg-indigo-700"
             >
               <Plus className="w-4 h-4 ml-2" />
               {t('subscriptions.create')}
@@ -139,12 +142,39 @@ export default function PaymentsPage() {
           {features.hasPayments && (
             <Button 
               onClick={() => setCashDialogOpen(true)}
-              className="bg-green-600 hover:bg-green-700 w-full md:w-auto"
+              className="bg-green-600 hover:bg-green-700"
             >
               <Banknote className="w-4 h-4 ml-2" />
               {t('payments.cashPayment')}
             </Button>
           )}
+        </div>
+
+        {/* Mobile: Single button with dropdown */}
+        <div className="md:hidden">
+          <Select onValueChange={(value) => {
+            if (value === 'tranzilla') setDialogOpen(true)
+            if (value === 'stripe') setStripeDialogOpen(true)
+            if (value === 'subscription') setSubscriptionDialogOpen(true)
+            if (value === 'cash') setCashDialogOpen(true)
+          }}>
+            <SelectTrigger className="w-full bg-theme-primary text-white hover:opacity-90">
+              <Plus className="w-4 h-4 ml-2" />
+              <SelectValue placeholder={t('payments.selectPaymentMethod')} />
+            </SelectTrigger>
+            <SelectContent>
+              {features.hasPayments && (
+                <>
+                  <SelectItem value="tranzilla">{t('payments.createLink')}</SelectItem>
+                  {isAdmin && <SelectItem value="stripe">Stripe</SelectItem>}
+                  <SelectItem value="cash">{t('payments.cashPayment')}</SelectItem>
+                </>
+              )}
+              {features.hasSubscriptions && (
+                <SelectItem value="subscription">{t('subscriptions.create')}</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

@@ -106,7 +106,23 @@ export default function PartnersPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {campaigns.map((campaign) => (
-          <Card key={campaign.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+          <Card 
+            key={campaign.id} 
+            className="overflow-hidden hover:shadow-lg transition-all relative group"
+            style={{
+              boxShadow: '0 0 20px rgba(251, 191, 36, 0.3)',
+              animation: 'amber-glow 3s ease-in-out infinite'
+            }}
+          >
+            {/* Animated amber glow overlay */}
+            <div 
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-10"
+              style={{
+                background: 'radial-gradient(circle at center, rgba(251, 191, 36, 0.2) 0%, transparent 70%)',
+                animation: 'amber-pulse 2s ease-in-out infinite'
+              }}
+            />
+            
             <div className="relative w-full h-[250px]">
               <Image
                 src={campaign.banner_url}
@@ -130,6 +146,27 @@ export default function PartnersPage() {
           </Card>
         ))}
       </div>
+
+      {/* Amber glow animations */}
+      <style jsx>{`
+        @keyframes amber-glow {
+          0%, 100% {
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.3), 0 0 30px rgba(251, 191, 36, 0.2);
+          }
+          50% {
+            box-shadow: 0 0 30px rgba(251, 191, 36, 0.5), 0 0 40px rgba(251, 191, 36, 0.3);
+          }
+        }
+        
+        @keyframes amber-pulse {
+          0%, 100% {
+            opacity: 0;
+          }
+          50% {
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   )
 }

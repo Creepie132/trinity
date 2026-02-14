@@ -61,7 +61,7 @@ export default function ClientsPage() {
             {t('common.total')}: {clients?.length || 0} {t('clients.title')}
           </p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)} className="bg-theme-primary text-white hover:opacity-90">
+        <Button onClick={() => setAddDialogOpen(true)} className="hidden md:flex bg-theme-primary text-white hover:opacity-90">
           <Plus className="w-4 h-4 ml-2" />
           {t('clients.addNew')}
         </Button>
@@ -240,6 +240,15 @@ export default function ClientsPage() {
         open={clientSheetOpen}
         onOpenChange={setClientSheetOpen}
       />
+
+      {/* Mobile FAB (Floating Action Button) */}
+      <button
+        onClick={() => setAddDialogOpen(true)}
+        className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-theme-primary text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50"
+        aria-label={t('clients.addNew')}
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </div>
   )
 }

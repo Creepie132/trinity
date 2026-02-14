@@ -1,7 +1,6 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-
 import { useState, useEffect } from 'react'
 import {
   Dialog,
@@ -22,6 +21,8 @@ import {
 } from '@/components/ui/select'
 import { useCreateTransaction } from '@/hooks/useInventory'
 import { useClients } from '@/hooks/useClients'
+import { useAuth } from '@/hooks/useAuth'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { toast } from 'sonner'
 import { useLanguage } from '@/contexts/LanguageContext'
 import type { Product } from '@/types/inventory'
@@ -34,18 +35,22 @@ interface SellProductDialogProps {
 
 export function SellProductDialog({ open, onClose, product }: SellProductDialogProps) {
   const { t } = useLanguage()
+  const { orgId } = useAuth()
+  const supabase = createSupabaseBrowserClient()
   const createTransaction = useCreateTransaction()
   const { data: clients } = useClients()
 
   const [quantity, setQuantity] = useState(1)
   const [price, setPrice] = useState(0)
   const [clientId, setClientId] = useState<string>('')
+  const [paymentMethod, setPaymentMethod] = useState<string>('')
 
   useEffect(() => {
     if (product && open) {
       setPrice(product.sell_price)
       setQuantity(1)
       setClientId('')
+      setPaymentMethod('')
     }
   }, [product, open])
 
@@ -54,7 +59,7 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!product) return
+    if (!product || !orgId) return
 
     if (quantity <= 0) {
       toast.error('כמות חייבת להיות גדולה מאפס')
@@ -66,7 +71,13 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
       return
     }
 
+    if (!paymentMethod) {
+      toast.error('נא לבחור אמצעי תשלום')
+      return
+    }
+
     try {
+      // Create inventory transaction
       await createTransaction.mutateAsync({
         product_id: product.id,
         type: 'sale',
@@ -74,6 +85,26 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
         price_per_unit: price,
         total_price: total,
       })
+
+      // Create payment record if client is selected
+      if (clientId) {
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .insert({
+            org_id: orgId,
+            client_id: clientId,
+            amount: total,
+            status: 'completed',
+            payment_method: paymentMethod,
+            provider: 'cash',
+            paid_at: new Date().toISOString(),
+          })
+
+        if (paymentError) {
+          console.error('Payment creation error:', paymentError)
+          toast.error('המוצר נמכר אך היה שגיאה ביצירת התשלום')
+        }
+      }
 
       toast.success(t('common.success'))
       onClose()
@@ -147,6 +178,24 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
                     {client.first_name} {client.last_name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Payment Method (Required) */}
+          <div>
+            <Label htmlFor="paymentMethod">
+              אמצעי תשלום <span className="text-red-500">*</span>
+            </Label>
+            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <SelectTrigger className="bg-white dark:bg-gray-800">
+                <SelectValue placeholder="בחר אמצעי תשלום" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cash">💵 מזומן</SelectItem>
+                <SelectItem value="bit">📱 ביט</SelectItem>
+                <SelectItem value="credit">💳 אשראי</SelectItem>
+                <SelectItem value="bank_transfer">🏦 העברה</SelectItem>
               </SelectContent>
             </Select>
           </div>

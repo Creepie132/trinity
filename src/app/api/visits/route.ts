@@ -110,12 +110,28 @@ export async function POST(request: NextRequest) {
       status: 'scheduled',
     }
 
+    // UUID validation regex
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
     // Add service field (either service_id or service_type for backward compatibility)
     if (serviceId) {
-      insertData.service_id = serviceId
-      insertData.service_type = service || 'custom' // Keep service_type for compatibility
-    } else {
+      // Check if serviceId is a valid UUID
+      if (uuidRegex.test(serviceId)) {
+        // It's a UUID from services table
+        insertData.service_id = serviceId
+        insertData.service_type = service || null
+      } else {
+        // It's a text identifier (legacy default service)
+        insertData.service_id = null
+        insertData.service_type = serviceId
+      }
+    } else if (service) {
+      // Legacy: only service field provided
+      insertData.service_id = null
       insertData.service_type = service
+    } else {
+      insertData.service_id = null
+      insertData.service_type = 'other'
     }
 
     console.log('[API /api/visits POST] Insert data:', JSON.stringify(insertData, null, 2))

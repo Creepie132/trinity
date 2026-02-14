@@ -26,7 +26,7 @@ export default function RootLayout({
         <QueryProvider>
           <LanguageProvider>
             {children}
-            <Toaster position="top-center" />
+            <Toaster position="bottom-center" />
           </LanguageProvider>
         </QueryProvider>
       </body>

@@ -5,8 +5,210 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-11 22:10 UTC  
-**Версия:** 2.17.0
+**Последнее обновление:** 2026-02-14 13:36 UTC  
+**Версия:** 2.29.4
+
+---
+
+## 🔧 ОБНОВЛЕНИЯ v2.29.4 (2026-02-14) - Bug Fixes & Dark Theme
+
+### 🐛 CRITICAL FIXES
+
+#### ✅ 1. Visit Creation UUID Error (v2.29.2)
+**Проблема:** `invalid input syntax for type uuid` - при создании визита передавался текст вместо UUID в поле `service_id`.
+
+**Решение:**
+- Добавлена UUID валидация в `/api/visits/route.ts`
+- Regex: `/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i`
+- Логика:
+  - Валидный UUID → `service_id = UUID`, `service_type = null`
+  - Текст (legacy) → `service_id = null`, `service_type = текст`
+- Полная обратная совместимость
+
+**Files Changed:**
+- ✅ `src/app/api/visits/route.ts` - UUID validation logic
+
+---
+
+#### ✅ 2. Product Sale Without Payment (v2.29.2)
+**Проблема:** В SellProductDialog не было выбора способа оплаты.
+
+**Решение:**
+- Добавлен dropdown с 4 методами оплаты:
+  - 💵 מזומן (cash)
+  - 📱 ביט (bit)
+  - 💳 אשראי (credit)
+  - 🏦 העברה (bank_transfer)
+- При продаже клиенту автоматически создаётся payment:
+  - `status: 'completed'`
+  - `payment_method: выбранный метод`
+  - `provider: 'cash'`
+  - `paid_at: текущее время`
+
+**Files Changed:**
+- ✅ `src/components/inventory/SellProductDialog.tsx` - Payment method dropdown + auto-create payment
+
+---
+
+#### ✅ 3. Toast Position (v2.29.2)
+**Проблема:** Toast уведомления скрывались за header (top-center).
+
+**Решение:**
+- Изменён position Toaster: `top-center` → `bottom-center`
+
+**Files Changed:**
+- ✅ `src/app/layout.tsx` - Toaster position
+
+---
+
+#### ✅ 4. Client Card Improvements (v2.29.2)
+**Проблема:** 
+- "Всего потрачено" показывало ₪0.00 вместо реальных сумм
+- Визиты не отображались в карточке клиента
+- Карточка не переведена на русский
+
+**Решение:**
+- Исправлен SQL view `client_summary`:
+  - Использует `visits.scheduled_at` вместо `visit_date`
+  - Добавлены proper org_id joins
+- ClientSheet.tsx:
+  - Добавлен useQuery для загрузки визитов
+  - Реализована вкладка истории визитов с карточками
+  - 27 новых ключей перевода (Hebrew/Russian)
+  - Dark theme styling
+
+**Files Changed:**
+- ✅ `supabase/fix-client-summary-view.sql` - SQL migration
+- ✅ `src/components/clients/ClientSheet.tsx` - Visit history + translations
+- ✅ `src/contexts/LanguageContext.tsx` - 27 new keys
+
+---
+
+### 🎨 UI/UX IMPROVEMENTS
+
+#### ✅ 5. Modal Close Buttons (v2.29.3)
+**Проблема:** Кнопки закрытия модалок были неудобными (✕ или текст).
+
+**Решение:**
+- Все Sheet/Dialog компоненты получили кнопку стрелки назад:
+  - Размер: 44×44px (touch-friendly)
+  - RTL: ArrowRight (←)
+  - LTR: ArrowLeft (→)
+  - Position: `absolute top-0 right-0`
+  - Не перекрывается заголовком (`pr-12` на title)
+
+**Исправлено в 8 компонентах:**
+- ✅ ProductDetailSheet
+- ✅ ServiceDetailSheet
+- ✅ CompleteVisitPaymentDialog
+- ✅ CreateVisitDialog
+- ✅ CreateProductDialog
+- ✅ SellProductDialog
+- ✅ AddStockDialog
+- ✅ ClientSheet
+
+**Files Changed:**
+- ✅ All 8 modal components - Arrow back button (44×44px)
+
+---
+
+#### ✅ 6. CompleteVisitPaymentDialog Layout (v2.29.3)
+**Проблема:** Сумма к оплате скрывалась при скролле, кнопки не фиксированы.
+
+**Решение - Sticky Footer Layout:**
+```
+┌─────────────────────────────┐
+│ Header (sticky top-0)       │ ← Fixed header
+├─────────────────────────────┤
+│ Content (overflow-y-auto)   │ ← Scrollable
+│ - Visit details            │
+│ - Products                  │
+│ - Payment method           │
+│ - Care instructions        │
+├─────────────────────────────┤
+│ Footer (sticky bottom-0)    │ ← Fixed footer
+│ ┌─────────────────────────┐│
+│ │ Total: ₪1,500.00       ││ ← Always visible
+│ └─────────────────────────┘│
+│ [Confirm Payment]          │
+│ [Complete Without Payment] │
+│ [Cancel]                   │
+└─────────────────────────────┘
+```
+
+**Files Changed:**
+- ✅ `src/components/visits/CompleteVisitPaymentDialog.tsx` - Sticky footer layout
+
+---
+
+### 🌙 DARK THEME FIXES
+
+#### ✅ 7. Dark Theme Buttons & Inputs (v2.29.4)
+**Проблема:** Многие кнопки и инпуты не были видны в тёмной теме.
+
+**Решение:**
+- Payments page mobile dropdown: `dark:bg-gray-700 dark:text-white dark:border-gray-600`
+- Inventory page filters: все Select/Input с dark: классами
+- Все SelectContent: `dark:bg-gray-700 dark:border-gray-600`
+- Все SelectItem: `dark:text-white`
+
+**Pattern:**
+```tsx
+// Buttons
+dark:bg-gray-700 dark:text-white dark:border-gray-600
+
+// Inputs
+dark:bg-gray-700 dark:border-gray-600 dark:text-white
+
+// SelectContent
+dark:bg-gray-700 dark:border-gray-600
+
+// SelectItem
+dark:text-white
+```
+
+**Files Changed:**
+- ✅ `src/app/(dashboard)/payments/page.tsx` - Mobile dropdown + all filters
+- ✅ `src/app/(dashboard)/inventory/page.tsx` - Search + category/stock filters
+
+---
+
+#### ✅ 8. Missing Language Variable (v2.29.4)
+**Проблема:** В ProductDetailSheet использовалась переменная `language` без деструктуризации.
+
+**Решение:**
+```tsx
+// Было
+const { t } = useLanguage()
+// language не определен → ошибка
+
+// Стало
+const { t, language } = useLanguage()
+// ✅ Все работает
+```
+
+**Files Changed:**
+- ✅ `src/components/inventory/ProductDetailSheet.tsx` - Added language destructuring
+
+---
+
+### 📋 SUMMARY v2.29.2 - v2.29.4
+
+**Critical Fixes:**
+- ✅ Visit creation UUID validation
+- ✅ Product sale payment method
+- ✅ Toast position (bottom-center)
+- ✅ Client card data + translations
+
+**UI/UX:**
+- ✅ 8 modals with arrow back buttons (44×44px)
+- ✅ CompleteVisitPaymentDialog sticky footer
+- ✅ Dark theme buttons/inputs on all pages
+- ✅ Language variable fixes
+
+**Files Modified:** 15 files
+**New SQL Migrations:** 1 (fix-client-summary-view.sql)
+**New Translation Keys:** 27 (Hebrew + Russian)
 
 ---
 
@@ -5946,11 +6148,79 @@ npm start
 
 ---
 
-**Последнее обновление:** 2026-02-09 20:45 UTC
+**Последнее обновление:** 2026-02-14 13:36 UTC
 
-**Версия проекта:** 2.3.0
+**Версия проекта:** 2.29.4
 
 **Статус:** ✅ Production Ready
+
+**Основные достижения v2.29.4:**
+- ✅ **Visit Creation UUID Fix** — корректная обработка UUID и legacy services
+- ✅ **Product Sale Payment** — обязательный выбор способа оплаты
+- ✅ **Toast Position** — bottom-center для видимости
+- ✅ **Client Card Data** — исправлен SQL view, полная история визитов
+- ✅ **Modal Close Buttons** — стрелка назад 44×44px на всех модалках
+- ✅ **Dark Theme Fixes** — все кнопки и инпуты читаемы в тёмной теме
+- ✅ **27 новых ключей перевода** — Hebrew + Russian
+
+**Основные достижения v2.29:**
+- ✅ **Mobile UX Optimization** — FAB buttons, centered layouts, responsive dialogs
+- ✅ **Sidebar Consistency** — mobile = desktop (same items, order, icons)
+- ✅ **Adaptive Button Text** — full text on desktop, short on mobile
+- ✅ **Analytics PieChart** — white labels with text shadow for dark backgrounds
+- ✅ **Payments Page Centered** — mobile-optimized with dropdown selects
+- ✅ **Partners Page Animations** — CSS-only amber glow (@keyframes)
+
+**Основные достижения v2.27-v2.28:**
+- ✅ **Error Boundaries** — prevent white screens on mobile
+- ✅ **Care Instructions PDF** — jspdf generator with WhatsApp integration
+- ✅ **Sticky Sidebar Pattern** — admin layout sidebar fixed
+- ✅ **Landing Page Updates** — WhatsApp/Email animated buttons
+
+**Основные достижения v2.26:**
+- ✅ **Active Visit System** — live timer, multi-service tracking
+- ✅ **Visit Services Table** — with RLS and triggers
+- ✅ **Service Dropdown Redesign** — Select instead of buttons
+- ✅ **Compact ActiveVisitCard** — 80-100px height max
+
+**Основные достижения v2.25:**
+- ✅ **Services Management System** — customizable per-org services
+- ✅ **Care Instructions** — bilingual PDF generation
+- ✅ **Test Data Seeder Enhanced** — 25 Israeli clients, 80 visits, 13 products
+- ✅ **Visit-Service Integration** — database-driven instead of hardcoded
+
+**Основные достижения v2.23-v2.24:**
+- ✅ **Inventory System** — barcode scanning, transaction tracking
+- ✅ **Visit-Product Integration** — products in CompleteVisitPaymentDialog
+- ✅ **Low Stock Alerts** — dashboard card, sidebar badges, banner
+
+**Основные достижения v2.20-v2.22:**
+- ✅ **Visits System** — full CRUD with payment integration
+- ✅ **Analytics Dashboard** — PieChart + BarChart visualizations
+- ✅ **Branded Loading Animations** — Trinity logo with amber orbit
+- ✅ **Prism Login Button** — neumorphic design with rotating conic-gradient
+
+**Основные достижения v2.17-v2.19:**
+- ✅ **Stripe Payment Integration** — parallel to Tranzilla
+- ✅ **User Invitation System** — auto-linking on first login
+- ✅ **Landing Page** — Amber Solutions Systems standalone site
+- ✅ **Test Data Seeder** — basic client/visit/payment generation
+
+**Основные достижения v2.12-v2.16:**
+- ✅ **Full Translation System** — 676+ keys per language (Hebrew/Russian)
+- ✅ **Auto RTL ↔ LTR Switching** — based on language selection
+- ✅ **Settings Reorganization** — Display + Language pages
+- ✅ **Dark Mode Toggle** — persists across sessions
+
+**Основные достижения v2.9-v2.11:**
+- ✅ **Visual Theme System** — 6 color themes
+- ✅ **Layout System** — 3 UI styles (Classic/Modern/Compact)
+- ✅ **Advanced Customization** — 12+ granular settings
+
+**Основные достижения v2.8:**
+- ✅ **Auto-Link User ID System** — fixes "no access" errors
+- ✅ **Database Signup Error Fix** — email normalization trigger
+- ✅ **Dashboard Data Leak Fix** — added org_id filters to all stats
 
 **Основные достижения v2.3:**
 - ✅ **Правильный RTL Layout** — sidebar справа sticky, контент слева прокручивается
@@ -5975,13 +6245,149 @@ npm start
 - ✅ RTL интерфейс на иврите
 - ✅ Подробная документация
 
-**Коммиты:**
-- `b3645ab` (2026-02-09 20:45) — fix: правильный RTL layout - sidebar справа sticky
-- `0ac0921` (2026-02-09 20:00) — Sidebar fix
-- `e748f02` (2026-02-09 18:26) — feat: исправлена responsive логика sidebar (RTL) + переключатель темы
-- `c19bd26` — feat: добавлено мобильное меню для админ-панели
-- `0d18b5e` — feat: добавлено мобильное меню с бургером
-- `f6874de` — feat: добавлена проверка features в API routes
+**Последние коммиты (v2.29.4):**
+- `64b3c97` (2026-02-14 12:07) — Fix missing language variable
+- `a2af380` (2026-02-14 12:02) — Fix dark theme buttons
+- `0628b89` (2026-02-14 11:52) — Fix modals close button, payment dialog layout
+- `8ae6d35` (2026-02-14 11:46) — Fix visit creation UUID, product sale payment, toast position
+- `c3987dc` (2026-02-14 11:45) — Fix dark theme buttons (payments page)
+- `40b7403` (2026-02-14 03:55) — fix: Change payment method button text color to black
+- `3431f2c` (2026-02-14 03:22) — fix: Client card improvements
+
+---
+
+## 📁 Структура проекта (v2.29.4)
+
+### Основные директории
+
+```
+clientbase-pro/
+├── src/
+│   ├── app/                          # Next.js App Router
+│   │   ├── (dashboard)/              # CRM Routes (protected)
+│   │   │   ├── page.tsx              # Dashboard
+│   │   │   ├── clients/              # Clients page
+│   │   │   ├── visits/               # Visits page
+│   │   │   ├── inventory/            # Inventory page
+│   │   │   ├── payments/             # Payments page
+│   │   │   ├── sms/                  # SMS page
+│   │   │   ├── stats/                # Statistics
+│   │   │   ├── partners/             # Partners offers
+│   │   │   ├── settings/             # Settings (display, language, customize)
+│   │   │   └── layout.tsx            # CRM Layout (Sidebar + content)
+│   │   ├── admin/                    # Admin Panel (protected)
+│   │   │   ├── page.tsx              # Admin dashboard
+│   │   │   ├── organizations/        # Orgs management
+│   │   │   ├── billing/              # Billing management
+│   │   │   ├── users/                # Users management
+│   │   │   └── layout.tsx            # Admin Layout
+│   │   ├── api/                      # API Routes
+│   │   │   ├── admin/                # Admin endpoints
+│   │   │   ├── clients/              # Client endpoints
+│   │   │   ├── inventory/            # Inventory endpoints
+│   │   │   ├── org/                  # Organization endpoints
+│   │   │   ├── payments/             # Payment endpoints (Tranzilla + Stripe)
+│   │   │   ├── services/             # Services endpoints
+│   │   │   ├── visits/               # Visit endpoints
+│   │   │   └── ...
+│   │   ├── blocked/                  # Blocked page
+│   │   ├── landing/                  # Landing page (Amber Solutions)
+│   │   ├── login/                    # Login page
+│   │   ├── layout.tsx                # Root layout
+│   │   └── globals.css               # Global styles
+│   ├── components/                   # React components
+│   │   ├── care-instructions/        # Care instructions components
+│   │   ├── clients/                  # Client components (ClientSheet, etc.)
+│   │   ├── inventory/                # Inventory components (dialogs, sheets)
+│   │   ├── layout/                   # Layout components (Sidebar, MobileHeader)
+│   │   ├── payments/                 # Payment dialogs (Tranzilla, Stripe, Cash)
+│   │   ├── providers/                # React Query provider
+│   │   ├── services/                 # Service management components
+│   │   ├── ui/                       # shadcn/ui components
+│   │   └── visits/                   # Visit components (dialogs, cards)
+│   ├── contexts/                     # React contexts
+│   │   ├── LanguageContext.tsx       # i18n (676+ keys Hebrew/Russian)
+│   │   └── ThemeContext.tsx          # Theme + Layout + Customization
+│   ├── hooks/                        # Custom hooks
+│   │   ├── useAuth.ts                # Authentication
+│   │   ├── useClients.ts             # Clients CRUD
+│   │   ├── useFeatures.ts            # Feature flags
+│   │   ├── useInventory.ts           # Inventory CRUD
+│   │   ├── usePayments.ts            # Payments CRUD
+│   │   ├── useProducts.ts            # Products CRUD
+│   │   ├── useServices.ts            # Services CRUD
+│   │   ├── useStats.ts               # Statistics
+│   │   ├── useVisitServices.ts       # Visit-Service relations
+│   │   └── ...
+│   ├── lib/                          # Utilities
+│   │   ├── supabase-browser.ts       # Browser Supabase client
+│   │   ├── supabase-service.ts       # Service role client (bypasses RLS)
+│   │   ├── stripe.ts                 # Stripe client
+│   │   ├── tranzilla.ts              # Tranzilla utils
+│   │   └── utils.ts                  # shadcn/ui utils
+│   ├── types/                        # TypeScript types
+│   │   ├── database.ts               # Supabase types
+│   │   ├── inventory.ts              # Inventory types
+│   │   ├── services.ts               # Services types
+│   │   └── visits.ts                 # Visit types (single source of truth)
+│   └── middleware.ts                 # Auth + features middleware
+├── supabase/                         # SQL migrations
+│   ├── create-services.sql           # Services table
+│   ├── create-visit-services.sql     # Visit-service relations
+│   ├── create-visits-table.sql       # Visits table
+│   ├── fix-client-summary-view.sql   # Fixed view (scheduled_at)
+│   ├── migrate-visits-to-services.sql
+│   └── ...
+├── public/                           # Static assets
+│   ├── logo.png                      # Trinity logo
+│   ├── logoload.png                  # Loading logo
+│   └── ...
+├── CLAUDE.md                         # This file
+├── package.json                      # Dependencies
+├── tailwind.config.ts                # Tailwind configuration
+├── tsconfig.json                     # TypeScript configuration
+└── .env.local                        # Environment variables (gitignored)
+```
+
+### Ключевые файлы (недавно измененные)
+
+**Bug Fixes (v2.29.2-v2.29.4):**
+- `src/app/api/visits/route.ts` — UUID validation
+- `src/app/layout.tsx` — Toaster position
+- `src/components/inventory/SellProductDialog.tsx` — Payment method dropdown
+- `src/components/clients/ClientSheet.tsx` — Visit history + translations
+- `supabase/fix-client-summary-view.sql` — Fixed SQL view
+
+**UI/UX (v2.29.3):**
+- All 8 modal components — Arrow back button (44×44px)
+- `src/components/visits/CompleteVisitPaymentDialog.tsx` — Sticky footer layout
+
+**Dark Theme (v2.29.4):**
+- `src/app/(dashboard)/payments/page.tsx` — Mobile dropdown + filters
+- `src/app/(dashboard)/inventory/page.tsx` — Search + filters
+- `src/components/inventory/ProductDetailSheet.tsx` — Language variable fix
+
+**Translation System:**
+- `src/contexts/LanguageContext.tsx` — 676+ keys (Hebrew + Russian)
+
+**Core Systems:**
+- `src/hooks/useAuth.ts` — Authentication hook (needs optimization - 40-60 parallel requests)
+- `src/components/layout/Sidebar.tsx` — Main sidebar (desktop)
+- `src/components/layout/MobileSidebar.tsx` — Mobile sidebar (identical to desktop)
+- `middleware.ts` — Auth + features + public paths
+
+### SQL Migrations (Manual Execution)
+
+**Pending migrations (not executed automatically):**
+1. `supabase/create-services.sql` — Create services table
+2. `supabase/migrate-visits-to-services.sql` — Migrate visits to use service_id
+3. `supabase/create-visit-services.sql` — Create visit_services table
+4. `supabase/fix-client-summary-view.sql` — Fix client_summary view
+
+**Instructions:**
+- Execute in Supabase SQL Editor manually
+- Check for existing tables before running
+- All migrations are idempotent (safe to re-run)
 
 ---
 

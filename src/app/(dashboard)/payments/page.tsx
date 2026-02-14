@@ -158,20 +158,20 @@ export default function PaymentsPage() {
             if (value === 'subscription') setSubscriptionDialogOpen(true)
             if (value === 'cash') setCashDialogOpen(true)
           }}>
-            <SelectTrigger className="w-full bg-theme-primary hover:opacity-90 [&>span]:!text-gray-900 [&_svg]:text-gray-900">
-              <Plus className="w-4 h-4 ml-2 text-gray-900" />
-              <SelectValue placeholder={t('payments.selectPaymentMethod')} className="text-gray-900" />
+            <SelectTrigger className="w-full bg-theme-primary dark:bg-gray-700 dark:text-white dark:border-gray-600 hover:opacity-90 [&>span]:!text-gray-900 dark:[&>span]:!text-white [&_svg]:text-gray-900 dark:[&_svg]:text-white">
+              <Plus className="w-4 h-4 ml-2 text-gray-900 dark:text-white" />
+              <SelectValue placeholder={t('payments.selectPaymentMethod')} className="text-gray-900 dark:text-white" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-gray-700 dark:border-gray-600">
               {features.hasPayments && (
                 <>
-                  <SelectItem value="tranzilla">{t('payments.createLink')}</SelectItem>
-                  {isAdmin && <SelectItem value="stripe">Stripe</SelectItem>}
-                  <SelectItem value="cash">{t('payments.cashPayment')}</SelectItem>
+                  <SelectItem value="tranzilla" className="dark:text-white">{t('payments.createLink')}</SelectItem>
+                  {isAdmin && <SelectItem value="stripe" className="dark:text-white">Stripe</SelectItem>}
+                  <SelectItem value="cash" className="dark:text-white">{t('payments.cashPayment')}</SelectItem>
                 </>
               )}
               {features.hasSubscriptions && (
-                <SelectItem value="subscription">{t('subscriptions.create')}</SelectItem>
+                <SelectItem value="subscription" className="dark:text-white">{t('subscriptions.create')}</SelectItem>
               )}
             </SelectContent>
           </Select>

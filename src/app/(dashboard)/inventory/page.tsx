@@ -193,24 +193,24 @@ export default function InventoryPage() {
           <div className="flex flex-col md:flex-row gap-3">
             {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
               <Input
                 placeholder={t('inventory.search')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white dark:bg-gray-700"
+                className="pl-10 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               />
             </div>
 
             {/* Category Filter */}
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full md:w-48 bg-white dark:bg-gray-700">
+              <SelectTrigger className="w-full md:w-48 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                 <SelectValue placeholder={t('inventory.filterCategory')} />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value=" ">{t('inventory.filterCategory')}</SelectItem>
+              <SelectContent className="bg-white dark:bg-gray-700 dark:border-gray-600">
+                <SelectItem value=" " className="dark:text-white">{t('inventory.filterCategory')}</SelectItem>
                 {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat!}>
+                  <SelectItem key={cat} value={cat!} className="dark:text-white">
                     {cat}
                   </SelectItem>
                 ))}
@@ -222,13 +222,13 @@ export default function InventoryPage() {
               value={stockFilter}
               onValueChange={(v) => setStockFilter(v as StockFilter)}
             >
-              <SelectTrigger className="w-full md:w-40 bg-white dark:bg-gray-700">
+              <SelectTrigger className="w-full md:w-40 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('inventory.filterAll')}</SelectItem>
-                <SelectItem value="low">{t('inventory.filterLowStock')}</SelectItem>
-                <SelectItem value="out">{t('inventory.filterOutOfStock')}</SelectItem>
+              <SelectContent className="bg-white dark:bg-gray-700 dark:border-gray-600">
+                <SelectItem value="all" className="dark:text-white">{t('inventory.filterAll')}</SelectItem>
+                <SelectItem value="low" className="dark:text-white">{t('inventory.filterLowStock')}</SelectItem>
+                <SelectItem value="out" className="dark:text-white">{t('inventory.filterOutOfStock')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -4,10 +4,10 @@ import { cookies } from 'next/headers'
 
 export async function GET(
   request: Request,
-  { params }: { params: { orgId: string } }
+  { params }: { params: Promise<{ orgId: string }> }
 ) {
   try {
-    const orgId = params.orgId
+    const { orgId } = await params
     console.log('[GET ORG] Loading organization:', orgId)
 
     // Authenticate user

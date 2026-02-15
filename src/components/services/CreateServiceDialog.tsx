@@ -36,8 +36,8 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
   const [formData, setFormData] = useState<CreateServiceDTO>({
     name: '',
     name_ru: '',
-    price: 0,
-    duration_minutes: 60,
+    price: undefined,
+    duration_minutes: undefined,
     color: DEFAULT_COLORS[0],
   });
 
@@ -49,18 +49,25 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
       return;
     }
 
-    if (formData.price && formData.price < 0) {
+    if (formData.price !== undefined && formData.price < 0) {
       toast.error(t('services.errors.priceInvalid'));
       return;
     }
 
-    if (formData.duration_minutes && formData.duration_minutes < 1) {
+    if (formData.duration_minutes !== undefined && formData.duration_minutes < 1) {
       toast.error(t('services.errors.durationInvalid'));
       return;
     }
 
+    // Set defaults if not provided
+    const serviceData: CreateServiceDTO = {
+      ...formData,
+      price: formData.price ?? 0,
+      duration_minutes: formData.duration_minutes ?? 60,
+    };
+
     try {
-      await createService.mutateAsync(formData);
+      await createService.mutateAsync(serviceData);
 
       toast.success(t('services.created'));
       onOpenChange(false);
@@ -69,8 +76,8 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
       setFormData({
         name: '',
         name_ru: '',
-        price: 0,
-        duration_minutes: 60,
+        price: undefined,
+        duration_minutes: undefined,
         color: DEFAULT_COLORS[0],
       });
     } catch (error) {
@@ -124,8 +131,9 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.price}
-                onChange={(e) => handleChange('price', parseFloat(e.target.value) || 0)}
+                value={formData.price ?? ''}
+                onChange={(e) => handleChange('price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                placeholder="0"
                 required
               />
             </div>
@@ -137,8 +145,9 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
                 type="number"
                 min="1"
                 step="1"
-                value={formData.duration_minutes}
-                onChange={(e) => handleChange('duration_minutes', parseInt(e.target.value) || 60)}
+                value={formData.duration_minutes ?? ''}
+                onChange={(e) => handleChange('duration_minutes', e.target.value ? parseInt(e.target.value) : undefined)}
+                placeholder="60"
                 required
               />
             </div>

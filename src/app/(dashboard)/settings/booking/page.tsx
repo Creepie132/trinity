@@ -10,9 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
-import { useFeatures } from '@/hooks/useFeatures'
 import { ArrowLeft, Copy, Check } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 
@@ -59,21 +57,11 @@ const defaultSettings: BookingSettings = {
 export default function BookingSettingsPage() {
   const { t, language } = useLanguage()
   const { orgId, user } = useAuth()
-  const features = useFeatures()
-  const router = useRouter()
   const [settings, setSettings] = useState<BookingSettings>(defaultSettings)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [hasBreak, setHasBreak] = useState(true)
-
-  // Check feature access
-  useEffect(() => {
-    if (!features.isLoading && !features.hasBooking) {
-      router.push('/settings')
-      toast.error('הפיצ'ר הזמנת תורים לא פעיל')
-    }
-  }, [features.hasBooking, features.isLoading, router])
 
   // Generate slug from org name
   const generateSlug = (name: string) => {

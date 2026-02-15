@@ -105,15 +105,25 @@ export default function BookingSettingsPage() {
   }, [orgId])
 
   const handleSave = async () => {
-    if (!orgId) return
+    if (!orgId) {
+      toast.error('Organization ID not found')
+      return
+    }
 
+    console.log('[BOOKING SETTINGS] Saving settings for org:', orgId)
     setSaving(true)
+    
     try {
       // Prepare settings with or without break
       const settingsToSave = {
         ...settings,
         break_times: hasBreak ? settings.break_times : [],
       }
+
+      console.log('[BOOKING SETTINGS] Payload:', {
+        orgId,
+        settings: settingsToSave,
+      })
 
       const res = await fetch(`/api/organizations/booking-settings`, {
         method: 'PATCH',
@@ -124,12 +134,17 @@ export default function BookingSettingsPage() {
         }),
       })
 
-      if (!res.ok) throw new Error('Failed to save')
+      const data = await res.json()
+      console.log('[BOOKING SETTINGS] Response:', { status: res.status, data })
+
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP ${res.status}: ${res.statusText}`)
+      }
 
       toast.success(t('booking.saved'))
-    } catch (error) {
-      console.error('Error saving booking settings:', error)
-      toast.error('Failed to save settings')
+    } catch (error: any) {
+      console.error('[BOOKING SETTINGS] Error saving:', error)
+      toast.error(error.message || 'Failed to save settings')
     } finally {
       setSaving(false)
     }

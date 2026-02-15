@@ -85,6 +85,21 @@ export async function PATCH(request: Request) {
 
     if (error) {
       console.error('[BOOKING SETTINGS] Update error:', error)
+      
+      // Check if error is about missing column
+      if (error.message && (
+        error.message.includes('column "booking_settings"') ||
+        error.message.includes('column "slug"')
+      )) {
+        return NextResponse.json(
+          { 
+            error: 'Database migration required. Please run: supabase/APPLY-BOOKING-MIGRATION.md',
+            details: error.message
+          },
+          { status: 500 }
+        )
+      }
+      
       throw error
     }
 

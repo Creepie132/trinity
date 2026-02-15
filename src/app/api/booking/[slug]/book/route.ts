@@ -8,7 +8,15 @@ export async function POST(
 ) {
   try {
     const { slug } = await params
+    console.log('[Booking Book API] Creating booking for slug:', slug)
+    
     const body = await request.json()
+    console.log('[Booking Book API] Request body:', {
+      service_name: body.service_name,
+      client_name: body.client_name,
+      scheduled_at: body.scheduled_at
+    })
+    
     const {
       service_id,
       service_name,
@@ -23,6 +31,7 @@ export async function POST(
 
     // Validation
     if (!service_name || !client_name || !client_phone || !scheduled_at) {
+      console.error('[Booking Book API] Missing required fields')
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -41,10 +50,17 @@ export async function POST(
       .eq('slug', slug)
       .maybeSingle()
 
-    if (orgError || !org) {
+    if (orgError) {
+      console.error('[Booking Book API] Error finding org:', orgError)
+      return NextResponse.json({ error: 'Database error', details: orgError.message }, { status: 500 })
+    }
+
+    if (!org) {
+      console.error('[Booking Book API] Organization not found for slug:', slug)
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
+    console.log('[Booking Book API] Found organization:', org.name)
     const settings = org.booking_settings || {}
 
     // Validate date is not in the past
@@ -92,13 +108,18 @@ export async function POST(
     const startOfSlot = scheduledDate.toISOString()
     const endOfSlot = new Date(scheduledDate.getTime() + (duration_minutes || 60) * 60 * 1000).toISOString()
 
-    // Check for conflicts
-    const { data: conflicts } = await supabase
+    // Check for conflicts (bookings that overlap with our slot)
+    const { data: conflicts, error: conflictError } = await supabase
       .from('bookings')
       .select('id')
       .eq('org_id', org.id)
-      .neq('status', 'cancelled')
-      .or(`and(scheduled_at.lt.${endOfSlot},scheduled_at.gte.${startOfSlot})`)
+      .in('status', ['pending', 'confirmed'])
+      .gte('scheduled_at', startOfSlot)
+      .lt('scheduled_at', endOfSlot)
+
+    if (conflictError) {
+      console.error('[Booking Book API] Error checking conflicts:', conflictError)
+    }
 
     if (conflicts && conflicts.length > 0) {
       return NextResponse.json(
@@ -108,21 +129,30 @@ export async function POST(
     }
 
     // Create booking
+    console.log('[Booking Book API] Creating booking record...')
+    const bookingData = {
+      org_id: org.id,
+      service_id: service_id || null,
+      service_name,
+      client_name,
+      client_phone,
+      client_email: client_email || null,
+      scheduled_at,
+      duration_minutes: duration_minutes || 60,
+      price: price || null,
+      status: 'pending',
+      notes: notes || null
+    }
+    
+    console.log('[Booking Book API] Booking data:', {
+      ...bookingData,
+      org_id: org.id.substring(0, 8) + '...',
+      service_id: service_id ? service_id.substring(0, 8) + '...' : null
+    })
+
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .insert({
-        org_id: org.id,
-        service_id: service_id || null,
-        service_name,
-        client_name,
-        client_phone,
-        client_email: client_email || null,
-        scheduled_at,
-        duration_minutes: duration_minutes || 60,
-        price: price || null,
-        status: 'pending',
-        notes: notes || null
-      })
+      .insert(bookingData)
       .select('id')
       .single()
 
@@ -133,6 +163,8 @@ export async function POST(
         { status: 500 }
       )
     }
+
+    console.log('[Booking Book API] Booking created successfully:', booking.id)
 
     // Check if client exists, create if not
     const { data: existingClient } = await supabase

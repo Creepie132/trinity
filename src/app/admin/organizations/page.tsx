@@ -202,7 +202,7 @@ export default function OrganizationsPage() {
     }
   }
 
-  const handleToggleFeature = (orgId: string, feature: 'clients' | 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits' | 'inventory', enabled: boolean) => {
+  const handleToggleFeature = (orgId: string, feature: 'clients' | 'sms' | 'payments' | 'analytics' | 'subscriptions' | 'visits' | 'inventory' | 'booking', enabled: boolean) => {
     toggleFeature.mutate({ orgId, feature, enabled })
   }
 

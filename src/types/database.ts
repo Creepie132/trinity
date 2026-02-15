@@ -89,6 +89,7 @@ export interface Organization {
     subscriptions?: boolean
     visits?: boolean
     inventory?: boolean
+    booking?: boolean
   }
   billing_status: 'trial' | 'paid' | 'overdue' | 'cancelled'
   billing_due_date: string | null

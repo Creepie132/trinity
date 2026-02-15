@@ -408,12 +408,6 @@ export default function OrganizationsPage() {
                   <TableHead className="text-right">{t('admin.orgs.category')}</TableHead>
                   <TableHead className="text-right">{t('admin.orgs.plan')}</TableHead>
                   <TableHead className="text-right">{t('admin.orgs.status')}</TableHead>
-                  <TableHead className="text-right">SMS</TableHead>
-                  <TableHead className="text-right">Payments</TableHead>
-                  <TableHead className="text-right">Analytics</TableHead>
-                  <TableHead className="text-right">מנויים</TableHead>
-                  <TableHead className="text-right">ביקורים</TableHead>
-                  <TableHead className="text-right">מלאי</TableHead>
                   <TableHead className="text-right">{t('admin.orgs.created')}</TableHead>
                   <TableHead className="text-right">{t('clients.actions')}</TableHead>
                 </TableRow>
@@ -449,42 +443,6 @@ export default function OrganizationsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Switch
-                        checked={org.features?.sms || false}
-                        onCheckedChange={(checked) => handleToggleFeature(org.id, 'sms', checked)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={org.features?.payments || false}
-                        onCheckedChange={(checked) => handleToggleFeature(org.id, 'payments', checked)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={org.features?.analytics || false}
-                        onCheckedChange={(checked) => handleToggleFeature(org.id, 'analytics', checked)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={org.features?.subscriptions || false}
-                        onCheckedChange={(checked) => handleToggleFeature(org.id, 'subscriptions', checked)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={org.features?.visits !== false}
-                        onCheckedChange={(checked) => handleToggleFeature(org.id, 'visits', checked)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={org.features?.inventory || false}
-                        onCheckedChange={(checked) => handleToggleFeature(org.id, 'inventory', checked)}
-                      />
-                    </TableCell>
-                    <TableCell>
                       {format(new Date(org.created_at), 'dd/MM/yyyy')}
                     </TableCell>
                     <TableCell>
@@ -516,7 +474,7 @@ export default function OrganizationsPage() {
                 ))}
                 {(!organizations || organizations.length === 0) && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-gray-500">
+                    <TableCell colSpan={6} className="text-center py-12 text-gray-500">
                       {t('admin.orgs.noOrgs')}
                     </TableCell>
                   </TableRow>
@@ -820,6 +778,102 @@ export default function OrganizationsPage() {
                         הפעל גישה
                       </Button>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Features */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">פיצ'רים</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between w-full min-h-[44px] gap-3">
+                    <div>
+                      <p className="font-medium">לקוחות (Clients)</p>
+                      <p className="text-xs text-gray-500">ניהול לקוחות ומידע</p>
+                    </div>
+                    <Switch
+                      checked={selectedOrg.features?.clients !== false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'clients', checked)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between w-full min-h-[44px] gap-3">
+                    <div>
+                      <p className="font-medium">ביקורים (Visits)</p>
+                      <p className="text-xs text-gray-500">רישום ביקורים והזמנות</p>
+                    </div>
+                    <Switch
+                      checked={selectedOrg.features?.visits !== false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'visits', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between w-full min-h-[44px] gap-3">
+                    <div>
+                      <p className="font-medium">הזמנת תור (Online Booking)</p>
+                      <p className="text-xs text-gray-500">הזמנת תורים אונליין</p>
+                    </div>
+                    <Switch
+                      checked={selectedOrg.features?.booking || false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'booking', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between w-full min-h-[44px] gap-3">
+                    <div>
+                      <p className="font-medium">מלאי (Inventory)</p>
+                      <p className="text-xs text-gray-500">ניהול מלאי ומוצרים</p>
+                    </div>
+                    <Switch
+                      checked={selectedOrg.features?.inventory || false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'inventory', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between w-full min-h-[44px] gap-3">
+                    <div>
+                      <p className="font-medium">Payments</p>
+                      <p className="text-xs text-gray-500">קישורי תשלום ואשראי</p>
+                    </div>
+                    <Switch
+                      checked={selectedOrg.features?.payments || false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'payments', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between w-full min-h-[44px] gap-3">
+                    <div>
+                      <p className="font-medium">SMS Campaigns</p>
+                      <p className="text-xs text-gray-500">קמפיינים והודעות SMS</p>
+                    </div>
+                    <Switch
+                      checked={selectedOrg.features?.sms || false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'sms', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between w-full min-h-[44px] gap-3">
+                    <div>
+                      <p className="font-medium">Analytics</p>
+                      <p className="text-xs text-gray-500">סטטיסטיקות ודוחות</p>
+                    </div>
+                    <Switch
+                      checked={selectedOrg.features?.analytics || false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'analytics', checked)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between w-full min-h-[44px] gap-3">
+                    <div>
+                      <p className="font-medium">מנויים (Subscriptions)</p>
+                      <p className="text-xs text-gray-500">ניהול מנויים ותשלומים חוזרים</p>
+                    </div>
+                    <Switch
+                      checked={selectedOrg.features?.subscriptions || false}
+                      onCheckedChange={(checked) => handleToggleFeature(selectedOrg.id, 'subscriptions', checked)}
+                    />
                   </div>
                 </CardContent>
               </Card>

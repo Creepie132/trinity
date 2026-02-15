@@ -11,6 +11,7 @@ export interface Features {
   hasSubscriptions: boolean
   hasVisits: boolean
   hasInventory: boolean
+  hasBooking: boolean
   isActive: boolean
   category: string
   isLoading: boolean
@@ -29,6 +30,7 @@ export function useFeatures(): Features {
       hasSubscriptions: false,
       hasVisits: false,
       hasInventory: false,
+      hasBooking: false,
       isActive: false,
       category: 'other',
       isLoading: true,
@@ -45,6 +47,7 @@ export function useFeatures(): Features {
       hasSubscriptions: true,
       hasVisits: true,
       hasInventory: true,
+      hasBooking: true,
       isActive: true,
       category: organization?.category ?? 'other',
       isLoading: false,
@@ -60,6 +63,7 @@ export function useFeatures(): Features {
       hasSubscriptions: false,
       hasVisits: false,
       hasInventory: false,
+      hasBooking: false,
       isActive: false,
       category: 'other',
       isLoading: false,
@@ -74,6 +78,7 @@ export function useFeatures(): Features {
     hasSubscriptions: organization.features?.subscriptions ?? false,
     hasVisits: organization.features?.visits ?? true,
     hasInventory: organization.features?.inventory ?? false,
+    hasBooking: (organization.features as any)?.booking ?? false,
     isActive: organization.is_active ?? false,
     category: organization.category ?? 'other',
     isLoading: false,

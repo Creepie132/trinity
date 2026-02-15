@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText } from 'lucide-react'
+import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText, Calendar } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -22,6 +22,13 @@ export default function SettingsPage() {
       icon: Globe,
       title: t('settings.language'),
       description: t('settings.language.desc'),
+    },
+    {
+      id: 'booking',
+      href: '/settings/booking',
+      icon: Calendar,
+      title: t('settings.booking'),
+      description: t('settings.booking.desc'),
     },
     {
       id: 'services',

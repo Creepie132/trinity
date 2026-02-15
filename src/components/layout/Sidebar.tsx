@@ -10,6 +10,7 @@ import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLowStockProducts } from '@/hooks/useProducts'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useBookings } from '@/hooks/useBookings'
 import { Separator } from '@/components/ui/separator'
 import { UserProfileSheet } from '@/components/user/UserProfileSheet'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -25,11 +26,12 @@ const toAvatarSrc = (url: string | null): string | undefined => {
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, signOut } = useAuth()
+  const { user, signOut, orgId } = useAuth()
   const { data: isAdmin } = useIsAdmin()
   const { adminProfile } = useAdminProfile()
   const features = useFeatures()
   const { data: lowStockProducts } = useLowStockProducts()
+  const { pendingCount } = useBookings(orgId)
   const { t, language } = useLanguage()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [profileOpen, setProfileOpen] = useState(false)
@@ -163,6 +165,11 @@ export function Sidebar() {
               {item.href === '/inventory' && lowStockProducts && lowStockProducts.length > 0 && (
                 <span className="flex items-center justify-center px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full min-w-[1.5rem]">
                   {lowStockProducts.length}
+                </span>
+              )}
+              {item.href === '/visits' && pendingCount > 0 && (
+                <span className="flex items-center justify-center px-2 py-0.5 text-xs font-bold bg-yellow-500 text-white rounded-full min-w-[1.5rem]">
+                  {pendingCount}
                 </span>
               )}
               {isActive && (

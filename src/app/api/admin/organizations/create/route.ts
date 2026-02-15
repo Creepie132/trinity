@@ -178,6 +178,19 @@ export async function POST(request: NextRequest) {
 
     console.log('[CREATE ORG] ✅ No duplicate found, creating new organization')
 
+    // Generate slug from organization name
+    const generateSlug = (name: string) => {
+      return name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+        .replace(/\s+/g, '-')          // Replace spaces with hyphens
+        .replace(/-+/g, '-')           // Replace multiple hyphens with single
+        .trim()
+    }
+    
+    const slug = generateSlug(name)
+    console.log('[CREATE ORG] 🔗 Generated slug:', slug)
+
     // Create organization
     const { data: org, error: orgError } = await supabase
       .from('organizations')
@@ -187,6 +200,7 @@ export async function POST(request: NextRequest) {
         phone: client.phone || null,
         category,
         plan,
+        slug,
       })
       .select()
       .single()

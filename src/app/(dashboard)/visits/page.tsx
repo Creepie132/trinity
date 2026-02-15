@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play } from 'lucide-react'
+import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play, Inbox } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useBookings } from '@/hooks/useBookings'
 import { useQuery } from '@tanstack/react-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
@@ -42,9 +43,12 @@ export default function VisitsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'bookings'>('list')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [serviceColors, setServiceColors] = useState<Record<string, string>>({})
+  
+  // Bookings hook
+  const { bookings, isLoading: bookingsLoading, confirmBooking, cancelBooking, isConfirming, isCancelling } = useBookings(orgId)
 
   // Check organization status and feature access
   useEffect(() => {
@@ -274,6 +278,15 @@ export default function VisitsPage() {
             <CalendarDays className="w-4 h-4 ml-2" />
             {t('visits.calendarView')}
           </Button>
+          <Button
+            variant={viewMode === 'bookings' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('bookings')}
+            className={viewMode === 'bookings' ? 'bg-theme-primary text-white' : 'text-gray-700 dark:text-gray-300'}
+          >
+            <Inbox className="w-4 h-4 ml-2" />
+            {t('bookings.title')}
+          </Button>
         </div>
       </div>
 
@@ -493,6 +506,176 @@ export default function VisitsPage() {
           }}
           serviceColors={serviceColors}
         />
+      )}
+
+      {/* Bookings View */}
+      {viewMode === 'bookings' && (
+        <>
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            {bookings.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50 dark:bg-gray-800">
+                    <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('bookings.name')}</TableHead>
+                    <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('bookings.phone')}</TableHead>
+                    <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('bookings.service')}</TableHead>
+                    <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('bookings.date')}</TableHead>
+                    <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('bookings.time')}</TableHead>
+                    <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('bookings.status')}</TableHead>
+                    <TableHead className="text-left text-gray-700 dark:text-gray-300">{t('bookings.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bookings.map((booking) => {
+                    const scheduledDate = new Date(booking.scheduled_at)
+                    const statusColors = {
+                      pending: 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800',
+                      confirmed: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
+                      cancelled: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+                    }
+
+                    return (
+                      <TableRow key={booking.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <TableCell className="font-medium text-gray-900 dark:text-gray-100">
+                          {booking.client_name}
+                        </TableCell>
+                        <TableCell className="text-gray-700 dark:text-gray-300 font-mono">
+                          {booking.client_phone}
+                        </TableCell>
+                        <TableCell className="text-gray-700 dark:text-gray-300">
+                          {booking.service_name}
+                        </TableCell>
+                        <TableCell className="text-gray-700 dark:text-gray-300">
+                          {format(scheduledDate, 'dd/MM/yyyy')}
+                        </TableCell>
+                        <TableCell className="text-gray-700 dark:text-gray-300">
+                          {format(scheduledDate, 'HH:mm')}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={statusColors[booking.status]}>
+                            {t(`bookings.${booking.status}`)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {booking.status === 'pending' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => confirmBooking(booking.id)}
+                                  disabled={isConfirming || isCancelling}
+                                  className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/30"
+                                >
+                                  <CheckCircle className="w-3 h-3 ml-1" />
+                                  {isConfirming ? t('bookings.confirming') : t('bookings.confirm')}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => cancelBooking(booking.id)}
+                                  disabled={isConfirming || isCancelling}
+                                  className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30"
+                                >
+                                  <XCircle className="w-3 h-3 ml-1" />
+                                  {isCancelling ? t('bookings.cancelling') : t('bookings.cancel')}
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500 dark:text-gray-400 mb-4">{t('bookings.noBookings')}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {bookings.length > 0 ? (
+              bookings.map((booking) => {
+                const scheduledDate = new Date(booking.scheduled_at)
+                const statusColors = {
+                  pending: 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800',
+                  confirmed: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
+                  cancelled: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+                }
+
+                return (
+                  <div
+                    key={booking.id}
+                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">
+                          {booking.client_name}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 font-mono">
+                          {booking.client_phone}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className={statusColors[booking.status]}>
+                        {t(`bookings.${booking.status}`)}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-1 text-sm">
+                      <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">{t('bookings.service')}:</span>
+                        {booking.service_name}
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <Calendar className="w-4 h-4" />
+                        {format(scheduledDate, 'dd/MM/yyyy')}
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                        <Clock className="w-4 h-4" />
+                        {format(scheduledDate, 'HH:mm')}
+                      </div>
+                    </div>
+
+                    {booking.status === 'pending' && (
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => confirmBooking(booking.id)}
+                          disabled={isConfirming || isCancelling}
+                          className="flex-1 bg-green-50 text-green-700 border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                        >
+                          <CheckCircle className="w-3 h-3 ml-1" />
+                          {isConfirming ? t('bookings.confirming') : t('bookings.confirm')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => cancelBooking(booking.id)}
+                          disabled={isConfirming || isCancelling}
+                          className="flex-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
+                        >
+                          <XCircle className="w-3 h-3 ml-1" />
+                          {isCancelling ? t('bookings.cancelling') : t('bookings.cancel')}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            ) : (
+              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <p className="text-gray-500 dark:text-gray-400 mb-4">{t('bookings.noBookings')}</p>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Dialogs */}

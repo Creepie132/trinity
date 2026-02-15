@@ -77,7 +77,6 @@ export async function PATCH(request: Request) {
       .update({
         booking_settings,
         slug: booking_settings.slug,
-        updated_at: new Date().toISOString(),
       })
       .eq('id', orgId)
       .select()

@@ -944,14 +944,9 @@ export default function LandingPage() {
               </button>
             </a>
 
-            {/* Email Button - Scroll to Form */}
+            {/* Email Button - Open Contact Modal */}
             <button
-              onClick={() => {
-                const formSection = document.getElementById('contact-form');
-                if (formSection) {
-                  formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }}
+              onClick={() => setContactModalOpen(true)}
               className="bg-blue-50 rounded-xl p-6 text-center border-2 border-blue-200 hover:border-blue-400 hover:shadow-lg transition-all duration-300 group"
             >
               <Mail className="w-12 h-12 text-blue-600 mx-auto mb-3 group-hover:scale-110 transition-transform" />

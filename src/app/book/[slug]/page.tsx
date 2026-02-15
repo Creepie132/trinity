@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ChevronRight, ChevronLeft, Check, Clock, Calendar } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, Clock, Calendar, ArrowRight, Download, Home } from 'lucide-react'
 
 interface Service {
   id: string
@@ -45,10 +45,10 @@ const translations: Record<Language, any> = {
     step2: 'בחירת תאריך',
     step3: 'בחירת שעה',
     step4: 'פרטי ליצירת קשר',
-    step5: 'אישור',
     next: 'המשך',
-    back: 'חזרה',
-    confirm: 'אישור תור',
+    back: 'חזור',
+    backToTop: 'חזור',
+    confirm: 'אשר תור',
     price: 'מחיר',
     duration: 'משך',
     minutes: 'דקות',
@@ -58,12 +58,16 @@ const translations: Record<Language, any> = {
     noSlots: 'אין תורים פנויים ביום זה',
     name: 'שם מלא',
     phone: 'טלפון',
-    email: 'אימייל (אופציונלי)',
-    notes: 'הערות (אופציונלי)',
+    email: 'אימייל',
+    notes: 'הערות',
+    optional: '(אופציונלי)',
     loading: 'טוען...',
-    bookingSuccess: 'התור נקבע בהצלחה!',
+    bookingSuccess: 'תור נקבע בהצלחה!',
     bookingError: 'שגיאה בקביעת התור',
     closed: 'סגור',
+    addToCalendar: 'הוסף ליומן',
+    backToStart: 'חזרה לדף הראשי',
+    summary: 'סיכום',
     monthNames: ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
     dayNames: ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש']
   },
@@ -73,9 +77,9 @@ const translations: Record<Language, any> = {
     step2: 'Выбор даты',
     step3: 'Выбор времени',
     step4: 'Контактные данные',
-    step5: 'Подтверждение',
     next: 'Далее',
     back: 'Назад',
+    backToTop: 'Назад',
     confirm: 'Подтвердить запись',
     price: 'Цена',
     duration: 'Длительность',
@@ -86,12 +90,16 @@ const translations: Record<Language, any> = {
     noSlots: 'Нет свободных слотов на этот день',
     name: 'Полное имя',
     phone: 'Телефон',
-    email: 'Email (опционально)',
-    notes: 'Примечания (опционально)',
+    email: 'Email',
+    notes: 'Заметки',
+    optional: '(опционально)',
     loading: 'Загрузка...',
     bookingSuccess: 'Запись успешно создана!',
     bookingError: 'Ошибка при создании записи',
     closed: 'Выходной',
+    addToCalendar: 'Добавить в календарь',
+    backToStart: 'Вернуться на главную',
+    summary: 'Резюме',
     monthNames: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
     dayNames: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
   },
@@ -101,9 +109,9 @@ const translations: Record<Language, any> = {
     step2: 'Select Date',
     step3: 'Select Time',
     step4: 'Contact Details',
-    step5: 'Confirmation',
     next: 'Next',
     back: 'Back',
+    backToTop: 'Back',
     confirm: 'Confirm Booking',
     price: 'Price',
     duration: 'Duration',
@@ -114,12 +122,16 @@ const translations: Record<Language, any> = {
     noSlots: 'No available slots for this day',
     name: 'Full name',
     phone: 'Phone',
-    email: 'Email (optional)',
-    notes: 'Notes (optional)',
+    email: 'Email',
+    notes: 'Notes',
+    optional: '(optional)',
     loading: 'Loading...',
     bookingSuccess: 'Booking created successfully!',
     bookingError: 'Error creating booking',
     closed: 'Closed',
+    addToCalendar: 'Add to Calendar',
+    backToStart: 'Back to Start',
+    summary: 'Summary',
     monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
     dayNames: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
   }
@@ -163,6 +175,7 @@ export default function BookingPage() {
   // Success state
   const [bookingSuccess, setBookingSuccess] = useState(false)
   const [confirmationMessage, setConfirmationMessage] = useState('')
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
 
   const t = translations[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
@@ -193,6 +206,13 @@ export default function BookingPage() {
       loadSlots()
     }
   }, [selectedDate, selectedService])
+
+  // Success animation
+  useEffect(() => {
+    if (bookingSuccess) {
+      setTimeout(() => setShowSuccessAnimation(true), 100)
+    }
+  }, [bookingSuccess])
 
   const loadSlots = async () => {
     if (!selectedDate || !selectedService) return
@@ -238,7 +258,7 @@ export default function BookingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           service_id: selectedService.id,
-          service_name: selectedService.name,
+          service_name: language === 'ru' && selectedService.name_ru ? selectedService.name_ru : selectedService.name,
           client_name: clientName,
           client_phone: clientPhone,
           client_email: clientEmail || null,
@@ -255,12 +275,63 @@ export default function BookingPage() {
         throw new Error(data.error || 'Failed to create booking')
       }
 
-      setConfirmationMessage(data.confirmation_message)
+      const message = language === 'ru' 
+        ? (orgData?.booking_settings?.confirmation_message_ru || data.confirmation_message)
+        : data.confirmation_message
+      
+      setConfirmationMessage(message)
       setBookingSuccess(true)
       setStep(5)
     } catch (error: any) {
       alert(t.bookingError + ': ' + error.message)
     }
+  }
+
+  const generateICS = () => {
+    if (!selectedService || !selectedDate || !selectedTime || !orgData) return
+
+    const start = new Date(`${selectedDate}T${selectedTime}:00`)
+    const end = new Date(start.getTime() + selectedService.duration_minutes * 60000)
+
+    const formatDate = (date: Date) => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+    }
+
+    const ics = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Trinity CRM//Booking//EN
+BEGIN:VEVENT
+UID:${Date.now()}@ambersol.co.il
+DTSTAMP:${formatDate(new Date())}
+DTSTART:${formatDate(start)}
+DTEND:${formatDate(end)}
+SUMMARY:${selectedService.name} - ${orgData.name}
+DESCRIPTION:${t.price}: ₪${selectedService.price}\\n${t.name}: ${clientName}
+LOCATION:${orgData.name}
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR`
+
+    const blob = new Blob([ics], { type: 'text/calendar' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'booking.ics'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const resetBooking = () => {
+    setStep(1)
+    setSelectedService(null)
+    setSelectedDate(null)
+    setSelectedTime(null)
+    setClientName('')
+    setClientPhone('')
+    setClientEmail('')
+    setClientNotes('')
+    setBookingSuccess(false)
+    setShowSuccessAnimation(false)
   }
 
   // Generate calendar days
@@ -332,7 +403,7 @@ export default function BookingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-gray-50">
         <div className="text-xl text-gray-600">{t.loading}</div>
       </div>
     )
@@ -343,22 +414,34 @@ export default function BookingPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${dir === 'rtl' ? 'rtl' : 'ltr'}`} dir={dir}>
+    <div className={`min-h-screen bg-gradient-to-br from-white to-gray-50 ${dir === 'rtl' ? 'rtl' : 'ltr'}`} dir={dir}>
       {/* Header */}
-      <div className="bg-white border-b shadow-sm">
+      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">{orgData.name}</h1>
+            {/* Mobile back button */}
+            {step > 1 && !bookingSuccess && (
+              <button
+                onClick={() => setStep(Math.max(1, step - 1))}
+                className="md:hidden flex items-center gap-2 text-gray-700 hover:text-amber-600 transition-colors"
+              >
+                {dir === 'rtl' ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                {t.backToTop}
+              </button>
+            )}
+            
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{orgData.name}</h1>
+            
             {/* Language Switcher */}
             <div className="flex gap-2">
               {(['he', 'ru', 'en'] as Language[]).map(lang => (
                 <button
                   key={lang}
                   onClick={() => setLanguage(lang)}
-                  className={`px-3 py-1 rounded ${
+                  className={`px-3 py-1 rounded-lg text-sm font-semibold transition-all ${
                     language === lang
-                      ? 'bg-amber-500 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-amber-500 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   {lang.toUpperCase()}
@@ -372,15 +455,15 @@ export default function BookingPage() {
 
       {/* Progress Bar */}
       {!bookingSuccess && (
-        <div className="bg-white border-b">
+        <div className="bg-white border-b shadow-sm">
           <div className="max-w-4xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               {[1, 2, 3, 4].map((s) => (
                 <div key={s} className="flex items-center flex-1">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold transition-all ${
                       step >= s
-                        ? 'bg-amber-500 text-white'
+                        ? 'bg-amber-500 text-white shadow-md scale-110'
                         : 'bg-gray-200 text-gray-500'
                     }`}
                   >
@@ -388,7 +471,7 @@ export default function BookingPage() {
                   </div>
                   {s < 4 && (
                     <div
-                      className={`flex-1 h-1 mx-2 ${
+                      className={`flex-1 h-1 mx-2 transition-all ${
                         step > s ? 'bg-amber-500' : 'bg-gray-200'
                       }`}
                     />
@@ -410,30 +493,30 @@ export default function BookingPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Step 1: Select Service */}
         {step === 1 && (
-          <div>
+          <div className="animate-fade-in">
             <h2 className="text-2xl font-bold mb-6">{t.selectService}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {orgData.services.map((service) => (
                 <button
                   key={service.id}
                   onClick={() => handleServiceSelect(service)}
-                  className={`p-4 rounded-lg border-2 text-right transition-all ${
+                  className={`relative p-6 rounded-xl border-2 text-${dir === 'rtl' ? 'right' : 'left'} transition-all bg-white shadow-md hover:shadow-lg ${
                     selectedService?.id === service.id
-                      ? 'border-amber-500 bg-amber-50'
-                      : 'border-gray-200 bg-white hover:border-amber-300'
+                      ? 'border-amber-500 bg-amber-50 scale-105'
+                      : 'border-gray-200 hover:border-amber-300'
                   }`}
                 >
                   <div
-                    className="w-1 h-full absolute right-0 top-0 rounded-r-lg"
+                    className={`absolute ${dir === 'rtl' ? 'right' : 'left'}-0 top-0 h-full rounded-${dir === 'rtl' ? 'r' : 'l'}-xl`}
                     style={{ backgroundColor: service.color || '#F59E0B', width: '4px' }}
                   />
-                  <div className="mr-2">
-                    <div className="font-semibold text-lg mb-1">
+                  <div className={dir === 'rtl' ? 'mr-2' : 'ml-2'}>
+                    <div className="font-bold text-xl mb-2">
                       {language === 'ru' && service.name_ru ? service.name_ru : service.name}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span>
-                        {t.price}: ₪{service.price}
+                      <span className="font-semibold text-amber-600">
+                        ₪{service.price}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
@@ -448,10 +531,10 @@ export default function BookingPage() {
               <button
                 onClick={() => setStep(2)}
                 disabled={!selectedService}
-                className="px-6 py-3 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-8 py-4 bg-amber-500 text-white rounded-xl font-bold text-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
               >
                 {t.next}
-                {dir === 'rtl' ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                {dir === 'rtl' ? <ChevronLeft className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
               </button>
             </div>
           </div>
@@ -459,23 +542,23 @@ export default function BookingPage() {
 
         {/* Step 2: Select Date */}
         {step === 2 && (
-          <div>
+          <div className="animate-fade-in">
             <h2 className="text-2xl font-bold mb-6">{t.selectDate}</h2>
             
-            {/* Calendar Header */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
+            {/* Calendar */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-6">
                 <button
                   onClick={() => {
                     const newMonth = new Date(currentMonth)
                     newMonth.setMonth(newMonth.getMonth() - 1)
                     setCurrentMonth(newMonth)
                   }}
-                  className="p-2 hover:bg-gray-100 rounded"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  {dir === 'rtl' ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                  {dir === 'rtl' ? <ChevronRight className="w-6 h-6" /> : <ChevronLeft className="w-6 h-6" />}
                 </button>
-                <div className="text-lg font-semibold">
+                <div className="text-xl font-bold">
                   {t.monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
                 </div>
                 <button
@@ -484,16 +567,16 @@ export default function BookingPage() {
                     newMonth.setMonth(newMonth.getMonth() + 1)
                     setCurrentMonth(newMonth)
                   }}
-                  className="p-2 hover:bg-gray-100 rounded"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  {dir === 'rtl' ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                  {dir === 'rtl' ? <ChevronLeft className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
                 </button>
               </div>
 
               {/* Day names */}
-              <div className="grid grid-cols-7 gap-2 mb-2">
+              <div className="grid grid-cols-7 gap-2 mb-4">
                 {t.dayNames.map((day: string, i: number) => (
-                  <div key={i} className="text-center text-sm font-semibold text-gray-600 py-2">
+                  <div key={i} className="text-center text-sm font-bold text-gray-600 py-2">
                     {day}
                   </div>
                 ))}
@@ -511,15 +594,15 @@ export default function BookingPage() {
                       key={index}
                       onClick={() => day && available && handleDateSelect(formatDate(day))}
                       disabled={!day || !available}
-                      className={`aspect-square p-2 rounded-lg text-center transition-all ${
+                      className={`aspect-square p-3 rounded-lg text-center font-semibold transition-all ${
                         !day
                           ? 'invisible'
                           : selected
-                          ? 'bg-amber-500 text-white font-bold'
+                          ? 'bg-amber-500 text-white shadow-lg scale-110'
                           : todayDate
-                          ? 'border-2 border-amber-500 bg-white text-gray-900 font-semibold'
+                          ? 'border-2 border-amber-500 bg-white text-gray-900'
                           : available
-                          ? 'bg-white border border-gray-300 hover:border-amber-500 text-gray-900'
+                          ? 'bg-white border border-gray-300 hover:border-amber-500 hover:shadow-md text-gray-900'
                           : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       }`}
                     >
@@ -533,18 +616,18 @@ export default function BookingPage() {
             <div className="mt-8 flex justify-between">
               <button
                 onClick={() => setStep(1)}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 flex items-center gap-2"
+                className="px-8 py-4 bg-gray-200 text-gray-700 rounded-xl font-bold text-lg hover:bg-gray-300 flex items-center gap-2 shadow-md transition-all"
               >
-                {dir === 'rtl' ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                {dir === 'rtl' ? <ChevronRight className="w-6 h-6" /> : <ChevronLeft className="w-6 h-6" />}
                 {t.back}
               </button>
               <button
                 onClick={() => setStep(3)}
                 disabled={!selectedDate}
-                className="px-6 py-3 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-8 py-4 bg-amber-500 text-white rounded-xl font-bold text-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
               >
                 {t.next}
-                {dir === 'rtl' ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                {dir === 'rtl' ? <ChevronLeft className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
               </button>
             </div>
           </div>
@@ -552,49 +635,53 @@ export default function BookingPage() {
 
         {/* Step 3: Select Time */}
         {step === 3 && (
-          <div>
+          <div className="animate-fade-in">
             <h2 className="text-2xl font-bold mb-6">{t.selectTime}</h2>
             
             {loadingSlots ? (
               <div className="text-center py-12 text-gray-600">{t.loading}</div>
             ) : slots.length === 0 ? (
-              <div className="text-center py-12 text-gray-600">{t.noSlots}</div>
+              <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+                <div className="text-xl text-gray-600">{t.noSlots}</div>
+              </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                {slots.map((slot) => (
-                  <button
-                    key={slot.time}
-                    onClick={() => slot.available && handleTimeSelect(slot.time)}
-                    disabled={!slot.available}
-                    className={`p-3 rounded-lg text-center font-semibold transition-all ${
-                      selectedTime === slot.time
-                        ? 'bg-amber-500 text-white'
-                        : slot.available
-                        ? 'bg-white border-2 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white'
-                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    {slot.time}
-                  </button>
-                ))}
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  {slots.map((slot) => (
+                    <button
+                      key={slot.time}
+                      onClick={() => slot.available && handleTimeSelect(slot.time)}
+                      disabled={!slot.available}
+                      className={`p-4 rounded-lg text-center font-bold transition-all ${
+                        selectedTime === slot.time
+                          ? 'bg-amber-500 text-white shadow-lg scale-110'
+                          : slot.available
+                          ? 'bg-white border-2 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white shadow-md'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {slot.time}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
             <div className="mt-8 flex justify-between">
               <button
                 onClick={() => setStep(2)}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 flex items-center gap-2"
+                className="px-8 py-4 bg-gray-200 text-gray-700 rounded-xl font-bold text-lg hover:bg-gray-300 flex items-center gap-2 shadow-md transition-all"
               >
-                {dir === 'rtl' ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                {dir === 'rtl' ? <ChevronRight className="w-6 h-6" /> : <ChevronLeft className="w-6 h-6" />}
                 {t.back}
               </button>
               <button
                 onClick={() => setStep(4)}
                 disabled={!selectedTime}
-                className="px-6 py-3 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-8 py-4 bg-amber-500 text-white rounded-xl font-bold text-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
               >
                 {t.next}
-                {dir === 'rtl' ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                {dir === 'rtl' ? <ChevronLeft className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
               </button>
             </div>
           </div>
@@ -602,80 +689,103 @@ export default function BookingPage() {
 
         {/* Step 4: Contact Details */}
         {step === 4 && (
-          <div>
+          <div className="animate-fade-in">
             <h2 className="text-2xl font-bold mb-6">{t.step4}</h2>
             
-            <div className="bg-white rounded-lg shadow p-6 space-y-4">
+            <div className="bg-white rounded-xl shadow-lg p-8 space-y-6">
+              {/* Name */}
               <div>
-                <label className="block text-sm font-semibold mb-2">{t.name} *</label>
+                <label className="block text-base font-bold mb-3">{t.name}</label>
                 <input
                   type="text"
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                   required
                 />
               </div>
 
+              {/* Phone */}
               <div>
-                <label className="block text-sm font-semibold mb-2">{t.phone} *</label>
+                <label className="block text-base font-bold mb-3">{t.phone}</label>
                 <input
                   type="tel"
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
                   placeholder="05X-XXX-XXXX"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                   required
                 />
               </div>
 
+              {/* Email */}
               <div>
-                <label className="block text-sm font-semibold mb-2">{t.email}</label>
+                <label className="block text-base font-bold mb-3">
+                  {t.email} <span className="text-sm font-normal text-gray-500">{t.optional}</span>
+                </label>
                 <input
                   type="email"
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                 />
               </div>
 
+              {/* Notes */}
               <div>
-                <label className="block text-sm font-semibold mb-2">{t.notes}</label>
+                <label className="block text-base font-bold mb-3">
+                  {t.notes} <span className="text-sm font-normal text-gray-500">{t.optional}</span>
+                </label>
                 <textarea
                   value={clientNotes}
                   onChange={(e) => setClientNotes(e.target.value)}
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                  rows={4}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none transition-all"
                 />
               </div>
 
               {/* Summary */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="font-semibold mb-3">{t.step5}</h3>
-                <div className="space-y-2 text-sm">
-                  <div><span className="font-semibold">{t.step1}:</span> {selectedService?.name}</div>
-                  <div><span className="font-semibold">{t.step2}:</span> {selectedDate}</div>
-                  <div><span className="font-semibold">{t.step3}:</span> {selectedTime}</div>
-                  <div><span className="font-semibold">{t.price}:</span> ₪{selectedService?.price}</div>
-                  <div><span className="font-semibold">{t.duration}:</span> {selectedService?.duration_minutes} {t.minutes}</div>
+              <div className="mt-8 pt-8 border-t-2 border-gray-200">
+                <h3 className="text-xl font-bold mb-4">{t.summary}</h3>
+                <div className="space-y-3 text-base">
+                  <div className="flex justify-between">
+                    <span className="font-semibold">{t.step1}:</span>
+                    <span>{language === 'ru' && selectedService?.name_ru ? selectedService.name_ru : selectedService?.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">{t.step2}:</span>
+                    <span>{selectedDate}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">{t.step3}:</span>
+                    <span>{selectedTime}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">{t.duration}:</span>
+                    <span>{selectedService?.duration_minutes} {t.minutes}</span>
+                  </div>
+                  <div className="flex justify-between text-xl font-bold text-amber-600 pt-2 border-t">
+                    <span>{t.price}:</span>
+                    <span>₪{selectedService?.price}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-8 flex justify-between">
+            <div className="mt-8 flex flex-col sm:flex-row justify-between gap-4">
               <button
                 onClick={() => setStep(3)}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 flex items-center gap-2"
+                className="px-8 py-4 bg-gray-200 text-gray-700 rounded-xl font-bold text-lg hover:bg-gray-300 flex items-center justify-center gap-2 shadow-md transition-all"
               >
-                {dir === 'rtl' ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                {dir === 'rtl' ? <ChevronRight className="w-6 h-6" /> : <ChevronLeft className="w-6 h-6" />}
                 {t.back}
               </button>
               <button
                 onClick={handleBooking}
                 disabled={!clientName || !clientPhone}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-8 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all"
               >
-                <Check className="w-5 h-5" />
+                <Check className="w-6 h-6" />
                 {t.confirm}
               </button>
             </div>
@@ -684,24 +794,78 @@ export default function BookingPage() {
 
         {/* Step 5: Success */}
         {step === 5 && bookingSuccess && (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Check className="w-12 h-12 text-green-600" />
+          <div className="animate-fade-in text-center py-12">
+            <div className={`w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-8 transition-all duration-500 ${
+              showSuccessAnimation ? 'scale-100 opacity-100' : 'scale-50 opacity-0'
+            }`}>
+              <Check className="w-16 h-16 text-green-600" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">{t.bookingSuccess}</h2>
-            <p className="text-lg text-gray-600 mb-8">{confirmationMessage}</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t.bookingSuccess}</h2>
+            <p className="text-xl text-gray-600 mb-8 max-w-md mx-auto">{confirmationMessage}</p>
             
-            <div className="bg-white rounded-lg shadow p-6 max-w-md mx-auto text-right">
-              <div className="space-y-3">
-                <div><span className="font-semibold">{t.step1}:</span> {selectedService?.name}</div>
-                <div><span className="font-semibold">{t.step2}:</span> {selectedDate}</div>
-                <div><span className="font-semibold">{t.step3}:</span> {selectedTime}</div>
-                <div><span className="font-semibold">{t.price}:</span> ₪{selectedService?.price}</div>
+            <div className="bg-white rounded-xl shadow-lg p-8 max-w-md mx-auto mb-8">
+              <h3 className="text-xl font-bold mb-4">{t.summary}</h3>
+              <div className="space-y-3 text-base text-${dir === 'rtl' ? 'right' : 'left'}">
+                <div className="flex justify-between">
+                  <span className="font-semibold">{t.step1}:</span>
+                  <span>{language === 'ru' && selectedService?.name_ru ? selectedService.name_ru : selectedService?.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">{t.step2}:</span>
+                  <span>{selectedDate}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">{t.step3}:</span>
+                  <span>{selectedTime}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">{t.duration}:</span>
+                  <span>{selectedService?.duration_minutes} {t.minutes}</span>
+                </div>
+                <div className="flex justify-between text-xl font-bold text-amber-600 pt-3 border-t-2">
+                  <span>{t.price}:</span>
+                  <span>₪{selectedService?.price}</span>
+                </div>
               </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={generateICS}
+                className="px-8 py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all"
+              >
+                <Download className="w-6 h-6" />
+                {t.addToCalendar}
+              </button>
+              <button
+                onClick={resetBooking}
+                className="px-8 py-4 bg-gray-200 text-gray-700 rounded-xl font-bold text-lg hover:bg-gray-300 flex items-center justify-center gap-2 shadow-md transition-all"
+              >
+                <Home className="w-6 h-6" />
+                {t.backToStart}
+              </button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Custom CSS for fade animations */}
+      <style jsx global>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+      `}</style>
     </div>
   )
 }

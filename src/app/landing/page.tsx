@@ -641,14 +641,14 @@ export default function LandingPage() {
       }
       
       // Success
+      // Reset form before closing modal
+      e.currentTarget.reset()
+      
       setContactModalOpen(false)
       setToastType('success')
       setToastMessage(result.message || 'ההודעה נשלחה בהצלחה!')
       setShowToast(true)
       setTimeout(() => setShowToast(false), 3000)
-      
-      // Reset form
-      e.currentTarget.reset()
     } catch (error: any) {
       console.error('[Contact Form] Error:', error)
       setToastType('error')

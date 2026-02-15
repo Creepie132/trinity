@@ -65,6 +65,47 @@ export async function PATCH(request: Request) {
 
     console.log('[BOOKING SETTINGS] User has access, role:', orgUser.role)
 
+    // Convert working_hours from day names to day numbers (for booking page)
+    const dayMap: Record<string, number> = {
+      sunday: 0,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+      saturday: 6
+    }
+
+    const working_hours_numeric: Record<number, any> = {}
+    if (booking_settings.working_hours) {
+      Object.entries(booking_settings.working_hours).forEach(([dayName, hours]) => {
+        const dayNum = dayMap[dayName as keyof typeof dayMap]
+        if (dayNum !== undefined && (hours as any).enabled) {
+          working_hours_numeric[dayNum] = {
+            start: (hours as any).start,
+            end: (hours as any).end
+          }
+        }
+      })
+    }
+
+    // Prepare settings for database (booking page format)
+    const dbSettings = {
+      ...booking_settings,
+      working_hours: working_hours_numeric,
+      advance_days: booking_settings.max_days_ahead || 30,
+      min_advance_hours: booking_settings.min_advance_hours || 24,
+      slot_duration: booking_settings.slot_duration || 60,
+      break_time: booking_settings.break_times?.[0] || null,
+      confirmation_message_he: booking_settings.confirm_message_he || '',
+      confirmation_message_ru: booking_settings.confirm_message_ru || ''
+    }
+
+    console.log('[BOOKING SETTINGS] Converted settings:', {
+      working_hours: working_hours_numeric,
+      advance_days: dbSettings.advance_days
+    })
+
     // Use service role key for update
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -72,10 +113,10 @@ export async function PATCH(request: Request) {
     )
 
     // Update organization with booking settings and slug
-    const { data, error } = await supabaseAdmin
+    const { data, error} = await supabaseAdmin
       .from('organizations')
       .update({
-        booking_settings,
+        booking_settings: dbSettings,
         slug: booking_settings.slug,
       })
       .eq('id', orgId)

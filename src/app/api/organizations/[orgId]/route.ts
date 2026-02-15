@@ -84,6 +84,35 @@ export async function GET(
       throw orgError
     }
 
+    // Convert working_hours from numeric format (0-6) back to day names for UI
+    if (org.booking_settings?.working_hours) {
+      const numToDay: Record<number, string> = {
+        0: 'sunday',
+        1: 'monday',
+        2: 'tuesday',
+        3: 'wednesday',
+        4: 'thursday',
+        5: 'friday',
+        6: 'saturday'
+      }
+
+      const working_hours_named: Record<string, any> = {}
+      Object.entries(numToDay).forEach(([num, dayName]) => {
+        const hours = org.booking_settings.working_hours[Number(num)]
+        working_hours_named[dayName] = hours 
+          ? { enabled: true, start: hours.start, end: hours.end }
+          : { enabled: false, start: '09:00', end: '17:00' }
+      })
+
+      org.booking_settings.working_hours = working_hours_named
+      org.booking_settings.max_days_ahead = org.booking_settings.advance_days || 30
+      org.booking_settings.break_times = org.booking_settings.break_time 
+        ? [org.booking_settings.break_time]
+        : []
+      org.booking_settings.confirm_message_he = org.booking_settings.confirmation_message_he || ''
+      org.booking_settings.confirm_message_ru = org.booking_settings.confirmation_message_ru || ''
+    }
+
     console.log('[GET ORG] Success! Loaded org:', org.name)
     return NextResponse.json({ success: true, data: org })
   } catch (error: any) {

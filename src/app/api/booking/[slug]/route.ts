@@ -4,10 +4,10 @@ import { createClient } from '@supabase/supabase-js'
 // Public API - no auth required
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = params
+    const { slug } = await params
 
     // Use service role key for public access
     const supabase = createClient(

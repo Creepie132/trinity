@@ -33,11 +33,11 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
   const { t } = useLanguage();
   const createService = useCreateService();
 
-  const [formData, setFormData] = useState<CreateServiceDTO>({
+  const [formData, setFormData] = useState({
     name: '',
     name_ru: '',
-    price: undefined,
-    duration_minutes: undefined,
+    price: '' as string | number,
+    duration_minutes: '' as string | number,
     color: DEFAULT_COLORS[0],
   });
 
@@ -49,21 +49,26 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
       return;
     }
 
-    if (formData.price !== undefined && formData.price < 0) {
+    const price = typeof formData.price === 'string' ? parseFloat(formData.price) : formData.price;
+    const duration = typeof formData.duration_minutes === 'string' ? parseInt(formData.duration_minutes) : formData.duration_minutes;
+
+    if (price < 0) {
       toast.error(t('services.errors.priceInvalid'));
       return;
     }
 
-    if (formData.duration_minutes !== undefined && formData.duration_minutes < 1) {
+    if (duration < 1) {
       toast.error(t('services.errors.durationInvalid'));
       return;
     }
 
-    // Set defaults if not provided
+    // Prepare data for API
     const serviceData: CreateServiceDTO = {
-      ...formData,
-      price: formData.price ?? 0,
-      duration_minutes: formData.duration_minutes ?? 60,
+      name: formData.name,
+      name_ru: formData.name_ru,
+      price: price || 0,
+      duration_minutes: duration || 60,
+      color: formData.color,
     };
 
     try {
@@ -76,8 +81,8 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
       setFormData({
         name: '',
         name_ru: '',
-        price: undefined,
-        duration_minutes: undefined,
+        price: '',
+        duration_minutes: '',
         color: DEFAULT_COLORS[0],
       });
     } catch (error) {
@@ -86,7 +91,7 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
     }
   };
 
-  const handleChange = (field: keyof CreateServiceDTO, value: string | number) => {
+  const handleChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -131,8 +136,8 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.price ?? ''}
-                onChange={(e) => handleChange('price', e.target.value ? parseFloat(e.target.value) : undefined)}
+                value={formData.price}
+                onChange={(e) => handleChange('price', e.target.value)}
                 placeholder="0"
                 required
               />
@@ -145,8 +150,8 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
                 type="number"
                 min="1"
                 step="1"
-                value={formData.duration_minutes ?? ''}
-                onChange={(e) => handleChange('duration_minutes', e.target.value ? parseInt(e.target.value) : undefined)}
+                value={formData.duration_minutes}
+                onChange={(e) => handleChange('duration_minutes', e.target.value)}
                 placeholder="60"
                 required
               />

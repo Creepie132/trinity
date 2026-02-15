@@ -135,7 +135,7 @@ const translations: Record<'he' | 'ru', Translations> = {
       whyItems: [
         'מערכת אחת לכל העסק — לקוחות, תשלומים, SMS, ניתוח נתונים',
         'ממשק בעברית ורוסית — מותאם לשוק הישראלי',
-        'תמיכה בכרטיסי אשראי (Visa, Mastercard) Google Pay, Apple Pay והוראות קבע',
+        'תמיכה בכרטיסי אשראי (Visa, Mastercard), Google Pay, Apple Pay והוראות קבע',
         'גישה מכל מקום — מחשב, טאבלט ונייד',
         'תמיכה אישית — אנחנו כאן בשבילך',
       ],
@@ -334,7 +334,7 @@ const translations: Record<'he' | 'ru', Translations> = {
       whyItems: [
         'Одна система для всего бизнеса — клиенты, платежи, SMS, аналитика',
         'Интерфейс на иврите и русском — адаптирован для израильского рынка',
-        'Поддержка кредитных карт (Visa, Mastercard) Google Pay, Apple Pay и рекуррентные платежи',
+        'Поддержка кредитных карт (Visa, Mastercard), Google Pay, Apple Pay и рекуррентные платежи',
         'Доступ отовсюду — компьютер, планшет и телефон',
         'Персональная поддержка — мы всегда на связи',
       ],
@@ -524,6 +524,8 @@ export default function LandingPage() {
   const [selectedPlan, setSelectedPlan] = useState('')
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const [toastType, setToastType] = useState<'success' | 'error'>('success')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const t = translations[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
 
@@ -609,27 +611,53 @@ export default function LandingPage() {
     setContactModalOpen(true)
   }
 
-  const handleSubmitContact = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitContact = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const contactData = {
-      name: formData.get('name'),
-      email: formData.get('email'),
-      business: formData.get('business'),
-      message: formData.get('message'),
-      timestamp: new Date().toISOString(),
+    
+    if (isSubmitting) return
+    
+    setIsSubmitting(true)
+    
+    try {
+      const formData = new FormData(e.currentTarget)
+      const contactData = {
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        phone: formData.get('phone') as string,
+        message: formData.get('message') as string,
+      }
+      
+      // Send to API
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contactData),
+      })
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.errorHe || result.error || 'שגיאה בשליחת ההודעה')
+      }
+      
+      // Success
+      setContactModalOpen(false)
+      setToastType('success')
+      setToastMessage(result.message || 'ההודעה נשלחה בהצלחה!')
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 3000)
+      
+      // Reset form
+      e.currentTarget.reset()
+    } catch (error: any) {
+      console.error('[Contact Form] Error:', error)
+      setToastType('error')
+      setToastMessage(error.message || 'שגיאה בשליחת ההודעה')
+      setShowToast(true)
+      setTimeout(() => setShowToast(false), 3000)
+    } finally {
+      setIsSubmitting(false)
     }
-    
-    // Save to localStorage
-    const contacts = JSON.parse(localStorage.getItem('landing-contacts') || '[]')
-    contacts.push(contactData)
-    localStorage.setItem('landing-contacts', JSON.stringify(contacts))
-    
-    // Close modal and show toast
-    setContactModalOpen(false)
-    setToastMessage(t.contactModal.successMessage)
-    setShowToast(true)
-    setTimeout(() => setShowToast(false), 3000)
   }
 
   return (
@@ -1444,15 +1472,24 @@ export default function LandingPage() {
                   <button
                     type="button"
                     onClick={() => setContactModalOpen(false)}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                    disabled={isSubmitting}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {t.contactModal.cancel}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition-colors"
+                    disabled={isSubmitting}
+                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    {t.contactModal.submit}
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        {language === 'he' ? 'שולח...' : 'Отправка...'}
+                      </>
+                    ) : (
+                      t.contactModal.submit
+                    )}
                   </button>
                 </div>
               </form>
@@ -1463,7 +1500,7 @@ export default function LandingPage() {
 
       {/* Toast Notification */}
       {showToast && (
-        <div className="fixed bottom-8 right-8 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg animate-slide-up z-50 max-w-sm">
+        <div className={`fixed bottom-8 right-8 ${toastType === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white px-6 py-4 rounded-lg shadow-lg animate-slide-up z-50 max-w-sm`}>
           {toastMessage}
         </div>
       )}

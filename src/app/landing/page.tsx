@@ -641,8 +641,12 @@ export default function LandingPage() {
       }
       
       // Success
-      // Reset form before closing modal
-      e.currentTarget.reset()
+      // Reset form safely (check if still mounted)
+      try {
+        e.currentTarget?.reset()
+      } catch (err) {
+        // Form might be unmounted, ignore error
+      }
       
       setContactModalOpen(false)
       setToastType('success')

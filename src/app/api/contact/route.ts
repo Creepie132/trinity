@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Send email
     await resend.emails.send({
       from: 'Trinity CRM <noreply@ambersol.co.il>',
-      to: 'creepie1357@gmail.com',
+      to: 'ambersolutions.systems@gmail.com',
       subject: `פנייה חדשה מ-${name}`,
       html: `
         <h2>פנייה חדשה מהאתר</h2>

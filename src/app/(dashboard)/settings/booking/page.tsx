@@ -155,7 +155,7 @@ export default function BookingSettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-2xl mx-auto px-4 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/settings">
@@ -164,10 +164,10 @@ export default function BookingSettingsPage() {
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
             {t('booking.title')}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
             {t('booking.subtitle')}
           </p>
         </div>
@@ -178,13 +178,11 @@ export default function BookingSettingsPage() {
         <CardHeader>
           <CardTitle>{t('booking.enabled')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('booking.enabled.desc')}
-              </p>
-            </div>
+        <CardContent>
+          <div className="flex items-center justify-between w-full min-h-[44px] gap-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">
+              {t('booking.enabled.desc')}
+            </p>
             <Switch
               checked={settings.enabled}
               onCheckedChange={(checked) =>
@@ -200,9 +198,9 @@ export default function BookingSettingsPage() {
         <CardHeader>
           <CardTitle>{t('booking.slug')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <div>
-            <Label htmlFor="slug">{t('booking.slug.desc')}</Label>
+            <Label htmlFor="slug" className="text-sm">{t('booking.slug.desc')}</Label>
             <div className="flex gap-2 mt-2">
               <Input
                 id="slug"
@@ -211,12 +209,14 @@ export default function BookingSettingsPage() {
                   setSettings({ ...settings, slug: e.target.value })
                 }
                 placeholder={t('booking.slug.placeholder')}
+                className="flex-1"
               />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={copyBookingLink}
                 disabled={!settings.slug}
+                className="flex-shrink-0"
               >
                 {copied ? (
                   <Check className="w-4 h-4 text-green-500" />
@@ -225,9 +225,14 @@ export default function BookingSettingsPage() {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {t('booking.slug.preview')}: ambersol.co.il/book/{settings.slug || '...'}
-            </p>
+            <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t('booking.slug.preview')}:
+              </p>
+              <p className="text-xs md:text-sm text-gray-700 dark:text-gray-300 font-mono break-all">
+                ambersol.co.il/book/{settings.slug || '...'}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -237,67 +242,130 @@ export default function BookingSettingsPage() {
         <CardHeader>
           <CardTitle>{t('booking.workingHours')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {t('booking.workingHours.desc')}
           </p>
           
-          <div className="space-y-3">
+          <div className="space-y-3 overflow-hidden">
             {DAYS.map((day) => (
-              <div key={day} className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="w-28">
-                  <span className="font-medium">{t(`booking.day.${day}`)}</span>
+              <div key={day} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden">
+                {/* Mobile: Vertical Layout */}
+                <div className="flex flex-col gap-3 md:hidden">
+                  {/* Day name + toggle */}
+                  <div className="flex items-center justify-between w-full min-h-[44px]">
+                    <span className="font-medium text-sm">{t(`booking.day.${day}`)}</span>
+                    <Switch
+                      checked={settings.working_hours[day].enabled}
+                      onCheckedChange={(checked) =>
+                        setSettings({
+                          ...settings,
+                          working_hours: {
+                            ...settings.working_hours,
+                            [day]: { ...settings.working_hours[day], enabled: checked },
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                  
+                  {/* Time inputs (if enabled) */}
+                  {settings.working_hours[day].enabled && (
+                    <div className="flex items-center gap-2 w-full">
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-xs block mb-1">{t('booking.hours.start')}</Label>
+                        <Input
+                          type="time"
+                          value={settings.working_hours[day].start}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              working_hours: {
+                                ...settings.working_hours,
+                                [day]: { ...settings.working_hours[day], start: e.target.value },
+                              },
+                            })
+                          }
+                          className="w-full max-w-[100px] dark:bg-gray-700 dark:border-gray-600 text-sm"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-xs block mb-1">{t('booking.hours.end')}</Label>
+                        <Input
+                          type="time"
+                          value={settings.working_hours[day].end}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              working_hours: {
+                                ...settings.working_hours,
+                                [day]: { ...settings.working_hours[day], end: e.target.value },
+                              },
+                            })
+                          }
+                          className="w-full max-w-[100px] dark:bg-gray-700 dark:border-gray-600 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <Switch
-                  checked={settings.working_hours[day].enabled}
-                  onCheckedChange={(checked) =>
-                    setSettings({
-                      ...settings,
-                      working_hours: {
-                        ...settings.working_hours,
-                        [day]: { ...settings.working_hours[day], enabled: checked },
-                      },
-                    })
-                  }
-                />
-                {settings.working_hours[day].enabled && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs">{t('booking.hours.start')}</Label>
-                      <Input
-                        type="time"
-                        value={settings.working_hours[day].start}
-                        onChange={(e) =>
-                          setSettings({
-                            ...settings,
-                            working_hours: {
-                              ...settings.working_hours,
-                              [day]: { ...settings.working_hours[day], start: e.target.value },
-                            },
-                          })
-                        }
-                        className="w-32 dark:bg-gray-700 dark:border-gray-600"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs">{t('booking.hours.end')}</Label>
-                      <Input
-                        type="time"
-                        value={settings.working_hours[day].end}
-                        onChange={(e) =>
-                          setSettings({
-                            ...settings,
-                            working_hours: {
-                              ...settings.working_hours,
-                              [day]: { ...settings.working_hours[day], end: e.target.value },
-                            },
-                          })
-                        }
-                        className="w-32 dark:bg-gray-700 dark:border-gray-600"
-                      />
-                    </div>
-                  </>
-                )}
+
+                {/* Desktop: Horizontal Layout */}
+                <div className="hidden md:flex md:items-center md:gap-4">
+                  <div className="w-28 flex-shrink-0">
+                    <span className="font-medium">{t(`booking.day.${day}`)}</span>
+                  </div>
+                  <Switch
+                    checked={settings.working_hours[day].enabled}
+                    onCheckedChange={(checked) =>
+                      setSettings({
+                        ...settings,
+                        working_hours: {
+                          ...settings.working_hours,
+                          [day]: { ...settings.working_hours[day], enabled: checked },
+                        },
+                      })
+                    }
+                  />
+                  {settings.working_hours[day].enabled && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">{t('booking.hours.start')}</Label>
+                        <Input
+                          type="time"
+                          value={settings.working_hours[day].start}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              working_hours: {
+                                ...settings.working_hours,
+                                [day]: { ...settings.working_hours[day], start: e.target.value },
+                              },
+                            })
+                          }
+                          className="w-32 dark:bg-gray-700 dark:border-gray-600"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">{t('booking.hours.end')}</Label>
+                        <Input
+                          type="time"
+                          value={settings.working_hours[day].end}
+                          onChange={(e) =>
+                            setSettings({
+                              ...settings,
+                              working_hours: {
+                                ...settings.working_hours,
+                                [day]: { ...settings.working_hours[day], end: e.target.value },
+                              },
+                            })
+                          }
+                          className="w-32 dark:bg-gray-700 dark:border-gray-600"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -309,48 +377,87 @@ export default function BookingSettingsPage() {
         <CardHeader>
           <CardTitle>{t('booking.break')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between w-full min-h-[44px] gap-4">
+            <Label className="flex-1">{t('booking.break.enabled')}</Label>
             <Switch
               checked={hasBreak}
               onCheckedChange={setHasBreak}
             />
-            <Label>{t('booking.break.enabled')}</Label>
           </div>
           
           {hasBreak && (
-            <div className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Label>{t('booking.break.start')}</Label>
-                <Input
-                  type="time"
-                  value={settings.break_times[0]?.start || '13:00'}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      break_times: [
-                        { ...settings.break_times[0], start: e.target.value },
-                      ],
-                    })
-                  }
-                  className="w-32 dark:bg-gray-700 dark:border-gray-600"
-                />
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden">
+              {/* Mobile: Vertical */}
+              <div className="flex flex-col gap-3 md:hidden">
+                <div className="flex-1 min-w-0">
+                  <Label className="text-xs block mb-1">{t('booking.break.start')}</Label>
+                  <Input
+                    type="time"
+                    value={settings.break_times[0]?.start || '13:00'}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        break_times: [
+                          { ...settings.break_times[0], start: e.target.value },
+                        ],
+                      })
+                    }
+                    className="w-full max-w-[100px] dark:bg-gray-700 dark:border-gray-600 text-sm"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <Label className="text-xs block mb-1">{t('booking.break.end')}</Label>
+                  <Input
+                    type="time"
+                    value={settings.break_times[0]?.end || '14:00'}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        break_times: [
+                          { ...settings.break_times[0], end: e.target.value },
+                        ],
+                      })
+                    }
+                    className="w-full max-w-[100px] dark:bg-gray-700 dark:border-gray-600 text-sm"
+                  />
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Label>{t('booking.break.end')}</Label>
-                <Input
-                  type="time"
-                  value={settings.break_times[0]?.end || '14:00'}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      break_times: [
-                        { ...settings.break_times[0], end: e.target.value },
-                      ],
-                    })
-                  }
-                  className="w-32 dark:bg-gray-700 dark:border-gray-600"
-                />
+
+              {/* Desktop: Horizontal */}
+              <div className="hidden md:flex md:items-center md:gap-4">
+                <div className="flex items-center gap-2">
+                  <Label>{t('booking.break.start')}</Label>
+                  <Input
+                    type="time"
+                    value={settings.break_times[0]?.start || '13:00'}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        break_times: [
+                          { ...settings.break_times[0], start: e.target.value },
+                        ],
+                      })
+                    }
+                    className="w-32 dark:bg-gray-700 dark:border-gray-600"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label>{t('booking.break.end')}</Label>
+                  <Input
+                    type="time"
+                    value={settings.break_times[0]?.end || '14:00'}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        break_times: [
+                          { ...settings.break_times[0], end: e.target.value },
+                        ],
+                      })
+                    }
+                    className="w-32 dark:bg-gray-700 dark:border-gray-600"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -358,14 +465,14 @@ export default function BookingSettingsPage() {
       </Card>
 
       {/* Duration & Advance Settings */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Slot Duration */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('booking.slotDuration')}</CardTitle>
+            <CardTitle className="text-base md:text-lg">{t('booking.slotDuration')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-3">
               {t('booking.slotDuration.desc')}
             </p>
             <Select
@@ -374,7 +481,7 @@ export default function BookingSettingsPage() {
                 setSettings({ ...settings, slot_duration: parseInt(value) })
               }
             >
-              <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600">
+              <SelectTrigger className="w-full dark:bg-gray-700 dark:border-gray-600">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="dark:bg-gray-700">
@@ -391,10 +498,10 @@ export default function BookingSettingsPage() {
         {/* Min Advance Hours */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('booking.minAdvanceHours')}</CardTitle>
+            <CardTitle className="text-base md:text-lg">{t('booking.minAdvanceHours')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-3">
               {t('booking.minAdvanceHours.desc')}
             </p>
             <Select
@@ -403,7 +510,7 @@ export default function BookingSettingsPage() {
                 setSettings({ ...settings, min_advance_hours: parseInt(value) })
               }
             >
-              <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600">
+              <SelectTrigger className="w-full dark:bg-gray-700 dark:border-gray-600">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="dark:bg-gray-700">
@@ -420,10 +527,10 @@ export default function BookingSettingsPage() {
         {/* Max Days Ahead */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('booking.maxDaysAhead')}</CardTitle>
+            <CardTitle className="text-base md:text-lg">{t('booking.maxDaysAhead')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mb-3">
               {t('booking.maxDaysAhead.desc')}
             </p>
             <Select
@@ -432,7 +539,7 @@ export default function BookingSettingsPage() {
                 setSettings({ ...settings, max_days_ahead: parseInt(value) })
               }
             >
-              <SelectTrigger className="dark:bg-gray-700 dark:border-gray-600">
+              <SelectTrigger className="w-full dark:bg-gray-700 dark:border-gray-600">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="dark:bg-gray-700">
@@ -450,11 +557,11 @@ export default function BookingSettingsPage() {
       {/* Confirmation Messages */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('booking.confirmMessage')}</CardTitle>
+          <CardTitle className="text-base md:text-lg">{t('booking.confirmMessage')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="msg-he">{t('booking.confirmMessage.desc')}</Label>
+          <div className="overflow-hidden">
+            <Label htmlFor="msg-he" className="text-sm">{t('booking.confirmMessage.desc')}</Label>
             <Textarea
               id="msg-he"
               value={settings.confirm_message_he}
@@ -463,11 +570,11 @@ export default function BookingSettingsPage() {
               }
               placeholder={t('booking.confirmMessage.placeholder')}
               rows={3}
-              className="mt-2 dark:bg-gray-700 dark:border-gray-600"
+              className="mt-2 w-full dark:bg-gray-700 dark:border-gray-600 text-sm resize-none"
             />
           </div>
-          <div>
-            <Label htmlFor="msg-ru">{t('booking.confirmMessageRu.desc')}</Label>
+          <div className="overflow-hidden">
+            <Label htmlFor="msg-ru" className="text-sm">{t('booking.confirmMessageRu.desc')}</Label>
             <Textarea
               id="msg-ru"
               value={settings.confirm_message_ru}
@@ -476,19 +583,19 @@ export default function BookingSettingsPage() {
               }
               placeholder={t('booking.confirmMessageRu.placeholder')}
               rows={3}
-              className="mt-2 dark:bg-gray-700 dark:border-gray-600"
+              className="mt-2 w-full dark:bg-gray-700 dark:border-gray-600 text-sm resize-none"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Save Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end pb-6">
         <Button
           onClick={handleSave}
           disabled={saving}
           size="lg"
-          className="min-w-[200px]"
+          className="w-full md:w-auto md:min-w-[200px]"
         >
           {saving ? t('booking.saving') : t('booking.save')}
         </Button>

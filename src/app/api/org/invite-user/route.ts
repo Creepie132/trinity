@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { sendWelcomeEmail } from '@/lib/emails'
 
 export const dynamic = 'force-dynamic'
 
@@ -84,6 +85,15 @@ export async function POST(request: Request) {
 
     console.log('[Invite User] ✅ Permission check passed')
 
+    // Get organization name for email
+    const { data: organization } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', org_id)
+      .maybeSingle()
+
+    const orgName = organization?.name || 'Trinity CRM'
+
     // Check if user already exists in this org
     const { data: existingUser } = await supabase
       .from('org_users')
@@ -125,6 +135,11 @@ export async function POST(request: Request) {
     }
 
     console.log('[Invite User] ✅ User invited successfully:', newUser)
+
+    // Send welcome email (don't block on failure)
+    sendWelcomeEmail(normalizedEmail, orgName).catch(err => {
+      console.error('[Invite User] Email failed but user was created:', err)
+    })
 
     return NextResponse.json({
       success: true,

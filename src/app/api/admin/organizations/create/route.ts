@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { sendWelcomeEmail } from '@/lib/emails'
 
 export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7)
@@ -275,12 +276,10 @@ export async function POST(request: NextRequest) {
         assignmentResult.userId = existingAuthUser.id
         assignmentResult.authUserId = existingAuthUser.id
 
-        // TASK 3: Email notification stub
-        // TODO: Send welcome email to ${normalizedEmail} using Resend
-        // Subject: "Welcome to ${org.name} - Your Organization is Ready!"
-        // Template: organization-welcome
-        // Variables: { organizationName: org.name, ownerName: `${client.first_name} ${client.last_name}`, loginUrl: process.env.NEXT_PUBLIC_APP_URL }
-        console.log('[CREATE ORG] 📧 TODO: Send welcome email to', normalizedEmail)
+        // Send welcome email (don't block on failure)
+        sendWelcomeEmail(normalizedEmail, name).catch(err => {
+          console.error('[CREATE ORG] 📧 Email failed but user was created:', err)
+        })
       }
     } else {
       // User doesn't exist in auth.users → create invitation AND org_users entry with user_id = null
@@ -329,12 +328,10 @@ export async function POST(request: NextRequest) {
         console.log('[CREATE ORG] ✅ Invitation created for email:', normalizedEmail)
         assignmentResult.invitation = true
 
-        // TASK 3: Email notification stub
-        // TODO: Send invitation email to ${normalizedEmail} using Resend
-        // Subject: "You've been invited to join ${org.name}"
-        // Template: organization-invitation
-        // Variables: { organizationName: org.name, ownerName: `${client.first_name} ${client.last_name}`, invitationUrl: `${process.env.NEXT_PUBLIC_APP_URL}/login`, expiresAt: invitation.expires_at }
-        console.log('[CREATE ORG] 📧 TODO: Send invitation email to', normalizedEmail)
+        // Send welcome email (don't block on failure)
+        sendWelcomeEmail(normalizedEmail, name).catch(err => {
+          console.error('[CREATE ORG] 📧 Email failed but user was created:', err)
+        })
       }
     }
 

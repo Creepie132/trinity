@@ -75,27 +75,41 @@ export default function BookingSettingsPage() {
 
   // Load settings
   useEffect(() => {
-    if (!orgId) return
+    if (!orgId) {
+      setLoading(false)
+      return
+    }
 
     const loadSettings = async () => {
       try {
+        console.log('[BOOKING SETTINGS] Loading for org:', orgId)
         const res = await fetch(`/api/organizations/${orgId}`)
+        
+        if (!res.ok) {
+          const errorData = await res.json()
+          throw new Error(errorData.error || `HTTP ${res.status}`)
+        }
+
         const { data } = await res.json()
+        console.log('[BOOKING SETTINGS] Loaded org data:', data?.name)
         
         if (data?.booking_settings) {
+          console.log('[BOOKING SETTINGS] Found existing settings')
           setSettings(prev => ({ ...prev, ...data.booking_settings }))
           setHasBreak(data.booking_settings.break_times?.length > 0)
         } else if (data?.slug) {
+          console.log('[BOOKING SETTINGS] Found slug, using defaults')
           // If slug exists but no settings, use defaults with that slug
           setSettings(prev => ({ ...prev, slug: data.slug }))
         } else if (data?.name) {
+          console.log('[BOOKING SETTINGS] Generating slug from name:', data.name)
           // Auto-generate slug from org name
           const autoSlug = generateSlug(data.name)
           setSettings(prev => ({ ...prev, slug: autoSlug }))
         }
-      } catch (error) {
-        console.error('Error loading booking settings:', error)
-        toast.error('Failed to load settings')
+      } catch (error: any) {
+        console.error('[BOOKING SETTINGS] Error loading:', error)
+        toast.error(error.message || 'Failed to load settings')
       } finally {
         setLoading(false)
       }

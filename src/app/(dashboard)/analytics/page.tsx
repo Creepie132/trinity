@@ -326,9 +326,6 @@ export default function AnalyticsPage() {
                   dataKey="value"
                   animationBegin={0}
                   animationDuration={1000}
-                  activeShape={{
-                    outerRadius: 95,
-                  }}
                 >
                   {paymentMethodsData.map((entry, index) => (
                     <Cell 

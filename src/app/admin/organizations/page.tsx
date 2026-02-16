@@ -37,11 +37,12 @@ import {
   useRemoveOrgUser,
 } from '@/hooks/useAdmin'
 import { useQueryClient } from '@tanstack/react-query'
-import { Building2, Plus, Search, Eye, Trash, CheckCircle2, XCircle, Gift } from 'lucide-react'
+import { Building2, Plus, Search, Eye, Trash, CheckCircle2, XCircle, Gift, BarChart3 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Organization } from '@/types/database'
 import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { OrganizationStatsCard } from '@/components/admin/OrganizationStatsCard'
 
 export default function OrganizationsPage() {
   const { t } = useLanguage()
@@ -416,7 +417,10 @@ export default function OrganizationsPage() {
                 {organizations?.map((org: Organization) => (
                   <TableRow key={org.id}>
                     <TableCell>
-                      <div>
+                      <div 
+                        className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                        onClick={() => handleViewOrg(org.id)}
+                      >
                         <p className="font-medium">{org.name}</p>
                         <p className="text-sm text-gray-500">{org.email}</p>
                       </div>
@@ -663,7 +667,27 @@ export default function OrganizationsPage() {
           </SheetHeader>
           
           {selectedOrg && (
-            <div className="space-y-6 mt-6">
+            <Tabs defaultValue="stats" className="mt-6">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value="stats" className="gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  {t('admin.orgs.stats')}
+                </TabsTrigger>
+                <TabsTrigger value="info">
+                  {t('admin.orgs.info')}
+                </TabsTrigger>
+                <TabsTrigger value="users">
+                  {t('admin.orgs.users')}
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Stats Tab */}
+              <TabsContent value="stats" className="space-y-4">
+                <OrganizationStatsCard orgId={selectedOrg.id} />
+              </TabsContent>
+
+              {/* Info Tab */}
+              <TabsContent value="info" className="space-y-6">
               {/* Basic Info */}
               <Card>
                 <CardHeader>
@@ -877,8 +901,10 @@ export default function OrganizationsPage() {
                   </div>
                 </CardContent>
               </Card>
+              </TabsContent>
 
-              {/* Users */}
+              {/* Users Tab */}
+              <TabsContent value="users" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -928,7 +954,8 @@ export default function OrganizationsPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+              </TabsContent>
+            </Tabs>
           )}
         </SheetContent>
       </Sheet>

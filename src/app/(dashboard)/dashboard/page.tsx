@@ -55,7 +55,8 @@ const DEFAULT_WIDGETS: WidgetId[] = [
   'visits_month',
   'total_clients',
   'inactive_clients',
-  'revenue_month'
+  'revenue_month',
+  'birthdays_today'
 ]
 
 export default function DashboardPage() {
@@ -102,7 +103,16 @@ export default function DashboardPage() {
           .single()
 
         if (data?.settings?.dashboard_widgets) {
-          setWidgets(data.settings.dashboard_widgets)
+          let savedWidgets = data.settings.dashboard_widgets
+          
+          // Auto-migration: add birthdays_today if not present
+          if (!savedWidgets.includes('birthdays_today')) {
+            savedWidgets = [...savedWidgets, 'birthdays_today']
+          }
+          
+          setWidgets(savedWidgets)
+        } else {
+          setWidgets(DEFAULT_WIDGETS)
         }
         
         if (data?.settings?.dashboard_charts) {
@@ -277,7 +287,7 @@ export default function DashboardPage() {
 
       {/* Widgets Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {widgets.slice(0, window.innerWidth < 768 ? 4 : 8).map((widgetId, index) => {
+        {widgets.slice(0, window.innerWidth < 768 ? 6 : 8).map((widgetId, index) => {
           const config = widgetConfig[widgetId]
           if (!config) return null
 

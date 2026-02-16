@@ -41,11 +41,13 @@ export default function VisitsPage() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [dateFilter, setDateFilter] = useState<string>('all')
+  const [dateFilter, setDateFilter] = useState<string>('today')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'bookings'>('list')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [serviceColors, setServiceColors] = useState<Record<string, string>>({})
+  const [page, setPage] = useState(1)
+  const pageSize = 20
   
   // Bookings hook
   const { bookings, isLoading: bookingsLoading, confirmBooking, cancelBooking, isConfirming, isCancelling } = useBookings(orgId)
@@ -77,12 +79,18 @@ export default function VisitsPage() {
     }
   }, [orgId])
 
-  // Fetch visits
-  const { data: visits = [], isLoading, refetch } = useQuery({
-    queryKey: ['visits', orgId, dateFilter, statusFilter, searchQuery],
-    queryFn: async () => {
-      if (!orgId) return []
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1)
+  }, [dateFilter, statusFilter, searchQuery])
 
+  // Fetch visits with pagination
+  const { data: visitsData, isLoading, refetch } = useQuery({
+    queryKey: ['visits', orgId, dateFilter, statusFilter, searchQuery, page],
+    queryFn: async () => {
+      if (!orgId) return { data: [], count: 0 }
+
+      // Build query with count
       let query = supabase
         .from('visits')
         .select(`
@@ -97,7 +105,7 @@ export default function VisitsPage() {
             name,
             name_ru
           )
-        `)
+        `, { count: 'exact' })
         .eq('org_id', orgId)
         .order('scheduled_at', { ascending: false })
 
@@ -122,24 +130,42 @@ export default function VisitsPage() {
         query = query.gte('scheduled_at', startDate.toISOString())
       }
 
-      const { data, error } = await query
+      // Search filter
+      if (searchQuery) {
+        // Note: This is not ideal for large datasets, but works for basic search
+        // For better performance, consider full-text search or dedicated search service
+      }
+
+      // Pagination
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      query = query.range(from, to)
+
+      const { data, error, count } = await query
 
       if (error) throw error
 
-      // Client search filter
+      // Client search filter (client-side for now)
+      let filteredData = data as Visit[]
       if (searchQuery) {
         const lowerQuery = searchQuery.toLowerCase()
-        return data.filter((visit: Visit) => 
+        filteredData = filteredData.filter((visit: Visit) => 
           (visit.clients?.first_name || '').toLowerCase().includes(lowerQuery) ||
           (visit.clients?.last_name || '').toLowerCase().includes(lowerQuery) ||
           (visit.clients?.phone || '').includes(searchQuery)
         )
       }
 
-      return data as Visit[]
+      return { data: filteredData, count: count || 0 }
     },
     enabled: !!orgId,
   })
+
+  const visits = visitsData?.data || []
+  const totalCount = visitsData?.count || 0
+  const totalPages = Math.ceil(totalCount / pageSize)
+  const from = (page - 1) * pageSize + 1
+  const to = Math.min(page * pageSize, totalCount)
 
   const getServiceLabel = (service: string): string => {
     const serviceMap: Record<string, string> = {
@@ -247,7 +273,7 @@ export default function VisitsPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('visits.title')}</h1>
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
-            {t('common.total')}: {visits.length} {t('visits.title')}
+            {t('common.total')}: {totalCount} {t('visits.title')}
           </p>
         </div>
         {/* Desktop Add Button */}
@@ -489,6 +515,88 @@ export default function VisitsPage() {
               </div>
             )}
           </div>
+
+          {/* Pagination */}
+          {totalCount > pageSize && (
+            <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 sm:px-6">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <Button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                  variant="outline"
+                >
+                  {t('common.previous')}
+                </Button>
+                <Button
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages}
+                  variant="outline"
+                >
+                  {t('common.next')}
+                </Button>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    {t('common.showing')} <span className="font-medium">{from}</span> {t('common.outOf')} <span className="font-medium">{to}</span> {t('common.of')}{' '}
+                    <span className="font-medium">{totalCount}</span> {t('common.items')}
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <Button
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                      disabled={page === 1}
+                      variant="outline"
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md"
+                    >
+                      <span className="sr-only">{t('common.previous')}</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </Button>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum
+                      if (totalPages <= 5) {
+                        pageNum = i + 1
+                      } else if (page <= 3) {
+                        pageNum = i + 1
+                      } else if (page >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i
+                      } else {
+                        pageNum = page - 2 + i
+                      }
+                      return (
+                        <Button
+                          key={pageNum}
+                          onClick={() => setPage(pageNum)}
+                          variant={page === pageNum ? "default" : "outline"}
+                          className={`relative inline-flex items-center px-4 py-2 text-sm font-medium ${
+                            page === pageNum
+                              ? 'z-10 bg-theme-primary text-white'
+                              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          {pageNum}
+                        </Button>
+                      )
+                    })}
+                    <Button
+                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                      disabled={page === totalPages}
+                      variant="outline"
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md"
+                    >
+                      <span className="sr-only">{t('common.next')}</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </Button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
 

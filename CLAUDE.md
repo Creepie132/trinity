@@ -5,8 +5,457 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-14 13:36 UTC  
-**Версия:** 2.29.4
+**Последнее обновление:** 2026-02-16 22:30 UTC  
+**Версия:** 2.30.0
+
+---
+
+## 🔧 ОБНОВЛЕНИЯ v2.30.0 (2026-02-16) - Role System & Admin Stats 🔐
+
+### 🔴 CRITICAL SECURITY FIXES
+
+#### ✅ 1. SMS Campaigns Organization Leak (v2.30.0)
+
+**Проблема:** Пользователи видели клиентов из ВСЕХ организаций при создании SMS-рассылок.
+- У пользователя 25 клиентов, система показывала 425 (все клиенты базы)
+- История кампаний показывала кампании всех организаций
+- Можно было посмотреть чужие SMS по ID кампании
+
+**Решение:**
+Добавлена фильтрация по `org_id` во всех SMS hooks:
+
+```typescript
+// src/hooks/useSms.ts
+export function useSmsCampaigns() {
+  const { orgId } = useAuth()
+  return useQuery({
+    queryKey: ['sms-campaigns', orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('sms_campaigns')
+        .select('*')
+        .eq('org_id', orgId) // 🔒 CRITICAL!
+    }
+  })
+}
+```
+
+**Защищено:**
+- `useSmsCampaigns()` - только кампании своей организации
+- `useSmsCampaign(id)` - проверка org_id перед показом
+- `useSmsMessages(campaignId)` - доп. проверка владельца кампании
+- `useRecipientsCount()` - подсчёт только своих клиентов
+
+**Files Changed:**
+- ✅ `src/hooks/useSms.ts` - Added org_id filters to all queries
+
+---
+
+#### ✅ 2. Client Card "Admin Button" Removed (v2.30.0)
+
+**Проблема:** В карточке клиента была кнопка "Назначить администратором"
+- Клиенты (clients) — это НЕ пользователи системы
+- Кнопка не должна существовать
+
+**Решение:**
+- Удалена секция "Admin Assignment" из ClientSheet.tsx (строки 303-339, 352-360)
+- Удалён компонент `AssignAdminDialog.tsx`
+- Удалён хук `useClientAdminStatus.ts`
+- Убраны импорты Shield, X icons
+
+**Files Deleted:**
+- ❌ `src/components/clients/AssignAdminDialog.tsx`
+- ❌ `src/hooks/useClientAdminStatus.ts`
+
+**Files Changed:**
+- ✅ `src/components/clients/ClientSheet.tsx` - Removed admin section
+
+---
+
+### 🔐 NEW FEATURE: Role-Based Permissions System
+
+#### Role Structure
+
+**OLD System:** `admin`, `manager`, `user` (смешивались с super-admin)
+
+**NEW System:** `user`, `moderator`, `owner` (чёткое разделение)
+
+**SQL Migration:** `supabase/update-roles.sql`
+```sql
+-- Auto-migrate existing roles
+UPDATE org_users SET role = 'owner' WHERE role = 'admin';
+UPDATE org_users SET role = 'moderator' WHERE role = 'manager';
+
+-- Update constraint
+ALTER TABLE org_users 
+ADD CONSTRAINT org_users_role_check 
+CHECK (role IN ('user', 'moderator', 'owner'));
+```
+
+---
+
+#### Permission Matrix
+
+| Permission | user | moderator | owner |
+|-----------|:----:|:---------:|:-----:|
+| Manage visits/clients/payments | ✅ | ✅ | ✅ |
+| Send birthday messages | ✅ | ✅ | ✅ |
+| Change display settings | ✅ | ✅ | ✅ |
+| **View analytics** | ❌ | ✅ | ✅ |
+| **Manage inventory** | ❌ | ✅ | ✅ |
+| **Send SMS campaigns** | ❌ | ✅ | ✅ |
+| **Manage services** | ❌ | ❌ | ✅ |
+| **Manage care instructions** | ❌ | ❌ | ✅ |
+| **Manage booking settings** | ❌ | ❌ | ✅ |
+| **Manage birthday templates** | ❌ | ❌ | ✅ |
+| **Manage organization users** | ❌ | ❌ | ✅ |
+
+---
+
+#### usePermissions Hook
+
+**File:** `src/hooks/usePermissions.ts`
+
+```typescript
+export interface Permissions {
+  // User permissions (all roles)
+  canManageVisits: boolean
+  canManageClients: boolean
+  canAcceptPayments: boolean
+  canSendBirthdayMessage: boolean
+  canChangeDisplaySettings: boolean
+
+  // Moderator+ permissions
+  canViewAnalytics: boolean
+  canManageInventory: boolean
+  canSendSMS: boolean
+
+  // Owner-only permissions
+  canManageServices: boolean
+  canManageCareInstructions: boolean
+  canManageBookingSettings: boolean
+  canManageBirthdayTemplates: boolean
+  canManageUsers: boolean
+}
+
+export function usePermissions(): Permissions {
+  const { role } = useAuth()
+  // Returns permissions based on role
+}
+```
+
+**Usage:**
+```typescript
+const permissions = usePermissions()
+
+if (!permissions.canSendSMS) {
+  toast.error('אין לך הרשאה')
+  router.push('/dashboard')
+}
+```
+
+---
+
+#### AuthContext Extended
+
+**File:** `src/contexts/AuthContext.tsx`
+
+Added `role` field:
+```typescript
+type AuthContextType = {
+  user: any | null
+  orgId: string | null
+  role: 'user' | 'moderator' | 'owner' | null // NEW!
+  isAdmin: boolean
+  isLoading: boolean
+  signOut: () => Promise<void>
+  refetch: () => Promise<void>
+}
+```
+
+Role loaded from `org_users.role` during authentication.
+
+---
+
+#### UI Restrictions Applied
+
+**1. Sidebar** (`src/components/layout/Sidebar.tsx`)
+```typescript
+const navigation = baseNavigation.filter((item) => {
+  // Hide SMS/Inventory/Analytics for 'user' role
+  if (item.href === '/sms' && !permissions.canSendSMS) return false
+  if (item.href === '/inventory' && !permissions.canManageInventory) return false
+  if ((item.href === '/stats' || item.href === '/analytics') 
+      && !permissions.canViewAnalytics) return false
+  return true
+})
+```
+
+**2. Settings Page** (`src/app/(dashboard)/settings/page.tsx`)
+```typescript
+const filteredCategories = settingsCategories.filter((category) => {
+  // Owner-only settings
+  if (category.id === 'users' && !permissions.canManageUsers) return false
+  if (category.id === 'services' && !permissions.canManageServices) return false
+  if (category.id === 'booking' && !permissions.canManageBookingSettings) return false
+  // ... etc
+  return true
+})
+```
+
+**3. Protected Pages**
+All owner-only pages check permissions on mount:
+```typescript
+useEffect(() => {
+  if (!permissions.canManageUsers) {
+    toast.error('אין לך הרשאה')
+    router.push('/dashboard')
+  }
+}, [permissions.canManageUsers])
+```
+
+---
+
+#### User Management Page
+
+**File:** `src/app/(dashboard)/settings/users/page.tsx`
+
+**Access:** Owner-only (automatic redirect if not owner)
+
+**Features:**
+- Role descriptions (user/moderator/owner) in Hebrew/Russian
+- "Coming Soon" placeholder for:
+  - Invite new users
+  - Change user roles
+  - Remove users
+- Full feature will be implemented later
+
+**UI:**
+```
+📋 ניהול משתמשים / Управление пользователями
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• user (Пользователь / משתמש)
+  ✓ Visits, clients, payments
+  ✓ Birthday messages
+  
+• moderator (Модератор / מנהל משמרת)
+  ✓ All user permissions +
+  ✓ Analytics, Inventory, SMS
+
+• owner (Администратор / מנהל)
+  ✓ Full organization control
+  ✓ Manage services, users, booking
+```
+
+---
+
+#### Admin Panel Access Verified
+
+**IMPORTANT:** `/admin` accessible ONLY to super-admins from `admin_users` table.
+
+**`org_users.role = 'owner'` does NOT grant admin access!**
+
+**Verification:**
+- `AdminLayout` → `/api/admin/check` endpoint
+- Endpoint validates `admin_users.user_id`, NOT `org_users.role`
+- Owner of organization cannot access `/admin` panel
+
+**Files:**
+- ✅ `src/app/admin/layout.tsx` - Admin access check
+- ✅ `src/app/api/admin/check/route.ts` - Validates admin_users table
+
+---
+
+#### Files Changed (Role System)
+
+**NEW:**
+- ✅ `src/hooks/usePermissions.ts` - Permission logic
+- ✅ `src/app/(dashboard)/settings/users/page.tsx` - User management (owner-only)
+- ✅ `supabase/update-roles.sql` - SQL migration (NOT executed)
+
+**MODIFIED:**
+- ✅ `src/contexts/AuthContext.tsx` - Added role field
+- ✅ `src/components/layout/Sidebar.tsx` - Filter menu by permissions
+- ✅ `src/app/(dashboard)/settings/page.tsx` - Filter settings by role
+- ✅ `src/components/clients/ClientSheet.tsx` - Removed admin button
+
+**DELETED:**
+- ❌ `src/components/clients/AssignAdminDialog.tsx`
+- ❌ `src/hooks/useClientAdminStatus.ts`
+
+---
+
+### 📊 NEW FEATURE: Admin Organization Statistics
+
+#### Clickable Organization Names
+
+**File:** `src/app/admin/organizations/page.tsx`
+
+Organizations table now has clickable names:
+```tsx
+<div 
+  className="cursor-pointer hover:text-blue-600"
+  onClick={() => handleViewOrg(org.id)}
+>
+  <p className="font-medium">{org.name}</p>
+  <p className="text-sm text-gray-500">{org.email}</p>
+</div>
+```
+
+Clicking organization name opens detail Sheet.
+
+---
+
+#### Organization Stats Card
+
+**File:** `src/components/admin/OrganizationStatsCard.tsx`
+
+**Features:**
+- **Period Filter:** Day / Week / Month / Year
+- **4 Stat Blocks:**
+  1. 👥 **Total Clients** (blue) - All time
+  2. 📅 **Visits** (green) - Filtered by period
+  3. 💳 **Payments/Sales** (amber) - Filtered by period
+  4. 📈 **Total Revenue** (purple) - Filtered by period (₪)
+- **Date Range Display:** Shows period dates at bottom
+- **Loading States:** Spinner while fetching
+- **Error Handling:** Red card on error
+- **Hebrew/Russian:** Full localization
+- **Dark Mode:** Gradient cards with dark: variants
+
+**UI Example:**
+```
+┌─────────────────────────────────────┐
+│ תקופה: [יום] [שבוע] [חודש] [שנה] │
+├─────────────────────────────────────┤
+│ 👥 סך הכל לקוחות                   │
+│    25        [כל הזמנים]            │
+├─────────────────────────────────────┤
+│ 📅 ביקורים                          │
+│    48        [חודש]                 │
+├─────────────────────────────────────┤
+│ 💳 מכירות                           │
+│    32        [חודש]                 │
+├─────────────────────────────────────┤
+│ 📈 הכנסות                           │
+│    ₪15,600   [חודש]                 │
+└─────────────────────────────────────┘
+```
+
+---
+
+#### API Endpoint
+
+**File:** `src/app/api/admin/organizations/[orgId]/stats/route.ts`
+
+**GET** `/api/admin/organizations/[orgId]/stats?period=month`
+
+**Query Parameters:**
+- `period`: `day` | `week` | `month` | `year` (default: `month`)
+
+**Response:**
+```json
+{
+  "period": "month",
+  "startDate": "2026-01-16T00:00:00Z",
+  "endDate": "2026-02-16T22:30:00Z",
+  "stats": {
+    "totalClients": 25,
+    "visitsCount": 48,
+    "paymentsCount": 32,
+    "totalRevenue": 15600
+  }
+}
+```
+
+**Period Logic:**
+- **day:** From 00:00 today to now
+- **week:** Last 7 days
+- **month:** Last 30 days
+- **year:** Last 365 days
+
+**Queries:**
+- `totalClients`: COUNT from `clients` WHERE `org_id = ?`
+- `visitsCount`: COUNT from `visits` JOIN `clients` WHERE `org_id = ?` AND `scheduled_at >= startDate`
+- `paymentsCount`: COUNT from `payments` JOIN `clients` WHERE `org_id = ?` AND `status = 'completed'` AND `created_at >= startDate`
+- `totalRevenue`: SUM(`amount`) from same payments query
+
+---
+
+#### Organization Detail Tabs
+
+**File:** `src/app/admin/organizations/page.tsx`
+
+Organization Sheet now has **3 tabs**:
+
+**Tab 1: סטטיסטיקה / Статистика**
+- OrganizationStatsCard component
+- Period filter (day/week/month/year)
+- 4 gradient stat cards
+
+**Tab 2: מידע / Информация**
+- Basic info (name, email, phone, category, plan)
+- Feature toggles (clients, SMS, payments, analytics, etc.)
+- Active/Inactive toggle
+
+**Tab 3: משתמשים / Пользователи**
+- User list with roles
+- Add user button
+- Remove user button
+
+**Implementation:**
+```tsx
+<Tabs defaultValue="stats">
+  <TabsList className="grid w-full grid-cols-3">
+    <TabsTrigger value="stats">
+      <BarChart3 className="w-4 h-4" />
+      {t('admin.orgs.stats')}
+    </TabsTrigger>
+    <TabsTrigger value="info">{t('admin.orgs.info')}</TabsTrigger>
+    <TabsTrigger value="users">{t('admin.orgs.users')}</TabsTrigger>
+  </TabsList>
+
+  <TabsContent value="stats">
+    <OrganizationStatsCard orgId={selectedOrg.id} />
+  </TabsContent>
+  
+  {/* ... other tabs */}
+</Tabs>
+```
+
+---
+
+#### Files Changed (Admin Stats)
+
+**NEW:**
+- ✅ `src/app/api/admin/organizations/[orgId]/stats/route.ts` - Stats API endpoint
+- ✅ `src/components/admin/OrganizationStatsCard.tsx` - Stats card component
+
+**MODIFIED:**
+- ✅ `src/app/admin/organizations/page.tsx` - Clickable names + Tabs
+- ✅ `src/contexts/LanguageContext.tsx` - Added translations (admin.orgs.stats, admin.orgs.info)
+
+---
+
+### 📋 Summary v2.30.0
+
+**Security Fixes:**
+- 🔒 SMS campaigns now filtered by organization
+- 🔒 Removed incorrect "admin" button from client cards
+
+**New Features:**
+- 🔐 Role-based permission system (user/moderator/owner)
+- 🛡️ usePermissions() hook for access control
+- 👥 User management page (owner-only, coming soon)
+- 📊 Organization statistics in admin panel
+- 📈 Period filter for stats (day/week/month/year)
+- 📑 Tabs in organization detail Sheet
+
+**Files Modified:** 11 files
+**Files Added:** 4 files
+**Files Deleted:** 2 files
+**SQL Migrations:** 1 file (not executed)
 
 ---
 

@@ -7,7 +7,7 @@ export type Language = 'he' | 'ru'
 interface LanguageContextType {
   language: Language
   setLanguage: (lang: Language) => void
-  t: (key: string) => string
+  t: (key: string, vars?: Record<string, any>) => string
   dir: 'rtl' | 'ltr'
 }
 
@@ -321,6 +321,7 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.widgets.low_stock': 'מלאי נמוך',
     'dashboard.widgets.pending_bookings': 'הזמנות ממתינות',
     'dashboard.widgets.avg_visit': 'ממוצע לביקור',
+    'dashboard.widgets.birthdays_today': 'ימי הולדת היום',
     'dashboard.settings': 'הגדרות לוח בקרה',
     'dashboard.settingsSubtitle': 'התאם אילו גרפים להציג בלוח הבקרה',
     'dashboard.chartsOnDashboard': 'גרפים בלוח הבקרה',
@@ -329,6 +330,30 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.visitsChartDesc': 'גרף ביקורים לפי חודשים (עמודות)',
     'dashboard.topClientsDesc': 'טבלת 5 הלקוחות המשלמים ביותר',
     'dashboard.chartsInfo': 'השינויים ישמרו אוטומטית וישפיעו על התצוגה של לוח הבקרה',
+    'dashboard.birthdaysToday': 'ימי הולדת היום',
+    
+    // Birthdays
+    'birthdays.todayTitle': 'ימי הולדת היום!',
+    'birthdays.todayCount': '{count} לקוחות חוגגים היום',
+    'birthdays.yearsOld': 'שנים',
+    'birthdays.sendGreeting': 'שלח ברכה',
+    'birthdays.sendGift': 'שלח מתנה',
+    'birthdays.dontShowToday': 'אל תציג שוב היום',
+    'birthdays.templatesTitle': 'הודעות יום הולדת',
+    'birthdays.templatesSubtitle': 'התאם אישית הודעות ברכה ומתנות ללקוחות',
+    'birthdays.greetingTemplateHe': 'תבנית ברכה (עברית)',
+    'birthdays.greetingTemplateRu': 'תבנית ברכה (רוסית)',
+    'birthdays.giftTemplateHe': 'תבנית מתנה-הנחה (עברית)',
+    'birthdays.giftTemplateRu': 'תבנית מתנה-הנחה (רוסית)',
+    'birthdays.greetingDesc': 'הודעת ברכה פשוטה ללקוח',
+    'birthdays.giftDesc': 'הודעה עם קוד הנחה מיוחד',
+    'birthdays.discount': 'אחוז הנחה',
+    'birthdays.expiryDays': 'תוקף (ימים)',
+    'birthdays.availableVariables': 'משתנים זמינים',
+    'birthdays.varName': 'שם הלקוח',
+    'birthdays.varOrg': 'שם הארגון',
+    'birthdays.varDiscount': 'אחוז ההנחה',
+    'birthdays.varExpiryDate': 'תאריך תפוגה',
     
     // Clients
     'clients.title': 'לקוחות',
@@ -1167,6 +1192,7 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.widgets.low_stock': 'Низкий остаток',
     'dashboard.widgets.pending_bookings': 'Ожидающие записи',
     'dashboard.widgets.avg_visit': 'Средний чек',
+    'dashboard.widgets.birthdays_today': 'Именинники',
     'dashboard.settings': 'Настройки дашборда',
     'dashboard.settingsSubtitle': 'Настройте какие графики показывать на дашборде',
     'dashboard.chartsOnDashboard': 'Графики на дашборде',
@@ -1175,6 +1201,30 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.visitsChartDesc': 'График визитов по месяцам (столбцы)',
     'dashboard.topClientsDesc': 'Таблица топ 5 платящих клиентов',
     'dashboard.chartsInfo': 'Изменения сохранятся автоматически и повлияют на вид дашборда',
+    'dashboard.birthdaysToday': 'Именинники',
+    
+    // Birthdays
+    'birthdays.todayTitle': 'Именинники сегодня!',
+    'birthdays.todayCount': '{count} клиентов празднуют сегодня',
+    'birthdays.yearsOld': 'лет',
+    'birthdays.sendGreeting': 'Поздравить',
+    'birthdays.sendGift': 'Отправить подарок',
+    'birthdays.dontShowToday': 'Не показывать сегодня',
+    'birthdays.templatesTitle': 'Сообщения ко дню рождения',
+    'birthdays.templatesSubtitle': 'Настройте персональные поздравления и подарки для клиентов',
+    'birthdays.greetingTemplateHe': 'Шаблон поздравления (Hebrew)',
+    'birthdays.greetingTemplateRu': 'Шаблон поздравления (Русский)',
+    'birthdays.giftTemplateHe': 'Шаблон подарка-скидки (Hebrew)',
+    'birthdays.giftTemplateRu': 'Шаблон подарка-скидки (Русский)',
+    'birthdays.greetingDesc': 'Простое поздравление клиента',
+    'birthdays.giftDesc': 'Сообщение со специальным промокодом',
+    'birthdays.discount': 'Процент скидки',
+    'birthdays.expiryDays': 'Срок действия (дней)',
+    'birthdays.availableVariables': 'Доступные переменные',
+    'birthdays.varName': 'Имя клиента',
+    'birthdays.varOrg': 'Название организации',
+    'birthdays.varDiscount': 'Процент скидки',
+    'birthdays.varExpiryDate': 'Дата окончания',
     
     // Clients
     'clients.title': 'Клиенты',
@@ -1732,8 +1782,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute('dir', dir)
   }
 
-  const t = (key: string): string => {
-    return translations[language][key] || key
+  const t = (key: string, vars?: Record<string, any>): string => {
+    let text = translations[language][key] || key
+    
+    // Replace variables like {count}, {name}, etc.
+    if (vars) {
+      Object.keys(vars).forEach((varKey) => {
+        text = text.replace(new RegExp(`\\{${varKey}\\}`, 'g'), String(vars[varKey]))
+      })
+    }
+    
+    return text
   }
 
   const dir = language === 'he' ? 'rtl' : 'ltr'

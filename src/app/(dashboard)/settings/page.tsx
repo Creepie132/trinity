@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText, Calendar, LayoutDashboard } from 'lucide-react'
+import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText, Calendar, LayoutDashboard, Cake } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -36,6 +36,13 @@ export default function SettingsPage() {
       icon: Calendar,
       title: t('settings.booking'),
       description: t('settings.booking.desc'),
+    },
+    {
+      id: 'birthday-templates',
+      href: '/settings/birthday-templates',
+      icon: Cake,
+      title: t('birthdays.templatesTitle'),
+      description: t('birthdays.templatesSubtitle'),
     },
     {
       id: 'services',

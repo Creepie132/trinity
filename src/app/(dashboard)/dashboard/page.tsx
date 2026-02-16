@@ -21,7 +21,8 @@ import {
   Inbox,
   TrendingUp,
   BarChart3,
-  UsersRound
+  UsersRound,
+  Cake
 } from 'lucide-react'
 import {
   AreaChart,
@@ -36,6 +37,8 @@ import {
   Cell,
 } from 'recharts'
 import AdBanner from '@/components/ads/AdBanner'
+import BirthdayPopup from '@/components/birthdays/BirthdayPopup'
+import { useTodayBirthdays } from '@/hooks/useBirthdays'
 
 type WidgetId =
   | 'visits_month'
@@ -46,6 +49,7 @@ type WidgetId =
   | 'low_stock'
   | 'pending_bookings'
   | 'avg_visit'
+  | 'birthdays_today'
 
 const DEFAULT_WIDGETS: WidgetId[] = [
   'visits_month',
@@ -67,6 +71,7 @@ export default function DashboardPage() {
   const { data: revenueData } = useRevenueByMonth()
   const { data: visitsData } = useVisitsByMonth()
   const { data: topClients } = useTopClients()
+  const { data: birthdayClients = [] } = useTodayBirthdays()
 
   const [widgets, setWidgets] = useState<WidgetId[]>(DEFAULT_WIDGETS)
   const [widgetsLoaded, setWidgetsLoaded] = useState(false)
@@ -75,6 +80,7 @@ export default function DashboardPage() {
     visits: true,
     topClients: true
   })
+  const [showBirthdayPopup, setShowBirthdayPopup] = useState(false)
 
   // Check organization status
   useEffect(() => {
@@ -111,6 +117,18 @@ export default function DashboardPage() {
 
     loadSettings()
   }, [orgId, supabase])
+
+  // Check if should show birthday popup
+  useEffect(() => {
+    if (birthdayClients.length > 0 && widgetsLoaded) {
+      const today = new Date().toISOString().split('T')[0]
+      const lastShown = localStorage.getItem('birthday_popup_date')
+      
+      if (lastShown !== today) {
+        setShowBirthdayPopup(true)
+      }
+    }
+  }, [birthdayClients, widgetsLoaded])
 
   const widgetConfig = {
     visits_month: {
@@ -168,6 +186,14 @@ export default function DashboardPage() {
       link: '/stats',
       getValue: () => `₪${stats?.avgVisitValue?.toFixed(2) || '0.00'}`,
       label: t('dashboard.avgVisit')
+    },
+    birthdays_today: {
+      icon: Cake,
+      color: 'pink',
+      link: '#',
+      getValue: () => birthdayClients.length || 0,
+      label: t('dashboard.birthdaysToday'),
+      onClick: () => birthdayClients.length > 0 && setShowBirthdayPopup(true)
     }
   }
 
@@ -212,6 +238,11 @@ export default function DashboardPage() {
         bg: 'bg-indigo-50 dark:bg-indigo-900/20',
         text: 'text-indigo-600 dark:text-indigo-400',
         icon: 'bg-indigo-100 dark:bg-indigo-900/40'
+      },
+      pink: {
+        bg: 'bg-pink-50 dark:bg-pink-900/20',
+        text: 'text-pink-600 dark:text-pink-400',
+        icon: 'bg-pink-100 dark:bg-pink-900/40'
       }
     }
     return colors[color] || colors.blue
@@ -253,31 +284,38 @@ export default function DashboardPage() {
           const Icon = config.icon
           const colors = getColorClasses(config.color)
 
-          return (
+          const WidgetCard = (
+            <Card
+              className="cursor-pointer hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 aspect-square"
+              style={{
+                animation: `fadeInScale 0.4s ease-out ${index * 0.1}s both`
+              }}
+              onClick={(config as any).onClick}
+            >
+              <CardContent className="p-4 h-full flex flex-col items-center justify-between text-center">
+                {/* Icon */}
+                <div className={`${colors.icon} p-3 rounded-full`}>
+                  <Icon className={`w-6 h-6 md:w-8 md:h-8 ${colors.text}`} />
+                </div>
+
+                {/* Value */}
+                <div className={`text-2xl md:text-3xl font-bold ${colors.text}`}>
+                  {config.getValue()}
+                </div>
+
+                {/* Label */}
+                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                  {config.label}
+                </p>
+              </CardContent>
+            </Card>
+          )
+
+          return (config as any).onClick ? (
+            <div key={widgetId}>{WidgetCard}</div>
+          ) : (
             <Link key={widgetId} href={config.link}>
-              <Card
-                className="cursor-pointer hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 aspect-square"
-                style={{
-                  animation: `fadeInScale 0.4s ease-out ${index * 0.1}s both`
-                }}
-              >
-                <CardContent className="p-4 h-full flex flex-col items-center justify-between text-center">
-                  {/* Icon */}
-                  <div className={`${colors.icon} p-3 rounded-full`}>
-                    <Icon className={`w-6 h-6 md:w-8 md:h-8 ${colors.text}`} />
-                  </div>
-
-                  {/* Value */}
-                  <div className={`text-2xl md:text-3xl font-bold ${colors.text}`}>
-                    {config.getValue()}
-                  </div>
-
-                  {/* Label */}
-                  <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                    {config.label}
-                  </p>
-                </CardContent>
-              </Card>
+              {WidgetCard}
             </Link>
           )
         })}
@@ -475,6 +513,14 @@ export default function DashboardPage() {
 
       {/* Ad Banner */}
       <AdBanner category="dashboard" />
+
+      {/* Birthday Popup */}
+      {showBirthdayPopup && birthdayClients.length > 0 && (
+        <BirthdayPopup
+          clients={birthdayClients}
+          onClose={() => setShowBirthdayPopup(false)}
+        />
+      )}
 
       <style jsx global>{`
         @keyframes fadeInScale {

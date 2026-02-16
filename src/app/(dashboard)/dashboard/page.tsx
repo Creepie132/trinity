@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
-import { useDashboardStats } from '@/hooks/useStats'
+import { useDashboardStats, useRevenueByMonth, useVisitsByMonth, useTopClients } from '@/hooks/useStats'
 import { useLowStockProducts } from '@/hooks/useProducts'
 import { useBookings } from '@/hooks/useBookings'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -19,8 +19,22 @@ import {
   Clock,
   Package,
   Inbox,
-  TrendingUp
+  TrendingUp,
+  BarChart3,
+  UsersRound
 } from 'lucide-react'
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts'
 import AdBanner from '@/components/ads/AdBanner'
 
 type WidgetId =
@@ -50,9 +64,17 @@ export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
   const { data: lowStockProducts } = useLowStockProducts()
   const { pendingCount } = useBookings(orgId)
+  const { data: revenueData } = useRevenueByMonth()
+  const { data: visitsData } = useVisitsByMonth()
+  const { data: topClients } = useTopClients()
 
   const [widgets, setWidgets] = useState<WidgetId[]>(DEFAULT_WIDGETS)
   const [widgetsLoaded, setWidgetsLoaded] = useState(false)
+  const [showCharts, setShowCharts] = useState({
+    revenue: true,
+    visits: true,
+    topClients: true
+  })
 
   // Check organization status
   useEffect(() => {
@@ -61,9 +83,9 @@ export default function DashboardPage() {
     }
   }, [features.isActive, features.isLoading, router])
 
-  // Load widget settings
+  // Load widget and chart settings
   useEffect(() => {
-    const loadWidgets = async () => {
+    const loadSettings = async () => {
       if (!orgId) return
 
       try {
@@ -76,15 +98,19 @@ export default function DashboardPage() {
         if (data?.settings?.dashboard_widgets) {
           setWidgets(data.settings.dashboard_widgets)
         }
+        
+        if (data?.settings?.dashboard_charts) {
+          setShowCharts(data.settings.dashboard_charts)
+        }
       } catch (error) {
-        console.error('Error loading dashboard widgets:', error)
+        console.error('Error loading dashboard settings:', error)
       } finally {
         setWidgetsLoaded(true)
       }
     }
 
-    loadWidgets()
-  }, [orgId])
+    loadSettings()
+  }, [orgId, supabase])
 
   const widgetConfig = {
     visits_month: {
@@ -256,6 +282,196 @@ export default function DashboardPage() {
           )
         })}
       </div>
+
+      {/* Charts Section */}
+      {(showCharts.revenue || showCharts.visits || showCharts.topClients) && (
+        <div className="space-y-6">
+          {/* Charts Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Revenue Chart */}
+            {showCharts.revenue && revenueData && (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-fadeInUp">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+                    <DollarSign className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('stats.revenueByMonth')}</h3>
+                </div>
+                <ResponsiveContainer width="100%" height={300} className="min-h-[250px]">
+                  <AreaChart data={revenueData}>
+                    <defs>
+                      <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#fbbf24" stopOpacity={0.05}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+                    <XAxis 
+                      dataKey="month" 
+                      stroke="#9ca3af" 
+                      style={{ fontSize: '12px' }}
+                      className="dark:stroke-gray-400"
+                    />
+                    <YAxis 
+                      stroke="#9ca3af" 
+                      style={{ fontSize: '12px' }}
+                      className="dark:stroke-gray-400"
+                    />
+                    <Tooltip
+                      formatter={(value: any) => [`₪${value.toFixed(2)}`, t('payments.amount')]}
+                      contentStyle={{ 
+                        backgroundColor: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                        color: '#111827'
+                      }}
+                      wrapperClassName="dark:[&>div]:bg-gray-900 dark:[&>div]:text-white"
+                      cursor={{ stroke: '#fbbf24', strokeWidth: 2, strokeDasharray: '5 5' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="amount" 
+                      stroke="#f59e0b" 
+                      strokeWidth={3}
+                      fill="url(#colorAmount)"
+                      animationBegin={0}
+                      animationDuration={1200}
+                      dot={{ 
+                        fill: '#f59e0b', 
+                        stroke: 'white', 
+                        strokeWidth: 2, 
+                        r: 4 
+                      }}
+                      activeDot={{ 
+                        r: 6,
+                        fill: '#f59e0b',
+                        stroke: 'white',
+                        strokeWidth: 2
+                      }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Visits Chart */}
+            {showCharts.visits && visitsData && (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+                    <BarChart3 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('stats.visitsByMonth')}</h3>
+                </div>
+                <ResponsiveContainer width="100%" height={300} className="min-h-[250px]">
+                  <BarChart data={visitsData}>
+                    <defs>
+                      <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#fbbf24" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#d97706" stopOpacity={1} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+                    <XAxis 
+                      dataKey="month" 
+                      stroke="#9ca3af" 
+                      style={{ fontSize: '12px' }}
+                      className="dark:stroke-gray-400"
+                    />
+                    <YAxis 
+                      stroke="#9ca3af" 
+                      style={{ fontSize: '12px' }}
+                      className="dark:stroke-gray-400"
+                    />
+                    <Tooltip
+                      formatter={(value: any) => [value, t('clients.visits')]}
+                      contentStyle={{ 
+                        backgroundColor: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                        color: '#111827'
+                      }}
+                      wrapperClassName="dark:[&>div]:bg-gray-900 dark:[&>div]:text-white"
+                    />
+                    <Bar 
+                      dataKey="count" 
+                      fill="url(#colorVisits)" 
+                      radius={[8, 8, 0, 0]}
+                      animationBegin={0}
+                      animationDuration={1200}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {/* Top Clients Chart - Full Width */}
+          {showCharts.topClients && topClients && topClients.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+                  <UsersRound className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('stats.topClients')}</h3>
+              </div>
+              <ResponsiveContainer width="100%" height={300} className="min-h-[250px]">
+                <BarChart data={topClients} layout="vertical">
+                  <defs>
+                    {topClients.map((_, index) => {
+                      const colors = ['#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e']
+                      return (
+                        <linearGradient key={`topGradient-${index}`} id={`topGradient-${index}`} x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor={colors[index % colors.length]} stopOpacity={1} />
+                          <stop offset="100%" stopColor={colors[index % colors.length]} stopOpacity={0.7} />
+                        </linearGradient>
+                      )
+                    })}
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+                  <XAxis 
+                    type="number" 
+                    stroke="#9ca3af" 
+                    style={{ fontSize: '12px' }}
+                    className="dark:stroke-gray-400"
+                  />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    width={150} 
+                    stroke="#9ca3af" 
+                    style={{ fontSize: '12px' }}
+                    className="dark:stroke-gray-400"
+                  />
+                  <Tooltip
+                    formatter={(value: any) => [`₪${value.toFixed(2)}`, t('stats.totalPayments')]}
+                    contentStyle={{ 
+                      backgroundColor: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                      color: '#111827'
+                    }}
+                    wrapperClassName="dark:[&>div]:bg-gray-900 dark:[&>div]:text-white"
+                  />
+                  <Bar 
+                    dataKey="amount" 
+                    radius={[0, 8, 8, 0]}
+                    animationBegin={0}
+                    animationDuration={1200}
+                  >
+                    {topClients.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={`url(#topGradient-${index})`} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Ad Banner */}
       <AdBanner category="dashboard" />

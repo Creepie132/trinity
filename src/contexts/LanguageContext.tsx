@@ -321,6 +321,14 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.widgets.low_stock': 'מלאי נמוך',
     'dashboard.widgets.pending_bookings': 'הזמנות ממתינות',
     'dashboard.widgets.avg_visit': 'ממוצע לביקור',
+    'dashboard.settings': 'הגדרות לוח בקרה',
+    'dashboard.settingsSubtitle': 'התאם אילו גרפים להציג בלוח הבקרה',
+    'dashboard.chartsOnDashboard': 'גרפים בלוח הבקרה',
+    'dashboard.chartsDescription': 'בחר אילו גרפים סטטיסטיים להציג בעמוד הראשי',
+    'dashboard.revenueChartDesc': 'גרף הכנסות לפי חודשים (אזור)',
+    'dashboard.visitsChartDesc': 'גרף ביקורים לפי חודשים (עמודות)',
+    'dashboard.topClientsDesc': 'טבלת 5 הלקוחות המשלמים ביותר',
+    'dashboard.chartsInfo': 'השינויים ישמרו אוטומטית וישפיעו על התצוגה של לוח הבקרה',
     
     // Clients
     'clients.title': 'לקוחות',
@@ -1159,6 +1167,14 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.widgets.low_stock': 'Низкий остаток',
     'dashboard.widgets.pending_bookings': 'Ожидающие записи',
     'dashboard.widgets.avg_visit': 'Средний чек',
+    'dashboard.settings': 'Настройки дашборда',
+    'dashboard.settingsSubtitle': 'Настройте какие графики показывать на дашборде',
+    'dashboard.chartsOnDashboard': 'Графики на дашборде',
+    'dashboard.chartsDescription': 'Выберите какие статистические графики показывать на главной странице',
+    'dashboard.revenueChartDesc': 'График доходов по месяцам (область)',
+    'dashboard.visitsChartDesc': 'График визитов по месяцам (столбцы)',
+    'dashboard.topClientsDesc': 'Таблица топ 5 платящих клиентов',
+    'dashboard.chartsInfo': 'Изменения сохранятся автоматически и повлияют на вид дашборда',
     
     // Clients
     'clients.title': 'Клиенты',

@@ -13,8 +13,8 @@ export default function SettingsPage() {
       id: 'dashboard',
       href: '/settings/dashboard',
       icon: LayoutDashboard,
-      title: t('dashboard.customize'),
-      description: t('dashboard.customize.desc'),
+      title: t('dashboard.settings'),
+      description: t('dashboard.settingsSubtitle'),
     },
     {
       id: 'display',

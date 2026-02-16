@@ -499,6 +499,8 @@ const translations: Record<Language, Record<string, string>> = {
     'visits.elapsedTime': 'זמן שעבר',
     'visits.selectServiceToAdd': 'בחר שירות להוספה',
     'visits.tapToAdd': 'הקש כדי להוסיף ביקור',
+    'visits.addProduct': 'הוסף מוצר',
+    'visits.productFeatureComingSoon': 'תכונת מוצרים תגיע בקרוב',
     
     // Inventory
     'inventory.title': 'מלאי',
@@ -1370,6 +1372,8 @@ const translations: Record<Language, Record<string, string>> = {
     'visits.elapsedTime': 'Прошло времени',
     'visits.selectServiceToAdd': 'Выберите услугу для добавления',
     'visits.tapToAdd': 'Нажмите чтобы добавить визит',
+    'visits.addProduct': 'Добавить товар',
+    'visits.productFeatureComingSoon': 'Функция товаров скоро появится',
     
     // Inventory
     'inventory.title': 'Склад',

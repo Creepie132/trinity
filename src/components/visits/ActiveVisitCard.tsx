@@ -154,8 +154,9 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
     }
   };
 
-  const totalPrice = (visit.price || 0) + (visitServices?.reduce((sum, s) => sum + (s.price || 0), 0) || 0);
-  const totalDuration = (visit.duration_minutes || 0) + (visitServices?.reduce((sum, s) => sum + (s.duration_minutes || 0), 0) || 0);
+  // Calculate total from visitServices only (visit.price is already included if service was added)
+  const totalPrice = visitServices?.reduce((sum, s) => sum + (s.price || 0), 0) || 0;
+  const totalDuration = visitServices?.reduce((sum, s) => sum + (s.duration_minutes || 0), 0) || 0;
 
   const clientName = `${visit.clients?.first_name} ${visit.clients?.last_name}`;
   
@@ -222,12 +223,12 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
         {/* Mobile: Two rows layout */}
         <div className="md:hidden space-y-2">
           {/* Row 1: Info */}
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-semibold text-gray-900 dark:text-gray-100">{clientName}</div>
-              <div className="text-sm text-gray-700 dark:text-gray-300">{getServiceName()}</div>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">{clientName}</div>
+              <div className="text-sm text-gray-700 dark:text-gray-300 truncate">{getServiceName()}</div>
               {visitServices && visitServices.length > 0 && (
-                <div className="flex gap-1 mt-1">
+                <div className="flex gap-1 mt-1 flex-wrap">
                   {visitServices.map((service) => {
                     const serviceName = language === 'he' ? service.service_name : (service.service_name_ru || service.service_name);
                     return (
@@ -246,72 +247,89 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-mono text-sm">
-              <Clock className="w-3 h-3" />
-              {elapsedTime}
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 font-mono text-sm">
+                <Clock className="w-3 h-3" />
+                {elapsedTime}
+              </div>
+              <div className="flex items-center gap-1 font-bold text-green-700 dark:text-green-400 text-base">
+                ₪{totalPrice.toFixed(2)}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Action Buttons Row */}
-        <div className="flex items-center gap-2">
-          {/* Add Service Dropdown with Two Sections */}
-          <div className="flex gap-1 flex-1 md:flex-initial">
-            <Select 
-              value={selectedServiceId} 
-              onValueChange={(value) => {
-                if (value === 'custom') {
-                  setShowCustomServiceForm(true);
-                  setSelectedServiceId('');
-                } else {
-                  setSelectedServiceId(value);
-                }
-              }}
-            >
-              <SelectTrigger className="h-8 text-sm bg-white dark:bg-gray-700 border-amber-300 dark:border-amber-700">
-                <SelectValue placeholder={`+ ${t('visits.addService')}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {/* Section 1: Regular Services */}
-                <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                  {t('visits.regularService')}
-                </div>
-                {services?.map((service) => {
-                  const serviceName = language === 'he' ? service.name : (service.name_ru || service.name);
-                  return (
-                    <SelectItem key={service.id} value={service.id}>
-                      {serviceName} - ₪{service.price?.toFixed(2) || '0.00'} • {service.duration_minutes} {t('common.minutes')}
-                    </SelectItem>
-                  );
-                })}
-                
-                {/* Section 2: Custom Service */}
-                <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 mt-2 border-t border-gray-200 dark:border-gray-700">
-                  {t('visits.oneTimeService')}
-                </div>
-                <SelectItem value="custom">
-                  <span className="font-medium">✏️ {t('visits.customService')}</span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Add Service Button */}
+          <Select 
+            value={selectedServiceId} 
+            onValueChange={(value) => {
+              if (value === 'custom') {
+                setShowCustomServiceForm(true);
+                setSelectedServiceId('');
+              } else {
+                setSelectedServiceId(value);
+              }
+            }}
+          >
+            <SelectTrigger className="h-9 text-sm bg-blue-600 hover:bg-blue-700 text-white border-blue-700 flex-1 md:flex-initial md:w-auto">
+              <Plus className="w-4 h-4 mr-1 shrink-0" />
+              <span className="truncate">{t('visits.addService')}</span>
+            </SelectTrigger>
+            <SelectContent>
+              {/* Regular Services */}
+              <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                {t('visits.regularService')}
+              </div>
+              {services?.map((service) => {
+                const serviceName = language === 'he' ? service.name : (service.name_ru || service.name);
+                return (
+                  <SelectItem key={service.id} value={service.id}>
+                    {serviceName} - ₪{service.price?.toFixed(2) || '0.00'} • {service.duration_minutes} {t('common.minutes')}
+                  </SelectItem>
+                );
+              })}
+              
+              {/* Custom Service */}
+              <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 mt-2 border-t border-gray-200 dark:border-gray-700">
+                {t('visits.oneTimeService')}
+              </div>
+              <SelectItem value="custom">
+                <span className="font-medium">✏️ {t('visits.customService')}</span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {selectedServiceId && (
             <Button
               onClick={handleAddService}
-              disabled={addService.isPending || !selectedServiceId}
+              disabled={addService.isPending}
               size="sm"
-              className="h-8 px-2 bg-blue-600 hover:bg-blue-700"
+              className="h-9 bg-blue-600 hover:bg-blue-700"
             >
-              <Plus className="w-4 h-4" />
+              <CheckCircle className="w-4 h-4" />
             </Button>
-          </div>
+          )}
+
+          {/* Add Product Button (TODO: implement product selection) */}
+          <Button
+            onClick={() => toast.info(t('visits.productFeatureComingSoon'))}
+            size="sm"
+            className="h-9 text-sm bg-purple-600 hover:bg-purple-700 text-white flex-1 md:flex-initial"
+          >
+            <Plus className="w-4 h-4 mr-1 shrink-0" />
+            <span className="truncate">{t('visits.addProduct')}</span>
+          </Button>
 
           {/* Finish Button */}
           <Button
             onClick={onFinish}
             size="sm"
-            className="h-8 text-sm bg-green-600 hover:bg-green-700 px-3"
+            className="h-9 text-sm bg-green-600 hover:bg-green-700 px-3 md:flex-1"
           >
             <CheckCircle className="w-4 h-4 md:mr-1" />
-            <span className="hidden md:inline">{t('visits.finishVisit')}</span>
+            <span className="hidden sm:inline">{t('visits.finishVisit')}</span>
           </Button>
 
           {/* Cancel Button */}
@@ -319,16 +337,11 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
             onClick={() => setShowCancelDialog(true)}
             size="sm"
             variant="destructive"
-            className="h-8 text-sm px-3"
+            className="h-9 text-sm px-3"
           >
             <XCircle className="w-4 h-4 md:mr-1" />
-            <span className="hidden md:inline">{t('visits.cancelVisit')}</span>
+            <span className="hidden sm:inline">{t('visits.cancelVisit')}</span>
           </Button>
-
-          {/* Mobile: Total Price */}
-          <div className="md:hidden flex items-center gap-1 font-bold text-green-700 dark:text-green-400 ml-auto">
-            ₪{totalPrice.toFixed(2)}
-          </div>
         </div>
       </div>
 

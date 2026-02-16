@@ -2,11 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { usePermissions } from '@/hooks/usePermissions'
 import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText, Calendar, LayoutDashboard, Cake } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
   const { t } = useLanguage()
+  const permissions = usePermissions()
 
   const settingsCategories = [
     {
@@ -74,6 +76,19 @@ export default function SettingsPage() {
     },
   ]
 
+  // Filter settings based on permissions
+  const filteredCategories = settingsCategories.filter((category) => {
+    // Owner-only settings
+    if (category.id === 'users' && !permissions.canManageUsers) return false
+    if (category.id === 'services' && !permissions.canManageServices) return false
+    if (category.id === 'care-instructions' && !permissions.canManageCareInstructions) return false
+    if (category.id === 'booking' && !permissions.canManageBookingSettings) return false
+    if (category.id === 'birthday-templates' && !permissions.canManageBirthdayTemplates) return false
+    if (category.id === 'service-colors' && !permissions.canManageServices) return false
+    
+    return true
+  })
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -88,7 +103,7 @@ export default function SettingsPage() {
 
       {/* Settings Categories */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {settingsCategories.map((category) => (
+        {filteredCategories.map((category) => (
           <Link key={category.id} href={category.href}>
             <Card className="hover:shadow-lg transition-all cursor-pointer group h-full">
               <CardHeader>

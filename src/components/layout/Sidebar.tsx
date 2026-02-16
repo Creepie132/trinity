@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useFeatures } from '@/hooks/useFeatures'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useLowStockProducts } from '@/hooks/useProducts'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useBookings } from '@/hooks/useBookings'
@@ -30,6 +31,7 @@ export function Sidebar() {
   const { data: isAdmin } = useIsAdmin()
   const { adminProfile } = useAdminProfile()
   const features = useFeatures()
+  const permissions = usePermissions()
   const { data: lowStockProducts } = useLowStockProducts()
   const { pendingCount } = useBookings(orgId)
   const { t, language } = useLanguage()
@@ -100,16 +102,22 @@ export function Sidebar() {
     router.refresh()
   }
 
-  // Filter navigation based on features
+  // Filter navigation based on features AND permissions
   const navigation = baseNavigation.filter((item) => {
-    if (!item.requireFeature) return true
-    
-    if (item.requireFeature === 'clients') return features.hasClients !== false
-    if (item.requireFeature === 'payments') return features.hasPayments === true
-    if (item.requireFeature === 'sms') return features.hasSms === true
-    if (item.requireFeature === 'analytics') return features.hasAnalytics === true
-    if (item.requireFeature === 'visits') return features.hasVisits !== false
-    if (item.requireFeature === 'inventory') return features.hasInventory === true
+    // Check feature access first
+    if (item.requireFeature) {
+      if (item.requireFeature === 'clients' && features.hasClients === false) return false
+      if (item.requireFeature === 'payments' && features.hasPayments !== true) return false
+      if (item.requireFeature === 'sms' && features.hasSms !== true) return false
+      if (item.requireFeature === 'analytics' && features.hasAnalytics !== true) return false
+      if (item.requireFeature === 'visits' && features.hasVisits === false) return false
+      if (item.requireFeature === 'inventory' && features.hasInventory !== true) return false
+    }
+
+    // Check role permissions
+    if (item.href === '/sms' && !permissions.canSendSMS) return false
+    if (item.href === '/inventory' && !permissions.canManageInventory) return false
+    if ((item.href === '/stats' || item.href === '/analytics') && !permissions.canViewAnalytics) return false
     
     return true
   })

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 type AuthContextType = {
   user: any | null
   orgId: string | null
+  role: 'user' | 'moderator' | 'owner' | null
   isAdmin: boolean
   isLoading: boolean
   signOut: () => Promise<void>
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any | null>(null)
   const [orgId, setOrgId] = useState<string | null>(null)
+  const [role, setRole] = useState<'user' | 'moderator' | 'owner' | null>(null)
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
@@ -31,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.warn('[AuthProvider] loadAuth timeout - stopping spinner')
         setUser(null)
         setOrgId(null)
+        setRole(null)
         setIsAdmin(false)
         setIsLoading(false)
         setHasError(true)
@@ -43,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearTimeout(timeoutId)
         setUser(null)
         setOrgId(null)
+        setRole(null)
         setIsAdmin(false)
         setIsLoading(false)
         return
@@ -55,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearTimeout(timeoutId)
         setUser(null)
         setOrgId(null)
+        setRole(null)
         setIsAdmin(false)
         setIsLoading(false)
         return
@@ -71,16 +76,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .maybeSingle(),
         supabase
           .from('org_users')
-          .select('org_id')
+          .select('org_id, role')
           .eq('user_id', user.id)
           .maybeSingle()
       ])
 
       const isAdminUser = !!adminResult.data
       const userOrgId = orgResult.data?.org_id ?? null
+      const userRole = orgResult.data?.role ?? null
 
       setIsAdmin(isAdminUser)
       setOrgId(userOrgId)
+      setRole(userRole as 'user' | 'moderator' | 'owner' | null)
       clearTimeout(timeoutId)
       setIsLoading(false)
     } catch (error) {
@@ -88,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Don't block render on auth error
       setUser(null)
       setOrgId(null)
+      setRole(null)
       setIsAdmin(false)
       setIsLoading(false)
       setHasError(true)
@@ -112,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (event === 'SIGNED_OUT') {
               setUser(null)
               setOrgId(null)
+              setRole(null)
               setIsAdmin(false)
               setIsLoading(false)
             } else {
@@ -147,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await supabase.auth.signOut()
       setUser(null)
       setOrgId(null)
+      setRole(null)
       setIsAdmin(false)
       window.location.href = '/login'
     } catch (err) {
@@ -172,6 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         orgId,
+        role,
         isAdmin,
         isLoading,
         signOut,
@@ -191,6 +202,7 @@ export function useAuth(): AuthContextType {
     return {
       user: null,
       orgId: null,
+      role: null,
       isAdmin: false,
       isLoading: false,
       signOut: async () => {},

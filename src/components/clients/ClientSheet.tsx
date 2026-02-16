@@ -7,16 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useClient } from '@/hooks/useClients'
 import { usePayments } from '@/hooks/usePayments'
-import { useClientAdminStatus } from '@/hooks/useClientAdminStatus'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useQuery } from '@tanstack/react-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { CreatePaymentDialog } from '@/components/payments/CreatePaymentDialog'
 import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
-import { AssignAdminDialog } from './AssignAdminDialog'
 import { ClientSummary } from '@/types/database'
 import { Visit } from '@/types/visits'
-import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Shield, X, Clock, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Clock, ArrowRight, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 
@@ -31,11 +29,8 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
   const supabase = createSupabaseBrowserClient()
   const { data: fullClient } = useClient(client?.id)
   const { data: payments } = usePayments(client?.id)
-  const { isAdmin, role, isLoading: adminStatusLoading, refetch: refetchAdminStatus } = useClientAdminStatus(client?.email)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [visitDialogOpen, setVisitDialogOpen] = useState(false)
-  const [assignAdminDialogOpen, setAssignAdminDialogOpen] = useState(false)
-  const [isRemovingAdmin, setIsRemovingAdmin] = useState(false)
 
   // Fetch client visits
   const { data: visits = [] } = useQuery({
@@ -62,42 +57,6 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
   })
 
   if (!client) return null
-
-  const handleAssignAdmin = () => {
-    if (!client.email) {
-      toast.error(t('clients.noOrgFound'))
-      return
-    }
-    setAssignAdminDialogOpen(true)
-  }
-
-  const handleRemoveAdmin = async () => {
-    if (!client.email) return
-
-    setIsRemovingAdmin(true)
-    try {
-      const response = await fetch('/api/admin/assign', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: client.email }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        toast.error(data.error || t('clients.removePermissions'))
-        return
-      }
-
-      toast.success(data.message)
-      refetchAdminStatus()
-    } catch (error) {
-      console.error('Remove admin error:', error)
-      toast.error(t('clients.removePermissions'))
-    } finally {
-      setIsRemovingAdmin(false)
-    }
-  }
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
@@ -340,45 +299,6 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
               <div className="text-gray-300 whitespace-pre-wrap">{client.notes}</div>
             </div>
           )}
-
-          {/* Admin Assignment */}
-          <div className="pt-4 border-t border-gray-700">
-            {adminStatusLoading ? (
-              <div className="text-center text-gray-500 py-2">{t('common.loading')}</div>
-            ) : isAdmin ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-950 border border-blue-800">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-blue-400" />
-                    <span className="font-semibold text-blue-100">
-                      {role === 'admin' ? t('clients.adminRole') : t('clients.manager')}
-                    </span>
-                  </div>
-                  <Badge variant="secondary" className="bg-blue-900 text-blue-100">
-                    {role === 'admin' ? t('clients.fullAccess') : t('clients.limitedAccess')}
-                  </Badge>
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full text-red-400 hover:text-red-300 hover:bg-red-950 border-red-800"
-                  onClick={handleRemoveAdmin}
-                  disabled={isRemovingAdmin}
-                >
-                  <X className="w-4 h-4 ml-2" />
-                  {isRemovingAdmin ? t('clients.removing') : t('clients.removePermissions')}
-                </Button>
-              </div>
-            ) : (
-              <Button
-                className="w-full bg-amber-500 hover:bg-amber-600 text-white"
-                onClick={handleAssignAdmin}
-                disabled={!client.email}
-              >
-                <Shield className="w-4 h-4 ml-2" />
-                {t('clients.assignAsAdmin')}
-              </Button>
-            )}
-          </div>
         </div>
       </SheetContent>
 
@@ -389,16 +309,6 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
         clientId={client.id}
         clientName={`${client.first_name} ${client.last_name}`}
       />
-
-      {/* Assign Admin Dialog */}
-      {client.email && (
-        <AssignAdminDialog
-          open={assignAdminDialogOpen}
-          onOpenChange={setAssignAdminDialogOpen}
-          clientEmail={client.email}
-          onSuccess={() => refetchAdminStatus()}
-        />
-      )}
 
       {/* Create Visit Dialog */}
       <CreateVisitDialog

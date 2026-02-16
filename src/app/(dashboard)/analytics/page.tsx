@@ -146,42 +146,90 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('analytics.totalRevenue')}
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">₪{totalRevenue.toFixed(2)}</div>
-          </CardContent>
-        </Card>
+      <div className="space-y-3 md:space-y-0">
+        {/* Mobile: First 2 cards in a row */}
+        <div className="grid grid-cols-2 gap-3 md:hidden">
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
+            style={{ animation: 'fadeInScale 0.4s ease-out 0s both' }}
+          >
+            <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
+              <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              ₪{totalRevenue.toFixed(2)}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('analytics.totalRevenue')}</div>
+          </div>
 
-        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('analytics.avgTransaction')}
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">₪{avgTransaction.toFixed(2)}</div>
-          </CardContent>
-        </Card>
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
+            style={{ animation: 'fadeInScale 0.4s ease-out 0.1s both' }}
+          >
+            <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full">
+              <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              ₪{avgTransaction.toFixed(2)}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('analytics.avgTransaction')}</div>
+          </div>
+        </div>
 
-        <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('analytics.totalTransactions')}
-            </CardTitle>
-            <CreditCard className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalTransactions}</div>
-          </CardContent>
-        </Card>
+        {/* Mobile: Third card centered below */}
+        <div className="flex justify-center md:hidden">
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
+            style={{ maxWidth: '50%', animation: 'fadeInScale 0.4s ease-out 0.2s both' }}
+          >
+            <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-full">
+              <CreditCard className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              {totalTransactions}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('analytics.totalTransactions')}</div>
+          </div>
+        </div>
+
+        {/* Desktop: Original layout */}
+        <div className="hidden md:grid md:grid-cols-3 gap-4">
+          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('analytics.totalRevenue')}
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">₪{totalRevenue.toFixed(2)}</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('analytics.avgTransaction')}
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">₪{avgTransaction.toFixed(2)}</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('analytics.totalTransactions')}
+              </CardTitle>
+              <CreditCard className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalTransactions}</div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Filters */}

@@ -57,71 +57,129 @@ export default function StatsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">{t('dashboard.totalClients')}</p>
-                <p className="text-3xl font-bold text-blue-600 mt-1">
-                  {stats?.totalClients || 0}
-                </p>
-              </div>
-              <div className="bg-blue-100 p-3 rounded-full">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
+      <div className="space-y-3 md:space-y-0">
+        {/* Mobile: Grid 2x2 */}
+        <div className="grid grid-cols-2 gap-3 md:hidden">
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
+            style={{ animation: 'fadeInScale 0.4s ease-out 0s both' }}
+          >
+            <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full">
+              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {stats?.totalClients || 0}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('dashboard.totalClients')}</div>
+          </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">{t('dashboard.visitsMonth')}</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">
-                  {stats?.visitsThisMonth || 0}
-                </p>
-              </div>
-              <div className="bg-green-100 p-3 rounded-full">
-                <Calendar className="w-6 h-6 text-green-600" />
-              </div>
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
+            style={{ animation: 'fadeInScale 0.4s ease-out 0.1s both' }}
+          >
+            <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
+              <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {stats?.visitsThisMonth || 0}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('dashboard.visitsMonth')}</div>
+          </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">{t('dashboard.revenueMonth')}</p>
-                <p className="text-3xl font-bold text-purple-600 mt-1">
-                  ₪{stats?.revenueThisMonth.toFixed(2) || '0.00'}
-                </p>
-              </div>
-              <div className="bg-purple-100 p-3 rounded-full">
-                <DollarSign className="w-6 h-6 text-purple-600" />
-              </div>
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
+            style={{ animation: 'fadeInScale 0.4s ease-out 0.2s both' }}
+          >
+            <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-full">
+              <DollarSign className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              ₪{stats?.revenueThisMonth.toFixed(2) || '0.00'}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('dashboard.revenueMonth')}</div>
+          </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">{t('dashboard.inactiveClients')}</p>
-                <p className="text-3xl font-bold text-orange-600 mt-1">
-                  {stats?.inactiveClients || 0}
-                </p>
-              </div>
-              <div className="bg-orange-100 p-3 rounded-full">
-                <UserX className="w-6 h-6 text-orange-600" />
-              </div>
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
+            style={{ animation: 'fadeInScale 0.4s ease-out 0.3s both' }}
+          >
+            <div className="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-full">
+              <UserX className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
-            <p className="text-xs text-gray-500 mt-2">{t('dashboard.inactiveNote')}</p>
-          </CardContent>
-        </Card>
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+              {stats?.inactiveClients || 0}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('dashboard.inactiveClients')}</div>
+          </div>
+        </div>
+
+        {/* Desktop: Original layout */}
+        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">{t('dashboard.totalClients')}</p>
+                  <p className="text-3xl font-bold text-blue-600 mt-1">
+                    {stats?.totalClients || 0}
+                  </p>
+                </div>
+                <div className="bg-blue-100 p-3 rounded-full">
+                  <Users className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">{t('dashboard.visitsMonth')}</p>
+                  <p className="text-3xl font-bold text-green-600 mt-1">
+                    {stats?.visitsThisMonth || 0}
+                  </p>
+                </div>
+                <div className="bg-green-100 p-3 rounded-full">
+                  <Calendar className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">{t('dashboard.revenueMonth')}</p>
+                  <p className="text-3xl font-bold text-purple-600 mt-1">
+                    ₪{stats?.revenueThisMonth.toFixed(2) || '0.00'}
+                  </p>
+                </div>
+                <div className="bg-purple-100 p-3 rounded-full">
+                  <DollarSign className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">{t('dashboard.inactiveClients')}</p>
+                  <p className="text-3xl font-bold text-orange-600 mt-1">
+                    {stats?.inactiveClients || 0}
+                  </p>
+                </div>
+                <div className="bg-orange-100 p-3 rounded-full">
+                  <UserX className="w-6 h-6 text-orange-600" />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">{t('dashboard.inactiveNote')}</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Charts Row 1 */}

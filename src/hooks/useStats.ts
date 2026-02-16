@@ -17,6 +17,7 @@ export function useDashboardStats() {
           visitsThisMonth: 0,
           revenueThisMonth: 0,
           inactiveClients: 0,
+          avgVisitValue: 0,
         }
       }
 
@@ -70,11 +71,17 @@ export function useDashboardStats() {
         .eq('org_id', orgId)
         .or(`last_visit.is.null,last_visit.lt.${thirtyDaysAgo.toISOString()}`)
 
+      // Calculate average visit value
+      const avgVisitValue = visitsThisMonth && visitsThisMonth > 0
+        ? revenueThisMonth / visitsThisMonth
+        : 0
+
       console.log('[useDashboardStats] Stats loaded:', {
         totalClients,
         visitsThisMonth,
         revenueThisMonth,
         inactiveClients,
+        avgVisitValue,
       })
 
       return {
@@ -82,6 +89,7 @@ export function useDashboardStats() {
         visitsThisMonth: visitsThisMonth || 0,
         revenueThisMonth,
         inactiveClients: inactiveClients || 0,
+        avgVisitValue,
       }
     },
     enabled: !!orgId, // Only run query if orgId exists

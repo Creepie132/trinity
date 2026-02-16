@@ -3,18 +3,19 @@
 import { useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDashboardStats, useRevenueByMonth, useVisitsByMonth, useTopClients } from '@/hooks/useStats'
-import { Users, Calendar, DollarSign, UserX } from 'lucide-react'
+import { Users, Calendar, DollarSign, UserX, TrendingUp, BarChart3, UsersRound } from 'lucide-react'
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   Legend,
+  Cell,
 } from 'recharts'
 import { useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -185,96 +186,203 @@ export default function StatsPage() {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('stats.revenueByMonth')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {revenueLoading ? (
-              <div className="h-80 flex items-center justify-center">
-                <p className="text-gray-500">{t('common.loading')}</p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={revenueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value: any) => [`₪${value.toFixed(2)}`, t('payments.amount')]}
-                    labelStyle={{ direction: 'rtl' }}
-                  />
-                  <Bar dataKey="amount" fill="#9333ea" name={t('stats.revenue')} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-fadeInUp">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+              <DollarSign className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('stats.revenueByMonth')}</h3>
+          </div>
+          {revenueLoading ? (
+            <div className="h-80 flex items-center justify-center">
+              <p className="text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320} className="min-h-[250px]">
+              <AreaChart data={revenueData}>
+                <defs>
+                  <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#fbbf24" stopOpacity={0.05}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+                <XAxis 
+                  dataKey="month" 
+                  stroke="#9ca3af" 
+                  style={{ fontSize: '12px' }}
+                  className="dark:stroke-gray-400"
+                />
+                <YAxis 
+                  stroke="#9ca3af" 
+                  style={{ fontSize: '12px' }}
+                  className="dark:stroke-gray-400"
+                />
+                <Tooltip
+                  formatter={(value: any) => [`₪${value.toFixed(2)}`, t('payments.amount')]}
+                  contentStyle={{ 
+                    backgroundColor: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                    color: '#111827'
+                  }}
+                  wrapperClassName="dark:[&>div]:bg-gray-900 dark:[&>div]:text-white"
+                  cursor={{ stroke: '#fbbf24', strokeWidth: 2, strokeDasharray: '5 5' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="amount" 
+                  stroke="#f59e0b" 
+                  strokeWidth={3}
+                  fill="url(#colorAmount)"
+                  animationBegin={0}
+                  animationDuration={1200}
+                  dot={{ 
+                    fill: '#f59e0b', 
+                    stroke: 'white', 
+                    strokeWidth: 2, 
+                    r: 4 
+                  }}
+                  activeDot={{ 
+                    r: 6,
+                    fill: '#f59e0b',
+                    stroke: 'white',
+                    strokeWidth: 2
+                  }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
 
         {/* Visits Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('stats.visitsByMonth')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {visitsLoading ? (
-              <div className="h-80 flex items-center justify-center">
-                <p className="text-gray-500">{t('common.loading')}</p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={visitsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip
-                    formatter={(value: any) => [value, t('clients.visits')]}
-                    labelStyle={{ direction: 'rtl' }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#16a34a"
-                    strokeWidth={2}
-                    name={t('clients.visits')}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+              <BarChart3 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('stats.visitsByMonth')}</h3>
+          </div>
+          {visitsLoading ? (
+            <div className="h-80 flex items-center justify-center">
+              <p className="text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={320} className="min-h-[250px]">
+              <BarChart data={visitsData}>
+                <defs>
+                  <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#fbbf24" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#d97706" stopOpacity={1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+                <XAxis 
+                  dataKey="month" 
+                  stroke="#9ca3af" 
+                  style={{ fontSize: '12px' }}
+                  className="dark:stroke-gray-400"
+                />
+                <YAxis 
+                  stroke="#9ca3af" 
+                  style={{ fontSize: '12px' }}
+                  className="dark:stroke-gray-400"
+                />
+                <Tooltip
+                  formatter={(value: any) => [value, t('clients.visits')]}
+                  contentStyle={{ 
+                    backgroundColor: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                    color: '#111827'
+                  }}
+                  wrapperClassName="dark:[&>div]:bg-gray-900 dark:[&>div]:text-white"
+                />
+                <Bar 
+                  dataKey="count" 
+                  fill="url(#colorVisits)" 
+                  radius={[8, 8, 0, 0]}
+                  animationBegin={0}
+                  animationDuration={1200}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
       </div>
 
       {/* Top Clients Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('stats.topClients')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {topLoading ? (
-            <div className="h-80 flex items-center justify-center">
-              <p className="text-gray-500">{t('common.loading')}</p>
-            </div>
-          ) : topClients && topClients.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topClients} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={150} />
-                <Tooltip
-                  formatter={(value: any) => [`₪${value.toFixed(2)}`, t('stats.totalPayments')]}
-                  labelStyle={{ direction: 'rtl' }}
-                />
-                <Bar dataKey="amount" fill="#2563eb" name={t('payments.amount')} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-80 flex items-center justify-center">
-              <p className="text-gray-500">{t('stats.noData')}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+            <UsersRound className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('stats.topClients')}</h3>
+        </div>
+        {topLoading ? (
+          <div className="h-80 flex items-center justify-center">
+            <p className="text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
+          </div>
+        ) : topClients && topClients.length > 0 ? (
+          <ResponsiveContainer width="100%" height={320} className="min-h-[250px]">
+            <BarChart data={topClients} layout="vertical">
+              <defs>
+                {topClients.map((_, index) => {
+                  const colors = ['#fbbf24', '#f59e0b', '#d97706', '#b45309', '#92400e']
+                  return (
+                    <linearGradient key={`topGradient-${index}`} id={`topGradient-${index}`} x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor={colors[index % colors.length]} stopOpacity={1} />
+                      <stop offset="100%" stopColor={colors[index % colors.length]} stopOpacity={0.7} />
+                    </linearGradient>
+                  )
+                })}
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+              <XAxis 
+                type="number" 
+                stroke="#9ca3af" 
+                style={{ fontSize: '12px' }}
+                className="dark:stroke-gray-400"
+              />
+              <YAxis 
+                dataKey="name" 
+                type="category" 
+                width={150} 
+                stroke="#9ca3af" 
+                style={{ fontSize: '12px' }}
+                className="dark:stroke-gray-400"
+              />
+              <Tooltip
+                formatter={(value: any) => [`₪${value.toFixed(2)}`, t('stats.totalPayments')]}
+                contentStyle={{ 
+                  backgroundColor: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                  color: '#111827'
+                }}
+                wrapperClassName="dark:[&>div]:bg-gray-900 dark:[&>div]:text-white"
+              />
+              <Bar 
+                dataKey="amount" 
+                radius={[0, 8, 8, 0]}
+                animationBegin={0}
+                animationDuration={1200}
+              >
+                {topClients.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={`url(#topGradient-${index})`} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-80 flex items-center justify-center">
+            <p className="text-gray-500 dark:text-gray-400">{t('stats.noData')}</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

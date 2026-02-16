@@ -15,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { DollarSign, TrendingUp, CreditCard } from 'lucide-react'
+import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { DollarSign, TrendingUp, CreditCard, PieChartIcon, TrendingUpIcon } from 'lucide-react'
 
 interface PaymentData {
   payment_method: string
@@ -122,7 +122,7 @@ export default function AnalyticsPage() {
   const avgTransaction = paymentsData.length > 0 ? totalRevenue / paymentsData.length : 0
   const totalTransactions = paymentsData.length
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+  const COLORS = ['#fbbf24', '#34d399', '#60a5fa', '#a78bfa', '#fb7185', '#f59e0b']
 
   const getMethodLabel = (method: string): string => {
     const labels: Record<string, string> = {
@@ -277,82 +277,155 @@ export default function AnalyticsPage() {
       ) : paymentsData.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Pie Chart - Payment Methods Distribution */}
-          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-gray-900 dark:text-gray-100">{t('analytics.paymentMethods')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={paymentMethodsData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={{
-                      stroke: '#fff',
-                      strokeWidth: 2
-                    }}
-                    label={((props: any) => {
-                      const RADIAN = Math.PI / 180
-                      const radius = props.innerRadius + (props.outerRadius - props.innerRadius) * 1.3
-                      const x = props.cx + radius * Math.cos(-props.midAngle * RADIAN)
-                      const y = props.cy + radius * Math.sin(-props.midAngle * RADIAN)
-                      
-                      return (
-                        <text
-                          x={x}
-                          y={y}
-                          fill="white"
-                          textAnchor={x > props.cx ? 'start' : 'end'}
-                          dominantBaseline="central"
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: 'bold',
-                            textShadow: '0 0 4px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.6)'
-                          }}
-                        >
-                          {`${getMethodLabel(props.name || '')} (${((props.percent || 0) * 100).toFixed(0)}%)`}
-                        </text>
-                      )
-                    }) as any}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {paymentMethodsData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={((value: any) => `₪${Number(value).toFixed(2)}`) as any}
-                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', color: '#fff' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-fadeInUp">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+                <PieChartIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('analytics.paymentMethods')}</h3>
+            </div>
+            <ResponsiveContainer width="100%" height={320} className="min-h-[250px]">
+              <PieChart>
+                <defs>
+                  {COLORS.map((color, index) => (
+                    <linearGradient key={`gradient-${index}`} id={`pieGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={color} stopOpacity={0.8} />
+                      <stop offset="100%" stopColor={color} stopOpacity={1} />
+                    </linearGradient>
+                  ))}
+                </defs>
+                <Pie
+                  data={paymentMethodsData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={((props: any) => {
+                    const RADIAN = Math.PI / 180
+                    const radius = props.innerRadius + (props.outerRadius - props.innerRadius) * 1.25
+                    const x = props.cx + radius * Math.cos(-props.midAngle * RADIAN)
+                    const y = props.cy + radius * Math.sin(-props.midAngle * RADIAN)
+                    
+                    return (
+                      <text
+                        x={x}
+                        y={y}
+                        fill="currentColor"
+                        className="text-gray-900 dark:text-gray-100"
+                        textAnchor={x > props.cx ? 'start' : 'end'}
+                        dominantBaseline="central"
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}
+                      >
+                        {`${((props.percent || 0) * 100).toFixed(0)}%`}
+                      </text>
+                    )
+                  }) as any}
+                  outerRadius={90}
+                  dataKey="value"
+                  animationBegin={0}
+                  animationDuration={1000}
+                  activeShape={{
+                    outerRadius: 95,
+                  }}
+                >
+                  {paymentMethodsData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={`url(#pieGradient-${index % COLORS.length})`}
+                      stroke="white"
+                      strokeWidth={2}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={((value: any) => `₪${Number(value).toFixed(2)}`) as any}
+                  contentStyle={{ 
+                    backgroundColor: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                    color: '#111827'
+                  }}
+                  wrapperClassName="dark:[&>div]:bg-gray-900 dark:[&>div]:text-white"
+                  labelFormatter={(label) => getMethodLabel(label)}
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  formatter={(value) => getMethodLabel(value)}
+                  wrapperStyle={{ fontSize: '12px' }}
+                  iconType="circle"
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
 
-          {/* Bar Chart - Revenue Over Time */}
-          <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-gray-900 dark:text-gray-100">{t('analytics.revenueOverTime')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={revenueOverTime}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="date" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
-                  <Tooltip 
-                    formatter={((value: any) => `₪${Number(value).toFixed(2)}`) as any}
-                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', color: '#fff' }}
-                  />
-                  <Legend />
-                  <Bar dataKey="amount" fill="#3b82f6" name={t('analytics.totalRevenue')} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          {/* Area Chart - Revenue Over Time */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+                <TrendingUpIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('analytics.revenueOverTime')}</h3>
+            </div>
+            <ResponsiveContainer width="100%" height={320} className="min-h-[250px]">
+              <AreaChart data={revenueOverTime}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#fbbf24" stopOpacity={0.05}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#9ca3af" 
+                  style={{ fontSize: '12px' }}
+                  className="dark:stroke-gray-400"
+                />
+                <YAxis 
+                  stroke="#9ca3af" 
+                  style={{ fontSize: '12px' }}
+                  className="dark:stroke-gray-400"
+                />
+                <Tooltip 
+                  formatter={((value: any) => [`₪${Number(value).toFixed(2)}`, t('analytics.totalRevenue')]) as any}
+                  contentStyle={{ 
+                    backgroundColor: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                    color: '#111827'
+                  }}
+                  wrapperClassName="dark:[&>div]:bg-gray-900 dark:[&>div]:text-white"
+                  cursor={{ stroke: '#fbbf24', strokeWidth: 2, strokeDasharray: '5 5' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="amount" 
+                  stroke="#f59e0b" 
+                  strokeWidth={3}
+                  fill="url(#colorRevenue)"
+                  animationBegin={0}
+                  animationDuration={1200}
+                  dot={{ 
+                    fill: '#f59e0b', 
+                    stroke: 'white', 
+                    strokeWidth: 2, 
+                    r: 4 
+                  }}
+                  activeDot={{ 
+                    r: 6,
+                    fill: '#f59e0b',
+                    stroke: 'white',
+                    strokeWidth: 2
+                  }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       ) : (
         <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">

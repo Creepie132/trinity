@@ -258,7 +258,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Ad Banner */}
-      <AdBanner />
+      <AdBanner category="dashboard" />
 
       <style jsx global>{`
         @keyframes fadeInScale {

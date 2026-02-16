@@ -2,13 +2,20 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText, Calendar } from 'lucide-react'
+import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText, Calendar, LayoutDashboard } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
   const { t } = useLanguage()
 
   const settingsCategories = [
+    {
+      id: 'dashboard',
+      href: '/settings/dashboard',
+      icon: LayoutDashboard,
+      title: t('dashboard.customize'),
+      description: t('dashboard.customize.desc'),
+    },
     {
       id: 'display',
       href: '/settings/display',

@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Copy, ExternalLink, Eye, Banknote } from 'lucide-react'
+import { Plus, Copy, ExternalLink, Eye, Banknote, CheckCircle, TrendingUp } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
 import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
 import { CreateStripePaymentDialog } from '@/components/payments/CreateStripePaymentDialog'
@@ -180,24 +180,70 @@ export default function PaymentsPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              ₪{stats.totalAmount.toFixed(2)}
+        <div className="space-y-3 md:space-y-0">
+          {/* Mobile: First 2 cards in a row */}
+          <div className="grid grid-cols-2 gap-3 md:hidden">
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
+              style={{ animation: 'fadeInScale 0.4s ease-out 0s both' }}
+            >
+              <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
+                <Banknote className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                ₪{stats.totalAmount.toFixed(2)}
+              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('payments.totalMonth')}</div>
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('payments.totalMonth')}</div>
+
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
+              style={{ animation: 'fadeInScale 0.4s ease-out 0.1s both' }}
+            >
+              <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full">
+                <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.count}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('payments.successfulTransactions')}</div>
+            </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.count}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('payments.successfulTransactions')}</div>
+          {/* Mobile: Third card centered below */}
+          <div className="flex justify-center md:hidden">
+            <div 
+              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
+              style={{ maxWidth: '50%', animation: 'fadeInScale 0.4s ease-out 0.2s both' }}
+            >
+              <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-full">
+                <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                ₪{stats.avgAmount.toFixed(2)}
+              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('payments.avgTransaction')}</div>
+            </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              ₪{stats.avgAmount.toFixed(2)}
+          {/* Desktop: Original layout */}
+          <div className="hidden md:grid md:grid-cols-3 gap-4">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                ₪{stats.totalAmount.toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('payments.totalMonth')}</div>
             </div>
-            <div className="text-sm text-gray-600 mt-1">{t('payments.avgTransaction')}</div>
+
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.count}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('payments.successfulTransactions')}</div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                ₪{stats.avgAmount.toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('payments.avgTransaction')}</div>
+            </div>
           </div>
         </div>
       )}

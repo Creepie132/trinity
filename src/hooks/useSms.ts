@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { SmsCampaign, SmsMessage } from '@/types/database'
 import { toast } from 'sonner'
+import { useAuth } from '@/hooks/useAuth'
 const supabase = createSupabaseBrowserClient()
 
 interface CreateCampaignParams {
@@ -12,12 +13,16 @@ interface CreateCampaignParams {
 }
 
 export function useSmsCampaigns() {
+  const { orgId } = useAuth()
+
   return useQuery({
-    queryKey: ['sms-campaigns'],
+    queryKey: ['sms-campaigns', orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sms_campaigns')
         .select('*')
+        .eq('org_id', orgId) // 🔒 Фильтрация по организации
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -27,29 +32,47 @@ export function useSmsCampaigns() {
 }
 
 export function useSmsCampaign(id?: string) {
+  const { orgId } = useAuth()
+
   return useQuery({
-    queryKey: ['sms-campaign', id],
+    queryKey: ['sms-campaign', orgId, id],
+    enabled: !!orgId && !!id,
     queryFn: async () => {
       if (!id) return null
 
       const { data, error } = await supabase
         .from('sms_campaigns')
         .select('*')
+        .eq('org_id', orgId) // 🔒 Фильтрация по организации
         .eq('id', id)
         .single()
 
       if (error) throw error
       return data as SmsCampaign
     },
-    enabled: !!id,
   })
 }
 
 export function useSmsMessages(campaignId?: string) {
+  const { orgId } = useAuth()
+
   return useQuery({
-    queryKey: ['sms-messages', campaignId],
+    queryKey: ['sms-messages', orgId, campaignId],
+    enabled: !!orgId && !!campaignId,
     queryFn: async () => {
       if (!campaignId) return []
+
+      // Сначала проверяем, что кампания принадлежит нашей организации
+      const { data: campaign, error: campError } = await supabase
+        .from('sms_campaigns')
+        .select('org_id')
+        .eq('id', campaignId)
+        .eq('org_id', orgId) // 🔒 Проверка доступа
+        .single()
+
+      if (campError || !campaign) {
+        throw new Error('Campaign not found or access denied')
+      }
 
       const { data, error } = await supabase
         .from('sms_messages')
@@ -63,12 +86,12 @@ export function useSmsMessages(campaignId?: string) {
           )
         `)
         .eq('campaign_id', campaignId)
+        .eq('org_id', orgId) // 🔒 Дополнительная фильтрация
         .order('sent_at', { ascending: false })
 
       if (error) throw error
       return data as any[]
     },
-    enabled: !!campaignId,
   })
 }
 
@@ -101,13 +124,17 @@ export function useCreateCampaign() {
 }
 
 export function useRecipientsCount(filterType: string, filterValue?: string) {
+  const { orgId } = useAuth()
+
   return useQuery({
-    queryKey: ['recipients-count', filterType, filterValue],
+    queryKey: ['recipients-count', orgId, filterType, filterValue],
+    enabled: !!orgId && !!filterType,
     queryFn: async () => {
       if (filterType === 'all') {
         const { count, error } = await supabase
           .from('clients')
           .select('*', { count: 'exact', head: true })
+          .eq('org_id', orgId) // 🔒 Фильтрация по организации
           .not('phone', 'is', null)
 
         if (error) throw error
@@ -122,6 +149,7 @@ export function useRecipientsCount(filterType: string, filterValue?: string) {
         const { count, error } = await supabase
           .from('client_summary')
           .select('*', { count: 'exact', head: true })
+          .eq('org_id', orgId) // 🔒 Фильтрация по организации
           .not('phone', 'is', null)
           .or(`last_visit.is.null,last_visit.lt.${cutoffDate.toISOString()}`)
 
@@ -131,6 +159,5 @@ export function useRecipientsCount(filterType: string, filterValue?: string) {
 
       return 0
     },
-    enabled: !!filterType,
   })
 }

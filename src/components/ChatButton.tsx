@@ -36,6 +36,7 @@ export default function ChatButton({ onClick, isActive }: ChatButtonProps) {
         cursor: 'pointer',
         zIndex: 999,
         borderRadius: '50%',
+        overflow: 'hidden',
         background: 'transparent',
         border: 'none',
         outline: 'none',
@@ -51,28 +52,6 @@ export default function ChatButton({ onClick, isActive }: ChatButtonProps) {
           autoplay={true}
           style={{ width: '100%', height: '100%' }}
         />
-      )}
-      
-      {isActive && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontSize: 24,
-            fontWeight: 'bold',
-            textShadow: '0 0 10px rgba(0,0,0,0.5)',
-            pointerEvents: 'none',
-          }}
-        >
-          ✕
-        </div>
       )}
     </div>
   )

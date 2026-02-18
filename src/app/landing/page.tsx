@@ -1504,26 +1504,6 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* Floating Button - Desktop */}
-      <a
-        href="#pricing"
-        className="hidden md:block fixed right-0 top-1/2 -translate-y-1/2 bg-amber-500 text-white font-bold py-4 px-2 rounded-l-lg shadow-lg hover:bg-amber-600 transition-all z-40 animate-pulse-slow"
-        style={{
-          writingMode: 'vertical-rl',
-          textOrientation: 'mixed',
-        }}
-      >
-        {t.floatingButton.text}
-      </a>
-
-      {/* Floating Button - Mobile */}
-      <a
-        href="#pricing"
-        className="md:hidden fixed bottom-4 left-4 right-4 bg-amber-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-amber-600 transition-all z-40 text-center animate-pulse-slow"
-      >
-        {t.floatingButton.text}
-      </a>
-
       {/* Footer */}
       <footer className="bg-[#0F172A] text-white py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -579,12 +579,90 @@ export default function AiChatWidget() {
           }
         }
         
+        @keyframes rotate-sphere {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+        
+        @keyframes gradient-shift {
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+        
         .ai-chat-button {
           animation: pulse-glow 3s ease-in-out infinite;
         }
         
         .ai-chat-button:hover {
           transform: scale(1.1);
+        }
+        
+        .sphere-container {
+          position: relative;
+          width: 48px;
+          height: 48px;
+        }
+        
+        .sphere {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          background: radial-gradient(circle at 30% 30%, 
+            rgba(59, 130, 246, 0.8), 
+            rgba(139, 92, 246, 0.6), 
+            rgba(0, 0, 0, 0.9));
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .sphere::before {
+          content: '';
+          position: absolute;
+          inset: -50%;
+          background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 4px,
+            rgba(59, 130, 246, 0.4) 4px,
+            rgba(59, 130, 246, 0.4) 8px
+          );
+          animation: rotate-sphere 8s linear infinite;
+          border-radius: 50%;
+        }
+        
+        .sphere::after {
+          content: '';
+          position: absolute;
+          inset: 10%;
+          background: radial-gradient(circle at 40% 40%, 
+            rgba(255, 255, 255, 0.3), 
+            transparent 60%);
+          border-radius: 50%;
+        }
+        
+        .chat-window-border {
+          position: relative;
+          background: linear-gradient(135deg, #8B5CF6, #3B82F6, #8B5CF6);
+          background-size: 200% 200%;
+          animation: gradient-shift 4s ease infinite;
+          padding: 2px;
+          border-radius: 1rem;
+        }
+        
+        .chat-window-inner {
+          background: #0a0a0a;
+          border-radius: calc(1rem - 2px);
         }
       `}</style>
 
@@ -600,7 +678,9 @@ export default function AiChatWidget() {
           }}
         >
           <div className="flex items-center justify-center w-full h-full">
-            <img src="/ai-chat/aurora-icon.jpg" alt="Aurora AI" className="w-12 h-12 object-cover" />
+            <div className="sphere-container">
+              <div className="sphere"></div>
+            </div>
           </div>
         </button>
       )}
@@ -611,26 +691,30 @@ export default function AiChatWidget() {
           className={`fixed bottom-6 right-6 z-[1000] ${
             typeof window !== 'undefined' && window.innerWidth < 768
               ? 'inset-0 m-0 rounded-none'
-              : 'w-[380px] h-[520px] rounded-2xl'
-          } bg-[#0a0a0a] border border-[#1a1a2e] shadow-2xl flex flex-col overflow-hidden`}
+              : 'w-[380px] h-[520px]'
+          } shadow-2xl`}
           style={{
             animation: 'scaleIn 0.3s ease-out',
           }}
         >
-          {/* Header */}
-          <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-violet-900/20 to-blue-900/20">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-black">
-                <img src="/ai-chat/aurora-icon.jpg" alt="Aurora AI" className="w-full h-full object-cover" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-100">Amber AI Assistant</p>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-xs text-gray-400">{t('online')}</span>
+          <div className={`chat-window-border h-full ${
+            typeof window !== 'undefined' && window.innerWidth < 768 ? 'rounded-none' : ''
+          }`}>
+            <div className="chat-window-inner h-full flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-violet-900/20 to-blue-900/20">
+                <div className="flex items-center gap-3">
+                  <div className="sphere-container" style={{ width: '40px', height: '40px' }}>
+                    <div className="sphere"></div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-100">Amber AI Assistant</p>
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-xs text-gray-400">{t('online')}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
             <div className="flex items-center gap-2">
               {/* Language Selector */}
@@ -657,9 +741,11 @@ export default function AiChatWidget() {
             </div>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4" dir={dir}>
-            {renderContent()}
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-4" dir={dir}>
+                {renderContent()}
+              </div>
+            </div>
           </div>
         </div>
       )}

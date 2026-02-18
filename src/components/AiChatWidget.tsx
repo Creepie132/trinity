@@ -292,7 +292,7 @@ function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { siz
       { color: '#A78BFA', opacity: 0.3, speed: 0.0015, offset: Math.PI }
     ]
 
-    const draw = (time: number = 0) => {
+    const draw = (time: number) => {
       ctx.clearRect(0, 0, size, size)
 
       // Clip to circle
@@ -367,7 +367,11 @@ function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { siz
       animationRef.current = requestAnimationFrame(draw)
     }
 
-    animationRef.current = requestAnimationFrame(draw)
+    // Start animation with wrapper to avoid TS error
+    const animate = (timestamp: number) => {
+      draw(timestamp)
+    }
+    animationRef.current = requestAnimationFrame(animate)
 
     return () => {
       if (animationRef.current) {

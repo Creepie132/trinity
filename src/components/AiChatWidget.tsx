@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
+import OrbButton from './OrbButton'
 
 type Language = 'he' | 'ru' | 'en'
 type View = 'menu' | 'faq' | 'calculator' | 'trial' | 'clients' | 'services' | 'human' | 'faq-detail' | 'trial-form'
@@ -19,131 +20,6 @@ const translations: Record<string, Record<Language, string>> = {
   menuHuman: { he: '👤 לדבר עם נציג אנושי', ru: '👤 Связаться с человеком', en: '👤 Talk to a Human' },
   back: { he: '→ חזרה', ru: '← Назад', en: '← Back' },
   online: { he: 'Online', ru: 'Online', en: 'Online' }
-}
-
-function GlowingOrb({ isHovered, isChatOpen }: { isHovered: boolean; isChatOpen: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const rafRef = useRef<number | undefined>(undefined)
-  const startTimeRef = useRef<number>(Date.now())
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    const size = 72
-    const cx = size / 2
-    const cy = size / 2
-    const r = size * 0.42
-
-    const draw = () => {
-      const now = Date.now()
-      const elapsed = (now - startTimeRef.current) / 1000
-      
-      ctx.clearRect(0, 0, size, size)
-
-      // Clip to circle
-      ctx.save()
-      ctx.beginPath()
-      ctx.arc(cx, cy, r, 0, Math.PI * 2)
-      ctx.clip()
-
-      // Background gradient
-      const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
-      bgGrad.addColorStop(0, '#0a1628')
-      bgGrad.addColorStop(1, 'transparent')
-      ctx.fillStyle = bgGrad
-      ctx.fillRect(0, 0, size, size)
-
-      // Animation speed
-      const speed = isChatOpen ? 0.5 : isHovered ? 1.5 : 1
-      const rotationSpeed = (elapsed * speed) / 12 // 12 sec cycle
-      const pulseSpeed = (elapsed * speed) / 4 // 4 sec pulse
-
-      // Pulse brightness
-      const pulseBrightness = 0.8 + Math.sin(pulseSpeed * Math.PI * 2) * 0.2
-
-      // Draw wide flowing streams
-      const drawStream = (
-        angle: number,
-        width: number,
-        color1: string,
-        color2: string,
-        blur: number,
-        alpha: number
-      ) => {
-        ctx.save()
-        ctx.translate(cx, cy)
-        ctx.rotate(angle + rotationSpeed * Math.PI * 2)
-
-        const streamGrad = ctx.createLinearGradient(-r, 0, r, 0)
-        streamGrad.addColorStop(0, color1)
-        streamGrad.addColorStop(1, color2)
-
-        ctx.shadowBlur = isHovered ? blur * 1.6 : blur
-        ctx.shadowColor = color1
-        ctx.fillStyle = streamGrad
-        ctx.globalAlpha = alpha * pulseBrightness
-
-        // Create crescent/aurora shape
-        const deform = Math.sin(elapsed * speed * 0.5) * 0.1
-
-        ctx.beginPath()
-        // Upper curve
-        ctx.moveTo(-r * 0.8, -width / 2)
-        ctx.bezierCurveTo(
-          -r * 0.3, -width / 2 - width * deform,
-          r * 0.3, -width / 2 + width * deform,
-          r * 0.8, -width / 2
-        )
-        // Right edge (thinner)
-        ctx.lineTo(r * 0.75, 0)
-        // Lower curve
-        ctx.bezierCurveTo(
-          r * 0.3, width / 2 - width * deform,
-          -r * 0.3, width / 2 + width * deform,
-          -r * 0.8, width / 2
-        )
-        // Left edge (thinner)
-        ctx.lineTo(-r * 0.75, 0)
-        ctx.closePath()
-        ctx.fill()
-
-        ctx.restore()
-      }
-
-      // Stream 1: Cyan → Blue (main)
-      drawStream(0, 22, '#00D4FF', '#0066FF', 25, 0.7)
-
-      // Stream 2: Indigo → Purple
-      drawStream(Math.PI * 0.4, 18, '#4F46E5', '#7C3AED', 20, 0.6)
-
-      // Stream 3: White accent (thin)
-      drawStream(Math.PI * 0.7, 10, '#FFFFFF', '#FFFFFF', 15, 0.3)
-
-      ctx.restore()
-
-      // Draw X if chat is open
-      if (isChatOpen) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-        ctx.font = 'bold 28px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText('✕', cx, cy)
-      }
-
-      rafRef.current = requestAnimationFrame(draw)
-    }
-
-    rafRef.current = requestAnimationFrame(draw)
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    }
-  }, [isHovered, isChatOpen])
-
-  return <canvas ref={canvasRef} width={72} height={72} style={{ display: 'block', width: 72, height: 72 }} />
 }
 
 export default function AiChatWidget() {
@@ -228,11 +104,6 @@ export default function AiChatWidget() {
   return (
     <>
       <style jsx global>{`
-        @keyframes pulse-glow {
-          0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); }
-          50% { box-shadow: 0 0 40px rgba(0, 212, 255, 0.6); }
-        }
-        
         @keyframes border-pulse {
           0%, 100% { opacity: 0.25; }
           50% { opacity: 0.5; }
@@ -257,28 +128,17 @@ export default function AiChatWidget() {
         }
       `}</style>
 
-      {/* Floating Button */}
+      {/* 3D Orb Button */}
       {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            zIndex: 999,
-            cursor: 'pointer',
-            border: 'none',
-            background: 'transparent',
-            padding: 0,
-            transform: isHovered ? 'scale(1.08)' : 'scale(1)',
-            transition: 'transform 0.3s ease',
-            animation: 'pulse-glow 3s infinite'
-          }}
-        >
-          <GlowingOrb isHovered={isHovered} isChatOpen={false} />
-        </button>
+        <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 999 }}>
+          <OrbButton
+            isHovered={isHovered}
+            isChatOpen={false}
+            onClick={() => setIsOpen(true)}
+            onHoverStart={() => setIsHovered(true)}
+            onHoverEnd={() => setIsHovered(false)}
+          />
+        </div>
       )}
 
       {/* Chat Window */}
@@ -331,9 +191,13 @@ export default function AiChatWidget() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div onClick={() => setIsOpen(false)} style={{ cursor: 'pointer' }}>
-                  <GlowingOrb isHovered={false} isChatOpen={true} />
-                </div>
+                <OrbButton
+                  isHovered={false}
+                  isChatOpen={true}
+                  onClick={() => setIsOpen(false)}
+                  onHoverStart={() => {}}
+                  onHoverEnd={() => {}}
+                />
                 <div>
                   <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white', margin: 0 }}>Amber AI</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>

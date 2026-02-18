@@ -364,14 +364,10 @@ function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { siz
       ctx.arc(cx, cy, r, 0, Math.PI * 2)
       ctx.stroke()
 
-      animationRef.current = requestAnimationFrame(draw)
+      animationRef.current = requestAnimationFrame((t) => draw(t))
     }
 
-    // Start animation with wrapper to avoid TS error
-    const animate = (timestamp: number) => {
-      draw(timestamp)
-    }
-    animationRef.current = requestAnimationFrame(animate)
+    animationRef.current = requestAnimationFrame((t) => draw(t))
 
     return () => {
       if (animationRef.current) {

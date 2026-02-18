@@ -272,7 +272,7 @@ type View = 'menu' | 'faq' | 'calculator' | 'trial' | 'clients' | 'services' | '
 // Animated Orb Component
 function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { size?: number; isHovered?: boolean; isChatOpen?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     const canvas = canvasRef.current

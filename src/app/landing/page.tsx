@@ -236,7 +236,7 @@ const translations: Record<'he' | 'ru', Translations> = {
       plans: [
         {
           name: 'בסיסי',
-          price: '₪149/לחודש',
+          price: 'Coming Soon',
           features: [
             '✓ בסיס נתונים עד 200 לקוחות',
             '✓ היסטוריית ביקורים',
@@ -250,7 +250,7 @@ const translations: Record<'he' | 'ru', Translations> = {
         },
         {
           name: 'מקצועי',
-          price: '₪299/לחודש',
+          price: 'Coming Soon',
           features: [
             '✓ בסיס נתונים עד 1000 לקוחות',
             '✓ היסטוריית ביקורים',
@@ -265,7 +265,7 @@ const translations: Record<'he' | 'ru', Translations> = {
         },
         {
           name: 'ארגוני',
-          price: '₪499/לחודש',
+          price: 'Coming Soon',
           features: [
             '✓ לקוחות ללא הגבלה',
             '✓ היסטוריית ביקורים',
@@ -435,7 +435,7 @@ const translations: Record<'he' | 'ru', Translations> = {
       plans: [
         {
           name: 'Базовый',
-          price: '₪149/месяц',
+          price: 'Coming Soon',
           features: [
             '✓ База клиентов до 200',
             '✓ История визитов',
@@ -449,7 +449,7 @@ const translations: Record<'he' | 'ru', Translations> = {
         },
         {
           name: 'Профессиональный',
-          price: '₪299/месяц',
+          price: 'Coming Soon',
           features: [
             '✓ База клиентов до 1000',
             '✓ История визитов',
@@ -464,7 +464,7 @@ const translations: Record<'he' | 'ru', Translations> = {
         },
         {
           name: 'Корпоративный',
-          price: '₪499/месяц',
+          price: 'Coming Soon',
           features: [
             '✓ Безлимит клиентов',
             '✓ История визитов',

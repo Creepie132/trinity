@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import ChatOrb from './ChatOrb'
+import ChatButton from './ChatButton'
 
 type Language = 'he' | 'ru' | 'en'
 
@@ -23,7 +23,6 @@ const translations: Record<string, Record<Language, string>> = {
 
 export default function AiChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
   const [language, setLanguage] = useState<Language>('he')
 
   const t = (key: string) => translations[key]?.[language] || key
@@ -57,18 +56,8 @@ export default function AiChatWidget() {
         }
       `}</style>
 
-      {/* Orb Button */}
-      {!isOpen && (
-        <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 999 }}>
-          <ChatOrb
-            isHovered={isHovered}
-            isChatOpen={false}
-            onClick={() => setIsOpen(true)}
-            onHoverStart={() => setIsHovered(true)}
-            onHoverEnd={() => setIsHovered(false)}
-          />
-        </div>
-      )}
+      {/* Lottie Button */}
+      <ChatButton onClick={() => setIsOpen(!isOpen)} isActive={isOpen} />
 
       {/* Chat Window */}
       {isOpen && (
@@ -107,14 +96,18 @@ export default function AiChatWidget() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '40px', height: '40px' }}>
-                  <ChatOrb
-                    isHovered={false}
-                    isChatOpen={true}
-                    onClick={() => setIsOpen(false)}
-                    onHoverStart={() => {}}
-                    onHoverEnd={() => {}}
-                  />
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <span style={{ fontSize: '20px' }}>✨</span>
                 </div>
                 <div>
                   <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white', margin: 0 }}>

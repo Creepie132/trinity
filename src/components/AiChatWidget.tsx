@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, MessageCircle, ArrowLeft, Check } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { X } from 'lucide-react'
 
 type Language = 'he' | 'ru' | 'en'
 
@@ -14,14 +14,11 @@ interface Translation {
 }
 
 const translations: Translation = {
-  // Greeting
   greeting: {
     he: 'שלום! 👋 אני העוזר הדיגיטלי של Amber Solutions. איך אוכל לעזור?',
     ru: 'Привет! 👋 Я цифровой помощник Amber Solutions. Чем могу помочь?',
     en: "Hi! 👋 I'm the Amber Solutions digital assistant. How can I help?"
   },
-  
-  // Menu buttons
   menuFaq: {
     he: '❓ שאלות נפוצות',
     ru: '❓ Частые вопросы',
@@ -52,8 +49,6 @@ const translations: Translation = {
     ru: '👤 Связаться с человеком',
     en: '👤 Talk to a Human'
   },
-  
-  // FAQ questions
   faqQ1: {
     he: 'מה זה Trinity CRM?',
     ru: 'Что такое Trinity CRM?',
@@ -84,8 +79,6 @@ const translations: Translation = {
     ru: 'Как начать?',
     en: 'How do I start?'
   },
-  
-  // FAQ answers
   faqA1: {
     he: 'Trinity CRM היא מערכת ניהול לקוחות מתקדמת שפותחה במיוחד לעסקים בתחום השירותים - ספרות, מכוני יופי, קליניקות ועוד.',
     ru: 'Trinity CRM — это продвинутая система управления клиентами, созданная специально для сервисных бизнесов: салонов, клиник, студий красоты.',
@@ -116,8 +109,6 @@ const translations: Translation = {
     ru: 'Просто! Нажмите "Бесплатный тест 14 дней" и наш менеджер поможет вам начать в течение 24 часов.',
     en: 'Easy! Click "Free 14-Day Trial" and our rep will help you get started within 24 hours.'
   },
-  
-  // Calculator
   calcTitle: {
     he: 'בחר את הפיצ\'רים שאתה צריך:',
     ru: 'Выберите нужные функции:',
@@ -143,8 +134,6 @@ const translations: Translation = {
     ru: 'Спасибо за интерес! 🎉 Наш менеджер свяжется с вами в течение 24 часов.',
     en: 'Thanks for your interest! 🎉 We\'ll contact you within 24 hours to complete your order.'
   },
-  
-  // Trial
   trialMessage: {
     he: '🎁 כן! אנחנו מציעים 14 ימי נסיון חינם על מערכת Trinity CRM. תקבל גישה מלאה לכל הפיצ\'רים בלי התחייבות. רוצה להתחיל?',
     ru: '🎁 Да! Мы предлагаем 14 дней бесплатного тестирования Trinity CRM. Полный доступ ко всем функциям без обязательств. Хотите начать?',
@@ -185,22 +174,16 @@ const translations: Translation = {
     ru: 'Спасибо! Мы свяжемся в течение 24 часов 🎉',
     en: 'Thanks! We\'ll get back to you within 24 hours 🎉'
   },
-  
-  // Clients
   clientsMessage: {
     he: '⭐ Trinity CRM כבר משמשת עסקים בתחומי: יופי וקוסמטיקה 💅, ספרות ✂️, מספרות בארבר 💈, קליניקות 🏥. המערכת מתאימה לכל עסק שצריך לנהל לקוחות ותורים.',
     ru: '⭐ Trinity CRM уже используют бизнесы: салоны красоты 💅, парикмахерские ✂️, барбершопы 💈, клиники 🏥. Система подходит любому бизнесу с клиентами и записями.',
     en: '⭐ Trinity CRM is used by: beauty salons 💅, hair studios ✂️, barbershops 💈, clinics 🏥. Perfect for any business managing clients and appointments.'
   },
-  
-  // Services
   servicesTitle: {
     he: 'שירותים נוספים:',
     ru: 'Другие услуги:',
     en: 'Other Services:'
   },
-  
-  // Human contact
   humanMessage: {
     he: '👤 הבקשה שלך התקבלה! נציג אנושי יחזור אליך תוך 24 שעות. אם זה דחוף, כתוב לנו בוואטסאפ: 054-4858586',
     ru: '👤 Ваш запрос принят! Мы ответим в течение 24 часов. Если срочно — напишите в WhatsApp: 054-4858586',
@@ -211,8 +194,6 @@ const translations: Translation = {
     ru: 'Открыть WhatsApp',
     en: 'Open WhatsApp'
   },
-  
-  // Common
   back: {
     he: '→ חזרה לתפריט',
     ru: '← Назад в меню',
@@ -288,8 +269,119 @@ const services = [
 
 type View = 'menu' | 'faq' | 'calculator' | 'trial' | 'clients' | 'services' | 'human' | 'faq-detail' | 'trial-form'
 
+// Animated Orb Component
+function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { size?: number; isHovered?: boolean; isChatOpen?: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const animationRef = useRef<number>()
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const cx = size / 2
+    const cy = size / 2
+    const r = size * 0.44
+
+    const lines = [
+      { color: '#8B5CF6', opacity: 0.6, speed: 0.001, offset: 0 },
+      { color: '#3B82F6', opacity: 0.5, speed: 0.0013, offset: Math.PI / 3 },
+      { color: '#06B6D4', opacity: 0.4, speed: 0.0008, offset: Math.PI * 2 / 3 },
+      { color: '#A78BFA', opacity: 0.3, speed: 0.0015, offset: Math.PI }
+    ]
+
+    const draw = (time: number) => {
+      ctx.clearRect(0, 0, size, size)
+
+      // Clip to circle
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(cx, cy, r, 0, Math.PI * 2)
+      ctx.clip()
+
+      // Background gradient
+      const bgGrad = ctx.createRadialGradient(cx * 0.7, cy * 0.7, 0, cx, cy, r)
+      bgGrad.addColorStop(0, 'rgba(59, 130, 246, 0.15)')
+      bgGrad.addColorStop(0.5, 'rgba(139, 92, 246, 0.1)')
+      bgGrad.addColorStop(1, 'rgba(5, 5, 16, 0.95)')
+      ctx.fillStyle = bgGrad
+      ctx.fill()
+
+      // Draw flowing lines
+      const speedMultiplier = isHovered ? 2 : isChatOpen ? 0.5 : 1
+
+      lines.forEach((line) => {
+        ctx.beginPath()
+        ctx.strokeStyle = line.color
+        ctx.lineWidth = 1.8
+        ctx.globalAlpha = line.opacity
+        ctx.shadowBlur = 8
+        ctx.shadowColor = line.color
+
+        const t = time * line.speed * speedMultiplier + line.offset
+
+        const x1 = cx + Math.sin(t) * r * 0.6
+        const y1 = cy + Math.cos(t * 1.1) * r * 0.6
+
+        const x2 = cx + Math.sin(t + Math.PI / 2) * r * 0.7
+        const y2 = cy + Math.cos(t * 0.9 + Math.PI / 2) * r * 0.5
+
+        const x3 = cx + Math.sin(t + Math.PI) * r * 0.5
+        const y3 = cy + Math.cos(t * 1.2 + Math.PI) * r * 0.7
+
+        const x4 = cx + Math.sin(t + Math.PI * 1.5) * r * 0.6
+        const y4 = cy + Math.cos(t * 0.85 + Math.PI * 1.5) * r * 0.6
+
+        ctx.moveTo(x1, y1)
+        ctx.bezierCurveTo(x2, y2, x3, y3, x4, y4)
+        ctx.stroke()
+      })
+
+      ctx.restore()
+
+      // Highlight
+      const highlightGrad = ctx.createRadialGradient(cx * 0.6, cy * 0.6, 0, cx, cy, r * 0.8)
+      highlightGrad.addColorStop(0, 'rgba(255, 255, 255, 0.2)')
+      highlightGrad.addColorStop(0.4, 'rgba(255, 255, 255, 0.05)')
+      highlightGrad.addColorStop(1, 'transparent')
+      
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(cx, cy, r, 0, Math.PI * 2)
+      ctx.clip()
+      ctx.fillStyle = highlightGrad
+      ctx.fillRect(0, 0, size, size)
+      ctx.restore()
+
+      // Outer glow
+      ctx.shadowBlur = 15
+      ctx.shadowColor = 'rgba(139, 92, 246, 0.4)'
+      ctx.strokeStyle = 'rgba(139, 92, 246, 0.3)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.arc(cx, cy, r, 0, Math.PI * 2)
+      ctx.stroke()
+
+      animationRef.current = requestAnimationFrame(draw)
+    }
+
+    animationRef.current = requestAnimationFrame(draw)
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [size, isHovered, isChatOpen])
+
+  return <canvas ref={canvasRef} width={size} height={size} style={{ width: size, height: size }} />
+}
+
 export default function AiChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
   const [language, setLanguage] = useState<Language>('he')
   const [view, setView] = useState<View>('menu')
   const [selectedFaq, setSelectedFaq] = useState<number | null>(null)
@@ -299,10 +391,6 @@ export default function AiChatWidget() {
 
   const t = (key: string) => translations[key]?.[language] || key
   const dir = language === 'he' ? 'rtl' : 'ltr'
-
-  useEffect(() => {
-    document.documentElement.setAttribute('dir', dir)
-  }, [dir])
 
   const calculatePrice = () => {
     const setup = features
@@ -315,7 +403,7 @@ export default function AiChatWidget() {
   }
 
   const toggleFeature = (id: string) => {
-    if (id === 'crm') return // Always enabled
+    if (id === 'crm') return
     if (selectedFeatures.includes(id)) {
       setSelectedFeatures(selectedFeatures.filter(f => f !== id))
     } else {
@@ -327,26 +415,26 @@ export default function AiChatWidget() {
     if (view === 'menu') {
       return (
         <div className="space-y-2">
-          <div className="p-4 bg-gradient-to-br from-violet-500/10 to-blue-500/10 rounded-lg border border-violet-500/20 mb-4">
+          <div className="p-4 bg-gradient-to-br from-violet-500/10 to-blue-500/10 rounded-2xl border border-violet-500/20 mb-4">
             <p className="text-gray-100 text-sm">{t('greeting')}</p>
           </div>
           
-          <button onClick={() => setView('faq')} className="w-full p-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-left text-sm text-gray-100 transition-colors">
+          <button onClick={() => setView('faq')} className="menu-button">
             {t('menuFaq')}
           </button>
-          <button onClick={() => setView('calculator')} className="w-full p-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-left text-sm text-gray-100 transition-colors">
+          <button onClick={() => setView('calculator')} className="menu-button">
             {t('menuCalculator')}
           </button>
-          <button onClick={() => setView('trial')} className="w-full p-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-left text-sm text-gray-100 transition-colors">
+          <button onClick={() => setView('trial')} className="menu-button">
             {t('menuTrial')}
           </button>
-          <button onClick={() => setView('clients')} className="w-full p-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-left text-sm text-gray-100 transition-colors">
+          <button onClick={() => setView('clients')} className="menu-button">
             {t('menuClients')}
           </button>
-          <button onClick={() => setView('services')} className="w-full p-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-left text-sm text-gray-100 transition-colors">
+          <button onClick={() => setView('services')} className="menu-button">
             {t('menuServices')}
           </button>
-          <button onClick={() => setView('human')} className="w-full p-3 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 rounded-lg text-left text-sm text-white font-medium transition-all mt-4">
+          <button onClick={() => setView('human')} className="menu-button-primary">
             {t('menuHuman')}
           </button>
         </div>
@@ -363,12 +451,12 @@ export default function AiChatWidget() {
                 setSelectedFaq(i)
                 setView('faq-detail')
               }}
-              className="w-full p-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-left text-sm text-gray-100 transition-colors"
+              className="menu-button"
             >
               {t(`faqQ${i}`)}
             </button>
           ))}
-          <button onClick={() => setView('menu')} className="w-full p-2 text-sm text-gray-400 hover:text-gray-200 transition-colors mt-4">
+          <button onClick={() => setView('menu')} className="back-button">
             {t('back')}
           </button>
         </div>
@@ -378,11 +466,11 @@ export default function AiChatWidget() {
     if (view === 'faq-detail' && selectedFaq) {
       return (
         <div className="space-y-4">
-          <div className="p-4 bg-gray-800 rounded-lg">
+          <div className="p-4 bg-gray-800/50 rounded-2xl border border-violet-500/20">
             <p className="text-violet-400 font-medium text-sm mb-2">{t(`faqQ${selectedFaq}`)}</p>
             <p className="text-gray-100 text-sm">{t(`faqA${selectedFaq}`)}</p>
           </div>
-          <button onClick={() => setView('faq')} className="w-full p-2 text-sm text-gray-400 hover:text-gray-200 transition-colors">
+          <button onClick={() => setView('faq')} className="back-button">
             {t('back')}
           </button>
         </div>
@@ -395,10 +483,10 @@ export default function AiChatWidget() {
       if (showCheckoutMessage) {
         return (
           <div className="space-y-4">
-            <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+            <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-2xl">
               <p className="text-green-400 text-sm">{t('calcThankYou')}</p>
             </div>
-            <button onClick={() => { setShowCheckoutMessage(false); setView('menu') }} className="w-full p-2 text-sm text-gray-400 hover:text-gray-200 transition-colors">
+            <button onClick={() => { setShowCheckoutMessage(false); setView('menu') }} className="back-button">
               {t('back')}
             </button>
           </div>
@@ -408,16 +496,16 @@ export default function AiChatWidget() {
       return (
         <div className="space-y-3">
           <p className="text-sm text-gray-300 mb-3">{t('calcTitle')}</p>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
+          <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
             {features.map(feature => (
               <label
                 key={feature.id}
-                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
                   feature.disabled
-                    ? 'bg-gray-800 opacity-60 cursor-not-allowed'
+                    ? 'bg-gray-800/50 opacity-60 cursor-not-allowed'
                     : selectedFeatures.includes(feature.id)
                     ? 'bg-violet-600/20 border border-violet-500/30'
-                    : 'bg-gray-800 hover:bg-gray-700'
+                    : 'bg-gray-800/30 border border-gray-700/30 hover:border-violet-500/30'
                 }`}
               >
                 <input
@@ -432,7 +520,7 @@ export default function AiChatWidget() {
             ))}
           </div>
           
-          <div className="p-4 bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/30 rounded-lg mt-4">
+          <div className="p-4 bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/30 rounded-2xl mt-4">
             <div className="flex justify-between items-center text-sm mb-2">
               <span className="text-gray-300">{t('calcSetup')}:</span>
               <span className="text-orange-400 font-bold">₪{setup.toLocaleString()}</span>
@@ -445,12 +533,12 @@ export default function AiChatWidget() {
 
           <button
             onClick={() => setShowCheckoutMessage(true)}
-            className="w-full p-3 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 rounded-lg text-white font-medium text-sm transition-all"
+            className="menu-button-primary"
           >
             {t('calcCheckout')}
           </button>
 
-          <button onClick={() => setView('menu')} className="w-full p-2 text-sm text-gray-400 hover:text-gray-200 transition-colors">
+          <button onClick={() => setView('menu')} className="back-button">
             {t('back')}
           </button>
         </div>
@@ -460,13 +548,13 @@ export default function AiChatWidget() {
     if (view === 'trial') {
       return (
         <div className="space-y-4">
-          <div className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-lg">
+          <div className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-2xl">
             <p className="text-gray-100 text-sm">{t('trialMessage')}</p>
           </div>
-          <button onClick={() => setView('trial-form')} className="w-full p-3 bg-green-600 hover:bg-green-500 rounded-lg text-white font-medium text-sm transition-colors">
+          <button onClick={() => setView('trial-form')} className="menu-button-primary">
             {t('trialYes')}
           </button>
-          <button onClick={() => setView('menu')} className="w-full p-2 text-sm text-gray-400 hover:text-gray-200 transition-colors">
+          <button onClick={() => setView('menu')} className="back-button">
             {t('back')}
           </button>
         </div>
@@ -477,10 +565,10 @@ export default function AiChatWidget() {
       if (showTrialSuccess) {
         return (
           <div className="space-y-4">
-            <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+            <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-2xl">
               <p className="text-green-400 text-sm">{t('trialSuccess')}</p>
             </div>
-            <button onClick={() => { setShowTrialSuccess(false); setView('menu') }} className="w-full p-2 text-sm text-gray-400 hover:text-gray-200 transition-colors">
+            <button onClick={() => { setShowTrialSuccess(false); setView('menu') }} className="back-button">
               {t('back')}
             </button>
           </div>
@@ -495,14 +583,14 @@ export default function AiChatWidget() {
           }}
           className="space-y-3"
         >
-          <input type="text" placeholder={t('trialFormName')} required className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-sm text-gray-100 placeholder-gray-500" />
-          <input type="tel" placeholder={t('trialFormPhone')} required className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-sm text-gray-100 placeholder-gray-500" />
-          <input type="email" placeholder={t('trialFormEmail')} required className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-sm text-gray-100 placeholder-gray-500" />
-          <input type="text" placeholder={t('trialFormBusiness')} required className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-sm text-gray-100 placeholder-gray-500" />
-          <button type="submit" className="w-full p-3 bg-green-600 hover:bg-green-500 rounded-lg text-white font-medium text-sm transition-colors">
+          <input type="text" placeholder={t('trialFormName')} required className="form-input" />
+          <input type="tel" placeholder={t('trialFormPhone')} required className="form-input" />
+          <input type="email" placeholder={t('trialFormEmail')} required className="form-input" />
+          <input type="text" placeholder={t('trialFormBusiness')} required className="form-input" />
+          <button type="submit" className="menu-button-primary">
             {t('trialSubmit')}
           </button>
-          <button type="button" onClick={() => setView('trial')} className="w-full p-2 text-sm text-gray-400 hover:text-gray-200 transition-colors">
+          <button type="button" onClick={() => setView('trial')} className="back-button">
             {t('back')}
           </button>
         </form>
@@ -512,10 +600,10 @@ export default function AiChatWidget() {
     if (view === 'clients') {
       return (
         <div className="space-y-4">
-          <div className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-lg">
+          <div className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-2xl">
             <p className="text-gray-100 text-sm">{t('clientsMessage')}</p>
           </div>
-          <button onClick={() => setView('menu')} className="w-full p-2 text-sm text-gray-400 hover:text-gray-200 transition-colors">
+          <button onClick={() => setView('menu')} className="back-button">
             {t('back')}
           </button>
         </div>
@@ -526,9 +614,9 @@ export default function AiChatWidget() {
       return (
         <div className="space-y-3">
           <p className="text-sm text-gray-300 mb-2">{t('servicesTitle')}</p>
-          <div className="space-y-2 max-h-72 overflow-y-auto">
+          <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
             {services.map((service, i) => (
-              <div key={i} className="p-3 bg-gray-800 rounded-lg">
+              <div key={i} className="p-3 bg-gray-800/30 border border-gray-700/30 rounded-xl">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-100">{service.name[language]}</span>
                   <span className="text-xs text-orange-400 font-medium">{service.price[language]}</span>
@@ -536,7 +624,7 @@ export default function AiChatWidget() {
               </div>
             ))}
           </div>
-          <button onClick={() => setView('menu')} className="w-full p-2 text-sm text-gray-400 hover:text-gray-200 transition-colors mt-4">
+          <button onClick={() => setView('menu')} className="back-button mt-4">
             {t('back')}
           </button>
         </div>
@@ -546,18 +634,18 @@ export default function AiChatWidget() {
     if (view === 'human') {
       return (
         <div className="space-y-4">
-          <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+          <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-2xl">
             <p className="text-gray-100 text-sm mb-3">{t('humanMessage')}</p>
             <a
               href="https://wa.me/972544858586"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-white text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 rounded-xl text-white text-sm font-medium transition-colors"
             >
               {t('humanWhatsApp')}
             </a>
           </div>
-          <button onClick={() => setView('menu')} className="w-full p-2 text-sm text-gray-400 hover:text-gray-200 transition-colors">
+          <button onClick={() => setView('menu')} className="back-button">
             {t('back')}
           </button>
         </div>
@@ -570,99 +658,124 @@ export default function AiChatWidget() {
   return (
     <>
       <style jsx global>{`
-        @keyframes pulse-glow {
-          0%, 100% {
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
-          }
-          50% {
-            box-shadow: 0 0 30px rgba(139, 92, 246, 0.7), 0 0 60px rgba(59, 130, 246, 0.3);
-          }
-        }
-        
-        @keyframes rotate-sphere {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-        
-        @keyframes gradient-shift {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-          100% {
-            background-position: 0% 50%;
-          }
-        }
-        
-        .ai-chat-button {
-          animation: pulse-glow 3s ease-in-out infinite;
-        }
-        
-        .ai-chat-button:hover {
-          transform: scale(1.1);
-        }
-        
-        .sphere-container {
-          position: relative;
-          width: 48px;
-          height: 48px;
-        }
-        
-        .sphere {
+        .menu-button {
           width: 100%;
-          height: 100%;
-          border-radius: 50%;
-          background: radial-gradient(circle at 30% 30%, 
-            rgba(59, 130, 246, 0.8), 
-            rgba(139, 92, 246, 0.6), 
-            rgba(0, 0, 0, 0.9));
-          position: relative;
-          overflow: hidden;
+          padding: 12px 16px;
+          background: #111827;
+          border: 1px solid rgba(139, 92, 246, 0.2);
+          border-radius: 12px;
+          text-align: left;
+          font-size: 13px;
+          color: white;
+          transition: all 0.2s;
         }
         
-        .sphere::before {
+        .menu-button:hover {
+          border-color: rgba(139, 92, 246, 0.5);
+          box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+        }
+        
+        .menu-button-primary {
+          width: 100%;
+          padding: 12px 16px;
+          background: linear-gradient(135deg, #8B5CF6, #3B82F6);
+          border: none;
+          border-radius: 12px;
+          text-align: center;
+          font-size: 13px;
+          font-weight: 600;
+          color: white;
+          transition: all 0.2s;
+        }
+        
+        .menu-button-primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+        }
+        
+        .back-button {
+          width: 100%;
+          padding: 8px;
+          font-size: 13px;
+          color: #9CA3AF;
+          transition: color 0.2s;
+        }
+        
+        .back-button:hover {
+          color: #E5E7EB;
+        }
+        
+        .form-input {
+          width: 100%;
+          padding: 10px 12px;
+          background: rgba(17, 24, 39, 0.5);
+          border: 1px solid rgba(139, 92, 246, 0.2);
+          border-radius: 10px;
+          font-size: 13px;
+          color: #E5E7EB;
+        }
+        
+        .form-input::placeholder {
+          color: #6B7280;
+        }
+        
+        .form-input:focus {
+          outline: none;
+          border-color: rgba(139, 92, 246, 0.5);
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 3px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #8B5CF6;
+          border-radius: 10px;
+        }
+        
+        @keyframes border-glow {
+          0%, 100% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 0.6;
+          }
+        }
+        
+        @keyframes scaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.9) translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+        
+        .chat-window-wrapper {
+          animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .chat-border {
+          position: relative;
+          background: #0a0a0f;
+          border-radius: 20px;
+        }
+        
+        .chat-border::before {
           content: '';
           position: absolute;
-          inset: -50%;
-          background: repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 4px,
-            rgba(59, 130, 246, 0.4) 4px,
-            rgba(59, 130, 246, 0.4) 8px
-          );
-          animation: rotate-sphere 8s linear infinite;
-          border-radius: 50%;
-        }
-        
-        .sphere::after {
-          content: '';
-          position: absolute;
-          inset: 10%;
-          background: radial-gradient(circle at 40% 40%, 
-            rgba(255, 255, 255, 0.3), 
-            transparent 60%);
-          border-radius: 50%;
-        }
-        
-        .chat-window-border {
-          position: relative;
-          background: linear-gradient(135deg, #8B5CF6, #3B82F6, #8B5CF6);
-          background-size: 200% 200%;
-          animation: gradient-shift 4s ease infinite;
-          padding: 2px;
-          border-radius: 1rem;
-        }
-        
-        .chat-window-inner {
-          background: #0a0a0a;
-          border-radius: calc(1rem - 2px);
+          inset: -1px;
+          border-radius: 21px;
+          background: linear-gradient(135deg, #8B5CF6, #3B82F6, #06B6D4, #8B5CF6);
+          z-index: -1;
+          opacity: 0.5;
+          animation: border-glow 4s ease-in-out infinite;
         }
       `}</style>
 
@@ -670,98 +783,86 @@ export default function AiChatWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="ai-chat-button fixed bottom-6 right-6 z-[999] w-16 h-16 rounded-full bg-gradient-to-br from-gray-900 to-black border-2 border-transparent bg-clip-padding overflow-hidden"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className="fixed bottom-6 right-6 z-[999] transition-transform duration-300"
           style={{
-            backgroundImage: 'linear-gradient(black, black), linear-gradient(135deg, #8B5CF6, #3B82F6, #F59E0B)',
-            backgroundOrigin: 'border-box',
-            backgroundClip: 'padding-box, border-box'
+            transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+            filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))'
           }}
         >
-          <div className="flex items-center justify-center w-full h-full">
-            <div className="sphere-container">
-              <div className="sphere"></div>
-            </div>
-          </div>
+          <AnimatedOrb size={64} isHovered={isHovered} />
         </button>
       )}
 
       {/* Chat Window */}
       {isOpen && (
         <div
-          className={`fixed bottom-6 right-6 z-[1000] ${
+          className={`chat-window-wrapper fixed bottom-6 right-6 z-[1000] ${
             typeof window !== 'undefined' && window.innerWidth < 768
               ? 'inset-0 m-0 rounded-none'
-              : 'w-[380px] h-[520px]'
-          } shadow-2xl`}
-          style={{
-            animation: 'scaleIn 0.3s ease-out',
-          }}
+              : 'w-[400px] h-[540px]'
+          }`}
         >
-          <div className={`chat-window-border h-full ${
+          <div className={`chat-border h-full flex flex-col overflow-hidden ${
             typeof window !== 'undefined' && window.innerWidth < 768 ? 'rounded-none' : ''
-          }`}>
-            <div className="chat-window-inner h-full flex flex-col overflow-hidden">
-              {/* Header */}
-              <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-violet-900/20 to-blue-900/20">
-                <div className="flex items-center gap-3">
-                  <div className="sphere-container" style={{ width: '40px', height: '40px' }}>
-                    <div className="sphere"></div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-100">Amber AI Assistant</p>
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-xs text-gray-400">{t('online')}</span>
-                    </div>
+          }`}
+            style={{
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 0 40px rgba(139, 92, 246, 0.15)'
+            }}
+          >
+            {/* Header */}
+            <div className="p-4 border-b border-violet-500/15 flex items-center justify-between"
+              style={{
+                background: 'rgba(10, 10, 15, 0.95)',
+                backdropFilter: 'blur(12px)'
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div style={{ transform: 'scale(0.625)' }}>
+                  <AnimatedOrb size={64} isChatOpen={true} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">Amber AI</p>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-green-400">{t('online')}</span>
                   </div>
                 </div>
-
-            <div className="flex items-center gap-2">
-              {/* Language Selector */}
-              <div className="flex gap-1">
-                {(['he', 'ru', 'en'] as Language[]).map(lang => (
-                  <button
-                    key={lang}
-                    onClick={() => setLanguage(lang)}
-                    className={`text-lg transition-opacity ${
-                      language === lang ? 'opacity-100' : 'opacity-40 hover:opacity-70'
-                    }`}
-                  >
-                    {lang === 'he' ? '🇮🇱' : lang === 'ru' ? '🇷🇺' : '🇬🇧'}
-                  </button>
-                ))}
               </div>
 
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Language Selector */}
+                <div className="flex gap-1">
+                  {(['he', 'ru', 'en'] as Language[]).map(lang => (
+                    <button
+                      key={lang}
+                      onClick={() => setLanguage(lang)}
+                      className={`text-lg transition-opacity ${
+                        language === lang ? 'opacity-100' : 'opacity-40 hover:opacity-70'
+                      }`}
+                    >
+                      {lang === 'he' ? '🇮🇱' : lang === 'ru' ? '🇷🇺' : '🇬🇧'}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 hover:bg-gray-800/50 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
             </div>
-          </div>
 
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto p-4" dir={dir}>
-                {renderContent()}
-              </div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar" dir={dir}>
+              {renderContent()}
             </div>
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        @keyframes scaleIn {
-          from {
-            opacity: 0;
-            transform: scale(0.9);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-      `}</style>
     </>
   )
 }

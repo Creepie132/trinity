@@ -207,55 +207,14 @@ const translations: Translation = {
 }
 
 const features = [
-  {
-    id: 'crm',
-    name: { he: 'ניהול לקוחות', ru: 'CRM + Клиенты', en: 'Client Management' },
-    setup: 0,
-    monthly: 149,
-    disabled: true
-  },
-  {
-    id: 'booking',
-    name: { he: 'תורים אונליין', ru: 'Онлайн-запись', en: 'Online Booking' },
-    setup: 500,
-    monthly: 50
-  },
-  {
-    id: 'payments',
-    name: { he: 'תשלומים (Tranzilla)', ru: 'Платежи (Tranzilla)', en: 'Payments (Tranzilla)' },
-    setup: 800,
-    monthly: 70
-  },
-  {
-    id: 'sms',
-    name: { he: 'שיווק SMS', ru: 'SMS маркетинг (Irida)', en: 'SMS Marketing' },
-    setup: 600,
-    monthly: 60
-  },
-  {
-    id: 'inventory',
-    name: { he: 'מלאי + ברקוד', ru: 'Инвентарь + Штрих-код', en: 'Inventory + Barcode' },
-    setup: 400,
-    monthly: 40
-  },
-  {
-    id: 'website',
-    name: { he: 'הזמנות מהאתר', ru: 'Онлайн-бронирование (сайт)', en: 'Website Booking' },
-    setup: 700,
-    monthly: 50
-  },
-  {
-    id: 'telegram',
-    name: { he: 'בוט טלגרם', ru: 'Telegram бот', en: 'Telegram Bot' },
-    setup: 1000,
-    monthly: 50
-  },
-  {
-    id: 'multilang',
-    name: { he: 'ריבוי שפות', ru: 'Мультиязычность', en: 'Multi-Language' },
-    setup: 300,
-    monthly: 0
-  }
+  { id: 'crm', name: { he: 'ניהול לקוחות', ru: 'CRM + Клиенты', en: 'Client Management' }, setup: 0, monthly: 149, disabled: true },
+  { id: 'booking', name: { he: 'תורים אונליין', ru: 'Онлайн-запись', en: 'Online Booking' }, setup: 500, monthly: 50 },
+  { id: 'payments', name: { he: 'תשלומים (Tranzilla)', ru: 'Платежи (Tranzilla)', en: 'Payments (Tranzilla)' }, setup: 800, monthly: 70 },
+  { id: 'sms', name: { he: 'שיווק SMS', ru: 'SMS маркетинг (Irida)', en: 'SMS Marketing' }, setup: 600, monthly: 60 },
+  { id: 'inventory', name: { he: 'מלאי + ברקוד', ru: 'Инвентарь + Штрих-код', en: 'Inventory + Barcode' }, setup: 400, monthly: 40 },
+  { id: 'website', name: { he: 'הזמנות מהאתר', ru: 'Онлайн-бронирование (сайт)', en: 'Website Booking' }, setup: 700, monthly: 50 },
+  { id: 'telegram', name: { he: 'בוט טלגרם', ru: 'Telegram бот', en: 'Telegram Bot' }, setup: 1000, monthly: 50 },
+  { id: 'multilang', name: { he: 'ריבוי שפות', ru: 'Мультиязычность', en: 'Multi-Language' }, setup: 300, monthly: 0 }
 ]
 
 const services = [
@@ -269,10 +228,10 @@ const services = [
 
 type View = 'menu' | 'faq' | 'calculator' | 'trial' | 'clients' | 'services' | 'human' | 'faq-detail' | 'trial-form'
 
-// Animated Orb Component
-function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { size?: number; isHovered?: boolean; isChatOpen?: boolean }) {
+function AnimatedOrb({ isHovered, isChatOpen }: { isHovered: boolean; isChatOpen: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number | undefined>(undefined)
+  const startTimeRef = useRef<number>(Date.now())
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -281,6 +240,7 @@ function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { siz
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
+    const size = 64
     const cx = size / 2
     const cy = size / 2
     const r = size * 0.44
@@ -292,7 +252,8 @@ function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { siz
       { color: '#A78BFA', opacity: 0.3, speed: 0.0015, offset: Math.PI }
     ]
 
-    const draw = (time: number) => {
+    const draw = () => {
+      const time = Date.now() - startTimeRef.current
       ctx.clearRect(0, 0, size, size)
 
       // Clip to circle
@@ -303,11 +264,10 @@ function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { siz
 
       // Background gradient
       const bgGrad = ctx.createRadialGradient(cx * 0.7, cy * 0.7, 0, cx, cy, r)
-      bgGrad.addColorStop(0, 'rgba(59, 130, 246, 0.15)')
-      bgGrad.addColorStop(0.5, 'rgba(139, 92, 246, 0.1)')
+      bgGrad.addColorStop(0, 'rgba(26, 26, 62, 0.6)')
       bgGrad.addColorStop(1, 'rgba(5, 5, 16, 0.95)')
       ctx.fillStyle = bgGrad
-      ctx.fill()
+      ctx.fillRect(0, 0, size, size)
 
       // Draw flowing lines
       const speedMultiplier = isHovered ? 2 : isChatOpen ? 0.5 : 1
@@ -315,7 +275,7 @@ function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { siz
       lines.forEach((line) => {
         ctx.beginPath()
         ctx.strokeStyle = line.color
-        ctx.lineWidth = 1.8
+        ctx.lineWidth = 2
         ctx.globalAlpha = line.opacity
         ctx.shadowBlur = 8
         ctx.shadowColor = line.color
@@ -324,13 +284,10 @@ function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { siz
 
         const x1 = cx + Math.sin(t) * r * 0.6
         const y1 = cy + Math.cos(t * 1.1) * r * 0.6
-
         const x2 = cx + Math.sin(t + Math.PI / 2) * r * 0.7
         const y2 = cy + Math.cos(t * 0.9 + Math.PI / 2) * r * 0.5
-
         const x3 = cx + Math.sin(t + Math.PI) * r * 0.5
         const y3 = cy + Math.cos(t * 1.2 + Math.PI) * r * 0.7
-
         const x4 = cx + Math.sin(t + Math.PI * 1.5) * r * 0.6
         const y4 = cy + Math.cos(t * 0.85 + Math.PI * 1.5) * r * 0.6
 
@@ -341,42 +298,36 @@ function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { siz
 
       ctx.restore()
 
-      // Highlight
-      const highlightGrad = ctx.createRadialGradient(cx * 0.6, cy * 0.6, 0, cx, cy, r * 0.8)
-      highlightGrad.addColorStop(0, 'rgba(255, 255, 255, 0.2)')
-      highlightGrad.addColorStop(0.4, 'rgba(255, 255, 255, 0.05)')
-      highlightGrad.addColorStop(1, 'transparent')
-      
-      ctx.save()
-      ctx.beginPath()
-      ctx.arc(cx, cy, r, 0, Math.PI * 2)
-      ctx.clip()
-      ctx.fillStyle = highlightGrad
-      ctx.fillRect(0, 0, size, size)
-      ctx.restore()
+      // Draw X if chat is open
+      if (isChatOpen) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'
+        ctx.lineWidth = 2
+        ctx.lineCap = 'round'
+        ctx.shadowBlur = 0
+        ctx.globalAlpha = 1
 
-      // Outer glow
-      ctx.shadowBlur = 15
-      ctx.shadowColor = 'rgba(139, 92, 246, 0.4)'
-      ctx.strokeStyle = 'rgba(139, 92, 246, 0.3)'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.arc(cx, cy, r, 0, Math.PI * 2)
-      ctx.stroke()
+        const xSize = 12
+        ctx.beginPath()
+        ctx.moveTo(cx - xSize, cy - xSize)
+        ctx.lineTo(cx + xSize, cy + xSize)
+        ctx.moveTo(cx + xSize, cy - xSize)
+        ctx.lineTo(cx - xSize, cy + xSize)
+        ctx.stroke()
+      }
 
-      animationRef.current = requestAnimationFrame((t) => draw(t))
+      animationRef.current = requestAnimationFrame(draw)
     }
 
-    animationRef.current = requestAnimationFrame((t) => draw(t))
+    animationRef.current = requestAnimationFrame(draw)
 
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [size, isHovered, isChatOpen])
+  }, [isHovered, isChatOpen])
 
-  return <canvas ref={canvasRef} width={size} height={size} style={{ width: size, height: size }} />
+  return <canvas ref={canvasRef} width={64} height={64} style={{ width: 64, height: 64, display: 'block' }} />
 }
 
 export default function AiChatWidget() {
@@ -393,12 +344,8 @@ export default function AiChatWidget() {
   const dir = language === 'he' ? 'rtl' : 'ltr'
 
   const calculatePrice = () => {
-    const setup = features
-      .filter(f => selectedFeatures.includes(f.id))
-      .reduce((sum, f) => sum + f.setup, 0)
-    const monthly = features
-      .filter(f => selectedFeatures.includes(f.id))
-      .reduce((sum, f) => sum + f.monthly, 0)
+    const setup = features.filter(f => selectedFeatures.includes(f.id)).reduce((sum, f) => sum + f.setup, 0)
+    const monthly = features.filter(f => selectedFeatures.includes(f.id)).reduce((sum, f) => sum + f.monthly, 0)
     return { setup, monthly }
   }
 
@@ -418,25 +365,12 @@ export default function AiChatWidget() {
           <div className="p-4 bg-gradient-to-br from-violet-500/10 to-blue-500/10 rounded-2xl border border-violet-500/20 mb-4">
             <p className="text-gray-100 text-sm">{t('greeting')}</p>
           </div>
-          
-          <button onClick={() => setView('faq')} className="menu-button">
-            {t('menuFaq')}
-          </button>
-          <button onClick={() => setView('calculator')} className="menu-button">
-            {t('menuCalculator')}
-          </button>
-          <button onClick={() => setView('trial')} className="menu-button">
-            {t('menuTrial')}
-          </button>
-          <button onClick={() => setView('clients')} className="menu-button">
-            {t('menuClients')}
-          </button>
-          <button onClick={() => setView('services')} className="menu-button">
-            {t('menuServices')}
-          </button>
-          <button onClick={() => setView('human')} className="menu-button-primary">
-            {t('menuHuman')}
-          </button>
+          <button onClick={() => setView('faq')} className="menu-button">{t('menuFaq')}</button>
+          <button onClick={() => setView('calculator')} className="menu-button">{t('menuCalculator')}</button>
+          <button onClick={() => setView('trial')} className="menu-button">{t('menuTrial')}</button>
+          <button onClick={() => setView('clients')} className="menu-button">{t('menuClients')}</button>
+          <button onClick={() => setView('services')} className="menu-button">{t('menuServices')}</button>
+          <button onClick={() => setView('human')} className="menu-button-primary">{t('menuHuman')}</button>
         </div>
       )
     }
@@ -445,20 +379,11 @@ export default function AiChatWidget() {
       return (
         <div className="space-y-2">
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <button
-              key={i}
-              onClick={() => {
-                setSelectedFaq(i)
-                setView('faq-detail')
-              }}
-              className="menu-button"
-            >
+            <button key={i} onClick={() => { setSelectedFaq(i); setView('faq-detail') }} className="menu-button">
               {t(`faqQ${i}`)}
             </button>
           ))}
-          <button onClick={() => setView('menu')} className="back-button">
-            {t('back')}
-          </button>
+          <button onClick={() => setView('menu')} className="back-button">{t('back')}</button>
         </div>
       )
     }
@@ -470,9 +395,7 @@ export default function AiChatWidget() {
             <p className="text-violet-400 font-medium text-sm mb-2">{t(`faqQ${selectedFaq}`)}</p>
             <p className="text-gray-100 text-sm">{t(`faqA${selectedFaq}`)}</p>
           </div>
-          <button onClick={() => setView('faq')} className="back-button">
-            {t('back')}
-          </button>
+          <button onClick={() => setView('faq')} className="back-button">{t('back')}</button>
         </div>
       )
     }
@@ -486,9 +409,7 @@ export default function AiChatWidget() {
             <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-2xl">
               <p className="text-green-400 text-sm">{t('calcThankYou')}</p>
             </div>
-            <button onClick={() => { setShowCheckoutMessage(false); setView('menu') }} className="back-button">
-              {t('back')}
-            </button>
+            <button onClick={() => { setShowCheckoutMessage(false); setView('menu') }} className="back-button">{t('back')}</button>
           </div>
         )
       }
@@ -501,20 +422,10 @@ export default function AiChatWidget() {
               <label
                 key={feature.id}
                 className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
-                  feature.disabled
-                    ? 'bg-gray-800/50 opacity-60 cursor-not-allowed'
-                    : selectedFeatures.includes(feature.id)
-                    ? 'bg-violet-600/20 border border-violet-500/30'
-                    : 'bg-gray-800/30 border border-gray-700/30 hover:border-violet-500/30'
+                  feature.disabled ? 'bg-gray-800/50 opacity-60 cursor-not-allowed' : selectedFeatures.includes(feature.id) ? 'bg-violet-600/20 border border-violet-500/30' : 'bg-gray-800/30 border border-gray-700/30 hover:border-violet-500/30'
                 }`}
               >
-                <input
-                  type="checkbox"
-                  checked={selectedFeatures.includes(feature.id)}
-                  onChange={() => toggleFeature(feature.id)}
-                  disabled={feature.disabled}
-                  className="w-4 h-4 accent-violet-500"
-                />
+                <input type="checkbox" checked={selectedFeatures.includes(feature.id)} onChange={() => toggleFeature(feature.id)} disabled={feature.disabled} className="w-4 h-4 accent-violet-500" />
                 <span className="text-sm text-gray-100 flex-1">{feature.name[language]}</span>
               </label>
             ))}
@@ -531,16 +442,8 @@ export default function AiChatWidget() {
             </div>
           </div>
 
-          <button
-            onClick={() => setShowCheckoutMessage(true)}
-            className="menu-button-primary"
-          >
-            {t('calcCheckout')}
-          </button>
-
-          <button onClick={() => setView('menu')} className="back-button">
-            {t('back')}
-          </button>
+          <button onClick={() => setShowCheckoutMessage(true)} className="menu-button-primary">{t('calcCheckout')}</button>
+          <button onClick={() => setView('menu')} className="back-button">{t('back')}</button>
         </div>
       )
     }
@@ -551,12 +454,8 @@ export default function AiChatWidget() {
           <div className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-2xl">
             <p className="text-gray-100 text-sm">{t('trialMessage')}</p>
           </div>
-          <button onClick={() => setView('trial-form')} className="menu-button-primary">
-            {t('trialYes')}
-          </button>
-          <button onClick={() => setView('menu')} className="back-button">
-            {t('back')}
-          </button>
+          <button onClick={() => setView('trial-form')} className="menu-button-primary">{t('trialYes')}</button>
+          <button onClick={() => setView('menu')} className="back-button">{t('back')}</button>
         </div>
       )
     }
@@ -568,31 +467,19 @@ export default function AiChatWidget() {
             <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-2xl">
               <p className="text-green-400 text-sm">{t('trialSuccess')}</p>
             </div>
-            <button onClick={() => { setShowTrialSuccess(false); setView('menu') }} className="back-button">
-              {t('back')}
-            </button>
+            <button onClick={() => { setShowTrialSuccess(false); setView('menu') }} className="back-button">{t('back')}</button>
           </div>
         )
       }
 
       return (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            setShowTrialSuccess(true)
-          }}
-          className="space-y-3"
-        >
+        <form onSubmit={(e) => { e.preventDefault(); setShowTrialSuccess(true) }} className="space-y-3">
           <input type="text" placeholder={t('trialFormName')} required className="form-input" />
           <input type="tel" placeholder={t('trialFormPhone')} required className="form-input" />
           <input type="email" placeholder={t('trialFormEmail')} required className="form-input" />
           <input type="text" placeholder={t('trialFormBusiness')} required className="form-input" />
-          <button type="submit" className="menu-button-primary">
-            {t('trialSubmit')}
-          </button>
-          <button type="button" onClick={() => setView('trial')} className="back-button">
-            {t('back')}
-          </button>
+          <button type="submit" className="menu-button-primary">{t('trialSubmit')}</button>
+          <button type="button" onClick={() => setView('trial')} className="back-button">{t('back')}</button>
         </form>
       )
     }
@@ -603,9 +490,7 @@ export default function AiChatWidget() {
           <div className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-2xl">
             <p className="text-gray-100 text-sm">{t('clientsMessage')}</p>
           </div>
-          <button onClick={() => setView('menu')} className="back-button">
-            {t('back')}
-          </button>
+          <button onClick={() => setView('menu')} className="back-button">{t('back')}</button>
         </div>
       )
     }
@@ -624,9 +509,7 @@ export default function AiChatWidget() {
               </div>
             ))}
           </div>
-          <button onClick={() => setView('menu')} className="back-button mt-4">
-            {t('back')}
-          </button>
+          <button onClick={() => setView('menu')} className="back-button mt-4">{t('back')}</button>
         </div>
       )
     }
@@ -636,18 +519,11 @@ export default function AiChatWidget() {
         <div className="space-y-4">
           <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-2xl">
             <p className="text-gray-100 text-sm mb-3">{t('humanMessage')}</p>
-            <a
-              href="https://wa.me/972544858586"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 rounded-xl text-white text-sm font-medium transition-colors"
-            >
+            <a href="https://wa.me/972544858586" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 rounded-xl text-white text-sm font-medium transition-colors">
               {t('humanWhatsApp')}
             </a>
           </div>
-          <button onClick={() => setView('menu')} className="back-button">
-            {t('back')}
-          </button>
+          <button onClick={() => setView('menu')} className="back-button">{t('back')}</button>
         </div>
       )
     }
@@ -658,6 +534,21 @@ export default function AiChatWidget() {
   return (
     <>
       <style jsx global>{`
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); }
+          50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.7); }
+        }
+        
+        @keyframes border-glow {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.6; }
+        }
+        
+        @keyframes chat-open {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        
         .menu-button {
           width: 100%;
           padding: 12px 16px;
@@ -736,47 +627,6 @@ export default function AiChatWidget() {
           background: #8B5CF6;
           border-radius: 10px;
         }
-        
-        @keyframes border-glow {
-          0%, 100% {
-            opacity: 0.3;
-          }
-          50% {
-            opacity: 0.6;
-          }
-        }
-        
-        @keyframes scaleIn {
-          from {
-            opacity: 0;
-            transform: scale(0.9) translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-        }
-        
-        .chat-window-wrapper {
-          animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        .chat-border {
-          position: relative;
-          background: #0a0a0f;
-          border-radius: 20px;
-        }
-        
-        .chat-border::before {
-          content: '';
-          position: absolute;
-          inset: -1px;
-          border-radius: 21px;
-          background: linear-gradient(135deg, #8B5CF6, #3B82F6, #06B6D4, #8B5CF6);
-          z-index: -1;
-          opacity: 0.5;
-          animation: border-glow 4s ease-in-out infinite;
-        }
       `}</style>
 
       {/* Floating Button */}
@@ -785,79 +635,127 @@ export default function AiChatWidget() {
           onClick={() => setIsOpen(true)}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          className="fixed bottom-6 right-6 z-[999] transition-transform duration-300"
           style={{
+            position: 'fixed',
+            right: '24px',
+            bottom: '24px',
+            zIndex: 999,
+            cursor: 'pointer',
+            border: 'none',
+            background: 'transparent',
+            padding: 0,
             transform: isHovered ? 'scale(1.1)' : 'scale(1)',
-            filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.4))'
+            transition: 'transform 0.3s ease',
+            animation: 'pulse-glow 3s infinite'
           }}
         >
-          <AnimatedOrb size={64} isHovered={isHovered} />
+          <AnimatedOrb isHovered={isHovered} isChatOpen={false} />
         </button>
       )}
 
       {/* Chat Window */}
       {isOpen && (
         <div
-          className={`chat-window-wrapper fixed bottom-6 right-6 z-[1000] ${
-            typeof window !== 'undefined' && window.innerWidth < 768
-              ? 'inset-0 m-0 rounded-none'
-              : 'w-[400px] h-[540px]'
-          }`}
+          style={{
+            position: 'fixed',
+            right: '24px',
+            bottom: '24px',
+            width: '400px',
+            height: '540px',
+            zIndex: 1000,
+            animation: 'chat-open 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
         >
-          <div className={`chat-border h-full flex flex-col overflow-hidden ${
-            typeof window !== 'undefined' && window.innerWidth < 768 ? 'rounded-none' : ''
-          }`}
+          <div
             style={{
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 0 40px rgba(139, 92, 246, 0.15)'
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              background: '#0a0a0f',
+              borderRadius: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
             }}
           >
-            {/* Header */}
-            <div className="p-4 border-b border-violet-500/15 flex items-center justify-between"
+            {/* Gradient border via pseudo-element */}
+            <div
               style={{
+                position: 'absolute',
+                inset: '-1px',
+                borderRadius: '20px',
+                background: 'linear-gradient(135deg, #8B5CF6, #3B82F6, #06B6D4)',
+                zIndex: -1,
+                animation: 'border-glow 4s infinite'
+              }}
+            />
+
+            {/* Header */}
+            <div
+              style={{
+                padding: '16px',
+                borderBottom: '1px solid rgba(139, 92, 246, 0.15)',
+                backdropFilter: 'blur(12px)',
                 background: 'rgba(10, 10, 15, 0.95)',
-                backdropFilter: 'blur(12px)'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
               }}
             >
-              <div className="flex items-center gap-3">
-                <div style={{ transform: 'scale(0.625)' }}>
-                  <AnimatedOrb size={64} isChatOpen={true} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div onClick={() => setIsOpen(false)} style={{ cursor: 'pointer' }}>
+                  <AnimatedOrb isHovered={false} isChatOpen={true} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">Amber AI</p>
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-green-400">{t('online')}</span>
+                  <p style={{ fontSize: '14px', fontWeight: 'bold', color: 'white', margin: 0 }}>Amber AI</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }} />
+                    <span style={{ fontSize: '10px', color: '#10B981' }}>{t('online')}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {/* Language Selector */}
-                <div className="flex gap-1">
-                  {(['he', 'ru', 'en'] as Language[]).map(lang => (
-                    <button
-                      key={lang}
-                      onClick={() => setLanguage(lang)}
-                      className={`text-lg transition-opacity ${
-                        language === lang ? 'opacity-100' : 'opacity-40 hover:opacity-70'
-                      }`}
-                    >
-                      {lang === 'he' ? '🇮🇱' : lang === 'ru' ? '🇷🇺' : '🇬🇧'}
-                    </button>
-                  ))}
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {(['he', 'ru', 'en'] as Language[]).map(lang => (
+                  <button
+                    key={lang}
+                    onClick={() => setLanguage(lang)}
+                    style={{
+                      fontSize: '18px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      opacity: language === lang ? 1 : 0.4,
+                      transition: 'opacity 0.2s'
+                    }}
+                  >
+                    {lang === 'he' ? '🇮🇱' : lang === 'ru' ? '🇷🇺' : '🇬🇧'}
+                  </button>
+                ))}
 
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-gray-800/50 rounded-lg transition-colors"
+                  style={{
+                    padding: '8px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    borderRadius: '8px',
+                    transition: 'background 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                  <X className="w-5 h-5 text-gray-400" />
+                  <X style={{ width: '20px', height: '20px', color: '#9CA3AF' }} />
                 </button>
               </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar" dir={dir}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }} dir={dir} className="custom-scrollbar">
               {renderContent()}
             </div>
           </div>

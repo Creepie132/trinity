@@ -292,7 +292,7 @@ function AnimatedOrb({ size = 64, isHovered = false, isChatOpen = false }: { siz
       { color: '#A78BFA', opacity: 0.3, speed: 0.0015, offset: Math.PI }
     ]
 
-    const draw = (time: number) => {
+    const draw = (time: number = 0) => {
       ctx.clearRect(0, 0, size, size)
 
       // Clip to circle

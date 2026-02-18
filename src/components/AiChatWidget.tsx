@@ -64,10 +64,10 @@ export default function AiChatWidget() {
         <div
           style={{
             position: 'fixed',
-            bottom: '104px',
+            bottom: '126px',
             right: '24px',
             width: '380px',
-            maxHeight: 'calc(100vh - 130px)',
+            maxHeight: 'calc(100vh - 152px)',
             zIndex: 1000,
             animation: 'chat-open 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
           }}

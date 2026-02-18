@@ -23,8 +23,8 @@ const translations: Record<string, Record<Language, string>> = {
 
 function GlowingOrb({ isHovered, isChatOpen }: { isHovered: boolean; isChatOpen: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const rafRef = useRef<number>()
-  const startTimeRef = useRef(Date.now())
+  const rafRef = useRef<number | undefined>(undefined)
+  const startTimeRef = useRef<number>(Date.now())
 
   useEffect(() => {
     const canvas = canvasRef.current

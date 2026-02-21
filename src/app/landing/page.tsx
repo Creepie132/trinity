@@ -667,9 +667,9 @@ export default function LandingPage() {
         }`}
       >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-16 gap-8">
             {/* Logo */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3" style={{ flexShrink: 0, paddingRight: '40px' }}>
               <img
                 src="/logo.png"
                 alt="Amber Solutions Logo"
@@ -677,15 +677,18 @@ export default function LandingPage() {
               />
               {/* Hide text on mobile, show on desktop */}
               <span 
-                className={`hidden md:block text-lg font-bold whitespace-nowrap transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}
-                style={{ fontFamily: language === 'he' ? 'Assistant, system-ui, sans-serif' : 'Inter, system-ui, sans-serif' }}
+                className={`hidden md:block text-lg whitespace-nowrap transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}
+                style={{ 
+                  fontFamily: language === 'he' ? 'Assistant, system-ui, sans-serif' : 'Inter, system-ui, sans-serif',
+                  fontWeight: 500
+                }}
               >
                 Amber Solutions Systems
               </span>
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-6 lg:gap-8 mx-auto" style={{ fontFamily: language === 'he' ? 'Assistant, system-ui, sans-serif' : 'Inter, system-ui, sans-serif' }}>
+            <div className="hidden md:flex items-center gap-8" style={{ fontFamily: language === 'he' ? 'Assistant, system-ui, sans-serif' : 'Inter, system-ui, sans-serif' }}>
               <a
                 href="#about"
                 className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
@@ -731,7 +734,7 @@ export default function LandingPage() {
             </div>
 
             {/* Language Switcher & Login */}
-            <div className="flex items-center gap-2 md:gap-4" style={{ marginLeft: '32px' }}>
+            <div className="flex items-center gap-2 md:gap-4" style={{ flexShrink: 0 }}>
               {/* Prism login button - compact on mobile */}
               <div className="hidden md:block">
                 <PrismButton href="/login">

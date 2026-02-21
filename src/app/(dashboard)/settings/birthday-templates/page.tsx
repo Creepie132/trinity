@@ -71,38 +71,37 @@ export default function BirthdayTemplatesPage() {
 
     setSaving(true)
     try {
-      // Get current settings and features
+      // Get current features
       const { data: currentData } = await supabase
         .from('organizations')
-        .select('settings, features')
+        .select('features')
         .eq('id', orgId)
         .single()
 
-      const currentSettings = currentData?.settings || {}
       const currentFeatures = currentData?.features || {}
 
-      // Update with new templates and SMS settings
+      // Update features with birthday settings
       const { error } = await supabase
         .from('organizations')
         .update({
-          settings: {
-            ...currentSettings,
-            birthday_templates: templates
-          },
           features: {
             ...currentFeatures,
+            birthday_templates: templates,
             birthday_sms_enabled: birthdaySmsEnabled,
             birthday_message: birthdayMessage
           }
         })
         .eq('id', orgId)
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
 
       toast.success(t('settings.saved'))
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving birthday templates:', error)
-      toast.error(t('settings.saveFailed'))
+      toast.error(t('settings.saveFailed') + ': ' + (error.message || ''))
     } finally {
       setSaving(false)
     }

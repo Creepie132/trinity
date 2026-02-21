@@ -18,7 +18,7 @@ export const createVisitSchema = z.object({
   serviceId: z.string().optional(), // UUID или текст
   date: z.string().min(1),
   time: z.string().min(1),
-  duration: z.string().optional(),
+  duration: z.coerce.number().int().min(1).max(480).optional(),
   price: z.string().min(1), // Приходит как строка
   notes: z.string().max(2000).optional().or(z.literal("")),
 })

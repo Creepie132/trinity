@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       client_id: clientId,
       org_id: org_id,
       scheduled_at: scheduled_at,
-      duration_minutes: parseInt(duration || "60"),
+      duration_minutes: typeof duration === 'number' ? duration : parseInt(duration || "60"),
       price: parseFloat(price),
       notes: notes || null,
       status: 'scheduled',

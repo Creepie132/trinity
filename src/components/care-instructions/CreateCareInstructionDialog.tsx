@@ -43,13 +43,21 @@ export function CreateCareInstructionDialog({ open, onOpenChange }: CreateCareIn
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title.trim() || !formData.content.trim()) {
+    if (!formData.title.trim()) {
       toast.error(t('common.required'));
       return;
     }
 
+    // Content is optional if file is uploaded
+    // Auto-fill content with title if empty
+    const dataToSubmit = {
+      ...formData,
+      content: formData.content.trim() || formData.title,
+      content_ru: formData.content_ru?.trim() || formData.title_ru || formData.title,
+    }
+
     try {
-      await createInstruction.mutateAsync(formData);
+      await createInstruction.mutateAsync(dataToSubmit);
 
       toast.success(t('careInstructions.created'));
       onOpenChange(false);

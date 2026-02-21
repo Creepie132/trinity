@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { MessageCircle, X, ArrowRight, ArrowLeft, Check } from 'lucide-react'
 
 type Language = 'he' | 'ru' | 'en'
-type Screen = 'menu' | 'faq' | 'answer' | 'builder' | 'terminal' | 'terminal-tap' | 'terminal-physical' | 'summary'
+type Screen = 'menu' | 'faq' | 'answer' | 'builder' | 'terminal' | 'terminal-tap' | 'terminal-physical' | 'summary' | 'services' | 'service-contact'
 type Period = 1 | 3 | 6 | 12
 type TapLicenses = 1 | 3 | 5 | 10
 
@@ -209,7 +209,59 @@ const translations: Record<string, Record<Language, string>> = {
     ru: 'Спасибо за заказ! Наш представитель свяжется с вами в ближайшее время для завершения регистрации.', 
     en: 'Thank you for your order! Our representative will contact you soon to complete the registration.' 
   },
-  summaryPhoneEmail: { he: 'טלפון או Email', ru: 'Телефон или Email', en: 'Phone or Email' }
+  summaryPhoneEmail: { he: 'טלפון או Email', ru: 'Телефон или Email', en: 'Phone or Email' },
+  
+  // Additional Services
+  servicesTitle: { he: 'שירותים נוספים', ru: 'Дополнительные услуги', en: 'Additional Services' },
+  serviceWeb: { he: 'פיתוח אתרים', ru: 'Разработка Web-сайтов', en: 'Web Development' },
+  serviceWebDesc: { 
+    he: 'אתרים מותאמים אישית לעסקים, חנויות אונליין ודפי נחיתה', 
+    ru: 'Индивидуальные сайты для бизнеса, онлайн-магазины и лендинги', 
+    en: 'Custom websites for businesses, online stores and landing pages' 
+  },
+  serviceBots: { he: 'בוטים חכמים (WhatsApp & Telegram)', ru: 'AI-боты (WhatsApp & Telegram)', en: 'AI Bots (WhatsApp & Telegram)' },
+  serviceBotsDesc: { 
+    he: 'אוטומציה של תקשורת עם לקוחות 24/7', 
+    ru: 'Автоматизация коммуникации с клиентами 24/7', 
+    en: 'Automate client communication 24/7' 
+  },
+  serviceLanding: { he: 'דפי נחיתה מכירתיים', ru: 'Продающие лендинги', en: 'Sales Landing Pages' },
+  serviceLandingDesc: { 
+    he: 'דפי נחיתה ממירים שמביאים לקוחות חדשים', 
+    ru: 'Конверсионные лендинги, которые приводят новых клиентов', 
+    en: 'Converting landing pages that bring new clients' 
+  },
+  serviceTurnkey: { he: 'ארכיטקטורה דיגיטלית \'מפתח\'', ru: 'Цифровая архитектура «под ключ»', en: 'Digital Architecture \'Turnkey\'' },
+  serviceTurnkeyDesc: { 
+    he: 'פרויקטים מותאמים אישית בהתאם לצרכים שלך', 
+    ru: 'Индивидуальные проекты по согласованию', 
+    en: 'Custom projects tailored to your needs' 
+  },
+  serviceContactTitle: { 
+    he: 'תודה על ההתעניינות! נציג שלנו יצור איתך קשר. השאר את הפרטים שלך:', 
+    ru: 'Спасибо за интерес! Наш специалист свяжется с вами. Оставьте ваши данные:', 
+    en: 'Thanks for your interest! Our specialist will contact you. Leave your details:' 
+  },
+  serviceContactName: { he: 'שם מלא', ru: 'Полное имя', en: 'Full Name' },
+  serviceContactPhone: { he: 'טלפון', ru: 'Телефон', en: 'Phone' },
+  serviceContactSend: { he: 'שלח', ru: 'Отправить', en: 'Send' },
+  serviceContactSuccess: { 
+    he: 'תודה! נציג שלנו יצור איתך קשר בקרוב.', 
+    ru: 'Спасибо! Наш специалист свяжется с вами в ближайшее время.', 
+    en: 'Thank you! Our specialist will contact you soon.' 
+  },
+  
+  // Human Operator
+  operatorWaiting: { 
+    he: 'הבקשה שלך נשלחה לנציג. המתן לתשובה, נעדכן אותך כאן.', 
+    ru: 'Ваш запрос отправлен специалисту. Ожидайте ответа, мы уведомим вас здесь.', 
+    en: 'Your request has been sent to a specialist. Please wait, we\'ll notify you here.' 
+  },
+  operatorReply: { 
+    he: 'נציג יענה בהקדם', 
+    ru: 'Оператор ответит в ближайшее время', 
+    en: 'Operator will reply soon' 
+  }
 }
 
 const faqData: Record<string, { question: Record<Language, string>, answer: Record<Language, string> }> = {
@@ -304,6 +356,12 @@ export default function AiChatWidget() {
   const [physicalTerminalCount, setPhysicalTerminalCount] = useState(1)
   const [customTerminalCount, setCustomTerminalCount] = useState('')
   
+  // Additional services
+  const [selectedService, setSelectedService] = useState<string | null>(null)
+  const [contactName, setContactName] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
+  const [operatorRequestSent, setOperatorRequestSent] = useState(false)
+  
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Auto-detect language from HTML lang attribute
@@ -349,6 +407,10 @@ export default function AiChatWidget() {
       setTapLicenses(1)
       setPhysicalTerminalCount(1)
       setCustomTerminalCount('')
+      setSelectedService(null)
+      setContactName('')
+      setContactPhone('')
+      setOperatorRequestSent(false)
     }
   }, [isOpen])
 
@@ -379,6 +441,10 @@ export default function AiChatWidget() {
     setTapLicenses(1)
     setPhysicalTerminalCount(1)
     setCustomTerminalCount('')
+    setSelectedService(null)
+    setContactName('')
+    setContactPhone('')
+    setOperatorRequestSent(false)
   }
 
   const toggleModule = (moduleId: string) => {
@@ -465,6 +531,17 @@ export default function AiChatWidget() {
           from {
             opacity: 0;
             transform: translateY(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
           }
           to {
             opacity: 1;
@@ -707,6 +784,7 @@ export default function AiChatWidget() {
                       onClick={() => {
                         if (key === 'menuFaq') handleFaqClick()
                         if (key === 'menuBuilder') handleBuilderClick()
+                        if (key === 'menuServices') setScreen('services')
                       }}
                       style={{
                         padding: '14px 16px',
@@ -735,7 +813,25 @@ export default function AiChatWidget() {
 
                   {/* Human contact button */}
                   <button
-                    onClick={() => setShowInput(true)}
+                    onClick={async () => {
+                      setShowInput(true)
+                      setOperatorRequestSent(true)
+                      
+                      // Send notification to operator
+                      try {
+                        await fetch('/api/contact', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            name: 'Чат на лендинге',
+                            email: 'chat@landing',
+                            message: '🔔 Новый запрос из чата на лендинге! Клиент ждёт ответа.'
+                          })
+                        })
+                      } catch (err) {
+                        console.error('Failed to send operator notification:', err)
+                      }
+                    }}
                     style={{
                       padding: '14px 16px',
                       background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
@@ -1535,6 +1631,229 @@ export default function AiChatWidget() {
                   </button>
                 </div>
               )}
+
+              {/* Additional Services Screen */}
+              {screen === 'services' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Title */}
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'linear-gradient(135deg, rgba(123, 47, 247, 0.08), rgba(200, 80, 192, 0.08))',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(123, 47, 247, 0.1)',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <h3 style={{ color: '#7B2FF7', fontSize: '18px', fontWeight: 700, margin: 0 }}>
+                      {t('servicesTitle')}
+                    </h3>
+                  </div>
+
+                  {/* Service Cards */}
+                  {[
+                    { id: 'web', icon: '🌐', title: 'serviceWeb', desc: 'serviceWebDesc' },
+                    { id: 'bots', icon: '🤖', title: 'serviceBots', desc: 'serviceBotsDesc' },
+                    { id: 'landing', icon: '📄', title: 'serviceLanding', desc: 'serviceLandingDesc' },
+                    { id: 'turnkey', icon: '🔑', title: 'serviceTurnkey', desc: 'serviceTurnkeyDesc' }
+                  ].map(service => (
+                    <div
+                      key={service.id}
+                      onClick={() => {
+                        setSelectedService(service.id)
+                        setScreen('service-contact')
+                      }}
+                      style={{
+                        padding: '16px',
+                        background: '#f8f6ff',
+                        border: '1px solid rgba(123, 47, 247, 0.1)',
+                        borderRadius: '16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#7B2FF7'
+                        e.currentTarget.style.boxShadow = '0 4px 16px rgba(123, 47, 247, 0.15)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'rgba(123, 47, 247, 0.1)'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                    >
+                      <div style={{ fontSize: '32px', marginBottom: '8px', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                        {service.icon}
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#333', marginBottom: '6px', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                        {t(service.title)}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#888', lineHeight: '1.5', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                        {t(service.desc)}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Back to Menu button */}
+                  <button
+                    onClick={handleBackToMenu}
+                    style={{
+                      padding: '14px 16px',
+                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      border: 'none',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
+                    {t('backToMenu')}
+                  </button>
+                </div>
+              )}
+
+              {/* Service Contact Form Screen */}
+              {screen === 'service-contact' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Title */}
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'linear-gradient(135deg, rgba(123, 47, 247, 0.08), rgba(200, 80, 192, 0.08))',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(123, 47, 247, 0.1)'
+                    }}
+                  >
+                    <p style={{ color: '#7B2FF7', fontSize: '14px', fontWeight: 600, margin: 0, lineHeight: '1.6', textAlign: 'center' }}>
+                      {t('serviceContactTitle')}
+                    </p>
+                  </div>
+
+                  {/* Form */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <input
+                      type="text"
+                      placeholder={t('serviceContactName')}
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      style={{
+                        padding: '12px 16px',
+                        border: '1px solid rgba(123, 47, 247, 0.2)',
+                        borderRadius: '12px',
+                        fontSize: '13px',
+                        outline: 'none',
+                        direction: dir,
+                        textAlign: dir === 'rtl' ? 'right' : 'left'
+                      }}
+                    />
+                    <input
+                      type="tel"
+                      placeholder={t('serviceContactPhone')}
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      style={{
+                        padding: '12px 16px',
+                        border: '1px solid rgba(123, 47, 247, 0.2)',
+                        borderRadius: '12px',
+                        fontSize: '13px',
+                        outline: 'none',
+                        direction: dir,
+                        textAlign: dir === 'rtl' ? 'right' : 'left'
+                      }}
+                    />
+                  </div>
+
+                  {/* Send Button */}
+                  <button
+                    onClick={async () => {
+                      if (!contactName || !contactPhone) {
+                        alert(language === 'he' ? 'אנא מלא את כל השדות' : language === 'ru' ? 'Пожалуйста, заполните все поля' : 'Please fill all fields')
+                        return
+                      }
+
+                      try {
+                        const serviceNames = {
+                          web: t('serviceWeb'),
+                          bots: t('serviceBots'),
+                          landing: t('serviceLanding'),
+                          turnkey: t('serviceTurnkey')
+                        }
+
+                        await fetch('/api/contact', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            name: contactName,
+                            email: contactPhone,
+                            message: `Запрос на услугу: ${serviceNames[selectedService as keyof typeof serviceNames] || selectedService}`
+                          })
+                        })
+
+                        alert(t('serviceContactSuccess'))
+                        setContactName('')
+                        setContactPhone('')
+                        handleBackToMenu()
+                      } catch (err) {
+                        console.error('Failed to send contact form:', err)
+                        alert('Error sending request. Please try again.')
+                      }
+                    }}
+                    style={{
+                      padding: '14px 16px',
+                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      border: 'none',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 14px rgba(123, 47, 247, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(123, 47, 247, 0.3)'
+                    }}
+                  >
+                    {t('serviceContactSend')}
+                  </button>
+
+                  {/* Back Button */}
+                  <button
+                    onClick={() => setScreen('services')}
+                    style={{
+                      padding: '12px 16px',
+                      background: '#f5f5f5',
+                      border: '1px solid #e5e5e5',
+                      borderRadius: '12px',
+                      color: '#666',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />} {t('backToMenu')}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ЗОНА 2: Итоговая сумма (sticky, только для builder screen) */}
@@ -1675,14 +1994,33 @@ export default function AiChatWidget() {
 
             {/* ЗОНА 4: Поле ввода (скрыто по умолчанию) */}
             {showInput && (
-              <div
-                style={{
-                  flexShrink: 0,
-                  borderTop: '1px solid rgba(123, 47, 247, 0.1)',
-                  background: '#fafafa',
-                  padding: '16px'
-                }}
-              >
+              <>
+                {/* Operator Waiting Message */}
+                {operatorRequestSent && (
+                  <div
+                    style={{
+                      flexShrink: 0,
+                      padding: '12px 16px',
+                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05))',
+                      borderTop: '1px solid rgba(16, 185, 129, 0.2)',
+                      borderBottom: '1px solid rgba(16, 185, 129, 0.2)'
+                    }}
+                  >
+                    <p style={{ color: '#059669', fontSize: '12px', margin: 0, lineHeight: '1.5', textAlign: 'center' }}>
+                      ✓ {t('operatorWaiting')}
+                    </p>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    flexShrink: 0,
+                    borderTop: operatorRequestSent ? 'none' : '1px solid rgba(123, 47, 247, 0.1)',
+                    background: '#fafafa',
+                    padding: '16px',
+                    animation: 'slideUp 0.3s ease-out'
+                  }}
+                >
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     ref={inputRef}
@@ -1734,6 +2072,7 @@ export default function AiChatWidget() {
                   </button>
                 </div>
               </div>
+              </>
             )}
           </div>
         </div>

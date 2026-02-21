@@ -793,7 +793,7 @@ export default function AiChatWidget() {
 
               {/* Builder Screen */}
               {screen === 'builder' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '220px' }}>
                   {/* Title */}
                   <div
                     style={{
@@ -925,10 +925,17 @@ export default function AiChatWidget() {
                   {/* Total Summary */}
                   <div
                     style={{
+                      position: 'sticky',
+                      bottom: '80px',
                       padding: '16px',
-                      background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(50, 50, 50, 0.95))',
+                      background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.98), rgba(50, 50, 50, 0.98))',
                       borderRadius: '16px',
-                      color: 'white'
+                      color: 'white',
+                      boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.3), 0 4px 24px rgba(200, 146, 42, 0.2)',
+                      backdropFilter: 'blur(10px)',
+                      zIndex: 10,
+                      marginTop: '16px',
+                      border: '1px solid rgba(200, 146, 42, 0.3)'
                     }}
                   >
                     {/* Setup */}
@@ -968,62 +975,80 @@ export default function AiChatWidget() {
                     )}
                   </div>
 
-                  {/* Continue Button */}
-                  <button
+                  {/* Sticky Actions Wrapper */}
+                  <div
                     style={{
-                      padding: '14px 16px',
-                      background: 'linear-gradient(135deg, #C8922A, #FFBF00)',
-                      border: 'none',
-                      borderRadius: '16px',
-                      color: 'white',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      boxShadow: '0 4px 14px rgba(200, 146, 42, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(200, 146, 42, 0.4)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(200, 146, 42, 0.3)'
-                    }}
-                  >
-                    {t('builderContinue')}
-                  </button>
-
-                  {/* Back to Menu button */}
-                  <button
-                    onClick={handleBackToMenu}
-                    style={{
-                      padding: '14px 16px',
-                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
-                      border: 'none',
-                      borderRadius: '16px',
-                      color: 'white',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
+                      position: 'sticky',
+                      bottom: 0,
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = 'none'
+                      flexDirection: 'column',
+                      gap: '12px',
+                      padding: '16px',
+                      background: 'white',
+                      borderTop: '1px solid rgba(123, 47, 247, 0.1)',
+                      marginLeft: '-16px',
+                      marginRight: '-16px',
+                      marginBottom: '-16px',
+                      zIndex: 11
                     }}
                   >
-                    {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
-                    {t('backToMenu')}
-                  </button>
+                    {/* Continue Button */}
+                    <button
+                      style={{
+                        padding: '14px 16px',
+                        background: 'linear-gradient(135deg, #C8922A, #FFBF00)',
+                        border: 'none',
+                        borderRadius: '16px',
+                        color: 'white',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 14px rgba(200, 146, 42, 0.3)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)'
+                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(200, 146, 42, 0.4)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = '0 4px 14px rgba(200, 146, 42, 0.3)'
+                      }}
+                    >
+                      {t('builderContinue')}
+                    </button>
+
+                    {/* Back to Menu button */}
+                    <button
+                      onClick={handleBackToMenu}
+                      style={{
+                        padding: '14px 16px',
+                        background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                        border: 'none',
+                        borderRadius: '16px',
+                        color: 'white',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)'
+                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                    >
+                      {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
+                      {t('backToMenu')}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

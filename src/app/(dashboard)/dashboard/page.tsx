@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
@@ -7,20 +8,21 @@ import { useFeatures } from '@/hooks/useFeatures'
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { Users, Calendar, DollarSign, TrendingUp } from 'lucide-react'
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts'
 import { OnboardingWizard } from '@/components/OnboardingWizard'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+
+const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } = {
+  BarChart: dynamic(() => import('recharts').then(m => ({ default: m.BarChart })), { ssr: false }),
+  Bar: dynamic(() => import('recharts').then(m => ({ default: m.Bar })), { ssr: false }),
+  LineChart: dynamic(() => import('recharts').then(m => ({ default: m.LineChart })), { ssr: false }),
+  Line: dynamic(() => import('recharts').then(m => ({ default: m.Line })), { ssr: false }),
+  XAxis: dynamic(() => import('recharts').then(m => ({ default: m.XAxis })), { ssr: false }),
+  YAxis: dynamic(() => import('recharts').then(m => ({ default: m.YAxis })), { ssr: false }),
+  CartesianGrid: dynamic(() => import('recharts').then(m => ({ default: m.CartesianGrid })), { ssr: false }),
+  Tooltip: dynamic(() => import('recharts').then(m => ({ default: m.Tooltip })), { ssr: false }),
+  ResponsiveContainer: dynamic(() => import('recharts').then(m => ({ default: m.ResponsiveContainer })), { ssr: false }),
+  Cell: dynamic(() => import('recharts').then(m => ({ default: m.Cell })), { ssr: false }),
+}
 
 export default function DashboardPage() {
   const { orgId } = useAuth()
@@ -105,10 +107,30 @@ export default function DashboardPage() {
 
   if (statsLoading || features.isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Загрузка...</p>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Обзор вашего бизнеса</p>
+        </div>
+        
+        {/* Skeleton Loading */}
+        <div className="animate-pulse space-y-6">
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-28 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+            ))}
+          </div>
+          
+          {/* Charts Row Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+          </div>
+          
+          {/* Top Services Skeleton */}
+          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
         </div>
       </div>
     )

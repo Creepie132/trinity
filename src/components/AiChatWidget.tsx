@@ -148,7 +148,6 @@ const translations: Record<string, Record<Language, string>> = {
   },
   menuFaq: { he: '❓ שאלות נפוצות', ru: '❓ Частые вопросы', en: '❓ FAQ' },
   menuBuilder: { he: '🧮 הרכבה מודולרית', ru: '🧮 Модульная сборка', en: '🧮 Modular Builder' },
-  menuTrial: { he: '🎁 נסיון חינם 14 יום', ru: '🎁 Бесплатный тест 14 дней', en: '🎁 Free 14-Day Trial' },
   menuServices: { he: '🚀 שירותים נוספים', ru: '🚀 Другие услуги', en: '🚀 More Services' },
   menuHuman: { he: '👤 לדבר עם נציג אנושי', ru: '👤 Связаться с человеком', en: '👤 Talk to a Human' },
   backToMenu: { he: 'חזרה לתפריט ←', ru: '← Назад в меню', en: '← Back to Menu' },
@@ -778,7 +777,7 @@ export default function AiChatWidget() {
                   </div>
 
                   {/* Menu buttons */}
-                  {['menuFaq', 'menuBuilder', 'menuTrial', 'menuServices'].map(key => (
+                  {['menuFaq', 'menuBuilder', 'menuServices'].map(key => (
                     <button
                       key={key}
                       onClick={() => {

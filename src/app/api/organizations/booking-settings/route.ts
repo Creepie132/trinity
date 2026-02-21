@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
+import { logAudit } from '@/lib/audit'
 
 export async function PATCH(request: Request) {
   try {
@@ -150,6 +151,18 @@ export async function PATCH(request: Request) {
       
       throw error
     }
+
+    // ✅ Audit log
+    await logAudit({
+      org_id: orgId,
+      user_id: user.id,
+      user_email: user.email || '',
+      action: "update",
+      entity_type: "organization",
+      entity_id: orgId,
+      new_data: { booking_settings: dbSettings },
+      ip_address: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(),
+    })
 
     console.log('[BOOKING SETTINGS] Success! Updated org:', data.id)
     return NextResponse.json({ success: true, data })

@@ -4,6 +4,7 @@ import { sendSms } from '@/lib/inforu'
 import { ratelimitStrict, getClientIp } from '@/lib/ratelimit'
 import { validateBody, createSmsSchema } from '@/lib/validations'
 import { requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
+import { logAudit } from '@/lib/audit'
 
 export const dynamic = 'force-dynamic'
 
@@ -159,6 +160,18 @@ export async function POST(request: NextRequest) {
         console.error('Failed to save SMS messages:', messagesError)
       }
     }
+
+    // ✅ Audit log
+    await logAudit({
+      org_id,
+      user_id: authResult.data.user.id,
+      user_email: authResult.data.email,
+      action: "send_sms",
+      entity_type: "sms_campaign",
+      entity_id: campaign.id,
+      new_data: { recipients_count: recipients.length, sent_count, failed_count },
+      ip_address: getClientIp(request),
+    })
 
     return NextResponse.json({
       success: true,

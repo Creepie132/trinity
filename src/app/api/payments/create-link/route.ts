@@ -3,6 +3,8 @@ import { generateTranzillaPaymentLink } from '@/lib/tranzilla'
 import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
 import { rateLimit, PAYMENT_RATE_LIMIT } from '@/lib/rate-limit'
 import { validateBody, createPaymentSchema } from '@/lib/validations'
+import { logAudit } from '@/lib/audit'
+import { getClientIp } from '@/lib/ratelimit'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,6 +115,18 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       console.error('Failed to update payment link:', updateError)
     }
+
+    // ✅ Audit log
+    await logAudit({
+      org_id,
+      user_id: authResult.data.user.id,
+      user_email: authResult.data.email,
+      action: "create",
+      entity_type: "payment",
+      entity_id: payment.id,
+      new_data: { amount, currency: 'ILS', client_id: data.client_id },
+      ip_address: getClientIp(request),
+    })
 
     return NextResponse.json({
       success: true,

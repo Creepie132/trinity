@@ -6,8 +6,14 @@ export const dynamic = 'force-dynamic'
 
 async function sendSMS(phone: string, message: string) {
   const inforuUrl = 'https://api.inforu.co.il/SendMessageXml.ashx'
-  const username = process.env.INFORU_USERNAME!
-  const password = process.env.INFORU_PASSWORD!
+  const username = process.env.INFORU_USERNAME
+  const password = process.env.INFORU_PASSWORD
+
+  // Skip if credentials not configured
+  if (!username || !password) {
+    console.warn('INFORU credentials not configured, skipping SMS')
+    return false
+  }
 
   const xml = `<?xml version="1.0" encoding="utf-8"?>
 <InforuXml>

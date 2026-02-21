@@ -5,8 +5,357 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-16 22:30 UTC  
-**Версия:** 2.30.0
+**Последнее обновление:** 2026-02-21 00:20 UTC  
+**Версия:** 2.31.0
+
+---
+
+## 🔧 ОБНОВЛЕНИЯ v2.31.0 (2026-02-21) - Security Headers & Documentation 🔒
+
+### ✅ 1. HTTP Security Headers Added
+
+**Цель:** Повысить безопасность приложения на уровне HTTP заголовков.
+
+**Файл:** `next.config.ts`
+
+**Добавленные заголовки:**
+```typescript
+async headers() {
+  return [
+    {
+      source: '/(.*)',
+      headers: [
+        { key: 'X-Frame-Options', value: 'DENY' },                    // Защита от clickjacking
+        { key: 'X-Content-Type-Options', value: 'nosniff' },          // Защита от MIME-sniffing
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        { key: 'X-XSS-Protection', value: '1; mode=block' },          // XSS защита (legacy)
+        { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' }, // HSTS
+      ],
+    },
+  ];
+}
+```
+
+**Защита:**
+- ✅ Предотвращение clickjacking атак
+- ✅ Блокировка MIME-type sniffing
+- ✅ Контроль referrer headers
+- ✅ Отключение доступа к камере/микрофону/геолокации
+- ✅ Принудительное использование HTTPS (HSTS)
+
+**Commit:** `8d41fd7` - "security: add HTTP security headers"
+
+---
+
+### ✅ 2. Complete Project Documentation Created
+
+**Цель:** Полная структурированная документация всего проекта в одном файле.
+
+**Новый файл:** `PROJECT_DOCUMENTATION.md` (993 строки, 34KB)
+
+**Содержание:**
+1. **📁 Структура проекта** - дерево директорий и описание
+2. **🔐 Middleware** - логика авторизации, публичные пути, matcher config
+3. **🔌 API Routes** - все 40+ endpoints с описанием:
+   - `/api/admin/*` - управление организациями
+   - `/api/booking/*` - публичное бронирование
+   - `/api/payments/*` - Tranzilla & Stripe
+   - `/api/sms/*` - SMS кампании (Inforu)
+   - `/api/services/*`, `/api/visits/*`, `/api/inventory/*`, etc.
+4. **🗄️ Схема БД** - все 17 таблиц:
+   - organizations, org_users, admin_users
+   - clients, visits, visit_services
+   - payments, services, products, inventory_transactions
+   - sms_campaigns, sms_messages
+   - care_instructions, booking_settings, org_subscriptions
+   - ad_campaigns, landing_settings
+5. **🔒 RLS Policies** - все Row Level Security политики:
+   - Функции: `get_user_org_ids()`, `is_admin()`
+   - Политики для каждой таблицы
+   - Изоляция по организациям
+6. **🔌 Интеграции:**
+   - Supabase (auth, database, storage)
+   - Tranzilla (платежи - Израиль)
+   - Stripe (международные платежи)
+   - Inforu (SMS)
+   - Resend (email)
+   - Lottie Animation (AI chat button)
+7. **🔑 Environment Variables** - все переменные окружения
+8. **📦 Зависимости** - основные npm packages
+9. **🏗️ Архитектура** - multi-tenancy, авторизация, state management
+10. **🚀 Deployment** - Vercel + Supabase setup
+11. **🐛 Известные проблемы** - баги и решения
+12. **📝 Git Workflow** - commit format, репозиторий
+13. **🎯 Roadmap** - планы на будущее
+
+**Использование:**  
+Файл создан для быстрого онбординга новых разработчиков и AI-ассистентов. Содержит всю критическую информацию о проекте.
+
+---
+
+### ✅ 3. AI Chat Button Animation Fixed
+
+**Проблема:** Красные лучи Lottie анимации выходили за пределы круглой кнопки (94×94px).
+
+**Решение:**
+- Уменьшен масштаб всех слоёв анимации на 15%
+- Новые значения: 42.5%, 54.4%, 54.4% (было 50%, 64%, 64%)
+- Создан backup: `public/animations/ai-button.json.backup`
+
+**Файлы:**
+- `public/animations/ai-button.json` - модифицирован
+- `public/animations/ai-button.json.backup` - backup оригинала
+
+**Commit:** `e1f4133` - "Scale down Lottie animation by 15% to fit rays inside button circle"
+
+**Результат:** Анимация полностью влезает в круг, лучи не видны снаружи. ✨
+
+---
+
+### ✅ 4. Middleware JSON Files Fix
+
+**Проблема:** Middleware блокировал `.json` файлы, редиректил на `/login`.  
+- Lottie анимация `ai-button.json` не загружалась (404 → 302 → /login)
+
+**Решение:** Добавлен `.json` в matcher exclusions:
+```typescript
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json)$).*)'],
+}
+```
+
+**Commit:** `0212558` - "fix: middleware blocking .json files"
+
+**Результат:** AI chat button стал видимым на лендинге.
+
+---
+
+### 📊 Текущая структура проекта (2026-02-21)
+
+```
+clientbase-pro/
+├── src/
+│   ├── app/
+│   │   ├── (dashboard)/          # Защищённые страницы
+│   │   │   ├── analytics/
+│   │   │   ├── clients/
+│   │   │   ├── dashboard/
+│   │   │   ├── debug-admin/
+│   │   │   ├── inventory/
+│   │   │   ├── partners/
+│   │   │   ├── payments/
+│   │   │   ├── profile/
+│   │   │   ├── settings/
+│   │   │   ├── settings-new/
+│   │   │   ├── sms/
+│   │   │   ├── stats/
+│   │   │   ├── visits/
+│   │   │   ├── layout.tsx
+│   │   │   └── loading.tsx
+│   │   ├── admin/                # Admin панель
+│   │   │   ├── ads/
+│   │   │   ├── billing/
+│   │   │   ├── organizations/
+│   │   │   ├── settings/
+│   │   │   ├── layout.tsx
+│   │   │   └── page.tsx
+│   │   ├── api/                  # API Routes (40+ endpoints)
+│   │   │   ├── admin/
+│   │   │   ├── ads/
+│   │   │   ├── booking/
+│   │   │   ├── care-instructions/
+│   │   │   ├── contact/
+│   │   │   ├── health/
+│   │   │   ├── inventory/
+│   │   │   ├── org/
+│   │   │   ├── organizations/
+│   │   │   ├── payments/
+│   │   │   ├── products/
+│   │   │   ├── services/
+│   │   │   ├── setup-visits/
+│   │   │   ├── sms/
+│   │   │   ├── upload/
+│   │   │   └── visits/
+│   │   ├── blocked/              # Заблокированная организация
+│   │   ├── book/[slug]/          # Публичное бронирование
+│   │   ├── landing/              # Лендинг с AI chat
+│   │   ├── login/                # Страница входа
+│   │   ├── unauthorized/         # Нет доступа
+│   │   ├── callback/             # OAuth callback
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── error.tsx
+│   │   └── not-found.tsx
+│   ├── components/               # React компоненты (50+ файлов)
+│   │   ├── admin/
+│   │   ├── ads/
+│   │   ├── birthdays/
+│   │   ├── care-instructions/
+│   │   ├── clients/
+│   │   ├── inventory/
+│   │   ├── landing/
+│   │   ├── layout/
+│   │   ├── payments/
+│   │   ├── profile/
+│   │   ├── providers/
+│   │   ├── services/
+│   │   ├── sms/
+│   │   ├── ui/                   # shadcn/ui components
+│   │   ├── user/
+│   │   ├── visits/
+│   │   ├── AiChatWidget.tsx      # AI Chat интеграция
+│   │   ├── ChatButton.tsx        # Lottie анимация
+│   │   └── ErrorBoundary.tsx
+│   ├── contexts/                 # React Contexts
+│   │   ├── AuthContext.tsx       # Авторизация + role
+│   │   ├── LanguageContext.tsx   # i18n (Hebrew/English)
+│   │   └── ThemeContext.tsx      # Dark/Light mode
+│   ├── hooks/                    # Custom hooks (20+ файлов)
+│   │   ├── useAdmin.ts
+│   │   ├── useAdminProfile.ts
+│   │   ├── useAuth.ts
+│   │   ├── useBirthdays.ts
+│   │   ├── useBookings.ts
+│   │   ├── useCareInstructions.ts
+│   │   ├── useClients.ts
+│   │   ├── useFeatures.ts
+│   │   ├── useInventory.ts
+│   │   ├── useIsAdmin.ts
+│   │   ├── useOrganization.ts
+│   │   ├── usePayments.ts
+│   │   ├── usePermissions.ts     # NEW: Role-based permissions
+│   │   ├── useProducts.ts
+│   │   ├── useServices.ts
+│   │   ├── useSms.ts
+│   │   ├── useStats.ts
+│   │   └── useVisitServices.ts
+│   ├── lib/                      # Утилиты и интеграции
+│   │   ├── api-auth.ts           # API auth helpers
+│   │   ├── avatar-upload.ts      # Supabase Storage
+│   │   ├── emails.ts             # Resend email
+│   │   ├── inforu.ts             # SMS integration
+│   │   ├── pdf-generator.ts      # PDF reports
+│   │   ├── rate-limit.ts         # Rate limiting
+│   │   ├── stripe.ts             # Stripe payments
+│   │   ├── supabase-browser.ts   # Client-side Supabase
+│   │   ├── supabase-service.ts   # Server-side Supabase
+│   │   ├── supabase.ts           # Supabase client
+│   │   ├── tranzilla.ts          # Israeli payments
+│   │   └── utils.ts              # General utilities
+│   └── types/                    # TypeScript types
+│       ├── database.ts           # Supabase types
+│       ├── inventory.ts
+│       ├── services.ts
+│       └── visits.ts
+├── supabase/                     # SQL миграции и схемы
+│   ├── migrations/
+│   ├── SCHEMA_EXPORT.sql         # Полная схема БД
+│   ├── TRINITY_V2_TABLES_ONLY.sql # Только таблицы
+│   ├── schema-v2-part1.sql
+│   ├── schema-v2-part2.sql
+│   ├── schema-v2-part3.sql
+│   ├── update-roles.sql          # v2.30.0 migration
+│   ├── fix-organizations-rls.sql
+│   ├── fix-admin-org-users-rls.sql
+│   ├── add-booking.sql
+│   ├── add-admin-roles.sql
+│   ├── create-*.sql              # Отдельные миграции
+│   └── URGENT_FIX_RLS.sql
+├── public/
+│   ├── animations/
+│   │   ├── ai-button.json        # Lottie (4.6MB, масштаб 85%)
+│   │   └── ai-button.json.backup # Backup оригинала
+│   └── ...
+├── middleware.ts                 # Auth + routing
+├── next.config.ts                # Next.js config + security headers
+├── tailwind.config.ts            # Tailwind CSS
+├── tsconfig.json                 # TypeScript config
+├── package.json                  # Dependencies
+├── CLAUDE.md                     # Этот файл (память проекта)
+├── PROJECT_DOCUMENTATION.md      # NEW: Полная документация
+├── supabase-schema.sql           # Legacy schema
+└── README.md                     # Project README
+```
+
+---
+
+### 🔑 Критические файлы для работы
+
+**Авторизация:**
+- `middleware.ts` - проверка сессии на каждом запросе
+- `src/contexts/AuthContext.tsx` - контекст пользователя + role
+- `src/hooks/useAuth.ts` - хук для получения auth данных
+- `src/hooks/usePermissions.ts` - проверка прав по ролям
+
+**База данных:**
+- `supabase/SCHEMA_EXPORT.sql` - полная актуальная схема
+- `src/lib/supabase-service.ts` - server-side queries (RLS bypass)
+- `src/lib/supabase-browser.ts` - client-side queries (RLS enabled)
+
+**API:**
+- `src/app/api/**/*.ts` - все 40+ API routes
+- `src/lib/api-auth.ts` - проверка авторизации в API
+
+**Интеграции:**
+- `src/lib/tranzilla.ts` - Israeli payments (основной)
+- `src/lib/stripe.ts` - International payments
+- `src/lib/inforu.ts` - SMS gateway
+- `src/lib/emails.ts` - Email notifications
+
+**UI:**
+- `src/components/layout/Sidebar.tsx` - навигация (с фильтром по ролям)
+- `src/components/ui/*` - shadcn/ui компоненты
+- `src/components/AiChatWidget.tsx` - AI chat на лендинге
+- `src/components/ChatButton.tsx` - Lottie кнопка
+
+---
+
+### 🐛 Известные проблемы и решения (обновлено)
+
+#### 1. ✅ npm install fails локально (SOLVED)
+**Проблема:** ENOTEMPTY errors, SIGKILL  
+**Решение:** Использовать Vercel для сборки, локально работать без переустановки  
+**Статус:** Vercel билдит без проблем ✅
+
+#### 2. ✅ Middleware блокирует .json файлы (FIXED v2.31.0)
+**Проблема:** Lottie анимации не загружались  
+**Решение:** Добавлен `.json` в matcher exclusions (commit 0212558)  
+**Статус:** Исправлено ✅
+
+#### 3. ✅ Красные лучи вокруг AI кнопки (FIXED v2.31.0)
+**Проблема:** Lottie анимация рисует за пределами границ  
+**Решение:** Уменьшен масштаб всех слоёв на 15% (commit e1f4133)  
+**Статус:** Исправлено ✅
+
+#### 4. ✅ SMS Campaigns Organization Leak (FIXED v2.30.0)
+**Проблема:** Пользователи видели клиентов всех организаций  
+**Решение:** Добавлена фильтрация по org_id во всех hooks  
+**Статус:** Исправлено ✅
+
+#### 5. RLS блокирует публичные эндпоинты
+**Проблема:** Booking page требует auth  
+**Решение:** Отдельные политики для публичного доступа + проверки в API routes  
+**Статус:** Работает ✅
+
+#### 6. Stale auth cookies
+**Проблема:** Невалидные JWT токены вызывают ошибки  
+**Решение:** Try-catch в middleware с очисткой всех `sb-*` cookies  
+**Статус:** Работает ✅
+
+---
+
+### 📝 Последние коммиты (2026-02-21)
+
+```
+8d41fd7 security: add HTTP security headers + PROJECT_DOCUMENTATION.md
+e1f4133 Scale down Lottie animation by 15% to fit rays inside button circle
+9868ecc fix: chat button - clip rays with overflow hidden, remove X overlay
+0212558 fix: middleware blocking .json files
+456d29c Increased button size 72px → 94px (+30%)
+1f772be Adjusted chat window position 104px → 126px
+bfe630e Removed Three.js dependencies from package.json
+```
 
 ---
 

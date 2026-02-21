@@ -125,6 +125,35 @@ async function handleWebhook(request: NextRequest) {
         console.error('[Tranzilla Webhook] Failed to send Telegram notification:', error)
         // Don't fail the webhook if telegram fails
       }
+
+      // Award loyalty points for payment
+      if (existingPayment.client_id) {
+        try {
+          const { data: loyaltySettings } = await supabaseAdmin
+            .from('loyalty_settings')
+            .select('is_enabled, points_per_ils')
+            .eq('org_id', orgId)
+            .single()
+
+          if (loyaltySettings?.is_enabled && loyaltySettings.points_per_ils > 0) {
+            const points = Math.floor(existingPayment.amount * loyaltySettings.points_per_ils)
+            if (points > 0) {
+              await supabaseAdmin.from('loyalty_points').insert({
+                org_id: orgId,
+                client_id: existingPayment.client_id,
+                points,
+                type: 'earn_payment',
+                description: `Оплата ${existingPayment.amount}₪`,
+                reference_id: paymentId,
+              })
+              console.log('[Tranzilla Webhook] Awarded loyalty points:', points)
+            }
+          }
+        } catch (error) {
+          console.error('[Tranzilla Webhook] Loyalty points error (non-critical):', error)
+          // Don't fail the webhook if loyalty fails
+        }
+      }
     }
 
     return NextResponse.json({

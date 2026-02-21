@@ -15,11 +15,14 @@ import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
 import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 import { ClientSummary } from '@/types/database'
 import { Visit } from '@/types/visits'
-import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Clock, ArrowRight, ArrowLeft, Trash2 } from 'lucide-react'
+import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Clock, ArrowRight, ArrowLeft, Trash2, Star, TrendingUp, Minus } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useAuth } from '@/hooks/useAuth'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 interface ClientSheetProps {
   client: ClientSummary | null
@@ -31,12 +34,14 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
   const { t, language } = useLanguage()
   const supabase = createSupabaseBrowserClient()
   const permissions = usePermissions()
-  const { role } = useAuth()
+  const { role, orgId } = useAuth()
   const { data: fullClient } = useClient(client?.id)
   const { data: payments } = usePayments(client?.id)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [visitDialogOpen, setVisitDialogOpen] = useState(false)
   const [gdprDeleteOpen, setGdprDeleteOpen] = useState(false)
+  const [redeemDialogOpen, setRedeemDialogOpen] = useState(false)
+  const [redeemAmount, setRedeemAmount] = useState('')
 
   // Fetch client visits
   const { data: visits = [] } = useQuery({
@@ -61,6 +66,59 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
       return (data || []) as Visit[]
     },
   })
+
+  // Fetch loyalty points
+  const { data: loyaltyData, refetch: refetchLoyalty } = useQuery({
+    queryKey: ['client-loyalty', client?.id, orgId],
+    enabled: !!client?.id && !!orgId,
+    queryFn: async () => {
+      if (!client?.id || !orgId) return { balance: 0, history: [] }
+      
+      const response = await fetch(
+        `/api/loyalty/points?client_id=${client.id}&org_id=${orgId}`
+      )
+      if (!response.ok) throw new Error('Failed to fetch loyalty points')
+      return response.json()
+    },
+  })
+
+  const handleRedeemPoints = async () => {
+    if (!client?.id || !orgId) return
+    if (!redeemAmount || parseFloat(redeemAmount) <= 0) {
+      toast.error('Введите корректное количество баллов')
+      return
+    }
+
+    const points = -Math.abs(parseInt(redeemAmount))
+    if (Math.abs(points) > (loyaltyData?.balance || 0)) {
+      toast.error('Недостаточно баллов')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/loyalty/points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          org_id: orgId,
+          client_id: client.id,
+          points,
+          type: 'redeem',
+          description: `Списание ${Math.abs(points)} баллов`,
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to redeem points')
+
+      toast.success('Баллы списаны!')
+      setRedeemDialogOpen(false)
+      setRedeemAmount('')
+      refetchLoyalty()
+    } catch (error) {
+      console.error('Redeem error:', error)
+      toast.error('Ошибка списания баллов')
+    }
+  }
 
   if (!client) return null
 
@@ -198,12 +256,16 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
 
           {/* Tabs */}
           <Tabs defaultValue="visits" className="w-full">
-            <TabsList className="w-full grid grid-cols-3 bg-gray-700">
+            <TabsList className="w-full grid grid-cols-4 bg-gray-700">
               <TabsTrigger value="visits" className="data-[state=active]:bg-gray-600">
                 {t('clients.visitHistory')}
               </TabsTrigger>
               <TabsTrigger value="payments" className="data-[state=active]:bg-gray-600">
                 {t('clients.payments')}
+              </TabsTrigger>
+              <TabsTrigger value="loyalty" className="data-[state=active]:bg-gray-600">
+                <Star className="w-4 h-4 mr-1" />
+                Баллы
               </TabsTrigger>
               <TabsTrigger value="sms" className="data-[state=active]:bg-gray-600">
                 {t('clients.sms')}
@@ -304,6 +366,73 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
               )}
             </TabsContent>
 
+            <TabsContent value="loyalty" className="mt-4">
+              {/* Loyalty Balance */}
+              <div className="bg-gradient-to-r from-purple-900 to-indigo-900 p-6 rounded-lg mb-4 border border-purple-700">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Star className="w-6 h-6 text-yellow-400" />
+                    <span className="text-lg font-semibold text-gray-100">Баланс баллов</span>
+                  </div>
+                  <div className="text-3xl font-bold text-yellow-400">
+                    {loyaltyData?.balance || 0}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-300">
+                  Накопленные баллы можно использовать для оплаты
+                </p>
+                {(loyaltyData?.balance || 0) > 0 && (
+                  <Button
+                    onClick={() => setRedeemDialogOpen(true)}
+                    variant="outline"
+                    className="mt-4 w-full bg-purple-800 hover:bg-purple-700 border-purple-600"
+                  >
+                    <Minus className="w-4 h-4 mr-2" />
+                    Списать баллы
+                  </Button>
+                )}
+              </div>
+
+              {/* Loyalty History */}
+              {loyaltyData?.history && loyaltyData.history.length > 0 ? (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-gray-200 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" />
+                    История транзакций
+                  </h3>
+                  {loyaltyData.history.map((transaction: any) => (
+                    <div
+                      key={transaction.id}
+                      className="bg-gray-700 p-4 rounded-lg border border-gray-600"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-200">
+                            {transaction.description || transaction.type}
+                          </div>
+                          <div className="text-sm text-gray-400 mt-1">
+                            {format(new Date(transaction.created_at), 'dd/MM/yyyy HH:mm')}
+                          </div>
+                        </div>
+                        <div
+                          className={`text-lg font-bold ${
+                            transaction.points > 0 ? 'text-green-400' : 'text-red-400'
+                          }`}
+                        >
+                          {transaction.points > 0 ? '+' : ''}
+                          {transaction.points}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  История транзакций пуста
+                </div>
+              )}
+            </TabsContent>
+
             <TabsContent value="sms" className="mt-4">
               <div className="text-center text-gray-500 py-8">
                 {t('clients.noSMS')}
@@ -343,6 +472,38 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
         clientId={client.id}
         clientName={`${client.first_name} ${client.last_name}`}
       />
+
+      {/* Redeem Points Dialog */}
+      <Dialog open={redeemDialogOpen} onOpenChange={setRedeemDialogOpen}>
+        <DialogContent className="bg-gray-800 text-gray-100">
+          <DialogHeader>
+            <DialogTitle>Списать баллы</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="redeem-amount">Количество баллов</Label>
+              <Input
+                id="redeem-amount"
+                type="number"
+                value={redeemAmount}
+                onChange={(e) => setRedeemAmount(e.target.value)}
+                placeholder="0"
+                className="bg-gray-700 border-gray-600 mt-2"
+                max={loyaltyData?.balance || 0}
+              />
+              <p className="text-sm text-gray-400 mt-2">
+                Доступно: {loyaltyData?.balance || 0} баллов
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRedeemDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleRedeemPoints}>Списать</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   )
 }

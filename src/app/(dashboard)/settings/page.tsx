@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
-import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText, Calendar, LayoutDashboard, Cake, MessageSquare, Bell } from 'lucide-react'
+import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText, Calendar, LayoutDashboard, Cake, MessageSquare, Bell, Star } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -45,6 +45,13 @@ export default function SettingsPage() {
       icon: Bell,
       title: 'Telegram Notifications / התראות Telegram',
       description: 'Receive instant notifications about bookings and payments',
+    },
+    {
+      id: 'loyalty',
+      href: '/settings/loyalty',
+      icon: Star,
+      title: 'Loyalty Program / תכנית נאמנות',
+      description: 'Configure points rewards and redemption / הגדר תגמול בנקודות ופדיון',
     },
     {
       id: 'templates',

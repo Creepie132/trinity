@@ -162,6 +162,30 @@ export async function POST(request: NextRequest) {
 
     console.log('[API /api/visits POST] Visit created successfully:', visit.id)
 
+    // Award loyalty points for visit
+    try {
+      const { data: loyaltySettings } = await supabase
+        .from('loyalty_settings')
+        .select('is_enabled, points_per_visit')
+        .eq('org_id', org_id)
+        .single()
+
+      if (loyaltySettings?.is_enabled && loyaltySettings.points_per_visit > 0) {
+        await supabase.from('loyalty_points').insert({
+          org_id,
+          client_id: clientId,
+          points: loyaltySettings.points_per_visit,
+          type: 'earn_visit',
+          description: 'Визит',
+          reference_id: visit.id,
+        })
+        console.log('[API /api/visits POST] Awarded loyalty points:', loyaltySettings.points_per_visit)
+      }
+    } catch (error) {
+      console.error('[API /api/visits POST] Loyalty points error (non-critical):', error)
+      // Don't fail the request if loyalty fails
+    }
+
     return NextResponse.json({ visit }, { status: 201 })
   } catch (error: any) {
     console.error('[API /api/visits POST] Exception:', error)

@@ -88,6 +88,7 @@ export async function middleware(req: NextRequest) {
       "/api/payments/webhook",
       "/api/payments/stripe-webhook",
       "/api/payments/tranzila/webhook",
+      "/api/payments/tranzila/success",
       "/api/payments/callback",
       "/api/booking/",
       "/api/contact",

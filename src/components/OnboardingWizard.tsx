@@ -224,6 +224,51 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
 
       if (orgError) throw orgError
 
+      // 4. Create default message templates
+      const defaultTemplates = [
+        {
+          org_id: orgId,
+          name: 'תזכורת תור',
+          content: 'שלום {first_name}! תזכורת: יש לך תור מחר ב-{time}. {org_name}',
+          category: 'reminder',
+          variables: ['{first_name}', '{time}', '{org_name}'],
+          is_active: true,
+        },
+        {
+          org_id: orgId,
+          name: 'יום הולדת',
+          content: '🎂 יום הולדת שמח, {first_name}! {org_name} מאחלת לך הכל טוב!',
+          category: 'birthday',
+          variables: ['{first_name}', '{org_name}'],
+          is_active: true,
+        },
+        {
+          org_id: orgId,
+          name: 'חזרת לקוח',
+          content: 'שלום {first_name}, עברו {days} ימים מהביקור האחרון שלך ב-{org_name}. נשמח לראותך!',
+          category: 'followup',
+          variables: ['{first_name}', '{days}', '{org_name}'],
+          is_active: true,
+        },
+        {
+          org_id: orgId,
+          name: 'מבצע',
+          content: '🔥 מבצע ב-{org_name}! {message}',
+          category: 'promotion',
+          variables: ['{org_name}', '{message}'],
+          is_active: true,
+        },
+      ]
+
+      const { error: templatesError } = await supabase
+        .from('message_templates')
+        .insert(defaultTemplates)
+
+      if (templatesError) {
+        console.warn('Failed to create templates:', templatesError)
+        // Don't fail onboarding if templates fail
+      }
+
       toast.success('Настройка завершена! 🎉')
       router.refresh()
     } catch (error: any) {

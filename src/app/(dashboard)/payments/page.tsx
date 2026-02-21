@@ -15,7 +15,6 @@ import {
 import { Plus, Copy, ExternalLink, Eye, Banknote, CheckCircle, TrendingUp } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
 import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
-import { CreateStripePaymentDialog } from '@/components/payments/CreateStripePaymentDialog'
 import { CreateSubscriptionDialog } from '@/components/payments/CreateSubscriptionDialog'
 import { CreateCashPaymentDialog } from '@/components/payments/CreateCashPaymentDialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -34,7 +33,6 @@ export default function PaymentsPage() {
   const { data: isAdmin } = useIsAdmin()
   const { t } = useLanguage()
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [stripeDialogOpen, setStripeDialogOpen] = useState(false)
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false)
   const [cashDialogOpen, setCashDialogOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
@@ -42,6 +40,7 @@ export default function PaymentsPage() {
   const [clientFilter, setClientFilter] = useState('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [page, setPage] = useState(0)
 
   const { data: payments, isLoading } = usePayments(undefined, {
     status: statusFilter,
@@ -49,6 +48,7 @@ export default function PaymentsPage() {
     clientId: clientFilter !== 'all' ? clientFilter : undefined,
     startDate,
     endDate,
+    page,
   })
   const { data: stats } = usePaymentsStats()
 
@@ -121,15 +121,6 @@ export default function PaymentsPage() {
                 <Plus className="w-4 h-4 ml-2" />
                 {t('payments.createLink')}
               </Button>
-              {isAdmin && (
-                <Button 
-                  onClick={() => setStripeDialogOpen(true)}
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  <Plus className="w-4 h-4 ml-2" />
-                  Stripe
-                </Button>
-              )}
             </>
           )}
           {features.hasSubscriptions && (
@@ -156,7 +147,6 @@ export default function PaymentsPage() {
         <div className="md:hidden">
           <Select onValueChange={(value) => {
             if (value === 'tranzilla') setDialogOpen(true)
-            if (value === 'stripe') setStripeDialogOpen(true)
             if (value === 'subscription') setSubscriptionDialogOpen(true)
             if (value === 'cash') setCashDialogOpen(true)
           }}>
@@ -168,7 +158,6 @@ export default function PaymentsPage() {
               {features.hasPayments && (
                 <>
                   <SelectItem value="tranzilla" className="dark:text-white">{t('payments.createLink')}</SelectItem>
-                  {isAdmin && <SelectItem value="stripe" className="dark:text-white">Stripe</SelectItem>}
                   <SelectItem value="cash" className="dark:text-white">{t('payments.cashPayment')}</SelectItem>
                 </>
               )}
@@ -280,7 +269,6 @@ export default function PaymentsPage() {
                 <SelectItem value="cash" className="text-gray-900 dark:text-white">💵 {t('payments.method.cash')}</SelectItem>
                 <SelectItem value="bit" className="text-gray-900 dark:text-white">📱 {t('payments.method.bit')}</SelectItem>
                 <SelectItem value="credit_card" className="text-gray-900 dark:text-white">💳 {t('payments.method.credit')}</SelectItem>
-                <SelectItem value="stripe" className="text-gray-900 dark:text-white">🟣 Stripe</SelectItem>
                 <SelectItem value="bank_transfer" className="text-gray-900 dark:text-white">🏦 {t('payments.method.bankTransfer')}</SelectItem>
                 <SelectItem value="phone_credit" className="text-gray-900 dark:text-white">📞 {t('payments.method.phoneCredit')}</SelectItem>
               </SelectContent>
@@ -406,11 +394,35 @@ export default function PaymentsPage() {
             </Button>
           </div>
         )}
+        
+        {/* Pagination */}
+        {payments && payments.length > 0 && (
+          <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+            <Button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              variant="outline"
+              className="disabled:opacity-50"
+            >
+              ← {t('common.previous') || 'Назад'}
+            </Button>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {t('common.page') || 'Страница'} {page + 1}
+            </span>
+            <Button
+              onClick={() => setPage(p => p + 1)}
+              disabled={payments.length < 20}
+              variant="outline"
+              className="disabled:opacity-50"
+            >
+              {t('common.next') || 'Вперёд'} →
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Dialogs */}
       <CreatePaymentLinkDialog open={dialogOpen} onOpenChange={setDialogOpen} />
-      <CreateStripePaymentDialog open={stripeDialogOpen} onOpenChange={setStripeDialogOpen} />
       <CreateSubscriptionDialog open={subscriptionDialogOpen} onOpenChange={setSubscriptionDialogOpen} />
       <CreateCashPaymentDialog open={cashDialogOpen} onOpenChange={setCashDialogOpen} />
     </div>

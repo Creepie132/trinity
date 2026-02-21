@@ -43,7 +43,7 @@ export function useDashboardStats() {
         .lte('scheduled_at', lastDay.toISOString())
 
       // Revenue this month (filtered by org_id via clients.org_id)
-      // Use created_at for payments that don't have paid_at (like Stripe)
+      // Use created_at for payments that don't have paid_at
       const { data: paymentsData } = await supabase
         .from('payments')
         .select('amount, created_at, paid_at, clients!inner(org_id)')

@@ -51,7 +51,6 @@ const paymentMethods = [
   { value: 'credit', icon: CreditCard, labelKey: 'visits.paymentMethod.credit', emoji: '💳' },
   { value: 'bankTransfer', icon: Building2, labelKey: 'visits.paymentMethod.bankTransfer', emoji: '🏦' },
   { value: 'phoneCredit', icon: Phone, labelKey: 'visits.paymentMethod.phoneCredit', emoji: '📞' },
-  { value: 'stripe', icon: Zap, labelKey: 'visits.paymentMethod.stripe', emoji: '🟣' },
 ]
 
 export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: CompleteVisitPaymentDialogProps) {
@@ -229,61 +228,6 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
 
         // Open payment link
         window.open(payment_url, '_blank')
-        toast.success(t('payments.successMessage'))
-        
-        // Invalidate queries to refresh data
-        queryClient.invalidateQueries({ queryKey: ['visits'] })
-        queryClient.invalidateQueries({ queryKey: ['payments'] })
-        
-        onOpenChange(false)
-        setSelectedProducts([])
-        return
-      }
-
-      if (paymentMethod === 'stripe') {
-        // Create Stripe checkout
-        const response = await fetch('/api/payments/stripe-checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            clientId: visit.client_id,
-            amount: totalAmount,
-            clientName: `${visit.clients?.first_name} ${visit.clients?.last_name}`,
-            clientEmail: visit.clients?.email || '',
-            orgId,
-          }),
-        })
-
-        if (!response.ok) throw new Error('Failed to create Stripe checkout')
-
-        const { url } = await response.json()
-
-        // Update visit status
-        await supabase
-          .from('visits')
-          .update({ status: 'completed' })
-          .eq('id', visit.id)
-
-        // Create inventory transactions
-        if (selectedProducts.length > 0) {
-          for (const item of selectedProducts) {
-            await fetch('/api/inventory', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                product_id: item.product.id,
-                type: 'sale',
-                quantity: item.quantity,
-                price_per_unit: item.price,
-                total_price: item.price * item.quantity,
-                related_visit_id: visit.id,
-              }),
-            })
-          }
-        }
-
-        // Open Stripe checkout
-        window.open(url, '_blank')
         toast.success(t('payments.successMessage'))
         
         // Invalidate queries to refresh data
@@ -578,8 +522,8 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
               </Select>
             </div>
 
-            {/* Note for credit and stripe */}
-            {(paymentMethod === 'credit' || paymentMethod === 'stripe') && (
+            {/* Note for credit */}
+            {paymentMethod === 'credit' && (
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <p className="text-sm text-blue-800 dark:text-blue-300">
                   💡 {t('payments.sendLinkToClient')}

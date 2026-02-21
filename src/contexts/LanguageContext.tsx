@@ -468,7 +468,6 @@ const translations: Record<Language, Record<string, string>> = {
     'visits.paymentMethod.credit': 'אשראי (Tranzilla)',
     'visits.paymentMethod.bankTransfer': 'העברה בנקאית',
     'visits.paymentMethod.phoneCredit': 'אשראי טלפוני',
-    'visits.paymentMethod.stripe': 'Stripe',
     'visits.processPayment': 'עבד תשלום',
     'visits.processing': 'מעבד...',
     'visits.listView': 'רשימה',
@@ -720,7 +719,6 @@ const translations: Record<Language, Record<string, string>> = {
     'payments.method.cash': 'מזומן',
     'payments.method.bit': 'ביט',
     'payments.method.credit': 'אשראי',
-    'payments.method.stripe': 'Stripe',
     'payments.method.bankTransfer': 'העברה בנקאית',
     'payments.method.phoneCredit': 'אשראי טלפוני',
     
@@ -1343,7 +1341,6 @@ const translations: Record<Language, Record<string, string>> = {
     'visits.paymentMethod.credit': 'Кредитная карта (Tranzilla)',
     'visits.paymentMethod.bankTransfer': 'Банковский перевод',
     'visits.paymentMethod.phoneCredit': 'Телефонная оплата',
-    'visits.paymentMethod.stripe': 'Stripe',
     'visits.processPayment': 'Обработать платёж',
     'visits.processing': 'Обработка...',
     'visits.listView': 'Список',
@@ -1594,7 +1591,6 @@ const translations: Record<Language, Record<string, string>> = {
     'payments.method.cash': 'Наличные',
     'payments.method.bit': 'Bit',
     'payments.method.credit': 'Кредитная карта',
-    'payments.method.stripe': 'Stripe',
     'payments.method.bankTransfer': 'Банковский перевод',
     'payments.method.phoneCredit': 'Телефонная оплата',
     

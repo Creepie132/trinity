@@ -129,7 +129,6 @@ export default function AnalyticsPage() {
       cash: t('payments.method.cash'),
       bit: t('payments.method.bit'),
       credit_card: t('payments.method.credit'),
-      stripe: 'Stripe',
       bank_transfer: t('payments.method.bankTransfer'),
       phone_credit: t('payments.method.phoneCredit'),
       unknown: t('common.notAvailable'),
@@ -246,7 +245,6 @@ export default function AnalyticsPage() {
                 <SelectItem value="cash" className="text-gray-900 dark:text-white">💵 {t('payments.method.cash')}</SelectItem>
                 <SelectItem value="bit" className="text-gray-900 dark:text-white">📱 {t('payments.method.bit')}</SelectItem>
                 <SelectItem value="credit_card" className="text-gray-900 dark:text-white">💳 {t('payments.method.credit')}</SelectItem>
-                <SelectItem value="stripe" className="text-gray-900 dark:text-white">🟣 Stripe</SelectItem>
                 <SelectItem value="bank_transfer" className="text-gray-900 dark:text-white">🏦 {t('payments.method.bankTransfer')}</SelectItem>
                 <SelectItem value="phone_credit" className="text-gray-900 dark:text-white">📞 {t('payments.method.phoneCredit')}</SelectItem>
               </SelectContent>

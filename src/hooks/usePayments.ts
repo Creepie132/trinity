@@ -17,12 +17,16 @@ interface PaymentsFilters {
   clientId?: string
   startDate?: string
   endDate?: string
+  page?: number
 }
 
 export function usePayments(clientId?: string, filters?: PaymentsFilters) {
   return useQuery({
     queryKey: ['payments', clientId, filters],
     queryFn: async () => {
+      const page = filters?.page || 0
+      const pageSize = 20
+
       let query = supabase
         .from('payments')
         .select(`
@@ -35,6 +39,7 @@ export function usePayments(clientId?: string, filters?: PaymentsFilters) {
           )
         `)
         .order('created_at', { ascending: false })
+        .range(page * pageSize, page * pageSize + pageSize - 1)
 
       if (clientId) {
         query = query.eq('client_id', clientId)

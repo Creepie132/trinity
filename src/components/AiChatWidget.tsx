@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { MessageCircle } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { MessageCircle, X } from 'lucide-react'
 
 type Language = 'he' | 'ru' | 'en'
 
@@ -17,6 +17,7 @@ const translations: Record<string, Record<Language, string>> = {
   menuClients: { he: '⭐ מי כבר משתמש במערכת?', ru: '⭐ Кто уже пользуется?', en: '⭐ Who Uses Our System?' },
   menuServices: { he: '🚀 שירותים נוספים', ru: '🚀 Другие услуги', en: '🚀 More Services' },
   menuHuman: { he: '👤 לדבר עם נציג אנושי', ru: '👤 Связаться с человеком', en: '👤 Talk to a Human' },
+  inputPlaceholder: { he: 'כתוב הודעה...', ru: 'Напишите сообщение...', en: 'Type a message...' },
   back: { he: '→ חזרה', ru: '← Назад', en: '← Back' },
   online: { he: 'Online', ru: 'Online', en: 'Online' }
 }
@@ -24,6 +25,38 @@ const translations: Record<string, Record<Language, string>> = {
 export default function AiChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [language, setLanguage] = useState<Language>('he')
+  const [isMobile, setIsMobile] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-detect language from HTML lang attribute
+  useEffect(() => {
+    const htmlLang = document.documentElement.lang || 'he'
+    if (htmlLang.startsWith('he')) {
+      setLanguage('he')
+    } else if (htmlLang.startsWith('ru')) {
+      setLanguage('ru')
+    } else if (htmlLang.startsWith('en')) {
+      setLanguage('en')
+    }
+  }, [])
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 600)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Auto-focus input on desktop when opened
+  useEffect(() => {
+    if (isOpen && !isMobile && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }, [isOpen, isMobile])
 
   const t = (key: string) => translations[key]?.[language] || key
   const dir = language === 'he' ? 'rtl' : 'ltr'
@@ -42,6 +75,17 @@ export default function AiChatWidget() {
           }
         }
         
+        @keyframes chat-open-mobile {
+          from {
+            opacity: 0;
+            transform: translateY(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
         .chat-scrollbar::-webkit-scrollbar {
           width: 4px;
         }
@@ -54,14 +98,32 @@ export default function AiChatWidget() {
           background: rgba(123, 47, 247, 0.3);
           border-radius: 10px;
         }
+
+        /* Prevent mobile keyboard from covering chat */
+        @media (max-width: 600px) {
+          body.chat-open {
+            position: fixed;
+            width: 100%;
+            overflow: hidden;
+          }
+        }
       `}</style>
 
       {/* AI Assistant FAB Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen)
+          if (!isOpen && isMobile) {
+            document.body.classList.add('chat-open')
+          } else {
+            document.body.classList.remove('chat-open')
+          }
+        }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.05)'
-          e.currentTarget.style.boxShadow = '0 6px 20px 0 rgba(0,0,0,0.35)'
+          if (!isMobile) {
+            e.currentTarget.style.transform = 'scale(1.05)'
+            e.currentTarget.style.boxShadow = '0 6px 20px 0 rgba(0,0,0,0.35)'
+          }
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = isOpen ? 'scale(0.95)' : 'scale(1)'
@@ -77,7 +139,7 @@ export default function AiChatWidget() {
           backgroundColor: '#FFBF00',
           border: 'none',
           cursor: 'pointer',
-          display: 'flex',
+          display: isOpen && isMobile ? 'none' : 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           boxShadow: '0 4px 14px 0 rgba(0,0,0,0.25)',
@@ -100,23 +162,24 @@ export default function AiChatWidget() {
         <div
           style={{
             position: 'fixed',
-            bottom: '126px',
-            right: '24px',
-            width: '380px',
-            maxHeight: 'calc(100vh - 152px)',
-            zIndex: 1000,
-            animation: 'chat-open 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+            bottom: isMobile ? '0' : '100px',
+            right: isMobile ? '0' : '24px',
+            width: isMobile ? '100%' : '400px',
+            height: isMobile ? '100%' : '600px',
+            maxHeight: isMobile ? '100vh' : 'calc(100vh - 120px)',
+            zIndex: 10000,
+            animation: isMobile ? 'chat-open-mobile 0.3s cubic-bezier(0.16, 1, 0.3, 1)' : 'chat-open 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
           <div
             style={{
               background: '#ffffff',
-              border: '1px solid rgba(123, 47, 247, 0.15)',
-              borderRadius: '24px',
-              boxShadow: '0 8px 40px rgba(123, 47, 247, 0.12)',
+              border: isMobile ? 'none' : '1px solid rgba(123, 47, 247, 0.15)',
+              borderRadius: isMobile ? '0' : '16px',
+              boxShadow: isMobile ? 'none' : '0 8px 40px rgba(123, 47, 247, 0.12)',
               display: 'flex',
               flexDirection: 'column',
-              maxHeight: 'calc(100vh - 130px)',
+              height: '100%',
               overflow: 'hidden'
             }}
           >
@@ -124,11 +187,12 @@ export default function AiChatWidget() {
             <div
               style={{
                 background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
-                padding: '16px',
-                borderRadius: '24px 24px 0 0',
+                padding: isMobile ? '20px 16px' : '16px',
+                borderRadius: isMobile ? '0' : '16px 16px 0 0',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                flexShrink: 0
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -157,36 +221,67 @@ export default function AiChatWidget() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* Language Switcher with Flags */}
                 {(['he', 'ru', 'en'] as Language[]).map(lang => (
                   <button
                     key={lang}
                     onClick={() => setLanguage(lang)}
                     style={{
-                      fontSize: '18px',
-                      background: 'transparent',
+                      width: '32px',
+                      height: '32px',
+                      fontSize: '16px',
+                      background: language === lang ? 'rgba(255, 255, 255, 0.25)' : 'transparent',
                       border: 'none',
+                      borderRadius: '50%',
                       cursor: 'pointer',
-                      opacity: language === lang ? 1 : 0.5,
-                      transition: 'opacity 0.2s'
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                      opacity: language === lang ? 1 : 0.6
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)'
+                      e.currentTarget.style.opacity = '1'
+                    }}
+                    onMouseLeave={(e) => {
+                      if (language !== lang) {
+                        e.currentTarget.style.background = 'transparent'
+                        e.currentTarget.style.opacity = '0.6'
+                      }
                     }}
                   >
                     {lang === 'he' ? '🇮🇱' : lang === 'ru' ? '🇷🇺' : '🇬🇧'}
                   </button>
                 ))}
 
+                {/* Close Button */}
                 <button
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => {
+                    setIsOpen(false)
+                    document.body.classList.remove('chat-open')
+                  }}
                   style={{
-                    fontSize: '20px',
-                    background: 'transparent',
+                    width: '32px',
+                    height: '32px',
+                    background: 'rgba(255, 255, 255, 0.15)',
                     border: 'none',
+                    borderRadius: '50%',
                     cursor: 'pointer',
                     color: 'white',
-                    padding: '4px',
-                    opacity: 0.9
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'
                   }}
                 >
-                  ✕
+                  <X size={18} />
                 </button>
               </div>
             </div>
@@ -196,9 +291,9 @@ export default function AiChatWidget() {
               className="chat-scrollbar"
               style={{
                 padding: '16px',
-                minHeight: '200px',
-                maxHeight: 'calc(100vh - 230px)',
-                overflowY: 'auto'
+                flex: 1,
+                overflowY: 'auto',
+                overflowX: 'hidden'
               }}
               dir={dir}
             >
@@ -269,6 +364,67 @@ export default function AiChatWidget() {
                   }}
                 >
                   {t('menuHuman')}
+                </button>
+              </div>
+            </div>
+
+            {/* Input Footer */}
+            <div
+              style={{
+                padding: '16px',
+                borderTop: '1px solid rgba(123, 47, 247, 0.1)',
+                background: '#fafafa',
+                flexShrink: 0
+              }}
+            >
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder={t('inputPlaceholder')}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    border: '1px solid rgba(123, 47, 247, 0.2)',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    transition: 'all 0.2s',
+                    direction: dir,
+                    textAlign: dir === 'rtl' ? 'right' : 'left'
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#7B2FF7'
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(123, 47, 247, 0.1)'
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(123, 47, 247, 0.2)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                />
+                <button
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                    border: 'none',
+                    borderRadius: '12px',
+                    color: 'white',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                  }}
+                >
+                  ➤
                 </button>
               </div>
             </div>

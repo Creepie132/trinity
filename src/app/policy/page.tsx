@@ -214,6 +214,14 @@ export default function PolicyPage() {
 
             <hr className="border-white/20 my-8" />
 
+            <h2 className="text-2xl font-bold mt-12 mb-4">3. Плата за установку (Setup Fee)</h2>
+            <p className="mb-4">3.1 Плата за установку отражает фактическую работу по настройке, адаптации и конфигурации системы для Клиента.</p>
+            <p className="mb-4">3.2 Если Клиент отменил сделку в течение 14 дней и до начала фактической работы по настройке, плата за установку возвращается в полном объёме (за вычетом платы за отмену, указанной в пункте 1.2).</p>
+            <p className="mb-4">3.3 <strong>Если работа по настройке уже началась или была завершена</strong>, плата за установку <strong>не подлежит возврату</strong>, так как речь идёт об услуге, фактически оказанной и не подлежащей возврату в соответствии с разделом 14ה(ב)(1) Закона.</p>
+            <p className="mb-4">3.4 <strong>Конфигурация модулей считается выполненной</strong>, если система была настроена под требования Клиента, включая активацию модулей, импорт данных или персонализацию интерфейса.</p>
+
+            <hr className="border-white/20 my-8" />
+
             <h2 className="text-2xl font-bold mt-12 mb-4">9. Жалобы и обращения</h2>
             <p className="mb-4">9.1 По любым вопросам, уточнениям или жалобам, касающимся отмены и возврата средств, обращайтесь:</p>
             <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-6 mt-4 mb-4">
@@ -258,6 +266,14 @@ export default function PolicyPage() {
             <p className="mb-4">2.1 After 14 days from the transaction date, the Client may cancel the subscription at any time with 14 days&apos; advance notice.</p>
             <p className="mb-4">2.2 <strong>Monthly subscription:</strong> Cancellation takes effect at the end of the current billing period. No refund for the already paid month.</p>
             <p className="mb-4">2.3 <strong>Period subscription (3, 6, or 12 months):</strong> The Client will be charged for the months actually used at the full monthly price (without period discount), plus a cancellation fee of 5% of the total transaction value or 100 new shekels, whichever is lower. The balance will be refunded to the Client.</p>
+
+            <hr className="border-white/20 my-8" />
+
+            <h2 className="text-2xl font-bold mt-12 mb-4">3. Setup Fee</h2>
+            <p className="mb-4">3.1 The setup fee reflects actual work performed in configuring, adapting, and customizing the system for the Client.</p>
+            <p className="mb-4">3.2 If the Client cancelled the transaction within 14 days and before actual configuration work began, the setup fee will be refunded in full (minus the cancellation fee mentioned in section 1.2).</p>
+            <p className="mb-4">3.3 <strong>If configuration work has already started or been completed</strong>, the setup fee is <strong>non-refundable</strong>, as it represents a service actually performed and non-returnable in accordance with section 14ה(ב)(1) of the Law.</p>
+            <p className="mb-4">3.4 <strong>Module configuration is considered complete</strong> if the system has been customized to the Client&apos;s requirements, including module activation, data import, or interface personalization.</p>
 
             <hr className="border-white/20 my-8" />
 

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { parseTranzillaWebhook } from '@/lib/tranzilla'
+import { sendTelegramMessage } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,7 +44,7 @@ async function handleWebhook(request: NextRequest) {
     // 1) Find payment and its org_id
     const { data: existingPayment, error: findError } = await supabaseAdmin
       .from('payments')
-      .select('id, org_id, amount')
+      .select('id, org_id, amount, client_id, method')
       .eq('id', paymentId)
       .single()
 
@@ -86,6 +87,45 @@ async function handleWebhook(request: NextRequest) {
     }
 
     console.log('[Tranzilla Webhook] Payment updated successfully')
+
+    // Send Telegram notification for successful payment
+    if (parsed.success && updateData.status === 'completed') {
+      try {
+        // Get organization with telegram settings
+        const { data: org } = await supabaseAdmin
+          .from('organizations')
+          .select('telegram_chat_id, telegram_notifications')
+          .eq('id', orgId)
+          .single()
+
+        if (org?.telegram_notifications && org.telegram_chat_id) {
+          // Get client name
+          let clientName = 'Клиент'
+          if (existingPayment.client_id) {
+            const { data: client } = await supabaseAdmin
+              .from('clients')
+              .select('first_name, last_name')
+              .eq('id', existingPayment.client_id)
+              .single()
+
+            if (client) {
+              clientName = `${client.first_name} ${client.last_name}`.trim()
+            }
+          }
+
+          const method = existingPayment.method === 'card' ? 'Карта' : 
+                        existingPayment.method === 'cash' ? 'Наличные' : 
+                        existingPayment.method === 'bank_transfer' ? 'Перевод' : 
+                        'Другое'
+
+          const telegramMessage = `💰 <b>Оплата ${existingPayment.amount}₪</b>\n\n👤 От: ${clientName}\n💳 Способ: ${method}`
+          await sendTelegramMessage(org.telegram_chat_id, telegramMessage)
+        }
+      } catch (error) {
+        console.error('[Tranzilla Webhook] Failed to send Telegram notification:', error)
+        // Don't fail the webhook if telegram fails
+      }
+    }
 
     return NextResponse.json({
       success: true,

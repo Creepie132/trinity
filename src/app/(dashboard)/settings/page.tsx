@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
-import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText, Calendar, LayoutDashboard, Cake, MessageSquare } from 'lucide-react'
+import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText, Calendar, LayoutDashboard, Cake, MessageSquare, Bell } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -38,6 +38,13 @@ export default function SettingsPage() {
       icon: Calendar,
       title: t('settings.booking'),
       description: t('settings.booking.desc'),
+    },
+    {
+      id: 'notifications',
+      href: '/settings/notifications',
+      icon: Bell,
+      title: 'Telegram Notifications / התראות Telegram',
+      description: 'Receive instant notifications about bookings and payments',
     },
     {
       id: 'templates',

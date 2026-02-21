@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ratelimitPublic, getClientIp } from '@/lib/ratelimit'
 import { validateBody, createBookingSchema } from '@/lib/validations'
+import { sendTelegramMessage } from '@/lib/telegram'
 
 // Public API - no auth required
 export async function POST(
@@ -58,7 +59,7 @@ export async function POST(
     // Find organization
     const { data: org, error: orgError } = await supabase
       .from('organizations')
-      .select('id, name, booking_settings')
+      .select('id, name, booking_settings, telegram_chat_id, telegram_notifications')
       .eq('slug', slug)
       .maybeSingle()
 
@@ -177,6 +178,17 @@ export async function POST(
     }
 
     console.log('[Booking Book API] Booking created successfully:', booking.id)
+
+    // Send Telegram notification
+    if (org.telegram_notifications && org.telegram_chat_id) {
+      const date = new Date(scheduled_at).toLocaleDateString('he-IL')
+      const time = new Date(scheduled_at).toLocaleTimeString('he-IL', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      const telegramMessage = `📅 <b>Новая запись!</b>\n\n👤 ${client_name}\n💼 ${service_name}\n📅 ${date}\n🕐 ${time}`
+      await sendTelegramMessage(org.telegram_chat_id, telegramMessage)
+    }
 
     // Check if client exists, create if not
     const { data: existingClient } = await supabase

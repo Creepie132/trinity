@@ -39,6 +39,8 @@ import {
 import AdBanner from '@/components/ads/AdBanner'
 import BirthdayPopup from '@/components/birthdays/BirthdayPopup'
 import { useTodayBirthdays } from '@/hooks/useBirthdays'
+import { OnboardingWizard } from '@/components/OnboardingWizard'
+import { useQuery } from '@tanstack/react-query'
 
 type WidgetId =
   | 'visits_month'
@@ -82,6 +84,36 @@ export default function DashboardPage() {
     topClients: true
   })
   const [showBirthdayPopup, setShowBirthdayPopup] = useState(false)
+
+  // Check if onboarding is needed
+  const { data: onboardingData } = useQuery({
+    queryKey: ['onboarding-check', orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      if (!orgId) return { showOnboarding: false, organizationName: '' }
+
+      // Check organization features
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('name, features')
+        .eq('id', orgId)
+        .single()
+
+      // Check if services exist
+      const { data: services, count } = await supabase
+        .from('services')
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', orgId)
+
+      const onboardingCompleted = org?.features?.onboarding_completed ?? false
+      const hasServices = (count || 0) > 0
+
+      return {
+        showOnboarding: !onboardingCompleted || !hasServices,
+        organizationName: org?.name || '',
+      }
+    },
+  })
 
   // Check organization status
   useEffect(() => {
@@ -529,6 +561,14 @@ export default function DashboardPage() {
         <BirthdayPopup
           clients={birthdayClients}
           onClose={() => setShowBirthdayPopup(false)}
+        />
+      )}
+
+      {/* Onboarding Wizard */}
+      {onboardingData?.showOnboarding && (
+        <OnboardingWizard
+          open={true}
+          organizationName={onboardingData.organizationName}
         />
       )}
 

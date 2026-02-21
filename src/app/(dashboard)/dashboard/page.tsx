@@ -105,36 +105,7 @@ export default function DashboardPage() {
     },
   })
 
-  if (statsLoading || features.isLoading) {
-    return (
-      <div className="space-y-6 p-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Обзор вашего бизнеса</p>
-        </div>
-        
-        {/* Skeleton Loading */}
-        <div className="animate-pulse space-y-6">
-          {/* Stats Cards Skeleton */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-28 bg-gray-200 dark:bg-gray-700 rounded-xl" />
-            ))}
-          </div>
-          
-          {/* Charts Row Skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
-            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
-          </div>
-          
-          {/* Top Services Skeleton */}
-          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
-        </div>
-      </div>
-    )
-  }
+  const isLoading = statsLoading || features.isLoading
 
   const statCards = [
     {
@@ -173,7 +144,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
+      {/* Header - ALWAYS RENDERS IMMEDIATELY */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
@@ -181,129 +152,152 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statCards.map((card, index) => {
-          const Icon = card.icon
-          return (
-            <Card
-              key={index}
-              className="bg-[#111827] border-gray-800 hover:border-gray-700 transition-all duration-200 hover:shadow-lg"
-            >
+      {isLoading ? (
+        // Skeleton Loading
+        <div className="animate-pulse space-y-6">
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-28 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+            ))}
+          </div>
+          
+          {/* Charts Row Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+          </div>
+          
+          {/* Top Services Skeleton */}
+          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+        </div>
+      ) : (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {statCards.map((card, index) => {
+              const Icon = card.icon
+              return (
+                <Card
+                  key={index}
+                  className="bg-[#111827] border-gray-800 hover:border-gray-700 transition-all duration-200 hover:shadow-lg"
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-400 mb-1">{card.title}</p>
+                        <p className="text-3xl font-bold text-white">{card.value}</p>
+                      </div>
+                      <div className={`p-3 rounded-xl ${card.bgColor}`}>
+                        <Icon className={`w-6 h-6 ${card.iconColor}`} />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+
+          {/* Charts Row 1 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Revenue Chart */}
+            <Card className="bg-[#111827] border-gray-800">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-400 mb-1">{card.title}</p>
-                    <p className="text-3xl font-bold text-white">{card.value}</p>
-                  </div>
-                  <div className={`p-3 rounded-xl ${card.bgColor}`}>
-                    <Icon className={`w-6 h-6 ${card.iconColor}`} />
-                  </div>
-                </div>
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Выручка за последние 7 дней
+                </h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={revenueData}>
+                    <defs>
+                      <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#a855f7" stopOpacity={0.8} />
+                        <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.4} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="day" stroke="#9ca3af" />
+                    <YAxis stroke="#9ca3af" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1f2937',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff',
+                      }}
+                      formatter={(value: any) => [`₪${value}`, 'Выручка']}
+                    />
+                    <Bar dataKey="amount" fill="url(#revenueGradient)" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
-          )
-        })}
-      </div>
 
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
-        <Card className="bg-[#111827] border-gray-800">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">
-              Выручка за последние 7 дней
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={revenueData}>
-                <defs>
-                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#a855f7" stopOpacity={0.8} />
-                    <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.4} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="day" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1f2937',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                  }}
-                  formatter={(value: any) => [`₪${value}`, 'Выручка']}
-                />
-                <Bar dataKey="amount" fill="url(#revenueGradient)" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+            {/* Visits Chart */}
+            <Card className="bg-[#111827] border-gray-800">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Визиты за последние 30 дней
+                </h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={visitsData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="dateLabel" stroke="#9ca3af" />
+                    <YAxis stroke="#9ca3af" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1f2937',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff',
+                      }}
+                      formatter={(value: any) => [value, 'Визитов']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      dot={{ fill: '#3b82f6', r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Visits Chart */}
-        <Card className="bg-[#111827] border-gray-800">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">
-              Визиты за последние 30 дней
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={visitsData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="dateLabel" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1f2937',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                  }}
-                  formatter={(value: any) => [value, 'Визитов']}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={{ fill: '#3b82f6', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Services Chart */}
-      {topServices.length > 0 && (
-        <Card className="bg-[#111827] border-gray-800">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">
-              Топ-5 услуг за месяц
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={topServices} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis type="number" stroke="#9ca3af" />
-                <YAxis dataKey="name" type="category" width={150} stroke="#9ca3af" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1f2937',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                  }}
-                  formatter={(value: any) => [value, 'Визитов']}
-                />
-                <Bar dataKey="count" radius={[0, 8, 8, 0]}>
-                  {topServices.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          {/* Top Services Chart */}
+          {topServices.length > 0 && (
+            <Card className="bg-[#111827] border-gray-800">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Топ-5 услуг за месяц
+                </h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={topServices} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis type="number" stroke="#9ca3af" />
+                    <YAxis dataKey="name" type="category" width={150} stroke="#9ca3af" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1f2937',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff',
+                      }}
+                      formatter={(value: any) => [value, 'Визитов']}
+                    />
+                    <Bar dataKey="count" radius={[0, 8, 8, 0]}>
+                      {topServices.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {/* Onboarding Wizard */}

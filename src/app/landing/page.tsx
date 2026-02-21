@@ -73,11 +73,17 @@ interface Translations {
     subtitle?: string
     plans: {
       name: string
+      subtitle?: string
       price: string
+      period?: string
       features: string[]
       cta: string
       recommended?: string
     }[]
+    setupFee?: {
+      title: string
+      description: string
+    }
   }
   orderModal: {
     title: string
@@ -249,49 +255,55 @@ const translations: Record<'he' | 'ru', Translations> = {
       plans: [
         {
           name: 'בסיסי',
-          price: 'Coming Soon',
+          subtitle: 'Solo',
+          price: '₪300',
+          period: '/חודש',
           features: [
-            '✓ בסיס נתונים עד 200 לקוחות',
-            '✓ היסטוריית ביקורים',
-            '✗ קישורי תשלום',
-            '✗ רסלות SMS',
-            '✗ אנליטיקה',
-            '✓ משתמש אחד',
-            '✓ תמיכה באימייל',
+            '✓ לוח שנה לתורים',
+            '✓ בסיס לקוחות',
+            '✓ SMS התראות',
+            '✓ הזמנה אונליין',
+            '✓ סטטיסטיקה בסיסית',
+            '✓ עובד אחד',
           ],
-          cta: 'התחילו בחינם',
+          cta: 'התחילו',
         },
         {
-          name: 'מקצועי',
-          price: 'Coming Soon',
+          name: 'פרו',
+          subtitle: 'Studio',
+          price: '₪480',
+          period: '/חודש',
           features: [
-            '✓ בסיס נתונים עד 1000 לקוחות',
-            '✓ היסטוריית ביקורים',
-            '✓ קישורי תשלום',
-            '✓ SMS עד 500/חודש',
-            '✓ אנליטיקה וגרפים',
-            '✓ 3 משתמשים',
-            '✓ תמיכה בוואטסאפ',
+            '✓ הכל מ-Basic',
+            '✓ אוטומציית WhatsApp',
+            '✓ ניתוח הכנסות',
+            '✓ ניהול מלאי',
+            '✓ תוכנית נאמנות',
+            '✓ עד 5 עובדים',
           ],
-          cta: 'התחילו בחינם',
+          cta: 'בחרו פרו',
           recommended: 'מומלץ',
         },
         {
           name: 'ארגוני',
-          price: 'Coming Soon',
+          subtitle: 'Chain',
+          price: 'אישי',
+          period: '',
           features: [
-            '✓ לקוחות ללא הגבלה',
-            '✓ היסטוריית ביקורים',
-            '✓ קישורי תשלום',
-            '✓ SMS ללא הגבלה',
-            '✓ אנליטיקה מתקדמת',
-            '✓ עד 10 משתמשים',
-            '✓ תמיכה עדיפות',
-            '✓ מיתוג (לוגו וצבעים)',
+            '✓ הכל מ-Pro',
+            '✓ עובדים ללא הגבלה',
+            '✓ API אינטגרציות',
+            '✓ בוט טלגרם',
+            '✓ White Label',
+            '✓ מנהל אישי',
           ],
           cta: 'צרו קשר',
         },
       ],
+      setupFee: {
+        title: 'דמי התקנה חד פעמיים — ₪500',
+        description: 'כולל הגדרת המערכת, ייבוא נתונים, הדרכת צוות ותמיכה בחודש הראשון.',
+      },
     },
     orderModal: {
       title: 'הזמנת תוכנית',
@@ -1163,20 +1175,42 @@ export default function LandingPage() {
                       : 'bg-slate-800'
                   }`}
                 >
-                  <h3
-                    className={`text-2xl font-bold ${
-                      index === 0 ? 'text-gray-900' : 'text-white'
-                    }`}
-                  >
-                    {plan.name}
-                  </h3>
-                  <p
-                    className={`text-3xl font-bold mt-2 ${
-                      index === 0 ? 'text-gray-900' : 'text-white'
-                    }`}
-                  >
-                    {plan.price}
-                  </p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3
+                      className={`text-2xl font-bold ${
+                        index === 0 ? 'text-gray-900' : 'text-white'
+                      }`}
+                    >
+                      {plan.name}
+                    </h3>
+                    {plan.subtitle && (
+                      <span
+                        className={`text-sm font-normal ${
+                          index === 0 ? 'text-gray-600' : 'text-white opacity-80'
+                        }`}
+                      >
+                        / {plan.subtitle}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-end gap-1">
+                    <p
+                      className={`text-3xl font-bold ${
+                        index === 0 ? 'text-gray-900' : 'text-white'
+                      }`}
+                    >
+                      {plan.price}
+                    </p>
+                    {plan.period && (
+                      <span
+                        className={`text-sm mb-1 ${
+                          index === 0 ? 'text-gray-600' : 'text-white opacity-80'
+                        }`}
+                      >
+                        {plan.period}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Features */}
@@ -1211,6 +1245,40 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+
+          {/* Setup Fee Block */}
+          {t.pricing.setupFee && (
+            <div className="mt-12 max-w-3xl mx-auto">
+              <div className="rounded-2xl border-2 border-amber-500/30 bg-amber-50 p-6 flex flex-col md:flex-row items-start md:items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <svg
+                    className="w-5 h-5 text-amber-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-1">
+                    {t.pricing.setupFee.title}
+                  </h3>
+                  <p className="text-sm text-gray-700">
+                    {t.pricing.setupFee.description}
+                  </p>
+                </div>
+                <div className="text-2xl font-bold text-amber-600 flex-shrink-0">
+                  ₪500
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

@@ -2,23 +2,83 @@
 
 import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+
+type Language = 'he' | 'ru' | 'en'
 
 export default function TermsPage() {
   const router = useRouter()
+  const [language, setLanguage] = useState<Language>('he')
+
+  // Auto-detect language from HTML lang attribute
+  useEffect(() => {
+    const htmlLang = document.documentElement.lang
+    if (htmlLang === 'ru') setLanguage('ru')
+    else if (htmlLang === 'en') setLanguage('en')
+  }, [])
+
+  const handleLanguageChange = (lang: Language) => {
+    setLanguage(lang)
+    document.documentElement.setAttribute('lang', lang)
+    document.documentElement.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr')
+  }
+
+  const dir = language === 'he' ? 'rtl' : 'ltr'
+  const title = {
+    he: 'תקנון שימוש',
+    ru: 'Условия использования',
+    en: 'Terms of Service'
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 text-white" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 text-white" dir={dir}>
       {/* Header with Back Button */}
       <header className="sticky top-0 z-50 bg-gray-900/80 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-          <button
-            onClick={() => router.back()}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-            aria-label="חזרה"
-          >
-            <ArrowRight className="w-6 h-6" />
-          </button>
-          <h1 className="text-2xl font-bold">תקנון שימוש</h1>
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              aria-label={language === 'he' ? 'חזרה' : language === 'ru' ? 'Назад' : 'Back'}
+            >
+              <ArrowRight className="w-6 h-6" />
+            </button>
+            <h1 className="text-2xl font-bold">{title[language]}</h1>
+          </div>
+          
+          {/* Language Switcher */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleLanguageChange('he')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                language === 'he' 
+                  ? 'bg-amber-500 text-white' 
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              🇮🇱 עברית
+            </button>
+            <button
+              onClick={() => handleLanguageChange('ru')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                language === 'ru' 
+                  ? 'bg-amber-500 text-white' 
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              🇷🇺 Русский
+            </button>
+            <button
+              onClick={() => handleLanguageChange('en')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                language === 'en' 
+                  ? 'bg-amber-500 text-white' 
+                  : 'bg-white/10 text-white/70 hover:bg-white/20'
+              }`}
+            >
+              🇬🇧 English
+            </button>
+          </div>
         </div>
       </header>
 
@@ -26,6 +86,8 @@ export default function TermsPage() {
       <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 sm:p-8 lg:p-12 border border-white/10">
           
+          {/* Hebrew Version */}
+          {language === 'he' && (
           <div className="prose prose-invert max-w-none">
             <h2 className="text-3xl font-bold mb-4">תקנון שימוש — אמבר סולושנס סיסטמס</h2>
             <h3 className="text-xl font-semibold mb-6 text-amber-400">מערכת טריניטי לניהול עסקי</h3>
@@ -153,6 +215,90 @@ export default function TermsPage() {
             </div>
 
           </div>
+          )}
+
+          {/* Russian Version */}
+          {language === 'ru' && (
+          <div className="prose prose-invert max-w-none">
+            <h2 className="text-3xl font-bold mb-4">Условия использования — Amber Solutions Systems</h2>
+            <h3 className="text-xl font-semibold mb-6 text-amber-400">Система Trinity для управления бизнесом</h3>
+            <p className="text-gray-300 mb-8">Последнее обновление: февраль 2026</p>
+
+            <hr className="border-white/20 my-8" />
+
+            <h2 className="text-2xl font-bold mt-12 mb-4">1. Общие положения</h2>
+            <p className="mb-4">1.1 Настоящие Условия использования представляют собой обязывающее соглашение между пользователем (далее: &quot;Клиент&quot;) и Amber Solutions Systems, И.Н. 323358507, освобождённый плательщик (далее: &quot;Компания&quot;).</p>
+            <p className="mb-4">1.2 Использование системы Trinity (далее: &quot;Система&quot; или &quot;Сервис&quot;) означает полное согласие со всеми условиями настоящего документа.</p>
+            <p className="mb-4">1.3 Компания вправе обновлять настоящие Условия. Уведомление о существенных изменениях будет отправлено Клиенту по электронной почте или через систему не менее чем за 14 дней до вступления в силу.</p>
+
+            <hr className="border-white/20 my-8" />
+
+            <h2 className="text-2xl font-bold mt-12 mb-4">2. Определения</h2>
+            <p className="mb-4">2.1 <strong>&quot;Система&quot;</strong> — облачное программное обеспечение для управления взаимоотношениями с клиентами и операционной деятельностью бизнеса, включая управление очередями, клиентской базой, платежами, инвентарём и сопутствующими услугами.</p>
+            <p className="mb-4">2.2 <strong>&quot;Подписка&quot;</strong> — период использования сервиса в соответствии с выбранным Клиентом планом.</p>
+            <p className="mb-4">2.3 <strong>&quot;Модуль&quot;</strong> — самостоятельная единица сервиса в системе (например: управление клиентами, платежи, инвентарь и т.д.), которая может быть включена или отключена в соответствии с планом Клиента.</p>
+
+            <hr className="border-white/20 my-8" />
+
+            <h2 className="text-2xl font-bold mt-12 mb-4">3. Описание сервиса</h2>
+            <p className="mb-4">3.1 Система предоставляет инструменты управления бизнесом, включая: управление клиентской базой, управление визитами и записями, приём онлайн-платежей, управление инвентарём и товарами, отправку сообщений и напоминаний, отчёты и статистику.</p>
+            <p className="mb-4">3.2 Компания обязуется обеспечить доступность сервиса 99.9% в среднем за месяц, за исключением плановых технических работ, о которых будет сообщено за 24 часа.</p>
+
+            <hr className="border-white/20 my-8" />
+
+            <h2 className="text-2xl font-bold mt-12 mb-4">13. Контакты</h2>
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-6 mt-4">
+              <p className="font-semibold text-amber-400 mb-2">Amber Solutions Systems</p>
+              <p className="mb-2">И.Н. 323358507 | Освобождённый плательщик</p>
+              <p className="mb-2">Адрес: Менахем Бегин 10, Ашкелон, Израиль</p>
+              <p className="mb-2">Телефон: 054-4858586</p>
+              <p className="mb-2">Email: ambersolutions.systems@gmail.com</p>
+              <p>Сайт: ambersol.co.il</p>
+            </div>
+          </div>
+          )}
+
+          {/* English Version */}
+          {language === 'en' && (
+          <div className="prose prose-invert max-w-none">
+            <h2 className="text-3xl font-bold mb-4">Terms of Service — Amber Solutions Systems</h2>
+            <h3 className="text-xl font-semibold mb-6 text-amber-400">Trinity Business Management System</h3>
+            <p className="text-gray-300 mb-8">Last updated: February 2026</p>
+
+            <hr className="border-white/20 my-8" />
+
+            <h2 className="text-2xl font-bold mt-12 mb-4">1. General</h2>
+            <p className="mb-4">1.1 These Terms of Service constitute a binding agreement between the user (hereinafter: &quot;Client&quot;) and Amber Solutions Systems, ID 323358507, exempt business (hereinafter: &quot;Company&quot;).</p>
+            <p className="mb-4">1.2 Use of the Trinity system (hereinafter: &quot;System&quot; or &quot;Service&quot;) constitutes full acceptance of all terms herein.</p>
+            <p className="mb-4">1.3 The Company may update these Terms from time to time. Notice of material changes will be sent to the Client via email or system notification at least 14 days before they take effect.</p>
+
+            <hr className="border-white/20 my-8" />
+
+            <h2 className="text-2xl font-bold mt-12 mb-4">2. Definitions</h2>
+            <p className="mb-4">2.1 <strong>&quot;System&quot;</strong> — cloud-based software for customer relationship management and business operations, enabling queue management, customer database, payments, inventory, and related services.</p>
+            <p className="mb-4">2.2 <strong>&quot;Subscription&quot;</strong> — the period of service use according to the Client&apos;s chosen plan.</p>
+            <p className="mb-4">2.3 <strong>&quot;Module&quot;</strong> — an independent service unit within the system (e.g., client management, payments, inventory) that can be enabled or disabled according to the Client&apos;s plan.</p>
+
+            <hr className="border-white/20 my-8" />
+
+            <h2 className="text-2xl font-bold mt-12 mb-4">3. Service Description</h2>
+            <p className="mb-4">3.1 The System provides business management tools including: customer database management, visit and appointment scheduling, online payment processing, inventory and product management, messaging and reminders, reports and statistics.</p>
+            <p className="mb-4">3.2 The Company commits to providing 99.9% service availability on average per month, except for scheduled maintenance announced 24 hours in advance.</p>
+
+            <hr className="border-white/20 my-8" />
+
+            <h2 className="text-2xl font-bold mt-12 mb-4">13. Contact</h2>
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-6 mt-4">
+              <p className="font-semibold text-amber-400 mb-2">Amber Solutions Systems</p>
+              <p className="mb-2">ID 323358507 | Exempt Business</p>
+              <p className="mb-2">Address: Menachem Begin 10, Ashkelon, Israel</p>
+              <p className="mb-2">Phone: 054-4858586</p>
+              <p className="mb-2">Email: ambersolutions.systems@gmail.com</p>
+              <p>Website: ambersol.co.il</p>
+            </div>
+          </div>
+          )}
+
         </div>
       </main>
     </div>

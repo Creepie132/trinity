@@ -5,6 +5,7 @@ const PUBLIC_PATHS = ['/login', '/unauthorized', '/blocked', '/landing', '/terms
 const CALLBACK_PATH = '/callback'
 const WEBHOOK_PATH = '/api/payments/webhook'
 const STRIPE_WEBHOOK_PATH = '/api/payments/stripe-webhook'
+const TRANZILA_WEBHOOK_PATH = '/api/payments/tranzila/webhook'
 const HEALTH_PATH = '/api/health'
 
 export async function middleware(req: NextRequest) {
@@ -86,6 +87,7 @@ export async function middleware(req: NextRequest) {
     const csrfExempt = [
       "/api/payments/webhook",
       "/api/payments/stripe-webhook",
+      "/api/payments/tranzila/webhook",
       "/api/payments/callback",
       "/api/booking/",
       "/api/contact",

@@ -1,9 +1,7 @@
 'use client'
 
-import dynamic from 'next/dynamic'
-import { useState, useEffect } from 'react'
-
-const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
+import { MessageCircle } from 'lucide-react'
+import { useState } from 'react'
 
 interface ChatButtonProps {
   onClick: () => void
@@ -12,47 +10,45 @@ interface ChatButtonProps {
 
 export default function ChatButton({ onClick, isActive }: ChatButtonProps) {
   const [hovered, setHovered] = useState(false)
-  const [animData, setAnimData] = useState<any>(null)
-
-  // Load JSON dynamically to avoid blocking SSR
-  useEffect(() => {
-    fetch('/animations/ai-button.json')
-      .then(r => r.json())
-      .then(setAnimData)
-      .catch(err => console.error('Failed to load Lottie animation:', err))
-  }, [])
 
   return (
-    <div
+    <button
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className="chat-fab"
       style={{
         position: 'fixed',
-        bottom: 24,
-        right: 24,
-        width: 94,
-        height: 94,
-        cursor: 'pointer',
-        zIndex: 999,
+        bottom: '24px',
+        right: '24px',
+        width: '60px',
+        height: '60px',
         borderRadius: '50%',
-        overflow: 'hidden',
-        background: 'transparent',
+        backgroundColor: '#FFBF00',
         border: 'none',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: hovered
+          ? '0 6px 20px 0 rgba(0,0,0,0.35)'
+          : '0 4px 14px 0 rgba(0,0,0,0.25)',
+        transform: hovered ? 'scale(1.05)' : isActive ? 'scale(0.95)' : 'scale(1)',
+        transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+        zIndex: 9999,
         outline: 'none',
-        padding: 0,
-        transition: 'transform 300ms ease',
-        transform: hovered ? 'scale(1.12)' : isActive ? 'scale(0.85)' : 'scale(1)',
       }}
+      aria-label="Open AI Assistant"
     >
-      {animData && (
-        <Lottie
-          animationData={animData}
-          loop={true}
-          autoplay={true}
-          style={{ width: '100%', height: '100%' }}
-        />
-      )}
-    </div>
+      <MessageCircle
+        size={28}
+        strokeWidth={2.5}
+        color="#1A1A1A"
+        style={{
+          transition: 'transform 200ms ease',
+          transform: hovered ? 'rotate(-10deg)' : 'rotate(0deg)',
+        }}
+      />
+    </button>
   )
 }

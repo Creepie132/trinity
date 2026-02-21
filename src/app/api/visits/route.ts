@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       price: parseFloat(price),
       notes: notes || null,
       status: 'scheduled',
+      staff_user_id: user.id, // Track who created the visit
     }
 
     // UUID validation regex

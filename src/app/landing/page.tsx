@@ -822,12 +822,31 @@ export default function LandingPage() {
           background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)',
         }}
       >
-        {/* Background Pattern */}
+        {/* Background Pattern - Neural Grid */}
         <div
-          className="absolute inset-0 opacity-10"
+          className="absolute inset-0 opacity-[0.07]"
           style={{
-            backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
-            backgroundSize: '40px 40px',
+            backgroundImage: `
+              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px),
+              linear-gradient(180deg, rgba(255,255,255,0.1) 1px, transparent 1px),
+              radial-gradient(circle at 20% 30%, rgba(255,191,0,0.15) 0px, transparent 300px),
+              radial-gradient(circle at 80% 70%, rgba(255,107,53,0.15) 0px, transparent 300px)
+            `,
+            backgroundSize: '60px 60px, 60px 60px, 100% 100%, 100% 100%',
+          }}
+        ></div>
+
+        {/* Subtle Diagonal Lines */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 40px,
+              rgba(255,255,255,0.5) 40px,
+              rgba(255,255,255,0.5) 42px
+            )`
           }}
         ></div>
 
@@ -838,7 +857,7 @@ export default function LandingPage() {
         <div className="absolute bottom-20 right-1/3 w-28 h-28 bg-green-500/10 rounded-lg blur-3xl animate-float"></div>
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center relative z-10">
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 animate-slide-up">
+          <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-white mb-6 animate-slide-up">
             {t.hero.title}
           </h1>
           <p className="text-xl sm:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto animate-slide-up-delay">

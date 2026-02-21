@@ -557,7 +557,7 @@ export default function AiChatWidget() {
         }
         
         .chat-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(123, 47, 247, 0.3);
+          background: rgba(255, 191, 0, 0.3);
           border-radius: 10px;
         }
 
@@ -636,9 +636,9 @@ export default function AiChatWidget() {
           <div
             style={{
               background: '#ffffff',
-              border: isMobile ? 'none' : '1px solid rgba(123, 47, 247, 0.15)',
+              border: isMobile ? 'none' : '1px solid rgba(255, 191, 0, 0.15)',
               borderRadius: isMobile ? '0' : '16px',
-              boxShadow: isMobile ? 'none' : '0 8px 40px rgba(123, 47, 247, 0.12)',
+              boxShadow: isMobile ? 'none' : '0 8px 40px rgba(255, 191, 0, 0.12)',
               display: 'flex',
               flexDirection: 'column',
               height: '100%',
@@ -648,7 +648,7 @@ export default function AiChatWidget() {
             {/* Header */}
             <div
               style={{
-                background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                background: 'linear-gradient(135deg, #FFBF00, #FF6B35)',
                 padding: isMobile ? '20px 16px' : '16px',
                 borderRadius: isMobile ? '0' : '16px 16px 0 0',
                 display: 'flex',
@@ -766,9 +766,9 @@ export default function AiChatWidget() {
                   <div
                     style={{
                       padding: '16px',
-                      background: 'linear-gradient(135deg, rgba(123, 47, 247, 0.08), rgba(200, 80, 192, 0.08))',
+                      background: 'linear-gradient(135deg, rgba(255, 191, 0, 0.08), rgba(255, 107, 53, 0.08))',
                       borderRadius: '16px',
-                      border: '1px solid rgba(123, 47, 247, 0.1)'
+                      border: '1px solid rgba(255, 191, 0, 0.1)'
                     }}
                   >
                     <p style={{ color: '#1a1a1a', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>
@@ -788,7 +788,7 @@ export default function AiChatWidget() {
                       style={{
                         padding: '14px 16px',
                         background: '#f8f6ff',
-                        border: '1px solid rgba(123, 47, 247, 0.1)',
+                        border: '1px solid rgba(255, 191, 0, 0.1)',
                         borderRadius: '16px',
                         color: '#1a1a1a',
                         fontSize: '13px',
@@ -798,11 +798,11 @@ export default function AiChatWidget() {
                         transition: 'all 0.2s'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#7B2FF7'
-                        e.currentTarget.style.boxShadow = '0 2px 12px rgba(123, 47, 247, 0.15)'
+                        e.currentTarget.style.borderColor = '#FFBF00'
+                        e.currentTarget.style.boxShadow = '0 2px 12px rgba(255, 191, 0, 0.15)'
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'rgba(123, 47, 247, 0.1)'
+                        e.currentTarget.style.borderColor = 'rgba(255, 191, 0, 0.1)'
                         e.currentTarget.style.boxShadow = 'none'
                       }}
                     >
@@ -833,7 +833,7 @@ export default function AiChatWidget() {
                     }}
                     style={{
                       padding: '14px 16px',
-                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      background: 'linear-gradient(135deg, #FFBF00, #FF6B35)',
                       border: 'none',
                       borderRadius: '16px',
                       color: 'white',
@@ -844,7 +844,7 @@ export default function AiChatWidget() {
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 191, 0, 0.3)'
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
@@ -866,7 +866,7 @@ export default function AiChatWidget() {
                       style={{
                         padding: '14px 16px',
                         background: '#f8f6ff',
-                        border: '1px solid rgba(123, 47, 247, 0.1)',
+                        border: '1px solid rgba(255, 191, 0, 0.1)',
                         borderRadius: '16px',
                         color: '#1a1a1a',
                         fontSize: '13px',
@@ -876,11 +876,11 @@ export default function AiChatWidget() {
                         transition: 'all 0.2s'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#7B2FF7'
-                        e.currentTarget.style.boxShadow = '0 2px 12px rgba(123, 47, 247, 0.15)'
+                        e.currentTarget.style.borderColor = '#FFBF00'
+                        e.currentTarget.style.boxShadow = '0 2px 12px rgba(255, 191, 0, 0.15)'
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'rgba(123, 47, 247, 0.1)'
+                        e.currentTarget.style.borderColor = 'rgba(255, 191, 0, 0.1)'
                         e.currentTarget.style.boxShadow = 'none'
                       }}
                     >
@@ -893,7 +893,7 @@ export default function AiChatWidget() {
                     onClick={handleBackToMenu}
                     style={{
                       padding: '14px 16px',
-                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      background: 'linear-gradient(135deg, #FFBF00, #FF6B35)',
                       border: 'none',
                       borderRadius: '16px',
                       color: 'white',
@@ -908,7 +908,7 @@ export default function AiChatWidget() {
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 191, 0, 0.3)'
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
@@ -928,12 +928,12 @@ export default function AiChatWidget() {
                   <div
                     style={{
                       padding: '16px',
-                      background: 'linear-gradient(135deg, rgba(123, 47, 247, 0.08), rgba(200, 80, 192, 0.08))',
+                      background: 'linear-gradient(135deg, rgba(255, 191, 0, 0.08), rgba(255, 107, 53, 0.08))',
                       borderRadius: '16px',
-                      border: '1px solid rgba(123, 47, 247, 0.1)'
+                      border: '1px solid rgba(255, 191, 0, 0.1)'
                     }}
                   >
-                    <p style={{ color: '#7B2FF7', fontSize: '13px', fontWeight: 600, margin: 0, marginBottom: '8px' }}>
+                    <p style={{ color: '#FFBF00', fontSize: '13px', fontWeight: 600, margin: 0, marginBottom: '8px' }}>
                       {faqData[selectedQuestion].question[language]}
                     </p>
                     <p style={{ color: '#1a1a1a', fontSize: '14px', margin: 0, lineHeight: '1.6' }}>
@@ -946,7 +946,7 @@ export default function AiChatWidget() {
                     onClick={handleBackToMenu}
                     style={{
                       padding: '14px 16px',
-                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      background: 'linear-gradient(135deg, #FFBF00, #FF6B35)',
                       border: 'none',
                       borderRadius: '16px',
                       color: 'white',
@@ -961,7 +961,7 @@ export default function AiChatWidget() {
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 191, 0, 0.3)'
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
@@ -1249,7 +1249,7 @@ export default function AiChatWidget() {
                     onClick={() => setScreen('builder')}
                     style={{
                       padding: '14px 16px',
-                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      background: 'linear-gradient(135deg, #FFBF00, #FF6B35)',
                       border: 'none',
                       borderRadius: '16px',
                       color: 'white',
@@ -1264,7 +1264,7 @@ export default function AiChatWidget() {
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 191, 0, 0.3)'
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
@@ -1603,7 +1603,7 @@ export default function AiChatWidget() {
                     onClick={() => setScreen('builder')}
                     style={{
                       padding: '14px 16px',
-                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      background: 'linear-gradient(135deg, #FFBF00, #FF6B35)',
                       border: 'none',
                       borderRadius: '16px',
                       color: 'white',
@@ -1618,7 +1618,7 @@ export default function AiChatWidget() {
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 191, 0, 0.3)'
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
@@ -1638,13 +1638,13 @@ export default function AiChatWidget() {
                   <div
                     style={{
                       padding: '16px',
-                      background: 'linear-gradient(135deg, rgba(123, 47, 247, 0.08), rgba(200, 80, 192, 0.08))',
+                      background: 'linear-gradient(135deg, rgba(255, 191, 0, 0.08), rgba(255, 107, 53, 0.08))',
                       borderRadius: '16px',
-                      border: '1px solid rgba(123, 47, 247, 0.1)',
+                      border: '1px solid rgba(255, 191, 0, 0.1)',
                       textAlign: 'center'
                     }}
                   >
-                    <h3 style={{ color: '#7B2FF7', fontSize: '18px', fontWeight: 700, margin: 0 }}>
+                    <h3 style={{ color: '#FFBF00', fontSize: '18px', fontWeight: 700, margin: 0 }}>
                       {t('servicesTitle')}
                     </h3>
                   </div>
@@ -1665,17 +1665,17 @@ export default function AiChatWidget() {
                       style={{
                         padding: '16px',
                         background: '#f8f6ff',
-                        border: '1px solid rgba(123, 47, 247, 0.1)',
+                        border: '1px solid rgba(255, 191, 0, 0.1)',
                         borderRadius: '16px',
                         cursor: 'pointer',
                         transition: 'all 0.2s'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#7B2FF7'
-                        e.currentTarget.style.boxShadow = '0 4px 16px rgba(123, 47, 247, 0.15)'
+                        e.currentTarget.style.borderColor = '#FFBF00'
+                        e.currentTarget.style.boxShadow = '0 4px 16px rgba(255, 191, 0, 0.15)'
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'rgba(123, 47, 247, 0.1)'
+                        e.currentTarget.style.borderColor = 'rgba(255, 191, 0, 0.1)'
                         e.currentTarget.style.boxShadow = 'none'
                       }}
                     >
@@ -1696,7 +1696,7 @@ export default function AiChatWidget() {
                     onClick={handleBackToMenu}
                     style={{
                       padding: '14px 16px',
-                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      background: 'linear-gradient(135deg, #FFBF00, #FF6B35)',
                       border: 'none',
                       borderRadius: '16px',
                       color: 'white',
@@ -1711,7 +1711,7 @@ export default function AiChatWidget() {
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 191, 0, 0.3)'
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
@@ -1731,12 +1731,12 @@ export default function AiChatWidget() {
                   <div
                     style={{
                       padding: '16px',
-                      background: 'linear-gradient(135deg, rgba(123, 47, 247, 0.08), rgba(200, 80, 192, 0.08))',
+                      background: 'linear-gradient(135deg, rgba(255, 191, 0, 0.08), rgba(255, 107, 53, 0.08))',
                       borderRadius: '16px',
-                      border: '1px solid rgba(123, 47, 247, 0.1)'
+                      border: '1px solid rgba(255, 191, 0, 0.1)'
                     }}
                   >
-                    <p style={{ color: '#7B2FF7', fontSize: '14px', fontWeight: 600, margin: 0, lineHeight: '1.6', textAlign: 'center' }}>
+                    <p style={{ color: '#FFBF00', fontSize: '14px', fontWeight: 600, margin: 0, lineHeight: '1.6', textAlign: 'center' }}>
                       {t('serviceContactTitle')}
                     </p>
                   </div>
@@ -1750,7 +1750,7 @@ export default function AiChatWidget() {
                       onChange={(e) => setContactName(e.target.value)}
                       style={{
                         padding: '12px 16px',
-                        border: '1px solid rgba(123, 47, 247, 0.2)',
+                        border: '1px solid rgba(255, 191, 0, 0.2)',
                         borderRadius: '12px',
                         fontSize: '13px',
                         outline: 'none',
@@ -1765,7 +1765,7 @@ export default function AiChatWidget() {
                       onChange={(e) => setContactPhone(e.target.value)}
                       style={{
                         padding: '12px 16px',
-                        border: '1px solid rgba(123, 47, 247, 0.2)',
+                        border: '1px solid rgba(255, 191, 0, 0.2)',
                         borderRadius: '12px',
                         fontSize: '13px',
                         outline: 'none',
@@ -1812,7 +1812,7 @@ export default function AiChatWidget() {
                     }}
                     style={{
                       padding: '14px 16px',
-                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      background: 'linear-gradient(135deg, #FFBF00, #FF6B35)',
                       border: 'none',
                       borderRadius: '16px',
                       color: 'white',
@@ -1820,15 +1820,15 @@ export default function AiChatWidget() {
                       fontWeight: 700,
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      boxShadow: '0 4px 14px rgba(123, 47, 247, 0.3)'
+                      boxShadow: '0 4px 14px rgba(255, 191, 0, 0.3)'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)'
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.4)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 191, 0, 0.4)'
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'translateY(0)'
-                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(123, 47, 247, 0.3)'
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(255, 191, 0, 0.3)'
                     }}
                   >
                     {t('serviceContactSend')}
@@ -1923,7 +1923,7 @@ export default function AiChatWidget() {
               <div
                 style={{
                   flexShrink: 0,
-                  borderTop: '1px solid rgba(123, 47, 247, 0.1)',
+                  borderTop: '1px solid rgba(255, 191, 0, 0.1)',
                   background: 'white',
                   padding: '16px',
                   display: 'flex',
@@ -1963,7 +1963,7 @@ export default function AiChatWidget() {
                   onClick={handleBackToMenu}
                   style={{
                     padding: '14px 16px',
-                    background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                    background: 'linear-gradient(135deg, #FFBF00, #FF6B35)',
                     border: 'none',
                     borderRadius: '16px',
                     color: 'white',
@@ -1978,7 +1978,7 @@ export default function AiChatWidget() {
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)'
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 191, 0, 0.3)'
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)'
@@ -2014,7 +2014,7 @@ export default function AiChatWidget() {
                 <div
                   style={{
                     flexShrink: 0,
-                    borderTop: operatorRequestSent ? 'none' : '1px solid rgba(123, 47, 247, 0.1)',
+                    borderTop: operatorRequestSent ? 'none' : '1px solid rgba(255, 191, 0, 0.1)',
                     background: '#fafafa',
                     padding: '16px',
                     animation: 'slideUp 0.3s ease-out'
@@ -2028,7 +2028,7 @@ export default function AiChatWidget() {
                     style={{
                       flex: 1,
                       padding: '12px 16px',
-                      border: '1px solid rgba(123, 47, 247, 0.2)',
+                      border: '1px solid rgba(255, 191, 0, 0.2)',
                       borderRadius: '12px',
                       fontSize: '13px',
                       outline: 'none',
@@ -2037,11 +2037,11 @@ export default function AiChatWidget() {
                       textAlign: dir === 'rtl' ? 'right' : 'left'
                     }}
                     onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#7B2FF7'
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(123, 47, 247, 0.1)'
+                      e.currentTarget.style.borderColor = '#FFBF00'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(255, 191, 0, 0.1)'
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(123, 47, 247, 0.2)'
+                      e.currentTarget.style.borderColor = 'rgba(255, 191, 0, 0.2)'
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   />
@@ -2049,7 +2049,7 @@ export default function AiChatWidget() {
                     style={{
                       width: '44px',
                       height: '44px',
-                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      background: 'linear-gradient(135deg, #FFBF00, #FF6B35)',
                       border: 'none',
                       borderRadius: '12px',
                       color: 'white',

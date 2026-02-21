@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Assistant } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import ConditionalChatWidget from "@/components/ConditionalChatWidget";
 
 const inter = Inter({ subsets: ["latin"] });
+const assistant = Assistant({ subsets: ["hebrew"] });
 
 export const metadata: Metadata = {
   title: "Trinity | Amber Solutions Systems",

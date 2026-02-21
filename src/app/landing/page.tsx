@@ -676,13 +676,16 @@ export default function LandingPage() {
                 className="w-10 h-10 md:w-12 md:h-12 object-contain"
               />
               {/* Hide text on mobile, show on desktop */}
-              <span className={`hidden md:block text-lg font-bold whitespace-nowrap transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}>
+              <span 
+                className={`hidden md:block text-lg font-bold whitespace-nowrap transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}
+                style={{ fontFamily: language === 'he' ? 'Assistant, system-ui, sans-serif' : 'Inter, system-ui, sans-serif' }}
+              >
                 Amber Solutions Systems
               </span>
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-6 lg:gap-8 mx-auto" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <div className="hidden md:flex items-center gap-6 lg:gap-8 mx-auto" style={{ fontFamily: language === 'he' ? 'Assistant, system-ui, sans-serif' : 'Inter, system-ui, sans-serif' }}>
               <a
                 href="#about"
                 className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}

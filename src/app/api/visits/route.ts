@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { validateBody, createVisitSchema } from '@/lib/validations'
 
 export async function POST(request: NextRequest) {
   console.log('[API /api/visits POST] Start')
   
   try {
     const body = await request.json()
-    console.log('[API /api/visits POST] Request body:', JSON.stringify(body, null, 2))
+    
+    // ✅ Zod validation
+    const { data, error: validationError } = validateBody(createVisitSchema, body)
+    if (validationError || !data) {
+      console.error('[API /api/visits POST] Validation failed:', validationError)
+      return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
+    }
+
+    console.log('[API /api/visits POST] Request body:', JSON.stringify(data, null, 2))
     
     // Create Supabase client
     const cookieStore = await cookies()
@@ -60,7 +69,7 @@ export async function POST(request: NextRequest) {
     console.log('[API /api/visits POST] Organization ID:', org_id)
 
     // Extract and validate fields
-    const { clientId, service, serviceId, date, time, duration, price, notes } = body
+    const { clientId, service, serviceId, date, time, duration, price, notes } = data
     
     console.log('[API /api/visits POST] Extracted fields:', {
       clientId,
@@ -104,7 +113,7 @@ export async function POST(request: NextRequest) {
       client_id: clientId,
       org_id: org_id,
       scheduled_at: scheduled_at,
-      duration_minutes: parseInt(duration) || 60,
+      duration_minutes: parseInt(duration || "60"),
       price: parseFloat(price),
       notes: notes || null,
       status: 'scheduled',

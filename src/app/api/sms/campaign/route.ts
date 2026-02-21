@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
 import { sendSms } from '@/lib/inforu'
 import { ratelimitStrict, getClientIp } from '@/lib/ratelimit'
+import { validateBody, createSmsSchema } from '@/lib/validations'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,22 +29,14 @@ export async function POST(request: NextRequest) {
     const supabase = await getSupabaseServerClient()
 
     const body = await request.json()
-    const { name, message, filter_type, filter_value } = body
-
-    // Validation
-    if (!name || !message || !filter_type) {
-      return NextResponse.json(
-        { error: 'name, message, and filter_type are required' },
-        { status: 400 }
-      )
+    
+    // ✅ Zod validation
+    const { data, error } = validateBody(createSmsSchema, body)
+    if (error || !data) {
+      return NextResponse.json({ error: error || 'Validation failed' }, { status: 400 })
     }
 
-    if (message.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'message cannot be empty' },
-        { status: 400 }
-      )
-    }
+    const { name, message, filter_type, filter_value } = data
 
     // Получаем список получателей на основе фильтра
     let recipientsQuery = supabase

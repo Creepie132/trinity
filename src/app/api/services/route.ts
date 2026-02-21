@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import type { CreateServiceDTO } from '@/types/services'
+import { validateBody, createServiceSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,21 +89,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    const body: CreateServiceDTO = await request.json()
-
-    if (!body.name) {
-      return NextResponse.json({ error: 'Missing required field: name' }, { status: 400 })
+    const body = await request.json()
+    
+    // ✅ Zod validation
+    const { data, error: validationError } = validateBody(createServiceSchema, body)
+    if (validationError || !data) {
+      return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
     }
 
     const { data: service, error } = await supabase
       .from('services')
       .insert({
         org_id: orgUser.org_id,
-        name: body.name,
-        name_ru: body.name_ru,
-        price: body.price,
-        duration_minutes: body.duration_minutes || 60,
-        color: body.color || '#3B82F6',
+        name: data.name,
+        name_ru: data.name_ru,
+        price: data.price,
+        duration_minutes: data.duration_minutes || 60,
+        color: data.color || '#3B82F6',
         is_active: true,
       })
       .select()

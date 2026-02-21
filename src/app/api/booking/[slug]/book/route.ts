@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { ratelimitPublic, getClientIp } from '@/lib/ratelimit'
+import { validateBody, createBookingSchema } from '@/lib/validations'
 
 // Public API - no auth required
 export async function POST(
@@ -23,10 +24,18 @@ export async function POST(
     console.log('[Booking Book API] Creating booking for slug:', slug)
     
     const body = await request.json()
+    
+    // ✅ Zod validation
+    const { data, error } = validateBody(createBookingSchema, body)
+    if (error || !data) {
+      console.error('[Booking Book API] Validation failed:', error)
+      return NextResponse.json({ error: error || 'Validation failed' }, { status: 400 })
+    }
+
     console.log('[Booking Book API] Request body:', {
-      service_name: body.service_name,
-      client_name: body.client_name,
-      scheduled_at: body.scheduled_at
+      service_name: data.service_name,
+      client_name: data.client_name,
+      scheduled_at: data.scheduled_at
     })
     
     const {
@@ -39,16 +48,7 @@ export async function POST(
       duration_minutes,
       price,
       notes
-    } = body
-
-    // Validation
-    if (!service_name || !client_name || !client_phone || !scheduled_at) {
-      console.error('[Booking Book API] Missing required fields')
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
+    } = data
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

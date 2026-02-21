@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateTranzillaPaymentLink } from '@/lib/tranzilla'
 import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
 import { rateLimit, PAYMENT_RATE_LIMIT } from '@/lib/rate-limit'
+import { validateBody, createPaymentSchema } from '@/lib/validations'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,30 +40,14 @@ export async function POST(request: NextRequest) {
     const supabase = await getSupabaseServerClient()
 
     const body = await request.json()
-    const { client_id, amount, description, visit_id } = body
-
-    // Validation
-    if (!client_id || !amount) {
-      return NextResponse.json(
-        { error: 'client_id and amount are required' },
-        { status: 400 }
-      )
+    
+    // ✅ Zod validation
+    const { data, error: validationError } = validateBody(createPaymentSchema, body)
+    if (validationError || !data) {
+      return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
     }
 
-    if (amount <= 0) {
-      return NextResponse.json(
-        { error: 'Amount must be greater than 0' },
-        { status: 400 }
-      )
-    }
-
-    // Security: Validate max amount (prevent abuse)
-    if (amount > 100000) {
-      return NextResponse.json(
-        { error: 'Amount exceeds maximum allowed (100,000 ILS)' },
-        { status: 400 }
-      )
-    }
+    const { client_id, amount, description, visit_id } = data
 
     // SECURITY FIX: Verify client belongs to user's organization
     const { data: client, error: clientError } = await supabase

@@ -8,6 +8,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import type { CreateProductDTO, Product } from '@/types/inventory'
+import { validateBody, createProductSchema } from '@/lib/validations'
 
 /**
  * GET /api/products
@@ -128,14 +129,12 @@ export async function POST(request: NextRequest) {
     const { org_id } = orgUser
 
     // Parse request body
-    const body: CreateProductDTO = await request.json()
-
-    // Validate required fields
-    if (!body.name || !body.sell_price) {
-      return NextResponse.json(
-        { error: 'Missing required fields: name, sell_price' },
-        { status: 400 }
-      )
+    const body = await request.json()
+    
+    // ✅ Zod validation
+    const { data, error: validationError } = validateBody(createProductSchema, body)
+    if (validationError || !data) {
+      return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
     }
 
     // Insert product
@@ -143,17 +142,17 @@ export async function POST(request: NextRequest) {
       .from('products')
       .insert({
         org_id,
-        name: body.name,
-        description: body.description,
-        barcode: body.barcode,
-        sku: body.sku,
-        category: body.category,
-        purchase_price: body.purchase_price,
-        sell_price: body.sell_price,
-        quantity: body.quantity || 0,
-        min_quantity: body.min_quantity || 0,
-        unit: body.unit || 'יחידה',
-        image_url: body.image_url,
+        name: data.name,
+        description: data.description,
+        barcode: data.barcode,
+        sku: data.sku,
+        category: data.category,
+        purchase_price: data.purchase_price,
+        sell_price: data.sell_price,
+        quantity: data.quantity || 0,
+        min_quantity: data.min_quantity || 0,
+        unit: data.unit || 'יחידה',
+        image_url: data.image_url,
         is_active: true,
       })
       .select()

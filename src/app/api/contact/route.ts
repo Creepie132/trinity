@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { ratelimitPublic, getClientIp } from '@/lib/ratelimit'
+import { validateBody, contactFormSchema } from '@/lib/validations'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,15 +17,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, phone, email, message } = body
-
-    // Validation
-    if (!name || !phone) {
-      return NextResponse.json(
-        { error: 'Name and phone are required', errorHe: 'שם וטלפון הם שדות חובה' },
-        { status: 400 }
-      )
+    
+    // ✅ Zod validation
+    const { data, error } = validateBody(contactFormSchema, body)
+    if (error || !data) {
+      return NextResponse.json({ error: error || 'Validation failed' }, { status: 400 })
     }
+
+    const { name, phone, email, message } = data
 
     // Initialize Resend
     const resend = new Resend(process.env.RESEND_API_KEY)

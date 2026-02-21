@@ -682,47 +682,53 @@ export default function LandingPage() {
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-6 lg:gap-8 mx-auto" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
               <a
                 href="#about"
-                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                style={{ fontWeight: 500 }}
               >
                 {t.nav.about}
               </a>
               <a
                 href="#services"
-                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                style={{ fontWeight: 500 }}
               >
                 {t.nav.services}
               </a>
               <a
                 href="#pricing"
-                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                style={{ fontWeight: 500 }}
               >
                 {t.nav.pricing}
               </a>
               <a
                 href="#gallery"
-                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                style={{ fontWeight: 500 }}
               >
                 {t.nav.gallery}
               </a>
               <a
                 href="#reviews"
-                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                style={{ fontWeight: 500 }}
               >
                 {t.nav.reviews}
               </a>
               <a
                 href="#contact"
-                className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
+                style={{ fontWeight: 500 }}
               >
                 {t.nav.contact}
               </a>
             </div>
 
             {/* Language Switcher & Login */}
-            <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex items-center gap-2 md:gap-4" style={{ marginLeft: '32px' }}>
               {/* Prism login button - compact on mobile */}
               <div className="hidden md:block">
                 <PrismButton href="/login">

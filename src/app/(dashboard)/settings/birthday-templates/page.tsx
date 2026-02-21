@@ -6,6 +6,8 @@ import { ArrowRight, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
@@ -25,6 +27,8 @@ export default function BirthdayTemplatesPage() {
     discount: 15,
     expiry_days: 7
   })
+  const [birthdaySmsEnabled, setBirthdaySmsEnabled] = useState(false)
+  const [birthdayMessage, setBirthdayMessage] = useState('🎂 {org_name} מאחלת לך יום הולדת שמח, {first_name}! נשמח לראות אותך!')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -36,7 +40,7 @@ export default function BirthdayTemplatesPage() {
       try {
         const { data, error } = await supabase
           .from('organizations')
-          .select('settings')
+          .select('settings, features')
           .eq('id', orgId)
           .single()
 
@@ -44,6 +48,12 @@ export default function BirthdayTemplatesPage() {
 
         if (data?.settings?.birthday_templates) {
           setTemplates({ ...templates, ...data.settings.birthday_templates })
+        }
+
+        // Load birthday SMS settings from features
+        if (data?.features) {
+          setBirthdaySmsEnabled(data.features.birthday_sms_enabled || false)
+          setBirthdayMessage(data.features.birthday_message || birthdayMessage)
         }
       } catch (error) {
         console.error('Error loading birthday templates:', error)
@@ -61,22 +71,28 @@ export default function BirthdayTemplatesPage() {
 
     setSaving(true)
     try {
-      // Get current settings
+      // Get current settings and features
       const { data: currentData } = await supabase
         .from('organizations')
-        .select('settings')
+        .select('settings, features')
         .eq('id', orgId)
         .single()
 
       const currentSettings = currentData?.settings || {}
+      const currentFeatures = currentData?.features || {}
 
-      // Update with new templates
+      // Update with new templates and SMS settings
       const { error } = await supabase
         .from('organizations')
         .update({
           settings: {
             ...currentSettings,
             birthday_templates: templates
+          },
+          features: {
+            ...currentFeatures,
+            birthday_sms_enabled: birthdaySmsEnabled,
+            birthday_message: birthdayMessage
           }
         })
         .eq('id', orgId)
@@ -216,6 +232,49 @@ export default function BirthdayTemplatesPage() {
             dir="ltr"
           />
         </div>
+      </div>
+
+      {/* SMS Automation Settings */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+          🎂 Автоматические поздравления с днём рождения / ברכות יום הולדת אוטומטיות
+        </h3>
+        
+        <div className="flex items-center justify-between">
+          <div>
+            <Label htmlFor="birthday-sms-enabled" className="text-sm font-medium">
+              Отправлять SMS автоматически / שליחת SMS אוטומטי
+            </Label>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Система отправит поздравление всем клиентам в день рождения в 6:00 UTC
+            </p>
+          </div>
+          <Switch
+            id="birthday-sms-enabled"
+            checked={birthdaySmsEnabled}
+            onCheckedChange={setBirthdaySmsEnabled}
+          />
+        </div>
+
+        {birthdaySmsEnabled && (
+          <div>
+            <Label htmlFor="birthday-message" className="text-sm font-medium">
+              Текст SMS сообщения / טקסט הודעת SMS
+            </Label>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+              Доступные переменные: {'{first_name}'}, {'{org_name}'}
+            </p>
+            <Textarea
+              id="birthday-message"
+              value={birthdayMessage}
+              onChange={(e) => setBirthdayMessage(e.target.value)}
+              rows={3}
+              className="font-sans"
+              dir="rtl"
+              placeholder="🎂 {org_name} מאחלת לך יום הולדת שמח, {first_name}! נשמח לראות אותך!"
+            />
+          </div>
+        )}
       </div>
 
       {/* Variables Info */}

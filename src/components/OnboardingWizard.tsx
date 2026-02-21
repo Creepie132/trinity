@@ -276,11 +276,15 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
       }
 
       toast.success('Настройка завершена! 🎉')
-      router.refresh()
+      setLoading(false)
+
+      // Wait for UI to update, then reload to show dashboard without onboarding
+      setTimeout(() => {
+        window.location.reload()
+      }, 500)
     } catch (error: any) {
       console.error('Onboarding error:', error)
       toast.error('Ошибка сохранения: ' + error.message)
-    } finally {
       setLoading(false)
     }
   }

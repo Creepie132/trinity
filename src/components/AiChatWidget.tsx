@@ -793,7 +793,7 @@ export default function AiChatWidget() {
 
               {/* Builder Screen */}
               {screen === 'builder' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '220px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: isMobile ? '160px' : '16px' }}>
                   {/* Title */}
                   <div
                     style={{
@@ -925,54 +925,73 @@ export default function AiChatWidget() {
                   {/* Total Summary */}
                   <div
                     style={{
-                      position: 'sticky',
-                      bottom: '80px',
-                      padding: '16px',
+                      position: isMobile ? 'sticky' : 'fixed',
+                      ...(isMobile ? {
+                        // Mobile: sticky сверху, компактный
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        width: '100%',
+                        padding: '10px 12px',
+                        marginLeft: '-16px',
+                        marginRight: '-16px',
+                        marginTop: '-16px',
+                        marginBottom: '16px',
+                        borderRadius: '0',
+                        zIndex: 20
+                      } : {
+                        // Desktop: плавающая карточка слева
+                        left: '-330px',
+                        top: '120px',
+                        width: '300px',
+                        padding: '16px',
+                        borderRadius: '16px',
+                        zIndex: 10
+                      }),
                       background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.98), rgba(50, 50, 50, 0.98))',
-                      borderRadius: '16px',
                       color: 'white',
                       boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.3), 0 4px 24px rgba(200, 146, 42, 0.2)',
                       backdropFilter: 'blur(10px)',
-                      zIndex: 10,
-                      marginTop: '16px',
                       border: '1px solid rgba(200, 146, 42, 0.3)'
                     }}
                   >
-                    {/* Setup */}
-                    <div style={{ marginBottom: '12px' }}>
-                      <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '4px' }}>{t('builderSetup')}</div>
-                      <div style={{ fontSize: '20px', fontWeight: 700, color: '#C8922A' }}>
-                        {pricing.setupDiscount > 0 && (
-                          <span style={{ fontSize: '14px', textDecoration: 'line-through', color: '#888', marginLeft: '8px' }}>
-                            ₪{pricing.setupBase.toLocaleString()}
-                          </span>
-                        )}
-                        <span> ₪{pricing.setupDiscounted.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {/* Monthly */}
-                    <div style={{ marginBottom: pricing.yearlySavings > 0 ? '12px' : '0' }}>
-                      <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '4px' }}>{t('builderMonthly')}</div>
-                      <div style={{ fontSize: '20px', fontWeight: 700, color: '#C8922A' }}>
-                        {pricing.periodDiscount > 0 && (
-                          <span style={{ fontSize: '14px', textDecoration: 'line-through', color: '#888', marginLeft: '8px' }}>
-                            ₪{pricing.monthlyBase}
-                          </span>
-                        )}
-                        <span> ₪{pricing.monthlyDiscounted}/{language === 'he' ? 'חודש' : language === 'ru' ? 'мес' : 'mo'}</span>
-                      </div>
-                    </div>
-
-                    {/* Yearly Savings */}
-                    {pricing.yearlySavings > 0 && (
-                      <div>
-                        <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '4px' }}>{t('builderSavings')}</div>
-                        <div style={{ fontSize: '16px', fontWeight: 600, color: '#10B981' }}>
-                          ₪{pricing.yearlySavings.toLocaleString()}
+                    <div style={{ display: isMobile ? 'flex' : 'block', gap: isMobile ? '16px' : '0', justifyContent: 'space-between', alignItems: 'center' }}>
+                      {/* Setup */}
+                      <div style={{ marginBottom: isMobile ? '0' : '12px', flex: isMobile ? 1 : 'auto' }}>
+                        <div style={{ fontSize: isMobile ? '9px' : '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderSetup')}</div>
+                        <div style={{ fontSize: isMobile ? '14px' : '20px', fontWeight: 700, color: '#C8922A', whiteSpace: 'nowrap' }}>
+                          {pricing.setupDiscount > 0 && (
+                            <span style={{ fontSize: isMobile ? '10px' : '14px', textDecoration: 'line-through', color: '#888', marginLeft: '4px' }}>
+                              ₪{pricing.setupBase.toLocaleString()}
+                            </span>
+                          )}
+                          <span> ₪{pricing.setupDiscounted.toLocaleString()}</span>
                         </div>
                       </div>
-                    )}
+
+                      {/* Monthly */}
+                      <div style={{ marginBottom: isMobile ? '0' : (pricing.yearlySavings > 0 ? '12px' : '0'), flex: isMobile ? 1 : 'auto' }}>
+                        <div style={{ fontSize: isMobile ? '9px' : '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderMonthly')}</div>
+                        <div style={{ fontSize: isMobile ? '14px' : '20px', fontWeight: 700, color: '#C8922A', whiteSpace: 'nowrap' }}>
+                          {pricing.periodDiscount > 0 && (
+                            <span style={{ fontSize: isMobile ? '10px' : '14px', textDecoration: 'line-through', color: '#888', marginLeft: '4px' }}>
+                              ₪{pricing.monthlyBase}
+                            </span>
+                          )}
+                          <span> ₪{pricing.monthlyDiscounted}/{language === 'he' ? 'חו' : language === 'ru' ? 'м' : 'mo'}</span>
+                        </div>
+                      </div>
+
+                      {/* Yearly Savings */}
+                      {pricing.yearlySavings > 0 && (
+                        <div style={{ flex: isMobile ? 1 : 'auto' }}>
+                          <div style={{ fontSize: isMobile ? '9px' : '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderSavings')}</div>
+                          <div style={{ fontSize: isMobile ? '12px' : '16px', fontWeight: 600, color: '#10B981', whiteSpace: 'nowrap' }}>
+                            ₪{pricing.yearlySavings.toLocaleString()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Sticky Actions Wrapper */}

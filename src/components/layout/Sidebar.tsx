@@ -50,8 +50,8 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
     { name: t('nav.inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
     { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: t('nav.sms'), href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
-    { name: t('nav.stats'), href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
-    { name: language === 'he' ? 'דוחות' : 'Отчёты', href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
+    { name: t('nav.stats'), href: '/stats', icon: BarChart3, requireFeature: 'statistics' },
+    { name: language === 'he' ? 'דוחות' : 'Отчёты', href: '/analytics', icon: BarChart3, requireFeature: 'reports' },
     { name: t('nav.partners'), href: '/partners', icon: Gift, requireFeature: null },
     { name: t('nav.settings'), href: '/settings', icon: Settings, requireFeature: null },
   ]
@@ -113,7 +113,8 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
       if (item.requireFeature === 'clients' && features.hasClients === false) return false
       if (item.requireFeature === 'payments' && features.hasPayments !== true) return false
       if (item.requireFeature === 'sms' && features.hasSms !== true) return false
-      if (item.requireFeature === 'analytics' && features.hasAnalytics !== true) return false
+      if (item.requireFeature === 'statistics' && features.hasStatistics !== true) return false
+      if (item.requireFeature === 'reports' && features.hasReports !== true) return false
       if (item.requireFeature === 'visits' && features.hasVisits === false) return false
       if (item.requireFeature === 'inventory' && features.hasInventory !== true) return false
     }
@@ -121,7 +122,8 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
     // Check role permissions
     if (item.href === '/sms' && !permissions.canSendSMS) return false
     if (item.href === '/inventory' && !permissions.canManageInventory) return false
-    if ((item.href === '/stats' || item.href === '/analytics') && !permissions.canViewAnalytics) return false
+    if (item.href === '/stats' && !permissions.canViewAnalytics) return false
+    if (item.href === '/analytics' && !permissions.canViewAnalytics) return false
     
     return true
   })
@@ -154,7 +156,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all duration-200"
         >
           <Search className="w-5 h-5" />
-          <span className="flex-1 text-left">Поиск...</span>
+          <span className="flex-1 text-left">{language === 'he' ? 'חיפוש...' : 'Поиск...'}</span>
           <kbd className="px-2 py-1 text-xs bg-white dark:bg-slate-700 rounded shadow">
             ⌘K
           </kbd>

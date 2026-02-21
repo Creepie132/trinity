@@ -8,10 +8,15 @@ export interface Features {
   hasSms: boolean
   hasPayments: boolean
   hasAnalytics: boolean
+  hasStatistics: boolean
+  hasReports: boolean
   hasSubscriptions: boolean
   hasVisits: boolean
   hasInventory: boolean
   hasBooking: boolean
+  hasTelegram: boolean
+  hasLoyalty: boolean
+  hasBirthday: boolean
   isActive: boolean
   category: string
   isLoading: boolean
@@ -27,10 +32,15 @@ export function useFeatures(): Features {
       hasSms: false,
       hasPayments: false,
       hasAnalytics: false,
+      hasStatistics: false,
+      hasReports: false,
       hasSubscriptions: false,
       hasVisits: false,
       hasInventory: false,
       hasBooking: false,
+      hasTelegram: false,
+      hasLoyalty: false,
+      hasBirthday: false,
       isActive: false,
       category: 'other',
       isLoading: true,
@@ -44,10 +54,15 @@ export function useFeatures(): Features {
       hasSms: true,
       hasPayments: true,
       hasAnalytics: true,
+      hasStatistics: true,
+      hasReports: true,
       hasSubscriptions: true,
       hasVisits: true,
       hasInventory: true,
       hasBooking: true,
+      hasTelegram: true,
+      hasLoyalty: true,
+      hasBirthday: true,
       isActive: true,
       category: organization?.category ?? 'other',
       isLoading: false,
@@ -60,10 +75,15 @@ export function useFeatures(): Features {
       hasSms: false,
       hasPayments: false,
       hasAnalytics: false,
+      hasStatistics: false,
+      hasReports: false,
       hasSubscriptions: false,
       hasVisits: false,
       hasInventory: false,
       hasBooking: false,
+      hasTelegram: false,
+      hasLoyalty: false,
+      hasBirthday: false,
       isActive: false,
       category: 'other',
       isLoading: false,
@@ -79,10 +99,15 @@ export function useFeatures(): Features {
       hasSms: modules.sms ?? false,
       hasPayments: modules.payments ?? true,
       hasAnalytics: (modules.statistics || modules.reports) ?? true,
+      hasStatistics: modules.statistics ?? true,
+      hasReports: modules.reports ?? true,
       hasSubscriptions: modules.subscriptions ?? false,
       hasVisits: modules.visits ?? true,
       hasInventory: modules.inventory ?? false,
       hasBooking: modules.booking ?? false,
+      hasTelegram: modules.telegram ?? false,
+      hasLoyalty: modules.loyalty ?? false,
+      hasBirthday: modules.birthday ?? false,
       isActive: organization.is_active ?? false,
       category: organization.category ?? 'other',
       isLoading: false,
@@ -95,10 +120,15 @@ export function useFeatures(): Features {
     hasSms: organization.features?.sms ?? true,
     hasPayments: organization.features?.payments ?? true,
     hasAnalytics: organization.features?.analytics ?? true,
+    hasStatistics: organization.features?.analytics ?? true,
+    hasReports: organization.features?.analytics ?? true,
     hasSubscriptions: organization.features?.subscriptions ?? false,
     hasVisits: organization.features?.visits ?? true,
     hasInventory: organization.features?.inventory ?? false,
     hasBooking: (organization.features as any)?.booking ?? false,
+    hasTelegram: false,
+    hasLoyalty: false,
+    hasBirthday: false,
     isActive: organization.is_active ?? false,
     category: organization.category ?? 'other',
     isLoading: false,

@@ -3,12 +3,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useFeatures } from '@/hooks/useFeatures'
 import { Monitor, Globe, Settings as SettingsIcon, ArrowLeft, Users, Palette, Package, FileText, Calendar, LayoutDashboard, Cake, MessageSquare, Bell, Star } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
   const { t } = useLanguage()
   const permissions = usePermissions()
+  const features = useFeatures()
 
   const settingsCategories = [
     {
@@ -97,9 +99,15 @@ export default function SettingsPage() {
     },
   ]
 
-  // Filter settings based on permissions
+  // Filter settings based on permissions AND module access
   const filteredCategories = settingsCategories.filter((category) => {
-    // Owner-only settings
+    // Check module access first (if module is disabled, hide the setting)
+    if (category.id === 'booking' && features.hasBooking === false) return false
+    if (category.id === 'notifications' && features.hasTelegram === false) return false
+    if (category.id === 'loyalty' && features.hasLoyalty === false) return false
+    if (category.id === 'birthday-templates' && features.hasBirthday === false) return false
+    
+    // Owner-only settings (check permissions)
     if (category.id === 'users' && !permissions.canManageUsers) return false
     if (category.id === 'services' && !permissions.canManageServices) return false
     if (category.id === 'care-instructions' && !permissions.canManageCareInstructions) return false

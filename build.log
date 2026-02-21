@@ -1,0 +1,128 @@
+
+> trinity@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 42s
+  Running TypeScript ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/60) ...
+  Generating static pages using 7 workers (15/60) 
+  Generating static pages using 7 workers (30/60) 
+  Generating static pages using 7 workers (45/60) 
+✓ Generating static pages using 7 workers (60/60) in 5.0s
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /admin
+├ ○ /admin/ads
+├ ○ /admin/billing
+├ ○ /admin/modules
+├ ○ /admin/organizations
+├ ○ /admin/settings
+├ ○ /analytics
+├ ƒ /api/admin/assign
+├ ƒ /api/admin/check
+├ ƒ /api/admin/org-subscription
+├ ƒ /api/admin/organizations/[orgId]/stats
+├ ƒ /api/admin/organizations/create
+├ ƒ /api/admin/profile
+├ ƒ /api/admin/seed-test-data
+├ ƒ /api/ads/active
+├ ƒ /api/ads/click
+├ ƒ /api/ads/impression
+├ ƒ /api/booking/[slug]
+├ ƒ /api/booking/[slug]/book
+├ ƒ /api/booking/[slug]/slots
+├ ƒ /api/care-instructions
+├ ƒ /api/care-instructions/[id]
+├ ƒ /api/clients/[id]/gdpr-delete
+├ ƒ /api/clients/import
+├ ƒ /api/contact
+├ ƒ /api/cron/birthdays
+├ ƒ /api/cron/reminders
+├ ƒ /api/dashboard/debts
+├ ƒ /api/dashboard/reports
+├ ƒ /api/dashboard/revenue
+├ ƒ /api/dashboard/stats
+├ ƒ /api/dashboard/top-services
+├ ƒ /api/dashboard/visits-chart
+├ ƒ /api/export
+├ ƒ /api/health
+├ ƒ /api/inventory
+├ ƒ /api/loyalty/points
+├ ƒ /api/loyalty/settings
+├ ƒ /api/org/invite-user
+├ ƒ /api/org/link-user
+├ ƒ /api/organizations/[orgId]
+├ ƒ /api/organizations/booking-settings
+├ ƒ /api/payments/callback
+├ ƒ /api/payments/create-link
+├ ƒ /api/payments/stripe-checkout
+├ ƒ /api/payments/stripe-subscription
+├ ƒ /api/payments/stripe-webhook
+├ ƒ /api/payments/tranzilla-token
+├ ƒ /api/payments/webhook
+├ ƒ /api/products
+├ ƒ /api/products/[id]
+├ ƒ /api/search
+├ ƒ /api/services
+├ ƒ /api/services/[id]
+├ ƒ /api/setup-visits
+├ ƒ /api/sms/campaign
+├ ƒ /api/sms/send
+├ ƒ /api/templates
+├ ƒ /api/upload/banner
+├ ƒ /api/visits
+├ ƒ /api/visits/[id]/services
+├ ƒ /api/visits/[id]/services/[serviceId]
+├ ƒ /api/visits/[id]/status
+├ ○ /audit
+├ ○ /blocked
+├ ƒ /book/[slug]
+├ ƒ /callback
+├ ○ /clients
+├ ○ /clients/import
+├ ƒ /dashboard
+├ ○ /debts
+├ ○ /debug-admin
+├ ○ /inventory
+├ ○ /landing
+├ ○ /login
+├ ○ /partners
+├ ○ /payments
+├ ○ /policy
+├ ○ /profile
+├ ○ /reports
+├ ○ /settings
+├ ○ /settings-new
+├ ○ /settings/birthday-templates
+├ ○ /settings/booking
+├ ○ /settings/care-instructions
+├ ○ /settings/customize
+├ ○ /settings/dashboard
+├ ○ /settings/display
+├ ○ /settings/language
+├ ○ /settings/loyalty
+├ ○ /settings/notifications
+├ ○ /settings/service-colors
+├ ○ /settings/services
+├ ○ /settings/templates
+├ ○ /settings/users
+├ ○ /sms
+├ ○ /stats
+├ ○ /terms
+├ ○ /unauthorized
+└ ○ /visits
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

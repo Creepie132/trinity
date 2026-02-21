@@ -1,10 +1,12 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileHeader } from '@/components/layout/MobileHeader'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { GlobalSearch } from '@/components/GlobalSearch'
 
 /**
  * DashboardLayout — основной макет.
@@ -19,12 +21,27 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  // Ctrl+K / Cmd+K hotkey
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   return (
     <AuthProvider>
       <ThemeProvider>
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col">
           {/* Мобильный header */}
-          <MobileHeader />
+          <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
 
           <div className="flex-1 lg:flex lg:h-screen overflow-hidden">
             
@@ -32,7 +49,7 @@ export default function DashboardLayout({
               sticky top-0 h-screen делает его зафиксированным
             */}
             <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
-              <Sidebar />
+              <Sidebar onSearchOpen={() => setSearchOpen(true)} />
             </aside>
 
             {/* 2. Main Content — СКРОЛЛИТСЯ ОТДЕЛЬНО
@@ -48,6 +65,9 @@ export default function DashboardLayout({
 
           </div>
         </div>
+
+        {/* Global Search */}
+        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
       </ThemeProvider>
     </AuthProvider>
   )

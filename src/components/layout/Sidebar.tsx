@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, ChevronLeft, Settings, User as UserIcon, Calendar, Package } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, ChevronLeft, Settings, User as UserIcon, Calendar, Package, Search } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
@@ -24,7 +24,11 @@ const toAvatarSrc = (url: string | null): string | undefined => {
   return url
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  onSearchOpen?: () => void
+}
+
+export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, signOut, orgId } = useAuth()
@@ -143,8 +147,22 @@ export function Sidebar() {
         </div>
       </div>
 
+      {/* Search Button */}
+      <div className="px-4 pt-4 pb-2">
+        <button
+          onClick={onSearchOpen}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all duration-200"
+        >
+          <Search className="w-5 h-5" />
+          <span className="flex-1 text-left">Поиск...</span>
+          <kbd className="px-2 py-1 text-xs bg-white dark:bg-slate-700 rounded shadow">
+            ⌘K
+          </kbd>
+        </button>
+      </div>
+
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+      <nav className="flex-1 p-4 pt-2 space-y-2 overflow-y-auto">
         {navigation.map((item, index) => {
           const isActive = pathname === item.href
           const Icon = item.icon

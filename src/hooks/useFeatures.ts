@@ -70,6 +70,26 @@ export function useFeatures(): Features {
     }
   }
 
+  // Check if using new modular system
+  const modules = (organization.features as any)?.modules
+  
+  if (modules) {
+    return {
+      hasClients: modules.clients ?? true,
+      hasSms: modules.sms ?? false,
+      hasPayments: modules.payments ?? true,
+      hasAnalytics: (modules.statistics || modules.reports) ?? true,
+      hasSubscriptions: modules.subscriptions ?? false,
+      hasVisits: modules.visits ?? true,
+      hasInventory: modules.inventory ?? false,
+      hasBooking: modules.booking ?? false,
+      isActive: organization.is_active ?? false,
+      category: organization.category ?? 'other',
+      isLoading: false,
+    }
+  }
+
+  // Fallback to old feature system
   return {
     hasClients: (organization.features as any)?.clients ?? true,
     hasSms: organization.features?.sms ?? true,

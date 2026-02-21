@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, Home, Moon, Sun, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, Home, Moon, Sun, ChevronRight, Boxes } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -48,6 +48,11 @@ export function AdminSidebar() {
       name: t('admin.ads'),
       href: '/admin/ads',
       icon: Megaphone,
+    },
+    {
+      name: 'מודולים',
+      href: '/admin/modules',
+      icon: Boxes,
     },
     {
       name: t('admin.settings'),

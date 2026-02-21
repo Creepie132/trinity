@@ -4,7 +4,7 @@ import "./globals.css";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster } from "@/components/ui/sonner";
-import AiChatWidget from "@/components/AiChatWidget";
+import ConditionalChatWidget from "@/components/ConditionalChatWidget";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -46,7 +46,7 @@ export default function RootLayout({
                 }
               }}
             />
-            <AiChatWidget />
+            <ConditionalChatWidget />
           </LanguageProvider>
         </QueryProvider>
       </body>

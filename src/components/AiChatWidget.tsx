@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import { MessageCircle, X, ArrowRight, ArrowLeft, Check } from 'lucide-react'
 
 type Language = 'he' | 'ru' | 'en'
-type Screen = 'menu' | 'faq' | 'answer' | 'builder'
+type Screen = 'menu' | 'faq' | 'answer' | 'builder' | 'terminal' | 'terminal-tap' | 'terminal-physical' | 'summary'
 type Period = 1 | 3 | 6 | 12
+type TapLicenses = 1 | 3 | 5 | 10
 
 interface Module {
   id: string
@@ -160,7 +161,55 @@ const translations: Record<string, Record<Language, string>> = {
   builderProgress: { he: 'בחר עוד X מודולים לקבלת 20% הנחה על Setup', ru: 'Выбери ещё X модулей для 20% скидки на Setup', en: 'Select X more modules for 20% Setup discount' },
   builderDiscountActive: { he: '🎉 הנחת 20% על Setup הופעלה!', ru: '🎉 Скидка 20% на Setup активирована!', en: '🎉 20% Setup discount activated!' },
   inputPlaceholder: { he: 'כתוב הודעה...', ru: 'Напишите сообщение...', en: 'Type a message...' },
-  online: { he: 'Online', ru: 'Online', en: 'Online' }
+  online: { he: 'Online', ru: 'Online', en: 'Online' },
+  
+  // Terminal selection
+  terminalQuestion: { 
+    he: 'איך אתם מתכננים לקבל תשלומים מלקוחות במקום?', 
+    ru: 'Как вы планируете принимать оплату от клиентов на месте?', 
+    en: 'How do you plan to accept payments from clients on-site?' 
+  },
+  terminalTap: { he: 'Tap on Phone', ru: 'Tap on Phone', en: 'Tap on Phone' },
+  terminalTapDesc: { 
+    he: 'הפכו את האנדרואיד שלכם לטרמינל. בלי ציוד נוסף', 
+    ru: 'Превратите свой Android в терминал. Без дополнительного оборудования', 
+    en: 'Turn your Android into a terminal. No extra hardware' 
+  },
+  terminalPhysical: { he: 'טרמינל פיזי A8900', ru: 'Физический терминал A8900', en: 'Physical Terminal A8900' },
+  terminalPhysicalDesc: { 
+    he: 'מכשיר מקצועי עם הדפסת קבלות ותמיכה בכל הכרטיסים', 
+    ru: 'Профессиональное устройство с печатью чеков и поддержкой всех карт', 
+    en: 'Professional device with receipt printing and all card support' 
+  },
+  terminalTapQuestion: { 
+    he: 'על כמה מכשירים (טלפונים של עובדים) צריך להפעיל רישיון?', 
+    ru: 'На скольких устройствах (телефонах сотрудников) нужно активировать лицензию?', 
+    en: 'On how many devices (employee phones) do you need to activate a license?' 
+  },
+  terminalPhysicalQuestion: { 
+    he: 'כמה מכשירים דרושים לכם?', 
+    ru: 'Сколько устройств вам нужно?', 
+    en: 'How many devices do you need?' 
+  },
+  terminalOther: { he: 'אחר...', ru: 'Другое...', en: 'Other...' },
+  toSummary: { he: 'לסיכום הזמנה', ru: 'К итогу заказа', en: 'To Order Summary' },
+  
+  // Order Summary
+  summaryTitle: { he: 'סיכום הזמנה', ru: 'Итог заказа', en: 'Order Summary' },
+  summaryModules: { he: 'מודולים שנבחרו', ru: 'Выбранные модули', en: 'Selected Modules' },
+  summaryTerminals: { he: 'ציוד תשלום', ru: 'Оборудование для оплаты', en: 'Payment Equipment' },
+  summarySetupOnce: { he: 'Setup (חד פעמי)', ru: 'Setup (единоразово)', en: 'Setup (one-time)' },
+  summaryMonthly: { he: 'מנוי חודשי', ru: 'Ежемесячная подписка', en: 'Monthly Subscription' },
+  summaryYearlySavings: { he: 'חיסכון שנתי', ru: 'Годовая экономия', en: 'Yearly Savings' },
+  summaryPlan: { he: 'תוכנית X חודשים', ru: 'План на X месяцев', en: 'X-month Plan' },
+  summaryToPayment: { he: 'לתשלום', ru: 'К оплате', en: 'To Payment' },
+  summaryBackToEdit: { he: 'חזרה לעריכה', ru: 'Вернуться к редактированию', en: 'Back to Edit' },
+  summaryThankYou: { 
+    he: 'תודה על ההזמנה! נציג שלנו יצור איתך קשר בקרוב לסיום ההרשמה.', 
+    ru: 'Спасибо за заказ! Наш представитель свяжется с вами в ближайшее время для завершения регистрации.', 
+    en: 'Thank you for your order! Our representative will contact you soon to complete the registration.' 
+  },
+  summaryPhoneEmail: { he: 'טלפון או Email', ru: 'Телефон или Email', en: 'Phone or Email' }
 }
 
 const faqData: Record<string, { question: Record<Language, string>, answer: Record<Language, string> }> = {
@@ -247,6 +296,14 @@ export default function AiChatWidget() {
   const [selectedModules, setSelectedModules] = useState<string[]>(['core'])
   const [period, setPeriod] = useState<Period>(1)
   const [showInput, setShowInput] = useState(false)
+  
+  // Terminal selection
+  const [hasTapOnPhone, setHasTapOnPhone] = useState(false)
+  const [hasPhysicalTerminal, setHasPhysicalTerminal] = useState(false)
+  const [tapLicenses, setTapLicenses] = useState<TapLicenses>(1)
+  const [physicalTerminalCount, setPhysicalTerminalCount] = useState(1)
+  const [customTerminalCount, setCustomTerminalCount] = useState('')
+  
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Auto-detect language from HTML lang attribute
@@ -287,6 +344,11 @@ export default function AiChatWidget() {
       setSelectedModules(['core'])
       setPeriod(1)
       setShowInput(false)
+      setHasTapOnPhone(false)
+      setHasPhysicalTerminal(false)
+      setTapLicenses(1)
+      setPhysicalTerminalCount(1)
+      setCustomTerminalCount('')
     }
   }, [isOpen])
 
@@ -312,6 +374,11 @@ export default function AiChatWidget() {
     setSelectedModules(['core'])
     setPeriod(1)
     setShowInput(false)
+    setHasTapOnPhone(false)
+    setHasPhysicalTerminal(false)
+    setTapLicenses(1)
+    setPhysicalTerminalCount(1)
+    setCustomTerminalCount('')
   }
 
   const toggleModule = (moduleId: string) => {
@@ -328,8 +395,18 @@ export default function AiChatWidget() {
   const calculatePricing = () => {
     const selectedMods = MODULES.filter(m => selectedModules.includes(m.id))
     
-    // Monthly price
+    // Monthly price from modules
     let monthlyTotal = selectedMods.reduce((sum, m) => sum + m.monthly, 0)
+    
+    // Add terminal monthly costs
+    if (hasTapOnPhone) {
+      const tapPrices: Record<TapLicenses, number> = { 1: 69, 3: 169, 5: 249, 10: 449 }
+      monthlyTotal += tapPrices[tapLicenses]
+    }
+    if (hasPhysicalTerminal) {
+      const termCount = customTerminalCount ? parseInt(customTerminalCount) || physicalTerminalCount : physicalTerminalCount
+      monthlyTotal += termCount * 79
+    }
     
     // Period discount
     const periodDiscounts: Record<Period, number> = { 1: 0, 3: 0.05, 6: 0.10, 12: 0.15 }
@@ -341,8 +418,15 @@ export default function AiChatWidget() {
       discountedMonthly = 480
     }
     
-    // Setup price
+    // Setup price from modules
     let setupTotal = selectedMods.reduce((sum, m) => sum + m.setup, 0)
+    
+    // Add terminal setup costs
+    if (hasPhysicalTerminal) {
+      const termCount = customTerminalCount ? parseInt(customTerminalCount) || physicalTerminalCount : physicalTerminalCount
+      setupTotal += termCount * 1990
+    }
+    
     const setupDiscount = selectedModules.length >= 5 ? 0.20 : 0
     const discountedSetup = setupTotal * (1 - setupDiscount)
     
@@ -928,6 +1012,529 @@ export default function AiChatWidget() {
 
                 </div>
               )}
+
+              {/* Terminal Selection Screen */}
+              {screen === 'terminal' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Question */}
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'linear-gradient(135deg, rgba(200, 146, 42, 0.12), rgba(255, 191, 0, 0.08))',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(200, 146, 42, 0.2)'
+                    }}
+                  >
+                    <p style={{ color: '#C8922A', fontSize: '14px', fontWeight: 600, margin: 0, lineHeight: '1.5' }}>
+                      {t('terminalQuestion')}
+                    </p>
+                  </div>
+
+                  {/* Tap on Phone Option */}
+                  <div
+                    onClick={() => setHasTapOnPhone(!hasTapOnPhone)}
+                    style={{
+                      padding: '14px',
+                      background: hasTapOnPhone ? 'rgba(200, 146, 42, 0.1)' : '#f9f9f9',
+                      border: `1px solid ${hasTapOnPhone ? '#C8922A' : '#e5e5e5'}`,
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '12px'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '4px',
+                        border: `2px solid ${hasTapOnPhone ? '#C8922A' : '#ccc'}`,
+                        background: hasTapOnPhone ? '#C8922A' : 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        marginTop: '2px'
+                      }}
+                    >
+                      {hasTapOnPhone && <Check size={14} color="white" strokeWidth={3} />}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#333', marginBottom: '4px', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                        {t('terminalTap')}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#888', lineHeight: '1.4', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                        {t('terminalTapDesc')}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Physical Terminal Option */}
+                  <div
+                    onClick={() => setHasPhysicalTerminal(!hasPhysicalTerminal)}
+                    style={{
+                      padding: '14px',
+                      background: hasPhysicalTerminal ? 'rgba(200, 146, 42, 0.1)' : '#f9f9f9',
+                      border: `1px solid ${hasPhysicalTerminal ? '#C8922A' : '#e5e5e5'}`,
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '12px'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '4px',
+                        border: `2px solid ${hasPhysicalTerminal ? '#C8922A' : '#ccc'}`,
+                        background: hasPhysicalTerminal ? '#C8922A' : 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        marginTop: '2px'
+                      }}
+                    >
+                      {hasPhysicalTerminal && <Check size={14} color="white" strokeWidth={3} />}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#333', marginBottom: '4px', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                        {t('terminalPhysical')}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#888', lineHeight: '1.4', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                        {t('terminalPhysicalDesc')}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Continue Button */}
+                  <button
+                    onClick={() => {
+                      if (hasTapOnPhone && hasPhysicalTerminal) {
+                        setScreen('terminal-tap')
+                      } else if (hasTapOnPhone) {
+                        setScreen('terminal-tap')
+                      } else if (hasPhysicalTerminal) {
+                        setScreen('terminal-physical')
+                      } else {
+                        setScreen('summary')
+                      }
+                    }}
+                    style={{
+                      padding: '14px 16px',
+                      background: 'linear-gradient(135deg, #C8922A, #FFBF00)',
+                      border: 'none',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 14px rgba(200, 146, 42, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(200, 146, 42, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(200, 146, 42, 0.3)'
+                    }}
+                  >
+                    {t('builderContinue')}
+                  </button>
+
+                  {/* Back Button */}
+                  <button
+                    onClick={() => setScreen('builder')}
+                    style={{
+                      padding: '14px 16px',
+                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      border: 'none',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
+                    {t('backToMenu')}
+                  </button>
+                </div>
+              )}
+
+              {/* Terminal Tap Licenses Screen */}
+              {screen === 'terminal-tap' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'linear-gradient(135deg, rgba(200, 146, 42, 0.12), rgba(255, 191, 0, 0.08))',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(200, 146, 42, 0.2)'
+                    }}
+                  >
+                    <p style={{ color: '#C8922A', fontSize: '14px', fontWeight: 600, margin: 0, lineHeight: '1.5' }}>
+                      {t('terminalTapQuestion')}
+                    </p>
+                  </div>
+
+                  {/* License Options */}
+                  {([1, 3, 5, 10] as TapLicenses[]).map(count => {
+                    const prices: Record<TapLicenses, number> = { 1: 69, 3: 169, 5: 249, 10: 449 }
+                    return (
+                      <button
+                        key={count}
+                        onClick={() => setTapLicenses(count)}
+                        style={{
+                          padding: '14px 16px',
+                          background: tapLicenses === count ? 'rgba(200, 146, 42, 0.1)' : '#f5f5f5',
+                          border: `1px solid ${tapLicenses === count ? '#C8922A' : '#e5e5e5'}`,
+                          borderRadius: '12px',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          color: tapLicenses === count ? '#C8922A' : '#666',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {count} {language === 'he' ? 'רישיונות' : language === 'ru' ? 'лицензий' : 'licenses'} — ₪{prices[count]}/{language === 'he' ? 'חו' : language === 'ru' ? 'мес' : 'mo'}
+                      </button>
+                    )
+                  })}
+
+                  {/* Continue Button */}
+                  <button
+                    onClick={() => hasPhysicalTerminal ? setScreen('terminal-physical') : setScreen('summary')}
+                    style={{
+                      padding: '14px 16px',
+                      background: 'linear-gradient(135deg, #C8922A, #FFBF00)',
+                      border: 'none',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 14px rgba(200, 146, 42, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(200, 146, 42, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(200, 146, 42, 0.3)'
+                    }}
+                  >
+                    {t('toSummary')}
+                  </button>
+                </div>
+              )}
+
+              {/* Physical Terminal Count Screen */}
+              {screen === 'terminal-physical' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'linear-gradient(135deg, rgba(200, 146, 42, 0.12), rgba(255, 191, 0, 0.08))',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(200, 146, 42, 0.2)'
+                    }}
+                  >
+                    <p style={{ color: '#C8922A', fontSize: '14px', fontWeight: 600, margin: 0, lineHeight: '1.5' }}>
+                      {t('terminalPhysicalQuestion')}
+                    </p>
+                  </div>
+
+                  {/* Count Options */}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {[1, 2, 3].map(count => (
+                      <button
+                        key={count}
+                        onClick={() => {
+                          setPhysicalTerminalCount(count)
+                          setCustomTerminalCount('')
+                        }}
+                        style={{
+                          flex: 1,
+                          minWidth: '70px',
+                          padding: '12px',
+                          background: physicalTerminalCount === count && !customTerminalCount ? '#C8922A' : '#f5f5f5',
+                          color: physicalTerminalCount === count && !customTerminalCount ? 'white' : '#666',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {count}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const input = prompt(t('terminalOther'))
+                        if (input && !isNaN(parseInt(input))) {
+                          setCustomTerminalCount(input)
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        minWidth: '90px',
+                        padding: '12px',
+                        background: customTerminalCount ? '#C8922A' : '#f5f5f5',
+                        color: customTerminalCount ? 'white' : '#666',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {customTerminalCount || t('terminalOther')}
+                    </button>
+                  </div>
+
+                  {/* Price Display */}
+                  <div
+                    style={{
+                      padding: '12px',
+                      background: '#fff3cd',
+                      border: '1px solid #ffc107',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      color: '#856404',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {(() => {
+                      const count = customTerminalCount ? parseInt(customTerminalCount) : physicalTerminalCount
+                      return `${count} × ₪1,990 + ${count} × ₪79/חו = ₪${count * 1990} setup + ₪${count * 79}/חו`
+                    })()}
+                  </div>
+
+                  {/* Continue Button */}
+                  <button
+                    onClick={() => setScreen('summary')}
+                    style={{
+                      padding: '14px 16px',
+                      background: 'linear-gradient(135deg, #C8922A, #FFBF00)',
+                      border: 'none',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 14px rgba(200, 146, 42, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(200, 146, 42, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(200, 146, 42, 0.3)'
+                    }}
+                  >
+                    {t('toSummary')}
+                  </button>
+                </div>
+              )}
+
+              {/* Order Summary Screen */}
+              {screen === 'summary' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Title */}
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'linear-gradient(135deg, rgba(200, 146, 42, 0.12), rgba(255, 191, 0, 0.08))',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(200, 146, 42, 0.2)',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <h3 style={{ color: '#C8922A', fontSize: '18px', fontWeight: 700, margin: 0 }}>
+                      {t('summaryTitle')}
+                    </h3>
+                  </div>
+
+                  {/* Selected Modules */}
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: '#f9f9f9',
+                      borderRadius: '12px',
+                      border: '1px solid #e5e5e5'
+                    }}
+                  >
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#666', marginBottom: '12px' }}>
+                      📦 {t('summaryModules')}:
+                    </div>
+                    {MODULES.filter(m => selectedModules.includes(m.id)).map(mod => (
+                      <div key={mod.id} style={{ fontSize: '12px', color: '#333', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>• {mod.name[language]}</span>
+                        <span>₪{mod.monthly}/{language === 'he' ? 'חו' : language === 'ru' ? 'мес' : 'mo'}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Terminals */}
+                  {(hasTapOnPhone || hasPhysicalTerminal) && (
+                    <div
+                      style={{
+                        padding: '16px',
+                        background: '#f9f9f9',
+                        borderRadius: '12px',
+                        border: '1px solid #e5e5e5'
+                      }}
+                    >
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#666', marginBottom: '12px' }}>
+                        💳 {t('summaryTerminals')}:
+                      </div>
+                      {hasTapOnPhone && (
+                        <div style={{ fontSize: '12px', color: '#333', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                          <span>• {t('terminalTap')} ({tapLicenses} {language === 'he' ? 'רישיונות' : language === 'ru' ? 'лицензий' : 'licenses'})</span>
+                          <span>₪{[69, 169, 249, 449][[1, 3, 5, 10].indexOf(tapLicenses)]}/{language === 'he' ? 'חו' : language === 'ru' ? 'мес' : 'mo'}</span>
+                        </div>
+                      )}
+                      {hasPhysicalTerminal && (
+                        <>
+                          <div style={{ fontSize: '12px', color: '#333', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>• {t('terminalPhysical')} ({customTerminalCount || physicalTerminalCount}x)</span>
+                            <span>₪{(customTerminalCount ? parseInt(customTerminalCount) : physicalTerminalCount) * 1990} setup</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#333', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                            <span></span>
+                            <span>₪{(customTerminalCount ? parseInt(customTerminalCount) : physicalTerminalCount) * 79}/{language === 'he' ? 'חו' : language === 'ru' ? 'мес' : 'mo'}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Total */}
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.98), rgba(50, 50, 50, 0.98))',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(200, 146, 42, 0.3)',
+                      color: 'white'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '13px' }}>🔧 {t('summarySetupOnce')}:</span>
+                      <span style={{ fontSize: '15px', fontWeight: 700, color: '#C8922A' }}>
+                        ₪{pricing.setupDiscounted.toLocaleString()}
+                        {pricing.setupDiscount > 0 && (
+                          <span style={{ fontSize: '11px', textDecoration: 'line-through', color: '#888', marginRight: '6px' }}>
+                            {' '}₪{pricing.setupBase.toLocaleString()}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '13px' }}>💳 {t('summaryMonthly')}:</span>
+                      <span style={{ fontSize: '15px', fontWeight: 700, color: '#C8922A' }}>
+                        ₪{pricing.monthlyDiscounted}/{language === 'he' ? 'חו' : language === 'ru' ? 'мес' : 'mo'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#ccc' }}>
+                      <span>{t('summaryPlan').replace('X', String(period))}</span>
+                      {pricing.yearlySavings > 0 && <span>🏷️ {t('summaryYearlySavings')}: ₪{pricing.yearlySavings.toLocaleString()}</span>}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <button
+                    onClick={() => {
+                      const contact = prompt(t('summaryPhoneEmail'))
+                      if (contact) {
+                        alert(t('summaryThankYou'))
+                        handleBackToMenu()
+                      }
+                    }}
+                    style={{
+                      padding: '14px 16px',
+                      background: 'linear-gradient(135deg, #C8922A, #FFBF00)',
+                      border: 'none',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 14px rgba(200, 146, 42, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(200, 146, 42, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(200, 146, 42, 0.3)'
+                    }}
+                  >
+                    {t('summaryToPayment')}
+                  </button>
+
+                  <button
+                    onClick={() => setScreen('builder')}
+                    style={{
+                      padding: '14px 16px',
+                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      border: 'none',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
+                    {t('summaryBackToEdit')}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* ЗОНА 2: Итоговая сумма (sticky, только для builder screen) */}
@@ -1008,6 +1615,7 @@ export default function AiChatWidget() {
               >
                 {/* Continue Button */}
                 <button
+                  onClick={() => setScreen('terminal')}
                   style={{
                     padding: '14px 16px',
                     background: 'linear-gradient(135deg, #C8922A, #FFBF00)',

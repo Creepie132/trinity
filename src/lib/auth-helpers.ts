@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 type Role = "owner" | "moderator" | "user"
 
@@ -9,14 +11,34 @@ interface AuthResult {
   email: string
 }
 
+// Service role client for bypassing RLS
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
 // Проверить что пользователь принадлежит организации и имеет нужную роль
 export async function requireOrgRole(
   orgId: string,
   requiredRoles: Role[]
 ): Promise<AuthResult> {
-  const supabase = createClient(
+  // Get user from session (with cookies)
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        },
+      },
+    }
   )
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -25,7 +47,8 @@ export async function requireOrgRole(
     throw new Error("Unauthorized")
   }
 
-  const { data: orgUser, error: orgError } = await supabase
+  // Use service role to check org_users (bypass RLS)
+  const { data: orgUser, error: orgError } = await supabaseAdmin
     .from("org_users")
     .select("role, email")
     .eq("org_id", orgId)
@@ -50,9 +73,23 @@ export async function requireOrgRole(
 
 // Проверить что пользователь — системный админ
 export async function requireAdmin(): Promise<{ userId: string; email: string }> {
-  const supabase = createClient(
+  // Get user from session (with cookies)
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        },
+      },
+    }
   )
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -61,7 +98,8 @@ export async function requireAdmin(): Promise<{ userId: string; email: string }>
     throw new Error("Unauthorized")
   }
 
-  const { data: adminUser } = await supabase
+  // Use service role to check admin_users (bypass RLS)
+  const { data: adminUser } = await supabaseAdmin
     .from("admin_users")
     .select("email")
     .eq("user_id", user.id)

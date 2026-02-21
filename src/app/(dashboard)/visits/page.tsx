@@ -29,6 +29,7 @@ import {
 import { toast } from 'sonner'
 import { Visit } from '@/types/visits'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
+import { ExportButton } from '@/components/ExportButton'
 
 export default function VisitsPage() {
   const router = useRouter()
@@ -276,11 +277,14 @@ export default function VisitsPage() {
             {t('common.total')}: {totalCount} {t('visits.title')}
           </p>
         </div>
-        {/* Desktop Add Button */}
-        <Button onClick={() => setAddDialogOpen(true)} className="hidden md:flex bg-theme-primary text-white hover:opacity-90">
-          <Plus className="w-4 h-4 ml-2" />
-          {t('visits.addNew')}
-        </Button>
+        {/* Desktop Buttons */}
+        <div className="flex gap-2">
+          <ExportButton type="visits" />
+          <Button onClick={() => setAddDialogOpen(true)} className="hidden md:flex bg-theme-primary text-white hover:opacity-90">
+            <Plus className="w-4 h-4 ml-2" />
+            {t('visits.addNew')}
+          </Button>
+        </div>
       </div>
 
       {/* View Mode Toggle */}

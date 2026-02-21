@@ -25,6 +25,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { ExportButton } from '@/components/ExportButton'
 
 export default function PaymentsPage() {
   const searchParams = useSearchParams()
@@ -113,6 +114,7 @@ export default function PaymentsPage() {
 
         {/* Desktop buttons */}
         <div className="hidden md:flex flex-wrap gap-3">
+          <ExportButton type="payments" />
           {features.hasPayments && (
             <>
               <Button onClick={() => setDialogOpen(true)}>

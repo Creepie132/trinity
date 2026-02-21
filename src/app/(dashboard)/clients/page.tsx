@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
+import { ExportButton } from '@/components/ExportButton'
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -65,10 +66,13 @@ export default function ClientsPage() {
             {t('common.total')}: {clients?.length || 0} {t('clients.title')}
           </p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)} className="hidden md:flex bg-theme-primary text-white hover:opacity-90">
-          <Plus className="w-4 h-4 ml-2" />
-          {t('clients.addNew')}
-        </Button>
+        <div className="flex gap-2">
+          <ExportButton type="clients" />
+          <Button onClick={() => setAddDialogOpen(true)} className="hidden md:flex bg-theme-primary text-white hover:opacity-90">
+            <Plus className="w-4 h-4 ml-2" />
+            {t('clients.addNew')}
+          </Button>
+        </div>
       </div>
 
       {/* Search */}

@@ -32,6 +32,7 @@ import { BarcodeScanner } from '@/components/inventory/BarcodeScanner'
 import { QuickSaleDialog } from '@/components/inventory/QuickSaleDialog'
 import { ReturnProductDialog } from '@/components/inventory/ReturnProductDialog'
 import type { Product } from '@/types/inventory'
+import { ExportButton } from '@/components/ExportButton'
 
 type StockFilter = 'all' | 'low' | 'out'
 
@@ -125,6 +126,7 @@ export default function InventoryPage() {
           </h1>
         </div>
         <div className="hidden md:flex flex-wrap gap-2">
+          <ExportButton type="products" />
           <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
             <Plus className="w-4 h-4" />
             {t('inventory.newProduct')}

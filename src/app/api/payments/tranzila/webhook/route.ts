@@ -57,7 +57,7 @@ const PLAN_FEATURES: Record<string, Record<string, boolean>> = {
 async function handleWebhook(req: NextRequest) {
   try {
     // IP whitelist (только в production)
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'production' && process.env.TRANZILA_IP_WHITELIST_ENABLED === 'true') {
       const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? ''
       if (!TRANZILA_IPS.includes(ip)) {
         console.warn(`Tranzila webhook: rejected IP ${ip}`)

@@ -154,8 +154,14 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
 
   const handleNext = () => {
     if (step === 1) {
-      if (!businessName || !category) {
+      if (!businessName || !category || !phone) {
         toast.error('Заполните все поля')
+        return
+      }
+      // Validate phone number (only digits, +, -, spaces)
+      const phoneRegex = /^[\d\s\-+()]+$/
+      if (!phoneRegex.test(phone)) {
+        toast.error('Телефон должен содержать только цифры')
         return
       }
     }
@@ -336,8 +342,8 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  placeholder="050-1234567"
                   className="mt-2 bg-gray-800 border-gray-700 text-white"
-                  placeholder="+972 50 123 4567"
                 />
               </div>
             </div>

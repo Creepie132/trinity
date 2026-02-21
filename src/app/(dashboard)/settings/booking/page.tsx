@@ -10,9 +10,10 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
-import { ArrowLeft, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Copy, Check, Download, Printer, QrCode } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import QRCode from 'qrcode'
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
 
@@ -62,6 +63,8 @@ export default function BookingSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [hasBreak, setHasBreak] = useState(true)
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
+  const [orgName, setOrgName] = useState<string>('')
 
   // Generate slug from org name
   const generateSlug = (name: string) => {
@@ -93,6 +96,11 @@ export default function BookingSettingsPage() {
         const { data } = await res.json()
         console.log('[BOOKING SETTINGS] Loaded org data:', data?.name)
         
+        // Save org name for QR code
+        if (data?.name) {
+          setOrgName(data.name)
+        }
+        
         if (data?.booking_settings) {
           console.log('[BOOKING SETTINGS] Found existing settings')
           setSettings(prev => ({ ...prev, ...data.booking_settings }))
@@ -117,6 +125,108 @@ export default function BookingSettingsPage() {
 
     loadSettings()
   }, [orgId])
+
+  // Generate QR code when slug changes
+  useEffect(() => {
+    const generateQR = async () => {
+      if (!settings.slug) return
+
+      try {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+        const bookingUrl = `${appUrl}/book/${settings.slug}`
+        const qrDataUrl = await QRCode.toDataURL(bookingUrl, {
+          width: 512,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#ffffff',
+          },
+        })
+        setQrCodeUrl(qrDataUrl)
+      } catch (error) {
+        console.error('QR generation error:', error)
+      }
+    }
+
+    generateQR()
+  }, [settings.slug])
+
+  const handleDownloadQR = () => {
+    if (!qrCodeUrl) return
+
+    const link = document.createElement('a')
+    link.download = `${settings.slug}-qr-code.png`
+    link.href = qrCodeUrl
+    link.click()
+    toast.success('QR код скачан!')
+  }
+
+  const handlePrintQR = () => {
+    if (!qrCodeUrl) return
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR код - ${orgName}</title>
+          <style>
+            body {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              margin: 0;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            }
+            .container {
+              text-align: center;
+              padding: 40px;
+            }
+            h1 {
+              font-size: 32px;
+              margin-bottom: 10px;
+              color: #1a1a1a;
+            }
+            .emoji {
+              font-size: 48px;
+              margin-bottom: 20px;
+            }
+            img {
+              max-width: 400px;
+              margin: 20px 0;
+            }
+            p {
+              font-size: 20px;
+              color: #666;
+              margin: 10px 0;
+            }
+            @media print {
+              body {
+                margin: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>${orgName}</h1>
+            <div class="emoji">📱</div>
+            <p>Запишитесь онлайн!</p>
+            <p>Сканируйте QR-код</p>
+            <img src="${qrCodeUrl}" alt="QR Code" />
+          </div>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    setTimeout(() => {
+      printWindow.print()
+    }, 250)
+  }
 
   const handleSave = async () => {
     if (!orgId) {
@@ -617,6 +727,73 @@ export default function BookingSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* QR Code Section */}
+      {settings.slug && qrCodeUrl && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base md:text-lg flex items-center gap-2">
+              <QrCode className="w-5 h-5" />
+              QR-код для клиентов / קוד QR ללקוחות
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              Клиенты могут отсканировать этот QR-код чтобы перейти на страницу онлайн-записи
+            </p>
+            
+            {/* QR Code Display */}
+            <div className="flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700">
+              <img
+                src={qrCodeUrl}
+                alt="QR Code"
+                className="w-64 h-64 mb-4"
+              />
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {orgName}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  Ссылка: {process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/book/{settings.slug}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const url = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/book/${settings.slug}`
+                    navigator.clipboard.writeText(url)
+                    toast.success('Ссылка скопирована!')
+                  }}
+                  className="text-xs"
+                >
+                  <Copy className="w-3 h-3 mr-1" />
+                  Скопировать ссылку
+                </Button>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <Button
+                onClick={handleDownloadQR}
+                variant="outline"
+                className="flex-1 gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Скачать QR
+              </Button>
+              <Button
+                onClick={handlePrintQR}
+                variant="outline"
+                className="flex-1 gap-2"
+              >
+                <Printer className="w-4 h-4" />
+                Печать
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Save Button */}
       <div className="flex justify-end pb-6">

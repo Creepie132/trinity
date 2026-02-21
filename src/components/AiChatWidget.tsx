@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import ChatButton from './ChatButton'
+import { MessageCircle } from 'lucide-react'
 
 type Language = 'he' | 'ru' | 'en'
 
@@ -56,8 +56,44 @@ export default function AiChatWidget() {
         }
       `}</style>
 
-      {/* Lottie Button */}
-      <ChatButton onClick={() => setIsOpen(!isOpen)} isActive={isOpen} />
+      {/* AI Assistant FAB Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.05)'
+          e.currentTarget.style.boxShadow = '0 6px 20px 0 rgba(0,0,0,0.35)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = isOpen ? 'scale(0.95)' : 'scale(1)'
+          e.currentTarget.style.boxShadow = '0 4px 14px 0 rgba(0,0,0,0.25)'
+        }}
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          backgroundColor: '#FFBF00',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 4px 14px 0 rgba(0,0,0,0.25)',
+          transform: isOpen ? 'scale(0.95)' : 'scale(1)',
+          transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+          zIndex: 9999,
+          outline: 'none',
+        }}
+        aria-label="Open AI Assistant"
+      >
+        <MessageCircle
+          size={28}
+          strokeWidth={2.5}
+          color="#1A1A1A"
+        />
+      </button>
 
       {/* Chat Window */}
       {isOpen && (

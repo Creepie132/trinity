@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Получаем список получателей на основе фильтра
     let recipientsQuery = supabase
-      .from('client_summary')
+      .from('clients')
       .select('id, first_name, last_name, phone')
       .eq('org_id', org_id)
       .not('phone', 'is', null)

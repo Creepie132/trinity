@@ -1313,9 +1313,10 @@ export default function LandingPage() {
                   </label>
                   <input
                     type="tel"
+                    pattern="[0-9+\-() ]*"
                     name="phone"
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   />
                 </div>
 
@@ -1432,6 +1433,7 @@ export default function LandingPage() {
                   </label>
                   <input
                     type="tel"
+                    pattern="[0-9+\-() ]*"
                     name="phone"
                     required
                     placeholder="05X-XXX-XXXX"

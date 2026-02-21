@@ -710,6 +710,7 @@ END:VCALENDAR`
                 <label className="block text-base font-bold mb-3">{t.phone}</label>
                 <input
                   type="tel"
+                  pattern="[0-9+\-() ]*"
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
                   placeholder="05X-XXX-XXXX"

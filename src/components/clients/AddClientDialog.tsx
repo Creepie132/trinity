@@ -108,6 +108,7 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
             <Input
               id="phone"
               type="tel"
+              pattern="[0-9+\-() ]*"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder="+972-50-1234567"

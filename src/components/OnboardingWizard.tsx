@@ -158,10 +158,10 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
         toast.error('Заполните все поля')
         return
       }
-      // Validate phone number (only digits, +, -, spaces)
-      const phoneRegex = /^[\d\s\-+()]+$/
+      // Validate phone number (only digits, +, -, spaces, parentheses, 7-20 chars)
+      const phoneRegex = /^[0-9+\-() ]{7,20}$/
       if (!phoneRegex.test(phone)) {
-        toast.error('Телефон должен содержать только цифры')
+        toast.error('Телефон должен содержать только цифры, +, -, (), пробелы (7-20 символов)')
         return
       }
     }
@@ -340,6 +340,7 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
                 <Input
                   id="phone"
                   type="tel"
+                  pattern="[0-9+\-() ]*"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="050-1234567"

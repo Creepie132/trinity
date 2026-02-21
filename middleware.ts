@@ -6,6 +6,7 @@ const CALLBACK_PATH = '/callback'
 const WEBHOOK_PATH = '/api/payments/webhook'
 const STRIPE_WEBHOOK_PATH = '/api/payments/stripe-webhook'
 const TRANZILA_WEBHOOK_PATH = '/api/payments/tranzila/webhook'
+const TRANZILA_SUCCESS_PATH = '/api/payments/tranzila/success'
 const HEALTH_PATH = '/api/health'
 
 export async function middleware(req: NextRequest) {
@@ -25,6 +26,10 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith(WEBHOOK_PATH + '/') ||
     pathname === STRIPE_WEBHOOK_PATH ||
     pathname.startsWith(STRIPE_WEBHOOK_PATH + '/') ||
+    pathname === TRANZILA_WEBHOOK_PATH ||
+    pathname.startsWith(TRANZILA_WEBHOOK_PATH + '/') ||
+    pathname === TRANZILA_SUCCESS_PATH ||
+    pathname.startsWith(TRANZILA_SUCCESS_PATH + '/') ||
     pathname === HEALTH_PATH ||
     pathname.startsWith('/.well-known')
   ) {

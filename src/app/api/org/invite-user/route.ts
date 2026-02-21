@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { sendWelcomeEmail } from '@/lib/emails'
+import { requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +47,13 @@ export async function POST(request: Request) {
         { error: 'org_id, email, and role are required' },
         { status: 400 }
       )
+    }
+
+    // ✅ Проверка роли (только owner)
+    try {
+      await requireOrgRole(org_id, ["owner"])
+    } catch (e) {
+      return authErrorResponse(e)
     }
 
     if (!['owner', 'manager', 'user'].includes(role)) {

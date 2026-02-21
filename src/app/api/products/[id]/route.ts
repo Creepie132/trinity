@@ -8,6 +8,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import type { UpdateProductDTO } from '@/types/inventory'
+import { requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
 
 /**
  * PATCH /api/products/[id]
@@ -157,6 +158,13 @@ export async function DELETE(
     }
 
     const { org_id } = orgUser
+
+    // ✅ Проверка роли (только owner/moderator)
+    try {
+      await requireOrgRole(org_id, ["owner", "moderator"])
+    } catch (e) {
+      return authErrorResponse(e)
+    }
 
     // Soft delete: set is_active = false
     const { data: product, error } = await supabase

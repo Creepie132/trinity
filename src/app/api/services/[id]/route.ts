@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import type { UpdateServiceDTO } from '@/types/services'
+import { requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
 
 export async function PATCH(
   request: NextRequest,
@@ -109,6 +110,13 @@ export async function DELETE(
 
     if (orgError || !orgUser) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+    }
+
+    // ✅ Проверка роли (только owner/moderator)
+    try {
+      await requireOrgRole(orgUser.org_id, ["owner", "moderator"])
+    } catch (e) {
+      return authErrorResponse(e)
     }
 
     const { data: service, error } = await supabase

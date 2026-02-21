@@ -2,12 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { sendWelcomeEmail } from '@/lib/emails'
+import { requireAdmin, authErrorResponse } from '@/lib/auth-helpers'
 
 export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7)
   console.log(`[CREATE ORG ${requestId}] 🚀 API called at ${new Date().toISOString()}`)
   
   try {
+    // ✅ Проверка admin доступа
+    let adminUserId: string
+    try {
+      const adminAuth = await requireAdmin()
+      adminUserId = adminAuth.userId
+    } catch (e) {
+      return authErrorResponse(e)
+    }
+
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,22 +35,6 @@ export async function POST(request: NextRequest) {
         },
       }
     )
-
-    // Check admin authentication
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: adminUser } = await supabase
-      .from('admin_users')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!adminUser) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
 
     const body = await request.json()
     const { name, category, plan, clientId, newClient } = body
@@ -328,7 +322,7 @@ export async function POST(request: NextRequest) {
           email: normalizedEmail,
           org_id: org.id,
           role: 'owner',
-          invited_by: user.id,
+          invited_by: adminUserId,
           expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
         })
 

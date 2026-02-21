@@ -3,6 +3,7 @@ import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
 import { sendSms } from '@/lib/inforu'
 import { ratelimitStrict, getClientIp } from '@/lib/ratelimit'
 import { validateBody, createSmsSchema } from '@/lib/validations'
+import { requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,15 @@ export async function POST(request: NextRequest) {
     const authResult = await checkAuthAndFeature('sms')
     if (!authResult.success) {
       return authResult.response
+    }
+
+    const { org_id } = authResult.data
+
+    // ✅ Проверка роли (только owner/moderator)
+    try {
+      await requireOrgRole(org_id, ["owner", "moderator"])
+    } catch (e) {
+      return authErrorResponse(e)
     }
 
     // ✅ Rate limiting (Upstash)
@@ -25,7 +35,6 @@ export async function POST(request: NextRequest) {
       console.warn('Rate limiting unavailable:', e)
     }
 
-    const { org_id } = authResult.data
     const supabase = await getSupabaseServerClient()
 
     const body = await request.json()

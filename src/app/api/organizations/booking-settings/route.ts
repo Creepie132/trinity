@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
 
 export async function PATCH(request: Request) {
   try {
@@ -45,6 +46,13 @@ export async function PATCH(request: Request) {
         { error: 'Organization ID required' },
         { status: 400 }
       )
+    }
+
+    // ✅ Проверка роли (только owner)
+    try {
+      await requireOrgRole(orgId, ["owner"])
+    } catch (e) {
+      return authErrorResponse(e)
     }
 
     // Check user has access to this org

@@ -926,63 +926,74 @@ export default function AiChatWidget() {
                     </div>
                   )}
 
-                  {/* Total Summary */}
-                  <div
-                    style={{
-                      padding: '16px',
-                      marginTop: '16px',
-                      background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.98), rgba(50, 50, 50, 0.98))',
-                      color: 'white',
-                      boxShadow: '0 4px 24px rgba(200, 146, 42, 0.2)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(200, 146, 42, 0.3)',
-                      borderRadius: '16px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', gap: '16px', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-                      {/* Setup */}
-                      <div style={{ flex: 1, minWidth: '100px' }}>
-                        <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderSetup')}</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#C8922A', whiteSpace: 'nowrap' }}>
-                          {pricing.setupDiscount > 0 && (
-                            <span style={{ fontSize: '12px', textDecoration: 'line-through', color: '#888', marginRight: '4px' }}>
-                              ₪{pricing.setupBase.toLocaleString()}
-                            </span>
-                          )}
-                          <span>₪{pricing.setupDiscounted.toLocaleString()}</span>
-                        </div>
-                      </div>
-
-                      {/* Monthly */}
-                      <div style={{ flex: 1, minWidth: '100px' }}>
-                        <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderMonthly')}</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#C8922A', whiteSpace: 'nowrap' }}>
-                          {pricing.periodDiscount > 0 && (
-                            <span style={{ fontSize: '12px', textDecoration: 'line-through', color: '#888', marginRight: '4px' }}>
-                              ₪{pricing.monthlyBase}
-                            </span>
-                          )}
-                          <span>₪{pricing.monthlyDiscounted}/{language === 'he' ? 'חו' : language === 'ru' ? 'м' : 'mo'}</span>
-                        </div>
-                      </div>
-
-                      {/* Yearly Savings */}
-                      {pricing.yearlySavings > 0 && (
-                        <div style={{ flex: 1, minWidth: '100px' }}>
-                          <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderSavings')}</div>
-                          <div style={{ fontSize: '16px', fontWeight: 600, color: '#10B981', whiteSpace: 'nowrap' }}>
-                            ₪{pricing.yearlySavings.toLocaleString()}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
                 </div>
               )}
             </div>
 
-            {/* ЗОНА 2: Кнопки действий (только для builder screen) */}
+            {/* ЗОНА 2: Итоговая сумма (sticky, только для builder screen) */}
+            {screen === 'builder' && (
+              <div
+                className="price-summary"
+                style={{
+                  flexShrink: 0,
+                  borderTop: '1px solid rgba(200, 146, 42, 0.2)',
+                  borderBottom: '1px solid rgba(200, 146, 42, 0.2)',
+                  padding: '10px 16px',
+                  background: 'linear-gradient(135deg, rgba(200, 146, 42, 0.12), rgba(255, 191, 0, 0.08))',
+                  backdropFilter: 'blur(8px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  flexWrap: 'wrap'
+                }}
+                dir={dir}
+              >
+                {/* Setup */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#666', fontWeight: 500 }}>
+                    {t('builderSetup')}:
+                  </span>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#C8922A' }}>
+                    ₪{pricing.setupDiscounted.toLocaleString()}
+                  </span>
+                  {pricing.setupDiscount > 0 && (
+                    <span style={{ fontSize: '11px', textDecoration: 'line-through', color: '#888' }}>
+                      ₪{pricing.setupBase.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+
+                {/* Monthly */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#666', fontWeight: 500 }}>
+                    {t('builderMonthly')}:
+                  </span>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#C8922A' }}>
+                    ₪{pricing.monthlyDiscounted}/{language === 'he' ? 'חו' : language === 'ru' ? 'м' : 'mo'}
+                  </span>
+                  {pricing.periodDiscount > 0 && (
+                    <span style={{ fontSize: '11px', textDecoration: 'line-through', color: '#888' }}>
+                      ₪{pricing.monthlyBase}
+                    </span>
+                  )}
+                </div>
+
+                {/* Yearly Savings */}
+                {pricing.yearlySavings > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', color: '#666', fontWeight: 500 }}>
+                      {t('builderSavings')}:
+                    </span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#10B981' }}>
+                      ₪{pricing.yearlySavings.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ЗОНА 3: Кнопки действий (только для builder screen) */}
             {screen === 'builder' && (
               <div
                 style={{
@@ -1054,7 +1065,7 @@ export default function AiChatWidget() {
               </div>
             )}
 
-            {/* ЗОНА 3: Поле ввода (скрыто по умолчанию) */}
+            {/* ЗОНА 4: Поле ввода (скрыто по умолчанию) */}
             {showInput && (
               <div
                 style={{

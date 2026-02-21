@@ -89,16 +89,6 @@ const MODULES: Module[] = [
     setup: 250
   },
   {
-    id: 'tap_on_phone',
-    name: {
-      he: 'Tap on Phone',
-      ru: 'Tap on Phone',
-      en: 'Tap on Phone'
-    },
-    monthly: 69,
-    setup: 150
-  },
-  {
     id: 'stats_reports',
     name: {
       he: 'סטטיסטיקה + דוחות',
@@ -291,9 +281,9 @@ const faqData: Record<string, { question: Record<Language, string>, answer: Reco
       en: 'Why does my business need this?'
     },
     answer: {
-      he: 'כדי לא להפסיד כסף. Trinity תזכיר ללקוח על התור, תברך ליום הולדת ותראה לך איזה עובד מביא יותר רווח. אתה רואה מספרים אמיתיים, לא מנחש.',
-      ru: 'Чтобы не терять деньги. Trinity напомнит клиенту о записи, поздравит с днём рождения и покажет, какой мастер приносит больше прибыли. Ты видишь реальные цифры, а не гадаешь на кофейной гуще.',
-      en: 'To stop losing money. Trinity reminds clients about appointments, sends birthday greetings, and shows which employee generates the most profit. Real numbers, not guesswork.'
+      he: 'Trinity CRM מאפשר לך לנהל את העסק בצורה חכמה: תורים, תזכורות, תשלומים ומלאי — הכל במקום אחד. במקום הודעות ורישומים ידניים — מערכת ברורה שחוסכת לך זמן ומגדילה הכנסות.',
+      ru: 'Trinity CRM автоматизирует рутину: запись клиентов, напоминания, учёт платежей и склада — всё в одном месте. Вместо мессенджеров и бумажек — чёткая система. Вы тратите меньше времени на администрирование и больше — на клиентов.',
+      en: 'Trinity CRM automates your daily routine: client bookings, reminders, payments and inventory — all in one place. Replace WhatsApp chaos and paper notebooks with a clear system. Spend less time on admin, more time on clients.'
     }
   },
   q3: {
@@ -303,9 +293,9 @@ const faqData: Record<string, { question: Record<Language, string>, answer: Reco
       en: 'When is the right time to implement Trinity?'
     },
     answer: {
-      he: 'ברגע שכמות הלקוחות עברה 15-20. אם אתה מרגיש שמתחיל לשכוח להתקשר חזרה או מתבלבל בתורים — הגיע הזמן. עדיף לבנות מערכת מהתחלה מאשר לסדר בלגן אחר כך.',
-      ru: 'Как только количество клиентов перевалило за 15-20 человек. Если ты чувствуешь, что начинаешь забывать перезвонить или путаешься в записях — время пришло.',
-      en: 'As soon as your client base exceeds 15-20 people. If you\'re starting to forget callbacks or mix up appointments — it\'s time.'
+      he: 'כשאתה מבלה יותר מ-30 דקות ביום על ניהול תורים, תזכורות או חישוב הכנסות — הגיע הזמן. Trinity מתאים מהלקוח הראשון וגדל יחד עם העסק שלך.',
+      ru: 'Как только вы тратите больше 30 минут в день на запись клиентов, напоминания или подсчёт выручки — пора. Trinity подходит с первого клиента и растёт вместе с вашим бизнесом.',
+      en: 'When you spend more than 30 minutes a day managing bookings, reminders or revenue tracking — it\'s time. Trinity works from day one and scales with your business.'
     }
   },
   q4: {
@@ -327,9 +317,9 @@ const faqData: Record<string, { question: Record<Language, string>, answer: Reco
       en: 'What happens to my data if I leave?'
     },
     answer: {
-      he: 'הנתונים שייכים רק לך. בכל רגע אתה יכול ללחוץ כפתור אחד ולייצא את כל הבסיס לאקסל. אנחנו לא מחזיקים את הלקוחות שלך \'כבני ערובה\' — אנחנו עובדים על אמון.',
-      ru: 'Данные принадлежат только тебе. В любой момент ты можешь нажать одну кнопку и выгрузить всю базу в Excel. Мы не держим твоих клиентов «в заложниках».',
-      en: 'Your data belongs only to you. You can export your entire database to Excel with one click at any time. We don\'t hold your clients hostage.'
+      he: 'הנתונים שלך שייכים לך. בעת ביטול המנוי תקבל ייצוא מלא של בסיס הלקוחות בפורמט Excel/CSV. אנחנו לא נועלים נתונים ולא חוסמים ייצוא.',
+      ru: 'Ваши данные принадлежат вам. При отключении вы получаете полный экспорт базы клиентов в Excel/CSV. Мы не удерживаем данные и не блокируем экспорт.',
+      en: 'Your data belongs to you. When you cancel, you get a full export of your client database in Excel/CSV format. We never lock your data or block exports.'
     }
   },
   q6: {
@@ -506,7 +496,7 @@ export default function AiChatWidget() {
     const discountedSetup = setupTotal * (1 - setupDiscount)
     
     // Yearly savings
-    const yearlySavings = period >= 6 ? (monthlyTotal - discountedMonthly) * 12 : 0
+    const yearlySavings = period > 1 ? (monthlyTotal - discountedMonthly) * 12 : 0
     
     return {
       monthlyBase: monthlyTotal,
@@ -925,7 +915,6 @@ export default function AiChatWidget() {
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   >
-                    {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
                     {t('backToMenu')}
                   </button>
                 </div>
@@ -953,7 +942,7 @@ export default function AiChatWidget() {
 
                   {/* Back to Menu button */}
                   <button
-                    onClick={handleBackToMenu}
+                    onClick={() => setScreen('faq')}
                     style={{
                       padding: '14px 16px',
                       background: 'linear-gradient(135deg, #FFBF00, #FF6B35)',
@@ -978,7 +967,6 @@ export default function AiChatWidget() {
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   >
-                    {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
                     {t('backToMenu')}
                   </button>
                 </div>
@@ -1080,40 +1068,6 @@ export default function AiChatWidget() {
                       )
                     })}
                   </div>
-
-                  {/* Progress for Setup Discount */}
-                  {pricing.modulesLeft > 0 && (
-                    <div
-                      style={{
-                        padding: '12px',
-                        background: '#fff3cd',
-                        border: '1px solid #ffc107',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        color: '#856404',
-                        textAlign: 'center'
-                      }}
-                    >
-                      {t('builderProgress').replace('X', String(pricing.modulesLeft))}
-                    </div>
-                  )}
-
-                  {pricing.modulesLeft === 0 && pricing.setupDiscount > 0 && (
-                    <div
-                      style={{
-                        padding: '12px',
-                        background: '#d4edda',
-                        border: '1px solid #28a745',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: '#155724',
-                        textAlign: 'center'
-                      }}
-                    >
-                      {t('builderDiscountActive')}
-                    </div>
-                  )}
 
                 </div>
               )}
@@ -1281,7 +1235,6 @@ export default function AiChatWidget() {
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   >
-                    {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
                     {t('backToMenu')}
                   </button>
                 </div>
@@ -1716,10 +1669,10 @@ export default function AiChatWidget() {
 
                   {/* Service Cards */}
                   {[
-                    { id: 'web', icon: '🌐', title: 'serviceWeb', desc: 'serviceWebDesc' },
-                    { id: 'bots', icon: '🤖', title: 'serviceBots', desc: 'serviceBotsDesc' },
-                    { id: 'landing', icon: '📄', title: 'serviceLanding', desc: 'serviceLandingDesc' },
-                    { id: 'turnkey', icon: '🔑', title: 'serviceTurnkey', desc: 'serviceTurnkeyDesc' }
+                    { id: 'web', title: 'serviceWeb', desc: 'serviceWebDesc' },
+                    { id: 'bots', title: 'serviceBots', desc: 'serviceBotsDesc' },
+                    { id: 'landing', title: 'serviceLanding', desc: 'serviceLandingDesc' },
+                    { id: 'turnkey', title: 'serviceTurnkey', desc: 'serviceTurnkeyDesc' }
                   ].map(service => (
                     <div
                       key={service.id}
@@ -1744,9 +1697,6 @@ export default function AiChatWidget() {
                         e.currentTarget.style.boxShadow = 'none'
                       }}
                     >
-                      <div style={{ fontSize: '32px', marginBottom: '8px', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
-                        {service.icon}
-                      </div>
                       <div style={{ fontSize: '14px', fontWeight: 600, color: '#333', marginBottom: '6px', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
                         {t(service.title)}
                       </div>
@@ -1783,7 +1733,6 @@ export default function AiChatWidget() {
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   >
-                    {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
                     {t('backToMenu')}
                   </button>
                 </div>
@@ -1914,7 +1863,7 @@ export default function AiChatWidget() {
                       transition: 'all 0.2s'
                     }}
                   >
-                    {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />} {t('backToMenu')}
+                    {t('backToMenu')}
                   </button>
                 </div>
               )}
@@ -1996,6 +1945,40 @@ export default function AiChatWidget() {
                   gap: '12px'
                 }}
               >
+                {/* Progress for Setup Discount */}
+                {pricing.modulesLeft > 0 && (
+                  <div
+                    style={{
+                      padding: '12px',
+                      background: '#fff3cd',
+                      border: '1px solid #ffc107',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      color: '#856404',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {t('builderProgress').replace('X', String(pricing.modulesLeft))}
+                  </div>
+                )}
+
+                {pricing.modulesLeft === 0 && pricing.setupDiscount > 0 && (
+                  <div
+                    style={{
+                      padding: '12px',
+                      background: '#d4edda',
+                      border: '1px solid #28a745',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#155724',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {t('builderDiscountActive')}
+                  </div>
+                )}
+
                 {/* Continue Button */}
                 <button
                   onClick={() => setScreen('terminal')}
@@ -2050,7 +2033,6 @@ export default function AiChatWidget() {
                     e.currentTarget.style.boxShadow = 'none'
                   }}
                 >
-                  {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
                   {t('backToMenu')}
                 </button>
               </div>

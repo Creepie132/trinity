@@ -5,8 +5,248 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-21 00:20 UTC  
-**Версия:** 2.31.0
+**Последнее обновление:** 2026-02-21 10:30 UTC  
+**Версия:** 2.33.0
+
+---
+
+## 🔧 ОБНОВЛЕНИЯ v2.33.0 (2026-02-21) - Premium AI Chat Widget + FAQ System 🤖
+
+### ✅ 1. Premium AI Widget Redesign (commit f3dc339)
+
+**Цель:** Современный респонсивный дизайн с языковым переключателем.
+
+**Реализовано:**
+
+**Responsive Design:**
+- **Desktop:** 400×600px, border-radius 16px, правый нижний угол
+- **Mobile:** Fullscreen 100%×100%, занимает весь экран
+- **Body class trick:** `body.chat-open` предотвращает скрытие чата мобильной клавиатурой
+
+**Language Switcher:**
+- Emoji флаги: 🇮🇱 Hebrew / 🇷🇺 Russian / 🇬🇧 English
+- Круглые кнопки 32×32px с hover эффектами
+- Auto-detect: читает `document.documentElement.lang` при монтировании
+- Мгновенное переключение всего интерфейса
+
+**Premium UX:**
+- Autofocus на input (только desktop)
+- Градиентные фоны для сообщений
+- Border-radius: 16px (контейнер), 12px (сообщения)
+- Hover effects на всех кнопках
+- Input footer с Send кнопкой
+- Smooth animations
+
+**Files Changed:**
+- ✅ `src/components/AiChatWidget.tsx` - Полностью переработан
+
+---
+
+### ✅ 2. Landing + FAQ Chatbot (commit 2a74c96)
+
+**Цель:** Убрать "бесплатный пробный период" + добавить FAQ систему.
+
+**Landing Page Changes:**
+- ❌ Removed: все упоминания "free trial" 
+  - Disclaimer: "אין צורך בכרטיס אשראי" (удалён)
+  - Subtitle: "ללא עלות" (удалён)
+  - Badge: "⭐ חינם לנצח" (удалён)
+  - CTA: "התחל ניסיון חינם" → "התחל עכשיו"
+- ✅ TypeScript: сделаны optional поля `badge?`, `text?`, `disclaimer?`
+- ✅ Conditional rendering: `{t.orderModal.badge && <span>...</span>}`
+
+**FAQ System (6 Questions):**
+
+Удалена кнопка "⭐ מי כבר משתמש במערכת?" → Заменена на FAQ
+
+**6 вопросов в 3 языках (HE/RU/EN):**
+1. **מה זה CRM?** / Что такое CRM? / What is CRM?
+   - Ответ: Объяснение системы управления клиентами
+   
+2. **למי מתאים המערכת?** / Для кого подходит? / Who needs this?
+   - Ответ: Парикмахеры, мастера красоты, мед. клиники, и т.д.
+   
+3. **כמה זמן לוקח?** / Сколько времени? / How long to implement?
+   - Ответ: 5 минут регистрация + демо-данные
+   
+4. **איך מעבירים לקוחות?** / Как перенести клиентов? / How to migrate?
+   - Ответ: Excel/CSV импорт + автоматическое сопоставление
+   
+5. **מה קורה עם הנתונים?** / Что с данными? / Data retention?
+   - Ответ: Экспорт в любой момент, полное владение
+   
+6. **האם זה בטוח?** / Это безопасно? / Is it secure?
+   - Ответ: SSL, шифрование, резервное копирование
+
+**Navigation Flow:**
+```
+Menu → FAQ → [6 questions] → Answer → Back to Menu
+```
+
+**State Management:**
+```typescript
+type Screen = 'menu' | 'faq' | 'answer'
+const [screen, setScreen] = useState<Screen>('menu')
+const [selectedQuestion, setSelectedQuestion] = useState<number | null>(null)
+```
+
+**RTL-aware Back Button:**
+- Hebrew/Russian: ArrowRight (←)
+- English: ArrowLeft (→)
+
+**Files Changed:**
+- ✅ `src/components/AiChatWidget.tsx` - FAQ система
+- ✅ `src/app/landing/page.tsx` - Удалены free trial тексты
+- ✅ TypeScript: опциональные поля вместо пустых строк
+
+---
+
+### ✅ 3. Conditional AI Chatbot (commit 0695676)
+
+**Цель:** Показывать AI чат ТОЛЬКО на landing page, НЕ в CRM dashboard.
+
+**Проблема:** Чат был везде → захламление интерфейса CRM.
+
+**Решение:**
+
+**Новый компонент:** `ConditionalChatWidget.tsx`
+```typescript
+'use client'
+import { usePathname } from 'next/navigation'
+import AiChatWidget from './AiChatWidget'
+
+export default function ConditionalChatWidget() {
+  const pathname = usePathname()
+  const isLandingPage = pathname === '/landing' || pathname === '/'
+  
+  if (!isLandingPage) return null
+  return <AiChatWidget />
+}
+```
+
+**Usage:**
+```tsx
+// Root layout
+import ConditionalChatWidget from '@/components/ConditionalChatWidget'
+
+<body>
+  {children}
+  <ConditionalChatWidget /> {/* Только на / и /landing */}
+</body>
+```
+
+**Files:**
+- ✅ `src/components/ConditionalChatWidget.tsx` - NEW
+- ✅ `src/app/layout.tsx` - Используется ConditionalChatWidget
+
+---
+
+### ✅ 4. Modular Organization System (commit 0695676)
+
+**Цель:** Гранулярная модульная система + исправление дубликатов.
+
+**Проблема:** 
+- Дублирование секций "פיצ'רים" в admin organizations page (строки 722-778, 808-903)
+- statistics и reports оба использовали `hasAnalytics`
+- Настройки показывались даже при выключенных модулях
+
+**Решение:**
+
+**useFeatures.ts Updates:**
+```typescript
+interface OrganizationFeatures {
+  // ... existing
+  hasStatistics: boolean     // NEW: /stats page
+  hasReports: boolean        // NEW: /analytics page
+  hasTelegram: boolean       // NEW: Telegram notifications
+  hasLoyalty: boolean        // NEW: Loyalty points
+  hasBirthday: boolean       // NEW: Birthday messages
+}
+
+// Reads from organizations.features JSONB:
+{
+  clients: true,
+  visits: true,
+  booking: false,
+  inventory: true,
+  payments: true,
+  sms: false,
+  statistics: true,   // Separate from reports!
+  reports: false,
+  subscriptions: false,
+  telegram: true,
+  loyalty: false,
+  birthday: false
+}
+```
+
+**Sidebar.tsx Split:**
+```typescript
+// BEFORE (wrong)
+if ((item.href === '/stats' || item.href === '/analytics') 
+    && !features.hasAnalytics) return false
+
+// AFTER (correct)
+if (item.href === '/stats' && !features.hasStatistics) return false
+if (item.href === '/analytics' && !features.hasReports) return false
+```
+
+**Settings Page Filtering:**
+```typescript
+// Hide settings based on disabled modules
+const filteredCategories = settingsCategories.filter((cat) => {
+  if (cat.id === 'booking' && !features.hasBooking) return false
+  if (cat.id === 'notifications' && !features.hasTelegram) return false
+  if (cat.id === 'loyalty' && !features.hasLoyalty) return false
+  if (cat.id === 'birthday-templates' && !features.hasBirthday) return false
+  return true
+})
+```
+
+**Admin Organizations Page:**
+- ❌ Удалены дубликаты секций Features (строки 722-778, 808-903)
+- ✅ Оставлена одна секция с правильными модулями
+- ✅ Исправлен баг с незакрытым `TabsContent`
+
+**Files Changed:**
+- ✅ `src/hooks/useFeatures.ts` - Добавлены 5 новых полей
+- ✅ `src/components/layout/Sidebar.tsx` - Разделены statistics/reports + Hebrew search
+- ✅ `src/app/(dashboard)/settings/page.tsx` - Модульная фильтрация
+- ✅ `src/app/admin/organizations/page.tsx` - Удалены дубликаты
+
+---
+
+### 📋 Summary v2.33.0
+
+**New Features:**
+- 🤖 Premium AI chat widget (responsive, language switcher, auto-language)
+- ❓ FAQ система (6 вопросов × 3 языка)
+- 🎯 Conditional rendering (только landing page)
+- 🧩 Гранулярная модульная система
+
+**Improvements:**
+- 🚀 Mobile-friendly fullscreen chat
+- 🌐 Auto-detect language from HTML
+- 🗑️ Удалены все "free trial" тексты
+- 🔧 TypeScript optional fields
+- 📊 statistics ≠ reports (разные модули)
+
+**Bug Fixes:**
+- ✅ Дублирование Features секций (admin page)
+- ✅ TabsContent closing bug
+- ✅ Settings visibility при выключенных модулях
+
+**Files Modified:** 6 files
+**Files Added:** 1 file (ConditionalChatWidget.tsx)
+**Translation Keys:** 18 new FAQ entries (HE/RU/EN)
+
+**Next Steps:**
+- [ ] Modular Pricing Configurator in Chat
+  - Rename "Build Your System" → "Modular Builder"
+  - 12 modules with checkboxes
+  - Period selector (1/3/6/12 months) with discounts
+  - Real-time price calculation
+  - Dark theme with amber accent
 
 ---
 
@@ -131,7 +371,11 @@ export const config = {
 
 ---
 
-### 📊 Текущая структура проекта (2026-02-21)
+### 📊 Текущая структура проекта (2026-02-21 10:30 UTC)
+
+**Последний коммит:** `2a74c96` - "feat: chat bot FAQ + remove free trial messaging + clean landing"  
+**Статус деплоя:** ✅ Deployed на Vercel  
+**Build stats:** 57 static pages, 62 API routes
 
 ```
 clientbase-pro/
@@ -204,8 +448,9 @@ clientbase-pro/
 │   │   ├── ui/                   # shadcn/ui components
 │   │   ├── user/
 │   │   ├── visits/
-│   │   ├── AiChatWidget.tsx      # AI Chat интеграция
+│   │   ├── AiChatWidget.tsx      # AI Chat с FAQ системой (v2.33.0)
 │   │   ├── ChatButton.tsx        # Lottie анимация
+│   │   ├── ConditionalChatWidget.tsx # Условный рендеринг чата (только landing)
 │   │   └── ErrorBoundary.tsx
 │   ├── contexts/                 # React Contexts
 │   │   ├── AuthContext.tsx       # Авторизация + role
@@ -304,9 +549,10 @@ clientbase-pro/
 - `src/lib/emails.ts` - Email notifications
 
 **UI:**
-- `src/components/layout/Sidebar.tsx` - навигация (с фильтром по ролям)
+- `src/components/layout/Sidebar.tsx` - навигация (с фильтром по ролям + модулям)
 - `src/components/ui/*` - shadcn/ui компоненты
-- `src/components/AiChatWidget.tsx` - AI chat на лендинге
+- `src/components/AiChatWidget.tsx` - AI chat с FAQ системой (v2.33.0)
+- `src/components/ConditionalChatWidget.tsx` - условный рендеринг (только landing)
 - `src/components/ChatButton.tsx` - Lottie кнопка
 
 ---
@@ -348,7 +594,10 @@ clientbase-pro/
 ### 📝 Последние коммиты (2026-02-21)
 
 ```
-8d41fd7 security: add HTTP security headers + PROJECT_DOCUMENTATION.md
+2a74c96 feat: chat bot FAQ + remove free trial messaging + clean landing (v2.33.0)
+f3dc339 feat: premium AI widget redesign - responsive + language switcher
+0695676 feat: conditional chatbot + modular organization system
+8d41fd7 security: add HTTP security headers + PROJECT_DOCUMENTATION.md (v2.31.0)
 e1f4133 Scale down Lottie animation by 15% to fit rays inside button circle
 9868ecc fix: chat button - clip rays with overflow hidden, remove X overlay
 0212558 fix: middleware blocking .json files

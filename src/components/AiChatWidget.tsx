@@ -246,6 +246,7 @@ export default function AiChatWidget() {
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null)
   const [selectedModules, setSelectedModules] = useState<string[]>(['core'])
   const [period, setPeriod] = useState<Period>(1)
+  const [showInput, setShowInput] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Auto-detect language from HTML lang attribute
@@ -285,6 +286,7 @@ export default function AiChatWidget() {
       setSelectedQuestion(null)
       setSelectedModules(['core'])
       setPeriod(1)
+      setShowInput(false)
     }
   }, [isOpen])
 
@@ -309,6 +311,7 @@ export default function AiChatWidget() {
     setSelectedQuestion(null)
     setSelectedModules(['core'])
     setPeriod(1)
+    setShowInput(false)
   }
 
   const toggleModule = (moduleId: string) => {
@@ -585,14 +588,14 @@ export default function AiChatWidget() {
               </div>
             </div>
 
-            {/* Content */}
+            {/* ЗОНА 1: Область сообщений (scrollable) */}
             <div
               className="chat-scrollbar"
               style={{
-                padding: '16px',
                 flex: 1,
                 overflowY: 'auto',
-                overflowX: 'hidden'
+                overflowX: 'hidden',
+                padding: '16px'
               }}
               dir={dir}
             >
@@ -648,6 +651,7 @@ export default function AiChatWidget() {
 
                   {/* Human contact button */}
                   <button
+                    onClick={() => setShowInput(true)}
                     style={{
                       padding: '14px 16px',
                       background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
@@ -793,7 +797,7 @@ export default function AiChatWidget() {
 
               {/* Builder Screen */}
               {screen === 'builder' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: isMobile ? '160px' : '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {/* Title */}
                   <div
                     style={{
@@ -925,68 +929,48 @@ export default function AiChatWidget() {
                   {/* Total Summary */}
                   <div
                     style={{
-                      position: isMobile ? 'sticky' : 'fixed',
-                      ...(isMobile ? {
-                        // Mobile: sticky сверху, компактный
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        width: '100%',
-                        padding: '10px 12px',
-                        marginLeft: '-16px',
-                        marginRight: '-16px',
-                        marginTop: '-16px',
-                        marginBottom: '16px',
-                        borderRadius: '0',
-                        zIndex: 20
-                      } : {
-                        // Desktop: плавающая карточка слева
-                        left: '-330px',
-                        top: '120px',
-                        width: '300px',
-                        padding: '16px',
-                        borderRadius: '16px',
-                        zIndex: 10
-                      }),
+                      padding: '16px',
+                      marginTop: '16px',
                       background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.98), rgba(50, 50, 50, 0.98))',
                       color: 'white',
-                      boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.3), 0 4px 24px rgba(200, 146, 42, 0.2)',
+                      boxShadow: '0 4px 24px rgba(200, 146, 42, 0.2)',
                       backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(200, 146, 42, 0.3)'
+                      border: '1px solid rgba(200, 146, 42, 0.3)',
+                      borderRadius: '16px'
                     }}
                   >
-                    <div style={{ display: isMobile ? 'flex' : 'block', gap: isMobile ? '16px' : '0', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '16px', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
                       {/* Setup */}
-                      <div style={{ marginBottom: isMobile ? '0' : '12px', flex: isMobile ? 1 : 'auto' }}>
-                        <div style={{ fontSize: isMobile ? '9px' : '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderSetup')}</div>
-                        <div style={{ fontSize: isMobile ? '14px' : '20px', fontWeight: 700, color: '#C8922A', whiteSpace: 'nowrap' }}>
+                      <div style={{ flex: 1, minWidth: '100px' }}>
+                        <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderSetup')}</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#C8922A', whiteSpace: 'nowrap' }}>
                           {pricing.setupDiscount > 0 && (
-                            <span style={{ fontSize: isMobile ? '10px' : '14px', textDecoration: 'line-through', color: '#888', marginLeft: '4px' }}>
+                            <span style={{ fontSize: '12px', textDecoration: 'line-through', color: '#888', marginRight: '4px' }}>
                               ₪{pricing.setupBase.toLocaleString()}
                             </span>
                           )}
-                          <span> ₪{pricing.setupDiscounted.toLocaleString()}</span>
+                          <span>₪{pricing.setupDiscounted.toLocaleString()}</span>
                         </div>
                       </div>
 
                       {/* Monthly */}
-                      <div style={{ marginBottom: isMobile ? '0' : (pricing.yearlySavings > 0 ? '12px' : '0'), flex: isMobile ? 1 : 'auto' }}>
-                        <div style={{ fontSize: isMobile ? '9px' : '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderMonthly')}</div>
-                        <div style={{ fontSize: isMobile ? '14px' : '20px', fontWeight: 700, color: '#C8922A', whiteSpace: 'nowrap' }}>
+                      <div style={{ flex: 1, minWidth: '100px' }}>
+                        <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderMonthly')}</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#C8922A', whiteSpace: 'nowrap' }}>
                           {pricing.periodDiscount > 0 && (
-                            <span style={{ fontSize: isMobile ? '10px' : '14px', textDecoration: 'line-through', color: '#888', marginLeft: '4px' }}>
+                            <span style={{ fontSize: '12px', textDecoration: 'line-through', color: '#888', marginRight: '4px' }}>
                               ₪{pricing.monthlyBase}
                             </span>
                           )}
-                          <span> ₪{pricing.monthlyDiscounted}/{language === 'he' ? 'חו' : language === 'ru' ? 'м' : 'mo'}</span>
+                          <span>₪{pricing.monthlyDiscounted}/{language === 'he' ? 'חו' : language === 'ru' ? 'м' : 'mo'}</span>
                         </div>
                       </div>
 
                       {/* Yearly Savings */}
                       {pricing.yearlySavings > 0 && (
-                        <div style={{ flex: isMobile ? 1 : 'auto' }}>
-                          <div style={{ fontSize: isMobile ? '9px' : '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderSavings')}</div>
-                          <div style={{ fontSize: isMobile ? '12px' : '16px', fontWeight: 600, color: '#10B981', whiteSpace: 'nowrap' }}>
+                        <div style={{ flex: 1, minWidth: '100px' }}>
+                          <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '2px' }}>{t('builderSavings')}</div>
+                          <div style={{ fontSize: '16px', fontWeight: 600, color: '#10B981', whiteSpace: 'nowrap' }}>
                             ₪{pricing.yearlySavings.toLocaleString()}
                           </div>
                         </div>
@@ -994,144 +978,144 @@ export default function AiChatWidget() {
                     </div>
                   </div>
 
-                  {/* Sticky Actions Wrapper */}
-                  <div
-                    style={{
-                      position: 'sticky',
-                      bottom: 0,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '12px',
-                      padding: '16px',
-                      background: 'white',
-                      borderTop: '1px solid rgba(123, 47, 247, 0.1)',
-                      marginLeft: '-16px',
-                      marginRight: '-16px',
-                      marginBottom: '-16px',
-                      zIndex: 11
-                    }}
-                  >
-                    {/* Continue Button */}
-                    <button
-                      style={{
-                        padding: '14px 16px',
-                        background: 'linear-gradient(135deg, #C8922A, #FFBF00)',
-                        border: 'none',
-                        borderRadius: '16px',
-                        color: 'white',
-                        fontSize: '14px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        boxShadow: '0 4px 14px rgba(200, 146, 42, 0.3)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)'
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(200, 146, 42, 0.4)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)'
-                        e.currentTarget.style.boxShadow = '0 4px 14px rgba(200, 146, 42, 0.3)'
-                      }}
-                    >
-                      {t('builderContinue')}
-                    </button>
-
-                    {/* Back to Menu button */}
-                    <button
-                      onClick={handleBackToMenu}
-                      style={{
-                        padding: '14px 16px',
-                        background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
-                        border: 'none',
-                        borderRadius: '16px',
-                        color: 'white',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)'
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)'
-                        e.currentTarget.style.boxShadow = 'none'
-                      }}
-                    >
-                      {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
-                      {t('backToMenu')}
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
 
-            {/* Input Footer */}
-            <div
-              style={{
-                padding: '16px',
-                borderTop: '1px solid rgba(123, 47, 247, 0.1)',
-                background: '#fafafa',
-                flexShrink: 0
-              }}
-            >
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  placeholder={t('inputPlaceholder')}
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    border: '1px solid rgba(123, 47, 247, 0.2)',
-                    borderRadius: '12px',
-                    fontSize: '13px',
-                    outline: 'none',
-                    transition: 'all 0.2s',
-                    direction: dir,
-                    textAlign: dir === 'rtl' ? 'right' : 'left'
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = '#7B2FF7'
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(123, 47, 247, 0.1)'
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(123, 47, 247, 0.2)'
-                    e.currentTarget.style.boxShadow = 'none'
-                  }}
-                />
+            {/* ЗОНА 2: Кнопки действий (только для builder screen) */}
+            {screen === 'builder' && (
+              <div
+                style={{
+                  flexShrink: 0,
+                  borderTop: '1px solid rgba(123, 47, 247, 0.1)',
+                  background: 'white',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}
+              >
+                {/* Continue Button */}
                 <button
                   style={{
-                    width: '44px',
-                    height: '44px',
+                    padding: '14px 16px',
+                    background: 'linear-gradient(135deg, #C8922A, #FFBF00)',
+                    border: 'none',
+                    borderRadius: '16px',
+                    color: 'white',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 4px 14px rgba(200, 146, 42, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(200, 146, 42, 0.4)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(200, 146, 42, 0.3)'
+                  }}
+                >
+                  {t('builderContinue')}
+                </button>
+
+                {/* Back to Menu button */}
+                <button
+                  onClick={handleBackToMenu}
+                  style={{
+                    padding: '14px 16px',
                     background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
                     border: 'none',
-                    borderRadius: '12px',
+                    borderRadius: '16px',
                     color: 'white',
+                    fontSize: '13px',
+                    fontWeight: 600,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '18px',
+                    gap: '8px',
                     transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)'
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = 'none'
                   }}
                 >
-                  ➤
+                  {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
+                  {t('backToMenu')}
                 </button>
               </div>
-            </div>
+            )}
+
+            {/* ЗОНА 3: Поле ввода (скрыто по умолчанию) */}
+            {showInput && (
+              <div
+                style={{
+                  flexShrink: 0,
+                  borderTop: '1px solid rgba(123, 47, 247, 0.1)',
+                  background: '#fafafa',
+                  padding: '16px'
+                }}
+              >
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    placeholder={t('inputPlaceholder')}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      border: '1px solid rgba(123, 47, 247, 0.2)',
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      outline: 'none',
+                      transition: 'all 0.2s',
+                      direction: dir,
+                      textAlign: dir === 'rtl' ? 'right' : 'left'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = '#7B2FF7'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(123, 47, 247, 0.1)'
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(123, 47, 247, 0.2)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  />
+                  <button
+                    style={{
+                      width: '44px',
+                      height: '44px',
+                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '18px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.05)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)'
+                    }}
+                  >
+                    ➤
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -80,7 +80,30 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Session exists → allow request
+  // Session exists → CSRF protection for API routes
+  if (pathname.startsWith("/api/") && !["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    // Исключаем webhooks и публичные API (они приходят от внешних сервисов)
+    const csrfExempt = [
+      "/api/payments/webhook",
+      "/api/payments/stripe-webhook",
+      "/api/payments/callback",
+      "/api/booking/",
+      "/api/contact",
+    ]
+
+    const isExempt = csrfExempt.some(p => pathname.startsWith(p))
+
+    if (!isExempt) {
+      const origin = req.headers.get("origin")
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ambersol.co.il"
+
+      if (origin && !origin.startsWith(appUrl) && !origin.startsWith("https://www.ambersol.co.il")) {
+        console.warn('[middleware] CSRF blocked:', { origin, pathname })
+        return NextResponse.json({ error: "CSRF: Invalid origin" }, { status: 403 })
+      }
+    }
+  }
+
   // All other checks (admin, org_users, org status) happen on client side
   return response
 }

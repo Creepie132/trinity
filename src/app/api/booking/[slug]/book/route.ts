@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { ratelimitPublic, getClientIp } from '@/lib/ratelimit'
 
 // Public API - no auth required
 export async function POST(
@@ -7,6 +8,17 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    // ✅ Rate limiting (Upstash)
+    try {
+      const ip = getClientIp(request)
+      const { success } = await ratelimitPublic.limit(ip)
+      if (!success) {
+        return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+      }
+    } catch (e) {
+      console.warn('Rate limiting unavailable:', e)
+    }
+
     const { slug } = await params
     console.log('[Booking Book API] Creating booking for slug:', slug)
     

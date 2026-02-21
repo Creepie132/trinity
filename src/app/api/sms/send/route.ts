@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
 import { sendSms } from '@/lib/inforu'
-import { rateLimit, SMS_RATE_LIMIT } from '@/lib/rate-limit'
+import { ratelimitStrict, getClientIp } from '@/lib/ratelimit'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,26 +13,15 @@ export async function POST(request: NextRequest) {
       return authResult.response
     }
 
-    // ✅ Rate limiting
-    const rateLimitResult = rateLimit(
-      `sms:${authResult.data.email}`,
-      SMS_RATE_LIMIT
-    )
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { 
-          error: 'Too many SMS requests. Please try again later.',
-          retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
-        },
-        { 
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-            'X-RateLimit-Reset': new Date(rateLimitResult.resetAt).toISOString(),
-          }
-        }
-      )
+    // ✅ Rate limiting (Upstash)
+    try {
+      const ip = getClientIp(request)
+      const { success } = await ratelimitStrict.limit(ip)
+      if (!success) {
+        return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+      }
+    } catch (e) {
+      console.warn('Rate limiting unavailable:', e)
     }
 
     const { org_id, isAdmin } = authResult.data

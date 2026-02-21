@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { ratelimitPublic, getClientIp } from '@/lib/ratelimit'
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ Rate limiting (Upstash)
+    try {
+      const ip = getClientIp(request)
+      const { success } = await ratelimitPublic.limit(ip)
+      if (!success) {
+        return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+      }
+    } catch (e) {
+      console.warn('Rate limiting unavailable:', e)
+    }
+
     const body = await request.json()
     const { name, phone, email, message } = body
 

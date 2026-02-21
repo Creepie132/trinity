@@ -1,9 +1,22 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Ленивая инициализация Resend (создаём только при вызове)
+function getResendClient() {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('[Email] RESEND_API_KEY not configured')
+    return null
+  }
+  return new Resend(process.env.RESEND_API_KEY)
+}
 
 export async function sendWelcomeEmail(userEmail: string, orgName: string): Promise<boolean> {
   try {
+    const resend = getResendClient()
+    if (!resend) {
+      console.warn('[Email] Skipping email send - Resend not configured')
+      return false
+    }
+
     await resend.emails.send({
       from: 'Trinity CRM <onboarding@resend.dev>',
       to: userEmail,

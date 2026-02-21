@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
 import { sendSms } from '@/lib/inforu'
+import { ratelimitStrict, getClientIp } from '@/lib/ratelimit'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,17 @@ export async function POST(request: NextRequest) {
     const authResult = await checkAuthAndFeature('sms')
     if (!authResult.success) {
       return authResult.response
+    }
+
+    // ✅ Rate limiting (Upstash)
+    try {
+      const ip = getClientIp(request)
+      const { success } = await ratelimitStrict.limit(ip)
+      if (!success) {
+        return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+      }
+    } catch (e) {
+      console.warn('Rate limiting unavailable:', e)
     }
 
     const { org_id } = authResult.data

@@ -34,7 +34,7 @@ interface Translations {
     title: string
     subtitle: string
     cta: string
-    disclaimer: string
+    disclaimer?: string
   }
   services: {
     title: string
@@ -58,7 +58,7 @@ interface Translations {
   reviews: {
     title: string
     items: {
-      text: string
+      text?: string
       author: string
     }[]
   }
@@ -70,7 +70,7 @@ interface Translations {
   }
   pricing: {
     title: string
-    subtitle: string
+    subtitle?: string
     plans: {
       name: string
       price: string
@@ -81,7 +81,7 @@ interface Translations {
   }
   orderModal: {
     title: string
-    badge: string
+    badge?: string
     nameLabel: string
     emailLabel: string
     phoneLabel: string
@@ -105,7 +105,7 @@ interface Translations {
     successMessage: string
   }
   floatingButton: {
-    text: string
+    text?: string
   }
   footer: {
     copyright: string
@@ -149,7 +149,6 @@ const translations: Record<'he' | 'ru', Translations> = {
       title: 'פתרונות טכנולוגיים לעסקים קטנים',
       subtitle: 'מערכות CRM, בוטים, אתרים ודפי נחיתה — הכל במקום אחד',
       cta: 'בואו נדבר',
-      disclaimer: 'ללא התחייבות • החודש הראשון חינם',
     },
     services: {
       title: 'מה אנחנו מציעים',
@@ -232,7 +231,6 @@ const translations: Record<'he' | 'ru', Translations> = {
     },
     pricing: {
       title: 'בחרו את התוכנית המתאימה',
-      subtitle: 'החודש הראשון חינם לכל התוכניות!',
       plans: [
         {
           name: 'בסיסי',
@@ -282,7 +280,6 @@ const translations: Record<'he' | 'ru', Translations> = {
     },
     orderModal: {
       title: 'הזמנת תוכנית',
-      badge: '!החודש הראשון חינם',
       nameLabel: 'שם מלא',
       emailLabel: 'אימייל',
       phoneLabel: 'טלפון',
@@ -306,7 +303,6 @@ const translations: Record<'he' | 'ru', Translations> = {
       successMessage: '!ההודעה נשלחה',
     },
     floatingButton: {
-      text: '🎁 החודש הראשון חינם',
     },
     footer: {
       copyright: 'Amber Solutions Systems © 2026',
@@ -348,7 +344,6 @@ const translations: Record<'he' | 'ru', Translations> = {
       title: 'Технологические решения для малого бизнеса',
       subtitle: 'CRM системы, боты, сайты и лендинги — всё в одном месте',
       cta: 'Давайте поговорим',
-      disclaimer: 'Без обязательств • Первый месяц бесплатно',
     },
     services: {
       title: 'Что мы предлагаем',
@@ -431,7 +426,6 @@ const translations: Record<'he' | 'ru', Translations> = {
     },
     pricing: {
       title: 'Выберите подходящий план',
-      subtitle: 'Первый месяц бесплатно на все планы!',
       plans: [
         {
           name: 'Базовый',
@@ -445,7 +439,7 @@ const translations: Record<'he' | 'ru', Translations> = {
             '✓ 1 пользователь',
             '✓ Поддержка по Email',
           ],
-          cta: 'Начать бесплатно',
+          cta: 'Начать',
         },
         {
           name: 'Профессиональный',
@@ -459,7 +453,7 @@ const translations: Record<'he' | 'ru', Translations> = {
             '✓ 3 пользователя',
             '✓ Поддержка WhatsApp',
           ],
-          cta: 'Начать бесплатно',
+          cta: 'Начать',
           recommended: 'Рекомендуемый',
         },
         {
@@ -481,7 +475,6 @@ const translations: Record<'he' | 'ru', Translations> = {
     },
     orderModal: {
       title: 'Заказ плана',
-      badge: 'Первый месяц бесплатно!',
       nameLabel: 'Полное имя',
       emailLabel: 'Email',
       phoneLabel: 'Телефон',
@@ -505,7 +498,6 @@ const translations: Record<'he' | 'ru', Translations> = {
       successMessage: 'Сообщение отправлено!',
     },
     floatingButton: {
-      text: '🎁 Первый месяц бесплатно',
     },
     footer: {
       copyright: 'Amber Solutions Systems © 2026',
@@ -1267,9 +1259,11 @@ export default function LandingPage() {
                   <h3 className="text-2xl font-bold text-gray-900">
                     {t.orderModal.title} {selectedPlan}
                   </h3>
-                  <span className="inline-block mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-semibold">
-                    {t.orderModal.badge}
-                  </span>
+                  {t.orderModal.badge && (
+                    <span className="inline-block mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-semibold">
+                      {t.orderModal.badge}
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={() => setOrderModalOpen(false)}

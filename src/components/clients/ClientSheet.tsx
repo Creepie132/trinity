@@ -12,11 +12,14 @@ import { useQuery } from '@tanstack/react-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { CreatePaymentDialog } from '@/components/payments/CreatePaymentDialog'
 import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
+import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 import { ClientSummary } from '@/types/database'
 import { Visit } from '@/types/visits'
-import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Clock, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Clock, ArrowRight, ArrowLeft, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+import { usePermissions } from '@/hooks/usePermissions'
+import { useAuth } from '@/hooks/useAuth'
 
 interface ClientSheetProps {
   client: ClientSummary | null
@@ -27,10 +30,13 @@ interface ClientSheetProps {
 export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
   const { t, language } = useLanguage()
   const supabase = createSupabaseBrowserClient()
+  const permissions = usePermissions()
+  const { role } = useAuth()
   const { data: fullClient } = useClient(client?.id)
   const { data: payments } = usePayments(client?.id)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [visitDialogOpen, setVisitDialogOpen] = useState(false)
+  const [gdprDeleteOpen, setGdprDeleteOpen] = useState(false)
 
   // Fetch client visits
   const { data: visits = [] } = useQuery({
@@ -175,6 +181,19 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
               <Calendar className="w-4 h-4 ml-2" />
               {t('clients.addVisit')}
             </Button>
+            
+            {/* GDPR Delete - Owner only */}
+            {role === 'owner' && (
+              <Button 
+                size="sm" 
+                variant="destructive"
+                onClick={() => setGdprDeleteOpen(true)}
+                className="gap-2 bg-red-600 hover:bg-red-700 border-red-500"
+              >
+                <Trash2 className="w-4 h-4" />
+                🗑️ Полное удаление (GDPR)
+              </Button>
+            )}
           </div>
 
           {/* Tabs */}
@@ -315,6 +334,14 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
         open={visitDialogOpen}
         onOpenChange={setVisitDialogOpen}
         preselectedClientId={client.id}
+      />
+
+      {/* GDPR Delete Dialog */}
+      <GdprDeleteDialog
+        open={gdprDeleteOpen}
+        onOpenChange={setGdprDeleteOpen}
+        clientId={client.id}
+        clientName={`${client.first_name} ${client.last_name}`}
       />
     </Sheet>
   )

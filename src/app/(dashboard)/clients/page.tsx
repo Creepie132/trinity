@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Eye, Edit, MessageSquare, CreditCard } from 'lucide-react'
+import { Plus, Search, Eye, Edit, MessageSquare, CreditCard, Upload } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { AddClientDialog } from '@/components/clients/AddClientDialog'
 import { ClientSheet } from '@/components/clients/ClientSheet'
 import { ClientSummary } from '@/types/database'
 import { format } from 'date-fns'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
@@ -68,6 +69,12 @@ export default function ClientsPage() {
         </div>
         <div className="flex gap-2">
           <ExportButton type="clients" />
+          <Link href="/clients/import">
+            <Button variant="outline" className="hidden md:flex gap-2">
+              <Upload className="w-4 h-4" />
+              Импорт из Excel
+            </Button>
+          </Link>
           <Button onClick={() => setAddDialogOpen(true)} className="hidden md:flex bg-theme-primary text-white hover:opacity-90">
             <Plus className="w-4 h-4 ml-2" />
             {t('clients.addNew')}

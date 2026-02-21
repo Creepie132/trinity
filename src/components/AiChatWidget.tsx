@@ -1,10 +1,143 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { MessageCircle, X, ArrowRight, ArrowLeft } from 'lucide-react'
+import { MessageCircle, X, ArrowRight, ArrowLeft, Check } from 'lucide-react'
 
 type Language = 'he' | 'ru' | 'en'
-type Screen = 'menu' | 'faq' | 'answer'
+type Screen = 'menu' | 'faq' | 'answer' | 'builder'
+type Period = 1 | 3 | 6 | 12
+
+interface Module {
+  id: string
+  name: Record<Language, string>
+  monthly: number
+  setup: number
+  required?: boolean
+}
+
+const MODULES: Module[] = [
+  {
+    id: 'core',
+    name: {
+      he: 'ליבה בסיסית (בסיס לקוחות + ביקורים)',
+      ru: 'Базовое ядро (Клиенты + Визиты)',
+      en: 'Core (Clients + Visits)'
+    },
+    monthly: 99,
+    setup: 350,
+    required: true
+  },
+  {
+    id: 'booking',
+    name: {
+      he: 'הזמנות אונליין (Self-booking)',
+      ru: 'Онлайн-запись (Self-booking)',
+      en: 'Online Booking (Self-booking)'
+    },
+    monthly: 59,
+    setup: 150
+  },
+  {
+    id: 'inventory',
+    name: {
+      he: 'ניהול מלאי',
+      ru: 'Складской учёт',
+      en: 'Inventory Management'
+    },
+    monthly: 49,
+    setup: 150
+  },
+  {
+    id: 'payment_digital',
+    name: {
+      he: 'טרמינל תשלום דיגיטלי',
+      ru: 'Платёжный терминал Digital',
+      en: 'Digital Payment Terminal'
+    },
+    monthly: 119,
+    setup: 450
+  },
+  {
+    id: 'bit',
+    name: {
+      he: 'הפעלת bit',
+      ru: 'Активация bit',
+      en: 'bit Activation'
+    },
+    monthly: 0,
+    setup: 250
+  },
+  {
+    id: 'recurring',
+    name: {
+      he: 'תשלומים חוזרים',
+      ru: 'Рекуррентные платежи',
+      en: 'Recurring Payments'
+    },
+    monthly: 199,
+    setup: 450
+  },
+  {
+    id: 'apple_google_pay',
+    name: {
+      he: 'Apple Pay / Google Pay',
+      ru: 'Apple Pay / Google Pay',
+      en: 'Apple Pay / Google Pay'
+    },
+    monthly: 49,
+    setup: 250
+  },
+  {
+    id: 'tap_on_phone',
+    name: {
+      he: 'Tap on Phone',
+      ru: 'Tap on Phone',
+      en: 'Tap on Phone'
+    },
+    monthly: 69,
+    setup: 150
+  },
+  {
+    id: 'stats_reports',
+    name: {
+      he: 'סטטיסטיקה + דוחות',
+      ru: 'Статистика + Отчёты',
+      en: 'Statistics + Reports'
+    },
+    monthly: 49,
+    setup: 200
+  },
+  {
+    id: 'telegram',
+    name: {
+      he: 'התראות טלגרם',
+      ru: 'Уведомления в Telegram',
+      en: 'Telegram Notifications'
+    },
+    monthly: 29,
+    setup: 100
+  },
+  {
+    id: 'loyalty',
+    name: {
+      he: 'תוכנית נאמנות',
+      ru: 'Программа лояльности',
+      en: 'Loyalty Program'
+    },
+    monthly: 39,
+    setup: 100
+  },
+  {
+    id: 'birthday',
+    name: {
+      he: 'הודעות יום הולדת',
+      ru: 'Поздравления с ДР',
+      en: 'Birthday Greetings'
+    },
+    monthly: 19,
+    setup: 100
+  }
+]
 
 const translations: Record<string, Record<Language, string>> = {
   greeting: {
@@ -13,11 +146,19 @@ const translations: Record<string, Record<Language, string>> = {
     en: "Hi! 👋 I'm the Amber Solutions digital assistant. How can I help?"
   },
   menuFaq: { he: '❓ שאלות נפוצות', ru: '❓ Частые вопросы', en: '❓ FAQ' },
-  menuCalculator: { he: '🧮 בנה את המערכת שלך', ru: '🧮 Собери свою систему', en: '🧮 Build Your System' },
+  menuBuilder: { he: '🧮 הרכבה מודולרית', ru: '🧮 Модульная сборка', en: '🧮 Modular Builder' },
   menuTrial: { he: '🎁 נסיון חינם 14 יום', ru: '🎁 Бесплатный тест 14 дней', en: '🎁 Free 14-Day Trial' },
   menuServices: { he: '🚀 שירותים נוספים', ru: '🚀 Другие услуги', en: '🚀 More Services' },
   menuHuman: { he: '👤 לדבר עם נציג אנושי', ru: '👤 Связаться с человеком', en: '👤 Talk to a Human' },
   backToMenu: { he: 'חזרה לתפריט ←', ru: '← Назад в меню', en: '← Back to Menu' },
+  builderTitle: { he: 'בנה את המערכת שלך', ru: 'Собери свою систему', en: 'Build Your System' },
+  builderContinue: { he: 'המשך', ru: 'Далее', en: 'Continue' },
+  builderSetup: { he: 'Setup', ru: 'Setup', en: 'Setup' },
+  builderMonthly: { he: 'מנוי חודשי', ru: 'Подписка', en: 'Monthly' },
+  builderSavings: { he: 'חיסכון שנתי', ru: 'Экономия за год', en: 'Yearly Savings' },
+  builderDiscount: { he: 'הנחה', ru: 'Скидка', en: 'Discount' },
+  builderProgress: { he: 'בחר עוד X מודולים לקבלת 20% הנחה על Setup', ru: 'Выбери ещё X модулей для 20% скидки на Setup', en: 'Select X more modules for 20% Setup discount' },
+  builderDiscountActive: { he: '🎉 הנחת 20% על Setup הופעלה!', ru: '🎉 Скидка 20% на Setup активирована!', en: '🎉 20% Setup discount activated!' },
   inputPlaceholder: { he: 'כתוב הודעה...', ru: 'Напишите сообщение...', en: 'Type a message...' },
   online: { he: 'Online', ru: 'Online', en: 'Online' }
 }
@@ -103,6 +244,8 @@ export default function AiChatWidget() {
   const [isMobile, setIsMobile] = useState(false)
   const [screen, setScreen] = useState<Screen>('menu')
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null)
+  const [selectedModules, setSelectedModules] = useState<string[]>(['core'])
+  const [period, setPeriod] = useState<Period>(1)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Auto-detect language from HTML lang attribute
@@ -140,6 +283,8 @@ export default function AiChatWidget() {
     if (isOpen) {
       setScreen('menu')
       setSelectedQuestion(null)
+      setSelectedModules(['core'])
+      setPeriod(1)
     }
   }, [isOpen])
 
@@ -150,6 +295,10 @@ export default function AiChatWidget() {
     setScreen('faq')
   }
 
+  const handleBuilderClick = () => {
+    setScreen('builder')
+  }
+
   const handleQuestionClick = (questionKey: string) => {
     setSelectedQuestion(questionKey)
     setScreen('answer')
@@ -158,7 +307,58 @@ export default function AiChatWidget() {
   const handleBackToMenu = () => {
     setScreen('menu')
     setSelectedQuestion(null)
+    setSelectedModules(['core'])
+    setPeriod(1)
   }
+
+  const toggleModule = (moduleId: string) => {
+    const module = MODULES.find(m => m.id === moduleId)
+    if (module?.required) return
+
+    setSelectedModules(prev => 
+      prev.includes(moduleId)
+        ? prev.filter(id => id !== moduleId)
+        : [...prev, moduleId]
+    )
+  }
+
+  const calculatePricing = () => {
+    const selectedMods = MODULES.filter(m => selectedModules.includes(m.id))
+    
+    // Monthly price
+    let monthlyTotal = selectedMods.reduce((sum, m) => sum + m.monthly, 0)
+    
+    // Period discount
+    const periodDiscounts: Record<Period, number> = { 1: 0, 3: 0.05, 6: 0.10, 12: 0.15 }
+    const discount = periodDiscounts[period]
+    let discountedMonthly = monthlyTotal * (1 - discount)
+    
+    // Min price constraint for 12 months
+    if (period === 12 && discountedMonthly < 480) {
+      discountedMonthly = 480
+    }
+    
+    // Setup price
+    let setupTotal = selectedMods.reduce((sum, m) => sum + m.setup, 0)
+    const setupDiscount = selectedModules.length >= 5 ? 0.20 : 0
+    const discountedSetup = setupTotal * (1 - setupDiscount)
+    
+    // Yearly savings
+    const yearlySavings = period >= 6 ? (monthlyTotal - discountedMonthly) * 12 : 0
+    
+    return {
+      monthlyBase: monthlyTotal,
+      monthlyDiscounted: Math.round(discountedMonthly),
+      setupBase: setupTotal,
+      setupDiscounted: Math.round(discountedSetup),
+      setupDiscount,
+      periodDiscount: discount,
+      yearlySavings: Math.round(yearlySavings),
+      modulesLeft: Math.max(0, 5 - selectedModules.length)
+    }
+  }
+
+  const pricing = calculatePricing()
 
   return (
     <>
@@ -414,10 +614,13 @@ export default function AiChatWidget() {
                   </div>
 
                   {/* Menu buttons */}
-                  {['menuFaq', 'menuCalculator', 'menuTrial', 'menuServices'].map(key => (
+                  {['menuFaq', 'menuBuilder', 'menuTrial', 'menuServices'].map(key => (
                     <button
                       key={key}
-                      onClick={() => key === 'menuFaq' && handleFaqClick()}
+                      onClick={() => {
+                        if (key === 'menuFaq') handleFaqClick()
+                        if (key === 'menuBuilder') handleBuilderClick()
+                      }}
                       style={{
                         padding: '14px 16px',
                         background: '#f8f6ff',
@@ -554,6 +757,242 @@ export default function AiChatWidget() {
                       {faqData[selectedQuestion].answer[language]}
                     </p>
                   </div>
+
+                  {/* Back to Menu button */}
+                  <button
+                    onClick={handleBackToMenu}
+                    style={{
+                      padding: '14px 16px',
+                      background: 'linear-gradient(135deg, #7B2FF7, #C850C0)',
+                      border: 'none',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(123, 47, 247, 0.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
+                    {dir === 'rtl' ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
+                    {t('backToMenu')}
+                  </button>
+                </div>
+              )}
+
+              {/* Builder Screen */}
+              {screen === 'builder' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Title */}
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'linear-gradient(135deg, rgba(200, 146, 42, 0.12), rgba(255, 191, 0, 0.08))',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(200, 146, 42, 0.2)'
+                    }}
+                  >
+                    <h3 style={{ color: '#C8922A', fontSize: '16px', fontWeight: 700, margin: 0, marginBottom: '4px' }}>
+                      {t('builderTitle')}
+                    </h3>
+                  </div>
+
+                  {/* Period Selector */}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {([1, 3, 6, 12] as Period[]).map(p => (
+                      <button
+                        key={p}
+                        onClick={() => setPeriod(p)}
+                        style={{
+                          flex: 1,
+                          minWidth: '70px',
+                          padding: '10px',
+                          background: period === p ? '#C8922A' : '#f5f5f5',
+                          color: period === p ? 'white' : '#666',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {p} {language === 'he' ? 'חודשים' : language === 'ru' ? 'мес' : 'mo'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Modules List */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {MODULES.map(module => {
+                      const isSelected = selectedModules.includes(module.id)
+                      const isRequired = module.required
+
+                      return (
+                        <div
+                          key={module.id}
+                          onClick={() => !isRequired && toggleModule(module.id)}
+                          style={{
+                            padding: '12px',
+                            background: isSelected ? 'rgba(200, 146, 42, 0.1)' : '#f9f9f9',
+                            border: `1px solid ${isSelected ? '#C8922A' : '#e5e5e5'}`,
+                            borderRadius: '12px',
+                            cursor: isRequired ? 'not-allowed' : 'pointer',
+                            opacity: isRequired ? 0.7 : 1,
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '12px'
+                          }}
+                        >
+                          {/* Checkbox */}
+                          <div
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '4px',
+                              border: `2px solid ${isSelected ? '#C8922A' : '#ccc'}`,
+                              background: isSelected ? '#C8922A' : 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              marginTop: '2px'
+                            }}
+                          >
+                            {isSelected && <Check size={14} color="white" strokeWidth={3} />}
+                          </div>
+
+                          {/* Module Info */}
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#333', marginBottom: '4px', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                              {module.name[language]}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#888', textAlign: dir === 'rtl' ? 'right' : 'left' }}>
+                              ₪{module.monthly}/{language === 'he' ? 'חודש' : language === 'ru' ? 'мес' : 'mo'} · Setup ₪{module.setup}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Progress for Setup Discount */}
+                  {pricing.modulesLeft > 0 && (
+                    <div
+                      style={{
+                        padding: '12px',
+                        background: '#fff3cd',
+                        border: '1px solid #ffc107',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        color: '#856404',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {t('builderProgress').replace('X', String(pricing.modulesLeft))}
+                    </div>
+                  )}
+
+                  {pricing.modulesLeft === 0 && pricing.setupDiscount > 0 && (
+                    <div
+                      style={{
+                        padding: '12px',
+                        background: '#d4edda',
+                        border: '1px solid #28a745',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        color: '#155724',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {t('builderDiscountActive')}
+                    </div>
+                  )}
+
+                  {/* Total Summary */}
+                  <div
+                    style={{
+                      padding: '16px',
+                      background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(50, 50, 50, 0.95))',
+                      borderRadius: '16px',
+                      color: 'white'
+                    }}
+                  >
+                    {/* Setup */}
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '4px' }}>{t('builderSetup')}</div>
+                      <div style={{ fontSize: '20px', fontWeight: 700, color: '#C8922A' }}>
+                        {pricing.setupDiscount > 0 && (
+                          <span style={{ fontSize: '14px', textDecoration: 'line-through', color: '#888', marginLeft: '8px' }}>
+                            ₪{pricing.setupBase.toLocaleString()}
+                          </span>
+                        )}
+                        <span> ₪{pricing.setupDiscounted.toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    {/* Monthly */}
+                    <div style={{ marginBottom: pricing.yearlySavings > 0 ? '12px' : '0' }}>
+                      <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '4px' }}>{t('builderMonthly')}</div>
+                      <div style={{ fontSize: '20px', fontWeight: 700, color: '#C8922A' }}>
+                        {pricing.periodDiscount > 0 && (
+                          <span style={{ fontSize: '14px', textDecoration: 'line-through', color: '#888', marginLeft: '8px' }}>
+                            ₪{pricing.monthlyBase}
+                          </span>
+                        )}
+                        <span> ₪{pricing.monthlyDiscounted}/{language === 'he' ? 'חודש' : language === 'ru' ? 'мес' : 'mo'}</span>
+                      </div>
+                    </div>
+
+                    {/* Yearly Savings */}
+                    {pricing.yearlySavings > 0 && (
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '4px' }}>{t('builderSavings')}</div>
+                        <div style={{ fontSize: '16px', fontWeight: 600, color: '#10B981' }}>
+                          ₪{pricing.yearlySavings.toLocaleString()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Continue Button */}
+                  <button
+                    style={{
+                      padding: '14px 16px',
+                      background: 'linear-gradient(135deg, #C8922A, #FFBF00)',
+                      border: 'none',
+                      borderRadius: '16px',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 14px rgba(200, 146, 42, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(200, 146, 42, 0.4)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)'
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(200, 146, 42, 0.3)'
+                    }}
+                  >
+                    {t('builderContinue')}
+                  </button>
 
                   {/* Back to Menu button */}
                   <button

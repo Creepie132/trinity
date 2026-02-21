@@ -209,6 +209,14 @@ const translations: Record<string, Record<Language, string>> = {
     en: 'Thank you for your order! Our representative will contact you soon to complete the registration.' 
   },
   summaryPhoneEmail: { he: 'טלפון או Email', ru: 'Телефон или Email', en: 'Phone or Email' },
+  summaryAgreeTerms: { 
+    he: 'קראתי ואני מסכים/ה ל', 
+    ru: 'Я прочитал и согласен с', 
+    en: 'I have read and agree to' 
+  },
+  summaryTermsLink: { he: 'תקנון השימוש', ru: 'условиями использования', en: 'Terms of Service' },
+  summaryPolicyLink: { he: 'מדיניות הביטולים', ru: 'политикой возвратов', en: 'Cancellation Policy' },
+  summaryAnd: { he: 'ול', ru: 'и', en: 'and' },
   
   // Additional Services
   servicesTitle: { he: 'שירותים נוספים', ru: 'Дополнительные услуги', en: 'Additional Services' },
@@ -360,6 +368,7 @@ export default function AiChatWidget() {
   const [contactName, setContactName] = useState('')
   const [contactPhone, setContactPhone] = useState('')
   const [operatorRequestSent, setOperatorRequestSent] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -444,6 +453,7 @@ export default function AiChatWidget() {
     setContactName('')
     setContactPhone('')
     setOperatorRequestSent(false)
+    setAgreedToTerms(false)
   }
 
   const toggleModule = (moduleId: string) => {
@@ -1566,6 +1576,58 @@ export default function AiChatWidget() {
                     </div>
                   </div>
 
+                  {/* Terms Checkbox */}
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      padding: '12px',
+                      background: '#f9f9f9',
+                      borderRadius: '12px',
+                      border: '1px solid #e5e5e5',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      lineHeight: '1.5',
+                      color: '#333'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        marginTop: '2px',
+                        cursor: 'pointer',
+                        flexShrink: 0
+                      }}
+                    />
+                    <span>
+                      {t('summaryAgreeTerms')}{' '}
+                      <a
+                        href="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#C8922A', textDecoration: 'underline', fontWeight: 600 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {t('summaryTermsLink')}
+                      </a>
+                      {' '}{t('summaryAnd')}{' '}
+                      <a
+                        href="/policy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#C8922A', textDecoration: 'underline', fontWeight: 600 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {t('summaryPolicyLink')}
+                      </a>
+                    </span>
+                  </label>
+
                   {/* Action Buttons */}
                   <button
                     onClick={() => {
@@ -1575,15 +1637,18 @@ export default function AiChatWidget() {
                         handleBackToMenu()
                       }
                     }}
+                    disabled={!agreedToTerms}
                     style={{
                       padding: '14px 16px',
-                      background: 'linear-gradient(135deg, #C8922A, #FFBF00)',
+                      background: agreedToTerms 
+                        ? 'linear-gradient(135deg, #C8922A, #FFBF00)' 
+                        : '#ccc',
                       border: 'none',
                       borderRadius: '16px',
                       color: 'white',
                       fontSize: '14px',
                       fontWeight: 700,
-                      cursor: 'pointer',
+                      cursor: agreedToTerms ? 'pointer' : 'not-allowed',
                       transition: 'all 0.2s',
                       boxShadow: '0 4px 14px rgba(200, 146, 42, 0.3)'
                     }}

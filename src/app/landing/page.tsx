@@ -110,6 +110,21 @@ interface Translations {
   footer: {
     copyright: string
     location: string
+    contact: {
+      title: string
+      address: string
+      phone: string
+      email: string
+    }
+    links: {
+      title: string
+      terms: string
+      policy: string
+    }
+    payment: {
+      title: string
+      secure: string
+    }
   }
 }
 
@@ -305,8 +320,23 @@ const translations: Record<'he' | 'ru', Translations> = {
     floatingButton: {
     },
     footer: {
-      copyright: 'Amber Solutions Systems © 2026',
+      copyright: '© 2026 Amber Solutions Systems | ת.ז. 323358507 | עוסק פטור',
       location: 'אשקלון, ישראל',
+      contact: {
+        title: 'צור קשר',
+        address: 'מנחם בגין 10, אשקלון, ישראל',
+        phone: '054-4858586',
+        email: 'ambersolutions.systems@gmail.com',
+      },
+      links: {
+        title: 'מידע משפטי',
+        terms: 'תקנון שימוש',
+        policy: 'מדיניות ביטולים ופרטיות',
+      },
+      payment: {
+        title: 'אמצעי תשלום',
+        secure: 'תשלום מאובטח',
+      },
     },
   },
   ru: {
@@ -500,8 +530,23 @@ const translations: Record<'he' | 'ru', Translations> = {
     floatingButton: {
     },
     footer: {
-      copyright: 'Amber Solutions Systems © 2026',
+      copyright: '© 2026 Amber Solutions Systems | И.Н. 323358507 | Освобождённый плательщик',
       location: 'Ашкелон, Израиль',
+      contact: {
+        title: 'Контакты',
+        address: 'Менахем Бегин 10, Ашкелон, Израиль',
+        phone: '054-4858586',
+        email: 'ambersolutions.systems@gmail.com',
+      },
+      links: {
+        title: 'Правовая информация',
+        terms: 'Условия использования',
+        policy: 'Политика возвратов и конфиденциальность',
+      },
+      payment: {
+        title: 'Способы оплаты',
+        secure: 'Безопасная оплата',
+      },
     },
   },
 }
@@ -1532,50 +1577,63 @@ export default function LandingPage() {
       )}
 
       {/* Footer */}
-      <footer className="bg-[#0F172A] text-white py-12">
+      <footer className="bg-[#0F172A] text-white py-12 border-t border-white/10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-            {/* Logo & Copyright */}
-            <div className="flex items-center gap-3">
-              <img
-                src="/logo.png"
-                alt="Amber Solutions Logo"
-                className="w-8 h-8 object-contain"
-              />
-              <div className="text-center md:text-start">
-                <p className="font-semibold">{t.footer.copyright}</p>
-                <p className="text-gray-400 text-sm mt-1">{t.footer.location}</p>
+          {/* 3 Sections Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            
+            {/* Section 1: Contact (слева для RTL = справа визуально) */}
+            <div>
+              <h3 className="font-bold text-lg mb-4">{t.footer.contact.title}</h3>
+              <div className="space-y-2 text-gray-300 text-sm">
+                <p className="font-semibold text-white">Amber Solutions Systems</p>
+                <p>{t.footer.contact.address}</p>
+                <p>{t.footer.contact.phone}</p>
+                <p>{t.footer.contact.email}</p>
               </div>
             </div>
 
-            {/* Contact Links */}
-            <div className="flex gap-6">
-              <a
-                href="https://wa.me/972544858586"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
-                aria-label="WhatsApp"
-              >
-                <MessageCircle size={24} />
-              </a>
-              <a
-                href="mailto:ambersolutions.systems@gmail.com"
-                className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
-                aria-label="Email"
-              >
-                <Mail size={24} />
-              </a>
-              <a
-                href="https://www.facebook.com/profile.php?id=61587546885536"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-amber-500 transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook size={24} />
-              </a>
+            {/* Section 2: Legal Links (центр) */}
+            <div>
+              <h3 className="font-bold text-lg mb-4">{t.footer.links.title}</h3>
+              <div className="space-y-2">
+                <a 
+                  href="/terms" 
+                  className="block text-gray-300 hover:text-amber-400 transition-colors text-sm"
+                >
+                  {t.footer.links.terms}
+                </a>
+                <a 
+                  href="/policy" 
+                  className="block text-gray-300 hover:text-amber-400 transition-colors text-sm"
+                >
+                  {t.footer.links.policy}
+                </a>
+              </div>
             </div>
+
+            {/* Section 3: Payment Methods (справа для RTL = слева визуально) */}
+            <div>
+              <h3 className="font-bold text-lg mb-4">{t.footer.payment.title}</h3>
+              <div className="flex flex-wrap gap-3 mb-4">
+                {/* Payment Icons */}
+                <div className="bg-white px-3 py-2 rounded text-xs font-bold text-gray-900">VISA</div>
+                <div className="bg-white px-3 py-2 rounded text-xs font-bold text-gray-900">Mastercard</div>
+                <div className="bg-white px-3 py-2 rounded text-xs font-bold text-gray-900">Diners</div>
+                <div className="bg-gradient-to-r from-blue-500 to-blue-700 px-3 py-2 rounded text-xs font-bold text-white">bit</div>
+              </div>
+              <div className="flex items-center gap-2 text-green-400 text-sm">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+                <span>{t.footer.payment.secure}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Copyright */}
+          <div className="border-t border-white/10 pt-6 text-center text-sm text-gray-400">
+            {t.footer.copyright}
           </div>
         </div>
       </footer>

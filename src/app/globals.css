@@ -608,3 +608,136 @@
 .animate-fadeInUp {
   animation: fadeInUp 0.6s ease-out both;
 }
+
+/* ========== NEURAL GRID BACKGROUND ========== */
+/* Технологическая сетка для основного фона */
+body {
+  position: relative;
+  background: 
+    /* Тонкая вертикальная сетка */
+    linear-gradient(90deg, rgba(255, 191, 0, 0.02) 1px, transparent 1px),
+    /* Тонкая горизонтальная сетка */
+    linear-gradient(180deg, rgba(255, 191, 0, 0.02) 1px, transparent 1px),
+    /* Темный базовый фон */
+    hsl(var(--background));
+  background-size: 60px 60px, 60px 60px, 100%;
+  background-position: 0 0, 0 0, 0 0;
+}
+
+/* Анимированные нейронные узлы */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: 
+    /* Светящиеся узлы */
+    radial-gradient(circle at 15% 20%, rgba(255, 191, 0, 0.05) 0px, transparent 120px),
+    radial-gradient(circle at 85% 30%, rgba(255, 107, 53, 0.04) 0px, transparent 100px),
+    radial-gradient(circle at 30% 70%, rgba(255, 191, 0, 0.03) 0px, transparent 90px),
+    radial-gradient(circle at 70% 80%, rgba(255, 107, 53, 0.05) 0px, transparent 110px),
+    radial-gradient(circle at 50% 50%, rgba(255, 191, 0, 0.02) 0px, transparent 150px);
+  animation: neuralPulse 8s ease-in-out infinite;
+}
+
+/* Анимированные связи между узлами */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: 
+    /* Диагональные линии-связи */
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 250px,
+      rgba(255, 191, 0, 0.015) 250px,
+      rgba(255, 191, 0, 0.015) 251px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 280px,
+      rgba(255, 107, 53, 0.01) 280px,
+      rgba(255, 107, 53, 0.01) 281px
+    );
+  animation: neuralShift 15s linear infinite;
+}
+
+/* Анимация пульсации узлов */
+@keyframes neuralPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+/* Анимация движения связей */
+@keyframes neuralShift {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+  100% {
+    background-position: 100px 100px, -100px 100px;
+  }
+}
+
+/* Dark mode: более заметная сетка */
+.dark body {
+  background: 
+    linear-gradient(90deg, rgba(255, 191, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 191, 0, 0.04) 1px, transparent 1px),
+    hsl(var(--background));
+  background-size: 60px 60px, 60px 60px, 100%;
+}
+
+.dark body::before {
+  background-image: 
+    radial-gradient(circle at 15% 20%, rgba(255, 191, 0, 0.08) 0px, transparent 120px),
+    radial-gradient(circle at 85% 30%, rgba(255, 107, 53, 0.06) 0px, transparent 100px),
+    radial-gradient(circle at 30% 70%, rgba(255, 191, 0, 0.05) 0px, transparent 90px),
+    radial-gradient(circle at 70% 80%, rgba(255, 107, 53, 0.07) 0px, transparent 110px),
+    radial-gradient(circle at 50% 50%, rgba(255, 191, 0, 0.04) 0px, transparent 150px);
+}
+
+.dark body::after {
+  background: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 250px,
+      rgba(255, 191, 0, 0.025) 250px,
+      rgba(255, 191, 0, 0.025) 251px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 280px,
+      rgba(255, 107, 53, 0.02) 280px,
+      rgba(255, 107, 53, 0.02) 281px
+    );
+}
+
+/* Убедимся, что контент выше сетки */
+#__next,
+main,
+header,
+footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* Отключение анимаций для пользователей с prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after {
+    animation: none !important;
+  }
+}

@@ -7,22 +7,6 @@ import { useVisitServices, useAddVisitService, useRemoveVisitService, useUpdateV
 import { Visit } from '@/types/visits';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Plus, Clock, DollarSign, CheckCircle, XCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -35,6 +19,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { AddServiceDialog } from './AddServiceDialog';
+import { AddProductDialog } from './AddProductDialog';
 
 interface ActiveVisitCardProps {
   visit: Visit;
@@ -51,13 +37,8 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
 
   const [elapsedTime, setElapsedTime] = useState<string>('00:00:00');
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [selectedServiceId, setSelectedServiceId] = useState<string>('');
-  const [showCustomServiceForm, setShowCustomServiceForm] = useState(false);
-  const [customService, setCustomService] = useState({
-    name: '',
-    price: '',
-    duration: '',
-  });
+  const [showAddService, setShowAddService] = useState(false);
+  const [showAddProduct, setShowAddProduct] = useState(false);
 
   // Timer effect
   useEffect(() => {
@@ -81,52 +62,16 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
     return () => clearInterval(interval);
   }, [visit.started_at]);
 
-  const handleAddService = async () => {
-    if (!selectedServiceId) {
-      toast.error(t('visits.selectServiceToAdd'));
-      return;
-    }
-
-    const selectedService = services?.find(s => s.id === selectedServiceId);
-    if (!selectedService) return;
-
+  const handleAddService = async (service: any) => {
     try {
       await addService.mutateAsync({
         visit_id: visit.id,
-        service_id: selectedService.id,
-        service_name: selectedService.name,
-        service_name_ru: selectedService.name_ru || selectedService.name,
-        price: selectedService.price || 0,
-        duration_minutes: selectedService.duration_minutes,
+        service_id: service.id,
+        service_name: service.name,
+        service_name_ru: service.name_ru || service.name,
+        price: service.price || 0,
+        duration_minutes: service.duration_minutes,
       });
-
-      toast.success(t('visits.addService') + ' ✓');
-      setSelectedServiceId('');
-    } catch (error) {
-      console.error('Error adding service:', error);
-      toast.error(t('errors.somethingWentWrong'));
-    }
-  };
-
-  const handleAddCustomService = async () => {
-    if (!customService.name || !customService.price || !customService.duration) {
-      toast.error(t('visits.fillAllFields'));
-      return;
-    }
-
-    try {
-      await addService.mutateAsync({
-        visit_id: visit.id,
-        service_id: undefined,
-        service_name: customService.name,
-        service_name_ru: customService.name, // Same for custom
-        price: parseFloat(customService.price),
-        duration_minutes: parseInt(customService.duration),
-      });
-
-      toast.success(t('visits.addService') + ' ✓');
-      setShowCustomServiceForm(false);
-      setCustomService({ name: '', price: '', duration: '' });
     } catch (error) {
       console.error('Error adding custom service:', error);
       toast.error(t('errors.somethingWentWrong'));
@@ -276,64 +221,23 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
         {/* Action Buttons Row */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Add Service Button */}
-          <Select 
-            value={selectedServiceId} 
-            onValueChange={(value) => {
-              if (value === 'custom') {
-                setShowCustomServiceForm(true);
-                setSelectedServiceId('');
-              } else {
-                setSelectedServiceId(value);
-              }
-            }}
-          >
-            <SelectTrigger className="h-9 text-sm bg-blue-600 hover:bg-blue-700 text-white border-blue-700 flex-1 md:flex-initial md:w-auto">
-              <Plus className="w-4 h-4 mr-1 shrink-0" />
-              <span className="truncate">{t('visits.addService')}</span>
-            </SelectTrigger>
-            <SelectContent>
-              {/* Regular Services */}
-              <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
-                {t('visits.regularService')}
-              </div>
-              {services?.map((service) => {
-                const serviceName = language === 'he' ? service.name : (service.name_ru || service.name);
-                return (
-                  <SelectItem key={service.id} value={service.id}>
-                    {serviceName} - ₪{service.price?.toFixed(2) || '0.00'} • {service.duration_minutes} {t('common.minutes')}
-                  </SelectItem>
-                );
-              })}
-              
-              {/* Custom Service */}
-              <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 mt-2 border-t border-gray-200 dark:border-gray-700">
-                {t('visits.oneTimeService')}
-              </div>
-              <SelectItem value="custom">
-                <span className="font-medium">✏️ {t('visits.customService')}</span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          {selectedServiceId && (
-            <Button
-              onClick={handleAddService}
-              disabled={addService.isPending}
-              size="sm"
-              className="h-9 bg-blue-600 hover:bg-blue-700"
-            >
-              <CheckCircle className="w-4 h-4" />
-            </Button>
-          )}
-
-          {/* Add Product Button (TODO: implement product selection) */}
           <Button
-            onClick={() => toast.info(t('visits.productFeatureComingSoon'))}
+            onClick={() => setShowAddService(true)}
+            size="sm"
+            className="h-9 text-sm bg-blue-600 hover:bg-blue-700 text-white flex-1 md:flex-initial"
+          >
+            <Plus className="w-4 h-4 mr-1 shrink-0" />
+            <span className="truncate">{language === 'he' ? 'הוסף שירות' : 'Добавить услугу'}</span>
+          </Button>
+
+          {/* Add Product Button */}
+          <Button
+            onClick={() => setShowAddProduct(true)}
             size="sm"
             className="h-9 text-sm bg-purple-600 hover:bg-purple-700 text-white flex-1 md:flex-initial"
           >
             <Plus className="w-4 h-4 mr-1 shrink-0" />
-            <span className="truncate">{t('visits.addProduct')}</span>
+            <span className="truncate">{language === 'he' ? 'הוסף מוצר' : 'Добавить товар'}</span>
           </Button>
 
           {/* Finish Button */}
@@ -359,55 +263,20 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
         </div>
       </div>
 
-      {/* Custom Service Form Dialog */}
-      <Dialog open={showCustomServiceForm} onOpenChange={setShowCustomServiceForm}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('visits.addCustomService')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="service-name">{t('visits.serviceName')}</Label>
-              <Input
-                id="service-name"
-                value={customService.name}
-                onChange={(e) => setCustomService({ ...customService, name: e.target.value })}
-                placeholder={t('visits.enterServiceName')}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="service-price">{t('visits.price')}</Label>
-                <Input
-                  id="service-price"
-                  type="number"
-                  value={customService.price}
-                  onChange={(e) => setCustomService({ ...customService, price: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="service-duration">{t('visits.duration')} ({t('common.minutes')})</Label>
-                <Input
-                  id="service-duration"
-                  type="number"
-                  value={customService.duration}
-                  onChange={(e) => setCustomService({ ...customService, duration: e.target.value })}
-                  placeholder="60"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCustomServiceForm(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button onClick={handleAddCustomService} disabled={addService.isPending}>
-              {t('visits.addService')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Add Service Dialog */}
+      <AddServiceDialog
+        open={showAddService}
+        onOpenChange={setShowAddService}
+        onAddService={handleAddService}
+        isPending={addService.isPending}
+      />
+
+      {/* Add Product Dialog */}
+      <AddProductDialog
+        open={showAddProduct}
+        onOpenChange={setShowAddProduct}
+        visitId={visit.id}
+      />
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>

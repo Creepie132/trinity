@@ -275,26 +275,45 @@ export async function POST(
     console.log('is UUID?', service_id ? uuidRegex.test(service_id) : false)
     
     if (service_id && uuidRegex.test(service_id)) {
-      console.log('Creating visit_services entry...')
-      const { error: vsError } = await supabaseAdmin
-        .from('visit_services')
-        .insert({
-          visit_id: visit.id,
-          service_id: service_id,
-          quantity: 1
-        })
+      console.log('Loading service data...')
+      // Load full service data
+      const { data: serviceData, error: serviceLoadError } = await supabaseAdmin
+        .from('services')
+        .select('id, name, name_ru, price, duration_minutes')
+        .eq('id', service_id)
+        .maybeSingle()
 
-      if (vsError) {
-        console.error('❌ Visit service creation failed:', vsError)
-        console.error('Error details:', {
-          message: vsError.message,
-          code: vsError.code,
-          details: vsError.details,
-          hint: vsError.hint
-        })
-        // Don't fail the whole booking if visit_services fails
+      if (serviceLoadError) {
+        console.error('Service load error:', serviceLoadError)
+      }
+
+      if (serviceData) {
+        console.log('Creating visit_services entry with full data...')
+        const { error: vsError } = await supabaseAdmin
+          .from('visit_services')
+          .insert({
+            visit_id: visit.id,
+            service_id: serviceData.id,
+            service_name: serviceData.name,
+            service_name_ru: serviceData.name_ru || serviceData.name,
+            price: serviceData.price || 0,
+            duration_minutes: serviceData.duration_minutes || duration_minutes || 60
+          })
+
+        if (vsError) {
+          console.error('❌ Visit service creation failed:', vsError)
+          console.error('Error details:', {
+            message: vsError.message,
+            code: vsError.code,
+            details: vsError.details,
+            hint: vsError.hint
+          })
+          // Don't fail the whole booking if visit_services fails
+        } else {
+          console.log('✅ Visit service linked successfully')
+        }
       } else {
-        console.log('✅ Visit service linked successfully')
+        console.warn('Service not found in database:', service_id)
       }
     } else {
       console.log('Skipping visit_services creation (no valid service_id)')
@@ -302,20 +321,28 @@ export async function POST(
 
     // Send Telegram notification
     console.log('Step 6: Sending Telegram notification...')
+    console.log('Telegram settings:', {
+      telegram_notifications: org.telegram_notifications,
+      telegram_chat_id: org.telegram_chat_id,
+      has_chat_id: !!org.telegram_chat_id
+    })
+    
     if (org.telegram_notifications && org.telegram_chat_id) {
       const date = new Date(scheduled_at).toLocaleDateString('he-IL')
       const time = new Date(scheduled_at).toLocaleTimeString('he-IL', {
         hour: '2-digit',
         minute: '2-digit',
       })
-      const telegramMessage = `📅 <b>Новая запись онлайн!</b>\n\n👤 ${client_name}\n📞 ${client_phone}\n💼 ${service_name}\n📅 ${date}\n🕐 ${time}\n💰 ₪${price || 0}`
+      const telegramMessage = `📅 <b>Новая запись онлайн!</b>\n\n👤 ${client_name}\n📞 ${client_phone}\n💼 ${service_name}\n📅 ${date}\n🕐 ${time}\n💰 ₪${price || 0}\n\n🌐 Источник: Онлайн-запись`
       
       try {
         await sendTelegramMessage(org.telegram_chat_id, telegramMessage)
-        console.log('Telegram notification sent')
+        console.log('✅ Telegram notification sent to:', org.telegram_chat_id)
       } catch (error) {
-        console.error('Telegram notification failed (non-fatal):', error)
+        console.error('❌ Telegram notification failed (non-fatal):', error)
       }
+    } else {
+      console.log('⏭️ Telegram notification skipped (not enabled or no chat_id)')
     }
 
     // Get confirmation message

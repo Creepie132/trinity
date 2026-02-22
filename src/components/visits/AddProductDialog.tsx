@@ -37,7 +37,7 @@ export function AddProductDialog({
       const supabase = createSupabaseBrowserClient();
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('id, name, sell_price, stock, is_active')
         .eq('is_active', true)
         .order('name');
 
@@ -74,7 +74,7 @@ export function AddProductDialog({
         productId: product.id,
         productName: product.name,
         quantity,
-        price: product.price * quantity,
+        price: (product.sell_price || 0) * quantity,
       });
 
       // Close dialog after adding
@@ -125,7 +125,7 @@ export function AddProductDialog({
                       {product.name}
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      ₪{product.price || 0} {language === 'he' ? 'ליחידה' : 'за шт.'}
+                      ₪{product.sell_price || 0} {language === 'he' ? 'ליחידה' : 'за шт.'}
                     </div>
                   </div>
 

@@ -1,23 +1,17 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useClients } from '@/hooks/useClients'
 import { useCreatePaymentLink } from '@/hooks/usePayments'
 import { toast } from 'sonner'
 import { MessageSquare, Copy, ExternalLink } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { ClientSearch } from '@/components/ui/ClientSearch'
+import { useAuth } from '@/hooks/useAuth'
 
 interface CreatePaymentLinkDialogProps {
   open: boolean
@@ -25,37 +19,19 @@ interface CreatePaymentLinkDialogProps {
 }
 
 export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLinkDialogProps) {
-  const [selectedClientId, setSelectedClientId] = useState('')
+  const [selectedClient, setSelectedClient] = useState<any>(null)
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
   const [paymentLink, setPaymentLink] = useState<string | null>(null)
 
-  const { t } = useLanguage()
-  const { data: clientsData } = useClients()
-  const clients = clientsData?.data || []
+  const { t, language } = useLanguage()
+  const { orgId } = useAuth()
   const createPayment = useCreatePaymentLink()
-
-  // Filter clients based on search
-  const filteredClients = useMemo(() => {
-    if (!clients) return []
-    if (!searchQuery) return clients
-
-    const query = searchQuery.toLowerCase()
-    return clients.filter(
-      (client) =>
-        client.first_name.toLowerCase().includes(query) ||
-        client.last_name.toLowerCase().includes(query) ||
-        client.phone.includes(query)
-    )
-  }, [clients, searchQuery])
-
-  const selectedClient = clients?.find((c) => c.id === selectedClientId)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!selectedClientId) {
+    if (!selectedClient) {
       toast.error(t('payments.selectClient'))
       return
     }
@@ -68,7 +44,7 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
 
     try {
       const result = await createPayment.mutateAsync({
-        client_id: selectedClientId,
+        client_id: selectedClient.id,
         amount: amountNum,
         description: description || 'תשלום',
       })
@@ -80,10 +56,9 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
   }
 
   const handleClose = () => {
-    setSelectedClientId('')
+    setSelectedClient(null)
     setAmount('')
     setDescription('')
-    setSearchQuery('')
     setPaymentLink(null)
     onOpenChange(false)
   }
@@ -119,25 +94,13 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="client">{t('payments.client')} *</Label>
-              <div className="space-y-2">
-                <Input
-                  placeholder={t('clients.search')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('payments.selectClient')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredClients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.first_name} {client.last_name} - {client.phone}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <ClientSearch
+                orgId={orgId || ''}
+                onSelect={(client) => setSelectedClient(client)}
+                placeholder={t('payments.selectClient')}
+                locale={language as 'he' | 'ru' | 'en'}
+                value={selectedClient}
+              />
             </div>
 
             <div>

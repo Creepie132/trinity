@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,11 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useClients } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { ClientSearch } from '@/components/ui/ClientSearch'
 
 interface CreateSubscriptionDialogProps {
   open: boolean
@@ -26,32 +26,13 @@ interface CreateSubscriptionDialogProps {
 type Interval = 'month' | 'week' | 'year'
 
 export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscriptionDialogProps) {
-  const [selectedClientId, setSelectedClientId] = useState('')
+  const [selectedClient, setSelectedClient] = useState<any>(null)
   const [amount, setAmount] = useState('')
   const [interval, setInterval] = useState<Interval>('month')
-  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(false)
 
   const { t, language } = useLanguage()
-  const { data: clientsData } = useClients()
-  const clients = clientsData?.data || []
   const { orgId } = useAuth()
-
-  // Filter clients based on search
-  const filteredClients = useMemo(() => {
-    if (!clients) return []
-    if (!searchQuery) return clients
-
-    const query = searchQuery.toLowerCase()
-    return clients.filter(
-      (client) =>
-        client.first_name.toLowerCase().includes(query) ||
-        client.last_name.toLowerCase().includes(query) ||
-        client.phone.includes(query)
-    )
-  }, [clients, searchQuery])
-
-  const selectedClient = clients?.find((c) => c.id === selectedClientId)
 
   const getIntervalLabel = (interval: Interval) => {
     const labels = {
@@ -65,7 +46,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!selectedClientId) {
+    if (!selectedClient) {
       toast.error(t('payments.selectClient'))
       return
     }
@@ -92,7 +73,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
           interval: interval,
           clientName: `${selectedClient.first_name} ${selectedClient.last_name}`,
           clientEmail: selectedClient.email || `${selectedClient.phone}@temp.com`,
-          clientId: selectedClientId,
+          clientId: selectedClient.id,
           orgId: orgId,
         }),
       })
@@ -116,10 +97,9 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
   }
 
   const handleClose = () => {
-    setSelectedClientId('')
+    setSelectedClient(null)
     setAmount('')
     setInterval('month')
-    setSearchQuery('')
     onOpenChange(false)
   }
 
@@ -137,25 +117,13 @@ export function CreateSubscriptionDialog({ open, onOpenChange }: CreateSubscript
             <Label htmlFor="client">
               {t('payments.client')} *
             </Label>
-            <div className="space-y-2">
-              <Input
-                placeholder={t('clients.search')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('payments.selectClient')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredClients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.first_name} {client.last_name} - {client.phone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <ClientSearch
+              orgId={orgId || ''}
+              onSelect={(client) => setSelectedClient(client)}
+              placeholder={t('payments.selectClient')}
+              locale={language as 'he' | 'ru' | 'en'}
+              value={selectedClient}
+            />
           </div>
 
           <div>

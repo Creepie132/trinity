@@ -33,7 +33,7 @@ import { ExportButton } from '@/components/ExportButton'
 export default function VisitsPage() {
   const router = useRouter()
   const features = useFeatures()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { orgId } = useAuth()
   const supabase = createSupabaseBrowserClient()
 
@@ -172,6 +172,38 @@ export default function VisitsPage() {
   const totalPages = Math.ceil(totalCount / pageSize)
   const from = (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, totalCount)
+
+  // Sort visits by status groups
+  const statusOrder: Record<string, number> = {
+    'scheduled': 0,
+    'in_progress': 0,
+    'completed': 1,
+    'cancelled': 2,
+    'no_show': 2,
+  }
+
+  const sortedVisits = [...visits].sort((a, b) => {
+    const groupA = statusOrder[a.status] ?? 1
+    const groupB = statusOrder[b.status] ?? 1
+    
+    // Sort by group first
+    if (groupA !== groupB) return groupA - groupB
+    
+    // Within "upcoming" group (scheduled, in_progress): nearest first (ASC)
+    if (groupA === 0) {
+      return new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+    }
+    
+    // Within "completed" and "cancelled" groups: latest first (DESC)
+    const dateA = new Date(a.updated_at || a.scheduled_at).getTime()
+    const dateB = new Date(b.updated_at || b.scheduled_at).getTime()
+    return dateB - dateA
+  })
+
+  // Group visits by status
+  const scheduledVisits = sortedVisits.filter(v => v.status === 'scheduled' || v.status === 'in_progress')
+  const completedVisits = sortedVisits.filter(v => v.status === 'completed')
+  const cancelledVisits = sortedVisits.filter(v => v.status === 'cancelled' || v.status === 'no_show')
 
   const getServiceLabel = (service: string): string => {
     const serviceMap: Record<string, string> = {
@@ -402,7 +434,7 @@ export default function VisitsPage() {
         <>
           {/* Desktop Table (hidden on mobile) */}
           <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            {visits.length > 0 ? (
+            {sortedVisits.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50 dark:bg-gray-800">
@@ -417,7 +449,17 @@ export default function VisitsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visits.map((visit) => {
+                {/* Upcoming visits */}
+                {scheduledVisits.length > 0 && (
+                  <>
+                    <TableRow>
+                      <TableCell colSpan={8} className="bg-gray-50 dark:bg-gray-900 py-2">
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-2">
+                          {language === 'he' ? 'תורים קרובים' : language === 'ru' ? 'Предстоящие' : 'Upcoming'}
+                        </h3>
+                      </TableCell>
+                    </TableRow>
+                    {scheduledVisits.map((visit) => {
                   // Render ActiveVisitCard for in_progress visits
                   if (visit.status === 'in_progress') {
                     return (
@@ -490,6 +532,131 @@ export default function VisitsPage() {
                     </TableRow>
                   )
                 })}
+                  </>
+                )}
+                
+                {/* Completed visits */}
+                {completedVisits.length > 0 && (
+                  <>
+                    <TableRow>
+                      <TableCell colSpan={8} className="bg-gray-50 dark:bg-gray-900 py-2">
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-2">
+                          {language === 'he' ? 'הושלמו' : language === 'ru' ? 'Завершённые' : 'Completed'}
+                        </h3>
+                      </TableCell>
+                    </TableRow>
+                    {completedVisits.map((visit) => {
+                  // Render ActiveVisitCard for in_progress visits
+                  if (visit.status === 'in_progress') {
+                    return (
+                      <TableRow key={visit.id} className="bg-amber-50 dark:bg-amber-900/10">
+                        <TableCell colSpan={8} className="p-4">
+                          <div className="border-2 border-amber-400 dark:border-amber-600 rounded-lg">
+                            <ActiveVisitCard 
+                              visit={visit} 
+                              onFinish={() => handleCompleteVisit(visit)} 
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  }
+                  
+                  // Regular row for other statuses
+                  return (
+                    <TableRow key={visit.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <TableCell className="font-medium text-gray-900 dark:text-gray-100">
+                        {visit.clients?.first_name} {visit.clients?.last_name}
+                      </TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">{getServiceLabel(visit.service_type)}</TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">
+                        {format(new Date(visit.scheduled_at), 'dd/MM/yyyy')}
+                      </TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Clock className="w-3 h-3" />
+                          {format(new Date(visit.scheduled_at), 'HH:mm')}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">{visit.duration_minutes || 0} דק׳</TableCell>
+                      <TableCell className="font-bold text-theme-primary">₪{visit.price || 0}</TableCell>
+                      <TableCell>{getStatusBadge(visit.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2 justify-start">
+                          {visit.status === 'scheduled' && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => handleStartVisit(visit.id)}
+                                className="bg-green-600 text-white hover:bg-green-700"
+                              >
+                                <Play className="w-3 h-3 ml-1" />
+                                {t('visits.startVisit')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCompleteVisit(visit)}
+                                className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+                              >
+                                <CheckCircle className="w-3 h-3 ml-1" />
+                                {t('visits.complete')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCancelVisit(visit.id)}
+                                className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30"
+                              >
+                                <XCircle className="w-3 h-3 ml-1" />
+                                {t('visits.cancel')}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+                  </>
+                )}
+                
+                {/* Cancelled visits */}
+                {cancelledVisits.length > 0 && (
+                  <>
+                    <TableRow>
+                      <TableCell colSpan={8} className="bg-gray-50 dark:bg-gray-900 py-2">
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-2">
+                          {language === 'he' ? 'בוטלו' : language === 'ru' ? 'Отменённые' : 'Cancelled'}
+                        </h3>
+                      </TableCell>
+                    </TableRow>
+                    {cancelledVisits.map((visit) => {
+                  // Regular row with reduced opacity
+                  return (
+                    <TableRow key={visit.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 opacity-60">
+                      <TableCell className="font-medium text-gray-500 dark:text-gray-400">
+                        {visit.clients?.first_name} {visit.clients?.last_name}
+                      </TableCell>
+                      <TableCell className="text-gray-500 dark:text-gray-500">{getServiceLabel(visit.service_type)}</TableCell>
+                      <TableCell className="text-gray-500 dark:text-gray-500">
+                        {format(new Date(visit.scheduled_at), 'dd/MM/yyyy')}
+                      </TableCell>
+                      <TableCell className="text-gray-500 dark:text-gray-500">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Clock className="w-3 h-3" />
+                          {format(new Date(visit.scheduled_at), 'HH:mm')}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-gray-500 dark:text-gray-500">{visit.duration_minutes || 0} דק׳</TableCell>
+                      <TableCell className="text-gray-500 dark:text-gray-500">₪{visit.price || 0}</TableCell>
+                      <TableCell>{getStatusBadge(visit.status)}</TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  )
+                })}
+                  </>
+                )}
               </TableBody>
             </Table>
           ) : (
@@ -501,14 +668,58 @@ export default function VisitsPage() {
 
           {/* Mobile Cards (visible only on mobile) - Using VisitCard component */}
           <div className="md:hidden space-y-3">
-            {visits.length > 0 ? (
-              visits.map((visit) => (
-                <VisitCard
-                  key={visit.id}
-                  visit={visit}
-                  onComplete={handleCompleteVisit}
-                />
-              ))
+            {sortedVisits.length > 0 ? (
+              <>
+                {/* Upcoming visits */}
+                {scheduledVisits.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-2 py-2 bg-gray-50 dark:bg-gray-900 rounded">
+                      {language === 'he' ? 'תורים קרובים' : language === 'ru' ? 'Предстоящие' : 'Upcoming'}
+                    </h3>
+                    {scheduledVisits.map((visit) => (
+                      <VisitCard
+                        key={visit.id}
+                        visit={visit}
+                        onComplete={handleCompleteVisit}
+                      />
+                    ))}
+                  </>
+                )}
+                
+                {/* Completed visits */}
+                {completedVisits.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-2 py-2 bg-gray-50 dark:bg-gray-900 rounded mt-4">
+                      {language === 'he' ? 'הושלמו' : language === 'ru' ? 'Завершённые' : 'Completed'}
+                    </h3>
+                    {completedVisits.map((visit) => (
+                      <VisitCard
+                        key={visit.id}
+                        visit={visit}
+                        onComplete={handleCompleteVisit}
+                      />
+                    ))}
+                  </>
+                )}
+                
+                {/* Cancelled visits */}
+                {cancelledVisits.length > 0 && (
+                  <>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-2 py-2 bg-gray-50 dark:bg-gray-900 rounded mt-4">
+                      {language === 'he' ? 'בוטלו' : language === 'ru' ? 'Отменённые' : 'Cancelled'}
+                    </h3>
+                    <div className="opacity-60 space-y-3">
+                      {cancelledVisits.map((visit) => (
+                        <VisitCard
+                          key={visit.id}
+                          visit={visit}
+                          onComplete={handleCompleteVisit}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
             ) : (
               <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                 <p className="text-gray-500 dark:text-gray-400 mb-4">{t('visits.noVisits')}</p>

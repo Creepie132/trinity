@@ -12,19 +12,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useClients } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { toast } from 'sonner'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useRouter } from 'next/navigation'
+import { ClientSearch } from '@/components/ui/ClientSearch'
 
 interface CreateCashPaymentDialogProps {
   open: boolean
@@ -32,12 +25,12 @@ interface CreateCashPaymentDialogProps {
 }
 
 export function CreateCashPaymentDialog({ open, onOpenChange }: CreateCashPaymentDialogProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { orgId } = useAuth()
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
-  const { data: clients } = useClients()
 
+  const [selectedClient, setSelectedClient] = useState<any>(null)
   const [clientId, setClientId] = useState<string>('')
   const [amount, setAmount] = useState<string>('')
   const [notes, setNotes] = useState('')
@@ -58,8 +51,6 @@ export function CreateCashPaymentDialog({ open, onOpenChange }: CreateCashPaymen
 
     setIsProcessing(true)
     try {
-      const client = clients?.data?.find((c) => c.id === clientId)
-
       const { error } = await supabase
         .from('payments')
         .insert({
@@ -68,7 +59,7 @@ export function CreateCashPaymentDialog({ open, onOpenChange }: CreateCashPaymen
           amount: parseFloat(amount),
           payment_method: 'cash',
           status: 'completed',
-          description: notes || `${t('payments.cashPayment')} - ${client?.first_name} ${client?.last_name}`,
+          description: notes || `${t('payments.cashPayment')} - ${selectedClient?.first_name} ${selectedClient?.last_name}`,
         })
 
       if (error) throw error
@@ -100,19 +91,16 @@ export function CreateCashPaymentDialog({ open, onOpenChange }: CreateCashPaymen
             <Label htmlFor="client">
               {t('visits.client')} <span className="text-red-500">*</span>
             </Label>
-            <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger className="bg-white dark:bg-gray-800">
-                <SelectValue placeholder={t('visits.selectClient')} />
-              </SelectTrigger>
-              <SelectContent>
-                {clients?.data?.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.first_name} {client.last_name}
-                    {client.phone && ` - ${client.phone}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ClientSearch
+              orgId={orgId || ''}
+              onSelect={(client) => {
+                setSelectedClient(client)
+                setClientId(client?.id || '')
+              }}
+              placeholder={t('visits.selectClient')}
+              locale={language as 'he' | 'ru' | 'en'}
+              value={selectedClient}
+            />
           </div>
 
           {/* Amount */}

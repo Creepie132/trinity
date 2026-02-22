@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useServices } from '@/hooks/useServices'
 import {
   Dialog,
@@ -27,6 +27,25 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { ArrowRight, ArrowLeft } from 'lucide-react'
+import { ClientSearch } from '@/components/ui/ClientSearch'
+
+// Get default time (rounded to next 30 min)
+const getDefaultTime = () => {
+  const now = new Date()
+  const minutes = now.getMinutes()
+  const roundedMinutes = minutes < 30 ? 30 : 0
+  const defaultTime = new Date(now)
+  if (roundedMinutes === 0) defaultTime.setHours(defaultTime.getHours() + 1)
+  defaultTime.setMinutes(roundedMinutes)
+  return `${String(defaultTime.getHours()).padStart(2, '0')}:${String(defaultTime.getMinutes()).padStart(2, '0')}`
+}
+
+// Get default date (tomorrow)
+const getDefaultDate = () => {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  return tomorrow.toISOString().split('T')[0]
+}
 
 interface CreateVisitDialogProps {
   open: boolean
@@ -70,12 +89,13 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
   const { data: customServices } = useServices()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<any>(null)
   const [formData, setFormData] = useState({
     clientId: preselectedClientId || '',
     serviceId: '',
     service: '', // Legacy field for backward compatibility
-    date: preselectedDate ? preselectedDate.toISOString().split('T')[0] : '',
-    time: '',
+    date: preselectedDate ? preselectedDate.toISOString().split('T')[0] : getDefaultDate(),
+    time: getDefaultTime(),
     duration: 60,
     price: '',
     notes: '',
@@ -111,23 +131,6 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
       })
     }
   }
-
-  // Fetch clients
-  const { data: clients = [] } = useQuery({
-    queryKey: ['clients', orgId],
-    queryFn: async () => {
-      if (!orgId) return []
-      const { data, error } = await supabase
-        .from('clients')
-        .select('id, first_name, last_name, phone')
-        .eq('org_id', orgId)
-        .order('first_name')
-      
-      if (error) throw error
-      return data
-    },
-    enabled: !!orgId && open,
-  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -227,25 +230,16 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
             <Label htmlFor="client" className="text-gray-900 dark:text-gray-100">
               {t('visits.client')} *
             </Label>
-            <Select
-              value={formData.clientId}
-              onValueChange={(value) => setFormData({ ...formData, clientId: value })}
-            >
-              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
-                <SelectValue placeholder={t('visits.selectClient')} />
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                {clients.map((client) => (
-                  <SelectItem 
-                    key={client.id} 
-                    value={client.id}
-                    className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-                  >
-                    {client.first_name} {client.last_name} - {client.phone}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ClientSearch
+              orgId={orgId || ''}
+              onSelect={(client) => {
+                setSelectedClient(client)
+                setFormData({ ...formData, clientId: client?.id || '' })
+              }}
+              placeholder={t('visits.selectClient')}
+              locale={language as 'he' | 'ru' | 'en'}
+              value={selectedClient}
+            />
           </div>
 
           {/* Service selection */}

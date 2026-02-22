@@ -2,23 +2,16 @@
 
 import { useQueryClient } from '@tanstack/react-query'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useClients } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { ClientSearch } from '@/components/ui/ClientSearch'
 
 interface CreateStripePaymentDialogProps {
   open: boolean
@@ -26,36 +19,17 @@ interface CreateStripePaymentDialogProps {
 }
 
 export function CreateStripePaymentDialog({ open, onOpenChange }: CreateStripePaymentDialogProps) {
-  const [selectedClientId, setSelectedClientId] = useState('')
+  const [selectedClient, setSelectedClient] = useState<any>(null)
   const [amount, setAmount] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const { t } = useLanguage()
-  const { data: clientsData } = useClients()
-  const clients = clientsData?.data || []
+  const { t, language } = useLanguage()
   const { orgId } = useAuth()
-
-  // Filter clients based on search
-  const filteredClients = useMemo(() => {
-    if (!clients) return []
-    if (!searchQuery) return clients
-
-    const query = searchQuery.toLowerCase()
-    return clients.filter(
-      (client) =>
-        client.first_name.toLowerCase().includes(query) ||
-        client.last_name.toLowerCase().includes(query) ||
-        client.phone.includes(query)
-    )
-  }, [clients, searchQuery])
-
-  const selectedClient = clients?.find((c) => c.id === selectedClientId)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!selectedClientId) {
+    if (!selectedClient) {
       toast.error(t('payments.selectClient'))
       return
     }
@@ -82,7 +56,7 @@ export function CreateStripePaymentDialog({ open, onOpenChange }: CreateStripePa
           currency: 'ILS',
           clientName: `${selectedClient.first_name} ${selectedClient.last_name}`,
           clientEmail: selectedClient.email || `${selectedClient.phone}@temp.com`,
-          clientId: selectedClientId,
+          clientId: selectedClient.id,
           orgId: orgId,
         }),
       })
@@ -106,9 +80,8 @@ export function CreateStripePaymentDialog({ open, onOpenChange }: CreateStripePa
   }
 
   const handleClose = () => {
-    setSelectedClientId('')
+    setSelectedClient(null)
     setAmount('')
-    setSearchQuery('')
     onOpenChange(false)
   }
 
@@ -122,25 +95,13 @@ export function CreateStripePaymentDialog({ open, onOpenChange }: CreateStripePa
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="client">{t('payments.client')} *</Label>
-            <div className="space-y-2">
-              <Input
-                placeholder={t('clients.search')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('payments.selectClient')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredClients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.first_name} {client.last_name} - {client.phone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <ClientSearch
+              orgId={orgId || ''}
+              onSelect={(client) => setSelectedClient(client)}
+              placeholder={t('payments.selectClient')}
+              locale={language as 'he' | 'ru' | 'en'}
+              value={selectedClient}
+            />
           </div>
 
           <div>

@@ -114,47 +114,49 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
               </div>
             </div>
 
-            {/* Debug Info */}
-            <div className="space-y-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800">
-              <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
-                מידע טכני (Debug)
-              </h4>
-              <div className="space-y-2 text-xs font-mono">
-                <div className="flex justify-between">
-                  <span className="text-yellow-700 dark:text-yellow-300">User ID:</span>
-                  <span className="text-yellow-900 dark:text-yellow-100 font-semibold break-all">
-                    {user?.id || '❌ לא זמין'}
-                  </span>
+            {/* Debug Info - Only visible to admins */}
+            {isAdmin && (
+              <div className="space-y-3 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800">
+                <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  מידע טכני (Debug)
+                </h4>
+                <div className="space-y-2 text-xs font-mono">
+                  <div className="flex justify-between">
+                    <span className="text-yellow-700 dark:text-yellow-300">User ID:</span>
+                    <span className="text-yellow-900 dark:text-yellow-100 font-semibold break-all">
+                      {user?.id || '❌ לא זמין'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-yellow-700 dark:text-yellow-300">Org ID:</span>
+                    <span className="text-yellow-900 dark:text-yellow-100 font-semibold break-all">
+                      {orgId || '❌ לא זמין'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-yellow-700 dark:text-yellow-300">Auth Status:</span>
+                    <span className="text-yellow-900 dark:text-yellow-100 font-semibold">
+                      {authLoading ? '⏳ טוען...' : user ? '✅ מחובר' : '❌ לא מחובר'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-yellow-700 dark:text-yellow-300">Is Admin:</span>
+                    <span className="text-yellow-900 dark:text-yellow-100 font-semibold">
+                      {isAdmin ? '✅ כן' : '❌ לא'}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-yellow-700 dark:text-yellow-300">Org ID:</span>
-                  <span className="text-yellow-900 dark:text-yellow-100 font-semibold break-all">
-                    {orgId || '❌ לא זמין'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-yellow-700 dark:text-yellow-300">Auth Status:</span>
-                  <span className="text-yellow-900 dark:text-yellow-100 font-semibold">
-                    {authLoading ? '⏳ טוען...' : user ? '✅ מחובר' : '❌ לא מחובר'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-yellow-700 dark:text-yellow-300">Is Admin:</span>
-                  <span className="text-yellow-900 dark:text-yellow-100 font-semibold">
-                    {isAdmin ? '✅ כן' : '❌ לא'}
-                  </span>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetch()}
+                  className="w-full mt-2 border-yellow-300 dark:border-yellow-700"
+                >
+                  רענן נתונים
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetch()}
-                className="w-full mt-2 border-yellow-300 dark:border-yellow-700"
-              >
-                רענן נתונים
-              </Button>
-            </div>
+            )}
 
             {/* Account Info */}
             <div className="space-y-4">

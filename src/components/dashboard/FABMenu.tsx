@@ -79,6 +79,7 @@ export default function FABMenu() {
 
   const positionClass = dir === 'rtl' ? 'left-6' : 'right-6'
   const alignmentClass = dir === 'rtl' ? 'items-start' : 'items-end'
+  const isRtl = dir === 'rtl'
 
   return (
     <>
@@ -91,28 +92,15 @@ export default function FABMenu() {
               <button
                 key={index}
                 onClick={item.onClick}
-                className={`flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 cursor-pointer hover:scale-105 transition-transform`}
+                className={`flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 cursor-pointer hover:scale-105 transition-transform ${isRtl ? '' : 'flex-row-reverse'}`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                {dir === 'rtl' ? (
-                  <>
-                    <div className={`w-11 h-11 rounded-full ${item.color} shadow-md flex items-center justify-center`}>
-                      <Icon size={20} />
-                    </div>
-                    <span className="text-sm font-medium bg-card text-card-foreground px-3 py-1.5 rounded-lg shadow-md border border-border whitespace-nowrap">
-                      {item.label}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-sm font-medium bg-card text-card-foreground px-3 py-1.5 rounded-lg shadow-md border border-border whitespace-nowrap">
-                      {item.label}
-                    </span>
-                    <div className={`w-11 h-11 rounded-full ${item.color} shadow-md flex items-center justify-center`}>
-                      <Icon size={20} />
-                    </div>
-                  </>
-                )}
+                <div className={`w-11 h-11 rounded-full ${item.color} shadow-md flex items-center justify-center flex-shrink-0`}>
+                  <Icon size={20} />
+                </div>
+                <span className="text-sm font-medium bg-card text-card-foreground px-3 py-1.5 rounded-lg shadow-md border border-border whitespace-nowrap">
+                  {item.label}
+                </span>
               </button>
             )
           })}

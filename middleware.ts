@@ -34,6 +34,7 @@ export async function middleware(req: NextRequest) {
     pathname === HEALTH_PATH ||
     pathname.startsWith(ACCESS_API_PATH + '/') ||
     pathname.startsWith('/book/') ||
+    pathname.startsWith('/invite/') ||
     pathname.startsWith('/.well-known')
   ) {
     return NextResponse.next()

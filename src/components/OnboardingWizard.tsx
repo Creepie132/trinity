@@ -187,31 +187,62 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
 
     setLoading(true)
     try {
-      // 1. Save services
+      // 1. Check existing services and delete if any (for existing users)
+      console.log('[Onboarding] Checking existing services...')
+      const { data: existingServices } = await supabase
+        .from('services')
+        .select('id')
+        .eq('org_id', orgId)
+
+      if (existingServices && existingServices.length > 0) {
+        console.log('[Onboarding] Deleting existing services:', existingServices.length)
+        // Delete old services before inserting new
+        const { error: deleteError } = await supabase
+          .from('services')
+          .delete()
+          .eq('org_id', orgId)
+
+        if (deleteError) {
+          console.error('[Onboarding] Error deleting old services:', deleteError)
+        }
+      }
+
+      // 2. Save new services
       const serviceRecords = services.map((s) => ({
         org_id: orgId,
         name: s.name,
         price: s.price,
-        duration: s.duration,
+        duration_minutes: s.duration,
         is_active: true,
       }))
 
+      console.log('[Onboarding] Inserting services:', serviceRecords.length)
       const { error: servicesError } = await supabase.from('services').insert(serviceRecords)
 
-      if (servicesError) throw servicesError
+      if (servicesError) {
+        console.error('[Onboarding] Services error:', servicesError)
+        throw servicesError
+      }
 
-      // 2. Save working hours
+      // 3. Save working hours (UPSERT for existing users)
+      console.log('[Onboarding] Saving working hours...')
       const { error: workingHoursError } = await supabase
         .from('booking_settings')
         .upsert({
           org_id: orgId,
           working_hours: workingHours,
           updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'org_id'
         })
 
-      if (workingHoursError) throw workingHoursError
+      if (workingHoursError) {
+        console.error('[Onboarding] Working hours error:', workingHoursError)
+        throw workingHoursError
+      }
 
-      // 3. Update organization features
+      // 4. Update organization features
+      console.log('[Onboarding] Updating organization features...')
       const { data: org } = await supabase
         .from('organizations')
         .select('features')
@@ -228,53 +259,68 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
         .update({ features: updatedFeatures })
         .eq('id', orgId)
 
-      if (orgError) throw orgError
-
-      // 4. Create default message templates
-      const defaultTemplates = [
-        {
-          org_id: orgId,
-          name: 'תזכורת תור',
-          content: 'שלום {first_name}! תזכורת: יש לך תור מחר ב-{time}. {org_name}',
-          category: 'reminder',
-          variables: ['{first_name}', '{time}', '{org_name}'],
-          is_active: true,
-        },
-        {
-          org_id: orgId,
-          name: 'יום הולדת',
-          content: '🎂 יום הולדת שמח, {first_name}! {org_name} מאחלת לך הכל טוב!',
-          category: 'birthday',
-          variables: ['{first_name}', '{org_name}'],
-          is_active: true,
-        },
-        {
-          org_id: orgId,
-          name: 'חזרת לקוח',
-          content: 'שלום {first_name}, עברו {days} ימים מהביקור האחרון שלך ב-{org_name}. נשמח לראותך!',
-          category: 'followup',
-          variables: ['{first_name}', '{days}', '{org_name}'],
-          is_active: true,
-        },
-        {
-          org_id: orgId,
-          name: 'מבצע',
-          content: '🔥 מבצע ב-{org_name}! {message}',
-          category: 'promotion',
-          variables: ['{org_name}', '{message}'],
-          is_active: true,
-        },
-      ]
-
-      const { error: templatesError } = await supabase
-        .from('message_templates')
-        .insert(defaultTemplates)
-
-      if (templatesError) {
-        console.warn('Failed to create templates:', templatesError)
-        // Don't fail onboarding if templates fail
+      if (orgError) {
+        console.error('[Onboarding] Org update error:', orgError)
+        throw orgError
       }
 
+      // 5. Create default message templates (check if exist first)
+      console.log('[Onboarding] Creating message templates...')
+      const { data: existingTemplates } = await supabase
+        .from('message_templates')
+        .select('id')
+        .eq('org_id', orgId)
+        .limit(1)
+
+      if (!existingTemplates || existingTemplates.length === 0) {
+        const defaultTemplates = [
+          {
+            org_id: orgId,
+            name: 'תזכורת תור',
+            content: 'שלום {first_name}! תזכורת: יש לך תור מחר ב-{time}. {org_name}',
+            category: 'reminder',
+            variables: ['{first_name}', '{time}', '{org_name}'],
+            is_active: true,
+          },
+          {
+            org_id: orgId,
+            name: 'יום הולדת',
+            content: '🎂 יום הולדת שמח, {first_name}! {org_name} מאחלת לך הכל טוב!',
+            category: 'birthday',
+            variables: ['{first_name}', '{org_name}'],
+            is_active: true,
+          },
+          {
+            org_id: orgId,
+            name: 'חזרת לקוח',
+            content: 'שלום {first_name}, עברו {days} ימים מהביקור האחרון שלך ב-{org_name}. נשמח לראותך!',
+            category: 'followup',
+            variables: ['{first_name}', '{days}', '{org_name}'],
+            is_active: true,
+          },
+          {
+            org_id: orgId,
+            name: 'מבצע',
+            content: '🔥 מבצע ב-{org_name}! {message}',
+            category: 'promotion',
+            variables: ['{org_name}', '{message}'],
+            is_active: true,
+          },
+        ]
+
+        const { error: templatesError } = await supabase
+          .from('message_templates')
+          .insert(defaultTemplates)
+
+        if (templatesError) {
+          console.warn('[Onboarding] Failed to create templates:', templatesError)
+          // Don't fail onboarding if templates fail
+        }
+      } else {
+        console.log('[Onboarding] Templates already exist, skipping')
+      }
+
+      console.log('[Onboarding] Completed successfully!')
       toast.success('Настройка завершена! 🎉')
       setLoading(false)
 
@@ -283,8 +329,21 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
         window.location.reload()
       }, 500)
     } catch (error: any) {
-      console.error('Onboarding error:', error)
-      toast.error('Ошибка сохранения: ' + error.message)
+      console.error('[Onboarding] Error:', error)
+      
+      // User-friendly error messages
+      let errorMessage = 'Ошибка сохранения'
+      const msg = error?.message || ''
+      
+      if (msg.includes('violates') || msg.includes('duplicate') || msg.includes('unique')) {
+        errorMessage = 'Настройка уже выполнена. Обновите страницу.'
+      } else if (msg.includes('permission') || msg.includes('denied')) {
+        errorMessage = 'Нет прав для сохранения. Обратитесь к администратору.'
+      } else if (msg) {
+        errorMessage = `Ошибка: ${msg}`
+      }
+      
+      toast.error(errorMessage)
       setLoading(false)
     }
   }

@@ -40,10 +40,13 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const { adminProfile } = useAdminProfile()
   const features = useFeatures()
   const { data: lowStockProducts } = useLowStockProducts()
-  const { t, language } = useLanguage()
+  const { t, language, dir } = useLanguage()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [profileOpen, setProfileOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
+  // Sidebar side based on direction
+  const sidebarSide = dir === 'rtl' ? 'right' : 'left'
 
   const baseNavigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
@@ -126,7 +129,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent side="right" className="w-80 p-0 bg-gradient-to-b from-white to-gray-50 dark:from-slate-800 dark:to-slate-900">
+        <SheetContent side={sidebarSide} className="w-80 p-0 bg-gradient-to-b from-white to-gray-50 dark:from-slate-800 dark:to-slate-900">
           <div className="flex flex-col h-full">
             {/* Header */}
             <SheetHeader className="p-6 pb-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">

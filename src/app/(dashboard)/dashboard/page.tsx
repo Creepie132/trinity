@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StatsCards from '@/components/dashboard/StatsCards'
 import TodayBlock from '@/components/dashboard/TodayBlock'
+import FABMenu from '@/components/dashboard/FABMenu'
 import { StatsCardsSkeleton } from '@/components/dashboard/StatsCardsSkeleton'
 import { DashboardClient } from '@/components/dashboard/DashboardClient'
 
@@ -66,6 +67,9 @@ export default async function DashboardPage() {
 
       {/* Charts and Onboarding - Client Component */}
       <DashboardClient orgId={orgId} />
+
+      {/* Floating Action Button */}
+      <FABMenu />
     </div>
   )
 }

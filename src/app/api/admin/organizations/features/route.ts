@@ -54,16 +54,40 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get request body
-    const { org_id, features } = await request.json()
+    const { org_id, features, subscription_update } = await request.json()
 
-    if (!org_id || !features) {
+    if (!org_id) {
       return NextResponse.json(
-        { error: 'Missing org_id or features' },
+        { error: 'Missing org_id' },
         { status: 400 }
       )
     }
 
-    // Update organization features using service role
+    // Handle subscription update
+    if (subscription_update) {
+      const { data, error } = await supabaseAdmin
+        .from('organizations')
+        .update(subscription_update)
+        .eq('id', org_id)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error updating subscription:', error)
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true, data })
+    }
+
+    // Handle features update
+    if (!features) {
+      return NextResponse.json(
+        { error: 'Missing features or subscription_update' },
+        { status: 400 }
+      )
+    }
+
     const { data, error } = await supabaseAdmin
       .from('organizations')
       .update({ features })

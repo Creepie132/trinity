@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const PUBLIC_PATHS = ['/login', '/unauthorized', '/blocked', '/landing', '/terms', '/policy', '/access-pending']
+const PUBLIC_PATHS = ['/login', '/unauthorized', '/blocked', '/landing', '/terms', '/policy', '/access-pending', '/subscription-expired']
 const CALLBACK_PATH = '/callback'
 const WEBHOOK_PATH = '/api/payments/webhook'
 const STRIPE_WEBHOOK_PATH = '/api/payments/stripe-webhook'
@@ -139,13 +139,26 @@ export async function middleware(req: NextRequest) {
         const org: any = orgUser?.organizations
         const now = new Date()
 
+        // Check if subscription is expired
+        const isExpired = org && (
+          org.subscription_status === 'expired' ||
+          (org.subscription_expires_at && new Date(org.subscription_expires_at) < now)
+        )
+
+        if (isExpired && pathname !== '/subscription-expired') {
+          const url = req.nextUrl.clone()
+          url.pathname = '/subscription-expired'
+          return NextResponse.redirect(url)
+        }
+
+        // Check if user has active access
         const hasAccess = org && (
           org.subscription_status === 'active' ||
           (org.subscription_status === 'trial' && org.subscription_expires_at && new Date(org.subscription_expires_at) > now) ||
           (org.subscription_status === 'manual' && org.subscription_expires_at && new Date(org.subscription_expires_at) > now)
         )
 
-        if (!hasAccess && pathname !== '/access-pending') {
+        if (!hasAccess && !isExpired && pathname !== '/access-pending') {
           const url = req.nextUrl.clone()
           url.pathname = '/access-pending'
           return NextResponse.redirect(url)

@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       settings: org?.features || {},
-      dashboard_charts: org?.features?.dashboard_settings?.dashboard_charts || {
+      dashboard_charts: org?.features?.dashboard_charts || {
         revenue: true,
         visits: true,
         topClients: true,
@@ -97,23 +97,16 @@ export async function PUT(request: NextRequest) {
       .single()
 
     const currentFeatures = org?.features || {}
-    const currentDashboardSettings = currentFeatures.dashboard_settings || {}
 
     console.log('Current features:', currentFeatures)
-    console.log('Current dashboard settings:', currentDashboardSettings)
+    console.log('Dashboard charts to save:', body.dashboard_charts)
 
-    // Обновляем dashboard_settings с новыми настройками графиков
-    const updatedDashboardSettings = {
-      ...currentDashboardSettings,
+    // Обновляем dashboard_charts напрямую в features (без wrapper dashboard_settings)
+    const updatedFeatures = {
+      ...currentFeatures,
       dashboard_charts: body.dashboard_charts || body,
     }
 
-    const updatedFeatures = {
-      ...currentFeatures,
-      dashboard_settings: updatedDashboardSettings,
-    }
-
-    console.log('Updated dashboard settings:', updatedDashboardSettings)
     console.log('Updated features:', updatedFeatures)
 
     // Сохраняем через admin (обходит RLS)
@@ -135,7 +128,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      settings: updatedDashboardSettings,
+      dashboard_charts: body.dashboard_charts || body,
     })
   } catch (error: any) {
     console.error('=== SETTINGS SAVE ERROR ===')

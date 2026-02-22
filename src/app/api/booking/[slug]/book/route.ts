@@ -76,6 +76,15 @@ export async function POST(
     console.log('[Booking Book API] Found organization:', org.name)
     const settings = org.booking_settings || {}
 
+    // Check if booking is enabled
+    if (!settings.enabled) {
+      console.log('[Booking Book API] Booking is disabled for org:', org.name)
+      return NextResponse.json(
+        { error: 'Booking is not enabled for this organization' },
+        { status: 403 }
+      )
+    }
+
     // Validate date is not in the past
     const scheduledDate = new Date(scheduled_at)
     const now = new Date()

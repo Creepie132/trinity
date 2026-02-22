@@ -14,6 +14,7 @@ import { ArrowLeft, Copy, Check, Download, Printer, QrCode } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import QRCode from 'qrcode'
+import { generateBookingCode } from '@/lib/utils'
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
 
@@ -66,16 +67,6 @@ export default function BookingSettingsPage() {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [orgName, setOrgName] = useState<string>('')
 
-  // Generate slug from org name
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim()
-  }
-
   // Load settings
   useEffect(() => {
     if (!orgId) {
@@ -103,17 +94,21 @@ export default function BookingSettingsPage() {
         
         if (data?.booking_settings) {
           console.log('[BOOKING SETTINGS] Found existing settings')
-          setSettings(prev => ({ ...prev, ...data.booking_settings }))
-          setHasBreak(data.booking_settings.break_times?.length > 0)
-        } else if (data?.slug) {
-          console.log('[BOOKING SETTINGS] Found slug, using defaults')
-          // If slug exists but no settings, use defaults with that slug
-          setSettings(prev => ({ ...prev, slug: data.slug }))
-        } else if (data?.name) {
-          console.log('[BOOKING SETTINGS] Generating slug from name:', data.name)
-          // Auto-generate slug from org name
-          const autoSlug = generateSlug(data.name)
-          setSettings(prev => ({ ...prev, slug: autoSlug }))
+          const loadedSettings = { ...data.booking_settings }
+          
+          // Generate booking code if slug is empty
+          if (!loadedSettings.slug) {
+            console.log('[BOOKING SETTINGS] Generating new booking code')
+            loadedSettings.slug = generateBookingCode()
+          }
+          
+          setSettings(prev => ({ ...prev, ...loadedSettings }))
+          setHasBreak(loadedSettings.break_times?.length > 0)
+        } else {
+          console.log('[BOOKING SETTINGS] No settings found, generating new booking code')
+          // Generate unique booking code for new organizations
+          const newSlug = generateBookingCode()
+          setSettings(prev => ({ ...prev, slug: newSlug }))
         }
       } catch (error: any) {
         console.error('[BOOKING SETTINGS] Error loading:', error)
@@ -332,47 +327,41 @@ export default function BookingSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Slug */}
+      {/* Booking Link (Read-only) */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('booking.slug')}</CardTitle>
+          <CardTitle>{language === 'he' ? 'קישור להזמנות' : 'Ссылка для записи'}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div>
-            <Label htmlFor="slug" className="text-sm">{t('booking.slug.desc')}</Label>
-            <div className="flex gap-2 mt-2">
-              <Input
-                id="slug"
-                value={settings.slug}
-                onChange={(e) =>
-                  setSettings({ ...settings, slug: e.target.value })
-                }
-                placeholder={t('booking.slug.placeholder')}
-                className="flex-1"
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={copyBookingLink}
-                disabled={!settings.slug}
-                className="flex-shrink-0"
-              >
-                {copied ? (
-                  <Check className="w-4 h-4 text-green-500" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
-            <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {t('booking.slug.preview')}:
-              </p>
-              <p className="text-xs md:text-sm text-gray-700 dark:text-gray-300 font-mono break-all">
+        <CardContent>
+          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+            <div className="flex-1 min-w-0">
+              <span className="text-sm text-muted-foreground block mb-1">
+                {language === 'he' ? 'קישור להזמנות:' : 'Ссылка для записи:'}
+              </span>
+              <code className="text-sm font-mono font-medium break-all">
                 ambersol.co.il/book/{settings.slug || '...'}
-              </p>
+              </code>
             </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={copyBookingLink}
+              disabled={!settings.slug}
+              className="flex-shrink-0"
+              title={language === 'he' ? 'העתק' : 'Копировать'}
+            >
+              {copied ? (
+                <Check className="w-4 h-4 text-green-500" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
+            </Button>
           </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            {language === 'he' 
+              ? 'הקישור נוצר אוטומטית ואינו ניתן לעריכה' 
+              : 'Ссылка создана автоматически и не может быть изменена'}
+          </p>
         </CardContent>
       </Card>
 

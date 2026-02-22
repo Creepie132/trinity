@@ -185,6 +185,16 @@ export default function BookingPage() {
     const loadOrg = async () => {
       try {
         const res = await fetch(`/api/booking/${slug}`)
+        
+        // Handle booking disabled (403)
+        if (res.status === 403) {
+          const errorData = await res.json()
+          console.log('Booking disabled:', errorData.error)
+          setOrgData(null)
+          setLoading(false)
+          return
+        }
+        
         if (!res.ok) throw new Error('Organization not found')
         const data = await res.json()
         setOrgData(data)
@@ -410,7 +420,23 @@ END:VCALENDAR`
   }
 
   if (!orgData) {
-    return null
+    const lang = detectLanguage()
+    const t = translations[lang]
+    const dir = lang === 'he' ? 'rtl' : 'ltr'
+    
+    return (
+      <div className={`min-h-screen flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-white to-gray-50 ${dir === 'rtl' ? 'rtl' : 'ltr'}`} dir={dir}>
+        <div className="max-w-md mx-auto space-y-4">
+          <div className="text-6xl mb-4">🚫</div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {lang === 'he' ? 'ההזמנות אונליין לא פעילות כרגע' : 'Онлайн-запись временно недоступна'}
+          </h1>
+          <p className="text-gray-600">
+            {lang === 'he' ? 'ניתן ליצור קשר ישירות עם בית העסק' : 'Свяжитесь с бизнесом напрямую'}
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

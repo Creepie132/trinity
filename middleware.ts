@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const PUBLIC_PATHS = ['/login', '/unauthorized', '/blocked', '/landing', '/terms', '/policy']
+const PUBLIC_PATHS = ['/login', '/unauthorized', '/blocked', '/landing', '/terms', '/policy', '/access-pending']
 const CALLBACK_PATH = '/callback'
 const WEBHOOK_PATH = '/api/payments/webhook'
 const STRIPE_WEBHOOK_PATH = '/api/payments/stripe-webhook'
 const TRANZILA_WEBHOOK_PATH = '/api/payments/tranzila/webhook'
 const TRANZILA_SUCCESS_PATH = '/api/payments/tranzila/success'
 const HEALTH_PATH = '/api/health'
+const ACCESS_API_PATH = '/api/access'
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
@@ -31,6 +32,8 @@ export async function middleware(req: NextRequest) {
     pathname === TRANZILA_SUCCESS_PATH ||
     pathname.startsWith(TRANZILA_SUCCESS_PATH + '/') ||
     pathname === HEALTH_PATH ||
+    pathname.startsWith(ACCESS_API_PATH + '/') ||
+    pathname.startsWith('/book/') ||
     pathname.startsWith('/.well-known')
   ) {
     return NextResponse.next()
@@ -97,6 +100,7 @@ export async function middleware(req: NextRequest) {
       "/api/payments/callback",
       "/api/booking/",
       "/api/contact",
+      "/api/access/",
     ]
 
     const isExempt = csrfExempt.some(p => pathname.startsWith(p))
@@ -109,6 +113,47 @@ export async function middleware(req: NextRequest) {
         console.warn('[middleware] CSRF blocked:', { origin, pathname })
         return NextResponse.json({ error: "CSRF: Invalid origin" }, { status: 403 })
       }
+    }
+  }
+
+  // Check access control (subscription/trial status)
+  // Skip for admin routes and static paths
+  if (!pathname.startsWith('/admin') && !pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
+    try {
+      // Check if user is admin
+      const { data: adminUser } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+
+      // Admins always have access
+      if (!adminUser) {
+        // Check organization subscription status
+        const { data: orgUser } = await supabase
+          .from('org_users')
+          .select('org_id, organizations(subscription_status, subscription_expires_at)')
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+
+        const org: any = orgUser?.organizations
+        const now = new Date()
+
+        const hasAccess = org && (
+          org.subscription_status === 'active' ||
+          (org.subscription_status === 'trial' && org.subscription_expires_at && new Date(org.subscription_expires_at) > now) ||
+          (org.subscription_status === 'manual' && org.subscription_expires_at && new Date(org.subscription_expires_at) > now)
+        )
+
+        if (!hasAccess && pathname !== '/access-pending') {
+          const url = req.nextUrl.clone()
+          url.pathname = '/access-pending'
+          return NextResponse.redirect(url)
+        }
+      }
+    } catch (error) {
+      console.error('[middleware] Access check error:', error)
+      // On error, allow access to avoid blocking legitimate users
     }
   }
 

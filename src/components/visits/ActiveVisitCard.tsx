@@ -176,8 +176,15 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
         <div className="hidden md:flex md:items-center md:justify-between md:gap-4">
           {/* Left: Client, Service, Timer */}
           <div className="flex items-center gap-4 flex-1">
-            <div className="font-semibold text-gray-900 dark:text-gray-100">
-              {clientName}
+            <div className="flex items-center gap-2">
+              <div className="font-semibold text-gray-900 dark:text-gray-100">
+                {clientName}
+              </div>
+              {visit.source === 'online_booking' && (
+                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 text-xs">
+                  {language === 'he' ? 'אונליין' : language === 'ru' ? 'Онлайн' : 'Online'}
+                </Badge>
+              )}
             </div>
             <div className="text-gray-700 dark:text-gray-300">
               {getServiceName()}
@@ -225,7 +232,14 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
           {/* Row 1: Info */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">{clientName}</div>
+              <div className="flex items-center gap-2">
+                <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">{clientName}</div>
+                {visit.source === 'online_booking' && (
+                  <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 text-xs shrink-0">
+                    {language === 'he' ? 'אונליין' : language === 'ru' ? 'Онлайн' : 'Online'}
+                  </Badge>
+                )}
+              </div>
               <div className="text-sm text-gray-700 dark:text-gray-300 truncate">{getServiceName()}</div>
               {visitServices && visitServices.length > 0 && (
                 <div className="flex gap-1 mt-1 flex-wrap">

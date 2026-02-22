@@ -34,6 +34,8 @@ export interface Visit {
   price?: number
   status: string
   notes?: string | null
+  source?: string // Source of visit: 'manual', 'online_booking', etc.
+  staff_user_id?: string // Staff member who created the visit
   created_at?: string
   updated_at?: string
   clients?: {

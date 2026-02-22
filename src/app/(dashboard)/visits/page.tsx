@@ -42,7 +42,7 @@ export default function VisitsPage() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [dateFilter, setDateFilter] = useState<string>('today')
+  const [dateFilter, setDateFilter] = useState<string>('week')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'bookings'>('list')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -121,11 +121,17 @@ export default function VisitsPage() {
         let startDate = new Date()
 
         if (dateFilter === 'today') {
+          // Today: from start of today
           startDate.setHours(0, 0, 0, 0)
         } else if (dateFilter === 'week') {
-          startDate.setDate(now.getDate() - 7)
+          // Week: from start of this week (Sunday)
+          const dayOfWeek = now.getDay()
+          startDate.setDate(now.getDate() - dayOfWeek)
+          startDate.setHours(0, 0, 0, 0)
         } else if (dateFilter === 'month') {
-          startDate.setMonth(now.getMonth() - 1)
+          // Month: from start of this month
+          startDate.setDate(1)
+          startDate.setHours(0, 0, 0, 0)
         }
 
         query = query.gte('scheduled_at', startDate.toISOString())

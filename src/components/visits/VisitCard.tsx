@@ -66,9 +66,16 @@ export function VisitCard({ visit, onComplete }: VisitCardProps) {
             </p>
           </div>
         </div>
-        <Badge className={statusColor}>
-          {t(`visits.status.${visit.status}`)}
-        </Badge>
+        <div className="flex flex-col gap-1 items-end">
+          <Badge className={statusColor}>
+            {t(`visits.status.${visit.status}`)}
+          </Badge>
+          {visit.source === 'online_booking' && (
+            <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 text-xs">
+              {language === 'he' ? 'אונליין' : language === 'ru' ? 'Онлайн' : 'Online'}
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Details */}

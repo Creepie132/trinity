@@ -26,14 +26,12 @@ export default function StatsCardsClient({ clients, visits, revenue, avgCheck }:
       visits: 'ביקורים החודש',
       revenue: 'הכנסות',
       avgCheck: 'צ\'ק ממוצע',
-      compared: 'לעומת חודש קודם',
     },
     ru: {
       clients: 'Клиенты',
       visits: 'Визиты за месяц',
       revenue: 'Выручка',
       avgCheck: 'Средний чек',
-      compared: 'По сравнению с прошлым месяцем',
     },
   }
 
@@ -91,17 +89,12 @@ export default function StatsCardsClient({ clients, visits, revenue, avgCheck }:
                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 truncate">{card.title}</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{card.value}</p>
                     {hasChange ? (
-                      <div className="flex items-center gap-1">
-                        <span className={`text-xs flex items-center gap-0.5 ${
-                          isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
-                        }`}>
-                          {isPositive ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                          {Math.abs(card.change)}%
-                        </span>
-                        <span className="text-[10px] text-gray-500 dark:text-gray-500">
-                          {t.compared}
-                        </span>
-                      </div>
+                      <span className={`text-xs flex items-center gap-0.5 ${
+                        isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
+                      }`}>
+                        {isPositive ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                        {Math.abs(card.change)}%
+                      </span>
                     ) : (
                       <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
                     )}

@@ -5,11 +5,8 @@ import { useRouter, useParams } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Loader2, Mail, CheckCircle, XCircle } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { toast } from 'sonner'
 
 export default function InvitePage() {
   const router = useRouter()
@@ -20,10 +17,6 @@ export default function InvitePage() {
 
   const [loading, setLoading] = useState(true)
   const [invitation, setInvitation] = useState<any>(null)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [submitting, setSubmitting] = useState(false)
 
   const translations = {
     he: {
@@ -96,62 +89,11 @@ export default function InvitePage() {
         setInvitation(null)
       } else {
         setInvitation(data)
-        setEmail(data.email)
       }
     } catch (error) {
       console.error('Error loading invitation:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!email || !password || !fullName) {
-      toast.error('Please fill all fields')
-      return
-    }
-
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters')
-      return
-    }
-
-    setSubmitting(true)
-
-    try {
-      // Sign up user
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: email.toLowerCase(),
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
-      })
-
-      if (signUpError) throw signUpError
-
-      if (!authData.user) throw new Error('User creation failed')
-
-      // Mark invitation as accepted
-      await supabase
-        .from('invitations')
-        .update({
-          status: 'accepted',
-          accepted_at: new Date().toISOString(),
-        })
-        .eq('token', token)
-
-      toast.success('Account created successfully!')
-      router.push('/dashboard')
-    } catch (error: any) {
-      console.error('Sign up error:', error)
-      toast.error(error.message || 'Failed to create account')
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -187,6 +129,29 @@ export default function InvitePage() {
     )
   }
 
+  // Check if expired
+  if (new Date(invitation.expires_at) < new Date()) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background p-6">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center mx-auto mb-6">
+            <span className="text-3xl">⏰</span>
+          </div>
+          <h1 className="text-2xl font-bold mb-3">Invitation Expired</h1>
+          <p className="text-muted-foreground">
+            This invitation has expired. Contact the administrator for a new one.
+          </p>
+          <p className="text-muted-foreground mt-2" dir="rtl">
+            ההזמנה פגה. פנה למנהל לקבלת הזמנה חדשה.
+          </p>
+          <Button onClick={() => router.push('/login')} className="w-full mt-6">
+            Go to Login | חזור לדף כניסה
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   if (invitation.status !== 'pending') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-gray-900 dark:to-gray-800 p-4">
@@ -199,7 +164,7 @@ export default function InvitePage() {
           </CardHeader>
           <CardContent className="text-center">
             <Button onClick={() => router.push('/login')} className="w-full">
-              Go to Login
+              Go to Login | חזור לדף כניסה
             </Button>
           </CardContent>
         </Card>
@@ -207,94 +172,54 @@ export default function InvitePage() {
     )
   }
 
+  // Valid invitation - show landing
+  const loginUrl = `/login?invitation=${token}&email=${encodeURIComponent(invitation.email)}`
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center">
-            <Mail className="w-10 h-10 text-white" />
-          </div>
-          <CardTitle className="text-3xl font-bold">{t.title}</CardTitle>
-          <CardDescription className="text-lg">{t.subtitle}</CardDescription>
-        </CardHeader>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-background to-muted/30 p-6">
+      <div className="max-w-md w-full text-center">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-primary mb-2">Trinity CRM</h1>
+          <p className="text-amber-600 dark:text-amber-500 font-medium">by Amber Solutions</p>
+        </div>
 
-        <CardContent className="space-y-6">
-          {invitation.message && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">{t.message}:</p>
-              <p className="text-blue-800 dark:text-blue-300 italic">"{invitation.message}"</p>
-            </div>
-          )}
-
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
-            <p className="text-green-900 dark:text-green-200 font-semibold">
-              🎉 {t.trialInfo}
+        <Card className="shadow-lg mb-6">
+          <CardContent className="p-8">
+            <h2 className="text-2xl font-semibold mb-2">Welcome! | !ברוכים הבאים</h2>
+            <p className="text-muted-foreground mb-6">
+              You're invited to try Trinity CRM
+              <br />
+              14 days free trial
             </p>
-          </div>
 
-          <form onSubmit={handleSignUp} className="space-y-4">
-            <div>
-              <Label htmlFor="fullName">{t.fullName}</Label>
-              <Input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                placeholder="John Doe"
-              />
-            </div>
+            {invitation.message && (
+              <div className="bg-muted/50 rounded-lg p-4 mb-6 text-sm text-muted-foreground italic">
+                "{invitation.message}"
+              </div>
+            )}
 
-            <div>
-              <Label htmlFor="email">{t.email}</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="password">{t.password}</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                placeholder="••••••••"
-              />
-            </div>
-
-            <Button type="submit" className="w-full" size="lg" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {t.creating}
-                </>
-              ) : (
-                t.signUp
-              )}
+            <Button
+              onClick={() => router.push(loginUrl)}
+              className="w-full bg-primary text-primary-foreground px-8 py-4 text-lg font-semibold"
+              size="lg"
+            >
+              Get Started | התחל עכשיו
             </Button>
-          </form>
+          </CardContent>
+        </Card>
 
-          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">{t.features}</h3>
-            <ul className="space-y-2">
-              {t.featureList.map((feature, index) => (
-                <li key={index} className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
-                  <span className="text-green-500 mt-1">✓</span>
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
+        <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span>📅</span> Appointments
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-center gap-2">
+            <span>👥</span> Clients
+          </div>
+          <div className="flex items-center gap-2">
+            <span>💳</span> Payments
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

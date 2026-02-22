@@ -25,6 +25,8 @@ export async function POST(
     console.log('[Booking Book API] Creating booking for slug:', slug)
     
     const body = await request.json()
+    console.log('=== BOOKING CREATE REQUEST ===')
+    console.log('Body:', JSON.stringify(body, null, 2))
     
     // ✅ Zod validation
     const { data, error } = validateBody(createBookingSchema, body)
@@ -33,10 +35,12 @@ export async function POST(
       return NextResponse.json({ error: error || 'Validation failed' }, { status: 400 })
     }
 
-    console.log('[Booking Book API] Request body:', {
+    console.log('[Booking Book API] Validated data:', {
       service_name: data.service_name,
       client_name: data.client_name,
-      scheduled_at: data.scheduled_at
+      scheduled_at: data.scheduled_at,
+      client_phone: data.client_phone,
+      notes: data.notes
     })
     
     const {
@@ -56,12 +60,15 @@ export async function POST(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    console.log('Step 1: Finding organization by slug...')
     // Find organization
     const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select('id, name, booking_settings, telegram_chat_id, telegram_notifications')
       .eq('slug', slug)
       .maybeSingle()
+
+    console.log('Step 1 result:', { org: org?.name, error: orgError?.message })
 
     if (orgError) {
       console.error('[Booking Book API] Error finding org:', orgError)
@@ -73,7 +80,7 @@ export async function POST(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    console.log('[Booking Book API] Found organization:', org.name)
+    console.log('[Booking Book API] Found organization:', org.name, 'ID:', org.id)
     const settings = org.booking_settings || {}
 
     // Check if booking is enabled
@@ -130,17 +137,26 @@ export async function POST(
     const startOfSlot = scheduledDate.toISOString()
     const endOfSlot = new Date(scheduledDate.getTime() + (duration_minutes || 60) * 60 * 1000).toISOString()
 
-    // Check for conflicts (bookings that overlap with our slot)
+    console.log('Step 2: Checking slot availability...')
+    // Check for conflicts - использую visits вместо bookings
     const { data: conflicts, error: conflictError } = await supabase
-      .from('bookings')
+      .from('visits')
       .select('id')
       .eq('org_id', org.id)
-      .in('status', ['pending', 'confirmed'])
+      .in('status', ['scheduled', 'completed'])
       .gte('scheduled_at', startOfSlot)
       .lt('scheduled_at', endOfSlot)
 
+    console.log('Step 2 result:', { conflicts: conflicts?.length, error: conflictError?.message })
+
     if (conflictError) {
       console.error('[Booking Book API] Error checking conflicts:', conflictError)
+      console.error('Conflict error details:', {
+        message: conflictError.message,
+        code: conflictError.code,
+        details: conflictError.details,
+        hint: conflictError.hint
+      })
     }
 
     if (conflicts && conflicts.length > 0) {
@@ -150,62 +166,18 @@ export async function POST(
       )
     }
 
-    // Create booking
-    console.log('[Booking Book API] Creating booking record...')
-    const bookingData = {
-      org_id: org.id,
-      service_id: service_id || null,
-      service_name,
-      client_name,
-      client_phone,
-      client_email: client_email || null,
-      scheduled_at,
-      duration_minutes: duration_minutes || 60,
-      price: price || null,
-      status: 'pending',
-      notes: notes || ''
-    }
-    
-    console.log('[Booking Book API] Booking data:', {
-      ...bookingData,
-      org_id: org.id.substring(0, 8) + '...',
-      service_id: service_id ? service_id.substring(0, 8) + '...' : null
-    })
-
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
-      .insert(bookingData)
-      .select('id')
-      .single()
-
-    if (bookingError) {
-      console.error('[Booking Book API] Error creating booking:', bookingError)
-      return NextResponse.json(
-        { error: 'Failed to create booking', details: bookingError.message },
-        { status: 500 }
-      )
-    }
-
-    console.log('[Booking Book API] Booking created successfully:', booking.id)
-
-    // Send Telegram notification
-    if (org.telegram_notifications && org.telegram_chat_id) {
-      const date = new Date(scheduled_at).toLocaleDateString('he-IL')
-      const time = new Date(scheduled_at).toLocaleTimeString('he-IL', {
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-      const telegramMessage = `📅 <b>Новая запись!</b>\n\n👤 ${client_name}\n💼 ${service_name}\n📅 ${date}\n🕐 ${time}`
-      await sendTelegramMessage(org.telegram_chat_id, telegramMessage)
-    }
-
-    // Check if client exists, create if not
-    const { data: existingClient } = await supabase
+    console.log('Step 3: Checking or creating client...')
+    // Check if client exists, create if not (BEFORE creating visit)
+    const { data: existingClient, error: clientFindError } = await supabase
       .from('clients')
       .select('id')
       .eq('org_id', org.id)
       .eq('phone', client_phone)
       .maybeSingle()
+
+    console.log('Step 3 result:', { existingClient: existingClient?.id, error: clientFindError?.message })
+
+    let clientId = existingClient?.id
 
     if (!existingClient) {
       // Create new client
@@ -213,31 +185,113 @@ export async function POST(
       const firstName = nameParts[0] || client_name
       const lastName = nameParts.slice(1).join(' ') || ''
 
-      await supabase.from('clients').insert({
-        org_id: org.id,
-        first_name: firstName,
-        last_name: lastName,
-        phone: client_phone,
-        email: client_email || null,
-        notes: 'Created via public booking page'
+      console.log('Creating new client:', { firstName, lastName, phone: client_phone })
+
+      const { data: newClient, error: clientCreateError } = await supabase
+        .from('clients')
+        .insert({
+          org_id: org.id,
+          first_name: firstName,
+          last_name: lastName,
+          phone: client_phone,
+          email: client_email || null,
+          notes: 'Created via public booking page'
+        })
+        .select('id')
+        .single()
+
+      if (clientCreateError) {
+        console.error('[Booking Book API] Error creating client:', clientCreateError)
+        console.error('Client create error details:', {
+          message: clientCreateError.message,
+          code: clientCreateError.code,
+          details: clientCreateError.details,
+          hint: clientCreateError.hint
+        })
+      } else {
+        clientId = newClient?.id
+        console.log('New client created:', clientId)
+      }
+    }
+
+    // Create visit (не booking, а visit!)
+    console.log('Step 4: Creating visit record...')
+    const visitData = {
+      org_id: org.id,
+      client_id: clientId || null,
+      service: service_name,
+      scheduled_at,
+      duration_minutes: duration_minutes || 60,
+      price: price ? String(price) : null,
+      status: 'scheduled',
+      notes: notes || ''
+    }
+    
+    console.log('[Booking Book API] Visit data:', visitData)
+
+    const { data: visit, error: visitError } = await supabase
+      .from('visits')
+      .insert(visitData)
+      .select('id')
+      .single()
+
+    console.log('Step 4 result:', { visit_id: visit?.id, error: visitError?.message })
+
+    if (visitError) {
+      console.error('[Booking Book API] Error creating visit:', visitError)
+      console.error('Visit error details:', {
+        message: visitError.message,
+        code: visitError.code,
+        details: visitError.details,
+        hint: visitError.hint
       })
+      return NextResponse.json(
+        { error: 'Failed to create booking', details: visitError.message },
+        { status: 500 }
+      )
+    }
+
+    console.log('[Booking Book API] Visit created successfully:', visit.id)
+
+    // Send Telegram notification
+    console.log('Step 5: Sending Telegram notification...')
+    if (org.telegram_notifications && org.telegram_chat_id) {
+      const date = new Date(scheduled_at).toLocaleDateString('he-IL')
+      const time = new Date(scheduled_at).toLocaleTimeString('he-IL', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      const telegramMessage = `📅 <b>Новая запись!</b>\n\n👤 ${client_name}\n💼 ${service_name}\n📅 ${date}\n🕐 ${time}`
+      try {
+        await sendTelegramMessage(org.telegram_chat_id, telegramMessage)
+        console.log('Telegram notification sent')
+      } catch (error) {
+        console.error('Telegram notification failed:', error)
+      }
     }
 
     // Get confirmation message
     const confirmationMessage = settings.confirmation_message_he || 'תודה שקבעת תור! נתראה בקרוב'
 
+    console.log('=== BOOKING CREATE SUCCESS ===')
     return NextResponse.json({
       success: true,
-      booking_id: booking.id,
+      booking_id: visit.id,
       confirmation_message: confirmationMessage,
       scheduled_at,
       service_name,
       org_name: org.name
     })
   } catch (error: any) {
-    console.error('[Booking Book API] Exception:', error)
+    console.error('=== BOOKING CREATE ERROR ===')
+    console.error('Error:', error)
+    console.error('Message:', error?.message)
+    console.error('Code:', error?.code)
+    console.error('Details:', error?.details)
+    console.error('Hint:', error?.hint)
+    console.error('Stack:', error?.stack)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: error?.message || 'Internal server error', details: error?.details || error?.message },
       { status: 500 }
     )
   }

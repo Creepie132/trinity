@@ -13,6 +13,8 @@ import { useLowStockProducts } from '@/hooks/useProducts'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useBookings } from '@/hooks/useBookings'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
+import { useOrganization } from '@/hooks/useOrganization'
+import { MODULES } from '@/lib/modules-config'
 import { Separator } from '@/components/ui/separator'
 import { UserProfileSheet } from '@/components/user/UserProfileSheet'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -41,21 +43,29 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const { pendingCount } = useBookings(orgId)
   const { t, language } = useLanguage()
   const meetingMode = useMeetingMode()
+  const { data: organization } = useOrganization()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [profileOpen, setProfileOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
+  // Get module name from MODULES config
+  const getModuleName = (moduleKey: string) => {
+    const module = MODULES.find(m => m.key === moduleKey)
+    if (!module) return ''
+    return language === 'he' ? module.name_he : module.name_ru
+  }
+
   const baseNavigation = [
-    { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
-    { name: t('nav.clients'), href: '/clients', icon: Users, requireFeature: 'clients' },
-    { name: meetingMode.t.visits, href: '/visits', icon: Calendar, requireFeature: 'visits' },
-    { name: t('nav.inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
-    { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
-    { name: t('nav.sms'), href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
-    { name: t('nav.stats'), href: '/stats', icon: BarChart3, requireFeature: 'statistics' },
-    { name: language === 'he' ? 'דוחות' : 'Отчёты', href: '/analytics', icon: BarChart3, requireFeature: 'reports' },
-    { name: t('nav.partners'), href: '/partners', icon: Gift, requireFeature: null },
-    { name: t('nav.settings'), href: '/settings', icon: Settings, requireFeature: null },
+    { name: t('nav.dashboard'), href: '/dashboard', icon: Home, moduleKey: null },
+    { name: getModuleName('clients'), href: '/clients', icon: Users, moduleKey: 'clients' },
+    { name: meetingMode.t.visits, href: '/visits', icon: Calendar, moduleKey: 'visits' },
+    { name: getModuleName('inventory'), href: '/inventory', icon: Package, moduleKey: 'inventory' },
+    { name: getModuleName('payments'), href: '/payments', icon: CreditCard, moduleKey: 'payments' },
+    { name: getModuleName('sms'), href: '/sms', icon: MessageSquare, moduleKey: 'sms' },
+    { name: getModuleName('statistics'), href: '/stats', icon: BarChart3, moduleKey: 'statistics' },
+    { name: getModuleName('reports'), href: '/analytics', icon: BarChart3, moduleKey: 'reports' },
+    { name: t('nav.partners'), href: '/partners', icon: Gift, moduleKey: null },
+    { name: t('nav.settings'), href: '/settings', icon: Settings, moduleKey: null },
   ]
 
   useEffect(() => {
@@ -108,26 +118,32 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
     router.refresh()
   }
 
-  // Filter navigation based on features AND permissions
+  // Filter navigation based on modules configuration
   const navigation = baseNavigation.filter((item) => {
-    // Check feature access first
-    if (item.requireFeature) {
-      if (item.requireFeature === 'clients' && features.hasClients === false) return false
-      if (item.requireFeature === 'payments' && features.hasPayments !== true) return false
-      if (item.requireFeature === 'sms' && features.hasSms !== true) return false
-      if (item.requireFeature === 'statistics' && features.hasStatistics !== true) return false
-      if (item.requireFeature === 'reports' && features.hasReports !== true) return false
-      if (item.requireFeature === 'visits' && features.hasVisits === false) return false
-      if (item.requireFeature === 'inventory' && features.hasInventory !== true) return false
+    // Items without moduleKey are always visible (dashboard, partners, settings)
+    if (!item.moduleKey) return true
+
+    // Get module config
+    const module = MODULES.find(m => m.key === item.moduleKey)
+    
+    // If module has alwaysVisible flag - show it (unless explicitly disabled)
+    if (module?.alwaysVisible) {
+      const enabledModules = organization?.features?.modules || {}
+      // Show if not explicitly set to false
+      return enabledModules[item.moduleKey] !== false
     }
 
-    // Check role permissions
+    // For other modules - check if enabled in organization features
+    const enabledModules = organization?.features?.modules || {}
+    const isEnabled = enabledModules[item.moduleKey] !== false
+
+    // Also check role permissions
     if (item.href === '/sms' && !permissions.canSendSMS) return false
     if (item.href === '/inventory' && !permissions.canManageInventory) return false
     if (item.href === '/stats' && !permissions.canViewAnalytics) return false
     if (item.href === '/analytics' && !permissions.canViewAnalytics) return false
     
-    return true
+    return isEnabled
   })
 
   return (

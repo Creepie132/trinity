@@ -19,6 +19,7 @@ export interface Organization {
     visits?: boolean
     inventory?: boolean
     meeting_mode?: boolean
+    modules?: Record<string, boolean>
   }
   billing_status: string
   billing_due_date: string | null

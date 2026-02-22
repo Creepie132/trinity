@@ -50,7 +50,7 @@ export function AdminSidebar() {
       icon: Megaphone,
     },
     {
-      name: 'מודולים',
+      name: t('admin.modules'),
       href: '/admin/modules',
       icon: Boxes,
     },

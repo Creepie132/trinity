@@ -91,6 +91,7 @@ export interface Organization {
     inventory?: boolean
     booking?: boolean
     meeting_mode?: boolean
+    modules?: Record<string, boolean>
   }
   billing_status: 'trial' | 'paid' | 'overdue' | 'cancelled'
   billing_due_date: string | null

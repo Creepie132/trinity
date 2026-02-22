@@ -6,7 +6,7 @@ import TodayBlock from '@/components/dashboard/TodayBlock'
 import FABMenu from '@/components/dashboard/FABMenu'
 import { StatsCardsSkeleton } from '@/components/dashboard/StatsCardsSkeleton'
 import { DashboardClient } from '@/components/dashboard/DashboardClient'
-import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
+import { DashboardWrapper } from '@/components/dashboard/DashboardWrapper'
 
 export default async function DashboardPage() {
   // Get orgId from server session
@@ -40,9 +40,8 @@ export default async function DashboardPage() {
   const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
 
   return (
-    <div className="space-y-6 p-6" dir="rtl">
-      {/* Header with localized greeting */}
-      <DashboardHeader userName={userName} />
+    <DashboardWrapper userName={userName} orgId={orgId}>
+      {/* Header with localized greeting inside wrapper */}
 
       {/* Stats Cards with Suspense */}
       <Suspense fallback={<StatsCardsSkeleton />}>
@@ -59,6 +58,6 @@ export default async function DashboardPage() {
 
       {/* Floating Action Button */}
       <FABMenu />
-    </div>
+    </DashboardWrapper>
   )
 }

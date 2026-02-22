@@ -16,11 +16,19 @@ interface TodayVisit {
 
 interface TodayBlockClientProps {
   visits: TodayVisit[]
-  hebrewDate: string
 }
 
-export default function TodayBlockClient({ visits, hebrewDate }: TodayBlockClientProps) {
+export default function TodayBlockClient({ visits }: TodayBlockClientProps) {
   const { language } = useLanguage()
+
+  // Format today's date based on user's language
+  const today = new Date()
+  const dateLocale = language === 'he' ? 'he-IL' : 'ru-RU'
+  const formattedDate = today.toLocaleDateString(dateLocale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
 
   const translations = {
     he: {
@@ -61,9 +69,9 @@ export default function TodayBlockClient({ visits, hebrewDate }: TodayBlockClien
   return (
     <Card className="bg-white dark:bg-[#111827] border-gray-200 dark:border-gray-800">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2 text-start">
           <Calendar className="w-4 h-4 text-amber-500" />
-          {t.today}, {hebrewDate}
+          {t.today}, {formattedDate}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
@@ -72,7 +80,7 @@ export default function TodayBlockClient({ visits, hebrewDate }: TodayBlockClien
             {visits.map((visit) => (
               <div
                 key={visit.id}
-                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-start"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <span className="font-mono text-sm text-gray-700 dark:text-gray-300 w-12 flex-shrink-0">
@@ -97,14 +105,14 @@ export default function TodayBlockClient({ visits, hebrewDate }: TodayBlockClien
             {visits.length === 5 && (
               <Link
                 href="/visits"
-                className="block text-center text-sm text-blue-600 dark:text-blue-400 hover:underline pt-2"
+                className="block text-start text-sm text-blue-600 dark:text-blue-400 hover:underline pt-2"
               >
                 {t.showAll} →
               </Link>
             )}
           </div>
         ) : (
-          <div className="py-8 text-center">
+          <div className="py-8 text-start">
             <p className="text-gray-500 dark:text-gray-400 text-sm">
               {t.noVisits}
             </p>

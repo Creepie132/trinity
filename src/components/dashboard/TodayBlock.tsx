@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 import TodayBlockClient from './TodayBlockClient'
 
 export default async function TodayBlock({ orgId }: { orgId: string }) {
@@ -8,14 +9,6 @@ export default async function TodayBlock({ orgId }: { orgId: string }) {
   const today = new Date()
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0)
   const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)
-
-  // Format date in Hebrew
-  const dateFormatter = new Intl.DateTimeFormat('he-IL', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  })
-  const hebrewDate = dateFormatter.format(today)
 
   // Fetch today's visits with client details
   const { data: visits } = await supabase
@@ -52,5 +45,5 @@ export default async function TodayBlock({ orgId }: { orgId: string }) {
     }
   }) || []
 
-  return <TodayBlockClient visits={formattedVisits} hebrewDate={hebrewDate} />
+  return <TodayBlockClient visits={formattedVisits} />
 }

@@ -24,28 +24,35 @@ export default function DashboardSettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  // Load settings
-  useEffect(() => {
-    const loadSettings = async () => {
-      if (!orgId) return
+  // Load settings function (extracted for reuse)
+  const loadSettings = async () => {
+    if (!orgId) return
 
-      try {
-        const response = await fetch('/api/dashboard/settings')
-        if (!response.ok) throw new Error('Failed to load settings')
-        
-        const data = await response.json()
-        
-        if (data.dashboard_charts) {
-          setShowCharts(data.dashboard_charts)
-        }
-      } catch (error) {
-        console.error('Error loading dashboard settings:', error)
-      } finally {
-        setLoading(false)
+    try {
+      const response = await fetch('/api/dashboard/settings')
+      if (!response.ok) throw new Error('Failed to load settings')
+      
+      const data = await response.json()
+      
+      if (data.dashboard_charts) {
+        setShowCharts({
+          revenue: data.dashboard_charts.revenue !== false,
+          visits: data.dashboard_charts.visits !== false,
+          topClients: data.dashboard_charts.topClients !== false,
+        })
       }
+    } catch (error) {
+      console.error('Error loading dashboard settings:', error)
     }
+  }
 
-    loadSettings()
+  // Load settings on mount
+  useEffect(() => {
+    const load = async () => {
+      await loadSettings()
+      setLoading(false)
+    }
+    load()
   }, [orgId])
 
   // Save settings
@@ -53,6 +60,8 @@ export default function DashboardSettingsPage() {
     if (!orgId) return
 
     setSaving(true)
+    const previousState = { ...showCharts } // Backup for rollback
+    
     try {
       const response = await fetch('/api/dashboard/settings', {
         method: 'PUT',
@@ -75,12 +84,17 @@ export default function DashboardSettingsPage() {
         throw new Error('Save failed')
       }
 
-      // Invalidate dashboard settings cache to trigger re-render
+      // Reload settings from API to ensure perfect sync with DB
+      await loadSettings()
+
+      // Invalidate dashboard settings cache to trigger dashboard re-render
       await queryClient.invalidateQueries({ queryKey: ['dashboard-settings'] })
 
       toast.success(t('settings.saved'))
     } catch (error: any) {
       console.error('Error saving dashboard settings:', error)
+      // Rollback to previous state on error
+      setShowCharts(previousState)
       toast.error(t('settings.saveFailed') + ': ' + (error.message || ''))
     } finally {
       setSaving(false)

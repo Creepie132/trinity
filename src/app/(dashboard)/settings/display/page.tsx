@@ -1,17 +1,68 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { useTheme, themes, Theme, Layout } from '@/contexts/ThemeContext'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { Check, LayoutGrid, Layers, AlignJustify, ArrowLeft, Moon, Sun } from 'lucide-react'
+import { Check, LayoutGrid, Layers, AlignJustify, ArrowLeft, Moon, Sun, CalendarDays } from 'lucide-react'
 import Link from 'next/link'
+import { useAuth } from '@/hooks/useAuth'
+import { useOrganization } from '@/hooks/useOrganization'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 export default function DisplaySettingsPage() {
   const { theme, setTheme, layout, setLayout, darkMode, setDarkMode } = useTheme()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  const { orgId } = useAuth()
+  const { data: organization, refetch } = useOrganization()
+  const queryClient = useQueryClient()
+  const supabase = createSupabaseBrowserClient()
+  
+  const [meetingMode, setMeetingMode] = useState(false)
+
+  useEffect(() => {
+    if (organization?.features?.meeting_mode) {
+      setMeetingMode(organization.features.meeting_mode)
+    }
+  }, [organization])
+
+  const handleMeetingModeChange = async (checked: boolean) => {
+    if (!orgId) return
+
+    setMeetingMode(checked)
+
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({
+          features: {
+            ...organization?.features,
+            meeting_mode: checked
+          }
+        })
+        .eq('id', orgId)
+
+      if (error) throw error
+
+      toast.success(checked 
+        ? (language === 'he' ? 'מצב פגישות הופעל' : 'Режим встреч включён')
+        : (language === 'he' ? 'מצב ביקורים הופעל' : 'Режим визитов включён')
+      )
+
+      // Refetch organization data
+      await refetch()
+      queryClient.invalidateQueries({ queryKey: ['organization'] })
+    } catch (error) {
+      console.error('Failed to update meeting mode:', error)
+      toast.error(language === 'he' ? 'שגיאה בעדכון' : 'Ошибка при обновлении')
+      setMeetingMode(!checked) // Revert
+    }
+  }
 
   const themeOptions: { id: Theme; name: string; colors: string }[] = [
     { id: 'default', name: t('theme.default'), colors: 'bg-gradient-to-r from-blue-500 to-blue-600' },
@@ -37,6 +88,34 @@ export default function DisplaySettingsPage() {
           {t('display.subtitle')}
         </p>
       </div>
+
+      {/* Meeting Mode Toggle */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarDays className="w-5 h-5" />
+            {language === 'he' ? 'מצב פגישות' : 'Режим встреч'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-900 dark:text-gray-100 font-medium mb-1">
+                {language === 'he' ? 'החלף "ביקורים" ל"פגישות"' : 'Заменить "Визиты" на "Встречи"'}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {language === 'he' 
+                  ? 'כל המערכת תציג "פגישות" במקום "ביקורים". מתאים למשרדים, ייעוץ, ופגישות עסקיות.'
+                  : 'Вся система будет показывать "Встречи" вместо "Визитов". Подходит для офисов, консультаций и деловых встреч.'}
+              </p>
+            </div>
+            <Switch 
+              checked={meetingMode}
+              onCheckedChange={handleMeetingModeChange}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Dark Mode */}
       <Card>

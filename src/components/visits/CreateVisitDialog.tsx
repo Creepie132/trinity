@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useQueryClient } from '@tanstack/react-query'
 import { useServices } from '@/hooks/useServices'
+import { useMeetingMode } from '@/hooks/useMeetingMode'
 import {
   Dialog,
   DialogContent,
@@ -84,6 +85,7 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
   const queryClient = useQueryClient()
+  const meetingMode = useMeetingMode()
 
   // Load custom services from database
   const { data: customServices } = useServices()
@@ -99,6 +101,8 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
     duration: 60,
     price: '',
     notes: '',
+    city: '', // For meeting mode
+    address: '', // For meeting mode
   })
 
   // Use custom services if available, otherwise fallback to default
@@ -139,14 +143,38 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
       return
     }
 
-    if (!formData.clientId || !formData.serviceId || !formData.date || !formData.time || !formData.price) {
-      toast.error(t('common.required'))
-      return
+    // Validation depends on meeting mode
+    if (meetingMode.isMeetingMode) {
+      if (!formData.clientId || !formData.serviceId || !formData.date || !formData.time) {
+        toast.error(t('common.required'))
+        return
+      }
+    } else {
+      if (!formData.clientId || !formData.serviceId || !formData.date || !formData.time || !formData.price) {
+        toast.error(t('common.required'))
+        return
+      }
     }
 
     setIsSubmitting(true)
 
     try {
+      // In meeting mode, format notes with city and address
+      let notesData = formData.notes
+      if (meetingMode.isMeetingMode && (formData.city || formData.address)) {
+        const meetingInfo = []
+        if (formData.city) {
+          meetingInfo.push(`${language === 'he' ? 'עיר' : 'Город'}: ${formData.city}`)
+        }
+        if (formData.address) {
+          meetingInfo.push(`${language === 'he' ? 'כתובת' : 'Адрес'}: ${formData.address}`)
+        }
+        if (formData.notes) {
+          meetingInfo.push(formData.notes)
+        }
+        notesData = meetingInfo.join('\n')
+      }
+
       // Call API route instead of direct insert
       const response = await fetch('/api/visits', {
         method: 'POST',
@@ -159,9 +187,9 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
           service: formData.service, // Legacy field for compatibility
           date: formData.date,
           time: formData.time,
-          duration: formData.duration,
-          price: formData.price,
-          notes: formData.notes,
+          duration: meetingMode.isMeetingMode ? 0 : formData.duration, // 0 for meetings
+          price: meetingMode.isMeetingMode ? '0' : formData.price, // 0 for meetings
+          notes: notesData,
         }),
       })
 
@@ -188,6 +216,8 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
         duration: 60,
         price: '',
         notes: '',
+        city: '',
+        address: '',
       })
     } catch (error: any) {
       console.error('Error creating visit:', error)
@@ -216,7 +246,7 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
                 <ArrowLeft className="h-6 w-6" />
               )}
             </Button>
-            <DialogTitle className="text-xl md:text-2xl text-gray-900 dark:text-gray-100 pr-12">{t('visits.createNew')}</DialogTitle>
+            <DialogTitle className="text-xl md:text-2xl text-gray-900 dark:text-gray-100 pr-12">{meetingMode.t.createVisit}</DialogTitle>
             <DialogDescription className="text-sm md:text-base text-gray-600 dark:text-gray-400">
               {t('visits.subtitle')}
             </DialogDescription>
@@ -301,48 +331,84 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
             </div>
           </div>
 
-          {/* Duration and Price */}
+          {/* Duration and Price (or City and Address in meeting mode) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="duration" className="text-gray-900 dark:text-gray-100">
-                {t('visits.duration')} *
-              </Label>
-              <Select
-                value={formData.duration.toString()}
-                onValueChange={(value) => setFormData({ ...formData, duration: parseInt(value) })}
-              >
-                <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                  {durations.map((duration) => (
-                    <SelectItem 
-                      key={duration.value} 
-                      value={duration.value.toString()}
-                      className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-                    >
-                      {t(duration.labelKey)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {meetingMode.isMeetingMode ? (
+              // Meeting Mode: City field
+              <div className="space-y-2">
+                <Label htmlFor="city" className="text-gray-900 dark:text-gray-100">
+                  {language === 'he' ? 'עיר' : 'Город'}
+                </Label>
+                <Input
+                  id="city"
+                  type="text"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
+                  placeholder={language === 'he' ? 'הזן עיר' : 'Введите город'}
+                />
+              </div>
+            ) : (
+              // Visit Mode: Duration field
+              <div className="space-y-2">
+                <Label htmlFor="duration" className="text-gray-900 dark:text-gray-100">
+                  {t('visits.duration')} *
+                </Label>
+                <Select
+                  value={formData.duration.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, duration: parseInt(value) })}
+                >
+                  <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+                    {durations.map((duration) => (
+                      <SelectItem 
+                        key={duration.value} 
+                        value={duration.value.toString()}
+                        className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
+                      >
+                        {t(duration.labelKey)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="price" className="text-gray-900 dark:text-gray-100">
-                {t('visits.price')} *
-              </Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                placeholder="100.00"
-                className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-              />
-            </div>
+            {meetingMode.isMeetingMode ? (
+              // Meeting Mode: Address field
+              <div className="space-y-2">
+                <Label htmlFor="address" className="text-gray-900 dark:text-gray-100">
+                  {language === 'he' ? 'כתובת' : 'Адрес'}
+                </Label>
+                <Input
+                  id="address"
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
+                  placeholder={language === 'he' ? 'הזן כתובת' : 'Введите адрес'}
+                />
+              </div>
+            ) : (
+              // Visit Mode: Price field
+              <div className="space-y-2">
+                <Label htmlFor="price" className="text-gray-900 dark:text-gray-100">
+                  {t('visits.price')} *
+                </Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="100.00"
+                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
+                />
+              </div>
+            )}
           </div>
 
           {/* Notes */}

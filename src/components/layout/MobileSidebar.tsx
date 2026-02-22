@@ -11,6 +11,7 @@ import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLowStockProducts } from '@/hooks/useProducts'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useMeetingMode } from '@/hooks/useMeetingMode'
 import {
   Sheet,
   SheetContent,
@@ -41,6 +42,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const features = useFeatures()
   const { data: lowStockProducts } = useLowStockProducts()
   const { t, language, dir } = useLanguage()
+  const meetingMode = useMeetingMode()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [profileOpen, setProfileOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -51,7 +53,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const baseNavigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
     { name: t('nav.clients'), href: '/clients', icon: Users, requireFeature: 'clients' },
-    { name: language === 'he' ? 'ביקורים' : 'Визиты', href: '/visits', icon: Calendar, requireFeature: 'visits' },
+    { name: meetingMode.t.visits, href: '/visits', icon: Calendar, requireFeature: 'visits' },
     { name: t('nav.inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
     { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: t('nav.sms'), href: '/sms', icon: MessageSquare, requireFeature: 'sms' },

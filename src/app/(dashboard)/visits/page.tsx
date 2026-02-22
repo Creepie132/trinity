@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useMeetingMode } from '@/hooks/useMeetingMode'
 import { useQuery } from '@tanstack/react-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
@@ -34,6 +35,7 @@ export default function VisitsPage() {
   const router = useRouter()
   const features = useFeatures()
   const { t, language } = useLanguage()
+  const meetingMode = useMeetingMode()
   const { orgId } = useAuth()
   const supabase = createSupabaseBrowserClient()
 
@@ -309,9 +311,9 @@ export default function VisitsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('visits.title')}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{meetingMode.t.visits}</h1>
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
-            {t('common.total')}: {totalCount} {t('visits.title')}
+            {t('common.total')}: {totalCount} {meetingMode.t.visits}
           </p>
         </div>
         {/* Desktop Buttons */}
@@ -319,7 +321,7 @@ export default function VisitsPage() {
           <ExportButton type="visits" />
           <Button onClick={() => setAddDialogOpen(true)} className="hidden md:flex bg-theme-primary text-white hover:opacity-90">
             <Plus className="w-4 h-4 ml-2" />
-            {t('visits.addNew')}
+            {meetingMode.t.newVisit}
           </Button>
         </div>
       </div>
@@ -843,7 +845,7 @@ export default function VisitsPage() {
       <button
         onClick={() => setAddDialogOpen(true)}
         className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-theme-primary text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50"
-        aria-label={t('visits.addNew')}
+        aria-label={meetingMode.t.newVisit}
       >
         <Plus className="w-6 h-6" />
       </button>

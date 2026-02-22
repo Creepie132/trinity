@@ -12,6 +12,7 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { useLowStockProducts } from '@/hooks/useProducts'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useBookings } from '@/hooks/useBookings'
+import { useMeetingMode } from '@/hooks/useMeetingMode'
 import { Separator } from '@/components/ui/separator'
 import { UserProfileSheet } from '@/components/user/UserProfileSheet'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -39,6 +40,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const { data: lowStockProducts } = useLowStockProducts()
   const { pendingCount } = useBookings(orgId)
   const { t, language } = useLanguage()
+  const meetingMode = useMeetingMode()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [profileOpen, setProfileOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -46,7 +48,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const baseNavigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
     { name: t('nav.clients'), href: '/clients', icon: Users, requireFeature: 'clients' },
-    { name: language === 'he' ? 'ביקורים' : 'Визиты', href: '/visits', icon: Calendar, requireFeature: 'visits' },
+    { name: meetingMode.t.visits, href: '/visits', icon: Calendar, requireFeature: 'visits' },
     { name: t('nav.inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
     { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: t('nav.sms'), href: '/sms', icon: MessageSquare, requireFeature: 'sms' },

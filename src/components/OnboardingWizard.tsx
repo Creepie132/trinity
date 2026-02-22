@@ -102,6 +102,10 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
 
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string>('')
+
+  // Detect locale (Russian by default, Hebrew if detected)
+  const locale = typeof window !== 'undefined' && window.navigator.language.includes('he') ? 'he' : 'ru'
 
   // Step 1 data
   const [businessName, setBusinessName] = useState(organizationName)
@@ -331,19 +335,36 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
     } catch (error: any) {
       console.error('[Onboarding] Error:', error)
       
-      // User-friendly error messages
-      let errorMessage = 'Ошибка сохранения'
       const msg = error?.message || ''
       
+      // User-friendly error messages
       if (msg.includes('violates') || msg.includes('duplicate') || msg.includes('unique')) {
-        errorMessage = 'Настройка уже выполнена. Обновите страницу.'
+        const errorMsg = locale === 'he' 
+          ? 'העסק כבר קיים במערכת. מעביר לדף הראשי...' 
+          : 'Бизнес уже существует в системе. Переход на главную...'
+        
+        setError(errorMsg)
+        toast.error(errorMsg)
+        
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 2000)
       } else if (msg.includes('permission') || msg.includes('denied')) {
-        errorMessage = 'Нет прав для сохранения. Обратитесь к администратору.'
-      } else if (msg) {
-        errorMessage = `Ошибка: ${msg}`
+        const errorMsg = locale === 'he'
+          ? 'אין הרשאות לשמירה. פנה למנהל.'
+          : 'Нет прав для сохранения. Обратитесь к администратору.'
+        
+        setError(errorMsg)
+        toast.error(errorMsg)
+      } else {
+        const errorMsg = locale === 'he' 
+          ? 'שגיאה בשמירה. נסו שוב.' 
+          : 'Ошибка сохранения. Попробуйте снова.'
+        
+        setError(errorMsg)
+        toast.error(msg || errorMsg)
       }
       
-      toast.error(errorMessage)
       setLoading(false)
     }
   }
@@ -582,6 +603,13 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
                 <div className="text-sm text-gray-400 mt-1">Поделитесь ссылкой на запись</div>
               </div>
             </div>
+
+            {/* Error message */}
+            {error && (
+              <div className="mt-4 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm font-medium">
+                {error}
+              </div>
+            )}
 
             <Button
               onClick={handleComplete}

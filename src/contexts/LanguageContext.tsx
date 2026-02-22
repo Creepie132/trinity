@@ -36,6 +36,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Admin Navigation
     'admin.dashboard': 'לוח בקרה',
     'admin.organizations': 'ארגונים',
+    'admin.invitations': 'הזמנות',
     'admin.subscriptions': 'מנויים וגישה',
     'admin.billing': 'חיובים',
     'admin.ads': 'פרסום',
@@ -911,6 +912,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Admin Navigation
     'admin.dashboard': 'Панель управления',
     'admin.organizations': 'Организации',
+    'admin.invitations': 'Приглашения',
     'admin.subscriptions': 'Подписки и доступ',
     'admin.billing': 'Оплата',
     'admin.ads': 'Реклама',

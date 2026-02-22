@@ -79,6 +79,34 @@ export async function POST(request: NextRequest) {
       console.log('Trial activated for org:', orgUser.org_id)
       console.log('Expires at:', expiresAt.toISOString())
 
+      // Send Telegram notification to admin
+      const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
+      const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID
+
+      if (TELEGRAM_BOT_TOKEN && ADMIN_CHAT_ID) {
+        try {
+          await fetch(
+            `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: ADMIN_CHAT_ID,
+                text: [
+                  '✅ Приглашение принято!',
+                  '',
+                  `👤 ${user.user_metadata?.full_name || user.email}`,
+                  `📧 ${user.email}`,
+                  `📅 Trial до ${expiresAt.toLocaleDateString('ru-RU', { timeZone: 'Asia/Jerusalem' })}`,
+                ].join('\n'),
+              }),
+            }
+          )
+        } catch (telegramError) {
+          console.error('Telegram notification error:', telegramError)
+        }
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Invitation activated successfully',

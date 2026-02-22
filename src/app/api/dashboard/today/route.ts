@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         scheduled_at,
         status,
         notes,
-        clients!inner(
+        clients(
           id,
           name
         )

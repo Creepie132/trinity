@@ -270,8 +270,12 @@ export async function POST(
     console.log('Visit created successfully:', visit.id)
 
     // ✅ Create visit_services entry if service_id exists
+    console.log('Step 5: Checking visit_services creation...')
+    console.log('service_id:', service_id)
+    console.log('is UUID?', service_id ? uuidRegex.test(service_id) : false)
+    
     if (service_id && uuidRegex.test(service_id)) {
-      console.log('Step 5: Creating visit_services entry...')
+      console.log('Creating visit_services entry...')
       const { error: vsError } = await supabaseAdmin
         .from('visit_services')
         .insert({
@@ -281,11 +285,19 @@ export async function POST(
         })
 
       if (vsError) {
-        console.warn('Visit service creation failed (non-fatal):', vsError)
+        console.error('❌ Visit service creation failed:', vsError)
+        console.error('Error details:', {
+          message: vsError.message,
+          code: vsError.code,
+          details: vsError.details,
+          hint: vsError.hint
+        })
         // Don't fail the whole booking if visit_services fails
       } else {
-        console.log('Visit service linked successfully')
+        console.log('✅ Visit service linked successfully')
       }
+    } else {
+      console.log('Skipping visit_services creation (no valid service_id)')
     }
 
     // Send Telegram notification

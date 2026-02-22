@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         client_id,
         scheduled_at,
         price,
-        clients!inner (
+        clients (
           id,
           first_name,
           last_name,

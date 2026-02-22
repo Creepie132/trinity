@@ -271,11 +271,11 @@ export default function BookingPage() {
           service_name: language === 'ru' && selectedService.name_ru ? selectedService.name_ru : selectedService.name,
           client_name: clientName,
           client_phone: clientPhone,
-          client_email: clientEmail || null,
+          client_email: clientEmail || '',
           scheduled_at: scheduledAt,
           duration_minutes: selectedService.duration_minutes,
           price: selectedService.price,
-          notes: clientNotes || null
+          notes: clientNotes || ''
         })
       })
 

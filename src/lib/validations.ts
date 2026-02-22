@@ -49,7 +49,7 @@ export const createBookingSchema = z.object({
   scheduled_at: z.string().min(1),
   duration_minutes: z.number().int().min(5).max(480).optional(),
   price: z.number().min(0).max(100000).optional(),
-  notes: z.string().max(2000).optional().or(z.literal("")),
+  notes: z.string().max(2000).nullish().default(''),
 })
 
 // Услуги

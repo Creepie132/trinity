@@ -163,7 +163,7 @@ export async function POST(
       duration_minutes: duration_minutes || 60,
       price: price || null,
       status: 'pending',
-      notes: notes || null
+      notes: notes || ''
     }
     
     console.log('[Booking Book API] Booking data:', {

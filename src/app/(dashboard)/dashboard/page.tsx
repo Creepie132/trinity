@@ -6,6 +6,7 @@ import TodayBlock from '@/components/dashboard/TodayBlock'
 import FABMenu from '@/components/dashboard/FABMenu'
 import { StatsCardsSkeleton } from '@/components/dashboard/StatsCardsSkeleton'
 import { DashboardClient } from '@/components/dashboard/DashboardClient'
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 
 export default async function DashboardPage() {
   // Get orgId from server session
@@ -40,20 +41,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6 p-6" dir="rtl">
-      {/* Header with Hebrew greeting */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          שלום, {userName}
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          {new Intl.DateTimeFormat('he-IL', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          }).format(new Date())}
-        </p>
-      </div>
+      {/* Header with localized greeting */}
+      <DashboardHeader userName={userName} />
 
       {/* Stats Cards with Suspense */}
       <Suspense fallback={<StatsCardsSkeleton />}>

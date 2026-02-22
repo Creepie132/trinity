@@ -34,6 +34,18 @@ export function DashboardClient({ orgId }: { orgId: string }) {
     }
   }, [features.isActive, features.isLoading, router])
 
+  // Fetch dashboard settings for chart visibility
+  const { data: dashboardSettings } = useQuery({
+    queryKey: ['dashboard-settings', orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const response = await fetch('/api/dashboard/settings')
+      if (!response.ok) throw new Error('Failed to load settings')
+      const data = await response.json()
+      return data.dashboard_charts || { revenue: true, visits: true, topClients: true }
+    },
+  })
+
   // Check if onboarding is needed
   const { data: onboardingData } = useQuery({
     queryKey: ['onboarding-check', orgId],
@@ -62,108 +74,117 @@ export function DashboardClient({ orgId }: { orgId: string }) {
     },
   })
 
-  // Fetch revenue chart data
+  // Fetch revenue chart data (only if enabled)
   const { data: revenueData = [] } = useQuery({
     queryKey: ['dashboard-revenue', orgId],
-    enabled: !!orgId,
+    enabled: !!orgId && dashboardSettings?.revenue !== false,
     queryFn: async () => {
       const response = await fetch(`/api/dashboard/revenue?org_id=${orgId}&days=7`)
       return response.json()
     },
   })
 
-  // Fetch visits chart data
+  // Fetch visits chart data (only if enabled)
   const { data: visitsData = [] } = useQuery({
     queryKey: ['dashboard-visits', orgId],
-    enabled: !!orgId,
+    enabled: !!orgId && dashboardSettings?.visits !== false,
     queryFn: async () => {
       const response = await fetch(`/api/dashboard/visits-chart?org_id=${orgId}&days=30`)
       return response.json()
     },
   })
 
-  // Fetch top services
+  // Fetch top services (only if enabled)
   const { data: topServices = [] } = useQuery({
     queryKey: ['dashboard-top-services', orgId],
-    enabled: !!orgId,
+    enabled: !!orgId && dashboardSettings?.topClients !== false,
     queryFn: async () => {
       const response = await fetch(`/api/dashboard/top-services?org_id=${orgId}`)
       return response.json()
     },
   })
 
+  // Check if any charts are visible
+  const hasVisibleCharts = dashboardSettings?.revenue !== false || dashboardSettings?.visits !== false
+
   return (
     <>
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
-        <Card className="bg-[#111827] border-gray-800">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">
-              Выручка за последние 7 дней
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={revenueData}>
-                <defs>
-                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#a855f7" stopOpacity={0.8} />
-                    <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.4} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="day" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1f2937',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                  }}
-                  formatter={(value: any) => [`₪${value}`, 'Выручка']}
-                />
-                <Bar dataKey="amount" fill="url(#revenueGradient)" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Charts Row 1 - Only render if at least one chart is visible */}
+      {hasVisibleCharts && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Revenue Chart */}
+          {dashboardSettings?.revenue !== false && (
+            <Card className="bg-[#111827] border-gray-800">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Выручка за последние 7 дней
+                </h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={revenueData}>
+                    <defs>
+                      <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#a855f7" stopOpacity={0.8} />
+                        <stop offset="100%" stopColor="#7c3aed" stopOpacity={0.4} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="day" stroke="#9ca3af" />
+                    <YAxis stroke="#9ca3af" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1f2937',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff',
+                      }}
+                      formatter={(value: any) => [`₪${value}`, 'Выручка']}
+                    />
+                    <Bar dataKey="amount" fill="url(#revenueGradient)" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
 
-        {/* Visits Chart */}
-        <Card className="bg-[#111827] border-gray-800">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">
-              Визиты за последние 30 дней
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={visitsData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="dateLabel" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#1f2937',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                  }}
-                  formatter={(value: any) => [value, 'Визитов']}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={{ fill: '#3b82f6', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Visits Chart */}
+          {dashboardSettings?.visits !== false && (
+            <Card className="bg-[#111827] border-gray-800">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Визиты за последние 30 дней
+                </h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={visitsData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="dateLabel" stroke="#9ca3af" />
+                    <YAxis stroke="#9ca3af" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1f2937',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff',
+                      }}
+                      formatter={(value: any) => [value, 'Визитов']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      dot={{ fill: '#3b82f6', r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Top Services Chart */}
-      {topServices.length > 0 && (
+      {dashboardSettings?.topClients !== false && topServices.length > 0 && (
         <Card className="bg-[#111827] border-gray-800">
           <CardContent className="p-6">
             <h3 className="text-lg font-semibold text-white mb-4">

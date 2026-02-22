@@ -8,11 +8,13 @@ import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 
 export default function DashboardSettingsPage() {
   const router = useRouter()
   const { t, dir } = useLanguage()
   const { orgId } = useAuth()
+  const queryClient = useQueryClient()
 
   const [showCharts, setShowCharts] = useState({
     revenue: true,
@@ -72,6 +74,9 @@ export default function DashboardSettingsPage() {
       if (!data.success) {
         throw new Error('Save failed')
       }
+
+      // Invalidate dashboard settings cache to trigger re-render
+      await queryClient.invalidateQueries({ queryKey: ['dashboard-settings'] })
 
       toast.success(t('settings.saved'))
     } catch (error: any) {

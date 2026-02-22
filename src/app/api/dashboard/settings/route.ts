@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     // Читаем настройки через admin (обходит RLS)
     const { data: org, error } = await supabaseAdmin
       .from('organizations')
-      .select('settings')
+      .select('features')
       .eq('id', orgUser.org_id)
       .single()
 
@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      settings: org?.settings || {},
-      dashboard_charts: org?.settings?.dashboard_charts || {
+      settings: org?.features || {},
+      dashboard_charts: org?.features?.dashboard_settings?.dashboard_charts || {
         revenue: true,
         visits: true,
         topClients: true,
@@ -89,29 +89,37 @@ export async function PUT(request: NextRequest) {
 
     console.log('Org ID:', orgUser.org_id)
 
-    // Читаем текущие settings
+    // Читаем текущие features
     const { data: org } = await supabaseAdmin
       .from('organizations')
-      .select('settings')
+      .select('features')
       .eq('id', orgUser.org_id)
       .single()
 
-    const currentSettings = org?.settings || {}
+    const currentFeatures = org?.features || {}
+    const currentDashboardSettings = currentFeatures.dashboard_settings || {}
 
-    console.log('Current settings:', currentSettings)
+    console.log('Current features:', currentFeatures)
+    console.log('Current dashboard settings:', currentDashboardSettings)
 
-    // Обновляем settings с новыми настройками графиков
-    const updatedSettings = {
-      ...currentSettings,
+    // Обновляем dashboard_settings с новыми настройками графиков
+    const updatedDashboardSettings = {
+      ...currentDashboardSettings,
       dashboard_charts: body.dashboard_charts || body,
     }
 
-    console.log('Updated settings:', updatedSettings)
+    const updatedFeatures = {
+      ...currentFeatures,
+      dashboard_settings: updatedDashboardSettings,
+    }
+
+    console.log('Updated dashboard settings:', updatedDashboardSettings)
+    console.log('Updated features:', updatedFeatures)
 
     // Сохраняем через admin (обходит RLS)
     const { error } = await supabaseAdmin
       .from('organizations')
-      .update({ settings: updatedSettings })
+      .update({ features: updatedFeatures })
       .eq('id', orgUser.org_id)
 
     if (error) {
@@ -127,7 +135,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      settings: updatedSettings,
+      settings: updatedDashboardSettings,
     })
   } catch (error: any) {
     console.error('=== SETTINGS SAVE ERROR ===')

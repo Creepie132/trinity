@@ -190,7 +190,29 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
     }
 
     setLoading(true)
+    setError('')
+
     try {
+      console.log('[Onboarding] Starting completion flow...')
+
+      // Check if onboarding is already completed
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('features')
+        .eq('id', orgId)
+        .single()
+
+      const isAlreadyCompleted = org?.features?.onboarding_completed === true
+
+      if (isAlreadyCompleted) {
+        console.log('[Onboarding] Already completed, redirecting to dashboard...')
+        toast.success('Настройки уже сохранены. Переход на главную...')
+        
+        // Use window.location.href for full page reload
+        window.location.href = '/dashboard'
+        return
+      }
+
       // 1. Check existing services and delete if any (for existing users)
       console.log('[Onboarding] Checking existing services...')
       const { data: existingServices } = await supabase
@@ -247,12 +269,6 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
 
       // 4. Update organization features
       console.log('[Onboarding] Updating organization features...')
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('features')
-        .eq('id', orgId)
-        .single()
-
       const updatedFeatures = {
         ...(org?.features || {}),
         onboarding_completed: true,
@@ -326,30 +342,49 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
 
       console.log('[Onboarding] Completed successfully!')
       toast.success('Настройка завершена! 🎉')
-      setLoading(false)
 
-      // Wait for UI to update, then reload to show dashboard without onboarding
+      // Use window.location.href for full page reload
       setTimeout(() => {
-        window.location.reload()
+        window.location.href = '/dashboard'
       }, 500)
     } catch (error: any) {
       console.error('[Onboarding] Error:', error)
       
       const msg = error?.message || ''
       
-      // User-friendly error messages
+      // Simplified error handling - if onboarding data already exists, just redirect
       if (msg.includes('violates') || msg.includes('duplicate') || msg.includes('unique')) {
-        const errorMsg = locale === 'he' 
-          ? 'העסק כבר קיים במערכת. מעביר לדף הראשי...' 
-          : 'Бизнес уже существует в системе. Переход на главную...'
+        console.log('[Onboarding] Data already exists, marking as complete and redirecting...')
         
-        setError(errorMsg)
-        toast.error(errorMsg)
+        // Try to mark as completed even if data exists
+        try {
+          const { data: org } = await supabase
+            .from('organizations')
+            .select('features')
+            .eq('id', orgId)
+            .single()
+
+          const updatedFeatures = {
+            ...(org?.features || {}),
+            onboarding_completed: true,
+          }
+
+          await supabase
+            .from('organizations')
+            .update({ features: updatedFeatures })
+            .eq('id', orgId)
+        } catch (updateError) {
+          console.error('[Onboarding] Failed to mark as completed:', updateError)
+        }
+
+        toast.success('Переход на главную...')
         
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 2000)
-      } else if (msg.includes('permission') || msg.includes('denied')) {
+        // Use window.location.href for guaranteed redirect
+        window.location.href = '/dashboard'
+        return
+      }
+      
+      if (msg.includes('permission') || msg.includes('denied')) {
         const errorMsg = locale === 'he'
           ? 'אין הרשאות לשמירה. פנה למנהל.'
           : 'Нет прав для сохранения. Обратитесь к администратору.'

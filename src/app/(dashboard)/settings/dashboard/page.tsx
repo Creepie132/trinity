@@ -7,14 +7,12 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { toast } from 'sonner'
 
 export default function DashboardSettingsPage() {
   const router = useRouter()
   const { t, dir } = useLanguage()
   const { orgId } = useAuth()
-  const supabase = createSupabaseBrowserClient()
 
   const [showCharts, setShowCharts] = useState({
     revenue: true,
@@ -30,16 +28,13 @@ export default function DashboardSettingsPage() {
       if (!orgId) return
 
       try {
-        const { data, error } = await supabase
-          .from('organizations')
-          .select('settings')
-          .eq('id', orgId)
-          .single()
-
-        if (error) throw error
-
-        if (data?.settings?.dashboard_charts) {
-          setShowCharts(data.settings.dashboard_charts)
+        const response = await fetch('/api/dashboard/settings')
+        if (!response.ok) throw new Error('Failed to load settings')
+        
+        const data = await response.json()
+        
+        if (data.dashboard_charts) {
+          setShowCharts(data.dashboard_charts)
         }
       } catch (error) {
         console.error('Error loading dashboard settings:', error)
@@ -49,7 +44,7 @@ export default function DashboardSettingsPage() {
     }
 
     loadSettings()
-  }, [orgId, supabase])
+  }, [orgId])
 
   // Save settings
   const handleSave = async () => {
@@ -57,32 +52,31 @@ export default function DashboardSettingsPage() {
 
     setSaving(true)
     try {
-      // Get current settings
-      const { data: currentData } = await supabase
-        .from('organizations')
-        .select('settings')
-        .eq('id', orgId)
-        .single()
+      const response = await fetch('/api/dashboard/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          dashboard_charts: showCharts
+        }),
+      })
 
-      const currentSettings = currentData?.settings || {}
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save settings')
+      }
 
-      // Update with new chart settings
-      const { error } = await supabase
-        .from('organizations')
-        .update({
-          settings: {
-            ...currentSettings,
-            dashboard_charts: showCharts
-          }
-        })
-        .eq('id', orgId)
-
-      if (error) throw error
+      const data = await response.json()
+      
+      if (!data.success) {
+        throw new Error('Save failed')
+      }
 
       toast.success(t('settings.saved'))
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving dashboard settings:', error)
-      toast.error(t('settings.saveFailed'))
+      toast.error(t('settings.saveFailed') + ': ' + (error.message || ''))
     } finally {
       setSaving(false)
     }

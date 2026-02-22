@@ -3,12 +3,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { Plus, User, Calendar, DollarSign } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { useRouter } from 'next/navigation'
+import { AddClientDialog } from '@/components/clients/AddClientDialog'
+import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
+import { CreateCashPaymentDialog } from '@/components/payments/CreateCashPaymentDialog'
 
 export default function FABMenu() {
   const [isOpen, setIsOpen] = useState(false)
+  const [showNewClient, setShowNewClient] = useState(false)
+  const [showNewVisit, setShowNewVisit] = useState(false)
+  const [showNewSale, setShowNewSale] = useState(false)
   const { language, dir } = useLanguage()
-  const router = useRouter()
   const menuRef = useRef<HTMLDivElement>(null)
 
   const translations = {
@@ -27,9 +31,33 @@ export default function FABMenu() {
   const t = translations[language]
 
   const menuItems = [
-    { icon: User, label: t.newClient, onClick: () => router.push('/clients?action=new') },
-    { icon: Calendar, label: t.newVisit, onClick: () => router.push('/visits?action=new') },
-    { icon: DollarSign, label: t.newSale, onClick: () => router.push('/payments?action=new') },
+    { 
+      icon: User, 
+      label: t.newClient, 
+      onClick: () => {
+        setShowNewClient(true)
+        setIsOpen(false)
+      },
+      color: 'bg-blue-500 text-white',
+    },
+    { 
+      icon: Calendar, 
+      label: t.newVisit, 
+      onClick: () => {
+        setShowNewVisit(true)
+        setIsOpen(false)
+      },
+      color: 'bg-green-500 text-white',
+    },
+    { 
+      icon: DollarSign, 
+      label: t.newSale, 
+      onClick: () => {
+        setShowNewSale(true)
+        setIsOpen(false)
+      },
+      color: 'bg-amber-500 text-white',
+    },
   ]
 
   // Close menu on outside click
@@ -50,65 +78,73 @@ export default function FABMenu() {
   }, [isOpen])
 
   const positionClass = dir === 'rtl' ? 'left-6' : 'right-6'
+  const alignmentClass = dir === 'rtl' ? 'items-start' : 'items-end'
 
   return (
-    <div ref={menuRef} className={`fixed bottom-6 ${positionClass} z-50`}>
-      {/* Speed Dial Menu Items */}
-      <div className="flex flex-col items-center gap-3 mb-3">
-        {isOpen && menuItems.map((item, index) => {
-          const Icon = item.icon
-          return (
-            <div
-              key={index}
-              className="flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              {dir === 'rtl' ? (
-                <>
-                  <button
-                    onClick={() => {
-                      item.onClick()
-                      setIsOpen(false)
-                    }}
-                    className="w-10 h-10 rounded-full bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
-                  >
-                    <Icon size={20} />
-                  </button>
-                  <span className="text-sm bg-card px-3 py-1.5 rounded shadow whitespace-nowrap">
-                    {item.label}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="text-sm bg-card px-3 py-1.5 rounded shadow whitespace-nowrap">
-                    {item.label}
-                  </span>
-                  <button
-                    onClick={() => {
-                      item.onClick()
-                      setIsOpen(false)
-                    }}
-                    className="w-10 h-10 rounded-full bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
-                  >
-                    <Icon size={20} />
-                  </button>
-                </>
-              )}
-            </div>
-          )
-        })}
+    <>
+      <div ref={menuRef} className={`fixed bottom-6 ${positionClass} z-50`}>
+        {/* Speed Dial Menu Items */}
+        <div className={`flex flex-col ${alignmentClass} gap-3 mb-3`}>
+          {isOpen && menuItems.map((item, index) => {
+            const Icon = item.icon
+            return (
+              <button
+                key={index}
+                onClick={item.onClick}
+                className={`flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 cursor-pointer hover:scale-105 transition-transform`}
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                {dir === 'rtl' ? (
+                  <>
+                    <div className={`w-11 h-11 rounded-full ${item.color} shadow-md flex items-center justify-center`}>
+                      <Icon size={20} />
+                    </div>
+                    <span className="text-sm font-medium bg-card text-card-foreground px-3 py-1.5 rounded-lg shadow-md border border-border whitespace-nowrap">
+                      {item.label}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm font-medium bg-card text-card-foreground px-3 py-1.5 rounded-lg shadow-md border border-border whitespace-nowrap">
+                      {item.label}
+                    </span>
+                    <div className={`w-11 h-11 rounded-full ${item.color} shadow-md flex items-center justify-center`}>
+                      <Icon size={20} />
+                    </div>
+                  </>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Main FAB Button */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group"
+        >
+          <Plus
+            size={24}
+            className={`transition-transform duration-300 ${isOpen ? 'rotate-45' : 'rotate-0'}`}
+          />
+        </button>
       </div>
 
-      {/* Main FAB Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center group"
-      >
-        <Plus
-          size={24}
-          className={`transition-transform duration-300 ${isOpen ? 'rotate-45' : 'rotate-0'}`}
-        />
-      </button>
-    </div>
+      {/* Modals */}
+      <AddClientDialog 
+        open={showNewClient} 
+        onOpenChange={setShowNewClient}
+      />
+      
+      <CreateVisitDialog 
+        open={showNewVisit} 
+        onOpenChange={setShowNewVisit}
+      />
+      
+      <CreateCashPaymentDialog 
+        open={showNewSale} 
+        onOpenChange={setShowNewSale}
+      />
+    </>
   )
 }

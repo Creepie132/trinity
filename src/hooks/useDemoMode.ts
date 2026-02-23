@@ -1,9 +1,21 @@
 'use client'
 
 import { useOrganization } from '@/hooks/useOrganization'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 
 export function useDemoMode() {
   const { data: organization } = useOrganization()
+  const { data: isAdmin } = useIsAdmin()
+
+  // Админы НИКОГДА не в demo
+  if (isAdmin) {
+    return {
+      isDemo: false,
+      plan: 'custom',
+      clientLimit: null,
+      daysLeft: null,
+    }
+  }
 
   // Get plan from organization
   const plan = (organization as any)?.plan || 'demo'

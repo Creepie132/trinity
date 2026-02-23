@@ -44,16 +44,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invitation expired' }, { status: 400 })
     }
 
-    // Mark invitation as accepted
-    await supabaseAdmin
-      .from('invitations')
-      .update({
-        status: 'accepted',
-        accepted_at: new Date().toISOString(),
-      })
-      .eq('id', invitation.id)
+    // Check if user is admin
+    const { data: admin } = await supabaseAdmin
+      .from('admin_users')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
 
-    console.log('Invitation marked as accepted')
+    if (admin) {
+      console.log('User is admin, only marking invitation as accepted')
+      // Админ — просто пометить приглашение как accepted, ничего не менять
+      await supabaseAdmin
+        .from('invitations')
+        .update({
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+        })
+        .eq('id', invitation.id)
+
+      return NextResponse.json({
+        success: true,
+        message: 'Invitation accepted (admin user)',
+        redirect: '/dashboard',
+      })
+    }
 
     // Find user's organization
     const { data: orgUser } = await supabaseAdmin
@@ -63,6 +77,45 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (orgUser) {
+      // Check current subscription status
+      const { data: org } = await supabaseAdmin
+        .from('organizations')
+        .select('subscription_status')
+        .eq('id', orgUser.org_id)
+        .single()
+
+      // Если уже active или manual — не понижать до trial
+      if (org?.subscription_status === 'active' || org?.subscription_status === 'manual') {
+        console.log('Organization already has active/manual subscription, not downgrading')
+        
+        // Mark invitation as accepted
+        await supabaseAdmin
+          .from('invitations')
+          .update({
+            status: 'accepted',
+            accepted_at: new Date().toISOString(),
+          })
+          .eq('id', invitation.id)
+
+        return NextResponse.json({
+          success: true,
+          message: 'Invitation accepted (existing subscription preserved)',
+          redirect: '/dashboard',
+        })
+      }
+
+      // Только для пользователей без активной подписки — создать trial
+      // Mark invitation as accepted
+      await supabaseAdmin
+        .from('invitations')
+        .update({
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+        })
+        .eq('id', invitation.id)
+
+      console.log('Invitation marked as accepted')
+
       // Activate 14-day trial
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + 14)

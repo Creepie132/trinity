@@ -135,7 +135,14 @@ export default function AdminInvitationsPage() {
 
       const data = await response.json()
 
-      toast.success(`${t.successSent} ${email}`)
+      // Show warning if user already exists
+      if (data.warning && data.message) {
+        toast.info(data.message, {
+          duration: 8000,
+        })
+      } else {
+        toast.success(`${t.successSent} ${email}`)
+      }
       
       // Show invite URL
       if (data.inviteUrl) {

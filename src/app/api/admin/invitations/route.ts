@@ -41,6 +41,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Already invited' }, { status: 409 })
   }
 
+  // Check if user already exists in system
+  const { data: existingUser } = await supabaseAdmin
+    .from('org_users')
+    .select('user_id, org_id')
+    .eq('email', email.toLowerCase())
+    .maybeSingle()
+
+  let warningMessage = null
+
+  if (existingUser) {
+    // Check if user is admin
+    const { data: existingAdmin } = await supabaseAdmin
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', existingUser.user_id)
+      .maybeSingle()
+
+    if (existingAdmin) {
+      warningMessage = 'Этот email принадлежит администратору. Приглашение отправлено но не изменит его права.'
+      console.log('Warning: Inviting existing admin:', email)
+    } else {
+      warningMessage = 'Этот пользователь уже в системе. Приглашение отправлено но не изменит его текущий план.'
+      console.log('Warning: Inviting existing user:', email)
+    }
+  }
+
   // Create invitation
   const { data: invitation, error } = await supabaseAdmin
     .from('invitations')
@@ -148,6 +174,8 @@ export async function POST(request: NextRequest) {
     invitationId: invitation.id,
     inviteUrl,
     emailSent,
+    warning: warningMessage ? true : false,
+    message: warningMessage,
   })
 }
 

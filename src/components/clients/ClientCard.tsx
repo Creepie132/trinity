@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar, Clock, Phone, MessageSquare, Mail, ChevronRight, Edit, Eye } from 'lucide-react'
+import { Calendar, Clock, Phone, MessageCircle, Mail, ChevronRight, Edit, Eye, CalendarPlus, Pencil } from 'lucide-react'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Button } from '@/components/ui/button'
 
@@ -178,7 +178,7 @@ export function ClientCard({
               className="flex items-center justify-center w-9 h-9 rounded-full bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-100 transition"
               title={text.whatsapp}
             >
-              <MessageSquare size={16} />
+              <MessageCircle size={16} />
             </button>
           )}
 
@@ -196,17 +196,32 @@ export function ClientCard({
             </button>
           )}
 
-          {/* Edit Button */}
+          {/* Записать на визит — только если модуль visits включён и не demo */}
+          {enabledModules?.visits !== false && !isDemo && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                // Navigate to new visit with client preselected
+                if (onClick) onClick(client)
+              }}
+              className="flex items-center justify-center w-9 h-9 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-100 transition"
+              title={locale === 'he' ? 'קבע ביקור' : 'Записать'}
+            >
+              <CalendarPlus size={16} />
+            </button>
+          )}
+
+          {/* Редактировать */}
           {onEdit && (
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 onEdit(client)
               }}
-              className="flex items-center justify-center w-9 h-9 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-100 transition ms-auto"
-              title={text.edit}
+              className="flex items-center justify-center w-9 h-9 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition ms-auto"
+              title={locale === 'he' ? 'ערוך' : 'Редактировать'}
             >
-              <Edit size={16} />
+              <Pencil size={16} />
             </button>
           )}
         </div>
@@ -214,92 +229,103 @@ export function ClientCard({
 
       {/* Bottom Sheet - Детали */}
       <BottomSheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)}>
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
+        {/* Большой аватар */}
+        <div className="flex flex-col items-center mb-6">
           <div
-            className={`${avatarColor} w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg`}
+            className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3`}
           >
             {initials}
           </div>
-          <div>
-            <h2 className="text-xl font-semibold">{client.name}</h2>
-            {client.phone && (
-              <p className="text-muted-foreground text-sm">{client.phone}</p>
-            )}
-          </div>
+          <h3 className="text-xl font-bold text-center">{client.name}</h3>
+          {client.phone && (
+            <p className="text-muted-foreground text-center">{client.phone}</p>
+          )}
         </div>
 
-        {/* Info Fields */}
-        <div className="space-y-3 mb-6">
-          <div className="flex justify-between items-start py-2 border-b border-muted">
-            <span className="text-sm text-muted-foreground">{text.phone}</span>
-            <span className="text-sm font-medium text-end">
-              {client.phone || text.noPhone}
-            </span>
-          </div>
+        {/* Все поля */}
+        <div className="space-y-1 mb-6">
+          {client.email && (
+            <div className="flex justify-between py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{text.email}</span>
+              <a
+                href={`mailto:${client.email}`}
+                className="text-sm text-primary hover:underline"
+              >
+                {client.email}
+              </a>
+            </div>
+          )}
 
-          <div className="flex justify-between items-start py-2 border-b border-muted">
-            <span className="text-sm text-muted-foreground">{text.email}</span>
-            <span className="text-sm font-medium text-end">
-              {client.email || text.noEmail}
-            </span>
-          </div>
-
-          <div className="flex justify-between items-start py-2 border-b border-muted">
+          <div className="flex justify-between py-2.5 border-b border-muted">
             <span className="text-sm text-muted-foreground">{text.visits}</span>
             <span className="text-sm font-medium">{visitsCount}</span>
           </div>
 
-          <div className="flex justify-between items-start py-2 border-b border-muted">
-            <span className="text-sm text-muted-foreground">{text.lastVisit}</span>
-            <span className="text-sm font-medium">
-              {client.last_visit
-                ? new Date(client.last_visit).toLocaleDateString(
-                    locale === 'he' ? 'he-IL' : 'ru-RU'
-                  )
-                : '—'}
-            </span>
-          </div>
-
-          {client.total_paid !== undefined && (
-            <div className="flex justify-between items-start py-2 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{text.totalSpent}</span>
-              <span className="text-sm font-medium text-green-600">
-                ₪{Number(client.total_paid || 0).toFixed(2)}
-              </span>
-            </div>
-          )}
-
-          {client.notes && (
-            <div className="flex justify-between items-start py-2 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{text.notes}</span>
-              <span className="text-sm font-medium text-end max-w-[60%]">
-                {client.notes}
+          {client.last_visit && (
+            <div className="flex justify-between py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{text.lastVisit}</span>
+              <span className="text-sm">
+                {new Date(client.last_visit).toLocaleDateString(
+                  locale === 'he' ? 'he-IL' : 'ru-RU'
+                )}
               </span>
             </div>
           )}
 
           {client.created_at && (
-            <div className="flex justify-between items-start py-2 border-b border-muted">
+            <div className="flex justify-between py-2.5 border-b border-muted">
               <span className="text-sm text-muted-foreground">{text.createdAt}</span>
-              <span className="text-sm font-medium">
+              <span className="text-sm">
                 {new Date(client.created_at).toLocaleDateString(
                   locale === 'he' ? 'he-IL' : 'ru-RU'
                 )}
               </span>
             </div>
           )}
+
+          {client.notes && (
+            <div className="py-2.5">
+              <span className="text-sm text-muted-foreground block mb-1">
+                {text.notes}
+              </span>
+              <p className="text-sm">{client.notes}</p>
+            </div>
+          )}
         </div>
 
-        {/* Actions */}
+        {/* Кнопки действий */}
         <div className="space-y-2">
+          {client.phone && (
+            <a
+              href={`tel:${client.phone}`}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition"
+            >
+              <Phone size={18} />
+              {text.call}
+            </a>
+          )}
+
+          {client.phone && (
+            <button
+              onClick={() => {
+                const phone = client.phone?.replace(/[^0-9]/g, '')
+                window.open(`https://wa.me/${phone}`, '_blank')
+              }}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-500 text-white font-medium hover:bg-green-600 transition"
+            >
+              <MessageCircle size={18} />
+              {text.whatsapp}
+            </button>
+          )}
+
           {onClick && (
             <Button
               onClick={() => {
                 onClick(client)
                 setSheetOpen(false)
               }}
-              className="w-full"
+              variant="outline"
+              className="w-full py-3"
             >
               <Eye className="w-4 h-4 me-2" />
               {text.view}
@@ -313,9 +339,9 @@ export function ClientCard({
                 setSheetOpen(false)
               }}
               variant="outline"
-              className="w-full"
+              className="w-full py-3"
             >
-              <Edit className="w-4 h-4 me-2" />
+              <Pencil className="w-4 h-4 me-2" />
               {text.edit}
             </Button>
           )}

@@ -88,7 +88,9 @@ export function useAuth(): UseAuthResult {
       let selectedOrgId = cachedOrgId
       if (!selectedOrgId && userOrganizations.length > 0) {
         selectedOrgId = userOrganizations[0].org_id
-        localStorage.setItem('current_org_id', selectedOrgId)
+        if (selectedOrgId) {
+          localStorage.setItem('current_org_id', selectedOrgId)
+        }
       }
 
       cachedOrgId = selectedOrgId

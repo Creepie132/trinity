@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { useAddClient } from '@/hooks/useClients'
+import { useAddClient, useClients } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useDemoMode } from '@/hooks/useDemoMode'
 import { RefreshCw } from 'lucide-react'
 
 interface AddClientDialogProps {
@@ -18,7 +19,10 @@ interface AddClientDialogProps {
 
 export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
   const { orgId, isLoading: authLoading, user, refetch } = useAuth()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  const { isDemo, clientLimit } = useDemoMode()
+  const { data: clientsData } = useClients()
+  const clientCount = clientsData?.count || 0
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -47,6 +51,11 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
     // Validation
     if (!formData.first_name || !formData.last_name || !formData.phone) {
       return
+    }
+
+    // Check DEMO limit
+    if (isDemo && clientCount >= 10) {
+      return // Button should be disabled, but double check
     }
 
     await addClient.mutateAsync({
@@ -79,6 +88,32 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
         <DialogHeader>
           <DialogTitle>{t('clients.addNew')}</DialogTitle>
         </DialogHeader>
+
+        {/* DEMO limit warning */}
+        {isDemo && (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              {language === 'he'
+                ? `${clientCount}/10 לקוחות (הגבלת הדגמה)`
+                : `${clientCount}/10 клиентов (лимит демо)`}
+            </p>
+            {clientCount >= 10 && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-center">
+                <p className="text-red-700 dark:text-red-300 text-sm font-medium mb-2">
+                  {language === 'he' ? 'הגעת למגבלת הלקוחות' : 'Достигнут лимит клиентов'}
+                </p>
+                <a
+                  href="https://wa.me/972544858586"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-red-600 dark:text-red-400 underline text-sm"
+                >
+                  {language === 'he' ? 'שדרג עכשיו' : 'Обновить тариф'}
+                </a>
+              </div>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -192,7 +227,7 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
             </Button>
             <Button 
               type="submit" 
-              disabled={addClient.isPending || authLoading || !orgId}
+              disabled={addClient.isPending || authLoading || !orgId || (isDemo && clientCount >= 10)}
             >
               {authLoading ? t('common.loading') : addClient.isPending ? t('common.saving') : t('common.save')}
             </Button>

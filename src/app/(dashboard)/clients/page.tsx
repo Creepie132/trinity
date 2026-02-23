@@ -15,13 +15,15 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useDemoMode } from '@/hooks/useDemoMode'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { ExportButton } from '@/components/ExportButton'
 
 export default function ClientsPage() {
   const router = useRouter()
   const features = useFeatures()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  const { isDemo, clientLimit } = useDemoMode()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -32,6 +34,7 @@ export default function ClientsPage() {
   const { data: clientsData, isLoading } = useClients(searchQuery, page, pageSize)
   const clients = clientsData?.data || []
   const totalCount = clientsData?.count || 0
+  const clientCount = totalCount
   const totalPages = Math.ceil(totalCount / pageSize)
   const from = (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, totalCount)
@@ -75,12 +78,33 @@ export default function ClientsPage() {
               Импорт из Excel
             </Button>
           </Link>
-          <Button onClick={() => setAddDialogOpen(true)} className="hidden md:flex bg-theme-primary text-white hover:opacity-90">
+          <Button 
+            onClick={() => setAddDialogOpen(true)} 
+            disabled={isDemo && clientCount >= 10}
+            className="hidden md:flex bg-theme-primary text-white hover:opacity-90 disabled:opacity-50"
+          >
             <Plus className="w-4 h-4 ml-2" />
             {t('clients.addNew')}
           </Button>
         </div>
       </div>
+
+      {/* DEMO limit banner */}
+      {isDemo && clientCount >= 10 && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-center">
+          <p className="text-red-700 dark:text-red-300 text-sm font-medium mb-2">
+            {language === 'he' ? 'הגעת למגבלת הלקוחות' : 'Достигнут лимит клиентов'}
+          </p>
+          <a
+            href="https://wa.me/972544858586"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-red-600 dark:text-red-400 underline text-sm"
+          >
+            {language === 'he' ? 'שדרג עכשיו' : 'Обновить тариф'}
+          </a>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">
@@ -259,7 +283,8 @@ export default function ClientsPage() {
       {/* Mobile FAB (Floating Action Button) */}
       <button
         onClick={() => setAddDialogOpen(true)}
-        className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-theme-primary text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50"
+        disabled={isDemo && clientCount >= 10}
+        className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-theme-primary text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50 disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label={t('clients.addNew')}
       >
         <Plus className="w-6 h-6" />

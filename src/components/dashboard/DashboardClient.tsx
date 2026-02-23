@@ -90,7 +90,7 @@ export function DashboardClient({ orgId }: { orgId: string }) {
     queryKey: ['onboarding-check', orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      if (!orgId) return { showOnboarding: false, organizationName: '' }
+      if (!orgId) return { showOnboarding: false, organizationName: '', modules: {} }
 
       const { data: org } = await supabase
         .from('organizations')
@@ -105,10 +105,12 @@ export function DashboardClient({ orgId }: { orgId: string }) {
 
       const onboardingCompleted = org?.features?.onboarding_completed ?? false
       const hasServices = (count || 0) > 0
+      const modules = org?.features?.modules || {}
 
       return {
         showOnboarding: !onboardingCompleted || !hasServices,
         organizationName: org?.name || '',
+        modules: modules,
       }
     },
   })
@@ -143,12 +145,15 @@ export function DashboardClient({ orgId }: { orgId: string }) {
     },
   })
 
+  // Check if statistics module is enabled
+  const statisticsEnabled = onboardingData?.modules?.statistics !== false
+  
   // Check if any charts are visible
-  const hasVisibleCharts = dashboardSettings?.revenue !== false || dashboardSettings?.visits !== false
+  const hasVisibleCharts = statisticsEnabled && (dashboardSettings?.revenue !== false || dashboardSettings?.visits !== false)
 
   return (
     <>
-      {/* Charts Row 1 - Only render if at least one chart is visible */}
+      {/* Charts Row 1 - Only render if statistics enabled and at least one chart is visible */}
       {hasVisibleCharts && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Revenue Chart */}

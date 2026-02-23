@@ -3,6 +3,8 @@
 import { useLanguage } from '@/contexts/LanguageContext'
 import { DashboardHeader } from './DashboardHeader'
 import { useDemoMode } from '@/hooks/useDemoMode'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/hooks/useAuth'
 
 interface DashboardWrapperProps {
   userName: string
@@ -12,14 +14,25 @@ interface DashboardWrapperProps {
 
 export function DashboardWrapper({ userName, orgId, children }: DashboardWrapperProps) {
   const { language, dir } = useLanguage()
-  const { isDemo, daysLeft } = useDemoMode()
+  const { isDemo, daysLeft, clientLimit } = useDemoMode()
+
+  // Fetch clients count for DEMO users
+  const { data: clientsCount } = useQuery({
+    queryKey: ['clients-count', orgId],
+    enabled: isDemo && !!orgId,
+    queryFn: async () => {
+      const response = await fetch('/api/clients?count_only=true')
+      const data = await response.json()
+      return data.count || 0
+    },
+  })
 
   return (
     <div className="space-y-6 p-6" dir={dir}>
       {/* DEMO Banner */}
       {isDemo && daysLeft !== null && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
               DEMO
             </span>
@@ -28,6 +41,14 @@ export function DashboardWrapper({ userName, orgId, children }: DashboardWrapper
                 ? `גרסת הדגמה — נותרו ${daysLeft} ימים. שדרג לגרסה המלאה!`
                 : `Демо-режим — осталось ${daysLeft} дней. Перейдите на полную версию!`}
             </p>
+            {/* Clients counter */}
+            {clientsCount !== undefined && (
+              <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-xs font-semibold px-3 py-1 rounded-full border border-amber-300 dark:border-amber-700">
+                {language === 'he'
+                  ? `לקוחות: ${clientsCount}/${clientLimit}`
+                  : `Клиенты: ${clientsCount}/${clientLimit}`}
+              </span>
+            )}
           </div>
           <a
             href="https://wa.me/972544858586"

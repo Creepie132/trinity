@@ -15,11 +15,13 @@ import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
 import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 import { ClientSummary } from '@/types/database'
 import { Visit } from '@/types/visits'
-import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Clock, ArrowRight, ArrowLeft, Trash2, Star, TrendingUp, Minus } from 'lucide-react'
+import { Calendar, CreditCard, MessageSquare, Phone, Mail, MapPin, User, Clock, ArrowRight, ArrowLeft, Trash2, Star, TrendingUp, Minus, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrganization } from '@/hooks/useOrganization'
+import { useDemoMode } from '@/hooks/useDemoMode'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,13 +37,29 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
   const supabase = createSupabaseBrowserClient()
   const permissions = usePermissions()
   const { role, orgId } = useAuth()
+  const { data: organization } = useOrganization()
+  const { isDemo } = useDemoMode()
   const { data: fullClient } = useClient(client?.id)
   const { data: payments } = usePayments(client?.id)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  
+  // Check enabled modules
+  const enabledModules = organization?.features?.modules || {}
+  const paymentsEnabled = enabledModules.payments !== false && !isDemo
+  const smsEnabled = enabledModules.sms !== false && !isDemo
+  const visitsEnabled = enabledModules.visits !== false && !isDemo
   const [visitDialogOpen, setVisitDialogOpen] = useState(false)
   const [gdprDeleteOpen, setGdprDeleteOpen] = useState(false)
   const [redeemDialogOpen, setRedeemDialogOpen] = useState(false)
   const [redeemAmount, setRedeemAmount] = useState('')
+  const [editMode, setEditMode] = useState(false)
+  const [editData, setEditData] = useState({
+    first_name: '',
+    last_name: '',
+    phone: '',
+    email: '',
+    address: ''
+  })
 
   // Fetch client visits
   const { data: visits = [] } = useQuery({
@@ -159,9 +177,18 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
               <ArrowLeft className="h-6 w-6" />
             )}
           </Button>
-          <SheetTitle className="text-2xl text-gray-100 pr-12">
-            {client.first_name} {client.last_name}
-          </SheetTitle>
+          <div className="flex items-center gap-2 pr-12">
+            <SheetTitle className="text-2xl text-gray-100">
+              {client.first_name} {client.last_name}
+            </SheetTitle>
+            <button
+              onClick={() => setEditMode(true)}
+              className="text-gray-400 hover:text-gray-200 transition"
+              title={language === 'he' ? 'ערוך פרטים' : 'Редактировать'}
+            >
+              <Pencil size={16} />
+            </button>
+          </div>
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
@@ -213,32 +240,43 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
 
           {/* Actions */}
           <div className="flex gap-2 flex-wrap">
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => setPaymentDialogOpen(true)}
-              className="bg-gray-700 text-gray-100 border-gray-600 hover:bg-gray-600"
-            >
-              <CreditCard className="w-4 h-4 ml-2" />
-              {t('clients.createPaymentLink')}
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline"
-              className="bg-gray-700 text-gray-100 border-gray-600 hover:bg-gray-600"
-            >
-              <MessageSquare className="w-4 h-4 ml-2" />
-              {t('clients.sendSMS')}
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={() => setVisitDialogOpen(true)}
-              className="bg-gray-700 text-gray-100 border-gray-600 hover:bg-gray-600"
-            >
-              <Calendar className="w-4 h-4 ml-2" />
-              {t('clients.addVisit')}
-            </Button>
+            {/* Payment Link - только если payments enabled */}
+            {paymentsEnabled && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setPaymentDialogOpen(true)}
+                className="bg-gray-700 text-gray-100 border-gray-600 hover:bg-gray-600"
+              >
+                <CreditCard className="w-4 h-4 ml-2" />
+                {t('clients.createPaymentLink')}
+              </Button>
+            )}
+            
+            {/* SMS - только если sms enabled */}
+            {smsEnabled && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="bg-gray-700 text-gray-100 border-gray-600 hover:bg-gray-600"
+              >
+                <MessageSquare className="w-4 h-4 ml-2" />
+                {t('clients.sendSMS')}
+              </Button>
+            )}
+            
+            {/* Add Visit - только если visits enabled */}
+            {visitsEnabled && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setVisitDialogOpen(true)}
+                className="bg-gray-700 text-gray-100 border-gray-600 hover:bg-gray-600"
+              >
+                <Calendar className="w-4 h-4 ml-2" />
+                {t('clients.addVisit')}
+              </Button>
+            )}
             
             {/* GDPR Delete - Owner only */}
             {role === 'owner' && (

@@ -73,7 +73,7 @@ export default function AdminLayout({
         </aside>
 
         {/* Main Content — ВТОРОЙ для RTL (отображается слева), scrollable */}
-        <main className="flex-1 overflow-y-auto pt-16 lg:pt-0 min-h-screen">
+        <main className="flex-1 overflow-y-auto pt-4 lg:pt-6 min-h-screen">
           <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
             {children}
           </div>

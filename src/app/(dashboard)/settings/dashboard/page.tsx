@@ -9,12 +9,16 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
+import { useOrganization } from '@/hooks/useOrganization'
+import { useDemoMode } from '@/hooks/useDemoMode'
 
 export default function DashboardSettingsPage() {
   const router = useRouter()
   const { t, dir } = useLanguage()
   const { orgId } = useAuth()
   const queryClient = useQueryClient()
+  const { data: organization } = useOrganization()
+  const { isDemo } = useDemoMode()
 
   const [showCharts, setShowCharts] = useState({
     revenue: true,
@@ -23,6 +27,10 @@ export default function DashboardSettingsPage() {
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  
+  // Check if statistics module is enabled
+  const enabledModules = organization?.features?.modules || {}
+  const statisticsEnabled = enabledModules.statistics !== false && !isDemo
 
   // Load settings function (extracted for reuse)
   const loadSettings = async () => {
@@ -136,18 +144,19 @@ export default function DashboardSettingsPage() {
         </div>
       </div>
 
-      {/* Charts Settings */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            {t('dashboard.chartsOnDashboard')}
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {t('dashboard.chartsDescription')}
-          </p>
-        </div>
+      {/* Charts Settings - Only show if statistics module is enabled */}
+      {statisticsEnabled && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              {t('dashboard.chartsOnDashboard')}
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {t('dashboard.chartsDescription')}
+            </p>
+          </div>
 
-        <div className="space-y-4">
+          <div className="space-y-4">
           {/* Revenue Chart Toggle */}
           <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
             <div className="flex-1">
@@ -196,14 +205,15 @@ export default function DashboardSettingsPage() {
             />
           </div>
         </div>
+        
+        {/* Info Card */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+          <p className="text-sm text-blue-900 dark:text-blue-200">
+            💡 {t('dashboard.chartsInfo')}
+          </p>
+        </div>
       </div>
-
-      {/* Info Card */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
-        <p className="text-sm text-blue-900 dark:text-blue-200">
-          💡 {t('dashboard.chartsInfo')}
-        </p>
-      </div>
+      )}
 
       {/* Save Button */}
       <div className="flex justify-end">

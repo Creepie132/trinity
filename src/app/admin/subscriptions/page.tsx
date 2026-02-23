@@ -21,6 +21,8 @@ interface Organization {
   subscription_expires_at: string | null
   owner_name: string
   owner_email: string
+  phone: string
+  display_name: string
 }
 
 interface AccessRequest {
@@ -53,6 +55,7 @@ export default function AdminSubscriptionsPage() {
       name: 'שם',
       owner: 'בעלים',
       email: 'אימייל',
+      phone: 'טלפון',
       status: 'סטטוס',
       expires: 'תוקף',
       actions: 'פעולות',
@@ -81,6 +84,7 @@ export default function AdminSubscriptionsPage() {
       name: 'Название',
       owner: 'Владелец',
       email: 'Email',
+      phone: 'Телефон',
       status: 'Статус',
       expires: 'Истекает',
       actions: 'Действия',
@@ -118,6 +122,7 @@ export default function AdminSubscriptionsPage() {
         .select(`
           id,
           name,
+          features,
           subscription_status,
           subscription_expires_at,
           org_users!inner (
@@ -131,14 +136,19 @@ export default function AdminSubscriptionsPage() {
         `)
         .eq('org_users.role', 'owner')
 
-      const formattedOrgs = orgs?.map((org: any) => ({
-        id: org.id,
-        name: org.name,
-        subscription_status: org.subscription_status || 'none',
-        subscription_expires_at: org.subscription_expires_at,
-        owner_name: org.org_users[0]?.profiles?.full_name || 'Unknown',
-        owner_email: org.org_users[0]?.profiles?.email || 'Unknown',
-      })) || []
+      const formattedOrgs = orgs?.map((org: any) => {
+        const businessInfo = org.features?.business_info || {}
+        return {
+          id: org.id,
+          name: org.name,
+          display_name: businessInfo.display_name || org.name,
+          subscription_status: org.subscription_status || 'none',
+          subscription_expires_at: org.subscription_expires_at,
+          owner_name: businessInfo.owner_name || org.org_users[0]?.profiles?.full_name || '—',
+          owner_email: org.org_users[0]?.profiles?.email || '—',
+          phone: businessInfo.mobile || '—',
+        }
+      }) || []
 
       setOrganizations(formattedOrgs)
 
@@ -347,6 +357,7 @@ export default function AdminSubscriptionsPage() {
                 <tr className="border-b">
                   <th className="text-start p-3">{t.name}</th>
                   <th className="text-start p-3">{t.owner}</th>
+                  <th className="text-start p-3">{t.phone}</th>
                   <th className="text-start p-3">{t.email}</th>
                   <th className="text-start p-3">{t.status}</th>
                   <th className="text-start p-3">{t.expires}</th>
@@ -356,8 +367,9 @@ export default function AdminSubscriptionsPage() {
               <tbody>
                 {organizations.map((org) => (
                   <tr key={org.id} className="border-b">
-                    <td className="p-3">{org.name}</td>
+                    <td className="p-3">{org.display_name}</td>
                     <td className="p-3">{org.owner_name}</td>
+                    <td className="p-3 whitespace-nowrap">{org.phone}</td>
                     <td className="p-3">{org.owner_email}</td>
                     <td className="p-3">{getStatusBadge(org.subscription_status)}</td>
                     <td className="p-3">

@@ -681,8 +681,27 @@ export default function VisitsPage() {
                     {scheduledVisits.map((visit) => (
                       <VisitCard
                         key={visit.id}
-                        visit={visit}
-                        onComplete={handleCompleteVisit}
+                        visit={{
+                          id: visit.id,
+                          client_name: visit.clients ? `${visit.clients.first_name} ${visit.clients.last_name}`.trim() : undefined,
+                          client_phone: visit.clients?.phone,
+                          service_name: getServiceLabel(visit.service_type),
+                          start_time: visit.scheduled_at,
+                          duration: visit.duration_minutes,
+                          status: visit.status,
+                          notes: visit.notes || undefined,
+                          price: visit.price,
+                          created_at: visit.created_at,
+                          clients: visit.clients,
+                          service_type: visit.service_type,
+                          duration_minutes: visit.duration_minutes,
+                          scheduled_at: visit.scheduled_at,
+                        }}
+                        locale={language === 'he' ? 'he' : 'ru'}
+                        isMeetingMode={meetingMode.isMeetingMode}
+                        onStart={handleStartVisit}
+                        onComplete={() => handleCompleteVisit(visit)}
+                        onCancel={handleCancelVisit}
                       />
                     ))}
                   </>
@@ -697,8 +716,27 @@ export default function VisitsPage() {
                     {completedVisits.map((visit) => (
                       <VisitCard
                         key={visit.id}
-                        visit={visit}
-                        onComplete={handleCompleteVisit}
+                        visit={{
+                          id: visit.id,
+                          client_name: visit.clients ? `${visit.clients.first_name} ${visit.clients.last_name}`.trim() : undefined,
+                          client_phone: visit.clients?.phone,
+                          service_name: getServiceLabel(visit.service_type),
+                          start_time: visit.scheduled_at,
+                          duration: visit.duration_minutes,
+                          status: visit.status,
+                          notes: visit.notes || undefined,
+                          price: visit.price,
+                          created_at: visit.created_at,
+                          clients: visit.clients,
+                          service_type: visit.service_type,
+                          duration_minutes: visit.duration_minutes,
+                          scheduled_at: visit.scheduled_at,
+                        }}
+                        locale={language === 'he' ? 'he' : 'ru'}
+                        isMeetingMode={meetingMode.isMeetingMode}
+                        onStart={handleStartVisit}
+                        onComplete={() => handleCompleteVisit(visit)}
+                        onCancel={handleCancelVisit}
                       />
                     ))}
                   </>
@@ -710,12 +748,31 @@ export default function VisitsPage() {
                     <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-2 py-2 bg-gray-50 dark:bg-gray-900 rounded mt-4">
                       {language === 'he' ? 'בוטלו' : language === 'ru' ? 'Отменённые' : 'Cancelled'}
                     </h3>
-                    <div className="opacity-60 space-y-3">
+                    <div className="space-y-3">
                       {cancelledVisits.map((visit) => (
                         <VisitCard
                           key={visit.id}
-                          visit={visit}
-                          onComplete={handleCompleteVisit}
+                          visit={{
+                            id: visit.id,
+                            client_name: visit.clients ? `${visit.clients.first_name} ${visit.clients.last_name}`.trim() : undefined,
+                            client_phone: visit.clients?.phone,
+                            service_name: getServiceLabel(visit.service_type),
+                            start_time: visit.scheduled_at,
+                            duration: visit.duration_minutes,
+                            status: visit.status,
+                            notes: visit.notes || undefined,
+                            price: visit.price,
+                            created_at: visit.created_at,
+                            clients: visit.clients,
+                            service_type: visit.service_type,
+                            duration_minutes: visit.duration_minutes,
+                            scheduled_at: visit.scheduled_at,
+                          }}
+                          locale={language === 'he' ? 'he' : 'ru'}
+                          isMeetingMode={meetingMode.isMeetingMode}
+                          onStart={handleStartVisit}
+                          onComplete={() => handleCompleteVisit(visit)}
+                          onCancel={handleCancelVisit}
                         />
                       ))}
                     </div>

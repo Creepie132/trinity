@@ -1,136 +1,252 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useUpdateVisitStatus } from '@/hooks/useVisitServices';
-import { Visit } from '@/types/visits';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Play, Clock, DollarSign, User } from 'lucide-react';
-import { ActiveVisitCard } from './ActiveVisitCard';
-import { toast } from 'sonner';
+import { useState } from 'react'
+import { Clock, User, ChevronRight, Play, CheckCircle, X, Phone, MessageCircle } from 'lucide-react'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 interface VisitCardProps {
-  visit: Visit;
-  onComplete: (visit: Visit) => void;
+  visit: {
+    id: string
+    client_name?: string
+    client_phone?: string
+    service_name?: string
+    start_time: string
+    duration?: number
+    status: string // scheduled | in_progress | completed | cancelled
+    notes?: string
+    price?: number
+    created_at?: string
+    clients?: {
+      first_name?: string
+      last_name?: string
+      phone?: string
+    }
+    service_type?: string
+    duration_minutes?: number
+    scheduled_at?: string
+  }
+  locale: 'he' | 'ru'
+  isMeetingMode?: boolean
+  onStart?: (id: string) => void
+  onComplete?: (id: string) => void
+  onCancel?: (id: string) => void
 }
 
-export function VisitCard({ visit, onComplete }: VisitCardProps) {
-  const { t, language } = useLanguage();
-  const updateStatus = useUpdateVisitStatus(visit.id);
-  const [showActive, setShowActive] = useState(false);
+const STATUS_LABELS: Record<string, { he: string; ru: string }> = {
+  scheduled: { he: 'מתוכנן', ru: 'Запланирован' },
+  in_progress: { he: 'בתהליך', ru: 'В процессе' },
+  completed: { he: 'הושלם', ru: 'Завершён' },
+  cancelled: { he: 'בוטל', ru: 'Отменён' },
+}
 
-  const handleStartVisit = async () => {
-    try {
-      await updateStatus.mutateAsync('in_progress');
-      toast.success(t('visits.startVisit') + ' ✓');
-      setShowActive(true);
-    } catch (error) {
-      console.error('Error starting visit:', error);
-      toast.error(t('errors.somethingWentWrong'));
-    }
-  };
+export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, onCancel }: VisitCardProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
-  const handleFinish = () => {
-    setShowActive(false);
-    onComplete(visit);
-  };
+  // Parse time and date
+  const startTime = visit.start_time || visit.scheduled_at || ''
+  const time = startTime
+    ? new Date(startTime).toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '--:--'
 
-  // Show active visit card for in_progress visits
-  if (visit.status === 'in_progress' || showActive) {
-    return <ActiveVisitCard visit={visit} onFinish={handleFinish} />;
-  }
+  const date = startTime
+    ? new Date(startTime).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU', {
+        day: 'numeric',
+        month: 'short',
+      })
+    : ''
 
-  // Regular visit card
-  const clientName = `${visit.clients?.first_name} ${visit.clients?.last_name}`;
-  const statusColors = {
-    scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  };
+  // Client info
+  const clientName =
+    visit.client_name ||
+    (visit.clients ? `${visit.clients.first_name || ''} ${visit.clients.last_name || ''}`.trim() : null) ||
+    (locale === 'he' ? 'לקוח' : 'Клиент')
 
-  const statusColor = statusColors[visit.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800';
+  const clientPhone = visit.client_phone || visit.clients?.phone || null
+
+  const serviceName = visit.service_name || visit.service_type || ''
+  const duration = visit.duration || visit.duration_minutes || 0
+
+  const statusLabel = STATUS_LABELS[visit.status]?.[locale] || visit.status
+
+  const isActive = visit.status === 'scheduled' || visit.status === 'in_progress'
+  const isCancelled = visit.status === 'cancelled'
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <User className="w-5 h-5 text-gray-400" />
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-              {clientName}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {visit.service_type}
-            </p>
+    <>
+      {/* Компактная карточка */}
+      <div
+        onClick={() => setDrawerOpen(true)}
+        className={`bg-card border rounded-xl mb-2 active:bg-muted/50 transition cursor-pointer ${
+          isCancelled ? 'opacity-50' : ''
+        } ${visit.status === 'in_progress' ? 'border-amber-300 dark:border-amber-700' : ''}`}
+      >
+        <div className="flex items-stretch">
+          {/* Левая часть — Таймлайн */}
+          <div
+            className={`flex flex-col items-center justify-center px-4 py-3 border-e ${
+              visit.status === 'in_progress'
+                ? 'bg-amber-50 dark:bg-amber-900/20'
+                : visit.status === 'completed'
+                ? 'bg-green-50 dark:bg-green-900/20'
+                : 'bg-muted/30'
+            }`}
+            style={{ minWidth: '72px' }}
+          >
+            <span className="text-lg font-bold">{time}</span>
+            {duration > 0 && !isMeetingMode && (
+              <span className="text-xs text-muted-foreground">
+                {duration} {locale === 'he' ? "ד'" : 'мин'}
+              </span>
+            )}
+          </div>
+
+          {/* Центр — Информация */}
+          <div className="flex-1 py-3 px-3 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-sm truncate text-start">{clientName}</p>
+                {serviceName && (
+                  <p className="text-xs text-muted-foreground truncate mt-0.5 text-start">{serviceName}</p>
+                )}
+              </div>
+
+              {/* Правая часть — Статус + шеврон */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <StatusBadge status={visit.status} label={statusLabel} />
+                <ChevronRight size={16} className="text-muted-foreground" />
+              </div>
+            </div>
+
+            {/* Цена если есть */}
+            {visit.price != null && visit.price > 0 && (
+              <p className="text-xs font-medium text-primary mt-1 text-start">₪{visit.price}</p>
+            )}
           </div>
         </div>
-        <div className="flex flex-col gap-1 items-end">
-          <Badge className={statusColor}>
-            {t(`visits.status.${visit.status}`)}
-          </Badge>
-          {visit.source === 'online_booking' && (
-            <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 text-xs">
-              {language === 'he' ? 'אונליין' : language === 'ru' ? 'Онлайн' : 'Online'}
-            </Badge>
+      </div>
+
+      {/* Bottom Drawer с деталями */}
+      <TrinityBottomDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={clientName}
+      >
+        {/* Статус бейдж */}
+        <div className="mb-4">
+          <StatusBadge status={visit.status} label={statusLabel} />
+        </div>
+
+        {/* Детали */}
+        <div className="space-y-1">
+          <div className="flex justify-between py-2.5 border-b border-muted">
+            <span className="text-sm text-muted-foreground">{locale === 'he' ? 'תאריך' : 'Дата'}</span>
+            <span className="text-sm font-medium text-start">{date}</span>
+          </div>
+
+          <div className="flex justify-between py-2.5 border-b border-muted">
+            <span className="text-sm text-muted-foreground">{locale === 'he' ? 'שעה' : 'Время'}</span>
+            <span className="text-sm font-medium text-start">{time}</span>
+          </div>
+
+          {duration > 0 && !isMeetingMode && (
+            <div className="flex justify-between py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{locale === 'he' ? 'משך' : 'Длительность'}</span>
+              <span className="text-sm text-start">
+                {duration} {locale === 'he' ? 'דקות' : 'мин'}
+              </span>
+            </div>
+          )}
+
+          {serviceName && (
+            <div className="flex justify-between py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{locale === 'he' ? 'שירות' : 'Услуга'}</span>
+              <span className="text-sm text-start">{serviceName}</span>
+            </div>
+          )}
+
+          {visit.price != null && (
+            <div className="flex justify-between py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{locale === 'he' ? 'מחיר' : 'Цена'}</span>
+              <span className="text-sm font-bold text-start">₪{visit.price}</span>
+            </div>
+          )}
+
+          {visit.notes && (
+            <div className="py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground block mb-1">{locale === 'he' ? 'הערות' : 'Заметки'}</span>
+              <p className="text-sm text-start">{visit.notes}</p>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Details */}
-      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
-        <div className="flex items-center gap-1">
-          <Clock className="w-4 h-4" />
-          {visit.duration_minutes} {t('common.minutes')}
-        </div>
-        <div className="flex items-center gap-1">
-          <DollarSign className="w-4 h-4" />
-          ₪{visit.price?.toFixed(2) || '0.00'}
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-2">
-        {visit.status === 'scheduled' && (
-          <>
-            <Button
-              onClick={handleStartVisit}
-              disabled={updateStatus.isPending}
-              className="flex-1 bg-green-600 hover:bg-green-700"
-              size="sm"
+        {/* Контакт клиента */}
+        {clientPhone && (
+          <div className="flex gap-2 mt-4">
+            <a
+              href={`tel:${clientPhone}`}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-sm font-medium"
             >
-              <Play className="w-4 h-4 mr-2" />
-              {t('visits.startVisit')}
-            </Button>
-            <Button
-              onClick={() => onComplete(visit)}
-              variant="outline"
-              size="sm"
+              <Phone size={16} />
+              {locale === 'he' ? 'התקשר' : 'Позвонить'}
+            </a>
+            <a
+              href={`https://wa.me/${clientPhone.replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 text-sm font-medium"
             >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              {t('visits.complete')}
-            </Button>
-          </>
+              <MessageCircle size={16} />
+              WhatsApp
+            </a>
+          </div>
         )}
 
-        {visit.status === 'completed' && (
-          <Button
-            onClick={() => onComplete(visit)}
-            variant="outline"
-            size="sm"
-            className="w-full"
-          >
-            {t('visits.viewDetails')}
-          </Button>
-        )}
-      </div>
+        {/* Кнопки действий — outline стиль, в одну строку */}
+        <div className="flex gap-2 mt-4">
+          {visit.status === 'scheduled' && onStart && (
+            <button
+              onClick={() => {
+                onStart(visit.id)
+                setDrawerOpen(false)
+              }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-amber-500 text-amber-600 dark:text-amber-400 font-medium text-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition"
+            >
+              <Play size={16} />
+              {locale === 'he' ? 'התחל' : 'Начать'}
+            </button>
+          )}
 
-      {visit.notes && (
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-          {visit.notes}
-        </p>
-      )}
-    </div>
-  );
+          {visit.status === 'in_progress' && onComplete && (
+            <button
+              onClick={() => {
+                onComplete(visit.id)
+                setDrawerOpen(false)
+              }}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-green-500 text-green-600 dark:text-green-400 font-medium text-sm hover:bg-green-50 dark:hover:bg-green-900/20 transition"
+            >
+              <CheckCircle size={16} />
+              {locale === 'he' ? 'סיים' : 'Завершить'}
+            </button>
+          )}
+
+          {isActive && onCancel && (
+            <button
+              onClick={() => {
+                onCancel(visit.id)
+                setDrawerOpen(false)
+              }}
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-muted text-muted-foreground text-sm hover:bg-muted/50 transition"
+            >
+              <X size={16} />
+              {locale === 'he' ? 'בטל' : 'Отмена'}
+            </button>
+          )}
+        </div>
+      </TrinityBottomDrawer>
+    </>
+  )
 }

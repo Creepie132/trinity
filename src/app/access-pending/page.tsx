@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Clock, Mail, CheckCircle2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { toast } from 'sonner'
 
 export default function AccessPendingPage() {
   const router = useRouter()
@@ -92,34 +93,28 @@ export default function AccessPendingPage() {
   const handleRefreshStatus = async () => {
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        router.push('/login')
-        return
-      }
+      const response = await fetch('/api/access/check')
+      const data = await response.json()
 
-      // Check if user now has access
-      const { data: orgUser } = await supabase
-        .from('org_users')
-        .select('org_id, organizations(subscription_status, subscription_expires_at)')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      const org: any = orgUser?.organizations
-      const now = new Date()
-
-      const hasAccess = org && (
-        org.subscription_status === 'active' ||
-        (org.subscription_status === 'trial' && new Date(org.subscription_expires_at) > now) ||
-        (org.subscription_status === 'manual' && new Date(org.subscription_expires_at) > now)
-      )
-
-      if (hasAccess) {
-        router.push('/dashboard')
+      if (data.hasAccess) {
+        toast.success(
+          language === 'he' ? '✅ הגישה אושרה!' : '✅ Доступ одобрен!',
+          { duration: 2000 }
+        )
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 500)
+      } else {
+        toast.info(
+          language === 'he' ? 'הבקשה עדיין בבדיקה' : 'Заявка ещё на рассмотрении',
+          { duration: 3000 }
+        )
       }
     } catch (error) {
       console.error('Error checking access status:', error)
+      toast.error(
+        language === 'he' ? 'שגיאה בבדיקת סטטוס' : 'Ошибка проверки статуса'
+      )
     } finally {
       setLoading(false)
     }

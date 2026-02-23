@@ -32,11 +32,11 @@ export async function GET(request: NextRequest) {
 
   if (!accessRequest) {
     return new Response(
-      `<html><body style="font-family:sans-serif;text-align:center;padding:50px">
+      `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">
         <h2>❌ Запрос не найден или уже обработан</h2>
         <p>Request not found or already processed</p>
       </body></html>`,
-      { headers: { 'Content-Type': 'text/html' } }
+      { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     )
   }
 
@@ -76,13 +76,13 @@ export async function GET(request: NextRequest) {
     }
 
     return new Response(
-      `<html><body style="font-family:sans-serif;text-align:center;padding:50px">
+      `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">
         <h2 style="color:green">✅ Доступ одобрен / Access Approved</h2>
         <p><strong>${accessRequest.email}</strong> получил доступ на 14 дней</p>
         <p>До: ${expiresAt.toLocaleDateString('ru-RU', { timeZone: 'Asia/Jerusalem' })}</p>
         <p>Until: ${expiresAt.toLocaleDateString('en-US', { timeZone: 'Asia/Jerusalem' })}</p>
       </body></html>`,
-      { headers: { 'Content-Type': 'text/html' } }
+      { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     )
   } else if (action === 'reject') {
     await supabaseAdmin
@@ -96,11 +96,11 @@ export async function GET(request: NextRequest) {
     console.log('Request rejected')
 
     return new Response(
-      `<html><body style="font-family:sans-serif;text-align:center;padding:50px">
+      `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">
         <h2 style="color:red">❌ Доступ отклонён / Access Rejected</h2>
         <p><strong>${accessRequest.email}</strong></p>
       </body></html>`,
-      { headers: { 'Content-Type': 'text/html' } }
+      { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     )
   }
 

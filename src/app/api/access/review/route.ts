@@ -126,13 +126,35 @@ export async function GET(request: NextRequest) {
       console.log('Created organization:', orgId)
 
       // Link user to organization
-      await supabaseAdmin
+      console.log('=== INSERTING ORG_USER ===')
+      console.log('userId:', userId, 'type:', typeof userId)
+      console.log('orgId:', orgId, 'type:', typeof orgId)
+      console.log('email:', accessRequest.email)
+      console.log('role:', 'owner')
+      
+      const { data: orgUserResult, error: orgUserError } = await supabaseAdmin
         .from('org_users')
         .insert({
           user_id: userId,
           org_id: orgId,
+          email: accessRequest.email,
           role: 'owner',
         })
+        .select()
+      
+      console.log('org_users insert result:', JSON.stringify(orgUserResult))
+      console.log('org_users insert error:', JSON.stringify(orgUserError))
+      
+      if (orgUserError) {
+        console.error('CRITICAL: Failed to link user to org:', orgUserError)
+        return new Response(
+          `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">
+            <h2 style="color:red">❌ Error linking user</h2>
+            <p>${orgUserError.message}</p>
+          </body></html>`,
+          { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+        )
+      }
 
       console.log('User linked to organization as owner')
     } else {

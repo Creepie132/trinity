@@ -5,8 +5,342 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-21 10:30 UTC  
-**Версия:** 2.33.0
+**Последнее обновление:** 2026-02-23 20:37 UTC  
+**Версия:** 2.35.0
+
+---
+
+## 🔧 ОБНОВЛЕНИЯ v2.35.0 (2026-02-23) - Mobile UI Consolidation & Redesign 📱
+
+### ✅ 1. Mobile Dashboard Improvements (commit e6f0fe6)
+
+**Цель:** Улучшить UX мобильного дашборда с компактными KPI карточками, empty states и DEMO баннером.
+
+**Реализовано:**
+
+**KPI Карточки (StatsCardsClient.tsx):**
+- Новый дизайн с цветными иконками в кружках (8×8px rounded-lg)
+- Процент изменения с TrendingUp/TrendingDown иконками
+- Сетка 2 колонки (вместо 4) на всех экранах
+- Убраны Card компоненты для компактности
+- Цветовая схема:
+  - Клиенты: blue-50 / blue-600
+  - Визиты: green-50 / green-600
+  - Выручка: purple-50 / purple-600
+  - Средний чек: amber-50 / amber-600
+
+**Empty State для "Сегодня" (TodayBlockClient.tsx):**
+- EmptyState компонент вместо простого текста
+- Иконка CalendarCheck
+- Заголовок + описание + кнопка действия
+- Клик → навигация на /visits
+
+**Компактный DEMO баннер (DashboardWrapper.tsx):**
+- Градиентный дизайн (from-red-500 to-amber-500)
+- Badge "DEMO" с прозрачным фоном (bg-white/20)
+- Компактный прогресс-бар клиентов (w-16, h-1.5)
+- Маленькая кнопка "שדרג" / "Upgrade" (text-xs)
+- Вся информация в одной строке (flex items-center justify-between)
+
+**Files Changed:**
+- ✅ `src/components/dashboard/StatsCardsClient.tsx`
+- ✅ `src/components/dashboard/TodayBlockClient.tsx`
+- ✅ `src/components/dashboard/DashboardWrapper.tsx`
+
+---
+
+### ✅ 2. Duration Optional in Meeting Mode (commit 10af42f)
+
+**Цель:** Исправить ошибку "Duration: Number must be greater than 1" при создании встречи в meeting mode.
+
+**Проблема:** В режиме встреч (meeting_mode = true) поле duration не нужно, но валидация требовала min(1).
+
+**Решение:**
+
+**Валидация в validations.ts:**
+```typescript
+// БЫЛО
+duration: z.coerce.number().int().min(1).max(480).optional()
+
+// СТАЛО
+duration: z.coerce.number().int().max(480).optional().nullable()
+```
+
+**CreateVisitDialog.tsx:**
+```typescript
+// В meeting mode отправляем null вместо 0
+duration: meetingMode.isMeetingMode ? null : formData.duration
+```
+
+**API `/api/visits/route.ts`:**
+- Проверка meeting_mode из organization.features
+- Условная валидация price (не требуется в meeting mode)
+- Правильная обработка null duration:
+  ```typescript
+  duration_minutes: duration !== null && duration !== undefined 
+    ? (typeof duration === 'number' ? duration : parseInt(duration))
+    : (isMeetingMode ? null : 60)
+  ```
+
+**Files Changed:**
+- ✅ `src/lib/validations.ts` - duration.optional().nullable()
+- ✅ `src/components/visits/CreateVisitDialog.tsx` - null в meeting mode
+- ✅ `src/app/api/visits/route.ts` - условная валидация
+
+---
+
+### ✅ 3. Payment Card Data Hierarchy Refactor (commit 3322f4c)
+
+**Цель:** Реорганизовать иерархию данных в карточках платежей - имя клиента как основной заголовок.
+
+**Было:**
+- Header: "—" (пусто)
+- Subtext: "Наличные - Владислав Халфин"
+
+**Стало:**
+- Header: **Владислав Халфин** (крупно, font-semibold)
+- Subtext: Наличные — #3322f4c8 (мелко, text-muted-foreground)
+
+**Логика парсинга:**
+```typescript
+function parsePaymentInfo(description, payment) {
+  // Приоритет 1: отдельные поля
+  if (payment.client_name || payment.client) {
+    return { clientName, subtitle: formatSubtitle(payment) }
+  }
+  
+  // Приоритет 2: парсинг строки "Наличные - Владислав Халфин"
+  if (description && description.includes(' - ')) {
+    const parts = description.split(' - ')
+    const method = parts[0].trim()
+    const name = parts.slice(1).join(' - ').trim()
+    return { clientName: name, subtitle: formatSubtitle({ ...payment, parsedMethod: method }) }
+  }
+  
+  return { clientName: description || '—', subtitle: formatSubtitle(payment) }
+}
+
+function formatSubtitle(payment) {
+  const methodLabels = {
+    cash: { he: 'מזומן', ru: 'Наличные' },
+    card: { he: 'כרטיס', ru: 'Карта' },
+    transfer: { he: 'העברה', ru: 'Перевод' },
+    bit: { he: 'ביט', ru: 'Bit' },
+  }
+  
+  const method = payment.parsedMethod || methodLabels[payment.method]?.[locale] || payment.method
+  const number = payment.id ? `#${payment.id.slice(0, 8)}` : ''
+  
+  return [method, number].filter(Boolean).join(' — ')
+}
+```
+
+**Применено:**
+- Мобильная карточка (PaymentCard.tsx)
+- Десктопная таблица (payments/page.tsx)
+- Bottom Drawer: Title = clientName, обновленный порядок полей
+
+**RTL Improvements:**
+- Все текстовые контейнеры: `min-w-0` для корректного truncate
+- Используется `text-start` вместо `text-left` (логическое свойство)
+- Используется `ms-3` вместо `ml-3` (margin-inline-start)
+
+**Files Changed:**
+- ✅ `src/components/payments/PaymentCard.tsx`
+- ✅ `src/app/(dashboard)/payments/page.tsx`
+
+---
+
+### ✅ 4. Mobile Visit Cards Timeline Redesign (commit e80d9a2)
+
+**Цель:** Редизайн мобильных карточек визитов с timeline layout и компактным дизайном.
+
+**Новый дизайн:**
+
+```
+┌────────────────────────────────────────┐
+│ 14:30  │  Владислав Халфин      📋 →  │
+│  60м   │  Стрижка + Окрашивание       │
+│        │  ₪150                         │
+└────────────────────────────────────────┘
+```
+
+**Структура:**
+- **Левая секция - таймлайн** (72px min-width):
+  - Время крупно (text-lg font-bold)
+  - Длительность мелко (text-xs) если не meeting mode
+  - Цвет фона по статусу:
+    - in_progress: amber-50 / amber-900/20
+    - completed: green-50 / green-900/20
+    - scheduled: muted/30
+- **Центр - информация** (flex-1):
+  - Имя клиента (font-semibold, truncate)
+  - Услуга (text-xs, text-muted-foreground, truncate)
+  - Цена внизу (text-xs, text-primary)
+- **Справа** (flex-shrink-0):
+  - StatusBadge
+  - ChevronRight icon
+
+**TrinityBottomDrawer:**
+- Title: clientName
+- Детали: Дата, время, длительность, услуга, цена, заметки
+- Контактные кнопки: Phone + WhatsApp (если есть номер)
+- Outline кнопки действий:
+  - Начать (scheduled) - border-2 border-amber-500
+  - Завершить (in_progress) - border-2 border-green-500
+  - Отмена - border border-muted
+
+**New Component:**
+- ✅ `src/components/visits/VisitCard.tsx` - NEW
+
+**Files Changed:**
+- ✅ `src/app/(dashboard)/visits/page.tsx` - Применён VisitCard на мобильном
+- ✅ Передача всех props: locale, isMeetingMode, обработчики (onStart, onComplete, onCancel)
+
+---
+
+### ✅ 5. Client Bottom Sheet Consolidation (commit 81869c6)
+
+**Цель:** Консолидировать опыт клиента на мобильном с таб-навигацией и GDPR удалением.
+
+**Проблема:** Дублирование логики - ClientCard имел локальный BottomSheet, ClientSheet - полный Sheet с табами.
+
+**Решение:**
+
+**New Component: ClientBottomSheet.tsx**
+
+**Структура:**
+- Таб-навигация: Main, Visits, Payments, SMS, GDPR
+- State management для активного таба
+- Загрузка данных через API endpoints
+
+**Main Tab:**
+```
+┌─────────────────────────────────────┐
+│         [Аватар VK]                 │
+│      Владислав Халфин               │
+│      +972-54-485-8586               │
+│      vlad@amber.com                 │
+├─────────────────────────────────────┤
+│   [📞]    [💬 WhatsApp]   [✏️]     │
+├─────────────────────────────────────┤
+│    25          │      12 фев        │
+│  Визитов       │    Последний       │
+├─────────────────────────────────────┤
+│  📅 Визиты  │  💰 Платежи         │
+│  💬 SMS      │  🗑️ GDPR            │
+└─────────────────────────────────────┘
+```
+
+**Навигация 2×2:**
+- Визиты (amber) → loadVisits() → fetch `/api/clients/[id]/visits`
+- Платежи (green) → loadPayments() → fetch `/api/clients/[id]/payments`
+- SMS (blue) → "Скоро..."
+- GDPR (red) → Удаление с двойным подтверждением
+
+**Visits Tab:**
+- История визитов (последние 20)
+- Карточки: service_type, дата, цена, StatusBadge
+- Состояния: loading / empty / data
+
+**Payments Tab:**
+- История платежей (последние 20)
+- Карточки: description, дата, amount, StatusBadge
+- Состояния: loading / empty / data
+
+**GDPR Tab:**
+```
+⚠️ Это действие необратимо!
+
+Удаление клиента навсегда удалит все его данные:
+личную информацию, историю визитов, платежей
+и заметки. Восстановление невозможно.
+
+[Удалить клиента (GDPR)]  ← outline red
+
+После клика:
+Уверены? Нажмите ещё раз для подтверждения
+
+[🗑️ Да, удалить навсегда]  ← filled red
+[Отмена]
+```
+
+**RTL-aware Back Button:**
+- Hebrew/Russian: ArrowRight (←)
+- English: ArrowLeft (→)
+
+**ClientCard Refactor:**
+- Убран локальный BottomSheet
+- Только prop `onSelect` для открытия централизованного sheet
+- Компактная карточка с avatar + stats + chevron
+
+**clients/page.tsx Update:**
+- Десктоп: ClientSheet (полная версия)
+- Мобайл: ClientBottomSheet (новый)
+- Передача обработчиков: onEdit, onDelete
+
+**New API Endpoints:**
+```
+GET /api/clients/[id]/visits
+- Returns: последние 20 визитов клиента
+- Fields: id, scheduled_at, duration_minutes, status, notes, price, service_type
+
+GET /api/clients/[id]/payments
+- Returns: последние 20 платежей клиента
+- Fields: id, amount, status, description, payment_method, created_at
+```
+
+**Async Params Fix (Next.js 15+):**
+```typescript
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }  // ← Promise!
+) {
+  const { id } = await params  // ← await params
+  // ...
+}
+```
+
+**New Files:**
+- ✅ `src/components/clients/ClientBottomSheet.tsx` - NEW (450+ lines)
+- ✅ `src/app/api/clients/[id]/visits/route.ts` - NEW
+- ✅ `src/app/api/clients/[id]/payments/route.ts` - NEW
+
+**Files Changed:**
+- ✅ `src/components/clients/ClientCard.tsx` - Убран локальный sheet
+- ✅ `src/app/(dashboard)/clients/page.tsx` - Применён ClientBottomSheet на мобильном
+
+---
+
+### 📋 Summary v2.35.0
+
+**New Components:**
+- 🎨 Mobile KPI cards с компактным дизайном
+- 📅 EmptyState для блока "Сегодня"
+- 🎯 Компактный DEMO баннер
+- 🗓️ VisitCard с timeline layout
+- 👤 ClientBottomSheet с таб-навигацией
+
+**API Endpoints:**
+- ✅ `/api/clients/[id]/visits` - История визитов клиента
+- ✅ `/api/clients/[id]/payments` - История платежей клиента
+
+**Improvements:**
+- 🐛 Duration optional в meeting mode (fix валидации)
+- 🔄 Payment card data hierarchy (имя клиента как header)
+- 📱 Mobile-first дизайн для визитов
+- 🗑️ GDPR удаление клиентов с двойным подтверждением
+- 🎨 Консистентный дизайн всех мобильных компонентов
+- ↔️ RTL-aware компоненты (text-start, ms-*, back arrows)
+
+**Files Modified:** 8 files
+**Files Added:** 3 files
+**Translation Keys:** 0 (используются существующие)
+
+**Next Steps:**
+- [ ] Применить mobile redesign к другим страницам (payments, services)
+- [ ] Тестирование на реальных устройствах
+- [ ] Performance optimization для мобильных компонентов
 
 ---
 
@@ -371,11 +705,11 @@ export const config = {
 
 ---
 
-### 📊 Текущая структура проекта (2026-02-21 10:30 UTC)
+### 📊 Текущая структура проекта (2026-02-23 20:37 UTC)
 
-**Последний коммит:** `2a74c96` - "feat: chat bot FAQ + remove free trial messaging + clean landing"  
+**Последний коммит:** `81869c6` - "feat: consolidated ClientBottomSheet with tabs navigation and GDPR"  
 **Статус деплоя:** ✅ Deployed на Vercel  
-**Build stats:** 57 static pages, 62 API routes
+**Build stats:** 79 static pages, 91 API routes
 
 ```
 clientbase-pro/
@@ -404,11 +738,14 @@ clientbase-pro/
 │   │   │   ├── settings/
 │   │   │   ├── layout.tsx
 │   │   │   └── page.tsx
-│   │   ├── api/                  # API Routes (40+ endpoints)
+│   │   ├── api/                  # API Routes (91 endpoints)
 │   │   │   ├── admin/
 │   │   │   ├── ads/
 │   │   │   ├── booking/
 │   │   │   ├── care-instructions/
+│   │   │   ├── clients/[id]/    # NEW v2.35.0
+│   │   │   │   ├── visits/      # История визитов клиента
+│   │   │   │   └── payments/    # История платежей клиента
 │   │   │   ├── contact/
 │   │   │   ├── health/
 │   │   │   ├── inventory/
@@ -431,26 +768,43 @@ clientbase-pro/
 │   │   ├── page.tsx
 │   │   ├── error.tsx
 │   │   └── not-found.tsx
-│   ├── components/               # React компоненты (50+ файлов)
+│   ├── components/               # React компоненты (60+ файлов)
 │   │   ├── admin/
+│   │   │   └── OrganizationStatsCard.tsx  # Статистика организаций (v2.30.0)
 │   │   ├── ads/
 │   │   ├── birthdays/
 │   │   ├── care-instructions/
 │   │   ├── clients/
+│   │   │   ├── ClientCard.tsx               # Карточка клиента с аватаром (v2.34.0)
+│   │   │   ├── ClientBottomSheet.tsx        # NEW v2.35.0 - табы с GDPR
+│   │   │   └── ClientSheet.tsx              # Полная версия для десктопа
+│   │   ├── dashboard/
+│   │   │   ├── StatsCardsClient.tsx         # KPI cards (v2.35.0)
+│   │   │   ├── TodayBlockClient.tsx         # Empty states (v2.35.0)
+│   │   │   └── DashboardWrapper.tsx         # Компактный DEMO баннер (v2.35.0)
 │   │   ├── inventory/
 │   │   ├── landing/
 │   │   ├── layout/
+│   │   │   └── Sidebar.tsx                  # Навигация с ролями и модулями
 │   │   ├── payments/
+│   │   │   └── PaymentCard.tsx              # Mobile card с иерархией данных (v2.35.0)
 │   │   ├── profile/
 │   │   ├── providers/
 │   │   ├── services/
 │   │   ├── sms/
-│   │   ├── ui/                   # shadcn/ui components
+│   │   ├── ui/                              # shadcn/ui + custom компоненты
+│   │   │   ├── TrinityBottomDrawer.tsx      # Vaul drawer (v2.34.0)
+│   │   │   ├── EmptyState.tsx               # Empty states (v2.34.0)
+│   │   │   ├── StatusBadge.tsx              # Status badges (v2.34.0)
+│   │   │   ├── TrinityDataCard.tsx          # Mobile cards (v2.34.0)
+│   │   │   ├── ResponsiveDataView.tsx       # Table/Card switcher (v2.34.0)
+│   │   │   └── ... (40+ shadcn компонентов)
 │   │   ├── user/
 │   │   ├── visits/
-│   │   ├── AiChatWidget.tsx      # AI Chat с FAQ системой (v2.33.0)
-│   │   ├── ChatButton.tsx        # Lottie анимация
-│   │   ├── ConditionalChatWidget.tsx # Условный рендеринг чата (только landing)
+│   │   │   └── VisitCard.tsx                # NEW v2.35.0 - timeline layout
+│   │   ├── AiChatWidget.tsx                 # AI Chat с FAQ системой (v2.33.0)
+│   │   ├── ChatButton.tsx                   # Lottie анимация
+│   │   ├── ConditionalChatWidget.tsx        # Условный рендеринг чата (только landing)
 │   │   └── ErrorBoundary.tsx
 │   ├── contexts/                 # React Contexts
 │   │   ├── AuthContext.tsx       # Авторизация + role

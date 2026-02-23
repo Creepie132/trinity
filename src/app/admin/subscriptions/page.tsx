@@ -13,16 +13,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
 import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { PLANS, getPlan, type PlanKey } from '@/lib/subscription-plans'
+import { MODULES } from '@/lib/modules-config'
 
 interface Organization {
   id: string
   name: string
+  plan?: string
   subscription_status: string
   subscription_expires_at: string | null
   owner_name: string
   owner_email: string
   phone: string
   display_name: string
+  features?: any
 }
 
 interface AccessRequest {
@@ -46,6 +51,9 @@ export default function AdminSubscriptionsPage() {
   const [extendDialogOpen, setExtendDialogOpen] = useState(false)
   const [newStatus, setNewStatus] = useState<string>('trial')
   const [newExpiryDate, setNewExpiryDate] = useState<string>('')
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('demo')
+  const [customModules, setCustomModules] = useState<Record<string, boolean>>({})
+  const [customClientLimit, setCustomClientLimit] = useState<number>(0)
 
   const translations = {
     he: {
@@ -56,6 +64,7 @@ export default function AdminSubscriptionsPage() {
       owner: 'בעלים',
       email: 'אימייל',
       phone: 'טלפון',
+      plan: 'תוכנית',
       status: 'סטטוס',
       expires: 'תוקף',
       actions: 'פעולות',
@@ -67,6 +76,11 @@ export default function AdminSubscriptionsPage() {
       extendAccess: 'הארכת גישה',
       selectStatus: 'בחר סטטוס',
       expiryDate: 'תאריך תפוגה',
+      selectPlan: 'בחר תוכנית',
+      includedModules: 'מודולים כלולים',
+      clientLimit: 'מגבלת לקוחות',
+      selectModules: 'בחר מודולים',
+      unlimited: 'ללא הגבלה',
       save: 'שמור',
       cancel: 'ביטול',
       statuses: {
@@ -85,6 +99,7 @@ export default function AdminSubscriptionsPage() {
       owner: 'Владелец',
       email: 'Email',
       phone: 'Телефон',
+      plan: 'План',
       status: 'Статус',
       expires: 'Истекает',
       actions: 'Действия',
@@ -96,6 +111,11 @@ export default function AdminSubscriptionsPage() {
       extendAccess: 'Продление доступа',
       selectStatus: 'Выберите статус',
       expiryDate: 'Дата окончания',
+      selectPlan: 'Выберите план',
+      includedModules: 'Включённые модули',
+      clientLimit: 'Лимит клиентов',
+      selectModules: 'Выберите модули',
+      unlimited: 'Безлимит',
       save: 'Сохранить',
       cancel: 'Отмена',
       statuses: {
@@ -122,6 +142,7 @@ export default function AdminSubscriptionsPage() {
         .select(`
           id,
           name,
+          plan,
           features,
           subscription_status,
           subscription_expires_at,
@@ -141,12 +162,14 @@ export default function AdminSubscriptionsPage() {
         return {
           id: org.id,
           name: org.name,
+          plan: org.plan || 'demo',
           display_name: businessInfo.display_name || org.name,
           subscription_status: org.subscription_status || 'none',
           subscription_expires_at: org.subscription_expires_at,
           owner_name: businessInfo.owner_name || org.org_users[0]?.profiles?.full_name || '—',
           owner_email: org.org_users[0]?.profiles?.email || '—',
           phone: businessInfo.mobile || '—',
+          features: org.features,
         }
       }) || []
 
@@ -183,13 +206,52 @@ export default function AdminSubscriptionsPage() {
     }
   }
 
+  const getPlanBadge = (planKey: string) => {
+    const plan = getPlan(planKey as PlanKey)
+    if (!plan) return <Badge variant="outline">—</Badge>
+
+    const colorClasses: Record<string, string> = {
+      red: 'bg-red-500/10 text-red-600 border-red-500/20',
+      blue: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+      amber: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+      green: 'bg-green-500/10 text-green-600 border-green-500/20',
+      purple: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+    }
+
+    return (
+      <Badge className={colorClasses[plan.color] || 'bg-gray-500/10 text-gray-600 border-gray-500/20'}>
+        {language === 'he' ? plan.name_he : plan.name_ru}
+      </Badge>
+    )
+  }
+
   const handleExtend = (org: Organization) => {
     setSelectedOrg(org)
     setNewStatus(org.subscription_status === 'none' ? 'trial' : org.subscription_status)
+    setSelectedPlan((org.plan || 'demo') as PlanKey)
+    
+    // Initialize custom modules from current features
+    const currentModules = org.features?.modules || {}
+    setCustomModules(currentModules)
+    setCustomClientLimit(org.features?.client_limit || 0)
+    
     const defaultDate = new Date()
     defaultDate.setDate(defaultDate.getDate() + 14)
     setNewExpiryDate(defaultDate.toISOString().split('T')[0])
     setExtendDialogOpen(true)
+  }
+
+  const handlePlanChange = (planKey: PlanKey) => {
+    setSelectedPlan(planKey)
+    
+    // If not custom, load plan's modules
+    if (planKey !== 'custom') {
+      const plan = getPlan(planKey)
+      if (plan) {
+        setCustomModules(plan.modules)
+        setCustomClientLimit(plan.client_limit || 0)
+      }
+    }
   }
 
   const handleDeactivate = async (orgId: string) => {
@@ -224,11 +286,34 @@ export default function AdminSubscriptionsPage() {
       const expiresAt = new Date(newExpiryDate)
       expiresAt.setHours(23, 59, 59, 999)
 
+      // Get plan configuration
+      const plan = getPlan(selectedPlan)
+      let modules = {}
+      let clientLimit = null
+
+      if (selectedPlan === 'custom') {
+        modules = customModules
+        clientLimit = customClientLimit || null
+      } else if (plan) {
+        modules = plan.modules
+        clientLimit = plan.client_limit
+      }
+
+      // Merge with existing features
+      const currentFeatures = selectedOrg.features || {}
+      const updatedFeatures = {
+        ...currentFeatures,
+        modules: modules,
+        client_limit: clientLimit,
+      }
+
       const response = await fetch('/api/admin/organizations/features', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           org_id: selectedOrg.id,
+          plan: selectedPlan,
+          features: updatedFeatures,
           subscription_update: {
             subscription_status: newStatus,
             subscription_expires_at: expiresAt.toISOString(),
@@ -358,7 +443,7 @@ export default function AdminSubscriptionsPage() {
                   <th className="text-start p-3">{t.name}</th>
                   <th className="text-start p-3">{t.owner}</th>
                   <th className="text-start p-3">{t.phone}</th>
-                  <th className="text-start p-3">{t.email}</th>
+                  <th className="text-start p-3">{t.plan}</th>
                   <th className="text-start p-3">{t.status}</th>
                   <th className="text-start p-3">{t.expires}</th>
                   <th className="text-start p-3">{t.actions}</th>
@@ -370,7 +455,7 @@ export default function AdminSubscriptionsPage() {
                     <td className="p-3">{org.display_name}</td>
                     <td className="p-3">{org.owner_name}</td>
                     <td className="p-3 whitespace-nowrap">{org.phone}</td>
-                    <td className="p-3">{org.owner_email}</td>
+                    <td className="p-3">{getPlanBadge(org.plan || 'demo')}</td>
                     <td className="p-3">{getStatusBadge(org.subscription_status)}</td>
                     <td className="p-3">
                       {org.subscription_expires_at
@@ -414,6 +499,94 @@ export default function AdminSubscriptionsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
+            {/* Plan Selection */}
+            <div>
+              <Label>{t.selectPlan}</Label>
+              <Select value={selectedPlan} onValueChange={handlePlanChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLANS.map((plan) => (
+                    <SelectItem key={plan.key} value={plan.key}>
+                      {language === 'he' ? plan.name_he : plan.name_ru}
+                      {plan.price_monthly !== null && ` — ₪${plan.price_monthly}/мес`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Show modules info for non-custom plans */}
+            {selectedPlan !== 'custom' && (() => {
+              const plan = getPlan(selectedPlan)
+              if (!plan) return null
+              
+              return (
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
+                  <p className="font-medium mb-2">{t.includedModules}:</p>
+                  <div className="space-y-1">
+                    {Object.entries(plan.modules).map(([key, enabled]) => {
+                      const module = MODULES.find((m) => m.key === key)
+                      if (!module) return null
+                      
+                      return (
+                        <div key={key} className="flex items-center gap-2">
+                          <span className={enabled ? 'text-green-500' : 'text-red-400'}>
+                            {enabled ? '✅' : '❌'}
+                          </span>
+                          <span>{language === 'he' ? module.name_he : module.name_ru}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {plan.client_limit !== null && (
+                    <p className="mt-3 text-muted-foreground">
+                      {t.clientLimit}: {plan.client_limit}
+                    </p>
+                  )}
+                  {plan.client_limit === null && (
+                    <p className="mt-3 text-green-600 font-medium">
+                      {t.unlimited}
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
+
+            {/* Custom plan: module toggles */}
+            {selectedPlan === 'custom' && (
+              <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="font-medium mb-3 text-sm">{t.selectModules}:</p>
+                <div className="space-y-2">
+                  {MODULES.map((mod) => (
+                    <div key={mod.key} className="flex items-center justify-between">
+                      <span className="text-sm">
+                        {language === 'he' ? mod.name_he : mod.name_ru}
+                      </span>
+                      <Switch
+                        checked={customModules[mod.key] || false}
+                        onCheckedChange={(val) =>
+                          setCustomModules((prev) => ({ ...prev, [mod.key]: val }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <Label className="text-sm">{t.clientLimit}:</Label>
+                  <Input
+                    type="number"
+                    value={customClientLimit}
+                    onChange={(e) => setCustomClientLimit(parseInt(e.target.value) || 0)}
+                    placeholder="0 = безлимит"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Status & Expiry */}
             <div>
               <Label>{t.selectStatus}</Label>
               <Select value={newStatus} onValueChange={setNewStatus}>

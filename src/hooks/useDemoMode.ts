@@ -5,11 +5,17 @@ import { useOrganization } from '@/hooks/useOrganization'
 export function useDemoMode() {
   const { data: organization } = useOrganization()
 
-  // Check if organization is in trial mode (DEMO)
-  const isDemo = (organization as any)?.subscription_status === 'trial'
+  // Get plan from organization
+  const plan = (organization as any)?.plan || 'demo'
 
-  // Client limit for demo users (10 clients max)
-  const clientLimit = isDemo ? 10 : Infinity
+  // Check if organization is in trial mode (DEMO)
+  const isDemo = plan === 'demo' || (organization as any)?.subscription_status === 'trial'
+
+  // Get client limit from features or default based on plan
+  const featuresClientLimit = (organization as any)?.features?.client_limit
+  const clientLimit = featuresClientLimit !== undefined && featuresClientLimit !== null
+    ? featuresClientLimit
+    : (isDemo ? 10 : null)
 
   // Calculate days left in trial
   const daysLeft = isDemo && (organization as any)?.subscription_expires_at
@@ -24,6 +30,7 @@ export function useDemoMode() {
 
   return {
     isDemo,
+    plan,
     clientLimit,
     daysLeft,
   }

@@ -54,7 +54,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get request body
-    const { org_id, features, subscription_update } = await request.json()
+    const { org_id, features, subscription_update, plan } = await request.json()
 
     if (!org_id) {
       return NextResponse.json(
@@ -63,11 +63,43 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Handle subscription update
+    // Handle subscription update (with optional plan and features update)
     if (subscription_update) {
+      const updateData: any = { ...subscription_update }
+      
+      if (plan) {
+        updateData.plan = plan
+      }
+      
+      // If features are also provided, merge them
+      if (features) {
+        // Read current features first
+        const { data: org, error: readError } = await supabaseAdmin
+          .from('organizations')
+          .select('features')
+          .eq('id', org_id)
+          .single()
+
+        if (readError) {
+          console.error('Error reading organization:', readError)
+          return NextResponse.json({ error: readError.message }, { status: 500 })
+        }
+
+        // Deep merge features
+        const currentFeatures = org?.features || {}
+        updateData.features = {
+          ...currentFeatures,
+          ...features,
+          modules: {
+            ...(currentFeatures.modules || {}),
+            ...(features.modules || {}),
+          },
+        }
+      }
+
       const { data, error } = await supabaseAdmin
         .from('organizations')
-        .update(subscription_update)
+        .update(updateData)
         .eq('id', org_id)
         .select()
         .single()
@@ -88,9 +120,39 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // 1. Read current features from DB
+    const { data: org, error: readError } = await supabaseAdmin
+      .from('organizations')
+      .select('features')
+      .eq('id', org_id)
+      .single()
+
+    if (readError) {
+      console.error('Error reading organization:', readError)
+      return NextResponse.json({ error: readError.message }, { status: 500 })
+    }
+
+    // 2. Deep merge features (preserve other fields like business_info, dashboard_charts, etc.)
+    const currentFeatures = org?.features || {}
+    const mergedFeatures = {
+      ...currentFeatures,
+      ...features,
+      // Deep merge nested objects if they exist
+      modules: {
+        ...(currentFeatures.modules || {}),
+        ...(features.modules || {}),
+      },
+    }
+
+    // 3. Update with merged features (and optional plan)
+    const updateData: any = { features: mergedFeatures }
+    if (plan) {
+      updateData.plan = plan
+    }
+
     const { data, error } = await supabaseAdmin
       .from('organizations')
-      .update({ features })
+      .update(updateData)
       .eq('id', org_id)
       .select()
       .single()

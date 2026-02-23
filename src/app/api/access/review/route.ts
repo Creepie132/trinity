@@ -61,8 +61,68 @@ export async function GET(request: NextRequest) {
       .eq('user_id', userId)
       .maybeSingle()
 
-    if (orgUser) {
-      // Activate trial
+    let orgId = orgUser?.org_id
+
+    if (!orgId) {
+      // Create new organization for new user
+      console.log('No organization found, creating new one for user:', userId)
+      
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId)
+      const userName = userData?.user?.user_metadata?.full_name || userData?.user?.email || 'New Business'
+
+      const { data: newOrg, error: orgError } = await supabaseAdmin
+        .from('organizations')
+        .insert({
+          name: userName,
+          subscription_status: 'trial',
+          subscription_expires_at: expiresAt.toISOString(),
+          trial_started_at: new Date().toISOString(),
+          features: {
+            modules: {
+              clients: true,
+              visits: false,
+              booking: false,
+              inventory: false,
+              payments: false,
+              sms: false,
+              subscriptions: false,
+              statistics: false,
+              reports: false,
+              telegram: false,
+              loyalty: false,
+              birthday: false,
+            },
+          },
+        })
+        .select('id')
+        .single()
+
+      if (orgError) {
+        console.error('Error creating organization:', orgError)
+        return new Response(
+          `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">
+            <h2 style="color:red">❌ Error</h2>
+            <p>${orgError.message}</p>
+          </body></html>`,
+          { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+        )
+      }
+
+      orgId = newOrg.id
+      console.log('Created organization:', orgId)
+
+      // Link user to organization
+      await supabaseAdmin
+        .from('org_users')
+        .insert({
+          user_id: userId,
+          org_id: orgId,
+          role: 'owner',
+        })
+
+      console.log('User linked to organization as owner')
+    } else {
+      // Activate trial for existing organization
       await supabaseAdmin
         .from('organizations')
         .update({
@@ -70,17 +130,16 @@ export async function GET(request: NextRequest) {
           subscription_expires_at: expiresAt.toISOString(),
           trial_started_at: new Date().toISOString(),
         })
-        .eq('id', orgUser.org_id)
+        .eq('id', orgId)
 
-      console.log('Trial activated for org:', orgUser.org_id)
+      console.log('Trial activated for existing org:', orgId)
     }
 
     return new Response(
       `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">
         <h2 style="color:green">✅ Доступ одобрен / Access Approved</h2>
-        <p><strong>${accessRequest.email}</strong> получил доступ на 14 дней</p>
-        <p>До: ${expiresAt.toLocaleDateString('ru-RU', { timeZone: 'Asia/Jerusalem' })}</p>
-        <p>Until: ${expiresAt.toLocaleDateString('en-US', { timeZone: 'Asia/Jerusalem' })}</p>
+        <p><strong>${accessRequest.email}</strong> — 14 дней trial</p>
+        <p>До: ${expiresAt.toLocaleDateString('ru-RU')}</p>
       </body></html>`,
       { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
     )

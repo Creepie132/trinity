@@ -13,6 +13,7 @@ import { useLowStockProducts } from '@/hooks/useProducts'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
 import { useOrganization } from '@/hooks/useOrganization'
+import { useDemoMode } from '@/hooks/useDemoMode'
 import { MODULES } from '@/lib/modules-config'
 import {
   Sheet,
@@ -46,6 +47,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const { t, language, dir } = useLanguage()
   const meetingMode = useMeetingMode()
   const { data: organization } = useOrganization()
+  const { isDemo } = useDemoMode()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [profileOpen, setProfileOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -124,9 +126,17 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     onClose()
   }
 
+  // Pages allowed in DEMO mode
+  const DEMO_ALLOWED_PATHS = ['/dashboard', '/clients', '/partners', '/settings']
+
   // Filter navigation based on features
   // Filter navigation based on modules configuration
   const navigation = baseNavigation.filter((item) => {
+    // In DEMO mode, only show allowed paths
+    if (isDemo && !DEMO_ALLOWED_PATHS.includes(item.href)) {
+      return false
+    }
+
     // Items without moduleKey are always visible (dashboard, partners, settings)
     if (!item.moduleKey) return true
 

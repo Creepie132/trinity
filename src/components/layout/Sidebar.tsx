@@ -14,6 +14,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useBookings } from '@/hooks/useBookings'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
 import { useOrganization } from '@/hooks/useOrganization'
+import { useDemoMode } from '@/hooks/useDemoMode'
 import { MODULES } from '@/lib/modules-config'
 import { Separator } from '@/components/ui/separator'
 import { UserProfileSheet } from '@/components/user/UserProfileSheet'
@@ -44,6 +45,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const { t, language } = useLanguage()
   const meetingMode = useMeetingMode()
   const { data: organization } = useOrganization()
+  const { isDemo } = useDemoMode()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [profileOpen, setProfileOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
@@ -118,8 +120,16 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
     router.refresh()
   }
 
+  // Pages allowed in DEMO mode
+  const DEMO_ALLOWED_PATHS = ['/dashboard', '/clients', '/partners', '/settings']
+
   // Filter navigation based on modules configuration
   const navigation = baseNavigation.filter((item) => {
+    // In DEMO mode, only show allowed paths
+    if (isDemo && !DEMO_ALLOWED_PATHS.includes(item.href)) {
+      return false
+    }
+
     // Items without moduleKey are always visible (dashboard, partners, settings)
     if (!item.moduleKey) return true
 

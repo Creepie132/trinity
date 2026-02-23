@@ -106,6 +106,61 @@ export async function POST(request: NextRequest) {
       console.log('Telegram bot not configured, skipping notification')
     }
 
+    // Send email notification to admin via Resend
+    const RESEND_API_KEY = process.env.RESEND_API_KEY
+    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'ambersolutions.systems@gmail.com'
+
+    if (RESEND_API_KEY) {
+      try {
+        // Generate review token (same as for Telegram)
+        const reviewToken = crypto.randomUUID().replace(/-/g, '').substring(0, 16)
+        
+        const approveUrl = `${APP_URL}/api/access/review?user_id=${user.id}&action=approve&token=${reviewToken}`
+        const rejectUrl = `${APP_URL}/api/access/review?user_id=${user.id}&action=reject&token=${reviewToken}`
+
+        const emailResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Trinity CRM <noreply@send.ambersol.co.il>',
+            to: ADMIN_EMAIL,
+            subject: '🔐 Новый запрос на доступ — Trinity CRM',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #1f2937;">Новый запрос на доступ</h2>
+                <p><b>Имя:</b> ${user.user_metadata?.full_name || 'Не указано'}</p>
+                <p><b>Email:</b> ${user.email}</p>
+                <p><b>Дата:</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Jerusalem' })}</p>
+                <br/>
+                <div style="margin-top: 20px;">
+                  <a href="${approveUrl}" style="display: inline-block; padding: 12px 24px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; margin-right: 10px;">
+                    ✅ Одобрить (14 дней trial)
+                  </a>
+                  <a href="${rejectUrl}" style="display: inline-block; padding: 12px 24px; background: #ef4444; color: white; text-decoration: none; border-radius: 6px;">
+                    ❌ Отклонить
+                  </a>
+                </div>
+              </div>
+            `,
+          }),
+        })
+
+        if (!emailResponse.ok) {
+          console.error('Resend email failed:', await emailResponse.text())
+        } else {
+          console.log('Resend email sent successfully to:', ADMIN_EMAIL)
+        }
+      } catch (emailError) {
+        console.error('Error sending Resend email:', emailError)
+        // Don't fail the request if notification fails
+      }
+    } else {
+      console.log('Resend API key not configured, skipping email notification')
+    }
+
     return NextResponse.json({
       success: true,
       requestId: newRequest.id,

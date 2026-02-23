@@ -3,72 +3,32 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, ChevronLeft, Settings, User as UserIcon, Calendar, Package, Search } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, Calendar } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useFeatures } from '@/hooks/useFeatures'
-import { usePermissions } from '@/hooks/usePermissions'
-import { useLowStockProducts } from '@/hooks/useProducts'
-import { useLanguage } from '@/contexts/LanguageContext'
-import { useBookings } from '@/hooks/useBookings'
-import { useMeetingMode } from '@/hooks/useMeetingMode'
-import { useOrganization } from '@/hooks/useOrganization'
-import { useDemoMode } from '@/hooks/useDemoMode'
-import { MODULES } from '@/lib/modules-config'
 import { Separator } from '@/components/ui/separator'
-import { UserProfileSheet } from '@/components/user/UserProfileSheet'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { supabase } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 
-// Helper function to convert null to undefined for Avatar component
-const toAvatarSrc = (url: string | null): string | undefined => {
-  if (url === null) return undefined
-  return url
-}
+const baseNavigation = [
+  { name: 'דשבורד', href: '/', icon: Home, requireFeature: null },
+  { name: 'לקוחות', href: '/clients', icon: Users, requireFeature: null },
+  { name: 'תורים', href: '/appointments', icon: Calendar, requireFeature: null },
+  { name: 'תשלומים', href: '/payments', icon: CreditCard, requireFeature: 'payments' },
+  { name: 'הודעות SMS', href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
+  { name: 'סטטיסטיקה', href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
+  { name: 'הצעות שותפים', href: '/partners', icon: Gift, requireFeature: null },
+]
 
-interface SidebarProps {
-  onSearchOpen?: () => void
-}
-
-export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
+export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, signOut, orgId } = useAuth()
+  const { user, signOut } = useAuth()
   const { data: isAdmin } = useIsAdmin()
   const { adminProfile } = useAdminProfile()
   const features = useFeatures()
-  const permissions = usePermissions()
-  const { data: lowStockProducts } = useLowStockProducts()
-  const { pendingCount } = useBookings(orgId)
-  const { t, language } = useLanguage()
-  const meetingMode = useMeetingMode()
-  const { data: organization } = useOrganization()
-  const { isDemo } = useDemoMode()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-
-  // Get module name from MODULES config
-  const getModuleName = (moduleKey: string) => {
-    const module = MODULES.find(m => m.key === moduleKey)
-    if (!module) return ''
-    return language === 'he' ? module.name_he : module.name_ru
-  }
-
-  const baseNavigation = [
-    { name: t('nav.dashboard'), href: '/dashboard', icon: Home, moduleKey: null },
-    { name: getModuleName('clients'), href: '/clients', icon: Users, moduleKey: 'clients' },
-    { name: meetingMode.t.visits, href: '/visits', icon: Calendar, moduleKey: 'visits' },
-    { name: getModuleName('inventory'), href: '/inventory', icon: Package, moduleKey: 'inventory' },
-    { name: getModuleName('payments'), href: '/payments', icon: CreditCard, moduleKey: 'payments' },
-    { name: getModuleName('sms'), href: '/sms', icon: MessageSquare, moduleKey: 'sms' },
-    { name: getModuleName('statistics'), href: '/stats', icon: BarChart3, moduleKey: 'statistics' },
-    { name: getModuleName('reports'), href: '/analytics', icon: BarChart3, moduleKey: 'reports' },
-    { name: t('nav.partners'), href: '/partners', icon: Gift, moduleKey: null },
-    { name: t('nav.settings'), href: '/settings', icon: Settings, moduleKey: null },
-  ]
 
   useEffect(() => {
     // Load theme from localStorage
@@ -78,22 +38,6 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
       document.documentElement.classList.toggle('dark', savedTheme === 'dark')
     }
   }, [])
-
-  // Load avatar URL
-  useEffect(() => {
-    if (user) {
-      supabase
-        .from('org_users')
-        .select('avatar_url')
-        .eq('user_id', user.id)
-        .single()
-        .then(({ data, error }) => {
-          if (data && !error) {
-            setAvatarUrl(data.avatar_url)
-          }
-        })
-    }
-  }, [user])
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light'
@@ -110,9 +54,6 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
       null
   
   const displayEmail = user?.email || ''
-  
-  // Convert avatar URL from null to undefined for Avatar component compatibility
-  const avatarSrc: string | undefined = avatarUrl === null ? undefined : avatarUrl
 
   const onLogout = async () => {
     await signOut()
@@ -120,40 +61,15 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
     router.refresh()
   }
 
-  // Pages allowed in DEMO mode
-  const DEMO_ALLOWED_PATHS = ['/dashboard', '/clients', '/partners', '/settings']
-
-  // Filter navigation based on modules configuration
+  // Filter navigation based on features
   const navigation = baseNavigation.filter((item) => {
-    // In DEMO mode, only show allowed paths
-    if (isDemo && !DEMO_ALLOWED_PATHS.includes(item.href)) {
-      return false
-    }
-
-    // Items without moduleKey are always visible (dashboard, partners, settings)
-    if (!item.moduleKey) return true
-
-    // Get module config
-    const module = MODULES.find(m => m.key === item.moduleKey)
+    if (!item.requireFeature) return true
     
-    // If module has alwaysVisible flag - show it (unless explicitly disabled)
-    if (module?.alwaysVisible) {
-      const enabledModules = organization?.features?.modules || {}
-      // Show if not explicitly set to false
-      return enabledModules[item.moduleKey] !== false
-    }
-
-    // For other modules - check if enabled in organization features
-    const enabledModules = organization?.features?.modules || {}
-    const isEnabled = enabledModules[item.moduleKey] !== false
-
-    // Also check role permissions
-    if (item.href === '/sms' && !permissions.canSendSMS) return false
-    if (item.href === '/inventory' && !permissions.canManageInventory) return false
-    if (item.href === '/stats' && !permissions.canViewAnalytics) return false
-    if (item.href === '/analytics' && !permissions.canViewAnalytics) return false
+    if (item.requireFeature === 'payments') return features.hasPayments
+    if (item.requireFeature === 'sms') return features.hasSms
+    if (item.requireFeature === 'analytics') return features.hasAnalytics
     
-    return isEnabled
+    return true
   })
 
   return (
@@ -161,15 +77,15 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
       {/* Header */}
       <div className="p-6 pb-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
             <img
               src="/logo.png"
               alt="Trinity"
-              className="w-12 h-12 object-contain"
+              className="w-7 h-7 object-contain"
             />
           </div>
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Trinity
             </h1>
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Amber Solutions Systems</p>
@@ -177,22 +93,8 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
         </div>
       </div>
 
-      {/* Search Button */}
-      <div className="px-4 pt-4 pb-2">
-        <button
-          onClick={onSearchOpen}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-all duration-200"
-        >
-          <Search className="w-5 h-5" />
-          <span className="flex-1 text-left">{language === 'he' ? 'חיפוש...' : 'Поиск...'}</span>
-          <kbd className="px-2 py-1 text-xs bg-white dark:bg-slate-700 rounded shadow">
-            ⌘K
-          </kbd>
-        </button>
-      </div>
-
       {/* Navigation */}
-      <nav className="flex-1 p-4 pt-2 space-y-2 overflow-y-auto">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navigation.map((item, index) => {
           const isActive = pathname === item.href
           const Icon = item.icon
@@ -218,16 +120,6 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
                 )} />
               </div>
               <span className="flex-1">{item.name}</span>
-              {item.href === '/inventory' && lowStockProducts && lowStockProducts.length > 0 && (
-                <span className="flex items-center justify-center px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full min-w-[1.5rem]">
-                  {lowStockProducts.length}
-                </span>
-              )}
-              {item.href === '/visits' && pendingCount > 0 && (
-                <span className="flex items-center justify-center px-2 py-0.5 text-xs font-bold bg-yellow-500 text-white rounded-full min-w-[1.5rem]">
-                  {pendingCount}
-                </span>
-              )}
               {isActive && (
                 <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />
               )}
@@ -246,7 +138,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
               <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-800">
                 <Shield className="w-5 h-5 flex-shrink-0 text-purple-600 dark:text-purple-400" />
               </div>
-              <span className="flex-1 text-purple-700 dark:text-purple-300 font-semibold">{t('nav.admin')}</span>
+              <span className="flex-1 text-purple-700 dark:text-purple-300 font-semibold">פאנל ניהול</span>
               <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
             </Link>
           </>
@@ -265,54 +157,35 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
               <Sun className="w-5 h-5 text-yellow-500" />
             )}
           </div>
-          <span className="flex-1 text-right">{theme === 'light' ? t('nav.darkMode') : t('nav.lightMode')}</span>
+          <span className="flex-1 text-right">{theme === 'light' ? 'מצב כהה' : 'מצב בהיר'}</span>
         </button>
       </nav>
 
       {/* User Profile + Logout */}
-      <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 space-y-3">
-        {/* Clickable Profile */}
-        <button
-          onClick={() => setProfileOpen(true)}
-          className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800 hover:border-blue-200 dark:hover:border-blue-700 hover:shadow-md transition-all duration-200 group active:scale-[0.98]"
-        >
-          <Avatar className="w-11 h-11 shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
-            <AvatarImage src={avatarSrc} alt={displayName ?? undefined} />
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-lg">
-              {(displayName?.[0] || displayEmail?.[0])?.toUpperCase() || '?'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0 text-right">
+      <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
+        <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800">
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg text-lg">
+            {(displayName?.[0] || displayEmail?.[0])?.toUpperCase() || '?'}
+          </div>
+          <div className="flex-1 min-w-0">
             {displayName ? (
               <>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{displayName}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t('nav.myProfile')}</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayName}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{displayEmail}</p>
               </>
             ) : (
-              <>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{displayEmail}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{t('nav.myProfile')}</p>
-              </>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayEmail}</p>
             )}
           </div>
-          <ChevronLeft className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
-        </button>
-
-        {/* Logout Button */}
+        </div>
         <button
           onClick={onLogout}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 active:scale-[0.98] transition-all duration-200 border border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700"
         >
           <LogOut className="w-4 h-4" />
-          {t('nav.logout')}
+          יציאה מהמערכת
         </button>
       </div>
-
-      {/* Profile Sheet */}
-      <UserProfileSheet 
-        open={profileOpen} 
-        onOpenChange={setProfileOpen} 
-      />
     </div>
   )
 }

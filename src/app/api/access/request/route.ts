@@ -75,9 +75,6 @@ export async function POST(request: NextRequest) {
           `👤 ${user.user_metadata?.full_name || 'Без имени'}`,
           `📧 ${user.email}`,
           `📅 ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Jerusalem' })}`,
-          '',
-          `✅ Одобрить: ${approveUrl}`,
-          `❌ Отклонить: ${rejectUrl}`,
         ].join('\n')
 
         const telegramResponse = await fetch(
@@ -88,7 +85,14 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify({
               chat_id: ADMIN_CHAT_ID,
               text: message,
-              disable_web_page_preview: true,
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: '✅ Одобрить (14 дней)', url: approveUrl },
+                    { text: '❌ Отклонить', url: rejectUrl },
+                  ],
+                ],
+              },
             }),
           }
         )
@@ -118,38 +122,50 @@ export async function POST(request: NextRequest) {
         const approveUrl = `${APP_URL}/api/access/review?user_id=${user.id}&action=approve&token=${reviewToken}`
         const rejectUrl = `${APP_URL}/api/access/review?user_id=${user.id}&action=reject&token=${reviewToken}`
 
+        const emailPayload = {
+          from: 'Trinity CRM <noreply@send.ambersol.co.il>',
+          to: ADMIN_EMAIL,
+          subject: '🔐 Новый запрос на доступ — Trinity CRM',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #1f2937;">Новый запрос на доступ</h2>
+              <p><b>Имя:</b> ${user.user_metadata?.full_name || 'Не указано'}</p>
+              <p><b>Email:</b> ${user.email}</p>
+              <p><b>Дата:</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Jerusalem' })}</p>
+              <br/>
+              <div style="margin-top: 20px;">
+                <a href="${approveUrl}" style="display: inline-block; padding: 12px 24px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; margin-right: 10px;">
+                  ✅ Одобрить (14 дней trial)
+                </a>
+                <a href="${rejectUrl}" style="display: inline-block; padding: 12px 24px; background: #ef4444; color: white; text-decoration: none; border-radius: 6px;">
+                  ❌ Отклонить
+                </a>
+              </div>
+            </div>
+          `,
+        }
+
+        console.log('Sending Resend email with payload:', {
+          from: emailPayload.from,
+          to: emailPayload.to,
+          subject: emailPayload.subject,
+        })
+
         const emailResponse = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            from: 'Trinity CRM <noreply@send.ambersol.co.il>',
-            to: ADMIN_EMAIL,
-            subject: '🔐 Новый запрос на доступ — Trinity CRM',
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #1f2937;">Новый запрос на доступ</h2>
-                <p><b>Имя:</b> ${user.user_metadata?.full_name || 'Не указано'}</p>
-                <p><b>Email:</b> ${user.email}</p>
-                <p><b>Дата:</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Jerusalem' })}</p>
-                <br/>
-                <div style="margin-top: 20px;">
-                  <a href="${approveUrl}" style="display: inline-block; padding: 12px 24px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; margin-right: 10px;">
-                    ✅ Одобрить (14 дней trial)
-                  </a>
-                  <a href="${rejectUrl}" style="display: inline-block; padding: 12px 24px; background: #ef4444; color: white; text-decoration: none; border-radius: 6px;">
-                    ❌ Отклонить
-                  </a>
-                </div>
-              </div>
-            `,
-          }),
+          body: JSON.stringify(emailPayload),
         })
 
+        const resendResult = await emailResponse.json()
+        console.log('Resend status:', emailResponse.status)
+        console.log('Resend response:', JSON.stringify(resendResult))
+
         if (!emailResponse.ok) {
-          console.error('Resend email failed:', await emailResponse.text())
+          console.error('Resend email failed:', resendResult)
         } else {
           console.log('Resend email sent successfully to:', ADMIN_EMAIL)
         }

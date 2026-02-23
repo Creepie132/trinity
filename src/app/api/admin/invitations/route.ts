@@ -96,26 +96,37 @@ export async function POST(request: NextRequest) {
 </div>
       `
 
+      const emailPayload = {
+        from: 'Trinity CRM <noreply@send.ambersol.co.il>',
+        to: email.toLowerCase(),
+        subject: 'You are invited to Trinity CRM | הוזמנת ל-Trinity CRM',
+        html: emailBody,
+      }
+
+      console.log('Sending invitation email with payload:', {
+        from: emailPayload.from,
+        to: emailPayload.to,
+        subject: emailPayload.subject,
+      })
+
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${RESEND_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          from: 'Trinity CRM <noreply@send.ambersol.co.il>',
-          to: email.toLowerCase(),
-          subject: 'You are invited to Trinity CRM | הוזמנת ל-Trinity CRM',
-          html: emailBody,
-        }),
+        body: JSON.stringify(emailPayload),
       })
+
+      const resendResult = await res.json()
+      console.log('Resend status:', res.status)
+      console.log('Resend response:', JSON.stringify(resendResult))
 
       if (res.ok) {
         emailSent = true
-        console.log('Invitation email sent successfully')
+        console.log('Invitation email sent successfully to:', email)
       } else {
-        const errorText = await res.text()
-        console.error('Resend API error:', errorText)
+        console.error('Resend API error:', resendResult)
       }
     } catch (emailError) {
       console.error('Error sending invitation email:', emailError)

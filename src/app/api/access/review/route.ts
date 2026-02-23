@@ -77,11 +77,17 @@ export async function GET(request: NextRequest) {
       
       const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId)
       const userName = userData?.user?.user_metadata?.full_name || userData?.user?.email || 'New Business'
+      
+      // Add unique suffix to prevent duplicate name errors
+      const uniqueSuffix = Math.random().toString(36).substring(2, 8)
+      const orgName = `${userName}_${uniqueSuffix}`
+      
+      console.log('Generated unique org name:', orgName)
 
       const { data: newOrg, error: orgError } = await supabaseAdmin
         .from('organizations')
         .insert({
-          name: userName,
+          name: orgName,
           subscription_status: 'trial',
           subscription_expires_at: expiresAt.toISOString(),
           trial_started_at: new Date().toISOString(),

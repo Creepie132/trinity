@@ -27,6 +27,15 @@ export default function LoginPage() {
     }
 
     clearStaleCookies()
+
+    // Check for invitation token in URL
+    const params = new URLSearchParams(window.location.search)
+    const invitationToken = params.get('invitation')
+    
+    if (invitationToken) {
+      console.log('[login] Found invitation token, saving to localStorage:', invitationToken)
+      localStorage.setItem('invitation_token', invitationToken)
+    }
   }, [])
 
   const signIn = async () => {

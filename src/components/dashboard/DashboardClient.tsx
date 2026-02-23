@@ -34,6 +34,45 @@ export function DashboardClient({ orgId }: { orgId: string }) {
     }
   }, [features.isActive, features.isLoading, router])
 
+  // Activate invitation if token exists in localStorage
+  useEffect(() => {
+    const activateInvitation = async () => {
+      const invitationToken = localStorage.getItem('invitation_token')
+      
+      if (invitationToken) {
+        console.log('[dashboard] Found invitation token, activating...', invitationToken)
+        
+        try {
+          const response = await fetch('/api/access/activate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: invitationToken }),
+          })
+
+          const data = await response.json()
+
+          if (response.ok) {
+            console.log('[dashboard] Invitation activated successfully:', data)
+            // Remove token from localStorage after successful activation
+            localStorage.removeItem('invitation_token')
+            // Optionally show success message
+            // toast.success('Welcome! Your trial has been activated.')
+          } else {
+            console.error('[dashboard] Failed to activate invitation:', data)
+            // Still remove token to prevent retry loop
+            localStorage.removeItem('invitation_token')
+          }
+        } catch (error) {
+          console.error('[dashboard] Error activating invitation:', error)
+          // Remove token even on error to prevent retry loop
+          localStorage.removeItem('invitation_token')
+        }
+      }
+    }
+
+    activateInvitation()
+  }, [])
+
   // Fetch dashboard settings for chart visibility
   const { data: dashboardSettings } = useQuery({
     queryKey: ['dashboard-settings', orgId],

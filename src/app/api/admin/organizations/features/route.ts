@@ -54,13 +54,14 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get request body
-    const { org_id, features, subscription_update, plan } = await request.json()
+    const body = await request.json()
+    const { org_id, features, plan, subscription_update } = body
 
-    console.log('=== EXTEND SUBSCRIPTION ===')
+    console.log('=== UPDATE ORGANIZATION ===')
     console.log('org_id:', org_id)
-    console.log('subscription_update:', JSON.stringify(subscription_update))
     console.log('plan:', plan)
     console.log('features:', features ? 'present' : 'none')
+    console.log('subscription_update:', subscription_update ? 'present' : 'none')
 
     if (!org_id) {
       return NextResponse.json(
@@ -69,65 +70,8 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Handle subscription update (with optional plan and features update)
-    if (subscription_update) {
-      const updateData: any = { ...subscription_update }
-      
-      if (plan) {
-        updateData.plan = plan
-      }
-      
-      // If features are also provided, merge them
-      if (features) {
-        // Read current features first
-        const { data: org, error: readError } = await supabaseAdmin
-          .from('organizations')
-          .select('features')
-          .eq('id', org_id)
-          .single()
-
-        if (readError) {
-          console.error('Error reading organization:', readError)
-          return NextResponse.json({ error: readError.message }, { status: 500 })
-        }
-
-        // Deep merge features
-        const currentFeatures = org?.features || {}
-        updateData.features = {
-          ...currentFeatures,
-          ...features,
-          modules: {
-            ...(currentFeatures.modules || {}),
-            ...(features.modules || {}),
-          },
-        }
-      }
-
-      const { data, error } = await supabaseAdmin
-        .from('organizations')
-        .update(updateData)
-        .eq('id', org_id)
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error updating subscription:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
-      }
-
-      return NextResponse.json({ success: true, data })
-    }
-
-    // Handle features update
-    if (!features) {
-      return NextResponse.json(
-        { error: 'Missing features or subscription_update' },
-        { status: 400 }
-      )
-    }
-
-    // 1. Read current features from DB
-    const { data: org, error: readError } = await supabaseAdmin
+    // Read current organization
+    const { data: currentOrg, error: readError } = await supabaseAdmin
       .from('organizations')
       .select('features')
       .eq('id', org_id)
@@ -138,37 +82,43 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: readError.message }, { status: 500 })
     }
 
-    // 2. Deep merge features (preserve other fields like business_info, dashboard_charts, etc.)
-    const currentFeatures = org?.features || {}
+    // Merge features (preserve existing fields)
     const mergedFeatures = {
-      ...currentFeatures,
+      ...currentOrg?.features,
       ...features,
-      // Deep merge nested objects if they exist
-      modules: {
-        ...(currentFeatures.modules || {}),
-        ...(features.modules || {}),
-      },
+      modules: features?.modules || currentOrg?.features?.modules,
     }
 
-    // 3. Update with merged features (and optional plan)
+    // Build update data
     const updateData: any = { features: mergedFeatures }
+    
     if (plan) {
       updateData.plan = plan
     }
+    
+    if (subscription_update) {
+      if (subscription_update.subscription_status) {
+        updateData.subscription_status = subscription_update.subscription_status
+      }
+      if (subscription_update.subscription_expires_at !== undefined) {
+        updateData.subscription_expires_at = subscription_update.subscription_expires_at
+      }
+    }
 
-    const { data, error } = await supabaseAdmin
+    console.log('Update data:', JSON.stringify(updateData))
+
+    // Update organization
+    const { error } = await supabaseAdmin
       .from('organizations')
       .update(updateData)
       .eq('id', org_id)
-      .select()
-      .single()
 
     if (error) {
-      console.error('Error updating organization features:', error)
+      console.error('Update org error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, data })
+    return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('Error in PUT /api/admin/organizations/features:', error)
     return NextResponse.json(

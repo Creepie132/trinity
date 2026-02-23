@@ -1,7 +1,6 @@
 'use client'
 
-import { Card, CardContent } from '@/components/ui/card'
-import { Users, Calendar, DollarSign, TrendingUp, ArrowUp, ArrowDown } from 'lucide-react'
+import { Users, Calendar, DollarSign, TrendingUp, TrendingDown } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import Link from 'next/link'
 
@@ -43,7 +42,8 @@ export default function StatsCardsClient({ clients, visits, revenue, avgCheck }:
       value: clients.value,
       change: clients.change,
       icon: Users,
-      iconColor: 'text-blue-500',
+      iconBg: 'bg-blue-50 dark:bg-blue-900/30',
+      iconColor: 'text-blue-600 dark:text-blue-400',
       href: '/clients',
     },
     {
@@ -51,7 +51,8 @@ export default function StatsCardsClient({ clients, visits, revenue, avgCheck }:
       value: visits.value,
       change: visits.change,
       icon: Calendar,
-      iconColor: 'text-green-500',
+      iconBg: 'bg-green-50 dark:bg-green-900/30',
+      iconColor: 'text-green-600 dark:text-green-400',
       href: '/visits',
     },
     {
@@ -59,7 +60,8 @@ export default function StatsCardsClient({ clients, visits, revenue, avgCheck }:
       value: typeof revenue.value === 'number' ? `₪${revenue.value.toLocaleString()}` : revenue.value,
       change: revenue.change,
       icon: DollarSign,
-      iconColor: 'text-purple-500',
+      iconBg: 'bg-purple-50 dark:bg-purple-900/30',
+      iconColor: 'text-purple-600 dark:text-purple-400',
       href: '/payments',
     },
     {
@@ -67,13 +69,14 @@ export default function StatsCardsClient({ clients, visits, revenue, avgCheck }:
       value: typeof avgCheck.value === 'number' ? `₪${avgCheck.value.toLocaleString()}` : avgCheck.value,
       change: avgCheck.change,
       icon: TrendingUp,
-      iconColor: 'text-amber-500',
+      iconBg: 'bg-amber-50 dark:bg-amber-900/30',
+      iconColor: 'text-amber-600 dark:text-amber-400',
       href: '/payments',
     },
   ]
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 gap-3">
       {statCards.map((card, index) => {
         const Icon = card.icon
         const isPositive = card.change >= 0
@@ -81,27 +84,26 @@ export default function StatsCardsClient({ clients, visits, revenue, avgCheck }:
 
         return (
           <Link key={index} href={card.href}>
-            <Card className="bg-white dark:bg-[#111827] border-gray-200 dark:border-gray-800 hover:shadow-lg transition-all cursor-pointer hover:-translate-y-0.5">
-              <CardContent className="p-3">
-                <div className="flex items-start gap-2">
-                  <Icon className={`w-5 h-5 ${card.iconColor} flex-shrink-0 mt-0.5 opacity-70`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 truncate">{card.title}</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{card.value}</p>
-                    {hasChange ? (
-                      <span className={`text-xs flex items-center gap-0.5 ${
-                        isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
-                      }`}>
-                        {isPositive ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                        {Math.abs(card.change)}%
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-400 dark:text-gray-600">—</span>
-                    )}
+            <div className="bg-card border rounded-xl p-4 hover:shadow-lg transition-all cursor-pointer hover:-translate-y-0.5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-lg ${card.iconBg} flex items-center justify-center`}>
+                    <Icon size={16} className={card.iconColor} />
                   </div>
+                  <span className="text-sm text-muted-foreground">{card.title}</span>
                 </div>
-              </CardContent>
-            </Card>
+                {/* Процент изменения */}
+                {hasChange && (
+                  <span className={`text-xs font-medium flex items-center gap-0.5 ${
+                    isPositive ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                    {Math.abs(card.change)}%
+                  </span>
+                )}
+              </div>
+              <p className="text-2xl font-bold">{card.value}</p>
+            </div>
           </Link>
         )
       })}

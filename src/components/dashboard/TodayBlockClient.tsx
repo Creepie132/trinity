@@ -2,9 +2,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Calendar } from 'lucide-react'
+import { Calendar, CalendarCheck } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 interface TodayVisit {
   id: string
@@ -20,6 +22,7 @@ interface TodayBlockClientProps {
 
 export default function TodayBlockClient({ visits }: TodayBlockClientProps) {
   const { language } = useLanguage()
+  const router = useRouter()
 
   // Format today's date based on user's language
   const today = new Date()
@@ -38,7 +41,9 @@ export default function TodayBlockClient({ visits }: TodayBlockClientProps) {
       cancelled: 'בוטל',
       pending: 'ממתין',
       showAll: 'הצג הכל',
-      noVisits: 'אין תורים להיום 🎉',
+      noVisits: 'אין תורים להיום',
+      noVisitsDesc: 'הזמן לקוחות או צור תור חדש',
+      createVisit: 'צור תור חדש',
     },
     ru: {
       today: 'Сегодня',
@@ -47,7 +52,9 @@ export default function TodayBlockClient({ visits }: TodayBlockClientProps) {
       cancelled: 'Отменён',
       pending: 'Ожидает',
       showAll: 'Показать все',
-      noVisits: 'Нет записей на сегодня 🎉',
+      noVisits: 'На сегодня записей нет',
+      noVisitsDesc: 'Пригласите клиентов или создайте запись',
+      createVisit: 'Новая запись',
     },
   }
 
@@ -112,11 +119,15 @@ export default function TodayBlockClient({ visits }: TodayBlockClientProps) {
             )}
           </div>
         ) : (
-          <div className="py-8 text-start">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              {t.noVisits}
-            </p>
-          </div>
+          <EmptyState
+            icon={<CalendarCheck size={28} />}
+            title={t.noVisits}
+            description={t.noVisitsDesc}
+            action={{
+              label: t.createVisit,
+              onClick: () => router.push('/visits'),
+            }}
+          />
         )}
       </CardContent>
     </Card>

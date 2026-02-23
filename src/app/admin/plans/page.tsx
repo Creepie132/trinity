@@ -1,249 +1,410 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { PLANS, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
 import { toast } from 'sonner'
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Sparkles, 
-  Building2, 
-  Zap, 
-  Crown,
-  Settings2,
-  Users,
-  DollarSign,
-  Shield
-} from 'lucide-react'
+import { Shield, Plus, Trash2, Save } from 'lucide-react'
+
+interface Plan {
+  id: string
+  key: string
+  name_he: string
+  name_ru: string
+  desc_he: string
+  desc_ru: string
+  color: string
+  modules: Record<string, boolean>
+  client_limit: number | null
+  price_monthly: number | null
+  price_yearly: number | null
+  is_active: boolean
+  sort_order: number
+}
 
 export default function AdminPlansPage() {
   const { language } = useLanguage()
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
 
   const translations = {
     he: {
       title: 'ניהול תוכניות תמחור',
       subtitle: 'הגדרות תוכניות מנוי - מודולים, מחירים, מגבלות',
-      modules: 'מודולים',
-      price: 'מחיר',
+      addPlan: 'הוסף תוכנית',
+      save: 'שמור',
+      delete: 'מחק',
+      nameRu: 'שם רוסית',
+      nameHe: 'שם עברית',
+      descRu: 'תיאור רוסית',
+      descHe: 'תיאור עברית',
+      price: 'מחיר חודשי',
       clientLimit: 'מגבלת לקוחות',
       unlimited: 'ללא הגבלה',
-      perMonth: 'לחודש',
-      free: 'חינם',
-      custom: 'מותאם אישית',
-      note: 'הערה: נכון לעכשיו התוכניות מוגדרות בקוד. בעתיד יתווספו כאן כפתורי עריכה ושמירה בבסיס נתונים.',
+      modules: 'מודולים',
+      active: 'פעיל',
+      color: 'צבע',
+      key: 'מזהה',
+      note: 'הערה: ודא שטבלת subscription_plans קיימת במסד הנתונים (SQL migration בתיעוד)',
     },
     ru: {
       title: 'Управление тарифными планами',
       subtitle: 'Настройки планов подписки - модули, цены, лимиты',
-      modules: 'Модули',
-      price: 'Цена',
+      addPlan: 'Добавить план',
+      save: 'Сохранить',
+      delete: 'Удалить',
+      nameRu: 'Название (русский)',
+      nameHe: 'Название (иврит)',
+      descRu: 'Описание (русский)',
+      descHe: 'Описание (иврит)',
+      price: 'Цена/месяц',
       clientLimit: 'Лимит клиентов',
       unlimited: 'Безлимит',
-      perMonth: 'в месяц',
-      free: 'Бесплатно',
-      custom: 'Кастомный',
-      note: 'Примечание: в данный момент планы определены в коде. В будущем здесь появятся кнопки редактирования и сохранения в базе данных.',
+      modules: 'Модули',
+      active: 'Активен',
+      color: 'Цвет',
+      key: 'Ключ',
+      note: 'Примечание: убедитесь что таблица subscription_plans создана в БД (SQL migration в документации)',
     },
   }
 
   const t = translations[language]
 
-  const planIcons: Record<PlanKey, any> = {
-    demo: Sparkles,
-    basic: Building2,
-    professional: Zap,
-    corporate: Crown,
-    custom: Settings2,
+  useEffect(() => {
+    loadPlans()
+  }, [])
+
+  const loadPlans = async () => {
+    try {
+      const res = await fetch('/api/admin/plans')
+      if (res.ok) {
+        const data = await res.json()
+        setPlans(data)
+      } else {
+        // Table might not exist yet
+        console.warn('Failed to load plans from DB, table might not exist')
+        setPlans([])
+      }
+    } catch (error) {
+      console.error('Error loading plans:', error)
+      setPlans([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updatePlan = (id: string, field: string, value: any) => {
+    setPlans((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
+    )
+  }
+
+  const updatePlanModule = (id: string, moduleKey: string, enabled: boolean) => {
+    setPlans((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, modules: { ...p.modules, [moduleKey]: enabled } }
+          : p
+      )
+    )
+  }
+
+  const savePlan = async (plan: Plan) => {
+    setSaving(plan.id)
+    try {
+      const res = await fetch('/api/admin/plans', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(plan),
+      })
+
+      if (!res.ok) throw new Error('Failed to save')
+
+      toast.success(language === 'he' ? 'נשמר בהצלחה' : 'Сохранено')
+      loadPlans()
+    } catch (error) {
+      console.error('Error saving plan:', error)
+      toast.error(language === 'he' ? 'שגיאה בשמירה' : 'Ошибка сохранения')
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const deletePlan = async (id: string) => {
+    if (!confirm(language === 'he' ? 'למחוק תוכנית?' : 'Удалить план?')) return
+
+    try {
+      const res = await fetch('/api/admin/plans', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+
+      if (!res.ok) throw new Error('Failed to delete')
+
+      toast.success(language === 'he' ? 'נמחק' : 'Удалено')
+      loadPlans()
+    } catch (error) {
+      console.error('Error deleting plan:', error)
+      toast.error(language === 'he' ? 'שגיאה במחיקה' : 'Ошибка удаления')
+    }
+  }
+
+  const addNewPlan = async () => {
+    const newPlan = {
+      key: `plan_${Date.now()}`,
+      name_he: language === 'he' ? 'תוכנית חדשה' : 'Новый план',
+      name_ru: language === 'ru' ? 'Новый план' : 'תוכנית חדשה',
+      desc_he: '',
+      desc_ru: '',
+      color: 'gray',
+      modules: {},
+      client_limit: null,
+      price_monthly: null,
+      price_yearly: null,
+      is_active: true,
+      sort_order: plans.length,
+    }
+
+    try {
+      const res = await fetch('/api/admin/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPlan),
+      })
+
+      if (!res.ok) throw new Error('Failed to create')
+
+      toast.success(language === 'he' ? 'תוכנית נוצרה' : 'План создан')
+      loadPlans()
+    } catch (error) {
+      console.error('Error creating plan:', error)
+      toast.error(language === 'he' ? 'שגיאה ביצירה' : 'Ошибка создания')
+    }
   }
 
   const getColorClass = (color: string) => {
     const classes: Record<string, string> = {
-      red: 'border-red-500/30 bg-red-500/5',
-      blue: 'border-blue-500/30 bg-blue-500/5',
-      amber: 'border-amber-500/30 bg-amber-500/5',
-      green: 'border-green-500/30 bg-green-500/5',
-      purple: 'border-purple-500/30 bg-purple-500/5',
+      red: 'bg-red-500',
+      blue: 'bg-blue-500',
+      amber: 'bg-amber-500',
+      green: 'bg-green-500',
+      purple: 'bg-purple-500',
+      gray: 'bg-gray-500',
     }
-    return classes[color] || 'border-gray-500/30 bg-gray-500/5'
+    return classes[color] || 'bg-gray-500'
   }
 
-  const getBadgeColor = (color: string) => {
-    const classes: Record<string, string> = {
-      red: 'bg-red-500/10 text-red-600 border-red-500/20',
-      blue: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-      amber: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-      green: 'bg-green-500/10 text-green-600 border-green-500/20',
-      purple: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-    }
-    return classes[color] || 'bg-gray-500/10 text-gray-600 border-gray-500/20'
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-gray-500 dark:text-gray-400">
+          {language === 'he' ? 'טוען...' : 'Загрузка...'}
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Shield className="w-8 h-8 text-amber-600" />
-        <div>
-          <h1 className="text-3xl font-bold">{t.title}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{t.subtitle}</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Shield className="w-8 h-8 text-amber-600" />
+          <div>
+            <h1 className="text-3xl font-bold">{t.title}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t.subtitle}</p>
+          </div>
         </div>
+        <Button onClick={addNewPlan}>
+          <Plus className="w-4 h-4 mr-2" />
+          {t.addPlan}
+        </Button>
       </div>
 
-      {/* Note about future DB integration */}
-      <Card className="border-blue-500/30 bg-blue-500/5">
-        <CardContent className="pt-4">
-          <p className="text-sm text-blue-700 dark:text-blue-300">
-            ℹ️ {t.note}
-          </p>
-        </CardContent>
-      </Card>
+      {/* Note */}
+      {plans.length === 0 && (
+        <Card className="border-blue-500/30 bg-blue-500/5">
+          <CardContent className="pt-4">
+            <p className="text-sm text-blue-700 dark:text-blue-300">ℹ️ {t.note}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Plans Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {PLANS.map((plan) => {
-          const Icon = planIcons[plan.key]
-          const enabledModules = Object.entries(plan.modules).filter(([_, enabled]) => enabled)
-          const disabledModules = Object.entries(plan.modules).filter(([_, enabled]) => !enabled)
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {plans.map((plan) => (
+          <Card key={plan.id} className="border-2 relative">
+            {/* Color bar */}
+            <div
+              className={`absolute top-0 left-0 right-0 h-1 rounded-t-xl ${getColorClass(
+                plan.color
+              )}`}
+            />
 
-          return (
-            <Card 
-              key={plan.key} 
-              className={`border-2 ${getColorClass(plan.color)}`}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${getBadgeColor(plan.color)}`}>
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl">
-                        {language === 'he' ? plan.name_he : plan.name_ru}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        {language === 'he' ? plan.desc_he : plan.desc_ru}
-                      </CardDescription>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
+            <CardHeader className="pt-6">
+              <CardTitle className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">{plan.key}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => deletePlan(plan.id)}
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </CardTitle>
+            </CardHeader>
 
-              <CardContent className="space-y-4">
-                {/* Price */}
-                <div className="flex items-baseline gap-2">
-                  <DollarSign className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <span className="text-2xl font-bold">
-                      {plan.price_monthly !== null ? `₪${plan.price_monthly}` : t.custom}
-                    </span>
-                    {plan.price_monthly !== null && (
-                      <span className="text-sm text-muted-foreground mr-1">/{t.perMonth}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Client Limit */}
-                <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-sm">
-                    {t.clientLimit}: {plan.client_limit !== null ? plan.client_limit : t.unlimited}
-                  </span>
-                </div>
-
-                {/* Modules */}
+            <CardContent className="space-y-4">
+              {/* Names */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-sm font-medium mb-2">{t.modules}:</p>
-                  <div className="space-y-1.5">
-                    {/* Enabled modules */}
-                    {enabledModules.map(([key, _]) => {
-                      const module = MODULES.find(m => m.key === key)
-                      if (!module) return null
-                      return (
-                        <div key={key} className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                          <span className="text-green-700 dark:text-green-400">
-                            {language === 'he' ? module.name_he : module.name_ru}
-                          </span>
-                        </div>
-                      )
-                    })}
+                  <Label className="text-xs">{t.nameRu}</Label>
+                  <Input
+                    value={plan.name_ru}
+                    onChange={(e) => updatePlan(plan.id, 'name_ru', e.target.value)}
+                    className="text-lg font-bold"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">{t.nameHe}</Label>
+                  <Input
+                    value={plan.name_he}
+                    onChange={(e) => updatePlan(plan.id, 'name_he', e.target.value)}
+                    dir="rtl"
+                    className="text-lg font-bold"
+                  />
+                </div>
+              </div>
 
-                    {/* Disabled modules (show first 3) */}
-                    {disabledModules.slice(0, 3).map(([key, _]) => {
-                      const module = MODULES.find(m => m.key === key)
-                      if (!module) return null
-                      return (
-                        <div key={key} className="flex items-center gap-2 text-sm opacity-50">
-                          <XCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <span className="text-gray-500 dark:text-gray-400">
-                            {language === 'he' ? module.name_he : module.name_ru}
-                          </span>
-                        </div>
-                      )
-                    })}
+              {/* Descriptions */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">{t.descRu}</Label>
+                  <Input
+                    value={plan.desc_ru}
+                    onChange={(e) => updatePlan(plan.id, 'desc_ru', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">{t.descHe}</Label>
+                  <Input
+                    value={plan.desc_he}
+                    onChange={(e) => updatePlan(plan.id, 'desc_he', e.target.value)}
+                    dir="rtl"
+                  />
+                </div>
+              </div>
 
-                    {disabledModules.length > 3 && (
-                      <p className="text-xs text-muted-foreground ml-6">
-                        +{disabledModules.length - 3} {language === 'he' ? 'נוספים' : 'ещё'}
-                      </p>
-                    )}
+              {/* Price & Client Limit */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">{t.price}</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">₪</span>
+                    <Input
+                      type="number"
+                      value={plan.price_monthly || ''}
+                      onChange={(e) =>
+                        updatePlan(
+                          plan.id,
+                          'price_monthly',
+                          e.target.value ? parseFloat(e.target.value) : null
+                        )
+                      }
+                      placeholder="0"
+                    />
                   </div>
                 </div>
+                <div>
+                  <Label className="text-xs">{t.clientLimit}</Label>
+                  <Input
+                    type="number"
+                    value={plan.client_limit || ''}
+                    onChange={(e) =>
+                      updatePlan(
+                        plan.id,
+                        'client_limit',
+                        e.target.value ? parseInt(e.target.value) : null
+                      )
+                    }
+                    placeholder={t.unlimited}
+                  />
+                </div>
+              </div>
 
-                {/* Future: Edit button */}
-                {/* <Button variant="outline" className="w-full mt-4">
-                  Редактировать план
-                </Button> */}
-              </CardContent>
-            </Card>
-          )
-        })}
+              {/* Color */}
+              <div>
+                <Label className="text-xs">{t.color}</Label>
+                <select
+                  value={plan.color}
+                  onChange={(e) => updatePlan(plan.id, 'color', e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                >
+                  <option value="red">Red</option>
+                  <option value="blue">Blue</option>
+                  <option value="amber">Amber</option>
+                  <option value="green">Green</option>
+                  <option value="purple">Purple</option>
+                  <option value="gray">Gray</option>
+                </select>
+              </div>
+
+              {/* Modules */}
+              <div>
+                <Label className="text-xs mb-2 block">{t.modules}</Label>
+                <div className="space-y-2 max-h-48 overflow-y-auto border rounded p-3">
+                  {MODULES.map((mod) => (
+                    <div key={mod.key} className="flex items-center justify-between">
+                      <span className="text-sm">
+                        {language === 'he' ? mod.name_he : mod.name_ru}
+                      </span>
+                      <Switch
+                        checked={plan.modules[mod.key] || false}
+                        onCheckedChange={(val) =>
+                          updatePlanModule(plan.id, mod.key, val)
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active status */}
+              <div className="flex items-center justify-between pt-3 border-t">
+                <span className="text-sm font-medium">{t.active}</span>
+                <Switch
+                  checked={plan.is_active}
+                  onCheckedChange={(val) => updatePlan(plan.id, 'is_active', val)}
+                />
+              </div>
+
+              {/* Save button */}
+              <Button
+                onClick={() => savePlan(plan)}
+                disabled={saving === plan.id}
+                className="w-full"
+              >
+                {saving === plan.id ? (
+                  <span>{language === 'he' ? 'שומר...' : 'Сохранение...'}</span>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    {t.save}
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
       </div>
-
-      {/* SQL Migration Notice */}
-      <Card className="border-amber-500/30 bg-amber-500/5">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <span>⚠️</span>
-            <span>{language === 'he' ? 'מיגרציית SQL נדרשת' : 'Требуется SQL миграция'}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm font-mono bg-black/5 dark:bg-white/5 p-4 rounded">
-          <p className="text-amber-700 dark:text-amber-300 font-sans mb-2">
-            {language === 'he' 
-              ? 'להפעלת עריכת תוכניות ישירות מהממשק, הרץ את המיגרציה הבאה ב-Supabase SQL Editor:' 
-              : 'Для включения редактирования планов из интерфейса, выполните следующую миграцию в Supabase SQL Editor:'}
-          </p>
-          <pre className="text-xs overflow-x-auto text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-{`-- CREATE TABLE subscription_plans (
---   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
---   key text NOT NULL UNIQUE,
---   name_he text NOT NULL,
---   name_ru text NOT NULL,
---   desc_he text,
---   desc_ru text,
---   color text DEFAULT 'gray',
---   modules jsonb DEFAULT '{}',
---   client_limit integer,
---   price_monthly numeric(10,2),
---   price_yearly numeric(10,2),
---   is_active boolean DEFAULT true,
---   sort_order integer DEFAULT 0,
---   created_at timestamptz DEFAULT now(),
---   updated_at timestamptz DEFAULT now()
--- );
-
--- ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
--- CREATE POLICY "Admins manage plans" ON subscription_plans FOR ALL
---   USING (EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()));`}
-          </pre>
-        </CardContent>
-      </Card>
     </div>
   )
 }

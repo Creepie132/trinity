@@ -62,6 +62,7 @@ export default function AdminSubscriptionsPage() {
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>('demo')
   const [customModules, setCustomModules] = useState<Record<string, boolean>>({})
   const [customClientLimit, setCustomClientLimit] = useState<number>(0)
+  const [dbPlans, setDbPlans] = useState<any[]>([]) // Plans from database
 
   const translations = {
     he: {
@@ -144,6 +145,17 @@ export default function AdminSubscriptionsPage() {
 
   const loadData = async () => {
     try {
+      // Load plans from database
+      try {
+        const plansRes = await fetch('/api/admin/plans')
+        if (plansRes.ok) {
+          const plansData = await plansRes.json()
+          setDbPlans(plansData || [])
+        }
+      } catch (err) {
+        console.warn('Failed to load plans from DB, using hardcoded plans')
+      }
+
       // Load organizations with subscription info
       const { data: orgs } = await supabase
         .from('organizations')
@@ -261,6 +273,15 @@ export default function AdminSubscriptionsPage() {
     
     // If not custom, load plan's modules
     if (planKey !== 'custom') {
+      // Try database plans first
+      const dbPlan = dbPlans.find((p) => p.key === planKey)
+      if (dbPlan) {
+        setCustomModules(dbPlan.modules || {})
+        setCustomClientLimit(dbPlan.client_limit || 0)
+        return
+      }
+      
+      // Fallback to hardcoded plans
       const plan = getPlan(planKey)
       if (plan) {
         setCustomModules(plan.modules)
@@ -301,17 +322,27 @@ export default function AdminSubscriptionsPage() {
       const expiresAt = new Date(newExpiryDate)
       expiresAt.setHours(23, 59, 59, 999)
 
-      // Get plan configuration
-      const plan = getPlan(selectedPlan)
+      // Get plan configuration (try database first, then hardcoded)
       let modules = {}
       let clientLimit = null
 
       if (selectedPlan === 'custom') {
         modules = customModules
         clientLimit = customClientLimit || null
-      } else if (plan) {
-        modules = plan.modules
-        clientLimit = plan.client_limit
+      } else {
+        // Try database plans first
+        const dbPlan = dbPlans.find((p) => p.key === selectedPlan)
+        if (dbPlan) {
+          modules = dbPlan.modules || {}
+          clientLimit = dbPlan.client_limit
+        } else {
+          // Fallback to hardcoded plans
+          const plan = getPlan(selectedPlan)
+          if (plan) {
+            modules = plan.modules
+            clientLimit = plan.client_limit
+          }
+        }
       }
 
       // Merge with existing features
@@ -522,7 +553,8 @@ export default function AdminSubscriptionsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PLANS.map((plan) => (
+                  {/* Use DB plans if available, otherwise hardcoded */}
+                  {(dbPlans.length > 0 ? dbPlans : PLANS).map((plan) => (
                     <SelectItem key={plan.key} value={plan.key}>
                       {language === 'he' ? plan.name_he : plan.name_ru}
                       {plan.price_monthly !== null && ` — ₪${plan.price_monthly}/мес`}
@@ -534,14 +566,16 @@ export default function AdminSubscriptionsPage() {
 
             {/* Show modules info for non-custom plans */}
             {selectedPlan !== 'custom' && (() => {
-              const plan = getPlan(selectedPlan)
+              // Try DB plan first, then hardcoded
+              const dbPlan = dbPlans.find((p) => p.key === selectedPlan)
+              const plan = dbPlan || getPlan(selectedPlan)
               if (!plan) return null
               
               return (
                 <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
                   <p className="font-medium mb-2">{t.includedModules}:</p>
                   <div className="space-y-1">
-                    {Object.entries(plan.modules).map(([key, enabled]) => {
+                    {Object.entries(plan.modules || {}).map(([key, enabled]) => {
                       const module = MODULES.find((m) => m.key === key)
                       if (!module) return null
                       

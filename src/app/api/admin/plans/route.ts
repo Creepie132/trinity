@@ -1,57 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 
 // Service role client (bypasses RLS)
-const supabaseAdmin = createClient(
+const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function GET(request: NextRequest) {
   try {
-    // Check auth
-    const authHeader = request.headers.get('cookie')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    // Get current user from cookie
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            cookie: authHeader,
-          },
-        },
-      }
-    )
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is admin
-    const { data: adminData, error: adminError } = await supabaseAdmin
+    const { data: admin } = await supabaseAdmin
       .from('admin_users')
-      .select('user_id')
+      .select('id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (adminError || !adminData) {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
-    }
+    if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Get all plans
     console.log('=== LOAD PLANS ===')
@@ -80,42 +50,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check auth
-    const authHeader = request.headers.get('cookie')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            cookie: authHeader,
-          },
-        },
-      }
-    )
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is admin
-    const { data: adminData, error: adminError } = await supabaseAdmin
+    const { data: admin } = await supabaseAdmin
       .from('admin_users')
-      .select('user_id')
+      .select('id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (adminError || !adminData) {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
-    }
+    if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Create new plan
     const body = await request.json()
@@ -145,42 +91,18 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    // Check auth
-    const authHeader = request.headers.get('cookie')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            cookie: authHeader,
-          },
-        },
-      }
-    )
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is admin
-    const { data: adminData, error: adminError } = await supabaseAdmin
+    const { data: admin } = await supabaseAdmin
       .from('admin_users')
-      .select('user_id')
+      .select('id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (adminError || !adminData) {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
-    }
+    if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Update plan
     const { id, ...updates } = await request.json()
@@ -218,42 +140,18 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Check auth
-    const authHeader = request.headers.get('cookie')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            cookie: authHeader,
-          },
-        },
-      }
-    )
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is admin
-    const { data: adminData, error: adminError } = await supabaseAdmin
+    const { data: admin } = await supabaseAdmin
       .from('admin_users')
-      .select('user_id')
+      .select('id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (adminError || !adminData) {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
-    }
+    if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Delete plan
     const { id } = await request.json()

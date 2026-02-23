@@ -16,9 +16,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ hasAccess: false })
     }
 
-    console.log('=== ACCESS CHECK ===')
+    console.log('=== ACCESS CHECK START ===')
     console.log('User ID:', user.id)
     console.log('Email:', user.email)
+    console.log('Timestamp:', new Date().toISOString())
 
     // Check if admin
     const { data: admin } = await supabaseAdmin
@@ -60,7 +61,11 @@ export async function GET(request: NextRequest) {
 
     console.log('Subscription status:', org?.subscription_status)
     console.log('Expires at:', org?.subscription_expires_at)
+    console.log('Now:', now.toISOString())
+    console.log('Expires date object:', expires)
+    console.log('Is expired:', expires ? expires < now : 'no expiry')
     console.log('Has access:', hasAccess)
+    console.log('=== ACCESS CHECK END ===')
 
     return NextResponse.json({
       hasAccess,

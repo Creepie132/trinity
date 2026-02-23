@@ -92,11 +92,16 @@ export default function AccessPendingPage() {
 
   const handleRefreshStatus = async () => {
     setLoading(true)
+    console.log('[access-pending] Checking access status...')
+    
     try {
       const response = await fetch('/api/access/check')
       const data = await response.json()
 
+      console.log('[access-pending] Access check result:', data)
+
       if (data.hasAccess) {
+        console.log('[access-pending] Access approved! Redirecting to dashboard...')
         toast.success(
           language === 'he' ? '✅ הגישה אושרה!' : '✅ Доступ одобрен!',
           { duration: 2000 }

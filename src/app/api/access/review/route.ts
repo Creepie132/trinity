@@ -41,6 +41,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (action === 'approve') {
+    console.log('=== APPROVE START ===')
+    console.log('User ID:', userId)
+    console.log('Email:', accessRequest.email)
+    
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 14) // 14 days trial
 
@@ -61,9 +65,13 @@ export async function GET(request: NextRequest) {
       .eq('user_id', userId)
       .maybeSingle()
 
+    console.log('Existing orgUser:', orgUser)
+    
     let orgId = orgUser?.org_id
+    console.log('OrgId before creation:', orgId)
 
     if (!orgId) {
+      console.log('Creating new organization...')
       // Create new organization for new user
       console.log('No organization found, creating new one for user:', userId)
       
@@ -134,6 +142,10 @@ export async function GET(request: NextRequest) {
 
       console.log('Trial activated for existing org:', orgId)
     }
+
+    console.log('=== APPROVE END ===')
+    console.log('Final orgId:', orgId)
+    console.log('Expires at:', expiresAt.toISOString())
 
     return new Response(
       `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">

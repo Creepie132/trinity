@@ -64,6 +64,10 @@ export async function POST(request: NextRequest) {
   console.log('Invite URL:', inviteUrl)
 
   // Send email via Resend
+  console.log('=== RESEND EMAIL START ===')
+  console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY)
+  console.log('Sending to:', email)
+  
   const RESEND_API_KEY = process.env.RESEND_API_KEY
   let emailSent = false
 
@@ -103,13 +107,14 @@ export async function POST(request: NextRequest) {
         html: emailBody,
       }
 
-      console.log('Sending invitation email with payload:', {
+      console.log('Email payload:', {
         from: emailPayload.from,
         to: emailPayload.to,
         subject: emailPayload.subject,
+        htmlLength: emailBody.length
       })
 
-      const res = await fetch('https://api.resend.com/emails', {
+      const resendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -118,22 +123,25 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify(emailPayload),
       })
 
-      const resendResult = await res.json()
-      console.log('Resend status:', res.status)
-      console.log('Resend response:', JSON.stringify(resendResult))
+      const resendResult = await resendRes.json()
+      console.log('Resend status:', resendRes.status)
+      console.log('Resend result:', JSON.stringify(resendResult))
 
-      if (res.ok) {
+      if (resendRes.ok) {
         emailSent = true
-        console.log('Invitation email sent successfully to:', email)
+        console.log('✅ Invitation email sent successfully to:', email)
       } else {
-        console.error('Resend API error:', resendResult)
+        console.error('❌ Resend API error:', resendResult)
       }
     } catch (emailError) {
-      console.error('Error sending invitation email:', emailError)
+      console.error('❌ Error sending invitation email:', emailError)
     }
   } else {
-    console.log('RESEND_API_KEY not configured, skipping email')
+    console.warn('⚠️ RESEND_API_KEY not configured, skipping email')
   }
+  
+  console.log('=== RESEND EMAIL END ===')
+  console.log('Email sent status:', emailSent)
 
   return NextResponse.json({
     success: true,
@@ -157,28 +165,16 @@ export async function GET(request: NextRequest) {
 
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  // Fetch all invitations
+  // Fetch all invitations (simplified query without JOIN)
   const { data: invitations, error } = await supabaseAdmin
     .from('invitations')
-    .select(`
-      id,
-      email,
-      message,
-      status,
-      created_at,
-      expires_at,
-      accepted_at,
-      invited_by_profile:invited_by (
-        email,
-        raw_user_meta_data
-      )
-    `)
+    .select('id, email, token, status, message, created_at, accepted_at, expires_at')
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('Error fetching invitations:', error)
+    console.error('Load invitations error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ invitations })
+  return NextResponse.json(invitations || [])
 }

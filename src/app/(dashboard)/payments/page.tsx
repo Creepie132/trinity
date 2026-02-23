@@ -46,6 +46,63 @@ export default function PaymentsPage() {
   const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(0)
 
+  // Parse payment info with priority logic
+  function parsePaymentInfo(description: string | undefined, payment: any) {
+    const locale = language === 'he' ? 'he' : 'ru'
+    
+    // Priority: separate fields from object
+    if (payment.client_name || payment.clients) {
+      const clientName = payment.client_name ||
+        (payment.clients
+          ? `${payment.clients.first_name || ''} ${payment.clients.last_name || ''}`.trim()
+          : '—')
+      return {
+        clientName,
+        subtitle: formatSubtitle(payment, null, locale)
+      }
+    }
+
+    // Fallback: parse concatenated string "Наличные - Владислав Халфин"
+    if (description && description.includes(' - ')) {
+      const parts = description.split(' - ')
+      const method = parts[0].trim()
+      const name = parts.slice(1).join(' - ').trim() // handle dashes in name
+      return {
+        clientName: name || '—',
+        subtitle: formatSubtitle(payment, method, locale)
+      }
+    }
+
+    return {
+      clientName: description || '—',
+      subtitle: formatSubtitle(payment, null, locale)
+    }
+  }
+
+  function formatSubtitle(payment: any, parsedMethod: string | null, locale: 'he' | 'ru') {
+    const methodLabels: Record<string, { he: string, ru: string }> = {
+      cash: { he: 'מזומן', ru: 'Наличные' },
+      card: { he: 'כרטיס', ru: 'Карта' },
+      credit_card: { he: 'כרטיס', ru: 'Карта' },
+      transfer: { he: 'העברה', ru: 'Перевод' },
+      bank_transfer: { he: 'העברה', ru: 'Перевод' },
+      bit: { he: 'ביט', ru: 'Bit' },
+    }
+
+    const method = parsedMethod ||
+      (payment.payment_method && methodLabels[payment.payment_method]?.[locale]) ||
+      (payment.method && methodLabels[payment.method]?.[locale]) ||
+      payment.payment_method ||
+      payment.method ||
+      ''
+
+    const number = payment.id
+      ? `#${payment.id.slice(0, 8)}`
+      : (payment.payment_number ? `#${payment.payment_number}` : '')
+
+    return [method, number].filter(Boolean).join(' — ')
+  }
+
   const { data: payments, isLoading } = usePayments(undefined, {
     status: statusFilter,
     paymentMethod: paymentMethodFilter !== 'all' ? paymentMethodFilter : undefined,
@@ -346,71 +403,74 @@ export default function PaymentsPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <TableHead className="text-gray-700 dark:text-gray-300">{t('payments.client')}</TableHead>
-                <TableHead className="text-gray-700 dark:text-gray-300">{t('payments.amount')}</TableHead>
-                <TableHead className="text-gray-700 dark:text-gray-300">{t('payments.status')}</TableHead>
-                <TableHead className="text-gray-700 dark:text-gray-300">{t('payments.method')}</TableHead>
-                <TableHead className="text-gray-700 dark:text-gray-300">{t('common.date')}</TableHead>
-                <TableHead className="text-left text-gray-700 dark:text-gray-300">{t('clients.actions')}</TableHead>
+                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('payments.client')}</TableHead>
+                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('payments.description') || 'Описание'}</TableHead>
+                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('payments.amount')}</TableHead>
+                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('payments.status')}</TableHead>
+                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('common.date')}</TableHead>
+                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('clients.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {payments.map((payment: any) => (
-                <TableRow key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700">
-                  <TableCell className="font-medium text-gray-900 dark:text-gray-100">
-                    {payment.clients
-                      ? `${payment.clients.first_name} ${payment.clients.last_name}`
-                      : t('payments.unknown')}
-                  </TableCell>
-                  <TableCell className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                    ₪{Number(payment.amount).toFixed(2)}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                  <TableCell className="text-gray-700 dark:text-gray-300">
-                    {payment.payment_method === 'credit_card'
-                      ? t('payments.card')
-                      : payment.payment_method || '-'}
-                  </TableCell>
-                  <TableCell className="text-gray-700 dark:text-gray-300">
-                    {payment.paid_at
-                      ? format(new Date(payment.paid_at), 'dd/MM/yyyy HH:mm')
-                      : format(new Date(payment.created_at), 'dd/MM/yyyy HH:mm')}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      {payment.payment_link && payment.status === 'pending' && (
-                        <>
+              {payments.map((payment: any) => {
+                const { clientName, subtitle } = parsePaymentInfo(payment.description, payment)
+                return (
+                  <TableRow key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700">
+                    <TableCell className="font-semibold text-gray-900 dark:text-gray-100 text-start">
+                      <div className="min-w-0">
+                        <p className="truncate">{clientName}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-500 dark:text-gray-400 text-start">
+                      <div className="min-w-0">
+                        <p className="truncate">{subtitle}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-semibold text-lg text-gray-900 dark:text-gray-100 text-start">
+                      ₪{Number(payment.amount).toFixed(2)}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(payment.status)}</TableCell>
+                    <TableCell className="text-gray-700 dark:text-gray-300 text-start">
+                      {payment.paid_at
+                        ? format(new Date(payment.paid_at), 'dd/MM/yyyy HH:mm')
+                        : format(new Date(payment.created_at), 'dd/MM/yyyy HH:mm')}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {payment.payment_link && payment.status === 'pending' && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => copyPaymentLink(payment.payment_link)}
+                              title={t('payments.copyLink')}
+                            >
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => window.open(payment.payment_link, '_blank')}
+                              title={t('payments.openLink')}
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                        {payment.transaction_id && (
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => copyPaymentLink(payment.payment_link)}
-                            title={t('payments.copyLink')}
+                            title={`${t('payments.transactionId')}: ${payment.transaction_id}`}
                           >
-                            <Copy className="w-4 h-4" />
+                            <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => window.open(payment.payment_link, '_blank')}
-                            title={t('payments.openLink')}
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
-                      {payment.transaction_id && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          title={`${t('payments.transactionId')}: ${payment.transaction_id}`}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         ) : (

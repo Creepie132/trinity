@@ -187,7 +187,7 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
           service: formData.service, // Legacy field for compatibility
           date: formData.date,
           time: formData.time,
-          duration: meetingMode.isMeetingMode ? 0 : formData.duration, // 0 for meetings
+          duration: meetingMode.isMeetingMode ? null : formData.duration, // null for meetings
           price: meetingMode.isMeetingMode ? '0' : formData.price, // 0 for meetings
           notes: notesData,
         }),

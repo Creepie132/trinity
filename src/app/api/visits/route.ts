@@ -68,6 +68,16 @@ export async function POST(request: NextRequest) {
     const org_id = orgUser.org_id
     console.log('[API /api/visits POST] Organization ID:', org_id)
 
+    // Check meeting mode
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('features')
+      .eq('id', org_id)
+      .single()
+    
+    const isMeetingMode = orgData?.features?.meeting_mode === true
+    console.log('[API /api/visits POST] Meeting mode:', isMeetingMode)
+
     // Extract and validate fields
     const { clientId, service, serviceId, date, time, duration, price, notes } = data
     
@@ -99,7 +109,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'חסר תאריך או שעה' }, { status: 400 })
     }
     
-    if (!price) {
+    // In meeting mode, price is not required
+    if (!isMeetingMode && !price) {
       console.error('[API /api/visits POST] Missing price')
       return NextResponse.json({ error: 'חסר מחיר' }, { status: 400 })
     }
@@ -113,8 +124,10 @@ export async function POST(request: NextRequest) {
       client_id: clientId,
       org_id: org_id,
       scheduled_at: scheduled_at,
-      duration_minutes: typeof duration === 'number' ? duration : parseInt(duration || "60"),
-      price: parseFloat(price),
+      duration_minutes: duration !== null && duration !== undefined 
+        ? (typeof duration === 'number' ? duration : parseInt(duration))
+        : (isMeetingMode ? null : 60), // null for meetings, default 60 for visits
+      price: price ? parseFloat(price) : 0,
       notes: notes || null,
       status: 'scheduled',
       staff_user_id: user.id, // Track who created the visit

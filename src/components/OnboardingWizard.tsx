@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +17,7 @@ import { Plus, Trash2, Check, Users, Calendar, ExternalLink } from 'lucide-react
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrganization } from '@/hooks/useOrganization'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 interface Service {
@@ -98,6 +99,7 @@ interface OnboardingWizardProps {
 export function OnboardingWizard({ open, organizationName }: OnboardingWizardProps) {
   const router = useRouter()
   const { orgId } = useAuth()
+  const { data: organization } = useOrganization()
   const supabase = createSupabaseBrowserClient()
 
   const [step, setStep] = useState(1)
@@ -109,8 +111,33 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
 
   // Step 1 data
   const [businessName, setBusinessName] = useState(organizationName)
+  const [companyNumber, setCompanyNumber] = useState('')
+  const [ownerName, setOwnerName] = useState('')
   const [category, setCategory] = useState<string>('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+
+  // Prefill from business_info (from registration)
+  useEffect(() => {
+    const businessInfo = (organization?.features as any)?.business_info
+    if (businessInfo) {
+      if (businessInfo.display_name) setBusinessName(businessInfo.display_name)
+      if (businessInfo.company_number) setCompanyNumber(businessInfo.company_number)
+      if (businessInfo.owner_name) setOwnerName(businessInfo.owner_name)
+      if (businessInfo.mobile) setPhone(businessInfo.mobile)
+      if (businessInfo.email) setEmail(businessInfo.email)
+      if (businessInfo.address) setAddress(businessInfo.address)
+      if (businessInfo.city) setCity(businessInfo.city)
+    }
+
+    // Get user email from auth
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) setEmail(user.email)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organization])
 
   // Step 2 data
   const [services, setServices] = useState<Service[]>([])
@@ -267,16 +294,29 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
         throw workingHoursError
       }
 
-      // 4. Update organization features
-      console.log('[Onboarding] Updating organization features...')
+      // 4. Update organization features and business info
+      console.log('[Onboarding] Updating organization features and business info...')
       const updatedFeatures = {
         ...(org?.features || {}),
+        business_info: {
+          ...(org?.features?.business_info || {}),
+          display_name: businessName,
+          company_number: companyNumber,
+          owner_name: ownerName,
+          mobile: phone,
+          email: email,
+          address: address,
+          city: city,
+        },
         onboarding_completed: true,
       }
 
       const { error: orgError } = await supabase
         .from('organizations')
-        .update({ features: updatedFeatures })
+        .update({ 
+          name: businessName,  // Update org name with display_name
+          features: updatedFeatures 
+        })
         .eq('id', orgId)
 
       if (orgError) {
@@ -437,6 +477,86 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
               </div>
 
               <div>
+                <Label htmlFor="company-number">
+                  {locale === 'he' ? 'ח.פ / ע.מ' : 'Номер компании (ח.פ)'}
+                </Label>
+                <Input
+                  id="company-number"
+                  value={companyNumber}
+                  onChange={(e) => setCompanyNumber(e.target.value)}
+                  className="mt-2 bg-gray-800 border-gray-700 text-white"
+                  placeholder={locale === 'he' ? 'מספר חברה או עוסק' : 'Номер регистрации'}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="owner-name">
+                  {locale === 'he' ? 'שם בעל העסק' : 'Имя владельца'}
+                </Label>
+                <Input
+                  id="owner-name"
+                  value={ownerName}
+                  onChange={(e) => setOwnerName(e.target.value)}
+                  className="mt-2 bg-gray-800 border-gray-700 text-white"
+                  placeholder={locale === 'he' ? 'שם מלא' : 'Полное имя'}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="phone">Телефон</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  pattern="[0-9+\-() ]*"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="050-1234567"
+                  className="mt-2 bg-gray-800 border-gray-700 text-white"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="email">
+                  {locale === 'he' ? 'דוא"ל' : 'Электронная почта'}
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  disabled
+                  className="mt-2 bg-gray-700 border-gray-600 text-gray-400 cursor-not-allowed opacity-70"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="address">
+                    {locale === 'he' ? 'כתובת' : 'Адрес'}
+                  </Label>
+                  <Input
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="mt-2 bg-gray-800 border-gray-700 text-white"
+                    placeholder={locale === 'he' ? 'רחוב ומספר' : 'Улица и номер'}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="city">
+                    {locale === 'he' ? 'עיר' : 'Город'}
+                  </Label>
+                  <Input
+                    id="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="mt-2 bg-gray-800 border-gray-700 text-white"
+                    placeholder={locale === 'he' ? 'עיר' : 'Город'}
+                  />
+                </div>
+              </div>
+
+              <div>
                 <Label htmlFor="category">Категория</Label>
                 <Select value={category} onValueChange={handleCategoryChange}>
                   <SelectTrigger className="mt-2 bg-gray-800 border-gray-700 text-white">
@@ -452,19 +572,6 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
                     <SelectItem value="другое">Другое</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="phone">Телефон</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  pattern="[0-9+\-() ]*"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="050-1234567"
-                  className="mt-2 bg-gray-800 border-gray-700 text-white"
-                />
               </div>
             </div>
 

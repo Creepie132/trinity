@@ -63,6 +63,9 @@ export default function AdminSubscriptionsPage() {
   const [customModules, setCustomModules] = useState<Record<string, boolean>>({})
   const [customClientLimit, setCustomClientLimit] = useState<number>(0)
   const [dbPlans, setDbPlans] = useState<any[]>([]) // Plans from database
+  const [modulePricing, setModulePricing] = useState<any[]>([])
+  const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
+  const [manualPrice, setManualPrice] = useState<number>(0)
 
   const translations = {
     he: {
@@ -90,6 +93,12 @@ export default function AdminSubscriptionsPage() {
       clientLimit: 'מגבלת לקוחות',
       selectModules: 'בחר מודולים',
       unlimited: 'ללא הגבלה',
+      priceMode: 'מצב תמחור',
+      auto: 'אוטומטי',
+      manual: 'ידני',
+      calculatedPrice: 'מחושב לפי מודולים',
+      perMonth: 'לחודש',
+      manualPriceInput: 'מחיר ידני',
       save: 'שמור',
       cancel: 'ביטול',
       statuses: {
@@ -125,6 +134,12 @@ export default function AdminSubscriptionsPage() {
       clientLimit: 'Лимит клиентов',
       selectModules: 'Выберите модули',
       unlimited: 'Безлимит',
+      priceMode: 'Режим цены',
+      auto: 'Авто',
+      manual: 'Вручную',
+      calculatedPrice: 'Рассчитано по модулям',
+      perMonth: 'в месяц',
+      manualPriceInput: 'Цена вручную',
       save: 'Сохранить',
       cancel: 'Отмена',
       statuses: {
@@ -154,6 +169,17 @@ export default function AdminSubscriptionsPage() {
         }
       } catch (err) {
         console.warn('Failed to load plans from DB, using hardcoded plans')
+      }
+
+      // Load module pricing
+      try {
+        const pricingRes = await fetch('/api/admin/module-pricing')
+        if (pricingRes.ok) {
+          const pricingData = await pricingRes.json()
+          setModulePricing(pricingData || [])
+        }
+      } catch (err) {
+        console.warn('Failed to load module pricing')
       }
 
       // Load organizations with subscription info
@@ -262,6 +288,10 @@ export default function AdminSubscriptionsPage() {
     setCustomModules(currentModules)
     setCustomClientLimit(org.features?.client_limit || 0)
     
+    // Initialize price mode
+    setPriceMode(org.features?.price_mode || 'auto')
+    setManualPrice(org.features?.manual_price || 0)
+    
     const defaultDate = new Date()
     defaultDate.setDate(defaultDate.getDate() + 14)
     setNewExpiryDate(defaultDate.toISOString().split('T')[0])
@@ -345,12 +375,26 @@ export default function AdminSubscriptionsPage() {
         }
       }
 
+      // Calculate monthly price
+      const autoPrice = modulePricing.reduce((sum, mod) => {
+        const moduleKey = mod.module_key as string
+        if ((modules as any)[moduleKey]) {
+          return sum + parseFloat(mod.price_monthly || 0)
+        }
+        return sum
+      }, 0)
+
+      const monthlyPrice = priceMode === 'auto' ? autoPrice : manualPrice
+
       // Merge with existing features
       const currentFeatures = selectedOrg.features || {}
       const updatedFeatures = {
         ...currentFeatures,
         modules: modules,
         client_limit: clientLimit,
+        price_mode: priceMode,
+        manual_price: manualPrice,
+        monthly_price: monthlyPrice,
       }
 
       const response = await fetch('/api/admin/organizations/features', {
@@ -607,20 +651,41 @@ export default function AdminSubscriptionsPage() {
             {selectedPlan === 'custom' && (
               <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <p className="font-medium mb-3 text-sm">{t.selectModules}:</p>
-                <div className="space-y-2">
-                  {MODULES.map((mod) => (
-                    <div key={mod.key} className="flex items-center justify-between">
-                      <span className="text-sm">
-                        {language === 'he' ? mod.name_he : mod.name_ru}
-                      </span>
-                      <Switch
-                        checked={customModules[mod.key] || false}
-                        onCheckedChange={(val) =>
-                          setCustomModules((prev) => ({ ...prev, [mod.key]: val }))
-                        }
-                      />
-                    </div>
-                  ))}
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {modulePricing.length > 0 ? (
+                    modulePricing.map((mod) => (
+                      <div key={mod.module_key} className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">
+                            {language === 'he' ? mod.name_he : mod.name_ru}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ₪{mod.price_monthly || 0}
+                          </span>
+                        </div>
+                        <Switch
+                          checked={customModules[mod.module_key] || false}
+                          onCheckedChange={(val) =>
+                            setCustomModules((prev) => ({ ...prev, [mod.module_key]: val }))
+                          }
+                        />
+                      </div>
+                    ))
+                  ) : (
+                    MODULES.map((mod) => (
+                      <div key={mod.key} className="flex items-center justify-between">
+                        <span className="text-sm">
+                          {language === 'he' ? mod.name_he : mod.name_ru}
+                        </span>
+                        <Switch
+                          checked={customModules[mod.key] || false}
+                          onCheckedChange={(val) =>
+                            setCustomModules((prev) => ({ ...prev, [mod.key]: val }))
+                          }
+                        />
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className="mt-4">
                   <Label className="text-sm">{t.clientLimit}:</Label>
@@ -632,6 +697,62 @@ export default function AdminSubscriptionsPage() {
                     className="mt-1"
                   />
                 </div>
+
+                {/* Auto price calculation */}
+                {modulePricing.length > 0 && (() => {
+                  const autoPrice = modulePricing.reduce((sum, mod) => {
+                    if (customModules[mod.module_key]) {
+                      return sum + parseFloat(mod.price_monthly || 0)
+                    }
+                    return sum
+                  }, 0)
+
+                  return (
+                    <div className="mt-4 pt-4 border-t">
+                      <p className="text-sm font-medium mb-2">{t.priceMode}:</p>
+                      <div className="flex gap-2 mb-3">
+                        <Button
+                          size="sm"
+                          variant={priceMode === 'auto' ? 'default' : 'outline'}
+                          onClick={() => setPriceMode('auto')}
+                        >
+                          {t.auto}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={priceMode === 'manual' ? 'default' : 'outline'}
+                          onClick={() => setPriceMode('manual')}
+                        >
+                          {t.manual}
+                        </Button>
+                      </div>
+
+                      {priceMode === 'auto' ? (
+                        <div className="text-sm">
+                          <span className="font-bold text-lg">₪{autoPrice}</span>
+                          <span className="text-muted-foreground">/{t.perMonth}</span>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {t.calculatedPrice}
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <Label className="text-sm">{t.manualPriceInput}:</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-muted-foreground">₪</span>
+                            <Input
+                              type="number"
+                              value={manualPrice}
+                              onChange={(e) => setManualPrice(parseFloat(e.target.value) || 0)}
+                              className="w-32"
+                            />
+                            <span className="text-sm text-muted-foreground">/{t.perMonth}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             )}
 

@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar, Clock, Phone, MessageCircle, Mail, ChevronRight, Edit, Eye, CalendarPlus, Pencil } from 'lucide-react'
-import { BottomSheet } from '@/components/ui/BottomSheet'
-import { Button } from '@/components/ui/button'
+import { Calendar, Clock, Phone, MessageCircle, CalendarPlus, Pencil, ChevronRight } from 'lucide-react'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 
 interface ClientCardProps {
   client: {
@@ -33,7 +32,7 @@ export function ClientCard({
   onEdit,
   onClick,
 }: ClientCardProps) {
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   // Инициалы из имени
   const initials = client.name
@@ -57,13 +56,6 @@ export function ClientCard({
 
   const visitsCount = client.visits_count || client.total_visits || 0
 
-  const handleCardClick = () => {
-    if (onClick) {
-      onClick(client)
-    }
-    setSheetOpen(true)
-  }
-
   const t = {
     he: {
       visits: 'ביקורים',
@@ -71,16 +63,10 @@ export function ClientCard({
       call: 'התקשר',
       whatsapp: 'WhatsApp',
       email: 'אימייל',
-      sms: 'SMS',
-      view: 'צפה',
-      edit: 'ערוך',
-      phone: 'טלפון',
+      newVisit: 'קבע ביקור חדש',
+      edit: 'ערוך פרטים',
       notes: 'הערות',
-      createdAt: 'תאריך הוספה',
-      totalSpent: 'סה"כ הוצא',
-      noPhone: 'אין טלפון',
-      noEmail: 'אין אימייל',
-      noNotes: 'אין הערות',
+      createdAt: 'נוצר',
     },
     ru: {
       visits: 'Визитов',
@@ -88,24 +74,25 @@ export function ClientCard({
       call: 'Позвонить',
       whatsapp: 'WhatsApp',
       email: 'Email',
-      sms: 'SMS',
-      view: 'Просмотр',
+      newVisit: 'Новый визит',
       edit: 'Редактировать',
-      phone: 'Телефон',
       notes: 'Заметки',
-      createdAt: 'Дата добавления',
-      totalSpent: 'Всего потрачено',
-      noPhone: 'Нет телефона',
-      noEmail: 'Нет email',
-      noNotes: 'Нет заметок',
+      createdAt: 'Создан',
     },
   }
 
   const text = t[locale]
 
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick(client)
+    }
+    setDrawerOpen(true)
+  }
+
   return (
     <>
-      {/* Карточка — вся кликабельная */}
+      {/* Карточка */}
       <div
         onClick={handleCardClick}
         className="bg-card border rounded-xl p-4 mb-2 active:bg-muted/50 transition cursor-pointer"
@@ -151,7 +138,7 @@ export function ClientCard({
           )}
         </div>
 
-        {/* Action Bar — иконки-кнопки */}
+        {/* Action Bar */}
         <div className="flex items-center gap-2 mt-3">
           {/* Звонок */}
           {client.phone && (
@@ -182,30 +169,16 @@ export function ClientCard({
             </button>
           )}
 
-          {/* Email */}
-          {client.email && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                window.location.href = `mailto:${client.email}`
-              }}
-              className="flex items-center justify-center w-9 h-9 rounded-full bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 hover:bg-purple-100 transition"
-              title={text.email}
-            >
-              <Mail size={16} />
-            </button>
-          )}
-
-          {/* Записать на визит — только если модуль visits включён и не demo */}
+          {/* Новый визит — только если модуль включён и не demo */}
           {enabledModules?.visits !== false && !isDemo && (
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                // Navigate to new visit with client preselected
+                // Navigate to new visit
                 if (onClick) onClick(client)
               }}
               className="flex items-center justify-center w-9 h-9 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-100 transition"
-              title={locale === 'he' ? 'קבע ביקור' : 'Записать'}
+              title={text.newVisit}
             >
               <CalendarPlus size={16} />
             </button>
@@ -219,7 +192,7 @@ export function ClientCard({
                 onEdit(client)
               }}
               className="flex items-center justify-center w-9 h-9 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition ms-auto"
-              title={locale === 'he' ? 'ערוך' : 'Редактировать'}
+              title={text.edit}
             >
               <Pencil size={16} />
             </button>
@@ -227,9 +200,12 @@ export function ClientCard({
         </div>
       </div>
 
-      {/* Bottom Sheet - Детали */}
-      <BottomSheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)}>
-        {/* Большой аватар */}
+      {/* Bottom Drawer с деталями */}
+      <TrinityBottomDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      >
+        {/* Большой аватар по центру */}
         <div className="flex flex-col items-center mb-6">
           <div
             className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3`}
@@ -318,35 +294,33 @@ export function ClientCard({
             </button>
           )}
 
-          {onClick && (
-            <Button
+          {enabledModules?.visits !== false && !isDemo && (
+            <button
               onClick={() => {
-                onClick(client)
-                setSheetOpen(false)
+                setDrawerOpen(false)
+                if (onClick) onClick(client)
               }}
-              variant="outline"
-              className="w-full py-3"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 transition"
             >
-              <Eye className="w-4 h-4 me-2" />
-              {text.view}
-            </Button>
+              <CalendarPlus size={18} />
+              {text.newVisit}
+            </button>
           )}
 
           {onEdit && (
-            <Button
+            <button
               onClick={() => {
+                setDrawerOpen(false)
                 onEdit(client)
-                setSheetOpen(false)
               }}
-              variant="outline"
-              className="w-full py-3"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition"
             >
-              <Pencil className="w-4 h-4 me-2" />
+              <Pencil size={18} />
               {text.edit}
-            </Button>
+            </button>
           )}
         </div>
-      </BottomSheet>
+      </TrinityBottomDrawer>
     </>
   )
 }

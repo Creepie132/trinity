@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Eye, Edit, MessageSquare, CreditCard, Upload } from 'lucide-react'
+import { Plus, Search, Eye, Edit, MessageSquare, CreditCard, Upload, Users } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { AddClientDialog } from '@/components/clients/AddClientDialog'
 import { ClientSheet } from '@/components/clients/ClientSheet'
@@ -19,6 +19,7 @@ import { useDemoMode } from '@/hooks/useDemoMode'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { ExportButton } from '@/components/ExportButton'
 import { ClientCard } from '@/components/clients/ClientCard'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -214,17 +215,20 @@ export default function ClientsPage() {
               }}
               locale={language}
               isDemo={isDemo}
+              enabledModules={{ visits: features.hasVisits }}
               onClick={handleClientClick}
             />
           ))
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400 mb-4">{t('clients.noClients')}</p>
-            <Button onClick={() => setAddDialogOpen(true)} className="bg-theme-primary text-white hover:opacity-90">
-              <Plus className="w-4 h-4 ml-2" />
-              {t('clients.addFirst')}
-            </Button>
-          </div>
+          <EmptyState
+            icon={<Users size={28} />}
+            title={language === 'he' ? 'אין לקוחות עדיין' : 'Клиентов пока нет'}
+            description={language === 'he' ? 'הוסף את הלקוח הראשון שלך' : 'Добавьте первого клиента'}
+            action={{
+              label: language === 'he' ? 'הוסף לקוח' : 'Добавить',
+              onClick: () => setAddDialogOpen(true),
+            }}
+          />
         )}
 
         {/* Pagination */}

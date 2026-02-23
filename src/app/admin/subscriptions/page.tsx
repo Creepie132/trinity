@@ -39,6 +39,14 @@ interface AccessRequest {
   status: string
 }
 
+const SUBSCRIPTION_STATUSES = [
+  { value: 'none', label_he: 'ללא גישה', label_ru: 'Нет доступа', color: 'gray' },
+  { value: 'trial', label_he: 'ניסיון', label_ru: 'Пробный период', color: 'yellow' },
+  { value: 'active', label_he: 'פעיל', label_ru: 'Активна', color: 'green' },
+  { value: 'manual', label_he: 'גישה ידנית', label_ru: 'Ручной доступ', color: 'blue' },
+  { value: 'expired', label_he: 'פג תוקף', label_ru: 'Истекла', color: 'red' },
+]
+
 export default function AdminSubscriptionsPage() {
   const router = useRouter()
   const { language } = useLanguage()
@@ -191,18 +199,26 @@ export default function AdminSubscriptionsPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">{t.statuses.active}</Badge>
-      case 'trial':
-        return <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">{t.statuses.trial}</Badge>
-      case 'manual':
-        return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">{t.statuses.manual}</Badge>
-      case 'expired':
-        return <Badge className="bg-red-500/10 text-red-600 border-red-500/20">{t.statuses.expired}</Badge>
-      default:
-        return <Badge className="bg-gray-500/10 text-gray-600 border-gray-500/20">{t.statuses.none}</Badge>
+    const statusConfig = SUBSCRIPTION_STATUSES.find(s => s.value === status)
+    if (!statusConfig) {
+      return <Badge className="bg-gray-500/10 text-gray-600 border-gray-500/20">—</Badge>
     }
+
+    const colorClasses: Record<string, string> = {
+      gray: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
+      yellow: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
+      green: 'bg-green-500/10 text-green-600 border-green-500/20',
+      blue: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+      red: 'bg-red-500/10 text-red-600 border-red-500/20',
+    }
+
+    const label = language === 'he' ? statusConfig.label_he : statusConfig.label_ru
+
+    return (
+      <Badge className={colorClasses[statusConfig.color] || colorClasses.gray}>
+        {label}
+      </Badge>
+    )
   }
 
   const getPlanBadge = (planKey: string) => {
@@ -593,9 +609,11 @@ export default function AdminSubscriptionsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="trial">{t.statuses.trial}</SelectItem>
-                  <SelectItem value="active">{t.statuses.active}</SelectItem>
-                  <SelectItem value="manual">{t.statuses.manual}</SelectItem>
+                  {SUBSCRIPTION_STATUSES.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {language === 'he' ? status.label_he : status.label_ru}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

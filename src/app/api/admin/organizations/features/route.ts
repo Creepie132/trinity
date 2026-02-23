@@ -56,6 +56,12 @@ export async function PUT(request: NextRequest) {
     // Get request body
     const { org_id, features, subscription_update, plan } = await request.json()
 
+    console.log('=== EXTEND SUBSCRIPTION ===')
+    console.log('org_id:', org_id)
+    console.log('subscription_update:', JSON.stringify(subscription_update))
+    console.log('plan:', plan)
+    console.log('features:', features ? 'present' : 'none')
+
     if (!org_id) {
       return NextResponse.json(
         { error: 'Missing org_id' },

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, Home, Moon, Sun, ChevronRight, Boxes, Shield, Mail } from 'lucide-react'
+import { LayoutDashboard, Building2, CreditCard, Megaphone, Settings, Home, Moon, Sun, ChevronRight, Boxes, Shield, Mail, Package } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -48,6 +48,11 @@ export function AdminSidebar() {
       name: t('admin.subscriptions') || 'Подписки и доступ',
       href: '/admin/subscriptions',
       icon: Shield,
+    },
+    {
+      name: t('admin.plans') || 'Тарифные планы',
+      href: '/admin/plans',
+      icon: Package,
     },
     {
       name: t('admin.billing'),

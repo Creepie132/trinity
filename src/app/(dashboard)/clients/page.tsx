@@ -9,6 +9,7 @@ import { Plus, Search, Eye, Edit, MessageSquare, CreditCard, Upload, Users } fro
 import { useClients } from '@/hooks/useClients'
 import { AddClientDialog } from '@/components/clients/AddClientDialog'
 import { ClientSheet } from '@/components/clients/ClientSheet'
+import { ClientBottomSheet } from '@/components/clients/ClientBottomSheet'
 import { ClientSummary } from '@/types/database'
 import { format } from 'date-fns'
 import { useRouter } from 'next/navigation'
@@ -216,7 +217,10 @@ export default function ClientsPage() {
               locale={language}
               isDemo={isDemo}
               enabledModules={{ visits: features.hasVisits }}
-              onClick={handleClientClick}
+              onSelect={(c) => {
+                setSelectedClient(client)
+                setClientSheetOpen(true)
+              }}
             />
           ))
         ) : (
@@ -312,11 +316,57 @@ export default function ClientsPage() {
 
       {/* Dialogs */}
       <AddClientDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
-      <ClientSheet
-        client={selectedClient}
-        open={clientSheetOpen}
-        onOpenChange={setClientSheetOpen}
-      />
+      
+      {/* Desktop - ClientSheet */}
+      <div className="hidden md:block">
+        <ClientSheet
+          client={selectedClient}
+          open={clientSheetOpen}
+          onOpenChange={setClientSheetOpen}
+        />
+      </div>
+
+      {/* Mobile - ClientBottomSheet */}
+      {selectedClient && (
+        <div className="md:hidden">
+          <ClientBottomSheet
+            client={{
+              id: selectedClient.id,
+              name: `${selectedClient.first_name} ${selectedClient.last_name}`,
+              phone: selectedClient.phone || undefined,
+              email: selectedClient.email || undefined,
+              visits_count: selectedClient.total_visits,
+              last_visit: selectedClient.last_visit || undefined,
+              notes: selectedClient.notes || undefined,
+              created_at: selectedClient.created_at || undefined,
+            }}
+            isOpen={clientSheetOpen}
+            onClose={() => {
+              setClientSheetOpen(false)
+              setSelectedClient(null)
+            }}
+            locale={language === 'he' ? 'he' : 'ru'}
+            isDemo={isDemo}
+            enabledModules={{ visits: features.hasVisits, payments: features.hasPayments, sms: features.hasSms }}
+            onEdit={(c) => {
+              setClientSheetOpen(false)
+              setSelectedClient(null)
+              router.push(`/clients/${c.id}/edit`)
+            }}
+            onDelete={async (clientId) => {
+              // Handle delete via GDPR endpoint
+              try {
+                const res = await fetch(`/api/clients/${clientId}/gdpr-delete`, { method: 'DELETE' })
+                if (res.ok) {
+                  router.refresh()
+                }
+              } catch (e) {
+                console.error(e)
+              }
+            }}
+          />
+        </div>
+      )}
 
       {/* Mobile FAB (Floating Action Button) */}
       <button

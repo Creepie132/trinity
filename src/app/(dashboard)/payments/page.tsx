@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Copy, ExternalLink, Eye, Banknote, CheckCircle, TrendingUp } from 'lucide-react'
+import { Plus, Copy, ExternalLink, Eye, Banknote, CheckCircle, TrendingUp, SlidersHorizontal, Receipt } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
 import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
 import { CreateSubscriptionDialog } from '@/components/payments/CreateSubscriptionDialog'
@@ -25,16 +25,20 @@ import { useFeatures } from '@/hooks/useFeatures'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { ExportButton } from '@/components/ExportButton'
+import { PaymentCard } from '@/components/payments/PaymentCard'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 export default function PaymentsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const features = useFeatures()
   const { data: isAdmin } = useIsAdmin()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false)
   const [cashDialogOpen, setCashDialogOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all')
   const [clientFilter, setClientFilter] = useState('all')
@@ -239,8 +243,32 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+      {/* Filters - Mobile: Button, Desktop: Fields */}
+      <div className="md:hidden">
+        <button
+          onClick={() => setFiltersOpen(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-muted text-sm font-medium w-full justify-center"
+        >
+          <SlidersHorizontal size={16} />
+          {language === 'he' ? 'סינון' : 'Фильтры'}
+          {((statusFilter !== 'all' ? 1 : 0) +
+            (paymentMethodFilter !== 'all' ? 1 : 0) +
+            (clientFilter !== 'all' ? 1 : 0) +
+            (startDate ? 1 : 0) +
+            (endDate ? 1 : 0)) > 0 && (
+            <span className="bg-primary text-primary-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center">
+              {(statusFilter !== 'all' ? 1 : 0) +
+                (paymentMethodFilter !== 'all' ? 1 : 0) +
+                (clientFilter !== 'all' ? 1 : 0) +
+                (startDate ? 1 : 0) +
+                (endDate ? 1 : 0)}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Filters - Desktop */}
+      <div className="hidden md:block bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <label className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">{t('payments.filterByStatus')}</label>
@@ -310,8 +338,8 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      {/* Table - Desktop */}
+      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
         ) : payments && payments.length > 0 ? (
@@ -420,6 +448,112 @@ export default function PaymentsPage() {
           </div>
         )}
       </div>
+
+      {/* Mobile - Payment Cards */}
+      <div className="md:hidden space-y-2">
+        {isLoading ? (
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
+        ) : payments && payments.length > 0 ? (
+          payments.map((payment) => (
+            <PaymentCard
+              key={payment.id}
+              payment={payment}
+              locale={language === 'he' ? 'he' : 'ru'}
+            />
+          ))
+        ) : (
+          <EmptyState
+            icon={<Receipt size={28} />}
+            title={language === 'he' ? 'אין תשלומים עדיין' : 'Платежей пока нет'}
+            description={language === 'he' ? 'צור את התשלום הראשון' : 'Создайте первый платёж'}
+            action={{
+              label: language === 'he' ? 'הוסף תשלום' : 'Добавить',
+              onClick: () => setDialogOpen(true),
+            }}
+          />
+        )}
+      </div>
+
+      {/* Filters Drawer - Mobile */}
+      <TrinityBottomDrawer
+        isOpen={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title={language === 'he' ? 'סינון' : 'Фильтры'}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">{t('payments.filterByStatus')}</label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('payments.all')}</SelectItem>
+                <SelectItem value="pending">{t('payments.pending')}</SelectItem>
+                <SelectItem value="completed">{t('payments.paid')}</SelectItem>
+                <SelectItem value="failed">{t('payments.failed')}</SelectItem>
+                <SelectItem value="refunded">{t('payments.refunded')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">{t('payments.filterByMethod')}</label>
+            <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('payments.all')}</SelectItem>
+                <SelectItem value="cash">💵 {t('payments.method.cash')}</SelectItem>
+                <SelectItem value="bit">📱 {t('payments.method.bit')}</SelectItem>
+                <SelectItem value="credit_card">💳 {t('payments.method.credit')}</SelectItem>
+                <SelectItem value="bank_transfer">🏦 {t('payments.method.bankTransfer')}</SelectItem>
+                <SelectItem value="phone_credit">📞 {t('payments.method.phoneCredit')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">{t('payments.fromDate')}</label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">{t('payments.toDate')}</label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-6">
+          <button
+            onClick={() => {
+              setStatusFilter('all')
+              setPaymentMethodFilter('all')
+              setClientFilter('all')
+              setStartDate('')
+              setEndDate('')
+            }}
+            className="flex-1 py-3 rounded-xl bg-muted font-medium"
+          >
+            {language === 'he' ? 'נקה' : 'Сбросить'}
+          </button>
+          <button
+            onClick={() => setFiltersOpen(false)}
+            className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium"
+          >
+            {language === 'he' ? 'החל' : 'Применить'}
+          </button>
+        </div>
+      </TrinityBottomDrawer>
 
       {/* Dialogs */}
       <CreatePaymentLinkDialog open={dialogOpen} onOpenChange={setDialogOpen} />

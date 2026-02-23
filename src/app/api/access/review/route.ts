@@ -66,99 +66,11 @@ export async function GET(request: NextRequest) {
       .maybeSingle()
 
     console.log('Existing orgUser:', orgUser)
-    
-    let orgId = orgUser?.org_id
-    console.log('OrgId before creation:', orgId)
 
-    if (!orgId) {
-      console.log('Creating new organization...')
-      // Create new organization for new user
-      console.log('No organization found, creating new one for user:', userId)
-      
-      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId)
-      const userName = userData?.user?.user_metadata?.full_name || userData?.user?.email || 'New Business'
-      
-      // Add unique suffix to prevent duplicate name errors
-      const uniqueSuffix = Math.random().toString(36).substring(2, 8)
-      const orgName = `${userName}_${uniqueSuffix}`
-      
-      console.log('Generated unique org name:', orgName)
-
-      const { data: newOrg, error: orgError } = await supabaseAdmin
-        .from('organizations')
-        .insert({
-          name: orgName,
-          subscription_status: 'trial',
-          subscription_expires_at: expiresAt.toISOString(),
-          trial_started_at: new Date().toISOString(),
-          features: {
-            modules: {
-              clients: true,
-              visits: false,
-              booking: false,
-              inventory: false,
-              payments: false,
-              sms: false,
-              subscriptions: false,
-              statistics: false,
-              reports: false,
-              telegram: false,
-              loyalty: false,
-              birthday: false,
-            },
-          },
-        })
-        .select('id')
-        .single()
-
-      if (orgError) {
-        console.error('Error creating organization:', orgError)
-        return new Response(
-          `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">
-            <h2 style="color:red">❌ Error</h2>
-            <p>${orgError.message}</p>
-          </body></html>`,
-          { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-        )
-      }
-
-      orgId = newOrg.id
-      console.log('Created organization:', orgId)
-
-      // Link user to organization
-      console.log('=== INSERTING ORG_USER ===')
-      console.log('userId:', userId, 'type:', typeof userId)
-      console.log('orgId:', orgId, 'type:', typeof orgId)
-      console.log('email:', accessRequest.email)
-      console.log('role:', 'owner')
-      
-      const { data: orgUserResult, error: orgUserError } = await supabaseAdmin
-        .from('org_users')
-        .insert({
-          user_id: userId,
-          org_id: orgId,
-          email: accessRequest.email,
-          role: 'owner',
-        })
-        .select()
-      
-      console.log('org_users insert result:', JSON.stringify(orgUserResult))
-      console.log('org_users insert error:', JSON.stringify(orgUserError))
-      
-      if (orgUserError) {
-        console.error('CRITICAL: Failed to link user to org:', orgUserError)
-        return new Response(
-          `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">
-            <h2 style="color:red">❌ Error linking user</h2>
-            <p>${orgUserError.message}</p>
-          </body></html>`,
-          { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-        )
-      }
-
-      console.log('User linked to organization as owner')
-    } else {
+    if (orgUser) {
       // Activate trial for existing organization
+      console.log('Activating trial for org:', orgUser.org_id)
+      
       await supabaseAdmin
         .from('organizations')
         .update({
@@ -166,13 +78,24 @@ export async function GET(request: NextRequest) {
           subscription_expires_at: expiresAt.toISOString(),
           trial_started_at: new Date().toISOString(),
         })
-        .eq('id', orgId)
+        .eq('id', orgUser.org_id)
 
-      console.log('Trial activated for existing org:', orgId)
+      console.log('Trial activated for org:', orgUser.org_id)
+    } else {
+      console.error('NO ORG FOUND for user:', userId)
+      console.error('User should have completed onboarding first!')
+      
+      return new Response(
+        `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">
+          <h2 style="color:red">❌ Error</h2>
+          <p>Organization not found for user. User should complete onboarding first.</p>
+          <p>Email: ${accessRequest.email}</p>
+        </body></html>`,
+        { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+      )
     }
 
     console.log('=== APPROVE END ===')
-    console.log('Final orgId:', orgId)
     console.log('Expires at:', expiresAt.toISOString())
 
     return new Response(

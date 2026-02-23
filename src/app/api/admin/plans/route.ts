@@ -54,10 +54,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all plans
+    console.log('=== LOAD PLANS ===')
     const { data, error } = await supabaseAdmin
       .from('subscription_plans')
       .select('*')
       .order('sort_order', { ascending: true })
+
+    console.log('Plans data:', JSON.stringify(data))
+    console.log('Plans error:', JSON.stringify(error))
 
     if (error) {
       console.error('Error fetching plans:', error)

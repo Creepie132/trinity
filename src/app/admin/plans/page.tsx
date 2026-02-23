@@ -82,13 +82,19 @@ export default function AdminPlansPage() {
 
   const loadPlans = async () => {
     try {
+      console.log('=== LOAD PLANS CLIENT ===')
       const res = await fetch('/api/admin/plans')
+      console.log('Response status:', res.status)
+      
       if (res.ok) {
         const data = await res.json()
+        console.log('Plans loaded:', data.length, 'plans')
+        console.log('Plans data:', JSON.stringify(data).substring(0, 200))
         setPlans(data)
       } else {
         // Table might not exist yet
-        console.warn('Failed to load plans from DB, table might not exist')
+        const errorText = await res.text()
+        console.warn('Failed to load plans from DB, status:', res.status, 'error:', errorText)
         setPlans([])
       }
     } catch (error) {
@@ -173,11 +179,18 @@ export default function AdminPlansPage() {
     }
 
     try {
+      console.log('=== CREATE PLAN ===')
+      console.log('New plan data:', JSON.stringify(newPlan))
+      
       const res = await fetch('/api/admin/plans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newPlan),
       })
+
+      console.log('Create response status:', res.status)
+      const responseData = await res.json()
+      console.log('Create plan response:', JSON.stringify(responseData))
 
       if (!res.ok) throw new Error('Failed to create')
 

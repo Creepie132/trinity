@@ -146,19 +146,18 @@ export default function AdminSubscriptionsPage() {
           features,
           subscription_status,
           subscription_expires_at,
-          org_users!inner (
+          org_users (
             role,
             user_id,
-            profiles:user_id (
-              full_name,
-              email
-            )
+            email
           )
         `)
-        .eq('org_users.role', 'owner')
 
       const formattedOrgs = orgs?.map((org: any) => {
         const businessInfo = org.features?.business_info || {}
+        // Find owner from org_users
+        const owner = org.org_users?.find((u: any) => u.role === 'owner')
+        
         return {
           id: org.id,
           name: org.name,
@@ -166,8 +165,8 @@ export default function AdminSubscriptionsPage() {
           display_name: businessInfo.display_name || org.name,
           subscription_status: org.subscription_status || 'none',
           subscription_expires_at: org.subscription_expires_at,
-          owner_name: businessInfo.owner_name || org.org_users[0]?.profiles?.full_name || '—',
-          owner_email: org.org_users[0]?.profiles?.email || '—',
+          owner_name: businessInfo.owner_name || '—',
+          owner_email: owner?.email || businessInfo.email || '—',
           phone: businessInfo.mobile || '—',
           features: org.features,
         }

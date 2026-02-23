@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Building2, CreditCard, Megaphone, Boxes, Settings, ArrowLeft, Home, Moon, Sun, Shield, Mail, Package } from 'lucide-react'
+import { LayoutDashboard, Building2, CreditCard, Megaphone, Boxes, Settings, ArrowLeft, Home, Moon, Sun, Shield, Mail, Package, DollarSign } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import {
@@ -52,6 +52,11 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
       name: t('admin.plans') || 'Тарифные планы',
       href: '/admin/plans',
       icon: Package,
+    },
+    {
+      name: t('admin.modulePricing') || 'Цены модулей',
+      href: '/admin/module-pricing',
+      icon: DollarSign,
     },
     {
       name: t('admin.billing'),

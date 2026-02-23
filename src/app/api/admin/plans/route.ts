@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('sort_order', { ascending: true })
 
+    console.log('Plans:', data?.length, 'Error:', error)
     console.log('Plans data:', JSON.stringify(data))
     console.log('Plans error:', JSON.stringify(error))
 

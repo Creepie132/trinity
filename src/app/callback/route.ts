@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!user.id) {
-    return NextResponse.redirect(`${origin}/unauthorized`)
+    return NextResponse.redirect(`${origin}/access-pending`)
   }
 
   // 1) Check if admin
@@ -79,5 +79,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 
-  return NextResponse.redirect(`${origin}/unauthorized`)
+  // No admin, no org → redirect to access-pending (will auto-create request)
+  return NextResponse.redirect(`${origin}/access-pending`)
 }

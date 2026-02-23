@@ -79,6 +79,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 
-  // No admin, no org → redirect to access-pending (will auto-create request)
-  return NextResponse.redirect(`${origin}/access-pending`)
+  // No admin, no org → redirect to onboarding
+  return NextResponse.redirect(`${origin}/onboarding/business-info`)
 }

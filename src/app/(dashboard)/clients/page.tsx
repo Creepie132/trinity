@@ -18,6 +18,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { ExportButton } from '@/components/ExportButton'
+import { ResponsiveDataView } from '@/components/ui/ResponsiveDataView'
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -120,69 +121,64 @@ export default function ClientsPage() {
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[400px]">
         {clients && clients.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.name')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.phone')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.lastVisit')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.visits')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.totalSpent')}</TableHead>
-                <TableHead className="text-left text-gray-700 dark:text-gray-300">{t('clients.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clients.map((client) => (
-                <TableRow
-                  key={client.id}
-                  className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
-                  onClick={() => handleClientClick(client)}
-                >
-                  <TableCell className="font-medium text-gray-900 dark:text-gray-100">
-                    {client.first_name} {client.last_name}
-                  </TableCell>
-                  <TableCell className="text-gray-700 dark:text-gray-300">{client.phone}</TableCell>
-                  <TableCell className="text-gray-700 dark:text-gray-300">
-                    {client.last_visit
-                      ? format(new Date(client.last_visit), 'dd/MM/yyyy')
-                      : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{client.total_visits}</Badge>
-                  </TableCell>
-                  <TableCell className="font-semibold text-green-600 dark:text-green-400">
-                    ₪{Number(client.total_paid || 0).toFixed(2)}
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleClientClick(client)}
-                        className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <CreditCard className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ResponsiveDataView
+            columns={[
+              {
+                key: 'name',
+                label: t('clients.name'),
+                compact: true,
+                render: (val, row) => `${row.first_name} ${row.last_name}`,
+              },
+              {
+                key: 'phone',
+                label: t('clients.phone'),
+                compact: true,
+              },
+              {
+                key: 'email',
+                label: t('clients.email'),
+                render: (val) => val || '—',
+              },
+              {
+                key: 'total_visits',
+                label: t('clients.visits'),
+                compact: true,
+                render: (val) => (
+                  <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                    {val}
+                  </Badge>
+                ),
+              },
+              {
+                key: 'last_visit',
+                label: t('clients.lastVisit'),
+                render: (val) =>
+                  val ? format(new Date(val), 'dd/MM/yyyy') : '—',
+              },
+              {
+                key: 'total_paid',
+                label: t('clients.totalSpent'),
+                render: (val) => (
+                  <span className="font-semibold text-green-600 dark:text-green-400">
+                    ₪{Number(val || 0).toFixed(2)}
+                  </span>
+                ),
+              },
+            ]}
+            data={clients.map(client => ({
+              ...client,
+              name: `${client.first_name} ${client.last_name}`,
+            }))}
+            titleKey="name"
+            subtitleKey="phone"
+            actions={(client) => [
+              {
+                label: t('common.view'),
+                onClick: () => handleClientClick(client),
+              },
+            ]}
+            locale={language}
+          />
         ) : (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400 mb-4">{t('clients.noClients')}</p>

@@ -16,6 +16,7 @@ import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users } fro
 import { Switch } from '@/components/ui/switch'
 import { PLANS, getPlan, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
+import { ResponsiveDataView } from '@/components/ui/ResponsiveDataView'
 
 interface Organization {
   id: string
@@ -526,54 +527,68 @@ export default function AdminSubscriptionsPage() {
           <CardTitle>{t.organizations}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-start p-3">{t.name}</th>
-                  <th className="text-start p-3">{t.owner}</th>
-                  <th className="text-start p-3">{t.phone}</th>
-                  <th className="text-start p-3">{t.plan}</th>
-                  <th className="text-start p-3">{t.status}</th>
-                  <th className="text-start p-3">{t.expires}</th>
-                  <th className="text-start p-3">{t.actions}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {organizations.map((org) => (
-                  <tr key={org.id} className="border-b">
-                    <td className="p-3">{org.display_name}</td>
-                    <td className="p-3">{org.owner_name}</td>
-                    <td className="p-3 whitespace-nowrap">{org.phone}</td>
-                    <td className="p-3">{getPlanBadge(org.plan || 'demo')}</td>
-                    <td className="p-3">{getStatusBadge(org.subscription_status)}</td>
-                    <td className="p-3">
-                      {org.subscription_expires_at
-                        ? new Date(org.subscription_expires_at).toLocaleDateString(
-                            language === 'he' ? 'he-IL' : 'ru-RU'
-                          )
-                        : '-'}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleExtend(org)}>
-                          <Calendar className="w-4 h-4 mr-2" />
-                          {t.extend}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeactivate(org.id)}
-                        >
-                          {t.deactivate}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ResponsiveDataView
+            columns={[
+              {
+                key: 'display_name',
+                label: t.name,
+                compact: true,
+              },
+              {
+                key: 'owner_name',
+                label: t.owner,
+                compact: true,
+              },
+              {
+                key: 'phone',
+                label: t.phone,
+              },
+              {
+                key: 'plan',
+                label: t.plan,
+                render: (val) => getPlanBadge(val || 'demo'),
+              },
+              {
+                key: 'subscription_status',
+                label: t.status,
+                compact: true,
+                render: (val) => getStatusBadge(val),
+              },
+              {
+                key: 'subscription_expires_at',
+                label: t.expires,
+                render: (val) =>
+                  val
+                    ? new Date(val).toLocaleDateString(
+                        language === 'he' ? 'he-IL' : 'ru-RU'
+                      )
+                    : '-',
+              },
+            ]}
+            data={organizations}
+            titleKey="display_name"
+            subtitleKey="owner_name"
+            badgeKey="subscription_status"
+            badgeColorMap={{
+              trial: 'yellow',
+              active: 'green',
+              manual: 'blue',
+              expired: 'red',
+              none: 'gray',
+            }}
+            actions={(org) => [
+              {
+                label: t.extend,
+                onClick: () => handleExtend(org),
+              },
+              {
+                label: t.deactivate,
+                onClick: () => handleDeactivate(org.id),
+                variant: 'destructive',
+              },
+            ]}
+            locale={language}
+          />
         </CardContent>
       </Card>
 

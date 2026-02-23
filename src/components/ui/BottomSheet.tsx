@@ -1,16 +1,15 @@
 'use client'
 
 import { useEffect } from 'react'
+import { X } from 'lucide-react'
 
 interface BottomSheetProps {
   isOpen: boolean
   onClose: () => void
-  title?: string
   children: React.ReactNode
 }
 
-export function BottomSheet({ isOpen, onClose, title, children }: BottomSheetProps) {
-  // Prevent body scroll when sheet is open
+export function BottomSheet({ isOpen, onClose, children }: BottomSheetProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -26,30 +25,33 @@ export function BottomSheet({ isOpen, onClose, title, children }: BottomSheetPro
 
   return (
     <>
-      {/* Overlay */}
+      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+        className="fixed inset-0 bg-black/50 z-40 md:hidden"
         onClick={onClose}
       />
-
+      
       {/* Sheet */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl shadow-2xl transform transition-transform duration-300 ease-out max-h-[85vh] overflow-y-auto ${
-          isOpen ? 'translate-y-0' : 'translate-y-full'
-        }`}
-      >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-        </div>
-
-        {title && (
-          <div className="px-4 pb-3 border-b">
-            <h3 className="text-lg font-semibold">{title}</h3>
+      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden animate-slide-up">
+        <div className="bg-background rounded-t-3xl shadow-2xl max-h-[90vh] overflow-auto">
+          {/* Handle */}
+          <div className="flex justify-center pt-3 pb-2">
+            <div className="w-12 h-1 bg-muted-foreground/30 rounded-full" />
           </div>
-        )}
-
-        <div className="p-4">{children}</div>
+          
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 end-4 p-2 rounded-full hover:bg-muted"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          
+          {/* Content */}
+          <div className="px-6 pb-6">
+            {children}
+          </div>
+        </div>
       </div>
     </>
   )

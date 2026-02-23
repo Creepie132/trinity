@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
 import { Mail, Copy, Send, RefreshCw, Loader2 } from 'lucide-react'
+import { ResponsiveDataView } from '@/components/ui/ResponsiveDataView'
 
 interface Invitation {
   id: string
@@ -288,84 +289,87 @@ export default function AdminInvitationsPage() {
           <CardTitle>{t.invitationsList}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-start p-3">{t.email}</th>
-                  <th className="text-start p-3">{t.status}</th>
-                  <th className="text-start p-3">{t.sentDate}</th>
-                  <th className="text-start p-3">{t.acceptedDate}</th>
-                  <th className="text-start p-3">{t.actions}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invitations.map((invitation) => (
-                  <tr key={invitation.id} className="border-b">
-                    <td className="p-3">
-                      <div>
-                        <p className="font-medium">{invitation.email}</p>
-                        {invitation.message && (
-                          <p className="text-sm text-gray-500 italic truncate max-w-xs">
-                            "{invitation.message}"
-                          </p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="p-3">{getStatusBadge(invitation)}</td>
-                    <td className="p-3">
-                      {new Date(invitation.created_at).toLocaleDateString(
+          <ResponsiveDataView
+            columns={[
+              {
+                key: 'email',
+                label: t.email,
+                compact: true,
+                render: (val, row) => (
+                  <div>
+                    <p className="font-medium">{val}</p>
+                    {row.message && (
+                      <p className="text-sm text-gray-500 italic truncate max-w-xs">
+                        "{row.message}"
+                      </p>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: 'status',
+                label: t.status,
+                compact: true,
+                render: (val, row) => getStatusBadge(row),
+              },
+              {
+                key: 'created_at',
+                label: t.sentDate,
+                compact: true,
+                render: (val) =>
+                  new Date(val).toLocaleDateString(
+                    language === 'he' ? 'he-IL' : 'ru-RU'
+                  ),
+              },
+              {
+                key: 'accepted_at',
+                label: t.acceptedDate,
+                render: (val) =>
+                  val
+                    ? new Date(val).toLocaleDateString(
                         language === 'he' ? 'he-IL' : 'ru-RU'
-                      )}
-                    </td>
-                    <td className="p-3">
-                      {invitation.accepted_at
-                        ? new Date(invitation.accepted_at).toLocaleDateString(
-                            language === 'he' ? 'he-IL' : 'ru-RU'
-                          )
-                        : '-'}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex gap-2">
-                        {invitation.status === 'pending' && !isExpired(invitation) && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => copyInviteLink(invitation.token)}
-                            >
-                              <Copy className="w-4 h-4 mr-2" />
-                              {t.copyLink}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => resendInvitation(invitation)}
-                              disabled={sending}
-                            >
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                              {t.resend}
-                            </Button>
-                          </>
-                        )}
-                        {(invitation.status === 'expired' || isExpired(invitation)) && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            onClick={() => resendInvitation(invitation)}
-                            disabled={sending}
-                          >
-                            <Send className="w-4 h-4 mr-2" />
-                            {t.inviteAgain}
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      )
+                    : '-',
+              },
+              {
+                key: 'expires_at',
+                label: language === 'he' ? 'תפוגה' : 'Истекает',
+                render: (val) =>
+                  new Date(val).toLocaleDateString(
+                    language === 'he' ? 'he-IL' : 'ru-RU'
+                  ),
+              },
+            ]}
+            data={invitations}
+            titleKey="email"
+            badgeKey="status"
+            badgeColorMap={{
+              pending: 'yellow',
+              accepted: 'green',
+              expired: 'gray',
+            }}
+            actions={(row) => {
+              const actions = []
+              if (row.status === 'pending' && !isExpired(row)) {
+                actions.push({
+                  label: t.copyLink,
+                  onClick: () => copyInviteLink(row.token),
+                })
+                actions.push({
+                  label: t.resend,
+                  onClick: () => resendInvitation(row),
+                })
+              }
+              if (row.status === 'expired' || isExpired(row)) {
+                actions.push({
+                  label: t.inviteAgain,
+                  onClick: () => resendInvitation(row),
+                })
+              }
+              return actions
+            }}
+            locale={language}
+          />
         </CardContent>
       </Card>
     </div>

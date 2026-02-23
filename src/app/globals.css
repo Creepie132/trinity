@@ -309,6 +309,20 @@
   animation: fade-in 0.6s ease-out;
 }
 
+/* Bottom sheet slide-up animation */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
 /* Animated login button - Orbit style (comet trail) */
 @keyframes comet-orbit {
   0% {

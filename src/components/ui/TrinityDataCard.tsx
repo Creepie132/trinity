@@ -1,188 +1,130 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronRight, Mail, Phone, Calendar } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { BottomSheet } from './BottomSheet'
-import { Button } from './button'
-import { Badge } from './badge'
 
-export interface DataField {
+interface Badge {
+  text: string
+  color: 'gray' | 'yellow' | 'green' | 'blue' | 'red'
+}
+
+interface Field {
   key: string
   label: string
-  value: string | React.ReactNode
-  type?: 'text' | 'badge' | 'date' | 'email' | 'phone' | 'action'
-  color?: string // для badge
-  compact?: boolean // показывать в компактном виде карточки
-  icon?: React.ReactNode
+  value: React.ReactNode
+  compact?: boolean
+}
+
+interface Action {
+  label: string
+  onClick: () => void
+  variant?: 'default' | 'destructive'
 }
 
 interface TrinityDataCardProps {
   title: string
   subtitle?: string
-  fields: DataField[]
-  actions?: {
-    label: string
-    onClick: () => void
-    variant?: 'default' | 'destructive' | 'outline'
-  }[]
-  badge?: { text: string; color: string }
-  onClick?: () => void
+  badge?: Badge
+  fields: Field[]
+  actions?: Action[]
 }
 
-export function TrinityDataCard({
-  title,
-  subtitle,
-  fields,
-  actions,
-  badge,
-  onClick,
-}: TrinityDataCardProps) {
+const badgeColors = {
+  gray: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100',
+  yellow: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100',
+  green: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
+  blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
+  red: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100',
+}
+
+export function TrinityDataCard({ title, subtitle, badge, fields, actions }: TrinityDataCardProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  // Компактные поля — показываются на карточке
-  const compactFields = fields.filter((f) => f.compact)
-
-  const handleCardClick = () => {
-    if (onClick) {
-      onClick()
-    } else {
-      setIsOpen(true)
-    }
-  }
-
-  const renderFieldValue = (field: DataField) => {
-    switch (field.type) {
-      case 'badge':
-        return (
-          <Badge
-            className={`bg-${field.color || 'gray'}-100 text-${
-              field.color || 'gray'
-            }-700 dark:bg-${field.color || 'gray'}-900/30 dark:text-${
-              field.color || 'gray'
-            }-400`}
-          >
-            {field.value}
-          </Badge>
-        )
-      case 'email':
-        return (
-          <a
-            href={`mailto:${field.value}`}
-            className="text-blue-600 hover:underline flex items-center gap-1"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Mail size={14} />
-            {field.value}
-          </a>
-        )
-      case 'phone':
-        return (
-          <a
-            href={`tel:${field.value}`}
-            className="text-blue-600 hover:underline flex items-center gap-1"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Phone size={14} />
-            {field.value}
-          </a>
-        )
-      case 'date':
-        return (
-          <div className="flex items-center gap-1">
-            <Calendar size={14} className="text-muted-foreground" />
-            {field.value}
-          </div>
-        )
-      default:
-        return field.value
-    }
-  }
-
-  const getBadgeColor = (color: string) => {
-    const colors: Record<string, string> = {
-      red: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-      blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      green: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-      yellow: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-      amber: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      purple: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-      gray: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-    }
-    return colors[color] || colors.gray
-  }
+  // Compact fields shown in card
+  const compactFields = fields.filter(f => f.compact)
+  
+  // All fields shown in bottom sheet
+  const allFields = fields
 
   return (
     <>
+      {/* Card */}
       <div
-        onClick={handleCardClick}
-        className="bg-card border rounded-xl p-4 mb-3 active:bg-muted/50 transition cursor-pointer"
+        onClick={() => setIsOpen(true)}
+        className="bg-card border rounded-xl p-4 cursor-pointer hover:bg-muted/50 transition"
       >
-        <div className="flex items-center justify-between">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h4 className="font-medium truncate">{title}</h4>
-              {badge && (
-                <span className={`text-xs px-2 py-0.5 rounded-full ${getBadgeColor(badge.color)}`}>
-                  {badge.text}
-                </span>
-              )}
-            </div>
+            <h3 className="font-medium text-base truncate">{title}</h3>
             {subtitle && (
-              <p className="text-sm text-muted-foreground truncate mt-0.5">{subtitle}</p>
-            )}
-            {compactFields.length > 0 && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                {compactFields.map((f) => (
-                  <span key={f.key} className="text-xs text-muted-foreground">
-                    {f.icon && <span className="inline-block mr-1">{f.icon}</span>}
-                    {f.value}
-                  </span>
-                ))}
-              </div>
+              <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
             )}
           </div>
-          <ChevronRight className="text-muted-foreground ml-2 flex-shrink-0" size={20} />
+          {badge && (
+            <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ms-2 ${badgeColors[badge.color]}`}>
+              {badge.text}
+            </span>
+          )}
+        </div>
+
+        {/* Compact Fields */}
+        {compactFields.length > 0 && (
+          <div className="space-y-2 mb-3">
+            {compactFields.map(f => (
+              <div key={f.key} className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">{f.label}</span>
+                <span className="font-medium">{f.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-end text-primary text-sm font-medium">
+          <span className="me-1">פרטים</span>
+          <ChevronDown className="w-4 h-4" />
         </div>
       </div>
 
-      <BottomSheet isOpen={isOpen} onClose={() => setIsOpen(false)} title={title}>
+      {/* Bottom Sheet */}
+      <BottomSheet isOpen={isOpen} onClose={() => setIsOpen(false)}>
+        <h2 className="text-xl font-semibold mb-1">{title}</h2>
+        {subtitle && <p className="text-muted-foreground mb-4">{subtitle}</p>}
+        
         {badge && (
-          <span
-            className={`inline-block text-sm px-3 py-1 rounded-full mb-4 ${getBadgeColor(badge.color)}`}
-          >
+          <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full mb-4 ${badgeColors[badge.color]}`}>
             {badge.text}
           </span>
         )}
 
-        {subtitle && <p className="text-sm text-muted-foreground mb-4">{subtitle}</p>}
-
-        {/* All fields */}
         <div className="space-y-3">
-          {fields.map((field) => (
-            <div key={field.key} className="border-b pb-3 last:border-0">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                {field.label}
-              </label>
-              <div className="mt-1 text-sm">{renderFieldValue(field)}</div>
+          {allFields.map(f => (
+            <div key={f.key} className="flex justify-between items-start py-2 border-b border-muted last:border-0">
+              <span className="text-sm text-muted-foreground">{f.label}</span>
+              <span className="text-sm font-medium text-end max-w-[60%]">{f.value}</span>
             </div>
           ))}
         </div>
 
-        {/* Actions */}
         {actions && actions.length > 0 && (
-          <div className="flex flex-col gap-2 mt-6 pt-4 border-t">
+          <div className="mt-6 space-y-2">
             {actions.map((action, i) => (
-              <Button
+              <button
                 key={i}
-                variant={action.variant || 'default'}
                 onClick={() => {
                   action.onClick()
                   setIsOpen(false)
                 }}
-                className="w-full"
+                className={`w-full py-3 rounded-xl font-medium transition ${
+                  action.variant === 'destructive'
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                }`}
               >
                 {action.label}
-              </Button>
+              </button>
             ))}
           </div>
         )}

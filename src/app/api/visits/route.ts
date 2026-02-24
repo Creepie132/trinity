@@ -37,25 +37,13 @@ export async function GET() {
 
     console.log('Organization ID:', orgUser.org_id)
 
-    // Получаем визиты с клиентами (только будущие и недавние)
+    // Получаем визиты (только будущие и недавние)
     const oneWeekAgo = new Date()
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
 
     const { data: visits, error } = await supabase
       .from('visits')
-      .select(`
-        id,
-        client_id,
-        start_time,
-        status,
-        duration,
-        price,
-        notes,
-        clients (
-          name,
-          phone
-        )
-      `)
+      .select('id, client_id, start_time, status, duration, price, notes')
       .eq('org_id', orgUser.org_id)
       .gte('start_time', oneWeekAgo.toISOString())
       .order('start_time', { ascending: false })
@@ -70,20 +58,9 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Трансформируем данные
-    const transformedVisits = (visits || []).map((visit: any) => ({
-      id: visit.id,
-      client_id: visit.client_id,
-      start_time: visit.start_time,
-      status: visit.status,
-      duration: visit.duration,
-      price: visit.price,
-      notes: visit.notes,
-      client: visit.clients ? { name: visit.clients.name, phone: visit.clients.phone } : null,
-    }))
-
-    console.log('✅ Returning', transformedVisits.length, 'visits')
-    return NextResponse.json(transformedVisits)
+    // Возвращаем данные как есть (без JOIN с clients)
+    console.log('✅ Returning', visits?.length || 0, 'visits')
+    return NextResponse.json(visits || [])
   } catch (e: any) {
     console.error('❌ Catch error in GET /api/visits:', e.message)
     console.error('Stack:', e.stack)

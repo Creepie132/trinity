@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -33,10 +33,22 @@ export default function ClientsPage() {
   const [clientSheetOpen, setClientSheetOpen] = useState(false)
 
   const pageSize = 25
-  const { data: clientsData, isLoading } = useClients(searchQuery, page, pageSize)
+  const { data: clientsData, isLoading } = useClients('', page, pageSize)
   const clients = clientsData?.data || []
+  
+  // Client-side search filter
+  const filteredClients = useMemo(() => {
+    if (!searchQuery || searchQuery.length < 2) return clients
+    const q = searchQuery.toLowerCase()
+    return clients.filter(c => 
+      `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
+      c.phone?.includes(q) ||
+      c.email?.toLowerCase().includes(q)
+    )
+  }, [clients, searchQuery])
+  
   const totalCount = clientsData?.count || 0
-  const clientCount = totalCount
+  const clientCount = searchQuery ? filteredClients.length : totalCount
   const totalPages = Math.ceil(totalCount / pageSize)
   const from = (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, totalCount)
@@ -121,7 +133,7 @@ export default function ClientsPage() {
 
       {/* Desktop - Table */}
       <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[400px]">
-        {clients && clients.length > 0 ? (
+        {filteredClients && filteredClients.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -134,7 +146,7 @@ export default function ClientsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {clients.map((client) => (
+              {filteredClients.map((client) => (
                 <TableRow
                   key={client.id}
                   className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
@@ -198,8 +210,8 @@ export default function ClientsPage() {
 
       {/* Mobile - ClientCard */}
       <div className="md:hidden space-y-2">
-        {clients && clients.length > 0 ? (
-          clients.map((client) => (
+        {filteredClients && filteredClients.length > 0 ? (
+          filteredClients.map((client) => (
             <ClientCard
               key={client.id}
               client={{
@@ -234,8 +246,17 @@ export default function ClientsPage() {
           />
         )}
 
+        {/* Search results */}
+        {searchQuery && searchQuery.length >= 2 && (
+          <div className="mt-4 px-4 text-sm text-gray-600 dark:text-gray-400">
+            {language === 'he' 
+              ? `נמצאו ${filteredClients.length} לקוחות` 
+              : `Найдено ${filteredClients.length} клиентов`}
+          </div>
+        )}
+
         {/* Pagination */}
-        {clients.length > 0 && totalPages > 1 && (
+        {!searchQuery && clients.length > 0 && totalPages > 1 && (
           <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-4">
             {/* Stats */}
             <div className="text-sm text-gray-600 dark:text-gray-400">

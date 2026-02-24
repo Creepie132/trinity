@@ -5,6 +5,7 @@ import { Plus, Calendar, Clock, User, Filter, CheckCircle, Circle, AlertCircle, 
 import { TrinityCard } from '@/components/ui/TrinityCard'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { CreateTaskSheet } from '@/components/diary/CreateTaskSheet'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { format, isToday, isTomorrow, isPast, startOfDay, parseISO } from 'date-fns'
@@ -63,6 +64,7 @@ export default function DiaryPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
 
   // ===== Загрузка задач =====
   useEffect(() => {
@@ -310,14 +312,17 @@ export default function DiaryPage() {
         <h1 className="text-2xl font-bold">
           {language === 'he' ? 'יומן משימות' : 'Дневник задач'}
         </h1>
-        <TrinityButton
-          variant="primary"
-          size="md"
-          icon={<Plus className="w-5 h-5" />}
-          onClick={() => {/* TODO: Открыть форму создания задачи */}}
-        >
-          {language === 'he' ? 'משימה חדשה' : 'Новая задача'}
-        </TrinityButton>
+        {/* Десктоп кнопка */}
+        <div className="hidden md:block">
+          <TrinityButton
+            variant="primary"
+            size="md"
+            icon={<Plus className="w-5 h-5" />}
+            onClick={() => setCreateOpen(true)}
+          >
+            {language === 'he' ? 'משימה חדשה' : 'Новая задача'}
+          </TrinityButton>
+        </div>
       </div>
 
       {/* Поиск */}
@@ -380,7 +385,7 @@ export default function DiaryPage() {
           description={language === 'he' ? 'צור משימה חדשה כדי להתחיל' : 'Создайте первую задачу для начала работы'}
           action={{
             label: language === 'he' ? 'צור משימה' : 'Создать задачу',
-            onClick: () => {/* TODO */},
+            onClick: () => setCreateOpen(true),
           }}
         />
       ) : (
@@ -397,6 +402,27 @@ export default function DiaryPage() {
           ))}
         </div>
       )}
+
+      {/* FAB мобильный */}
+      <div className="md:hidden fixed bottom-20 end-4 z-30">
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 flex items-center justify-center transition"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Форма создания задачи */}
+      <CreateTaskSheet
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          setCreateOpen(false)
+          loadTasks()
+        }}
+        locale={language === 'he' ? 'he' : 'ru'}
+      />
     </div>
   )
 }

@@ -2,6 +2,64 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { validateBody, createVisitSchema } from '@/lib/validations'
+import { createClient } from '@/lib/supabase/server'
+
+// GET /api/visits - список визитов для текущей организации
+export async function GET() {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Получаем org_id пользователя
+  const { data: orgUser } = await supabase
+    .from('org_users')
+    .select('org_id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!orgUser) {
+    return NextResponse.json({ error: 'No organization' }, { status: 403 })
+  }
+
+  // Получаем визиты с клиентами (только будущие и недавние)
+  const oneWeekAgo = new Date()
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+
+  const { data: visits, error } = await supabase
+    .from('visits')
+    .select(`
+      id,
+      client_id,
+      scheduled_at,
+      service_type,
+      clients (
+        name
+      )
+    `)
+    .eq('org_id', orgUser.org_id)
+    .gte('scheduled_at', oneWeekAgo.toISOString())
+    .order('scheduled_at', { ascending: false })
+    .limit(100)
+
+  if (error) {
+    console.error('Get visits error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Трансформируем данные
+  const transformedVisits = (visits || []).map((visit: any) => ({
+    id: visit.id,
+    client_id: visit.client_id,
+    scheduled_at: visit.scheduled_at,
+    service_type: visit.service_type,
+    client: visit.clients ? { name: visit.clients.name } : null,
+  }))
+
+  return NextResponse.json(transformedVisits)
+}
 
 export async function POST(request: NextRequest) {
   console.log('[API /api/visits POST] Start')

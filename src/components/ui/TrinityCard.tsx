@@ -232,28 +232,22 @@ export function TrinityCard({
                 {detailFields.map((field, i) => (
                   <div
                     key={i}
-                    className={`flex justify-between ${field.type === 'multiline' ? 'flex-col' : 'items-center'} py-2.5 border-b border-muted last:border-0`}
+                    className={`flex ${field.type === 'multiline' ? 'flex-col' : 'justify-between items-center'} py-2.5 border-b border-muted last:border-0`}
                   >
-                    <span className="text-xs text-muted-foreground">{field.label}</span>
-                    {field.type === 'link' ? (
-                      <a href={field.value as string} className="text-sm text-blue-600 underline">
-                        {field.value}
-                      </a>
-                    ) : field.type === 'badge' ? (
-                      <span className="text-sm">{field.value}</span>
-                    ) : field.type === 'multiline' ? (
-                      <p className="text-sm mt-1 whitespace-pre-wrap">{field.value}</p>
+                    <span className="text-sm text-muted-foreground">{field.label}</span>
+                    {field.type === 'multiline' ? (
+                      <p className="text-sm whitespace-pre-wrap break-words mt-1">{field.value}</p>
                     ) : (
-                      <span className="text-sm font-medium">{field.value}</span>
+                      <span className="text-sm font-medium text-end">{field.value}</span>
                     )}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Detail Actions (кнопки снизу) */}
+            {/* Detail Actions */}
             {detailActions && detailActions.length > 0 && (
-              <div className="flex flex-col gap-2 mt-6">
+              <div className="mt-6 space-y-2">
                 {detailActions.map((action, i) => (
                   <button
                     key={i}
@@ -261,7 +255,7 @@ export function TrinityCard({
                       action.onClick()
                       setDrawerOpen(false)
                     }}
-                    className={action.className}
+                    className={`w-full py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition ${action.className}`}
                   >
                     {action.icon}
                     {action.label}
@@ -274,4 +268,19 @@ export function TrinityCard({
       </TrinityBottomDrawer>
     </>
   )
+}
+
+// ============================================
+// ХЕЛПЕРЫ
+// ============================================
+
+// Генератор цвета аватара по имени
+export function getAvatarColor(name: string): string {
+  const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-cyan-500']
+  return colors[(name || '').charCodeAt(0) % colors.length]
+}
+
+// Генератор инициалов
+export function getInitials(name: string): string {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 }

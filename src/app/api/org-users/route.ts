@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('org_users')
-      .select('user_id, full_name, role')
+      .select('user_id, role')
       .eq('org_id', orgUser.org_id)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -702,6 +702,10 @@ export default function VisitsPage() {
                         onStart={handleStartVisit}
                         onComplete={() => handleCompleteVisit(visit)}
                         onCancel={handleCancelVisit}
+                        onEdit={(visit) => {
+                          // TODO: открыть форму редактирования
+                          console.log('Edit visit:', visit.id)
+                        }}
                       />
                     ))}
                   </>
@@ -737,6 +741,10 @@ export default function VisitsPage() {
                         onStart={handleStartVisit}
                         onComplete={() => handleCompleteVisit(visit)}
                         onCancel={handleCancelVisit}
+                        onEdit={(visit) => {
+                          // TODO: открыть форму редактирования
+                          console.log('Edit visit:', visit.id)
+                        }}
                       />
                     ))}
                   </>
@@ -773,6 +781,10 @@ export default function VisitsPage() {
                           onStart={handleStartVisit}
                           onComplete={() => handleCompleteVisit(visit)}
                           onCancel={handleCancelVisit}
+                          onEdit={(visit) => {
+                            // TODO: открыть форму редактирования
+                            console.log('Edit visit:', visit.id)
+                          }}
                         />
                       ))}
                     </div>

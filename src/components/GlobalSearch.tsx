@@ -172,8 +172,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl p-0 gap-0 bg-gray-900 border-gray-800">
         {/* Мобильный: результаты сверху, инпут снизу | Десктоп: инпут сверху, результаты снизу */}
-        <div className="flex flex-col-reverse md:flex-col max-h-[80vh] md:max-h-[600px]">
-          {/* Results */}
+        <div className="flex flex-col h-full max-h-[80vh] md:max-h-[600px]">
+          {/* Results — скроллятся, сверху на мобильном */}
           <div className="flex-1 overflow-y-auto p-2 order-1 md:order-2">
           {query && totalResults === 0 && !loading && (
             <div className="text-center py-8 text-gray-500">
@@ -284,8 +284,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           )}
           </div>
 
-          {/* Search Input - внизу на мобильном, вверху на десктопе */}
-          <div className="flex items-center border-t md:border-t-0 md:border-b border-gray-800 px-4 py-3 order-2 md:order-1 bg-gray-900 sticky bottom-0 md:static">
+          {/* Инпут — внизу на мобильном, вверху на десктопе */}
+          <div className="flex items-center border-t md:border-t-0 md:border-b border-gray-800 px-4 py-3 order-2 md:order-1 bg-gray-900">
             <Search className="w-5 h-5 text-gray-400 mr-3" />
             <Input
               value={query}

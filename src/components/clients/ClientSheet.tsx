@@ -36,7 +36,7 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
   const { t, language } = useLanguage()
   const supabase = createSupabaseBrowserClient()
   const permissions = usePermissions()
-  const { role, orgId } = useAuth()
+  const { isAdmin, orgId } = useAuth()
   const { data: organization } = useOrganization()
   const { isDemo } = useDemoMode()
   const { data: fullClient } = useClient(client?.id)
@@ -279,7 +279,7 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
             )}
             
             {/* GDPR Delete - Owner only */}
-            {role === 'owner' && (
+            {isAdmin && (
               <Button 
                 size="sm" 
                 variant="destructive"

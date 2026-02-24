@@ -8,6 +8,7 @@ type UseAuthResult = {
   orgId: string | null
   organizations: Array<{ org_id: string; org_name: string }> | null
   isAdmin: boolean
+  role: string | null
   isLoading: boolean
   signOut: () => Promise<void>
   setCurrentOrg: (orgId: string) => void
@@ -15,7 +16,8 @@ type UseAuthResult = {
 
 let cachedOrgId: string | null = null
 let cachedIsAdmin: boolean | null = null
-let cachedOrganizations: Array<{ org_id: string; org_name: string }> | null = null
+let cachedRole: string | null = null
+let cachedOrganizations: Array<{ org_id: string; org_name: string; role: string }> | null = null
 
 // Читаем из localStorage при загрузке
 if (typeof window !== 'undefined') {
@@ -28,8 +30,9 @@ if (typeof window !== 'undefined') {
 export function useAuth(): UseAuthResult {
   const [user, setUser] = useState<any | null>(null)
   const [orgId, setOrgId] = useState<string | null>(cachedOrgId)
-  const [organizations, setOrganizations] = useState<Array<{ org_id: string; org_name: string }> | null>(cachedOrganizations)
+  const [organizations, setOrganizations] = useState<Array<{ org_id: string; org_name: string; role: string }> | null>(cachedOrganizations)
   const [isAdmin, setIsAdmin] = useState<boolean>(cachedIsAdmin ?? false)
+  const [role, setRole] = useState<string | null>(cachedRole)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -69,6 +72,7 @@ export function useAuth(): UseAuthResult {
         .from('org_users')
         .select(`
           org_id,
+          role,
           organizations (
             name
           )
@@ -78,6 +82,7 @@ export function useAuth(): UseAuthResult {
       const userOrganizations = (orgRows || []).map((row: any) => ({
         org_id: row.org_id,
         org_name: row.organizations?.name || 'Unknown',
+        role: row.role || 'user',
       }))
 
       cachedIsAdmin = isAdminUser
@@ -95,9 +100,15 @@ export function useAuth(): UseAuthResult {
 
       cachedOrgId = selectedOrgId
 
+      // Найти роль для выбранной организации
+      const currentOrgData = userOrganizations.find((org: any) => org.org_id === selectedOrgId)
+      const userRole = currentOrgData?.role || 'user'
+      cachedRole = userRole
+
       setIsAdmin(isAdminUser)
       setOrganizations(userOrganizations)
       setOrgId(selectedOrgId)
+      setRole(userRole)
       setIsLoading(false)
     }
 
@@ -111,6 +122,7 @@ export function useAuth(): UseAuthResult {
   const signOut = async () => {
     cachedOrgId = null
     cachedIsAdmin = null
+    cachedRole = null
     cachedOrganizations = null
     localStorage.removeItem('current_org_id')
     await supabase.auth.signOut()
@@ -130,6 +142,7 @@ export function useAuth(): UseAuthResult {
     orgId,
     organizations,
     isAdmin,
+    role,
     isLoading,
     signOut,
     setCurrentOrg,

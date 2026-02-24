@@ -93,7 +93,7 @@ export function validateBody<T>(schema: z.ZodSchema<T>, body: unknown): {
 } {
   const result = schema.safeParse(body)
   if (!result.success) {
-    const errors = result.error.errors.map(e => `${e.path.join(".")}: ${e.message}`).join(", ")
+    const errors = result.error.issues.map(e => `${e.path.join(".")}: ${e.message}`).join(", ")
     return { data: null, error: errors }
   }
   return { data: result.data, error: null }

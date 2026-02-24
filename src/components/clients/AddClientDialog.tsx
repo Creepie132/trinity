@@ -18,7 +18,7 @@ interface AddClientDialogProps {
 }
 
 export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
-  const { orgId, isLoading: authLoading, user, refetch } = useAuth()
+  const { orgId, isLoading: authLoading, user } = useAuth()
   const { t, language } = useLanguage()
   const { isDemo, clientLimit } = useDemoMode()
   const { data: clientsData } = useClients()
@@ -208,7 +208,7 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => refetch()}
+                onClick={() => window.location.reload()}
                 className="w-full border-red-300 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900"
               >
                 <RefreshCw className="w-4 h-4 ml-2" />

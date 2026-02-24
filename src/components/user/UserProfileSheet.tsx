@@ -20,7 +20,7 @@ interface UserProfileSheetProps {
 }
 
 export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) {
-  const { user, orgId, isAdmin, isLoading: authLoading, refetch } = useAuth()
+  const { user, orgId, isAdmin, isLoading: authLoading } = useAuth()
   const { data: organization, isLoading: orgLoading } = useOrganization()
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [loadingAvatar, setLoadingAvatar] = useState(true)
@@ -61,8 +61,8 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
 
   const handleAvatarUpdate = (newUrl: string) => {
     setAvatarUrl(newUrl)
-    // Optionally refetch auth data to update sidebar
-    refetch()
+    // Optionally reload to update sidebar
+    // window.location.reload() - not needed, sidebar will update on next navigation
   }
 
   return (
@@ -150,7 +150,7 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => refetch()}
+                  onClick={() => window.location.reload()}
                   className="w-full mt-2 border-yellow-300 dark:border-yellow-700"
                 >
                   רענן נתונים

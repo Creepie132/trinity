@@ -6,59 +6,82 @@ import { createClient } from '@/lib/supabase/server'
 
 // GET /api/visits - список визитов для текущей организации
 export async function GET() {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    console.log('=== GET /api/visits START ===')
+    
+    const supabase = await createClient()
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    console.log('User ID:', user?.id)
+    console.log('Auth error:', authError?.message)
+    
+    if (!user) {
+      console.log('❌ No user - returning 401')
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Получаем org_id пользователя
+    const { data: orgUser, error: orgError } = await supabase
+      .from('org_users')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .single()
+
+    console.log('Org user:', orgUser)
+    console.log('Org error:', orgError?.message)
+
+    if (!orgUser) {
+      console.log('❌ No organization - returning 403')
+      return NextResponse.json({ error: 'No organization' }, { status: 403 })
+    }
+
+    console.log('Organization ID:', orgUser.org_id)
+
+    // Получаем визиты с клиентами (только будущие и недавние)
+    const oneWeekAgo = new Date()
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+
+    const { data: visits, error } = await supabase
+      .from('visits')
+      .select(`
+        id,
+        client_id,
+        scheduled_at,
+        service_type,
+        clients (
+          name
+        )
+      `)
+      .eq('org_id', orgUser.org_id)
+      .gte('scheduled_at', oneWeekAgo.toISOString())
+      .order('scheduled_at', { ascending: false })
+      .limit(100)
+
+    console.log('Query error:', error?.message)
+    console.log('Visits count:', visits?.length)
+    console.log('First visit:', visits?.[0] ? JSON.stringify(visits[0]) : 'none')
+
+    if (error) {
+      console.error('❌ Visits query error:', JSON.stringify(error))
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Трансформируем данные
+    const transformedVisits = (visits || []).map((visit: any) => ({
+      id: visit.id,
+      client_id: visit.client_id,
+      scheduled_at: visit.scheduled_at,
+      service_type: visit.service_type,
+      client: visit.clients ? { name: visit.clients.name } : null,
+    }))
+
+    console.log('✅ Returning', transformedVisits.length, 'visits')
+    return NextResponse.json(transformedVisits)
+  } catch (e: any) {
+    console.error('❌ Catch error in GET /api/visits:', e.message)
+    console.error('Stack:', e.stack)
+    return NextResponse.json({ error: e.message }, { status: 500 })
   }
-
-  // Получаем org_id пользователя
-  const { data: orgUser } = await supabase
-    .from('org_users')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!orgUser) {
-    return NextResponse.json({ error: 'No organization' }, { status: 403 })
-  }
-
-  // Получаем визиты с клиентами (только будущие и недавние)
-  const oneWeekAgo = new Date()
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-
-  const { data: visits, error } = await supabase
-    .from('visits')
-    .select(`
-      id,
-      client_id,
-      scheduled_at,
-      service_type,
-      clients (
-        name
-      )
-    `)
-    .eq('org_id', orgUser.org_id)
-    .gte('scheduled_at', oneWeekAgo.toISOString())
-    .order('scheduled_at', { ascending: false })
-    .limit(100)
-
-  if (error) {
-    console.error('Get visits error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  // Трансформируем данные
-  const transformedVisits = (visits || []).map((visit: any) => ({
-    id: visit.id,
-    client_id: visit.client_id,
-    scheduled_at: visit.scheduled_at,
-    service_type: visit.service_type,
-    client: visit.clients ? { name: visit.clients.name } : null,
-  }))
-
-  return NextResponse.json(transformedVisits)
 }
 
 export async function POST(request: NextRequest) {

@@ -1175,110 +1175,42 @@ export default function LandingPage() {
                       : 'bg-slate-800'
                   }`}
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3
-                      className={`text-2xl font-bold ${
-                        index === 0 ? 'text-gray-900' : 'text-white'
-                      }`}
-                    >
-                      {plan.name}
-                    </h3>
-                    {plan.subtitle && (
-                      <span
-                        className={`text-sm font-normal ${
-                          index === 0 ? 'text-gray-600' : 'text-white opacity-80'
-                        }`}
-                      >
-                        / {plan.subtitle}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-end gap-1">
-                    <p
-                      className={`text-3xl font-bold ${
-                        index === 0 ? 'text-gray-900' : 'text-white'
-                      }`}
-                    >
-                      {plan.price}
-                    </p>
-                    {plan.period && (
-                      <span
-                        className={`text-sm mb-1 ${
-                          index === 0 ? 'text-gray-600' : 'text-white opacity-80'
-                        }`}
-                      >
-                        {plan.period}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Features */}
-                <div className="p-6">
-                  <ul className="space-y-3 mb-6">
-                    {plan.features.map((feature, fIndex) => (
-                      <li
-                        key={fIndex}
-                        className={`flex items-start gap-2 ${
-                          feature.startsWith('✗') ? 'text-gray-400' : 'text-gray-700'
-                        }`}
-                      >
-                        <span className="flex-shrink-0">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* CTA Button */}
-                  <button
-                    onClick={() => openOrderModal(plan.name)}
-                    className={`w-full py-3 rounded-lg font-semibold transition-all ${
-                      index === 0
-                        ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        : index === 1
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-slate-800 text-white hover:bg-slate-900'
+                  <h3
+                    className={`text-2xl font-bold ${
+                      index === 0 ? 'text-gray-900' : 'text-white'
                     }`}
                   >
-                    {plan.cta}
-                  </button>
+                    {plan.name}
+                  </h3>
+                </div>
+
+                {/* Заглушка "В разработке" */}
+                <div className="p-6 flex flex-col items-center justify-center py-12">
+                  {/* Шлагбаум */}
+                  <div className="relative mb-4">
+                    {/* Столб */}
+                    <div className="w-2 h-24 bg-slate-400 rounded-full mx-auto" />
+                    {/* Полосатая перекладина */}
+                    <div 
+                      className="absolute top-4 -left-12 -right-12 h-6 rounded-sm transform -rotate-3"
+                      style={{ 
+                        backgroundSize: '24px 100%',
+                        backgroundImage: 'repeating-linear-gradient(90deg, #facc15 0px, #facc15 12px, #1a1a1a 12px, #1a1a1a 24px)'
+                      }}
+                    />
+                    {/* Табличка */}
+                    <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-white border-2 border-slate-300 rounded-lg px-4 py-2 shadow-md mt-4">
+                      <p className="text-sm font-bold text-slate-700 whitespace-nowrap">🚧 בבנייה</p>
+                    </div>
+                  </div>
+                  {/* Подпись */}
+                  <p className="text-sm text-gray-500 mt-12">
+                    {language === 'he' ? 'העמוד בבנייה — בקרוב!' : 'Страница в разработке — скоро!'}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
-
-          {/* Setup Fee Block */}
-          {t.pricing.setupFee && (
-            <div className="mt-12 max-w-3xl mx-auto">
-              <div className="rounded-2xl border-2 border-amber-500/30 bg-amber-50 p-6 flex flex-col md:flex-row items-start md:items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                  <svg
-                    className="w-5 h-5 text-amber-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 mb-1">
-                    {t.pricing.setupFee.title}
-                  </h3>
-                  <p className="text-sm text-gray-700">
-                    {t.pricing.setupFee.description}
-                  </p>
-                </div>
-                <div className="text-2xl font-bold text-amber-600 flex-shrink-0">
-                  ₪500
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </section>
 

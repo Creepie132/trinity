@@ -143,81 +143,98 @@ export function TrinityCard({
       {/* ===== КАРТОЧКА ===== */}
       <div
         onClick={() => setDrawerOpen(true)}
-        className={`
-          flex items-center gap-3 p-3 bg-background rounded-xl border 
-          transition-all duration-200 cursor-pointer
-          hover:shadow-md active:scale-[0.98]
-          ${highlightBorder || 'border-border'}
-          ${isInactive ? 'opacity-50' : ''}
-          ${cardClassName}
-        `}
+        className={`bg-card border rounded-xl mb-2 active:bg-muted/50 transition cursor-pointer ${
+          isInactive ? 'opacity-50' : ''
+        } ${highlightBorder ? `border-${highlightBorder}` : ''} ${cardClassName}`}
       >
-        {/* Аватар */}
-        {renderAvatar()}
+        {avatar?.type === 'timeline' ? (
+          // Timeline layout (визиты)
+          <div className="flex items-stretch">
+            {renderAvatar()}
+            <div className="flex-1 py-3 px-3 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm truncate">{title}</p>
+                  {subtitle && <p className="text-xs text-muted-foreground truncate mt-0.5">{subtitle}</p>}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {badge && <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.className}`}>{badge.text}</span>}
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </div>
+              </div>
+              {price && <p className="text-xs font-medium text-primary mt-1">{price}</p>}
+            </div>
+          </div>
+        ) : (
+          // Standard layout (клиенты, платежи)
+          <div className="p-4">
+            <div className="flex items-center gap-3">
+              {renderAvatar()}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-semibold text-base truncate">{title}</h4>
+                  {badge && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.className}`}>{badge.text}</span>}
+                </div>
+                {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
+              </div>
+              <ChevronRight className="text-muted-foreground flex-shrink-0" size={18} />
+            </div>
 
-        {/* Основная информация */}
-        <div className="flex-1 min-w-0">
-          {/* Заголовок + Badge */}
-          <div className="flex items-center gap-2 mb-0.5">
-            <h3 className={`font-semibold text-sm truncate ${isRTL ? 'text-right' : 'text-left'}`}>
-              {title}
-            </h3>
-            {badge && (
-              <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${badge.className}`}>
-                {badge.text}
-              </span>
+            {/* Stats Row */}
+            {stats && stats.length > 0 && (
+              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-muted">
+                {stats.map((stat, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    {stat.icon}
+                    <span>{stat.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Quick Actions */}
+            {quickActions && quickActions.length > 0 && (
+              <div className="flex items-center gap-2 mt-3">
+                {quickActions.map((action, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      action.onClick()
+                    }}
+                    className={`flex items-center justify-center w-9 h-9 rounded-full ${action.color} ${action.textColor} ${action.darkBg || ''} ${action.darkText || ''} hover:opacity-80 transition`}
+                    title={action.label}
+                  >
+                    {action.icon}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-
-          {/* Подзаголовок */}
-          {subtitle && (
-            <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
-          )}
-
-          {/* Статистика (иконки + текст) */}
-          {stats && stats.length > 0 && (
-            <div className="flex items-center gap-3 mt-1">
-              {stats.map((stat, index) => (
-                <div key={index} className="flex items-center gap-1 text-xs text-muted-foreground">
-                  {stat.icon}
-                  <span>{stat.text}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Цена (справа) */}
-        {price && (
-          <div className="text-right flex-shrink-0">
-            <p className="text-sm font-bold text-foreground">{price}</p>
-          </div>
         )}
-
-        {/* Стрелка */}
-        <ChevronRight size={18} className={`text-muted-foreground flex-shrink-0 ${isRTL ? 'rotate-180' : ''}`} />
       </div>
 
-      {/* ===== BOTTOM DRAWER ===== */}
+      {/* ===== BOTTOM SHEET ===== */}
       <TrinityBottomDrawer
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         title={drawerTitle || title}
       >
         {/* Кастомный header */}
-        {drawerHeader && <div className="mb-4">{drawerHeader}</div>}
+        {drawerHeader}
 
-        {/* Полностью кастомный контент */}
-        {drawerContent ? (
-          drawerContent
-        ) : (
+        {/* Кастомный контент ИЛИ автоматический из полей */}
+        {drawerContent || (
           <>
-            {/* Поля деталей */}
-            {detailFields && detailFields.length > 0 && (
-              <div className="space-y-3 mb-6">
-                {detailFields.map((field, index) => (
-                  <div key={index}>
-                    <p className="text-xs text-muted-foreground mb-1">{field.label}</p>
+            {/* Detail Fields */}
+            {detailFields && (
+              <div className="space-y-1">
+                {detailFields.map((field, i) => (
+                  <div
+                    key={i}
+                    className={`flex justify-between ${field.type === 'multiline' ? 'flex-col' : 'items-center'} py-2.5 border-b border-muted last:border-0`}
+                  >
+                    <span className="text-xs text-muted-foreground">{field.label}</span>
                     {field.type === 'link' ? (
                       <a href={field.value as string} className="text-sm text-blue-600 underline">
                         {field.value}
@@ -225,47 +242,28 @@ export function TrinityCard({
                     ) : field.type === 'badge' ? (
                       <span className="text-sm">{field.value}</span>
                     ) : field.type === 'multiline' ? (
-                      <p className="text-sm whitespace-pre-wrap">{field.value}</p>
+                      <p className="text-sm mt-1 whitespace-pre-wrap">{field.value}</p>
                     ) : (
-                      <p className="text-sm font-medium">{field.value}</p>
+                      <span className="text-sm font-medium">{field.value}</span>
                     )}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Быстрые действия (внутри drawer) */}
-            {quickActions && quickActions.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 mb-6">
-                {quickActions.map((action, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      action.onClick()
-                      setDrawerOpen(false)
-                    }}
-                    className={`${action.color} ${action.darkBg || ''} ${action.textColor} ${action.darkText || ''} flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition`}
-                  >
-                    {action.icon}
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Дополнительные действия */}
+            {/* Detail Actions (кнопки снизу) */}
             {detailActions && detailActions.length > 0 && (
-              <div className="space-y-2">
-                {detailActions.map((action, index) => (
+              <div className="flex flex-col gap-2 mt-6">
+                {detailActions.map((action, i) => (
                   <button
-                    key={index}
+                    key={i}
                     onClick={() => {
                       action.onClick()
                       setDrawerOpen(false)
                     }}
                     className={action.className}
                   >
-                    {action.icon && <span className="mr-2">{action.icon}</span>}
+                    {action.icon}
                     {action.label}
                   </button>
                 ))}

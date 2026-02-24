@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Clock, User, ChevronRight, Play, CheckCircle, X, Phone, MessageCircle, Pencil } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { EditVisitSheet } from './EditVisitSheet'
 
 interface VisitCardProps {
   visit: {
@@ -43,6 +44,7 @@ const STATUS_LABELS: Record<string, { he: string; ru: string }> = {
 
 export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, onCancel, onEdit }: VisitCardProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
 
   // Parse time and date
   const startTime = visit.start_time || visit.scheduled_at || ''
@@ -194,18 +196,16 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
               <Phone size={16} />
               {locale === 'he' ? 'התקשר' : 'Позвонить'}
             </a>
-            {onEdit && (
-              <button
-                onClick={() => {
-                  setDrawerOpen(false)
-                  onEdit(visit)
-                }}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-sm font-medium"
-              >
-                <Pencil size={16} />
-                {locale === 'he' ? 'עריכה' : 'Изменить'}
-              </button>
-            )}
+            <button
+              onClick={() => {
+                setDrawerOpen(false)
+                setEditOpen(true)
+              }}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-sm font-medium"
+            >
+              <Pencil size={16} />
+              {locale === 'he' ? 'עריכה' : 'Изменить'}
+            </button>
             <a
               href={`https://wa.me/${clientPhone.replace(/[^0-9]/g, '')}`}
               target="_blank"
@@ -260,6 +260,19 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
           )}
         </div>
       </TrinityBottomDrawer>
+
+      {/* Форма редактирования */}
+      <EditVisitSheet
+        visit={visit}
+        isOpen={editOpen}
+        onClose={() => setEditOpen(false)}
+        onSaved={(updated) => {
+          setEditOpen(false)
+          window.location.reload()
+        }}
+        locale={locale}
+        isMeetingMode={isMeetingMode}
+      />
     </>
   )
 }

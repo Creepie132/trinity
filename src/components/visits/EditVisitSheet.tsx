@@ -138,7 +138,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
           />
         </div>
 
-        {/* Длительность (только если не meeting mode) */}
+        {/* Длительность — только если НЕ meeting mode */}
         {!isMeetingMode && (
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">{l.duration}</label>
@@ -147,7 +147,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
               value={form.duration}
               min={5}
               step={5}
-              onChange={(e) => setForm({ ...form, duration: Number(e.target.value) })}
+              onChange={(e) => setForm({ ...form, duration: e.target.value })}
               className={inputClass}
               dir="ltr"
             />
@@ -182,7 +182,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
       {/* Кнопка сохранить */}
       <button
         onClick={handleSave}
-        disabled={saving}
+        disabled={saving || !form.date || !form.time}
         className="w-full mt-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition"
       >
         <Save size={16} />

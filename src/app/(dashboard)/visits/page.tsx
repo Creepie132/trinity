@@ -18,7 +18,6 @@ import { CompleteVisitPaymentDialog } from '@/components/visits/CompleteVisitPay
 import { CalendarView } from '@/components/visits/CalendarView'
 import { VisitCard } from '@/components/visits/VisitCard'
 import { ActiveVisitCard } from '@/components/visits/ActiveVisitCard'
-import { EditVisitSheet } from '@/components/visits/EditVisitSheet'
 import { format } from 'date-fns'
 import {
   Select,
@@ -43,8 +42,6 @@ export default function VisitsPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
-  const [editVisitSheetOpen, setEditVisitSheetOpen] = useState(false)
-  const [visitToEdit, setVisitToEdit] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFilter, setDateFilter] = useState<string>('week')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -705,10 +702,6 @@ export default function VisitsPage() {
                         onStart={handleStartVisit}
                         onComplete={() => handleCompleteVisit(visit)}
                         onCancel={handleCancelVisit}
-                        onEdit={(visit) => {
-                          setVisitToEdit(visit)
-                          setEditVisitSheetOpen(true)
-                        }}
                       />
                     ))}
                   </>
@@ -744,10 +737,6 @@ export default function VisitsPage() {
                         onStart={handleStartVisit}
                         onComplete={() => handleCompleteVisit(visit)}
                         onCancel={handleCancelVisit}
-                        onEdit={(visit) => {
-                          setVisitToEdit(visit)
-                          setEditVisitSheetOpen(true)
-                        }}
                       />
                     ))}
                   </>
@@ -784,10 +773,6 @@ export default function VisitsPage() {
                           onStart={handleStartVisit}
                           onComplete={() => handleCompleteVisit(visit)}
                           onCancel={handleCancelVisit}
-                          onEdit={(visit) => {
-                            setVisitToEdit(visit)
-                            setEditVisitSheetOpen(true)
-                          }}
                         />
                       ))}
                     </div>
@@ -912,23 +897,6 @@ export default function VisitsPage() {
         open={paymentDialogOpen} 
         onOpenChange={setPaymentDialogOpen} 
       />
-
-      {/* Edit Visit Sheet */}
-      {visitToEdit && (
-        <EditVisitSheet
-          visit={visitToEdit}
-          isOpen={editVisitSheetOpen}
-          onClose={() => {
-            setEditVisitSheetOpen(false)
-            setVisitToEdit(null)
-          }}
-          onSaved={(updated) => {
-            router.refresh()
-          }}
-          locale={language === 'he' ? 'he' : 'ru'}
-          isMeetingMode={meetingMode.isMeetingMode}
-        />
-      )}
 
       {/* Mobile FAB (Floating Action Button) */}
       <button

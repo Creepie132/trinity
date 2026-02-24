@@ -46,15 +46,19 @@ export async function GET() {
       .select(`
         id,
         client_id,
-        scheduled_at,
-        service_type,
+        start_time,
+        status,
+        duration,
+        price,
+        notes,
         clients (
-          name
+          name,
+          phone
         )
       `)
       .eq('org_id', orgUser.org_id)
-      .gte('scheduled_at', oneWeekAgo.toISOString())
-      .order('scheduled_at', { ascending: false })
+      .gte('start_time', oneWeekAgo.toISOString())
+      .order('start_time', { ascending: false })
       .limit(100)
 
     console.log('Query error:', error?.message)
@@ -70,9 +74,12 @@ export async function GET() {
     const transformedVisits = (visits || []).map((visit: any) => ({
       id: visit.id,
       client_id: visit.client_id,
-      scheduled_at: visit.scheduled_at,
-      service_type: visit.service_type,
-      client: visit.clients ? { name: visit.clients.name } : null,
+      start_time: visit.start_time,
+      status: visit.status,
+      duration: visit.duration,
+      price: visit.price,
+      notes: visit.notes,
+      client: visit.clients ? { name: visit.clients.name, phone: visit.clients.phone } : null,
     }))
 
     console.log('✅ Returning', transformedVisits.length, 'visits')
@@ -197,14 +204,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Combine date and time into ISO timestamp
-    const scheduled_at = new Date(`${date}T${time}`).toISOString()
-    console.log('[API /api/visits POST] Scheduled at (ISO):', scheduled_at)
+    const start_time = new Date(`${date}T${time}`).toISOString()
+    console.log('[API /api/visits POST] Start time (ISO):', start_time)
 
     // Prepare insert data
     const insertData: any = {
       client_id: clientId,
       org_id: org_id,
-      scheduled_at: scheduled_at,
+      start_time: start_time,
       duration_minutes: duration !== null && duration !== undefined 
         ? (typeof duration === 'number' ? duration : parseInt(duration))
         : (isMeetingMode ? null : 60), // null for meetings, default 60 for visits
@@ -217,25 +224,25 @@ export async function POST(request: NextRequest) {
     // UUID validation regex
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-    // Add service field (either service_id or service_type for backward compatibility)
+    // Add service field (either service_id or service_name for backward compatibility)
     if (serviceId) {
       // Check if serviceId is a valid UUID
       if (uuidRegex.test(serviceId)) {
         // It's a UUID from services table
         insertData.service_id = serviceId
-        insertData.service_type = service || null
+        insertData.service_name = service || null
       } else {
         // It's a text identifier (legacy default service)
         insertData.service_id = null
-        insertData.service_type = serviceId
+        insertData.service_name = serviceId
       }
     } else if (service) {
       // Legacy: only service field provided
       insertData.service_id = null
-      insertData.service_type = service
+      insertData.service_name = service
     } else {
       insertData.service_id = null
-      insertData.service_type = 'other'
+      insertData.service_name = 'other'
     }
 
     console.log('[API /api/visits POST] Insert data:', JSON.stringify(insertData, null, 2))

@@ -34,12 +34,11 @@ export async function GET() {
 
     console.log('Organization ID:', orgUser.org_id)
 
-    // Получаем всех клиентов организации (только нужные поля)
+    // Получаем всех клиентов организации (все поля)
     const { data: clients, error } = await supabase
       .from('clients')
-      .select('id, name, phone, email')
+      .select('*')
       .eq('org_id', orgUser.org_id)
-      .order('name', { ascending: true })
       .limit(100)
 
     console.log('Query error:', error?.message)

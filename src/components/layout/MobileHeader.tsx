@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Menu, ArrowRight, Search } from 'lucide-react'
 import { MobileSidebar } from './MobileSidebar'
+import { NotificationBell } from '@/components/ui/NotificationBell'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface MobileHeaderProps {
   onSearchOpen?: () => void
@@ -13,6 +15,7 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
+  const { language } = useLanguage()
 
   // На главной странице не показываем кнопку "назад"
   const showBackButton = pathname !== '/'
@@ -63,8 +66,9 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
             </h1>
           </div>
 
-          {/* Правая сторона: кнопка поиска */}
-          <div className="flex items-center">
+          {/* Правая сторона: уведомления + поиск */}
+          <div className="flex items-center gap-1">
+            <NotificationBell locale={language === 'he' ? 'he' : 'ru'} />
             <button
               onClick={onSearchOpen}
               className="p-2.5 rounded-xl hover:bg-purple-50 dark:hover:bg-slate-700 active:bg-purple-100 dark:active:bg-slate-600 transition-all duration-200 active:scale-95"

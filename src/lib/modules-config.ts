@@ -25,6 +25,14 @@ export const MODULES: Module[] = [
     alwaysVisible: true
   },
   {
+    key: 'diary',
+    name_he: 'יומן',
+    name_ru: 'Дневник',
+    desc_he: 'ניהול משימות ותזכורות',
+    desc_ru: 'Управление задачами и напоминаниями',
+    alwaysVisible: true
+  },
+  {
     key: 'booking',
     name_he: 'הזמנות אונליין',
     name_ru: 'Онлайн-запись',

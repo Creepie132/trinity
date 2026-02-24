@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, ChevronLeft, Settings, Calendar, Package } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, ChevronLeft, Settings, Calendar, Package, BookOpen } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
@@ -66,6 +66,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home, moduleKey: null },
     { name: getModuleName('clients'), href: '/clients', icon: Users, moduleKey: 'clients' },
     { name: meetingMode.t.visits, href: '/visits', icon: Calendar, moduleKey: 'visits' },
+    { name: getModuleName('diary'), href: '/diary', icon: BookOpen, moduleKey: 'diary' },
     { name: getModuleName('inventory'), href: '/inventory', icon: Package, moduleKey: 'inventory' },
     { name: getModuleName('payments'), href: '/payments', icon: CreditCard, moduleKey: 'payments' },
     { name: getModuleName('sms'), href: '/sms', icon: MessageSquare, moduleKey: 'sms' },

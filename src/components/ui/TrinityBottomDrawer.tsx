@@ -22,19 +22,24 @@ export function TrinityBottomDrawer({
     <Drawer.Root open={isOpen} onOpenChange={(open) => !open && onClose()} snapPoints={snapPoints}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
-        <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl max-h-[90vh] outline-none">
-          {/* Handle */}
-          <div className="flex justify-center pt-3 pb-2">
-            <div className="w-10 h-1.5 bg-muted-foreground/30 rounded-full" />
+        <Drawer.Content 
+          className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl overflow-hidden flex flex-col outline-none"
+          style={{ maxHeight: 'calc(100dvh - 2rem)' }}
+        >
+          {/* Handle — не скроллится */}
+          <div className="flex-shrink-0 flex justify-center pt-3 pb-2">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
           </div>
 
+          {/* Title — не скроллится */}
           {title && (
-            <Drawer.Title className="px-4 pb-3 text-lg font-semibold border-b">
-              {title}
+            <Drawer.Title className="flex-shrink-0 px-6 pb-3">
+              <h3 className="text-lg font-semibold">{title}</h3>
             </Drawer.Title>
           )}
 
-          <div className="p-4 overflow-y-auto max-h-[calc(90vh-60px)]">
+          {/* Content — СКРОЛЛИТСЯ */}
+          <div className="flex-1 overflow-y-auto px-6 pb-6 overscroll-contain">
             {children}
           </div>
         </Drawer.Content>

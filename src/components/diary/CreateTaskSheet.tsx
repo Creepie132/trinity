@@ -106,6 +106,13 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
   const isRTL = locale === 'he'
   const labels = t[locale]
 
+  // Хелпер для фокуса на мобильных - скроллит поле в видимую область
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 300)
+  }
+
   // Form state - с поддержкой prefill
   const [title, setTitle] = useState(prefill?.title || '')
   const [priority, setPriority] = useState<Priority>('normal')
@@ -303,6 +310,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            onFocus={handleInputFocus}
             className="w-full px-4 py-3 rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
             dir={isRTL ? 'rtl' : 'ltr'}
           />
@@ -336,6 +344,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
+              onFocus={handleInputFocus}
               min={today}
               className="w-full px-4 py-3 rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
               dir="ltr"
@@ -347,6 +356,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
               type="time"
               value={dueTime}
               onChange={(e) => setDueTime(e.target.value)}
+              onFocus={handleInputFocus}
               className="w-full px-4 py-3 rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
               dir="ltr"
             />
@@ -444,6 +454,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
               type="tel"
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
+              onFocus={handleInputFocus}
               className="flex-1 px-4 py-3 rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
               dir="ltr"
             />
@@ -475,6 +486,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
             type="email"
             value={contactEmail}
             onChange={(e) => setContactEmail(e.target.value)}
+            onFocus={handleInputFocus}
             className="w-full px-4 py-3 rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
             dir="ltr"
           />
@@ -488,6 +500,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
               type="text"
               value={contactAddress}
               onChange={(e) => setContactAddress(e.target.value)}
+              onFocus={handleInputFocus}
               className="flex-1 px-4 py-3 rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
               dir={isRTL ? 'rtl' : 'ltr'}
             />
@@ -509,6 +522,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            onFocus={handleInputFocus}
             rows={4}
             className="w-full px-4 py-3 rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
             dir={isRTL ? 'rtl' : 'ltr'}

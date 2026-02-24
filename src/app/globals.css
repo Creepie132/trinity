@@ -755,3 +755,16 @@ footer {
     animation: none !important;
   }
 }
+
+/* Исправление для клавиатуры в bottom drawer на мобильных */
+@supports (height: 100dvh) {
+  [vaul-drawer] {
+    max-height: calc(100dvh - 1rem) !important;
+  }
+}
+
+[vaul-drawer] input:focus,
+[vaul-drawer] textarea:focus,
+[vaul-drawer] select:focus {
+  scroll-margin-bottom: 120px;
+}

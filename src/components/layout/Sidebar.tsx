@@ -21,7 +21,11 @@ const baseNavigation = [
   { name: 'הצעות שותפים', href: '/partners', icon: Gift, requireFeature: null },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  onSearchOpen?: () => void
+}
+
+export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, signOut } = useAuth()

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, Calendar } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, Calendar, Settings } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
@@ -12,13 +12,14 @@ import { Separator } from '@/components/ui/separator'
 import { useState, useEffect } from 'react'
 
 const baseNavigation = [
-  { name: 'דשבורד', href: '/', icon: Home, requireFeature: null },
+  { name: 'דשבורד', href: '/dashboard', icon: Home, requireFeature: null },
   { name: 'לקוחות', href: '/clients', icon: Users, requireFeature: null },
   { name: 'תורים', href: '/appointments', icon: Calendar, requireFeature: null },
   { name: 'תשלומים', href: '/payments', icon: CreditCard, requireFeature: 'payments' },
   { name: 'הודעות SMS', href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
   { name: 'סטטיסטיקה', href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
   { name: 'הצעות שותפים', href: '/partners', icon: Gift, requireFeature: null },
+  { name: 'הגדרות', href: '/settings', icon: Settings, requireFeature: null },
 ]
 
 interface SidebarProps {

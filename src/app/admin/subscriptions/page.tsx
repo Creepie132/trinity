@@ -398,6 +398,12 @@ export default function AdminSubscriptionsPage() {
         monthly_price: monthlyPrice,
       }
 
+      console.log('=== SAVE EXTENSION ===')
+      console.log('Org ID:', selectedOrg.id)
+      console.log('Plan:', selectedPlan)
+      console.log('Features:', JSON.stringify(updatedFeatures))
+      console.log('Subscription Update:', { subscription_status: newStatus, subscription_expires_at: expiresAt.toISOString() })
+
       const response = await fetch('/api/admin/organizations/features', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -411,6 +417,10 @@ export default function AdminSubscriptionsPage() {
           },
         }),
       })
+
+      console.log('Response status:', response.status)
+      const data = await response.json()
+      console.log('Response data:', JSON.stringify(data))
 
       if (!response.ok) throw new Error('Failed to extend')
 

@@ -3,80 +3,52 @@ import { createClient } from '@/lib/supabase/server'
 
 // GET /api/tasks - список задач с фильтрами
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // Получаем org_id пользователя
-  const { data: orgUser } = await supabase
-    .from('org_users')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!orgUser) {
-    return NextResponse.json({ error: 'No organization' }, { status: 403 })
-  }
-
-  // Параметры фильтрации
-  const { searchParams } = new URL(request.url)
-  const status = searchParams.get('status') // open, in_progress, done, cancelled
-  const assignedTo = searchParams.get('assigned_to') // 'me' или user_id
-  const date = searchParams.get('date') // YYYY-MM-DD для фильтра по due_date
-
-  let query = supabase
-    .from('tasks')
-    .select(`
-      *,
-      client:clients(id, name, phone),
-      assigned_user:org_users!tasks_assigned_to_fkey(user_id, full_name)
-    `)
-    .eq('org_id', orgUser.org_id)
-
-  // Фильтр по статусу
-  if (status) {
-    query = query.eq('status', status)
-  }
-
-  // Фильтр по назначенному
-  if (assignedTo === 'me') {
-    query = query.eq('assigned_to', user.id)
-  } else if (assignedTo) {
-    query = query.eq('assigned_to', assignedTo)
-  }
-
-  // Фильтр по дате
-  if (date) {
-    const startOfDay = new Date(date)
-    startOfDay.setHours(0, 0, 0, 0)
-    const endOfDay = new Date(date)
-    endOfDay.setHours(23, 59, 59, 999)
+  try {
+    const supabase = await createClient()
     
-    query = query
-      .gte('due_date', startOfDay.toISOString())
-      .lte('due_date', endOfDay.toISOString())
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    console.log('=== GET TASKS ===')
+    console.log('User:', user?.id)
+    console.log('Auth error:', authError?.message)
+    
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { data: orgUser } = await supabase
+      .from('org_users')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!orgUser) return NextResponse.json({ error: 'No organization' }, { status: 403 })
+
+    const url = new URL(request.url)
+    const status = url.searchParams.get('status')
+
+    let query = supabase
+      .from('tasks')
+      .select('*')
+      .eq('org_id', orgUser.org_id)
+      .order('created_at', { ascending: false })
+
+    if (status) query = query.eq('status', status)
+
+    const { data, error } = await query
+
+    console.log('Tasks error:', error?.message)
+    console.log('Tasks count:', data?.length)
+
+    if (error) {
+      if (error.message.includes('does not exist') || error.code === '42P01') {
+        return NextResponse.json([])
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json(data || [])
+  } catch (e: any) {
+    console.error('Tasks catch:', e.message)
+    return NextResponse.json({ error: e.message }, { status: 500 })
   }
-
-  // Сортировка: сначала по приоритету (urgent > high > normal > low), затем по дате
-  const { data: tasks, error } = await query.order('due_date', { ascending: true, nullsFirst: false })
-
-  if (error) {
-    console.error('Get tasks error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  // Дополнительная сортировка по приоритету в памяти
-  const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 }
-  const sortedTasks = tasks.sort((a, b) => {
-    const priorityA = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 2
-    const priorityB = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 2
-    return priorityA - priorityB
-  })
-
-  return NextResponse.json(sortedTasks)
 }
 
 // POST /api/tasks - создать новую задачу

@@ -143,104 +143,80 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
 
         {/* Детали */}
         <div className="space-y-1">
-          <div className="flex justify-between items-center py-3 border-b border-slate-100">
-            <span className="text-sm text-muted-foreground text-start">{locale === 'he' ? 'תאריך' : 'Дата'}</span>
-            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 text-end">{date}</span>
+          <div className="flex justify-between py-2.5 border-b border-muted">
+            <span className="text-sm text-muted-foreground">{locale === 'he' ? 'תאריך' : 'Дата'}</span>
+            <span className="text-sm font-medium text-start">{date}</span>
           </div>
 
-          <div className="flex justify-between items-center py-3 border-b border-slate-100">
-            <span className="text-sm text-muted-foreground text-start">{locale === 'he' ? 'שעה' : 'Время'}</span>
-            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 text-end">{time}</span>
+          <div className="flex justify-between py-2.5 border-b border-muted">
+            <span className="text-sm text-muted-foreground">{locale === 'he' ? 'שעה' : 'Время'}</span>
+            <span className="text-sm font-medium text-start">{time}</span>
           </div>
 
           {duration > 0 && !isMeetingMode && (
-            <div className="flex justify-between items-center py-3 border-b border-slate-100">
-              <span className="text-sm text-muted-foreground text-start">{locale === 'he' ? 'משך' : 'Длительность'}</span>
-              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 text-end">
+            <div className="flex justify-between py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{locale === 'he' ? 'משך' : 'Длительность'}</span>
+              <span className="text-sm text-start">
                 {duration} {locale === 'he' ? 'דקות' : 'мин'}
               </span>
             </div>
           )}
 
           {serviceName && (
-            <div className="flex justify-between items-center py-3 border-b border-slate-100">
-              <span className="text-sm text-muted-foreground text-start">{locale === 'he' ? 'שירות' : 'Услуга'}</span>
-              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 text-end">{serviceName}</span>
+            <div className="flex justify-between py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{locale === 'he' ? 'שירות' : 'Услуга'}</span>
+              <span className="text-sm text-start">{serviceName}</span>
             </div>
           )}
 
           {visit.price != null && (
-            <div className="flex justify-between items-center py-3 border-b border-slate-100">
-              <span className="text-sm text-muted-foreground text-start">{locale === 'he' ? 'מחיר' : 'Цена'}</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100 text-end">₪{visit.price}</span>
+            <div className="flex justify-between py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{locale === 'he' ? 'מחיר' : 'Цена'}</span>
+              <span className="text-sm font-bold text-start">₪{visit.price}</span>
             </div>
           )}
 
           {visit.notes && (
-            <div className="py-3 border-b border-slate-100">
-              <p className="text-sm text-muted-foreground mb-1">{locale === 'he' ? 'הערות' : 'Заметки'}</p>
-              <p className="text-sm whitespace-pre-wrap break-words max-h-32 overflow-y-auto">
-                {visit.notes}
-              </p>
+            <div className="py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground block mb-1">{locale === 'he' ? 'הערות' : 'Заметки'}</span>
+              <p className="text-sm text-start">{visit.notes}</p>
             </div>
           )}
         </div>
 
         {/* Контакт клиента */}
-        <div className="flex gap-2 mt-4">
-          {clientPhone && (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  window.location.href = `tel:${clientPhone}`
-                }}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-sm font-medium hover:bg-blue-100 transition"
-              >
-                <Phone size={16} />
-                {locale === 'he' ? 'התקשר' : 'Позвонить'}
-              </button>
-              
-              {onEdit && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setDrawerOpen(false)
-                    onEdit(visit)
-                  }}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-sm font-medium hover:bg-slate-200 transition"
-                >
-                  <Pencil size={16} />
-                  {locale === 'he' ? 'עריכה' : 'Изменить'}
-                </button>
-              )}
-              
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  window.open(`https://wa.me/${clientPhone.replace(/[^0-9]/g, '')}`, '_blank')
-                }}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 text-sm font-medium hover:bg-green-100 transition"
-              >
-                <MessageCircle size={16} />
-                WhatsApp
-              </button>
-            </>
-          )}
-          {!clientPhone && onEdit && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setDrawerOpen(false)
-                onEdit(visit)
-              }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-sm font-medium hover:bg-slate-200 transition"
+        {clientPhone && (
+          <div className="flex gap-2 mt-4">
+            <a
+              href={`tel:${clientPhone}`}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-sm font-medium"
             >
-              <Pencil size={16} />
-              {locale === 'he' ? 'עריכה' : 'Изменить'}
-            </button>
-          )}
-        </div>
+              <Phone size={16} />
+              {locale === 'he' ? 'התקשר' : 'Позвонить'}
+            </a>
+            {onEdit && (
+              <button
+                onClick={() => {
+                  setDrawerOpen(false)
+                  onEdit(visit)
+                }}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-sm font-medium"
+              >
+                <Pencil size={16} />
+                {locale === 'he' ? 'עריכה' : 'Изменить'}
+              </button>
+            )}
+            <a
+              href={`https://wa.me/${clientPhone.replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 text-sm font-medium"
+            >
+              <MessageCircle size={16} />
+              WhatsApp
+            </a>
+          </div>
+        )}
 
         {/* Кнопки действий — outline стиль, в одну строку */}
         <div className="flex gap-2 mt-4">

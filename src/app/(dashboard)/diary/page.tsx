@@ -6,6 +6,7 @@ import { TrinityCard } from '@/components/ui/TrinityCard'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CreateTaskSheet } from '@/components/diary/CreateTaskSheet'
+import { TaskDetailSheet } from '@/components/diary/TaskDetailSheet'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { format, isToday, isTomorrow, isPast, startOfDay, parseISO } from 'date-fns'
@@ -65,6 +66,8 @@ export default function DiaryPage() {
   const [filter, setFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
 
   // ===== Загрузка задач =====
   useEffect(() => {
@@ -196,6 +199,19 @@ export default function DiaryPage() {
     }
   }
 
+  // ===== Обработчик клика на задачу =====
+  function handleTaskClick(task: Task) {
+    setSelectedTask(task)
+    setDetailOpen(true)
+  }
+
+  // ===== Обработчик изменения статуса =====
+  async function handleStatusChange(taskId: string, status: Task['status']) {
+    await updateTaskStatus(taskId, status)
+    setDetailOpen(false)
+    setSelectedTask(null)
+  }
+
   // ===== Рендер карточки задачи =====
   function renderTaskCard(task: Task) {
     const quickActions = []
@@ -222,75 +238,43 @@ export default function DiaryPage() {
       })
     }
 
-    const detailFields = [
-      task.description ? { label: language === 'he' ? 'תיאור' : 'Описание', value: task.description, type: 'multiline' as const } : null,
-      task.due_date ? { label: language === 'he' ? 'תאריך יעד' : 'Срок', value: format(parseISO(task.due_date), 'dd MMM yyyy, HH:mm', { locale: dateLocale }) } : null,
-      task.assigned_user ? { label: language === 'he' ? 'ממונה' : 'Назначено', value: task.assigned_user.full_name } : null,
-      task.client ? { label: language === 'he' ? 'לקוח' : 'Клиент', value: task.client.name } : null,
-      task.contact_phone ? { label: language === 'he' ? 'טלפון' : 'Телефон', value: task.contact_phone } : null,
-      task.contact_email ? { label: language === 'he' ? 'דוא"ל' : 'Email', value: task.contact_email } : null,
-      task.contact_address ? { label: language === 'he' ? 'כתובת' : 'Адрес', value: task.contact_address } : null,
-    ].filter(Boolean) as any[]
-
-    const detailActions = []
-
-    if (task.status !== 'done') {
-      detailActions.push({
-        label: language === 'he' ? 'סמן כהושלם' : 'Завершить',
-        icon: <CheckCircle className="w-4 h-4" />,
-        onClick: () => updateTaskStatus(task.id, 'done'),
-        className: 'bg-green-600 text-white hover:bg-green-700 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2',
-      })
-    }
-
-    if (task.status === 'open') {
-      detailActions.push({
-        label: language === 'he' ? 'התחל עבודה' : 'В процесс',
-        icon: <Clock className="w-4 h-4" />,
-        onClick: () => updateTaskStatus(task.id, 'in_progress'),
-        className: 'bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2',
-      })
-    }
-
     return (
-      <TrinityCard
-        key={task.id}
-        avatar={{
-          type: 'icon',
-          icon: getTaskIcon(task),
-          iconBg: getIconBg(task),
-        }}
-        title={task.title}
-        subtitle={task.client?.name || task.description || ''}
-        badge={{
-          text: getStatusBadge(task),
-          className: task.status === 'done' 
-            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-            : task.status === 'in_progress'
-            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-            : task.status === 'cancelled'
-            ? 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
-            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-        }}
-        stats={[
-          task.due_date ? {
-            icon: <Calendar className="w-4 h-4" />,
-            text: format(parseISO(task.due_date), 'dd MMM, HH:mm', { locale: dateLocale }),
-          } : null,
-          task.priority !== 'normal' ? {
-            icon: <AlertCircle className="w-4 h-4" />,
-            text: task.priority === 'urgent' ? (language === 'he' ? 'דחוף' : 'Срочно') :
-                  task.priority === 'high' ? (language === 'he' ? 'גבוה' : 'Высокий') :
-                  (language === 'he' ? 'נמוך' : 'Низкий'),
-          } : null,
-        ].filter(Boolean) as any[]}
-        quickActions={quickActions.length > 0 ? quickActions : undefined}
-        drawerTitle={task.title}
-        detailFields={detailFields}
-        detailActions={detailActions}
-        isInactive={task.status === 'done' || task.status === 'cancelled'}
-        locale={language === 'he' ? 'he' : 'ru'}
-      />
+      <div key={task.id} onClick={() => handleTaskClick(task)} className="cursor-pointer">
+        <TrinityCard
+          avatar={{
+            type: 'icon',
+            icon: getTaskIcon(task),
+            iconBg: getIconBg(task),
+          }}
+          title={task.title}
+          subtitle={task.client?.name || task.description || ''}
+          badge={{
+            text: getStatusBadge(task),
+            className: task.status === 'done' 
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              : task.status === 'in_progress'
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              : task.status === 'cancelled'
+              ? 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
+              : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+          }}
+          stats={[
+            task.due_date ? {
+              icon: <Calendar className="w-4 h-4" />,
+              text: format(parseISO(task.due_date), 'dd MMM, HH:mm', { locale: dateLocale }),
+            } : null,
+            task.priority !== 'normal' ? {
+              icon: <AlertCircle className="w-4 h-4" />,
+              text: task.priority === 'urgent' ? (language === 'he' ? 'דחוף' : 'Срочно') :
+                    task.priority === 'high' ? (language === 'he' ? 'גבוה' : 'Высокий') :
+                    (language === 'he' ? 'נמוך' : 'Низкий'),
+            } : null,
+          ].filter(Boolean) as any[]}
+          quickActions={quickActions.length > 0 ? quickActions : undefined}
+          isInactive={task.status === 'done' || task.status === 'cancelled'}
+          locale={language === 'he' ? 'he' : 'ru'}
+        />
+      </div>
     )
   }
 
@@ -421,6 +405,18 @@ export default function DiaryPage() {
           setCreateOpen(false)
           loadTasks()
         }}
+        locale={language === 'he' ? 'he' : 'ru'}
+      />
+
+      {/* Детальный просмотр задачи */}
+      <TaskDetailSheet
+        task={selectedTask}
+        isOpen={detailOpen}
+        onClose={() => {
+          setDetailOpen(false)
+          setSelectedTask(null)
+        }}
+        onStatusChange={handleStatusChange}
         locale={language === 'he' ? 'he' : 'ru'}
       />
     </div>

@@ -1,0 +1,363 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { TrinityButton } from '@/components/ui/TrinityButton'
+import { User, Calendar, Phone, MessageCircle, MapPin, Mail, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { he, ru } from 'date-fns/locale'
+
+interface Task {
+  id: string
+  title: string
+  description: string | null
+  status: 'open' | 'in_progress' | 'done' | 'cancelled'
+  priority: 'low' | 'normal' | 'high' | 'urgent'
+  due_date: string | null
+  client_id: string | null
+  visit_id: string | null
+  contact_phone: string | null
+  contact_email: string | null
+  contact_address: string | null
+  is_auto: boolean
+  auto_type: string | null
+  created_at: string
+  client?: {
+    id: string
+    name: string
+  } | null
+}
+
+interface TaskDetailSheetProps {
+  task: Task | null
+  isOpen: boolean
+  onClose: () => void
+  onStatusChange?: (taskId: string, status: Task['status']) => void
+  onClientClick?: (clientId: string) => void
+  locale: 'he' | 'ru'
+}
+
+export function TaskDetailSheet({ 
+  task, 
+  isOpen, 
+  onClose, 
+  onStatusChange,
+  onClientClick,
+  locale 
+}: TaskDetailSheetProps) {
+  const router = useRouter()
+  const dateLocale = locale === 'he' ? he : ru
+
+  if (!task) return null
+
+  const t = {
+    he: {
+      description: 'תיאור',
+      dueDate: 'תאריך יעד',
+      client: 'לקוח',
+      visit: 'ביקור',
+      viewVisit: 'צפה בביקור',
+      phone: 'טלפון',
+      email: 'אימייל',
+      address: 'כתובת',
+      navigate: 'נווט',
+      markDone: 'סמן כהושלם',
+      startWork: 'התחל עבודה',
+      cancel: 'בטל',
+      priority: 'עדיפות',
+      status: 'סטטוס',
+      open: 'פתוח',
+      inProgress: 'בתהליך',
+      done: 'הושלם',
+      cancelled: 'בוטל',
+      low: 'נמוכה',
+      normal: 'רגילה',
+      high: 'גבוהה',
+      urgent: 'דחופה',
+      birthdayToday: 'יום הולדת היום!',
+      call: 'חייג',
+    },
+    ru: {
+      description: 'Описание',
+      dueDate: 'Срок',
+      client: 'Клиент',
+      visit: 'Визит',
+      viewVisit: 'Посмотреть визит',
+      phone: 'Телефон',
+      email: 'Email',
+      address: 'Адрес',
+      navigate: 'Навигация',
+      markDone: 'Завершить',
+      startWork: 'В процесс',
+      cancel: 'Отменить',
+      priority: 'Приоритет',
+      status: 'Статус',
+      open: 'Открыто',
+      inProgress: 'В процессе',
+      done: 'Завершено',
+      cancelled: 'Отменено',
+      low: 'Низкий',
+      normal: 'Обычный',
+      high: 'Высокий',
+      urgent: 'Срочный',
+      birthdayToday: 'День рождения сегодня!',
+      call: 'Позвонить',
+    },
+  }
+
+  const labels = t[locale]
+
+  const priorityLabels = {
+    low: labels.low,
+    normal: labels.normal,
+    high: labels.high,
+    urgent: labels.urgent,
+  }
+
+  const statusLabels = {
+    open: labels.open,
+    in_progress: labels.inProgress,
+    done: labels.done,
+    cancelled: labels.cancelled,
+  }
+
+  function handleCall(phone: string) {
+    window.location.href = `tel:${phone}`
+  }
+
+  function handleWhatsApp(phone: string) {
+    const cleanPhone = phone.replace(/[^0-9]/g, '')
+    window.open(`https://wa.me/${cleanPhone}`, '_blank')
+  }
+
+  function handleNavigate(address: string) {
+    const encoded = encodeURIComponent(address)
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
+    
+    if (isMobile) {
+      window.open(`geo:0,0?q=${encoded}`, '_blank')
+      // Фоллбэк на Google Maps если geo: не поддерживается
+      setTimeout(() => {
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank')
+      }, 500)
+    } else {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank')
+    }
+  }
+
+  function handleClientClick() {
+    if (task && task.client_id && onClientClick) {
+      onClose()
+      onClientClick(task.client_id)
+    }
+  }
+
+  function handleVisitClick() {
+    if (task && task.visit_id) {
+      onClose()
+      router.push(`/visits?highlight=${task.visit_id}`)
+    }
+  }
+
+  return (
+    <TrinityBottomDrawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title={task.title}
+    >
+      <div className="space-y-4">
+        {/* Специальная карточка для дня рождения */}
+        {task.is_auto && task.auto_type === 'birthday' && (
+          <div className="bg-gradient-to-r from-pink-50 to-amber-50 dark:from-pink-900/20 dark:to-amber-900/20 rounded-xl p-4 border border-pink-200 dark:border-pink-800 mb-4">
+            <p className="text-3xl mb-2">🎂</p>
+            <p className="font-semibold text-lg">{task.client?.name}</p>
+            <p className="text-sm text-muted-foreground mt-1">{labels.birthdayToday}</p>
+            {task.contact_phone && (
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => handleCall(task.contact_phone!)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
+                >
+                  <Phone className="w-4 h-4" />
+                  <span className="text-sm font-medium">{labels.call}</span>
+                </button>
+                <button
+                  onClick={() => handleWhatsApp(task.contact_phone!)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-green-600 text-white hover:bg-green-700 transition"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">WhatsApp</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Описание */}
+        {task.description && (
+          <div>
+            <label className="block text-sm font-medium mb-2">{labels.description}</label>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.description}</p>
+          </div>
+        )}
+
+        {/* Статус и Приоритет */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-2">{labels.status}</label>
+            <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${
+              task.status === 'done' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+              task.status === 'in_progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+              task.status === 'cancelled' ? 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400' :
+              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+            }`}>
+              {statusLabels[task.status]}
+            </span>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">{labels.priority}</label>
+            <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${
+              task.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+              task.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+              task.priority === 'low' ? 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400' :
+              'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+            }`}>
+              {priorityLabels[task.priority]}
+            </span>
+          </div>
+        </div>
+
+        {/* Дедлайн */}
+        {task.due_date && (
+          <div>
+            <label className="block text-sm font-medium mb-2">{labels.dueDate}</label>
+            <p className="text-sm">{format(parseISO(task.due_date), 'dd MMM yyyy, HH:mm', { locale: dateLocale })}</p>
+          </div>
+        )}
+
+        {/* Привязанный клиент - кликабельный */}
+        {task.client_id && task.client && (
+          <div>
+            <label className="block text-sm font-medium mb-2">{labels.client}</label>
+            <button
+              onClick={handleClientClick}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition"
+            >
+              <User size={14} className="text-primary" />
+              <span className="text-sm font-medium text-primary">{task.client.name}</span>
+            </button>
+          </div>
+        )}
+
+        {/* Привязанный визит - кликабельный */}
+        {task.visit_id && (
+          <div>
+            <label className="block text-sm font-medium mb-2">{labels.visit}</label>
+            <button
+              onClick={handleVisitClick}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition"
+            >
+              <Calendar size={14} className="text-amber-600 dark:text-amber-400" />
+              <span className="text-sm text-amber-700 dark:text-amber-300">{labels.viewVisit}</span>
+            </button>
+          </div>
+        )}
+
+        {/* Телефон - кликабельный с кнопками */}
+        {task.contact_phone && (
+          <div>
+            <label className="block text-sm font-medium mb-2">{labels.phone}</label>
+            <div className="flex items-center gap-2">
+              <a
+                href={`tel:${task.contact_phone}`}
+                className="text-sm text-primary underline hover:text-primary/80"
+                dir="ltr"
+              >
+                {task.contact_phone}
+              </a>
+              <button
+                onClick={() => handleCall(task.contact_phone!)}
+                className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 flex items-center justify-center transition"
+                title={labels.call}
+              >
+                <Phone size={14} />
+              </button>
+              <button
+                onClick={() => handleWhatsApp(task.contact_phone!)}
+                className="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 flex items-center justify-center transition"
+                title="WhatsApp"
+              >
+                <MessageCircle size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Email - кликабельный */}
+        {task.contact_email && (
+          <div>
+            <label className="block text-sm font-medium mb-2">{labels.email}</label>
+            <a
+              href={`mailto:${task.contact_email}`}
+              className="text-sm text-primary underline hover:text-primary/80 flex items-center gap-2"
+              dir="ltr"
+            >
+              <Mail size={14} />
+              {task.contact_email}
+            </a>
+          </div>
+        )}
+
+        {/* Адрес - кликабельный с навигацией */}
+        {task.contact_address && (
+          <div>
+            <label className="block text-sm font-medium mb-2">{labels.address}</label>
+            <button
+              onClick={() => handleNavigate(task.contact_address!)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition w-full text-left"
+            >
+              <MapPin size={14} className="text-purple-600 dark:text-purple-400 flex-shrink-0" />
+              <span className="text-sm text-purple-700 dark:text-purple-300 flex-1">{task.contact_address}</span>
+              <span className="text-xs text-purple-400">{labels.navigate}</span>
+            </button>
+          </div>
+        )}
+
+        {/* Кнопки действий */}
+        {task.status !== 'done' && task.status !== 'cancelled' && onStatusChange && (
+          <div className="flex gap-3 pt-4 border-t">
+            {task.status === 'open' && (
+              <TrinityButton
+                variant="primary"
+                size="md"
+                icon={<Clock className="w-4 h-4" />}
+                onClick={() => onStatusChange(task.id, 'in_progress')}
+                fullWidth
+              >
+                {labels.startWork}
+              </TrinityButton>
+            )}
+            <TrinityButton
+              variant="primary"
+              size="md"
+              icon={<CheckCircle className="w-4 h-4" />}
+              onClick={() => onStatusChange(task.id, 'done')}
+              fullWidth
+            >
+              {labels.markDone}
+            </TrinityButton>
+            <TrinityButton
+              variant="secondary"
+              size="md"
+              icon={<XCircle className="w-4 h-4" />}
+              onClick={() => onStatusChange(task.id, 'cancelled')}
+            >
+              {labels.cancel}
+            </TrinityButton>
+          </div>
+        )}
+      </div>
+    </TrinityBottomDrawer>
+  )
+}

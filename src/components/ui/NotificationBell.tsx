@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Bell } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { TrinityNotificationIcon } from './TrinityNotificationIcon'
 
 interface NotificationBellProps {
   locale: 'he' | 'ru'
@@ -71,18 +71,13 @@ export function NotificationBell({ locale }: NotificationBellProps) {
 
   return (
     <>
-      {/* Иконка колокольчика */}
-      <button
+      {/* Анимированный конверт Trinity */}
+      <TrinityNotificationIcon
+        hasNotification={unreadCount > 0}
+        unreadCount={unreadCount}
         onClick={handleOpen}
-        className="relative p-2 rounded-xl hover:bg-muted/50 transition"
-      >
-        <Bell size={20} className={unreadCount > 0 ? 'text-primary' : 'text-muted-foreground'} />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </button>
+        size={22}
+      />
 
       {/* Drawer с уведомлениями */}
       <TrinityBottomDrawer isOpen={isOpen} onClose={() => setIsOpen(false)} title={l.title}>

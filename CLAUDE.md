@@ -7935,6 +7935,41 @@ clientbase-pro/
 
 ---
 
+## Правило поиска на мобильном
+
+**НА МОБИЛЬНОМ (< md)** результаты поиска **ВСЕГДА открываются ВВЕРХ** (`bottom-full mb-1`).  
+**НА ДЕСКТОПЕ (>= md)** результаты поиска открываются **ВНИЗ** (`top-full mt-1`).
+
+### Классы для dropdown:
+```
+bottom-full mb-1 md:bottom-auto md:top-full md:mb-0 md:mt-1
+```
+
+### Готовые компоненты:
+- `TrinitySearchDropdown` — универсальный поиск с dropdown
+- `TrinityMobileSearch` — с явным контролем направления (`dropDirection`)
+
+### Правило:
+**НИКОГДА** не создавай dropdown который на мобильном открывается вниз — клавиатура его закроет!
+
+### Модальные окна поиска:
+Для модальных окон с поиском используй **flex-col-reverse** на мобильном:
+```tsx
+<div className="flex flex-col-reverse md:flex-col">
+  {/* Результаты - order-1 (сверху на мобильном) */}
+  <div className="flex-1 overflow-y-auto order-1 md:order-2">
+    {results}
+  </div>
+  
+  {/* Инпут - order-2 (снизу на мобильном, sticky) */}
+  <div className="order-2 md:order-1 sticky bottom-0 md:static">
+    <input autoFocus />
+  </div>
+</div>
+```
+
+---
+
 _Этот файл создан для AI-ассистентов (Claude, GPT, и др.) для быстрого понимания проекта._
 
 _Powered by Amber Solutions Systems © 2026_

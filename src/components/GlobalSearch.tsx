@@ -171,21 +171,10 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl p-0 gap-0 bg-gray-900 border-gray-800">
-        {/* Search Input */}
-        <div className="flex items-center border-b border-gray-800 px-4 py-3">
-          <Search className="w-5 h-5 text-gray-400 mr-3" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Поиск клиентов, платежей, услуг..."
-            className="border-0 bg-transparent text-white placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0"
-            autoFocus
-          />
-          {loading && <Loader2 className="w-4 h-4 text-gray-400 animate-spin ml-2" />}
-        </div>
-
-        {/* Results */}
-        <div className="max-h-[400px] overflow-y-auto p-2">
+        {/* Мобильный: результаты сверху, инпут снизу | Десктоп: инпут сверху, результаты снизу */}
+        <div className="flex flex-col-reverse md:flex-col max-h-[80vh] md:max-h-[600px]">
+          {/* Results */}
+          <div className="flex-1 overflow-y-auto p-2 order-1 md:order-2">
           {query && totalResults === 0 && !loading && (
             <div className="text-center py-8 text-gray-500">
               Ничего не найдено
@@ -293,6 +282,20 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               })}
             </div>
           )}
+          </div>
+
+          {/* Search Input - внизу на мобильном, вверху на десктопе */}
+          <div className="flex items-center border-t md:border-t-0 md:border-b border-gray-800 px-4 py-3 order-2 md:order-1 bg-gray-900 sticky bottom-0 md:static">
+            <Search className="w-5 h-5 text-gray-400 mr-3" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Поиск клиентов, платежей, услуг..."
+              className="border-0 bg-transparent text-white placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0"
+              autoFocus
+            />
+            {loading && <Loader2 className="w-4 h-4 text-gray-400 animate-spin ml-2" />}
+          </div>
         </div>
 
         {/* Footer hint */}

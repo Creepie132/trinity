@@ -146,9 +146,9 @@ export function ClientSearch({
             />
           </div>
 
-          {/* Dropdown */}
+          {/* Dropdown - ВВЕРХ на мобильном, ВНИЗ на десктопе */}
           {isOpen && searchQuery.length >= 2 && (
-            <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-50 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto bottom-full mb-1 md:bottom-auto md:top-full md:mb-0 md:mt-1">
               {isLoading ? (
                 <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                   {locale === 'he' ? 'טוען...' : locale === 'ru' ? 'Загрузка...' : 'Loading...'}

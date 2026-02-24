@@ -92,14 +92,17 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
         }),
       })
 
+      console.log('=== SAVE VISIT ===')
+      console.log('Status:', res.status)
+      const data = await res.json()
+      console.log('Response:', JSON.stringify(data))
+
       if (res.ok) {
-        const updated = await res.json()
         toast.success(locale === 'he' ? 'נשמר בהצלחה' : 'Сохранено')
-        onSaved(updated)
+        onSaved(data)
         onClose()
       } else {
-        const err = await res.json()
-        toast.error(err.error || (locale === 'he' ? 'שגיאה' : 'Ошибка'))
+        toast.error(data.error || (locale === 'he' ? 'שגיאה' : 'Ошибка'))
       }
     } catch (e) {
       toast.error(locale === 'he' ? 'שגיאה' : 'Ошибка')

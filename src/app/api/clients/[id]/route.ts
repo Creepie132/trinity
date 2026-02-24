@@ -14,7 +14,11 @@ export async function PUT(
 
   const { id } = await params
   const body = await request.json()
-  const { start_time, duration, notes, price } = body
+  const { name, phone, email, address, notes, avatar_url } = body
+
+  if (!name?.trim()) {
+    return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+  }
 
   // Получаем org_id пользователя
   const { data: orgUser } = await supabase
@@ -27,25 +31,24 @@ export async function PUT(
     return NextResponse.json({ error: 'No organization' }, { status: 403 })
   }
 
-  const updateData: any = {
-    updated_at: new Date().toISOString()
-  }
-
-  if (start_time !== undefined) updateData.start_time = start_time
-  if (duration !== undefined) updateData.duration = duration
-  if (notes !== undefined) updateData.notes = notes
-  if (price !== undefined) updateData.price = price
-
   const { data, error } = await supabase
-    .from('visits')
-    .update(updateData)
+    .from('clients')
+    .update({
+      name: name.trim(),
+      phone: phone || null,
+      email: email || null,
+      address: address || null,
+      notes: notes || null,
+      avatar_url: avatar_url || null,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', id)
     .eq('org_id', orgUser.org_id)
     .select()
     .single()
 
   if (error) {
-    console.error('Update visit error:', error)
+    console.error('Update client error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 

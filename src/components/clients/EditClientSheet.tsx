@@ -86,10 +86,14 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
         body: JSON.stringify({ ...form, avatar_url }),
       })
 
+      console.log('=== SAVE CLIENT ===')
+      console.log('Status:', res.status)
+      const data = await res.json()
+      console.log('Response:', JSON.stringify(data))
+
       if (res.ok) {
-        const updated = await res.json()
         toast.success(locale === 'he' ? 'נשמר בהצלחה' : 'Сохранено')
-        onSaved(updated)
+        onSaved(data)
         onClose()
       } else {
         toast.error(locale === 'he' ? 'שגיאה בשמירה' : 'Ошибка сохранения')

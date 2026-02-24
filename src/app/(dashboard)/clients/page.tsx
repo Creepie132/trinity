@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Search, Eye, Edit, MessageSquare, CreditCard, Upload, Users } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { AddClientDialog } from '@/components/clients/AddClientDialog'
-import { ClientSheet } from '@/components/clients/ClientSheet'
 import { ClientBottomSheet } from '@/components/clients/ClientBottomSheet'
 import { ClientSummary } from '@/types/database'
 import { format } from 'date-fns'
@@ -316,20 +315,10 @@ export default function ClientsPage() {
 
       {/* Dialogs */}
       <AddClientDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
-      
-      {/* Desktop - ClientSheet */}
-      <div className="hidden md:block">
-        <ClientSheet
-          client={selectedClient}
-          open={clientSheetOpen}
-          onOpenChange={setClientSheetOpen}
-        />
-      </div>
 
-      {/* Mobile - ClientBottomSheet */}
+      {/* ClientBottomSheet (mobile + desktop) */}
       {selectedClient && (
-        <div className="md:hidden">
-          <ClientBottomSheet
+        <ClientBottomSheet
             client={{
               id: selectedClient.id,
               name: `${selectedClient.first_name} ${selectedClient.last_name}`,
@@ -360,7 +349,6 @@ export default function ClientsPage() {
               }
             }}
           />
-        </div>
       )}
 
       {/* Mobile FAB (Floating Action Button) */}

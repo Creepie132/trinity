@@ -48,7 +48,7 @@ interface ClientStats {
 
 export default function ReportsPage() {
   const router = useRouter()
-  const { orgId, role } = useAuth()
+  const { orgId, isAdmin } = useAuth()
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('week')
   const [customFrom, setCustomFrom] = useState('')
@@ -60,17 +60,17 @@ export default function ReportsPage() {
 
   // Check role access
   useEffect(() => {
-    if (role && role !== 'owner' && role !== 'moderator') {
+    if (!isAdmin) {
       toast.error('Доступ запрещён')
       router.push('/dashboard')
     }
-  }, [role, router])
+  }, [isAdmin, router])
 
   useEffect(() => {
-    if (orgId && (role === 'owner' || role === 'moderator')) {
+    if (orgId && isAdmin) {
       loadReports()
     }
-  }, [orgId, role, period, customFrom, customTo])
+  }, [orgId, isAdmin, period, customFrom, customTo])
 
   const getDateRange = () => {
     const now = new Date()
@@ -129,7 +129,7 @@ export default function ReportsPage() {
     }
   }
 
-  if (role !== 'owner' && role !== 'moderator') {
+  if (!isAdmin) {
     return null
   }
 

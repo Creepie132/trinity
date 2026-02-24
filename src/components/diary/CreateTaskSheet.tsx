@@ -171,9 +171,23 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
   async function loadClients() {
     try {
       const response = await fetch('/api/clients')
+      console.log('=== DIARY CLIENTS ===')
+      console.log('Status:', response.status)
+      console.log('OK:', response.ok)
+      
       if (!response.ok) throw new Error('Failed to load clients')
+      
       const data = await response.json()
-      setClients(data || [])
+      console.log('Data type:', typeof data)
+      console.log('Is array:', Array.isArray(data))
+      console.log('Length:', data?.length)
+      console.log('First item:', JSON.stringify(data?.[0]))
+      
+      // API может возвращать { data: [...] } вместо [...]
+      const clients = Array.isArray(data) ? data : data?.data || []
+      console.log('Final clients count:', clients.length)
+      
+      setClients(clients)
     } catch (error) {
       console.error('Load clients error:', error)
     }
@@ -182,9 +196,23 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
   async function loadVisits() {
     try {
       const response = await fetch('/api/visits')
+      console.log('=== DIARY VISITS ===')
+      console.log('Status:', response.status)
+      console.log('OK:', response.ok)
+      
       if (!response.ok) throw new Error('Failed to load visits')
+      
       const data = await response.json()
-      setVisits(data || [])
+      console.log('Data type:', typeof data)
+      console.log('Is array:', Array.isArray(data))
+      console.log('Length:', data?.length)
+      console.log('First item:', JSON.stringify(data?.[0]))
+      
+      // API может возвращать { data: [...] } вместо [...]
+      const visits = Array.isArray(data) ? data : data?.data || []
+      console.log('Final visits count:', visits.length)
+      
+      setVisits(visits)
     } catch (error) {
       console.error('Load visits error:', error)
     }
@@ -424,8 +452,11 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
         <div>
           <label className="block text-sm font-medium mb-2">{labels.visit}</label>
           <TrinitySearchDropdown
-            data={visits}
-            searchKeys={['service_type']}
+            data={visits.map(v => ({
+              ...v,
+              client_name: v.client?.name || '' // Flatten для поиска
+            }))}
+            searchKeys={['client_name', 'service_type']}
             minChars={1}
             placeholder={labels.searchVisit}
             onSelect={handleVisitSelect}

@@ -7,8 +7,9 @@ import { useVisitServices, useAddVisitService, useRemoveVisitService, useUpdateV
 import { Visit } from '@/types/visits';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Clock, DollarSign, CheckCircle, XCircle, X } from 'lucide-react';
+import { Plus, Clock, DollarSign, CheckCircle, XCircle, X, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
+import { CreateTaskSheet } from '@/components/diary/CreateTaskSheet';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,7 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showAddService, setShowAddService] = useState(false);
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showTaskSheet, setShowTaskSheet] = useState(false);
 
   // Timer effect
   useEffect(() => {
@@ -240,6 +242,17 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
             <span className="truncate">{language === 'he' ? 'הוסף מוצר' : 'Добавить товар'}</span>
           </Button>
 
+          {/* Add Task Button */}
+          <Button
+            onClick={() => setShowTaskSheet(true)}
+            size="sm"
+            variant="outline"
+            className="h-9 text-sm flex-1 md:flex-initial"
+          >
+            <BookOpen className="w-4 h-4 mr-1 shrink-0" />
+            <span className="truncate">{language === 'he' ? 'משימה' : 'Задача'}</span>
+          </Button>
+
           {/* Finish Button */}
           <Button
             onClick={onFinish}
@@ -295,6 +308,25 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Task Sheet */}
+      <CreateTaskSheet
+        isOpen={showTaskSheet}
+        onClose={() => setShowTaskSheet(false)}
+        onCreated={() => {
+          setShowTaskSheet(false)
+          toast.success(language === 'he' ? 'משימה נוצרה בהצלחה' : 'Задача создана успешно')
+        }}
+        locale={language === 'he' ? 'he' : 'ru'}
+        prefill={{
+          visit_id: visit.id,
+          client_id: visit.client_id,
+          contact_phone: visit.clients?.phone || '',
+          description: language === 'he'
+            ? `משימה נפתחה במהלך ביקור #${visit.id.slice(0, 8)}, במהלך מתן שירות "${getServiceName()}" ללקוח ${visit.clients ? `${visit.clients.first_name} ${visit.clients.last_name}` : ''}`
+            : `Задача открыта во время визита #${visit.id.slice(0, 8)}, во время оказания услуг "${getServiceName()}" для ${visit.clients ? `${visit.clients.first_name} ${visit.clients.last_name}` : ''}`,
+        }}
+      />
     </>
   );
 }

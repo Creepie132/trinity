@@ -12,6 +12,13 @@ interface CreateTaskSheetProps {
   onClose: () => void
   onCreated: () => void
   locale: 'he' | 'ru'
+  prefill?: {
+    visit_id?: string
+    client_id?: string
+    contact_phone?: string
+    description?: string
+    title?: string
+  }
 }
 
 interface OrgUser {
@@ -94,23 +101,23 @@ const t = {
   },
 }
 
-export function CreateTaskSheet({ isOpen, onClose, onCreated, locale }: CreateTaskSheetProps) {
+export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }: CreateTaskSheetProps) {
   const { user } = useAuth()
   const isRTL = locale === 'he'
   const labels = t[locale]
 
-  // Form state
-  const [title, setTitle] = useState('')
+  // Form state - с поддержкой prefill
+  const [title, setTitle] = useState(prefill?.title || '')
   const [priority, setPriority] = useState<Priority>('normal')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
   const [assignedTo, setAssignedTo] = useState<string | null>(null)
-  const [clientId, setClientId] = useState<string | null>(null)
-  const [visitId, setVisitId] = useState<string | null>(null)
-  const [contactPhone, setContactPhone] = useState('')
+  const [clientId, setClientId] = useState<string | null>(prefill?.client_id || null)
+  const [visitId, setVisitId] = useState<string | null>(prefill?.visit_id || null)
+  const [contactPhone, setContactPhone] = useState(prefill?.contact_phone || '')
   const [contactEmail, setContactEmail] = useState('')
   const [contactAddress, setContactAddress] = useState('')
-  const [description, setDescription] = useState('')
+  const [description, setDescription] = useState(prefill?.description || '')
   const [saving, setSaving] = useState(false)
 
   // Data for dropdowns
@@ -131,6 +138,17 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale }: CreateTa
       loadVisits()
     }
   }, [isOpen])
+
+  // Обновить состояние при изменении prefill
+  useEffect(() => {
+    if (isOpen && prefill) {
+      setTitle(prefill.title || '')
+      setDescription(prefill.description || '')
+      setClientId(prefill.client_id || null)
+      setVisitId(prefill.visit_id || null)
+      setContactPhone(prefill.contact_phone || '')
+    }
+  }, [isOpen, prefill])
 
   async function loadOrgUsers() {
     try {

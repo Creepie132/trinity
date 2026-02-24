@@ -10,7 +10,6 @@ import { useClients } from '@/hooks/useClients'
 import { AddClientDialog } from '@/components/clients/AddClientDialog'
 import { ClientSheet } from '@/components/clients/ClientSheet'
 import { ClientBottomSheet } from '@/components/clients/ClientBottomSheet'
-import { EditClientSheet } from '@/components/clients/EditClientSheet'
 import { ClientSummary } from '@/types/database'
 import { format } from 'date-fns'
 import { useRouter } from 'next/navigation'
@@ -33,8 +32,6 @@ export default function ClientsPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<ClientSummary | null>(null)
   const [clientSheetOpen, setClientSheetOpen] = useState(false)
-  const [editClientSheetOpen, setEditClientSheetOpen] = useState(false)
-  const [clientToEdit, setClientToEdit] = useState<any>(null)
 
   const pageSize = 25
   const { data: clientsData, isLoading } = useClients(searchQuery, page, pageSize)
@@ -351,12 +348,6 @@ export default function ClientsPage() {
             locale={language === 'he' ? 'he' : 'ru'}
             isDemo={isDemo}
             enabledModules={{ visits: features.hasVisits, payments: features.hasPayments, sms: features.hasSms }}
-            onEdit={(c) => {
-              setClientSheetOpen(false)
-              setSelectedClient(null)
-              setClientToEdit(c)
-              setEditClientSheetOpen(true)
-            }}
             onDelete={async (clientId) => {
               // Handle delete via GDPR endpoint
               try {
@@ -370,22 +361,6 @@ export default function ClientsPage() {
             }}
           />
         </div>
-      )}
-
-      {/* Edit Client Sheet */}
-      {clientToEdit && (
-        <EditClientSheet
-          client={clientToEdit}
-          isOpen={editClientSheetOpen}
-          onClose={() => {
-            setEditClientSheetOpen(false)
-            setClientToEdit(null)
-          }}
-          onSaved={(updated) => {
-            router.refresh()
-          }}
-          locale={language === 'he' ? 'he' : 'ru'}
-        />
       )}
 
       {/* Mobile FAB (Floating Action Button) */}

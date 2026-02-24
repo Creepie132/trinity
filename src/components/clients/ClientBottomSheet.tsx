@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Calendar, DollarSign, MessageSquare, Trash2, Phone, MessageCircle, Pencil, ArrowRight, ArrowLeft } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { EditClientSheet } from './EditClientSheet'
 
 type Tab = 'main' | 'visits' | 'payments' | 'sms' | 'gdpr'
 
@@ -43,6 +44,7 @@ export function ClientBottomSheet({
   const [payments, setPayments] = useState<any[]>([])
   const [loadingVisits, setLoadingVisits] = useState(false)
   const [loadingPayments, setLoadingPayments] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
 
   // Инициалы
   const initials = client.name
@@ -107,6 +109,7 @@ export function ClientBottomSheet({
   }
 
   return (
+    <>
     <TrinityBottomDrawer isOpen={isOpen} onClose={handleClose} title={activeTab === 'main' ? client.name : undefined}>
       {/* ===== MAIN TAB ===== */}
       {activeTab === 'main' && (
@@ -144,10 +147,7 @@ export function ClientBottomSheet({
               </a>
             )}
             <button
-              onClick={() => {
-                handleClose()
-                onEdit?.(client)
-              }}
+              onClick={() => setEditOpen(true)}
               className="flex items-center justify-center w-12 h-12 rounded-full bg-muted text-muted-foreground"
             >
               <Pencil size={20} />
@@ -363,5 +363,18 @@ export function ClientBottomSheet({
         </>
       )}
     </TrinityBottomDrawer>
+
+    {/* Форма редактирования */}
+    <EditClientSheet
+      client={client}
+      isOpen={editOpen}
+      onClose={() => setEditOpen(false)}
+      onSaved={(updated) => {
+        // Обновить данные клиента в родителе через onClose
+        onClose()
+      }}
+      locale={locale}
+    />
+  </>
   )
 }

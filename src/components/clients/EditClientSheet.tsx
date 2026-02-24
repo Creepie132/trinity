@@ -109,67 +109,61 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
 
   return (
     <TrinityBottomDrawer isOpen={isOpen} onClose={onClose} title={l.title}>
-      {/* Avatar Section */}
+      {/* Аватар с загрузкой */}
       <div className="flex flex-col items-center mb-6">
-        <div className="relative">
+        <label className="relative cursor-pointer group">
           {avatarPreview ? (
-            <img
-              src={avatarPreview}
-              alt={form.name}
-              className="w-20 h-20 rounded-full object-cover"
-            />
+            <img src={avatarPreview} alt="" className="w-20 h-20 rounded-full object-cover" />
           ) : (
             <div className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl`}>
               {initials}
             </div>
           )}
-          <label className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer shadow-lg hover:opacity-90 transition">
-            <Upload size={16} />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              className="hidden"
-            />
-          </label>
-        </div>
+          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+            <Upload size={20} className="text-white" />
+          </div>
+          <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+        </label>
         <p className="text-xs text-muted-foreground mt-2">{l.photo}</p>
       </div>
 
-      {/* Form Fields */}
-      <div className="space-y-4">
+      {/* Форма */}
+      <div className="space-y-3">
         <div>
-          <label className="block text-sm font-medium mb-1.5">{l.name}</label>
+          <label className="text-xs text-muted-foreground mb-1 block">{l.name} *</label>
           <input
             type="text"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className={inputClass}
+            required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1.5">{l.phone}</label>
+          <label className="text-xs text-muted-foreground mb-1 block">{l.phone}</label>
           <input
             type="tel"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
             className={inputClass}
+            dir="ltr"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1.5">{l.email}</label>
+          <label className="text-xs text-muted-foreground mb-1 block">{l.email}</label>
           <input
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             className={inputClass}
+            dir="ltr"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1.5">{l.address}</label>
+          <label className="text-xs text-muted-foreground mb-1 block">{l.address}</label>
           <input
             type="text"
             value={form.address}
@@ -179,23 +173,23 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1.5">{l.notes}</label>
+          <label className="text-xs text-muted-foreground mb-1 block">{l.notes}</label>
           <textarea
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            className={`${inputClass} min-h-[80px] resize-none`}
             rows={3}
-            className={inputClass}
           />
         </div>
       </div>
 
-      {/* Save Button */}
+      {/* Кнопка сохранить */}
       <button
         onClick={handleSave}
-        disabled={saving}
-        className="w-full mt-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50"
+        disabled={saving || !form.name.trim()}
+        className="w-full mt-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition"
       >
-        <Save size={18} />
+        <Save size={16} />
         {saving ? '...' : l.save}
       </button>
     </TrinityBottomDrawer>

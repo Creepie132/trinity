@@ -4036,6 +4036,149 @@ Leya-Project/clientbase-pro/
 
 ---
 
+## 🎨 UI ШАБЛОНЫ TRINITY (Актуально на 2026-02-24)
+
+### ⚠️ ВАЖНО: Всегда используй эти компоненты!
+
+**НЕ создавай кнопки с кастомными стилями. НЕ дублируй логику карточек. НЕ пиши свой поиск.**
+
+---
+
+### 🔘 Кнопки — TrinityButton
+
+**Файл:** `src/components/ui/TrinityButton.tsx`
+
+```tsx
+import { 
+  TrinityButton, 
+  TrinitySaveButton, 
+  TrinityCancelButton, 
+  TrinityDeleteButton, 
+  TrinityCallButton, 
+  TrinityWhatsAppButton, 
+  TrinityIconButton 
+} from '@/components/ui/TrinityButton'
+```
+
+**Варианты:** `primary`, `secondary`, `outline`, `ghost`, `danger`, `call`, `whatsapp`, `edit`, `icon`  
+**Размеры:** `sm`, `md`, `lg`, `icon`
+
+**Примеры:**
+
+```tsx
+// Базовая кнопка
+<TrinityButton variant="primary" icon={<Plus size={16} />}>
+  Добавить
+</TrinityButton>
+
+// Готовые пресеты
+<TrinitySaveButton locale={locale} loading={saving} />
+<TrinityCancelButton locale={locale} onClick={onClose} />
+<TrinityCallButton phone="0541234567" locale={locale} />
+<TrinityWhatsAppButton phone="0541234567" locale={locale} />
+<TrinityDeleteButton locale={locale} onClick={handleDelete} />
+
+// Круглая иконка
+<TrinityIconButton 
+  icon={<Pencil size={16} />} 
+  color="bg-slate-100" 
+  textColor="text-slate-600"
+  onClick={handleEdit}
+/>
+```
+
+---
+
+### 🃏 Карточки — TrinityCard
+
+**Файл:** `src/components/ui/TrinityCard.tsx`
+
+```tsx
+import { TrinityCard, getAvatarColor, getInitials } from '@/components/ui/TrinityCard'
+```
+
+**Возможности:**
+- 4 типа аватаров: `initials`, `icon`, `image`, `timeline`
+- 2 layout: Timeline (визиты) + Standard (клиенты, платежи)
+- Quick actions (круглые кнопки)
+- Bottom Drawer с деталями
+- RTL поддержка
+
+**Пример:**
+
+```tsx
+<TrinityCard
+  avatar={{
+    type: 'initials',
+    text: getInitials(client.name),
+    color: getAvatarColor(client.name)
+  }}
+  title={client.name}
+  subtitle={client.phone}
+  stats={[
+    { icon: <Calendar size={14} />, text: '5 визитов' }
+  ]}
+  quickActions={[
+    {
+      icon: <Phone size={16} />,
+      label: 'Позвонить',
+      onClick: () => {},
+      color: 'bg-blue-50',
+      textColor: 'text-blue-600'
+    }
+  ]}
+  detailFields={[
+    { label: 'Email', value: client.email }
+  ]}
+  locale="ru"
+/>
+```
+
+---
+
+### 🔍 Поиск — TrinitySearch
+
+**Файл:** `src/components/ui/TrinitySearch.tsx`
+
+```tsx
+import { TrinitySearch, TrinitySearchDropdown } from '@/components/ui/TrinitySearch'
+```
+
+**TrinitySearch** — простой инпут с фильтрацией:
+```tsx
+<TrinitySearch
+  data={clients}
+  searchKeys={['first_name', 'last_name', 'phone', 'email']}
+  onResults={(filtered) => setFilteredClients(filtered)}
+  placeholder="Поиск клиента..."
+  locale="ru"
+/>
+```
+
+**TrinitySearchDropdown** — с выпадающим списком (автокомплит):
+```tsx
+<TrinitySearchDropdown
+  data={clients}
+  searchKeys={['first_name', 'last_name', 'phone']}
+  renderItem={(client) => (
+    <div>
+      <p className="font-medium">{client.first_name} {client.last_name}</p>
+      <p className="text-xs text-muted-foreground">{client.phone}</p>
+    </div>
+  )}
+  onSelect={(client) => handleSelect(client)}
+  locale="ru"
+/>
+```
+
+**Особенности:**
+- Generic типизация `<T>`
+- Клиентская фильтрация (без API)
+- Минимум 2 символа для поиска
+- RTL поддержка
+
+---
+
 ## 🔥 ОБНОВЛЕНИЯ v2.6.3 (2026-02-10 21:35) - ПОЛНАЯ СЕССИЯ ОТЛАДКИ RLS 🔴
 
 ### 🐛 КРИТИЧЕСКАЯ ПРОБЛЕМА: RLS блокировал доступ к организациям

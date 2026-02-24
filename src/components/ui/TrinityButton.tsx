@@ -1,7 +1,6 @@
 'use client'
 
 import { ReactNode, ButtonHTMLAttributes } from 'react'
-import { Save, Phone, MessageCircle, Pencil } from 'lucide-react'
 
 // ============================================
 // УНИВЕРСАЛЬНЫЕ КНОПКИ TRINITY CRM
@@ -106,10 +105,13 @@ export function TrinitySaveButton({ locale = 'ru', ...props }: PresetButtonProps
     <TrinityButton
       variant="primary"
       fullWidth
-      icon={<Save size={16} />}
-      locale={locale}
-      {...props}
-    >
+      icon={
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+          <path d="M17 21v-8H7v8M7 3v5h8"/>
+        </svg>
+      }
+      {...props}>
       {locale === 'he' ? 'שמור' : 'Сохранить'}
     </TrinityButton>
   )
@@ -121,52 +123,9 @@ export function TrinityCancelButton({ locale = 'ru', ...props }: PresetButtonPro
     <TrinityButton
       variant="secondary"
       fullWidth
-      locale={locale}
       {...props}
     >
       {locale === 'he' ? 'ביטול' : 'Отмена'}
-    </TrinityButton>
-  )
-}
-
-// Кнопка звонка
-export function TrinityCallButton({ locale = 'ru', ...props }: PresetButtonProps) {
-  return (
-    <TrinityButton
-      variant="call"
-      icon={<Phone size={16} />}
-      locale={locale}
-      {...props}
-    >
-      {locale === 'he' ? 'התקשר' : 'Позвонить'}
-    </TrinityButton>
-  )
-}
-
-// Кнопка WhatsApp
-export function TrinityWhatsAppButton({ locale = 'ru', ...props }: PresetButtonProps) {
-  return (
-    <TrinityButton
-      variant="whatsapp"
-      icon={<MessageCircle size={16} />}
-      locale={locale}
-      {...props}
-    >
-      WhatsApp
-    </TrinityButton>
-  )
-}
-
-// Кнопка редактирования
-export function TrinityEditButton({ locale = 'ru', ...props }: PresetButtonProps) {
-  return (
-    <TrinityButton
-      variant="edit"
-      icon={<Pencil size={16} />}
-      locale={locale}
-      {...props}
-    >
-      {locale === 'he' ? 'עריכה' : 'Изменить'}
     </TrinityButton>
   )
 }
@@ -177,7 +136,11 @@ export function TrinityDeleteButton({ locale = 'ru', ...props }: PresetButtonPro
     <TrinityButton
       variant="danger"
       fullWidth
-      locale={locale}
+      icon={
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+        </svg>
+      }
       {...props}
     >
       {locale === 'he' ? 'מחק' : 'Удалить'}
@@ -185,27 +148,61 @@ export function TrinityDeleteButton({ locale = 'ru', ...props }: PresetButtonPro
   )
 }
 
-// Круглая иконка-кнопка (для quick actions)
-interface TrinityIconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  icon: ReactNode
-  variant?: Extract<TrinityButtonVariant, 'call' | 'whatsapp' | 'edit'>
-  label?: string
-}
-
-export function TrinityIconButton({ 
-  icon, 
-  variant = 'edit',
-  label,
-  ...props 
-}: TrinityIconButtonProps) {
+// Кнопка звонка
+export function TrinityCallButton({ phone, locale = 'ru', ...props }: PresetButtonProps & { phone: string }) {
   return (
     <TrinityButton
-      variant={variant}
-      size="icon"
-      title={label}
+      variant="call"
+      fullWidth
+      icon={
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+        </svg>
+      }
+      onClick={() => window.location.href = `tel:${phone}`}
+      {...props}
+    >
+      {locale === 'he' ? 'התקשר' : 'Позвонить'}
+    </TrinityButton>
+  )
+}
+
+// Кнопка WhatsApp
+export function TrinityWhatsAppButton({ phone, locale = 'ru', ...props }: PresetButtonProps & { phone: string }) {
+  return (
+    <TrinityButton
+      variant="whatsapp"
+      fullWidth
+      icon={
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+        </svg>
+      }
+      onClick={() => window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}`, '_blank')}
+      {...props}
+    >
+      WhatsApp
+    </TrinityButton>
+  )
+}
+
+// Круглая иконка-кнопка (для quick actions)
+export function TrinityIconButton({ 
+  icon, 
+  color = 'bg-muted', 
+  textColor = 'text-muted-foreground', 
+  ...props 
+}: ButtonHTMLAttributes<HTMLButtonElement> & { 
+  icon: ReactNode
+  color?: string
+  textColor?: string
+}) {
+  return (
+    <button
+      className={`flex items-center justify-center w-9 h-9 rounded-full ${color} ${textColor} hover:opacity-80 transition active:scale-95`}
       {...props}
     >
       {icon}
-    </TrinityButton>
+    </button>
   )
 }

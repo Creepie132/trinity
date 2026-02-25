@@ -120,40 +120,30 @@ export function TrinityCardPc({
             </div>
           )}
 
-          {/* Табы */}
+          {/* Tabs */}
           {tabs && tabs.length > 0 && (
-            <>
-              {/* Tab Headers */}
-              <div className="flex border-b border-muted">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                      activeTab === tab.key
-                        ? 'text-primary border-b-2 border-primary'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      {tab.icon}
-                      {tab.label}
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab Content */}
-              <div className="flex-1 overflow-y-auto p-6">
-                {tabs.find((tab) => tab.key === activeTab)?.content}
-              </div>
-            </>
+            <div className="flex border-b border-muted px-6">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition ${
+                    activeTab === tab.key
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           )}
 
-          {/* Если нет табов, просто контент первого таба */}
-          {(!tabs || tabs.length === 0) && tabs?.[0]?.content && (
-            <div className="flex-1 overflow-y-auto p-6">{tabs[0].content}</div>
-          )}
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {tabs?.find((t) => t.key === activeTab)?.content}
+          </div>
         </div>
       </div>
     </div>

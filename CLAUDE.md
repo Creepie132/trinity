@@ -5,8 +5,191 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-25 17:50 UTC  
-**Версия:** 2.36.0
+**Последнее обновление:** 2026-02-25 19:56 UTC  
+**Версия:** 2.37.0
+
+---
+
+## 🔧 ОБНОВЛЕНИЯ v2.37.0 (2026-02-25) - TrinityCardPc Universal Desktop Template 🖥️
+
+### ✅ 1. TrinityCardPc — Universal Desktop Split-View Component (commit e97de7d)
+
+**Цель:** Создать универсальный шаблон десктопной карточки для ВСЕХ сущностей (клиенты, визиты, платежи, задачи).
+
+**Файл:** `src/components/ui/TrinityCardPc.tsx` (161 строка)
+
+**Архитектура:**
+- Grid layout: `350px | 1fr` (левая панель 30% + правая панель 70%)
+- Overlay: `bg-black/30`
+- Panel: настраиваемая ширина (default: `max-w-5xl`)
+- Левая панель: профиль, контакты, данные, edit форма, scrollable
+- Правая панель: KPI заголовок + табы с контентом, scrollable
+- RTL автоматически (dir={isRTL ? 'rtl' : 'ltr'})
+
+**Левая панель (350px):**
+- ✅ Кнопка закрытия (X)
+- ✅ `leftHeader` — аватар, имя, badge
+- ✅ `leftActions` — быстрые действия (звонок, WhatsApp, email)
+- ✅ `leftFields` — поля данных с dir="ltr"/"rtl"
+- ✅ `leftEditForm` — форма редактирования (заменяет leftFields при `isEditing={true}`)
+- ✅ `leftFooter` — кнопка Edit, другие действия
+- ✅ `overflow-y-auto` — скролл
+
+**Правая панель (flex: 1fr):**
+- ✅ `rightKpi` — KPI заголовок (label + value, text-2xl)
+- ✅ `tabs` — массив табов с key, label, icon, content
+- ✅ Tab navigation — `border-b-2 border-primary` для активного таба
+- ✅ Tab content — `overflow-y-auto` скролл
+
+**Props Interface:**
+```typescript
+interface TrinityCardPcProps {
+  isOpen: boolean
+  onClose: () => void
+  locale: 'he' | 'ru'
+  
+  // Левая панель
+  leftHeader?: ReactNode
+  leftActions?: ReactNode
+  leftFields?: { label: string; value: string | ReactNode; dir?: 'ltr' | 'rtl' }[]
+  leftFooter?: ReactNode
+  leftEditForm?: ReactNode
+  isEditing?: boolean
+  
+  // Правая панель
+  rightKpi?: { label: string; value: string }
+  tabs?: { key: string; label: string; icon?: ReactNode; content: ReactNode }[]
+  defaultTab?: string
+  
+  // Стилизация
+  maxWidth?: string // default: max-w-5xl
+}
+```
+
+**Пример использования:**
+```tsx
+<TrinityCardPc
+  isOpen={!!selectedClient}
+  onClose={() => setSelectedClient(null)}
+  locale={language === 'he' ? 'he' : 'ru'}
+  
+  leftHeader={
+    <>
+      <div className="bg-blue-500 w-20 h-20 rounded-full">АК</div>
+      <h2 className="text-xl font-bold mt-3">Анна Коэн</h2>
+    </>
+  }
+  
+  leftFields={[
+    { label: 'Телефон', value: '054-1234567', dir: 'ltr' },
+    { label: 'Email', value: 'anna@mail.com', dir: 'ltr' },
+  ]}
+  
+  rightKpi={{ label: 'Всего потрачено', value: '₪2,500' }}
+  
+  tabs={[
+    { key: 'visits', label: 'Визиты', content: <VisitsTable /> },
+    { key: 'payments', label: 'Финансы', content: <PaymentsTable /> },
+  ]}
+/>
+```
+
+**Применение:**
+- ✅ ClientDesktopPanel → будет мигрировать на TrinityCardPc
+- ✅ VisitDesktopPanel → будет мигрировать на TrinityCardPc
+- ✅ PaymentDesktopPanel → будет мигрировать на TrinityCardPc
+- ✅ TaskDesktopPanel → будет мигрировать на TrinityCardPc
+
+**ПРАВИЛО:**
+- НА ДЕСКТОПЕ (≥1024px): используй `TrinityCardPc`
+- НА МОБИЛЬНОМ (<1024px): используй `TrinityCard` + `TrinityBottomDrawer`
+- НИКОГДА не создавай кастомные десктопные панели — всегда используй шаблон
+
+**Commits:**
+- `e97de7d` - "feat: add TrinityCardPc universal desktop split-view component"
+
+**Files Changed:**
+- ✅ `src/components/ui/TrinityCardPc.tsx` - NEW (161 строка)
+
+**Результат:** +161 строка, универсальный шаблон для всех десктопных карточек.
+
+---
+
+### ✅ 2. Desktop Visits Table View (commits dfcbf77, 7e19c09)
+
+**Цель:** Заменить десктопные карточки визитов на таблицу + модальную панель деталей.
+
+**Реализовано:**
+
+**Таблица визитов (hidden md:block):**
+- Простой дизайн: `bg-card`, `rounded-2xl`, `border`
+- 5 колонок: Клиент | Дата | Время | Статус | Цена
+- Функция `getClientName()` для получения имени клиента из `allClients`
+- Клик по строке → открывает десктопную панель деталей
+- Статусы с цветными бейджами:
+  - completed: `bg-emerald-100 text-emerald-700`
+  - in_progress: `bg-amber-100 text-amber-700`
+  - scheduled: `bg-blue-100 text-blue-700`
+  - cancelled: `bg-slate-100 text-slate-500` с `opacity-50`
+
+**Десктопная панель деталей:**
+- Overlay с `bg-black/30`
+- Центральный контейнер `max-w-3xl`
+- **Заголовок:** имя клиента (крупно) + дата/время
+- **Кнопка закрытия:** X справа
+- **3 карточки:** Статус | Длительность | Цена (`bg-muted/30 rounded-xl p-4`)
+- **Заметки:** если есть (`whitespace-pre-wrap bg-muted/20 rounded-xl p-4`)
+- **Кнопки действий:**
+  - "Начать" (scheduled) — `border-2 border-amber-400 text-amber-600`
+  - "Завершить" (in_progress) — `border-2 border-emerald-400 text-emerald-600`
+  - "Отменить" (кроме completed/cancelled) — `border border-slate-300 text-slate-500`
+
+**Функции:**
+```typescript
+// Загрузка клиентов
+useEffect(() => {
+  fetch('/api/clients').then(r => r.json()).then(setAllClients)
+}, [])
+
+// Получение имени клиента
+function getClientName(visit: any): string {
+  const client = allClients?.find(c => c.id === visit.client_id)
+  return client ? `${client.first_name} ${client.last_name}`.trim() : ''
+}
+
+// Клик по визиту
+function handleVisitClick(visit: any) {
+  if (window.innerWidth >= 1024) {
+    setDesktopVisit(visit)
+  } else {
+    setSelectedVisit(visit)
+  }
+}
+
+// Обновление статуса
+async function updateVisitStatus(visitId: string, newStatus: string) {
+  const { error } = await supabase
+    .from('visits')
+    .update({ status: newStatus })
+    .eq('id', visitId)
+  
+  if (!error) {
+    toast.success('✓')
+    refetch()
+  }
+}
+```
+
+**Мобильный рендер:** Уже был обёрнут в `md:hidden` с карточками `VisitCard`.
+
+**Commits:**
+- `dfcbf77` - "feat: desktop visits table view"
+- `7e19c09` - "feat: desktop visit detail panel"
+
+**Files Changed:**
+- ✅ `src/app/(dashboard)/visits/page.tsx` - таблица + панель деталей (+174/-251 строк)
+
+**Результат:** Десктоп — таблица + модальная панель, мобайл — карточки + drawer.
 
 ---
 
@@ -4499,6 +4682,158 @@ import { TrinityCard, getAvatarColor, getInitials } from '@/components/ui/Trinit
   locale="ru"
 />
 ```
+
+---
+
+### 🖥️ Десктопные карточки — TrinityCardPc (Split-View)
+
+**Файл:** `src/components/ui/TrinityCardPc.tsx`
+
+**Универсальный шаблон для ВСЕХ десктопных карточек (≥1024px).**
+
+**Архитектура:**
+- Grid layout: `350px | 1fr` (левая панель + правая панель)
+- Overlay: `bg-black/30`
+- Panel: `max-w-5xl mx-auto my-4 rounded-2xl`
+- Левая панель: профиль, контакты, данные, edit форма
+- Правая панель: KPI заголовок + табы с контентом
+- RTL автоматически
+
+**ПРАВИЛО:** НА ДЕСКТОПЕ (≥ lg) используй `TrinityCardPc`. НА МОБИЛЬНОМ (< lg) используй `TrinityCard` + `TrinityBottomDrawer`.
+
+**Пример использования:**
+
+```tsx
+import { TrinityCardPc } from '@/components/ui/TrinityCardPc'
+import { Phone, MessageCircle, Calendar, CreditCard, Pencil } from 'lucide-react'
+
+<TrinityCardPc
+  isOpen={!!selectedClient}
+  onClose={() => setSelectedClient(null)}
+  locale={language === 'he' ? 'he' : 'ru'}
+  
+  // Левая панель (30%)
+  leftHeader={
+    <>
+      <div className="bg-blue-500 w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl">
+        АК
+      </div>
+      <h2 className="text-xl font-bold mt-3">Анна Коэн</h2>
+    </>
+  }
+  
+  leftActions={
+    <>
+      <TrinityIconButton 
+        icon={<Phone size={18} />} 
+        color="bg-blue-50" 
+        textColor="text-blue-600" 
+      />
+      <TrinityIconButton 
+        icon={<MessageCircle size={18} />} 
+        color="bg-green-50" 
+        textColor="text-green-600" 
+      />
+    </>
+  }
+  
+  leftFields={[
+    { label: 'Телефон', value: '054-1234567', dir: 'ltr' },
+    { label: 'Email', value: 'anna@mail.com', dir: 'ltr' },
+    { label: 'Адрес', value: 'ул. Дизенгофф 123' },
+  ]}
+  
+  leftFooter={
+    <TrinityButton 
+      variant="edit" 
+      fullWidth 
+      icon={<Pencil size={16} />}
+      onClick={() => setEditing(true)}
+    >
+      Изменить
+    </TrinityButton>
+  }
+  
+  // Форма редактирования (заменяет leftFields)
+  isEditing={editing}
+  leftEditForm={
+    <div className="space-y-3">
+      <input className="w-full p-2 rounded-lg border" value={name} onChange={...} />
+      <button onClick={handleSave}>Сохранить</button>
+    </div>
+  }
+  
+  // Правая панель (70%)
+  rightKpi={{
+    label: 'Всего потрачено',
+    value: '₪2,500'
+  }}
+  
+  tabs={[
+    {
+      key: 'visits',
+      label: 'Визиты',
+      icon: <Calendar size={16} />,
+      content: <VisitsTable clientId={selectedClient.id} />
+    },
+    {
+      key: 'payments',
+      label: 'Финансы',
+      icon: <CreditCard size={16} />,
+      content: <PaymentsTable clientId={selectedClient.id} />
+    },
+  ]}
+  
+  defaultTab="visits"
+  maxWidth="max-w-5xl"
+/>
+```
+
+**Props:**
+
+```typescript
+interface TrinityCardPcProps {
+  isOpen: boolean
+  onClose: () => void
+  locale: 'he' | 'ru'
+  
+  // Левая панель (30%)
+  leftHeader?: ReactNode           // Аватар + имя + badge
+  leftActions?: ReactNode          // Кнопки (звонок, WhatsApp, email)
+  leftFields?: {                   // Поля данных
+    label: string
+    value: string | ReactNode
+    dir?: 'ltr' | 'rtl'
+  }[]
+  leftFooter?: ReactNode           // Кнопка Edit и т.д.
+  leftEditForm?: ReactNode         // Форма редактирования (заменяет leftFields)
+  isEditing?: boolean              // Показать форму вместо полей
+  
+  // Правая панель (70%)
+  rightKpi?: {                     // KPI заголовок
+    label: string
+    value: string
+  }
+  tabs?: {                         // Табы с контентом
+    key: string
+    label: string
+    icon?: ReactNode
+    content: ReactNode
+  }[]
+  defaultTab?: string
+  
+  // Стилизация
+  maxWidth?: string                // default: max-w-5xl
+}
+```
+
+**Используется в:**
+- ClientDesktopPanel (clients/page.tsx)
+- VisitDesktopPanel (visits/page.tsx)
+- PaymentDesktopPanel (payments/page.tsx)
+- TaskDesktopPanel (diary/page.tsx)
+
+**ВАЖНО:** НИКОГДА не создавай кастомные десктопные панели — всегда используй шаблон `TrinityCardPc`.
 
 ---
 

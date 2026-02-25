@@ -75,6 +75,25 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
     setLoading(false)
   }
 
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/clients/${client.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setIsEditing(false)
+        if (onSaved) onSaved(updated)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+    setSaving(false)
+  }
+
   const t = {
     he: {
       visits: 'היסטוריית ביקורים',
@@ -195,49 +214,133 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
           </div>
 
           {/* Данные клиента */}
-          <div className="space-y-3 flex-1">
-            {client.phone && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{l.phone}</span>
-                <span className="font-medium" dir="ltr">{client.phone}</span>
+          {isEditing ? (
+            <div className="space-y-3 flex-1">
+              <div>
+                <label className="text-xs text-muted-foreground">{locale === 'he' ? 'שם פרטי' : 'Имя'}</label>
+                <input
+                  value={editForm.first_name}
+                  onChange={(e) => setEditForm({...editForm, first_name: e.target.value})}
+                  className="w-full py-2 px-3 rounded-lg border bg-background text-sm mt-1"
+                />
               </div>
-            )}
-            {client.email && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Email</span>
-                <span className="font-medium" dir="ltr">{client.email}</span>
+              <div>
+                <label className="text-xs text-muted-foreground">{locale === 'he' ? 'שם משפחה' : 'Фамилия'}</label>
+                <input
+                  value={editForm.last_name}
+                  onChange={(e) => setEditForm({...editForm, last_name: e.target.value})}
+                  className="w-full py-2 px-3 rounded-lg border bg-background text-sm mt-1"
+                />
               </div>
-            )}
-            {client.date_of_birth && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{l.birthDate}</span>
-                <span className="font-medium">{new Date(client.date_of_birth).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU')}</span>
+              <div>
+                <label className="text-xs text-muted-foreground">{locale === 'he' ? 'טלפון' : 'Телефон'}</label>
+                <input
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                  className="w-full py-2 px-3 rounded-lg border bg-background text-sm mt-1"
+                  dir="ltr"
+                />
               </div>
-            )}
-            {client.address && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{l.address}</span>
-                <span className="font-medium">{client.address}</span>
+              <div>
+                <label className="text-xs text-muted-foreground">Email</label>
+                <input
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                  className="w-full py-2 px-3 rounded-lg border bg-background text-sm mt-1"
+                  dir="ltr"
+                />
               </div>
-            )}
-            {client.notes && (
-              <div className="text-sm mt-4">
-                <span className="text-muted-foreground block mb-1">{l.notesLabel}</span>
-                <p className="whitespace-pre-wrap text-sm">{client.notes}</p>
+              <div>
+                <label className="text-xs text-muted-foreground">{locale === 'he' ? 'כתובת' : 'Адрес'}</label>
+                <input
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({...editForm, address: e.target.value})}
+                  className="w-full py-2 px-3 rounded-lg border bg-background text-sm mt-1"
+                />
               </div>
-            )}
-          </div>
+              <div>
+                <label className="text-xs text-muted-foreground">{locale === 'he' ? 'תאריך לידה' : 'Дата рождения'}</label>
+                <input
+                  type="date"
+                  value={editForm.date_of_birth}
+                  onChange={(e) => setEditForm({...editForm, date_of_birth: e.target.value})}
+                  className="w-full py-2 px-3 rounded-lg border bg-background text-sm mt-1"
+                  dir="ltr"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">{locale === 'he' ? 'הערות' : 'Заметки'}</label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
+                  className="w-full py-2 px-3 rounded-lg border bg-background text-sm mt-1 resize-none"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50"
+                >
+                  {saving ? '...' : (locale === 'he' ? 'שמור' : 'Сохранить')}
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-muted text-foreground text-sm font-medium hover:bg-muted/80 transition"
+                >
+                  {locale === 'he' ? 'ביטול' : 'Отмена'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 flex-1">
+              {client.phone && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{l.phone}</span>
+                  <span className="font-medium" dir="ltr">{client.phone}</span>
+                </div>
+              )}
+              {client.email && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Email</span>
+                  <span className="font-medium" dir="ltr">{client.email}</span>
+                </div>
+              )}
+              {client.date_of_birth && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{l.birthDate}</span>
+                  <span className="font-medium">{new Date(client.date_of_birth).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU')}</span>
+                </div>
+              )}
+              {client.address && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{l.address}</span>
+                  <span className="font-medium">{client.address}</span>
+                </div>
+              )}
+              {client.notes && (
+                <div className="text-sm mt-4">
+                  <span className="text-muted-foreground block mb-1">{l.notesLabel}</span>
+                  <p className="whitespace-pre-wrap text-sm">{client.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Кнопка Edit внизу */}
-          <TrinityButton
-            variant="edit"
-            fullWidth
-            icon={<Pencil size={16} />}
-            onClick={() => setIsEditing(true)}
-            className="mt-4"
-          >
-            {l.edit}
-          </TrinityButton>
+          {!isEditing && (
+            <TrinityButton
+              variant="edit"
+              fullWidth
+              icon={<Pencil size={16} />}
+              onClick={() => setIsEditing(true)}
+              className="mt-4"
+            >
+              {l.edit}
+            </TrinityButton>
+          )}
         </div>
 
         {/* === ПРАВАЯ ПАНЕЛЬ — Activity Stream (70%) === */}

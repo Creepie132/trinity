@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Calendar, Clock, User, Filter, CheckCircle, CheckCircle2, Circle, AlertCircle, Phone, MessageSquare, Search, X, Mail, MapPin, ChevronRight } from 'lucide-react'
+import { Plus, Calendar, Clock, User, Filter, CheckCircle, CheckCircle2, Circle, AlertCircle, Phone, MessageSquare, Search, X, Mail, MapPin, ChevronRight, PlayCircle, XCircle, AlertTriangle } from 'lucide-react'
 import { TrinityCard } from '@/components/ui/TrinityCard'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
@@ -57,6 +57,16 @@ interface TaskGroup {
   label: string
   tasks: Task[]
   color?: string
+}
+
+// ===== TaskStatusIcon - иконки статусов =====
+function TaskStatusIcon({ status, priority }: { status: string; priority: string }) {
+  if (status === 'done') return <CheckCircle2 size={20} className="text-emerald-500" />
+  if (status === 'cancelled') return <XCircle size={20} className="text-slate-300" />
+  if (status === 'in_progress') return <PlayCircle size={20} className="text-amber-500" />
+  if (priority === 'urgent') return <AlertTriangle size={20} className="text-red-500" />
+  if (priority === 'high') return <AlertTriangle size={20} className="text-amber-500" />
+  return <Circle size={20} className="text-blue-500" />
 }
 
 export default function DiaryPage() {
@@ -285,20 +295,8 @@ export default function DiaryPage() {
         key={task.id}
         avatar={{
           type: 'icon',
-          icon: (
-            <div className="flex flex-col items-center gap-1">
-              {getTaskIcon(task)}
-              <span className={`text-[9px] font-medium leading-none ${
-                task.status === 'done' ? 'text-emerald-600' :
-                task.status === 'in_progress' ? 'text-amber-600' :
-                task.status === 'cancelled' ? 'text-slate-400' :
-                'text-blue-600'
-              }`}>
-                {badge.text}
-              </span>
-            </div>
-          ),
-          iconBg: getIconBg(task),
+          icon: <TaskStatusIcon status={task.status} priority={task.priority} />,
+          iconBg: 'bg-transparent',
         }}
         title={task.title}
         subtitle={task.description ? (task.description.length > 60 ? task.description.slice(0, 60) + '...' : task.description) : clientName}
@@ -653,9 +651,7 @@ export default function DiaryPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.className}`}>
-                          {badge.text}
-                        </span>
+                        <TaskStatusIcon status={task.status} priority={task.priority} />
                       </td>
                     </tr>
                   )

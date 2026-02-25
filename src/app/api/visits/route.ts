@@ -5,65 +5,31 @@ import { validateBody, createVisitSchema } from '@/lib/validations'
 import { createClient } from '@/lib/supabase/server'
 
 // GET /api/visits - список визитов для текущей организации
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    console.log('=== GET /api/visits START ===')
-    
     const supabase = await createClient()
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    console.log('User ID:', user?.id)
-    console.log('Auth error:', authError?.message)
-    
-    if (!user) {
-      console.log('❌ No user - returning 401')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Получаем org_id пользователя
-    const { data: orgUser, error: orgError } = await supabase
+    const { data: orgUser } = await supabase
       .from('org_users')
       .select('org_id')
       .eq('user_id', user.id)
       .single()
 
-    console.log('Org user:', orgUser)
-    console.log('Org error:', orgError?.message)
+    if (!orgUser) return NextResponse.json({ error: 'No organization' }, { status: 403 })
 
-    if (!orgUser) {
-      console.log('❌ No organization - returning 403')
-      return NextResponse.json({ error: 'No organization' }, { status: 403 })
-    }
-
-    console.log('Organization ID:', orgUser.org_id)
-
-    // Получаем визиты (только будущие и недавние)
-    const oneWeekAgo = new Date()
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-
-    const { data: visits, error } = await supabase
+    const { data, error } = await supabase
       .from('visits')
       .select('*')
       .eq('org_id', orgUser.org_id)
-      .gte('start_time', oneWeekAgo.toISOString())
-      .order('start_time', { ascending: false })
-      .limit(100)
+      .limit(5)
 
-    console.log('Query error:', error?.message)
-    console.log('Visits count:', visits?.length)
-    console.log('First visit:', visits?.[0] ? JSON.stringify(visits[0]) : 'none')
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    if (error) {
-      console.error('❌ Visits query error:', JSON.stringify(error))
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    // Возвращаем данные как есть (без JOIN с clients)
-    console.log('✅ Returning', visits?.length || 0, 'visits')
-    return NextResponse.json(visits || [])
+    return NextResponse.json(data || [])
   } catch (e: any) {
-    console.error('❌ Catch error in GET /api/visits:', e.message)
-    console.error('Stack:', e.stack)
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }

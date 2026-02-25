@@ -9,14 +9,27 @@ interface ClientDesktopPanelProps {
   isOpen: boolean
   onClose: () => void
   onEdit: (client: any) => void
+  onSaved?: (client: any) => void
   locale: 'he' | 'ru'
 }
 
-export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, locale }: ClientDesktopPanelProps) {
+export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, locale }: ClientDesktopPanelProps) {
   const [activeTab, setActiveTab] = useState<'visits' | 'payments' | 'messages' | 'notes'>('visits')
   const [visits, setVisits] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState({
+    first_name: '',
+    last_name: '',
+    phone: '',
+    email: '',
+    address: '',
+    date_of_birth: '',
+    notes: '',
+  })
+  const [saving, setSaving] = useState(false)
 
   const isRTL = locale === 'he'
   const fullName = `${client?.first_name || ''} ${client?.last_name || ''}`.trim() || '—'
@@ -30,6 +43,21 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, locale }: 
       loadData()
     }
   }, [isOpen, client?.id, activeTab])
+
+  useEffect(() => {
+    if (client) {
+      setEditForm({
+        first_name: client.first_name || '',
+        last_name: client.last_name || '',
+        phone: client.phone || '',
+        email: client.email || '',
+        address: client.address || '',
+        date_of_birth: client.date_of_birth ? client.date_of_birth.split('T')[0] : '',
+        notes: client.notes || '',
+      })
+      setIsEditing(false)
+    }
+  }, [client])
 
   async function loadData() {
     setLoading(true)
@@ -205,7 +233,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, locale }: 
             variant="edit"
             fullWidth
             icon={<Pencil size={16} />}
-            onClick={() => onEdit(client)}
+            onClick={() => setIsEditing(true)}
             className="mt-4"
           >
             {l.edit}

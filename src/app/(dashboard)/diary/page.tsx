@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { CreateTaskSheet } from '@/components/diary/CreateTaskSheet'
 import { TaskDetailSheet } from '@/components/diary/TaskDetailSheet'
 import { useAuth } from '@/hooks/useAuth'
+import { getClientName } from '@/lib/client-utils'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { format, isToday, isTomorrow, isPast, startOfDay, parseISO } from 'date-fns'
 import { he, ru } from 'date-fns/locale'
@@ -99,7 +100,7 @@ export default function DiaryPage() {
       const matchesSearch = !searchQuery || 
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         task.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        getClientName(task.client).toLowerCase().includes(searchQuery.toLowerCase())
       return matchesSearch
     })
   }, [tasks, searchQuery])
@@ -247,7 +248,7 @@ export default function DiaryPage() {
             iconBg: getIconBg(task),
           }}
           title={task.title}
-          subtitle={task.client?.name || task.description || ''}
+          subtitle={getClientName(task.client) !== 'Без имени' ? getClientName(task.client) : (task.description || '')}
           badge={{
             text: getStatusBadge(task),
             className: task.status === 'done' 

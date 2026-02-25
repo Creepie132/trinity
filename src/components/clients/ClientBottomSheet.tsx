@@ -5,13 +5,16 @@ import { Calendar, DollarSign, MessageSquare, Trash2, Phone, MessageCircle, Penc
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EditClientSheet } from './EditClientSheet'
+import { getClientName, getClientInitials } from '@/lib/client-utils'
 
 type Tab = 'main' | 'visits' | 'payments' | 'sms' | 'gdpr'
 
 interface ClientBottomSheetProps {
   client: {
     id: string
-    name: string
+    first_name?: string
+    last_name?: string
+    name?: string // legacy
     phone?: string
     email?: string
     visits_count?: number
@@ -46,15 +49,10 @@ export function ClientBottomSheet({
   const [loadingPayments, setLoadingPayments] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
 
-  // Инициалы
-  const initials = client.name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
+  const clientName = getClientName(client)
+  const initials = getClientInitials(client)
   const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-cyan-500']
-  const avatarColor = colors[client.name.charCodeAt(0) % colors.length]
+  const avatarColor = colors[clientName.charCodeAt(0) % colors.length]
 
   // RTL-aware back arrow
   const BackIcon = locale === 'he' ? ArrowRight : ArrowLeft
@@ -110,7 +108,7 @@ export function ClientBottomSheet({
 
   return (
     <>
-    <TrinityBottomDrawer isOpen={isOpen} onClose={handleClose} title={activeTab === 'main' ? client.name : undefined}>
+    <TrinityBottomDrawer isOpen={isOpen} onClose={handleClose} title={activeTab === 'main' ? clientName : undefined}>
       {/* ===== MAIN TAB ===== */}
       {activeTab === 'main' && (
         <>
@@ -121,7 +119,7 @@ export function ClientBottomSheet({
             >
               {initials}
             </div>
-            <h3 className="text-xl font-bold">{client.name}</h3>
+            <h3 className="text-xl font-bold">{clientName}</h3>
             {client.phone && <p className="text-muted-foreground text-sm">{client.phone}</p>}
             {client.email && <p className="text-muted-foreground text-xs">{client.email}</p>}
           </div>

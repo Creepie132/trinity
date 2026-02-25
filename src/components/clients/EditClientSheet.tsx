@@ -15,7 +15,8 @@ interface EditClientSheetProps {
 
 export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: EditClientSheetProps) {
   const [form, setForm] = useState({
-    name: client?.name || '',
+    first_name: client?.first_name || '',
+    last_name: client?.last_name || '',
     email: client?.email || '',
     phone: client?.phone || '',
     address: client?.address || '',
@@ -29,7 +30,8 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
   const t = {
     he: {
       title: 'עריכת לקוח',
-      name: 'שם מלא',
+      firstName: 'שם פרטי',
+      lastName: 'שם משפחה',
       email: 'אימייל',
       phone: 'טלפון',
       address: 'כתובת',
@@ -39,7 +41,8 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     },
     ru: {
       title: 'Редактирование клиента',
-      name: 'Полное имя',
+      firstName: 'Имя',
+      lastName: 'Фамилия',
       email: 'Email',
       phone: 'Телефон',
       address: 'Адрес',
@@ -105,9 +108,12 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
   }
 
   // Инициалы
-  const initials = form.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+  const first = (form.first_name || '')[0]?.toUpperCase() || '?'
+  const last = (form.last_name || '')[0]?.toUpperCase() || ''
+  const initials = (first + last).slice(0, 2) || '??'
   const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-cyan-500']
-  const avatarColor = colors[(client?.name || '').charCodeAt(0) % colors.length]
+  const fullName = `${form.first_name} ${form.last_name}`.trim() || 'Client'
+  const avatarColor = colors[fullName.charCodeAt(0) % colors.length]
 
   const inputClass = "w-full px-4 py-3 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
 
@@ -134,13 +140,23 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
       {/* Форма */}
       <div className="space-y-3">
         <div>
-          <label className="text-xs text-muted-foreground mb-1 block">{l.name} *</label>
+          <label className="text-xs text-muted-foreground mb-1 block">{l.firstName} *</label>
           <input
             type="text"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            value={form.first_name}
+            onChange={(e) => setForm({ ...form, first_name: e.target.value })}
             className={inputClass}
             required
+          />
+        </div>
+
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">{l.lastName}</label>
+          <input
+            type="text"
+            value={form.last_name}
+            onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+            className={inputClass}
           />
         </div>
 
@@ -190,7 +206,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
       {/* Кнопка сохранить */}
       <button
         onClick={handleSave}
-        disabled={saving || !form.name.trim()}
+        disabled={saving || !form.first_name.trim()}
         className="w-full mt-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition"
       >
         <Save size={16} />

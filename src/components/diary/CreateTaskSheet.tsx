@@ -6,6 +6,7 @@ import { TrinityButton } from '@/components/ui/TrinityButton'
 import { TrinitySearchDropdown } from '@/components/ui/TrinitySearch'
 import { Phone, MessageSquare, Navigation, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { getClientName } from '@/lib/client-utils'
 
 interface CreateTaskSheetProps {
   isOpen: boolean
@@ -29,7 +30,9 @@ interface OrgUser {
 
 interface Client {
   id: string
-  name: string
+  first_name?: string
+  last_name?: string
+  name?: string // legacy
   phone: string
   email: string
 }
@@ -220,7 +223,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
 
   function handleClientSelect(client: Client) {
     setClientId(client.id)
-    setSelectedClientName(client.name)
+    setSelectedClientName(getClientName(client))
     if (client.phone) setContactPhone(client.phone)
     if (client.email) setContactEmail(client.email)
   }
@@ -429,13 +432,13 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
           <label className="block text-sm font-medium mb-2">{labels.client}</label>
           <TrinitySearchDropdown
             data={clients}
-            searchKeys={['name', 'phone']}
+            searchKeys={['first_name', 'last_name', 'phone']}
             minChars={2}
             placeholder={labels.searchClient}
             onSelect={handleClientSelect}
             renderItem={(client) => (
               <div>
-                <p className="font-medium">{client.name}</p>
+                <p className="font-medium">{getClientName(client)}</p>
                 {client.phone && <p className="text-xs text-muted-foreground">{client.phone}</p>}
               </div>
             )}
@@ -454,7 +457,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
           <TrinitySearchDropdown
             data={visits.map(v => ({
               ...v,
-              client_name: v.client?.name || '' // Flatten для поиска
+              client_name: getClientName(v.client) // Flatten для поиска
             }))}
             searchKeys={['client_name', 'service_type']}
             minChars={1}
@@ -462,7 +465,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
             onSelect={handleVisitSelect}
             renderItem={(visit) => (
               <div>
-                <p className="font-medium">{visit.client?.name || 'Unknown'}</p>
+                <p className="font-medium">{getClientName(visit.client)}</p>
                 <p className="text-xs text-muted-foreground">
                   {visit.service_type} - {new Date(visit.scheduled_at).toLocaleDateString()}
                 </p>

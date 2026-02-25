@@ -6,6 +6,7 @@ import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { User, Calendar, Phone, MessageCircle, MapPin, Mail, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
+import { getClientName } from '@/lib/client-utils'
 import { he, ru } from 'date-fns/locale'
 
 interface Task {
@@ -171,7 +172,7 @@ export function TaskDetailSheet({
         {task.is_auto && task.auto_type === 'birthday' && (
           <div className="bg-gradient-to-r from-pink-50 to-amber-50 dark:from-pink-900/20 dark:to-amber-900/20 rounded-xl p-4 border border-pink-200 dark:border-pink-800 mb-4">
             <p className="text-3xl mb-2">🎂</p>
-            <p className="font-semibold text-lg">{task.client?.name}</p>
+            <p className="font-semibold text-lg">{getClientName(task.client)}</p>
             <p className="text-sm text-muted-foreground mt-1">{labels.birthdayToday}</p>
             {task.contact_phone && (
               <div className="flex gap-2 mt-3">
@@ -245,7 +246,7 @@ export function TaskDetailSheet({
               className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition"
             >
               <User size={14} className="text-primary" />
-              <span className="text-sm font-medium text-primary">{task.client.name}</span>
+              <span className="text-sm font-medium text-primary">{getClientName(task.client)}</span>
             </button>
           </div>
         )}

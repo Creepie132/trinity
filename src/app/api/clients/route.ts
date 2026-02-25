@@ -35,6 +35,7 @@ export async function GET() {
     console.log('Organization ID:', orgUser.org_id)
 
     // Получаем всех клиентов организации (все поля)
+    // NOTE: clients table has first_name, last_name (not 'name')
     const { data: clients, error } = await supabase
       .from('clients')
       .select('*')

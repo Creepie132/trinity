@@ -1,11 +1,14 @@
 'use client'
 
 import { Calendar, Clock, Phone, MessageCircle, CalendarPlus, Pencil, ChevronRight } from 'lucide-react'
+import { getClientName, getClientInitials } from '@/lib/client-utils'
 
 interface ClientCardProps {
   client: {
     id: string
-    name: string
+    first_name?: string
+    last_name?: string
+    name?: string // legacy
     phone?: string
     email?: string
     visits_count?: number
@@ -29,13 +32,8 @@ export function ClientCard({
   onSelect,
 }: ClientCardProps) {
 
-  // Инициалы из имени
-  const initials = client.name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
+  const clientName = getClientName(client)
+  const initials = getClientInitials(client)
 
   // Цвет аватара — генерируем из имени (стабильный)
   const colors = [
@@ -46,7 +44,7 @@ export function ClientCard({
     'bg-rose-500',
     'bg-cyan-500',
   ]
-  const colorIndex = client.name.charCodeAt(0) % colors.length
+  const colorIndex = clientName.charCodeAt(0) % colors.length
   const avatarColor = colors[colorIndex]
 
   const visitsCount = client.visits_count || client.total_visits || 0
@@ -94,7 +92,7 @@ export function ClientCard({
 
           {/* Имя и телефон */}
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-base truncate">{client.name}</h4>
+            <h4 className="font-semibold text-base truncate">{clientName}</h4>
             {client.phone && (
               <p className="text-sm text-muted-foreground truncate">{client.phone}</p>
             )}

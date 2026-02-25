@@ -8,6 +8,7 @@ import { useFeatures } from '@/hooks/useFeatures'
 import { useQuery } from '@tanstack/react-query'
 import { OnboardingWizard } from '@/components/OnboardingWizard'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } = {
   BarChart: dynamic(() => import('recharts').then(m => ({ default: m.BarChart })), { ssr: false }),
@@ -22,10 +23,30 @@ const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Re
   Cell: dynamic(() => import('recharts').then(m => ({ default: m.Cell })), { ssr: false }),
 }
 
+const translations = {
+  he: {
+    revenueTitle: 'הכנסות ב-7 הימים האחרונים',
+    visitsTitle: 'ביקורים ב-30 הימים האחרונים',
+    topServicesTitle: '5 השירותים המובילים החודש',
+    revenue: 'הכנסות',
+    visits: 'ביקורים',
+  },
+  ru: {
+    revenueTitle: 'Выручка за последние 7 дней',
+    visitsTitle: 'Визиты за последние 30 дней',
+    topServicesTitle: 'Топ-5 услуг за месяц',
+    revenue: 'Выручка',
+    visits: 'Визитов',
+  },
+}
+
 export function DashboardClient({ orgId }: { orgId: string }) {
   const router = useRouter()
   const features = useFeatures()
   const supabase = createSupabaseBrowserClient()
+  const { language } = useLanguage()
+  
+  const t = translations[language]
 
   // Check organization status
   useEffect(() => {
@@ -161,7 +182,7 @@ export function DashboardClient({ orgId }: { orgId: string }) {
             <Card className="bg-[#111827] border-gray-800">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">
-                  Выручка за последние 7 дней
+                  {t.revenueTitle}
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={revenueData}>
@@ -181,7 +202,7 @@ export function DashboardClient({ orgId }: { orgId: string }) {
                         borderRadius: '8px',
                         color: '#fff',
                       }}
-                      formatter={(value: any) => [`₪${value}`, 'Выручка']}
+                      formatter={(value: any) => [`₪${value}`, t.revenue]}
                     />
                     <Bar dataKey="amount" fill="url(#revenueGradient)" radius={[8, 8, 0, 0]} />
                   </BarChart>
@@ -195,7 +216,7 @@ export function DashboardClient({ orgId }: { orgId: string }) {
             <Card className="bg-[#111827] border-gray-800">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">
-                  Визиты за последние 30 дней
+                  {t.visitsTitle}
                 </h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={visitsData}>
@@ -209,7 +230,7 @@ export function DashboardClient({ orgId }: { orgId: string }) {
                         borderRadius: '8px',
                         color: '#fff',
                       }}
-                      formatter={(value: any) => [value, 'Визитов']}
+                      formatter={(value: any) => [value, t.visits]}
                     />
                     <Line
                       type="monotone"
@@ -232,7 +253,7 @@ export function DashboardClient({ orgId }: { orgId: string }) {
         <Card className="bg-[#111827] border-gray-800">
           <CardContent className="p-6">
             <h3 className="text-lg font-semibold text-white mb-4">
-              Топ-5 услуг за месяц
+              {t.topServicesTitle}
             </h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={topServices} layout="vertical">
@@ -246,7 +267,7 @@ export function DashboardClient({ orgId }: { orgId: string }) {
                     borderRadius: '8px',
                     color: '#fff',
                   }}
-                  formatter={(value: any) => [value, 'Визитов']}
+                  formatter={(value: any) => [value, t.visits]}
                 />
                 <Bar dataKey="count" radius={[0, 8, 8, 0]}>
                   {topServices.map((entry: any, index: number) => (

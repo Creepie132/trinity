@@ -33,27 +33,21 @@ export function TodayTasksWidget({ tasks, locale }: TodayTasksWidgetProps) {
                 className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition"
               >
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  t.priority === 'high' ? 'bg-red-500' : 
-                  t.priority === 'medium' ? 'bg-amber-500' : 
-                  'bg-slate-400'
+                  t.priority === 'urgent' ? 'bg-red-500' : 
+                  t.priority === 'high' ? 'bg-amber-500' : 
+                  'bg-blue-500'
                 }`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{t.title || '—'}</p>
-                  {t.client_id && t.clients && (
+                  <p className="text-sm font-medium truncate">{t.title}</p>
+                  {t.due_date && (
                     <p className="text-xs text-slate-400">
-                      {t.clients.first_name} {t.clients.last_name}
+                      {new Date(t.due_date).toLocaleTimeString(l ? 'he-IL' : 'ru-RU', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
                     </p>
                   )}
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  t.priority === 'high' ? 'bg-red-500 text-white' : 
-                  t.priority === 'medium' ? 'bg-amber-500 text-white' : 
-                  'bg-slate-400 text-white'
-                }`}>
-                  {t.priority === 'high' ? (l ? 'גבוה' : 'Высок') : 
-                   t.priority === 'medium' ? (l ? 'בינוני' : 'Средн') : 
-                   (l ? 'נמוך' : 'Низк')}
-                </span>
               </div>
             ))}
           </div>

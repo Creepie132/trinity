@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Calendar, Settings, BookOpen } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Calendar, Settings, BookOpen, Package } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
@@ -17,8 +17,9 @@ const baseNavigation = [
   { name_he: 'דשבורד', name_ru: 'Дашборд', href: '/dashboard', icon: Home, requireFeature: null },
   { name_he: 'לקוחות', name_ru: 'Клиенты', href: '/clients', icon: Users, requireFeature: null },
   { name_he: 'ביקורים', name_ru: 'Визиты', href: '/visits', icon: Calendar, requireFeature: null },
-  { name_he: 'יומן', name_ru: 'Дневник', href: '/diary', icon: BookOpen, requireFeature: null },
   { name_he: 'תשלומים', name_ru: 'Платежи', href: '/payments', icon: CreditCard, requireFeature: 'payments' },
+  { name_he: 'מלאי', name_ru: 'Склад', href: '/inventory', icon: Package, requireFeature: 'inventory' },
+  { name_he: 'יומן', name_ru: 'Дневник', href: '/diary', icon: BookOpen, requireFeature: null },
   { name_he: 'הודעות SMS', name_ru: 'SMS-сообщения', href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
   { name_he: 'סטטיסטיקה', name_ru: 'Статистика', href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
   { name_he: 'הצעות שותפים', name_ru: 'Партнерам', href: '/partners', icon: Gift, requireFeature: null },
@@ -87,8 +88,8 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
               <img
                 src="/logo.png"
-                alt="Trinity"
-                className="w-7 h-7 object-contain"
+                alt="Amber Solutions"
+                className="h-10 w-auto object-contain"
               />
             </div>
             <div>

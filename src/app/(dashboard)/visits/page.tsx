@@ -52,9 +52,24 @@ export default function VisitsPage() {
   const [page, setPage] = useState(1)
   const pageSize = 20
   const [desktopPanelVisit, setDesktopPanelVisit] = useState<Visit | null>(null)
+  const [allClients, setAllClients] = useState<any[]>([])
   
   // Bookings hook
   // Bookings view removed - online bookings now show in main list with badge
+
+  // Load all clients for names lookup
+  useEffect(() => {
+    fetch('/api/clients')
+      .then((r) => r.json())
+      .then(setAllClients)
+      .catch(console.error)
+  }, [])
+
+  function getClientName(visit: any): string {
+    const client = allClients?.find((c: any) => c.id === visit.client_id)
+    if (client) return `${client.first_name || ''} ${client.last_name || ''}`.trim()
+    return ''
+  }
 
   // Check organization status and feature access
   useEffect(() => {
@@ -463,237 +478,72 @@ export default function VisitsPage() {
       {viewMode === 'list' && (
         <>
           {/* Desktop Table (hidden on mobile) */}
-          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            {sortedVisits.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50 dark:bg-gray-800">
-                  <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('visits.client')}</TableHead>
-                  <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('visits.service')}</TableHead>
-                  <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('visits.date')}</TableHead>
-                  <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('visits.time')}</TableHead>
-                  <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('visits.duration')}</TableHead>
-                  <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('visits.price')}</TableHead>
-                  <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('visits.status')}</TableHead>
-                  <TableHead className="text-left text-gray-700 dark:text-gray-300">{t('visits.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {/* Upcoming visits */}
-                {scheduledVisits.length > 0 && (
-                  <>
-                    <TableRow>
-                      <TableCell colSpan={8} className="bg-gray-50 dark:bg-gray-900 py-2">
-                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-2">
-                          {language === 'he' ? 'תורים קרובים' : language === 'ru' ? 'Предстоящие' : 'Upcoming'}
-                        </h3>
-                      </TableCell>
-                    </TableRow>
-                    {scheduledVisits.map((visit) => {
-                  // Render ActiveVisitCard for in_progress visits
-                  if (visit.status === 'in_progress') {
-                    return (
-                      <TableRow key={visit.id} className="bg-amber-50 dark:bg-amber-900/10">
-                        <TableCell colSpan={8} className="p-4">
-                          <div className="border-2 border-amber-400 dark:border-amber-600 rounded-lg">
-                            <ActiveVisitCard 
-                              visit={visit} 
-                              onFinish={() => handleCompleteVisit(visit)} 
-                            />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  }
-                  
-                  // Regular row for other statuses
-                  return (
-                    <TableRow key={visit.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <TableCell className="font-medium text-gray-900 dark:text-gray-100">
-                        {visit.clients?.first_name} {visit.clients?.last_name}
-                      </TableCell>
-                      <TableCell className="text-gray-700 dark:text-gray-300">{getServiceLabel(visit.service_type)}</TableCell>
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        {format(new Date(visit.scheduled_at), 'dd/MM/yyyy')}
-                      </TableCell>
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        <div className="flex items-center gap-1 justify-end">
-                          <Clock className="w-3 h-3" />
-                          {format(new Date(visit.scheduled_at), 'HH:mm')}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-gray-700 dark:text-gray-300">{visit.duration_minutes || 0} דק׳</TableCell>
-                      <TableCell className="font-bold text-theme-primary">₪{visit.price || 0}</TableCell>
-                      <TableCell>{getStatusBadge(visit.status)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2 justify-start">
-                          {visit.status === 'scheduled' && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleStartVisit(visit.id)}
-                                className="bg-green-600 text-white hover:bg-green-700"
-                              >
-                                <Play className="w-3 h-3 ml-1" />
-                                {t('visits.startVisit')}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleCompleteVisit(visit)}
-                                className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
-                              >
-                                <CheckCircle className="w-3 h-3 ml-1" />
-                                {t('visits.complete')}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleCancelVisit(visit.id)}
-                                className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30"
-                              >
-                                <XCircle className="w-3 h-3 ml-1" />
-                                {t('visits.cancel')}
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-                  </>
-                )}
-                
-                {/* Completed visits */}
-                {completedVisits.length > 0 && (
-                  <>
-                    <TableRow>
-                      <TableCell colSpan={8} className="bg-gray-50 dark:bg-gray-900 py-2">
-                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-2">
-                          {language === 'he' ? 'הושלמו' : language === 'ru' ? 'Завершённые' : 'Completed'}
-                        </h3>
-                      </TableCell>
-                    </TableRow>
-                    {completedVisits.map((visit) => {
-                  // Render ActiveVisitCard for in_progress visits
-                  if (visit.status === 'in_progress') {
-                    return (
-                      <TableRow key={visit.id} className="bg-amber-50 dark:bg-amber-900/10">
-                        <TableCell colSpan={8} className="p-4">
-                          <div className="border-2 border-amber-400 dark:border-amber-600 rounded-lg">
-                            <ActiveVisitCard 
-                              visit={visit} 
-                              onFinish={() => handleCompleteVisit(visit)} 
-                            />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  }
-                  
-                  // Regular row for other statuses
-                  return (
-                    <TableRow key={visit.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <TableCell className="font-medium text-gray-900 dark:text-gray-100">
-                        {visit.clients?.first_name} {visit.clients?.last_name}
-                      </TableCell>
-                      <TableCell className="text-gray-700 dark:text-gray-300">{getServiceLabel(visit.service_type)}</TableCell>
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        {format(new Date(visit.scheduled_at), 'dd/MM/yyyy')}
-                      </TableCell>
-                      <TableCell className="text-gray-700 dark:text-gray-300">
-                        <div className="flex items-center gap-1 justify-end">
-                          <Clock className="w-3 h-3" />
-                          {format(new Date(visit.scheduled_at), 'HH:mm')}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-gray-700 dark:text-gray-300">{visit.duration_minutes || 0} דק׳</TableCell>
-                      <TableCell className="font-bold text-theme-primary">₪{visit.price || 0}</TableCell>
-                      <TableCell>{getStatusBadge(visit.status)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2 justify-start">
-                          {visit.status === 'scheduled' && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleStartVisit(visit.id)}
-                                className="bg-green-600 text-white hover:bg-green-700"
-                              >
-                                <Play className="w-3 h-3 ml-1" />
-                                {t('visits.startVisit')}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleCompleteVisit(visit)}
-                                className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
-                              >
-                                <CheckCircle className="w-3 h-3 ml-1" />
-                                {t('visits.complete')}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleCancelVisit(visit.id)}
-                                className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/30"
-                              >
-                                <XCircle className="w-3 h-3 ml-1" />
-                                {t('visits.cancel')}
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-                  </>
-                )}
-                
-                {/* Cancelled visits */}
-                {cancelledVisits.length > 0 && (
-                  <>
-                    <TableRow>
-                      <TableCell colSpan={8} className="bg-gray-50 dark:bg-gray-900 py-2">
-                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-2">
-                          {language === 'he' ? 'בוטלו' : language === 'ru' ? 'Отменённые' : 'Cancelled'}
-                        </h3>
-                      </TableCell>
-                    </TableRow>
-                    {cancelledVisits.map((visit) => {
-                  // Regular row with reduced opacity
-                  return (
-                    <TableRow key={visit.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 opacity-60">
-                      <TableCell className="font-medium text-gray-500 dark:text-gray-400">
-                        {visit.clients?.first_name} {visit.clients?.last_name}
-                      </TableCell>
-                      <TableCell className="text-gray-500 dark:text-gray-500">{getServiceLabel(visit.service_type)}</TableCell>
-                      <TableCell className="text-gray-500 dark:text-gray-500">
-                        {format(new Date(visit.scheduled_at), 'dd/MM/yyyy')}
-                      </TableCell>
-                      <TableCell className="text-gray-500 dark:text-gray-500">
-                        <div className="flex items-center gap-1 justify-end">
-                          <Clock className="w-3 h-3" />
-                          {format(new Date(visit.scheduled_at), 'HH:mm')}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-gray-500 dark:text-gray-500">{visit.duration_minutes || 0} דק׳</TableCell>
-                      <TableCell className="text-gray-500 dark:text-gray-500">₪{visit.price || 0}</TableCell>
-                      <TableCell>{getStatusBadge(visit.status)}</TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
-                  )
-                })}
-                  </>
-                )}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400 mb-4">{t('visits.noVisits')}</p>
-            </div>
-          )}
+          <div className="hidden md:block bg-card rounded-2xl border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-muted bg-muted/30">
+                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'לקוח' : 'Клиент'}</th>
+                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'תאריך' : 'Дата'}</th>
+                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'שעה' : 'Время'}</th>
+                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'סטטוס' : 'Статус'}</th>
+                  <th className="text-end py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'מחיר' : 'Цена'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedVisits.map((visit: any) => (
+                  <tr
+                    key={visit.id}
+                    onClick={() => handleVisitClick(visit)}
+                    className={`border-b border-muted/50 hover:bg-muted/30 cursor-pointer transition ${
+                      visit.status === 'cancelled' ? 'opacity-50' : ''
+                    }`}
+                  >
+                    <td className="py-3 px-4 font-medium">{getClientName(visit) || '—'}</td>
+                    <td className="py-3 px-4 text-muted-foreground">
+                      {new Date(visit.scheduled_at).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU')}
+                    </td>
+                    <td className="py-3 px-4 text-muted-foreground">
+                      {new Date(visit.scheduled_at).toLocaleTimeString(language === 'he' ? 'he-IL' : 'ru-RU', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                          visit.status === 'completed'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : visit.status === 'in_progress'
+                            ? 'bg-amber-100 text-amber-700'
+                            : visit.status === 'scheduled'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {visit.status === 'completed'
+                          ? language === 'he'
+                            ? 'הושלם'
+                            : 'Завершён'
+                          : visit.status === 'in_progress'
+                          ? language === 'he'
+                            ? 'בביצוע'
+                            : 'В процессе'
+                          : visit.status === 'scheduled'
+                          ? language === 'he'
+                            ? 'מתוכנן'
+                            : 'Запланирован'
+                          : visit.status === 'cancelled'
+                          ? language === 'he'
+                            ? 'בוטל'
+                            : 'Отменён'
+                          : visit.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-end font-medium">{visit.price ? `₪${visit.price}` : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           {/* Mobile Cards (visible only on mobile) - Using VisitCard component */}

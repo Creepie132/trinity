@@ -1,7 +1,7 @@
 'use client'
 
 import { Drawer } from 'vaul'
-import { ReactNode } from 'react'
+import { useState, useEffect, ReactNode } from 'react'
 
 interface TrinityBottomDrawerProps {
   isOpen: boolean
@@ -18,13 +18,32 @@ export function TrinityBottomDrawer({
   children,
   snapPoints,
 }: TrinityBottomDrawerProps) {
+  const [viewportHeight, setViewportHeight] = useState('100dvh')
+
+  useEffect(() => {
+    function handleResize() {
+      // visualViewport учитывает клавиатуру
+      if (window.visualViewport) {
+        setViewportHeight(`${window.visualViewport.height}px`)
+      }
+    }
+
+    window.visualViewport?.addEventListener('resize', handleResize)
+    window.visualViewport?.addEventListener('scroll', handleResize)
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize)
+      window.visualViewport?.removeEventListener('scroll', handleResize)
+    }
+  }, [])
+
   return (
     <Drawer.Root open={isOpen} onOpenChange={(open) => !open && onClose()} snapPoints={snapPoints}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
         <Drawer.Content 
           className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl overflow-hidden flex flex-col outline-none"
-          style={{ maxHeight: 'calc(100dvh - 2rem)' }}
+          style={{ maxHeight: `calc(${viewportHeight} - 2rem)` }}
         >
           {/* Handle — не скроллится */}
           <div className="flex-shrink-0 flex justify-center pt-3 pb-2">

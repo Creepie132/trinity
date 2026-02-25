@@ -768,3 +768,22 @@ footer {
 [vaul-drawer] select:focus {
   scroll-margin-bottom: 120px;
 }
+
+/* Фикс vaul drawer + мобильная клавиатура */
+[vaul-drawer] {
+  transition: max-height 0.1s ease-out !important;
+}
+
+[vaul-drawer] input:focus,
+[vaul-drawer] textarea:focus,
+[vaul-drawer] select:focus {
+  scroll-margin-bottom: 150px;
+  scroll-padding-bottom: 150px;
+}
+
+/* Предотвращаем зум на iOS при фокусе */
+[vaul-drawer] input,
+[vaul-drawer] textarea,
+[vaul-drawer] select {
+  font-size: 16px !important;
+}

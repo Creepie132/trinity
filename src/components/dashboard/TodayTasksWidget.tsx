@@ -1,7 +1,6 @@
 'use client'
 
-import { CheckSquare } from 'lucide-react'
-import Link from 'next/link'
+import { useState } from 'react'
 
 interface TodayTasksWidgetProps {
   tasks: any[]
@@ -9,71 +8,70 @@ interface TodayTasksWidgetProps {
 }
 
 export function TodayTasksWidget({ tasks, locale }: TodayTasksWidgetProps) {
-  const title = locale === 'he' ? 'משימות היום' : 'Задачи сегодня'
-  const noTasks = locale === 'he' ? 'אין משימות' : 'Нет задач'
-  const viewAll = locale === 'he' ? 'כל המשימות' : 'Все задачи'
-
-  const priorityColors = {
-    high: 'bg-red-100 text-red-700',
-    medium: 'bg-amber-100 text-amber-700',
-    low: 'bg-slate-100 text-slate-600',
-  }
-
-  const priorityLabels = {
-    he: {
-      high: 'גבוה',
-      medium: 'בינוני',
-      low: 'נמוך',
-    },
-    ru: {
-      high: 'Высокий',
-      medium: 'Средний',
-      low: 'Низкий',
-    },
-  }
+  const l = locale === 'he'
+  const [page, setPage] = useState(0)
+  const perPage = 5
+  const totalPages = Math.ceil(tasks.length / perPage)
+  const current = tasks.slice(page * perPage, (page + 1) * perPage)
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold">{title}</h3>
-        <CheckSquare size={20} className="text-slate-400" />
+    <div className="bg-white rounded-2xl shadow-sm p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold">{l ? 'משימות להיום' : 'Задачи сегодня'}</h3>
+        <span className="text-xs text-slate-400">{tasks.length}</span>
       </div>
       
       {tasks.length === 0 ? (
-        <p className="text-slate-400 text-sm text-center py-8">{noTasks}</p>
+        <p className="text-sm text-slate-400 text-center py-8">{l ? 'אין משימות' : 'Нет задач'}</p>
       ) : (
-        <div className="space-y-3">
-          {tasks.map((task: any) => (
-            <Link 
-              key={task.id} 
-              href="/diary"
-              className="block p-3 rounded-xl hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{task.title}</p>
-                  {task.client_id && task.clients && (
-                    <p className="text-xs text-slate-500 mt-1">
-                      {task.clients.first_name} {task.clients.last_name}
+        <>
+          <div className="space-y-2">
+            {current.map((t: any) => (
+              <div 
+                key={t.id} 
+                onClick={() => window.location.href = '/diary'}
+                className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition"
+              >
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  t.priority === 'high' ? 'bg-red-500' : 
+                  t.priority === 'medium' ? 'bg-amber-500' : 
+                  'bg-slate-400'
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{t.title || '—'}</p>
+                  {t.client_id && t.clients && (
+                    <p className="text-xs text-slate-400">
+                      {t.clients.first_name} {t.clients.last_name}
                     </p>
                   )}
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-lg ${priorityColors[task.priority as keyof typeof priorityColors] || priorityColors.low}`}>
-                  {priorityLabels[locale as keyof typeof priorityLabels][task.priority as keyof typeof priorityLabels.ru] || task.priority}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  t.priority === 'high' ? 'bg-red-500 text-white' : 
+                  t.priority === 'medium' ? 'bg-amber-500 text-white' : 
+                  'bg-slate-400 text-white'
+                }`}>
+                  {t.priority === 'high' ? (l ? 'גבוה' : 'Высок') : 
+                   t.priority === 'medium' ? (l ? 'בינוני' : 'Средн') : 
+                   (l ? 'נמוך' : 'Низк')}
                 </span>
               </div>
-            </Link>
-          ))}
-        </div>
-      )}
-      
-      {tasks.length > 0 && (
-        <Link 
-          href="/diary" 
-          className="block text-center text-sm text-blue-600 hover:text-blue-700 mt-4"
-        >
-          {viewAll} →
-        </Link>
+            ))}
+          </div>
+          
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-3">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i)}
+                  className={`h-2 rounded-full transition ${
+                    page === i ? 'bg-blue-600 w-6' : 'bg-slate-200 w-2'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

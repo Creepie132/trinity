@@ -62,6 +62,12 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     }
   }
 
+  function handleFocus(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 300)
+  }
+
   async function handleSave() {
     setSaving(true)
     try {
@@ -145,6 +151,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
             type="text"
             value={form.first_name}
             onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+            onFocus={handleFocus}
             className={inputClass}
             required
           />
@@ -156,6 +163,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
             type="text"
             value={form.last_name}
             onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+            onFocus={handleFocus}
             className={inputClass}
           />
         </div>
@@ -166,6 +174,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
             type="tel"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            onFocus={handleFocus}
             className={inputClass}
             dir="ltr"
           />
@@ -177,6 +186,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
+            onFocus={handleFocus}
             className={inputClass}
             dir="ltr"
           />
@@ -188,6 +198,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
             type="text"
             value={form.address}
             onChange={(e) => setForm({ ...form, address: e.target.value })}
+            onFocus={handleFocus}
             className={inputClass}
           />
         </div>
@@ -197,6 +208,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
           <textarea
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            onFocus={handleFocus}
             className={`${inputClass} min-h-[80px] resize-none`}
             rows={3}
           />

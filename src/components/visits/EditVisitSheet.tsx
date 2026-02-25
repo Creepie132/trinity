@@ -36,6 +36,12 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
   }
 
+  function handleFocus(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 300)
+  }
+
   // Минимальная дата — сегодня
   const todayStr = formatDateInput(new Date())
 
@@ -123,6 +129,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
             value={form.date}
             min={todayStr}
             onChange={(e) => setForm({ ...form, date: e.target.value })}
+            onFocus={handleFocus}
             className={inputClass}
             dir="ltr"
           />
@@ -136,6 +143,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
             value={form.time}
             min={minTime}
             onChange={(e) => setForm({ ...form, time: e.target.value })}
+            onFocus={handleFocus}
             className={inputClass}
             dir="ltr"
           />
@@ -151,6 +159,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
               min={5}
               step={5}
               onChange={(e) => setForm({ ...form, duration: e.target.value })}
+              onFocus={handleFocus}
               className={inputClass}
               dir="ltr"
             />
@@ -165,6 +174,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
             value={form.price}
             min={0}
             onChange={(e) => setForm({ ...form, price: e.target.value })}
+            onFocus={handleFocus}
             className={inputClass}
             dir="ltr"
           />
@@ -176,6 +186,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
           <textarea
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            onFocus={handleFocus}
             className={`${inputClass} min-h-[80px] resize-none`}
             rows={3}
           />

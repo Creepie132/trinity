@@ -17,6 +17,7 @@ interface CreateTaskSheetProps {
     visit_id?: string
     client_id?: string
     contact_phone?: string
+    contact_address?: string
     description?: string
     title?: string
   }
@@ -126,7 +127,8 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
   const [visitId, setVisitId] = useState<string | null>(prefill?.visit_id || null)
   const [contactPhone, setContactPhone] = useState(prefill?.contact_phone || '')
   const [contactEmail, setContactEmail] = useState('')
-  const [contactAddress, setContactAddress] = useState('')
+  const [contactStreet, setContactStreet] = useState('')
+  const [contactCity, setContactCity] = useState('')
   const [description, setDescription] = useState(prefill?.description || '')
   const [saving, setSaving] = useState(false)
 
@@ -162,6 +164,13 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
       setClientId(prefill.client_id || null)
       setVisitId(prefill.visit_id || null)
       setContactPhone(prefill.contact_phone || '')
+      
+      // Разбить адрес если есть
+      if (prefill.contact_address) {
+        const parts = prefill.contact_address.split(',').map(s => s.trim())
+        setContactStreet(parts[0] || '')
+        setContactCity(parts[1] || '')
+      }
     }
   }, [isOpen, prefill])
 
@@ -288,15 +297,15 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
     window.open(`https://wa.me/${cleanPhone}`, '_blank')
   }
 
-  function handleNavigate() {
-    if (!contactAddress) return
-    const encoded = encodeURIComponent(contactAddress)
-    window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank')
-  }
-
   async function handleSubmit() {
     if (!title.trim()) {
       alert(locale === 'he' ? 'נא למלא כותרת' : 'Заполните заголовок')
+      return
+    }
+
+    // Валидация адреса - либо оба заполнены, либо оба пусты
+    if ((contactStreet && !contactCity) || (!contactStreet && contactCity)) {
+      alert(locale === 'he' ? 'נא למלא גם רחוב וגם עיר' : 'Заполните и адрес и город')
       return
     }
 
@@ -309,6 +318,9 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
         dueDateTimestamp = new Date(`${dueDate}T${timeStr}`).toISOString()
       }
 
+      // Объединить адрес
+      const contact_address = (contactStreet && contactCity) ? `${contactStreet}, ${contactCity}` : null
+
       const body = {
         title: title.trim(),
         description: description.trim() || null,
@@ -319,7 +331,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
         visit_id: visitId,
         contact_phone: contactPhone || null,
         contact_email: contactEmail || null,
-        contact_address: contactAddress || null,
+        contact_address,
       }
 
       console.log('=== CREATE TASK ===')
@@ -350,7 +362,8 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
       setVisitId(null)
       setContactPhone('')
       setContactEmail('')
-      setContactAddress('')
+      setContactStreet('')
+      setContactCity('')
       setDescription('')
       setSelectedClientName('')
       setSelectedVisitName('')
@@ -617,24 +630,33 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
 
         {/* Адрес */}
         <div>
-          <label className="block text-sm font-medium mb-2">{labels.address}</label>
-          <div className="flex gap-2">
+          <label className="block text-sm font-medium mb-2">
+            {locale === 'he' ? 'כתובת' : 'Адрес'}
+          </label>
+          <div className="space-y-2">
             <input
               type="text"
-              value={contactAddress}
-              onChange={(e) => setContactAddress(e.target.value)}
+              value={contactStreet}
+              onChange={(e) => setContactStreet(e.target.value)}
+              placeholder={locale === 'he' ? 'רחוב ומספר' : 'Улица и номер'}
+              className="w-full py-3 px-4 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               onFocus={handleInputFocus}
-              className="flex-1 px-4 py-3 rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
               dir={isRTL ? 'rtl' : 'ltr'}
             />
-            {contactAddress && (
-              <button
-                onClick={handleNavigate}
-                className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 flex items-center justify-center transition"
-                title={labels.navigate}
-              >
-                <Navigation className="w-5 h-5" />
-              </button>
+            <input
+              type="text"
+              value={contactCity}
+              onChange={(e) => setContactCity(e.target.value)}
+              placeholder={locale === 'he' ? 'עיר' : 'Город'}
+              className="w-full py-3 px-4 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              onFocus={handleInputFocus}
+              dir={isRTL ? 'rtl' : 'ltr'}
+            />
+            {/* Подсказка если заполнено только одно */}
+            {((contactStreet && !contactCity) || (!contactStreet && contactCity)) && (
+              <p className="text-xs text-amber-500 px-1">
+                {locale === 'he' ? 'נא למלא גם רחוב וגם עיר' : 'Заполните и улицу и город'}
+              </p>
             )}
           </div>
         </div>

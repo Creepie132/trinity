@@ -12,8 +12,8 @@ interface VisitCardProps {
     client_name?: string
     client_phone?: string
     service_name?: string
-    start_time: string
-    duration?: number
+    scheduled_at: string
+    duration_minutes?: number
     status: string // scheduled | in_progress | completed | cancelled
     notes?: string
     price?: number
@@ -24,8 +24,6 @@ interface VisitCardProps {
       phone?: string
     }
     service_type?: string
-    duration_minutes?: number
-    scheduled_at?: string
   }
   locale: 'he' | 'ru'
   isMeetingMode?: boolean
@@ -47,7 +45,7 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
   const [editOpen, setEditOpen] = useState(false)
 
   // Parse time and date
-  const startTime = visit.scheduled_at || visit.start_time || ''
+  const startTime = visit.scheduled_at || ''
   const time = startTime
     ? new Date(startTime).toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', {
         hour: '2-digit',
@@ -71,7 +69,7 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
   const clientPhone = visit.client_phone || visit.clients?.phone || null
 
   const serviceName = visit.service_name || visit.service_type || ''
-  const duration = visit.duration || visit.duration_minutes || 0
+  const duration = visit.duration_minutes || 0
 
   const statusLabel = STATUS_LABELS[visit.status]?.[locale] || visit.status
 

@@ -16,7 +16,7 @@ import { useState, useEffect } from 'react'
 const baseNavigation = [
   { name_he: 'דשבורד', name_ru: 'Дашборд', href: '/dashboard', icon: Home, requireFeature: null },
   { name_he: 'לקוחות', name_ru: 'Клиенты', href: '/clients', icon: Users, requireFeature: null },
-  { name_he: 'תורים', name_ru: 'Расписание', href: '/appointments', icon: Calendar, requireFeature: null },
+  { name_he: 'ביקורים', name_ru: 'Визиты', href: '/visits', icon: Calendar, requireFeature: null },
   { name_he: 'יומן', name_ru: 'Дневник', href: '/diary', icon: BookOpen, requireFeature: null },
   { name_he: 'תשלומים', name_ru: 'Платежи', href: '/payments', icon: CreditCard, requireFeature: 'payments' },
   { name_he: 'הודעות SMS', name_ru: 'SMS-сообщения', href: '/sms', icon: MessageSquare, requireFeature: 'sms' },

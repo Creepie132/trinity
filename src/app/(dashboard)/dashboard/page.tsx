@@ -1,13 +1,7 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import StatsCards from '@/components/dashboard/StatsCards'
-import TodayBlock from '@/components/dashboard/TodayBlock'
-import TodayTasksBlock from '@/components/dashboard/TodayTasksBlock'
-import FABMenu from '@/components/dashboard/FABMenu'
-import { StatsCardsSkeleton } from '@/components/dashboard/StatsCardsSkeleton'
-import { DashboardClient } from '@/components/dashboard/DashboardClient'
-import { DashboardWrapper } from '@/components/dashboard/DashboardWrapper'
+import { DashboardContent } from '@/components/dashboard/DashboardContent'
 
 export default async function DashboardPage() {
   // Get orgId from server session
@@ -30,40 +24,5 @@ export default async function DashboardPage() {
     redirect('/unauthorized')
   }
 
-  // Get user's name for greeting
-  const { data: profile } = await supabase
-    .from('org_users')
-    .select('user_id')
-    .eq('user_id', user.id)
-    .eq('org_id', orgId)
-    .single()
-
-  const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
-
-  return (
-    <DashboardWrapper userName={userName} orgId={orgId}>
-      {/* Header with localized greeting inside wrapper */}
-
-      {/* Stats Cards with Suspense */}
-      <Suspense fallback={<StatsCardsSkeleton />}>
-        <StatsCards orgId={orgId} />
-      </Suspense>
-
-      {/* Today Blocks - Visits & Tasks */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Suspense fallback={<div className="h-48 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />}>
-          <TodayBlock orgId={orgId} />
-        </Suspense>
-        <Suspense fallback={<div className="h-48 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />}>
-          <TodayTasksBlock />
-        </Suspense>
-      </div>
-
-      {/* Charts and Onboarding - Client Component */}
-      <DashboardClient orgId={orgId} />
-
-      {/* Floating Action Button */}
-      <FABMenu />
-    </DashboardWrapper>
-  )
+  return <DashboardContent orgId={orgId} />
 }

@@ -8636,6 +8636,41 @@ clientbase-pro/
 
 ---
 
+## MeetingDetailCard — Единый компонент визита
+
+**Файл:** `src/components/visits/MeetingDetailCard.tsx`
+
+**Используется ВЕЗДЕ** где отображаются детали визита: календарь, список визитов, дашборд.
+
+**Правило:** НИКОГДА не создавай отдельные карточки визита — используй `MeetingDetailCard`.
+
+### Возможности:
+- ✅ Отображение времени, даты, статуса, цены, длительности
+- ✅ Заметки
+- ✅ Быстрые действия: позвонить, WhatsApp
+- ✅ Кнопки управления: Начать, Завершить, Отменить, Добавить услугу
+- ✅ RTL поддержка (Hebrew/Russian)
+- ✅ Адаптивный дизайн (TrinityBottomDrawer)
+
+### Пример использования:
+```tsx
+import { MeetingDetailCard } from '@/components/visits/MeetingDetailCard'
+
+<MeetingDetailCard
+  visit={selectedVisit}
+  isOpen={!!selectedVisit}
+  onClose={() => setSelectedVisit(null)}
+  locale={language === 'he' ? 'he' : 'ru'}
+  clientName={getClientName(selectedVisit)}
+  onStart={() => updateVisitStatus(selectedVisit.id, 'in_progress')}
+  onComplete={() => handleCompleteVisit(selectedVisit)}
+  onCancel={() => updateVisitStatus(selectedVisit.id, 'cancelled')}
+  onAddService={() => handleAddService()}
+/>
+```
+
+---
+
 ## Правило поиска на мобильном
 
 **НА МОБИЛЬНОМ (< md)** результаты поиска **ВСЕГДА открываются ВВЕРХ** (`bottom-full mb-1`).  

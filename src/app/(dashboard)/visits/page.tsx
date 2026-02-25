@@ -19,6 +19,7 @@ import { CalendarView } from '@/components/visits/CalendarView'
 import { VisitCard } from '@/components/visits/VisitCard'
 import { ActiveVisitCard } from '@/components/visits/ActiveVisitCard'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { MeetingDetailCard } from '@/components/visits/MeetingDetailCard'
 import { format } from 'date-fns'
 import {
   Select,
@@ -949,6 +950,25 @@ export default function VisitsPage() {
           </div>
         </TrinityBottomDrawer>
       )}
+
+      {/* Mobile MeetingDetailCard */}
+      <MeetingDetailCard
+        visit={selectedVisit}
+        isOpen={!!selectedVisit}
+        onClose={() => setSelectedVisit(null)}
+        locale={language === 'he' ? 'he' : 'ru'}
+        clientName={selectedVisit ? getClientName(selectedVisit) : ''}
+        onStart={() => selectedVisit && updateVisitStatus(selectedVisit.id, 'in_progress')}
+        onComplete={() => selectedVisit && handleCompleteVisit(selectedVisit)}
+        onCancel={() => selectedVisit && updateVisitStatus(selectedVisit.id, 'cancelled')}
+        onAddService={() => {
+          if (selectedVisit) {
+            setAddServiceVisit(selectedVisit)
+            setAddServiceOpen(true)
+            setSelectedVisit(null)
+          }
+        }}
+      />
     </div>
   )
 }

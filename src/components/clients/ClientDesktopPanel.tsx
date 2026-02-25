@@ -168,7 +168,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
         style={{ display: 'grid', gridTemplateColumns: '350px 1fr' }}
       >
         {/* === ЛЕВАЯ ПАНЕЛЬ — Профиль (30%) === */}
-        <div className={`p-6 flex flex-col border-e border-muted bg-muted/20`}>
+        <div className="p-6 flex flex-col border-e border-muted bg-muted/20 overflow-y-auto">
           {/* Закрыть */}
           <button
             onClick={onClose}

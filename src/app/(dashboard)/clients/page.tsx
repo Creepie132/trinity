@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Plus, Search, Eye, Edit, MessageSquare, CreditCard, Upload, Users } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
+import { useQueryClient } from '@tanstack/react-query'
 import { AddClientDialog } from '@/components/clients/AddClientDialog'
 import { ClientBottomSheet } from '@/components/clients/ClientBottomSheet'
 import { ClientDesktopPanel } from '@/components/clients/ClientDesktopPanel'
@@ -27,6 +28,7 @@ export default function ClientsPage() {
   const features = useFeatures()
   const { t, language } = useLanguage()
   const { isDemo, clientLimit } = useDemoMode()
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -400,6 +402,10 @@ export default function ClientsPage() {
             // TODO: открыть форму редактирования
             setSelectedClient(desktopPanelClient)
             setClientSheetOpen(true)
+          }}
+          onSaved={(updated) => {
+            setDesktopPanelClient(updated)
+            queryClient.invalidateQueries({ queryKey: ['clients'] })
           }}
           locale={language === 'he' ? 'he' : 'ru'}
         />

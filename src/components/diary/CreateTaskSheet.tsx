@@ -40,11 +40,11 @@ interface Client {
 interface Visit {
   id: string
   client_id: string
-  scheduled_at: string
-  service_type: string
-  client?: {
-    name: string
-  }
+  start_time: string
+  status: string
+  duration?: number
+  price?: number
+  notes?: string
 }
 
 type Priority = 'low' | 'normal' | 'high' | 'urgent'
@@ -231,7 +231,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
   function handleVisitSelect(visit: Visit) {
     setVisitId(visit.id)
     setSelectedVisitName(
-      `${visit.client?.name || ''} - ${visit.service_type || ''} (${new Date(visit.scheduled_at).toLocaleDateString()})`
+      `${new Date(visit.start_time).toLocaleDateString()} - ${visit.status || ''}`
     )
   }
 
@@ -455,19 +455,18 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
         <div>
           <label className="block text-sm font-medium mb-2">{labels.visit}</label>
           <TrinitySearchDropdown
-            data={visits.map(v => ({
-              ...v,
-              client_name: getClientName(v.client) // Flatten для поиска
-            }))}
-            searchKeys={['client_name', 'service_type']}
+            data={visits}
+            searchKeys={['start_time', 'status']}
             minChars={1}
             placeholder={labels.searchVisit}
             onSelect={handleVisitSelect}
             renderItem={(visit) => (
               <div>
-                <p className="font-medium">{getClientName(visit.client)}</p>
+                <p className="font-medium text-sm">
+                  {visit.start_time ? new Date(visit.start_time).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU') : ''}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  {visit.service_type} - {new Date(visit.scheduled_at).toLocaleDateString()}
+                  {visit.status || ''} {visit.price ? `• ₪${visit.price}` : ''}
                 </p>
               </div>
             )}

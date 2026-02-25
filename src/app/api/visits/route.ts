@@ -156,6 +156,31 @@ export async function POST(request: NextRequest) {
     console.log('[API /api/visits POST] Scheduled at (ISO):', scheduled_at)
 
     // Prepare insert data
+    // UUID validation regex
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+    // Auto-load price from service if service is selected and price not provided
+    let visitPrice = price ? parseFloat(price) : 0
+    
+    if (!price && serviceId) {
+      const selectedServiceId = serviceId
+      
+      // Only fetch price if it's a valid UUID (from services table)
+      if (uuidRegex.test(selectedServiceId)) {
+        const { data: serviceData, error: serviceError } = await supabase
+          .from('services')
+          .select('price, duration_minutes')
+          .eq('id', selectedServiceId)
+          .eq('org_id', org_id)
+          .single()
+        
+        if (!serviceError && serviceData) {
+          visitPrice = serviceData.price || 0
+          console.log('[API /api/visits POST] Auto-loaded price from service:', visitPrice)
+        }
+      }
+    }
+
     const insertData: any = {
       client_id: clientId,
       org_id: org_id,
@@ -163,14 +188,11 @@ export async function POST(request: NextRequest) {
       duration_minutes: duration !== null && duration !== undefined 
         ? (typeof duration === 'number' ? duration : parseInt(duration))
         : (isMeetingMode ? null : 60), // null for meetings, default 60 for visits
-      price: price ? parseFloat(price) : 0,
+      price: visitPrice,
       notes: notes || null,
       status: 'scheduled',
       staff_user_id: user.id, // Track who created the visit
     }
-
-    // UUID validation regex
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
     // Add service field (either service_id or service_type)
     if (serviceId) {

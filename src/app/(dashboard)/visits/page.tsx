@@ -318,10 +318,9 @@ export default function VisitsPage() {
   }
 
   function handleVisitClick(visit: any) {
-    if (window.innerWidth >= 1024) {
-      setDesktopVisit(visit)
-    }
-    // На мобильном ничего не делаем - VisitCard сам откроет свой drawer
+    // Открываем detail panel на всех устройствах (адаптивная модалка)
+    // VisitCard имеет свой встроенный drawer, но клик из календаря использует эту модалку
+    setDesktopVisit(visit)
   }
 
   async function updateVisitStatus(visitId: string, newStatus: string) {
@@ -776,12 +775,12 @@ export default function VisitsPage() {
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* Desktop Panel */}
+      {/* Visit Detail Panel (Desktop & Mobile) */}
       {desktopVisit && (
         <div className="fixed inset-0 z-50" onClick={() => setDesktopVisit(null)}>
           <div className="absolute inset-0 bg-black/30" />
           <div
-            className="relative z-10 bg-background shadow-2xl max-w-3xl mx-auto my-8 rounded-2xl overflow-hidden"
+            className="relative z-10 bg-background shadow-2xl md:max-w-3xl w-full h-full md:h-auto mx-auto md:my-8 md:rounded-2xl overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">

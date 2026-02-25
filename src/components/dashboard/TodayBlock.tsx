@@ -20,13 +20,14 @@ export default async function TodayBlock({ orgId }: { orgId: string }) {
       notes,
       clients(
         id,
-        name
+        first_name,
+        last_name
       )
     `)
     .eq('org_id', orgId)
     .gte('scheduled_at', todayStart.toISOString())
     .lte('scheduled_at', todayEnd.toISOString())
-    .order('scheduled_at', { ascending: true })
+    .order('scheduled_at', { ascending: true})
     .limit(5)
 
   // Format visits for client component
@@ -39,7 +40,7 @@ export default async function TodayBlock({ orgId }: { orgId: string }) {
     return {
       id: visit.id,
       time: `${hours}:${minutes}`,
-      clientName: client?.name || 'Unknown',
+      clientName: client ? `${client.first_name || ''} ${client.last_name || ''}`.trim() : 'Unknown',
       notes: visit.notes,
       status: visit.status || 'scheduled',
     }

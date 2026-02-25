@@ -43,7 +43,7 @@ export async function GET() {
 
     const { data: visits, error } = await supabase
       .from('visits')
-      .select('id, client_id, start_time, status, duration, price, notes')
+      .select('*')
       .eq('org_id', orgUser.org_id)
       .gte('start_time', oneWeekAgo.toISOString())
       .order('start_time', { ascending: false })

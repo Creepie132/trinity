@@ -9,6 +9,7 @@ import { Plus, Search, Eye, Edit, MessageSquare, CreditCard, Upload, Users } fro
 import { useClients } from '@/hooks/useClients'
 import { AddClientDialog } from '@/components/clients/AddClientDialog'
 import { ClientBottomSheet } from '@/components/clients/ClientBottomSheet'
+import { ClientDesktopPanel } from '@/components/clients/ClientDesktopPanel'
 import { ClientSummary } from '@/types/database'
 import { format } from 'date-fns'
 import { useRouter } from 'next/navigation'
@@ -31,6 +32,7 @@ export default function ClientsPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<ClientSummary | null>(null)
   const [clientSheetOpen, setClientSheetOpen] = useState(false)
+  const [desktopPanelClient, setDesktopPanelClient] = useState<ClientSummary | null>(null)
 
   const pageSize = 25
   const { data: clientsData, isLoading } = useClients('', page, pageSize)
@@ -65,8 +67,14 @@ export default function ClientsPage() {
   }, [features.isActive, features.hasClients, features.isLoading, router])
 
   const handleClientClick = (client: ClientSummary) => {
-    setSelectedClient(client)
-    setClientSheetOpen(true)
+    // Десктоп (>= lg = 1024px) — открыть панель
+    // Мобильный — открыть TrinityBottomDrawer
+    if (window.innerWidth >= 1024) {
+      setDesktopPanelClient(client)
+    } else {
+      setSelectedClient(client)
+      setClientSheetOpen(true)
+    }
   }
 
   // Show loading screen while fetching data
@@ -370,6 +378,31 @@ export default function ClientsPage() {
               }
             }}
           />
+      )}
+
+      {/* Desktop Panel */}
+      {desktopPanelClient && (
+        <ClientDesktopPanel
+          client={{
+            id: desktopPanelClient.id,
+            first_name: desktopPanelClient.first_name,
+            last_name: desktopPanelClient.last_name,
+            phone: desktopPanelClient.phone,
+            email: desktopPanelClient.email,
+            date_of_birth: desktopPanelClient.date_of_birth,
+            address: desktopPanelClient.address,
+            notes: desktopPanelClient.notes,
+          }}
+          isOpen={!!desktopPanelClient}
+          onClose={() => setDesktopPanelClient(null)}
+          onEdit={(client) => {
+            setDesktopPanelClient(null)
+            // TODO: открыть форму редактирования
+            setSelectedClient(desktopPanelClient)
+            setClientSheetOpen(true)
+          }}
+          locale={language === 'he' ? 'he' : 'ru'}
+        />
       )}
 
       {/* Mobile FAB (Floating Action Button) */}

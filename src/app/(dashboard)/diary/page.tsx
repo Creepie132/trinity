@@ -4,8 +4,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { Plus, Calendar, Clock, User, Filter, CheckCircle, CheckCircle2, Circle, AlertCircle, Phone, MessageSquare, Search, X, Mail, MapPin, ChevronRight } from 'lucide-react'
 import { TrinityCard } from '@/components/ui/TrinityCard'
 import { TrinityButton } from '@/components/ui/TrinityButton'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CreateTaskSheet } from '@/components/diary/CreateTaskSheet'
+import { ClientBottomSheet } from '@/components/clients/ClientBottomSheet'
 import { useAuth } from '@/hooks/useAuth'
 import { getClientName } from '@/lib/client-utils'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -63,15 +65,19 @@ export default function DiaryPage() {
 
   const [tasks, setTasks] = useState<Task[]>([])
   const [clients, setClients] = useState<any[]>([])
+  const [visits, setVisits] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<any>(null)
+  const [selectedVisit, setSelectedVisit] = useState<any>(null)
 
   // ===== Загрузка задач =====
   useEffect(() => {
     loadTasks()
     loadClients()
+    loadVisits()
   }, [filter])
 
   async function loadTasks() {
@@ -101,6 +107,17 @@ export default function DiaryPage() {
       setClients(data)
     } catch (error) {
       console.error('Load clients error:', error)
+    }
+  }
+
+  async function loadVisits() {
+    try {
+      const response = await fetch('/api/visits')
+      if (!response.ok) return
+      const data = await response.json()
+      setVisits(data)
+    } catch (error) {
+      console.error('Load visits error:', error)
     }
   }
 
@@ -333,16 +350,19 @@ export default function DiaryPage() {
             )}
 
             {/* Клиент — КЛИКАБЕЛЬНЫЙ */}
-            {clientName && task.client_id && (
+            {task.client_id && (
               <button
                 onClick={() => {
-                  window.location.href = `/clients`
+                  const client = clients.find((c: any) => c.id === task.client_id)
+                  if (client) setSelectedClient(client)
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary/5 hover:bg-primary/10 transition text-start"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 transition text-start"
               >
-                <User size={16} className="text-primary" />
-                <span className="text-sm font-medium text-primary">{clientName}</span>
-                <ChevronRight size={14} className="text-primary/50 ms-auto" />
+                <User size={16} className="text-slate-600" />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {clientName || (language === 'he' ? 'לקוח' : 'Клиент')}
+                </span>
+                <ChevronRight size={14} className="text-slate-400 ms-auto" />
               </button>
             )}
 
@@ -350,15 +370,16 @@ export default function DiaryPage() {
             {task.visit_id && (
               <button
                 onClick={() => {
-                  window.location.href = `/visits?highlight=${task.visit_id}`
+                  const visit = visits.find((v: any) => v.id === task.visit_id)
+                  if (visit) setSelectedVisit(visit)
                 }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 transition text-start"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 transition text-start"
               >
-                <Calendar size={16} className="text-amber-600" />
-                <span className="text-sm font-medium text-amber-700">
-                  {language === 'he' ? 'צפה בביקור' : 'Перейти к визиту'}
+                <Calendar size={16} className="text-slate-600" />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {language === 'he' ? 'צפה בביקור' : 'Посмотреть визит'}
                 </span>
-                <ChevronRight size={14} className="text-amber-400 ms-auto" />
+                <ChevronRight size={14} className="text-slate-400 ms-auto" />
               </button>
             )}
 
@@ -586,6 +607,56 @@ export default function DiaryPage() {
         }}
         locale={language === 'he' ? 'he' : 'ru'}
       />
+
+      {/* Drawer клиента */}
+      {selectedClient && (
+        <ClientBottomSheet
+          client={selectedClient}
+          isOpen={!!selectedClient}
+          onClose={() => setSelectedClient(null)}
+          locale={language}
+        />
+      )}
+
+      {/* Drawer визита */}
+      {selectedVisit && (
+        <TrinityBottomDrawer
+          isOpen={!!selectedVisit}
+          onClose={() => setSelectedVisit(null)}
+          title={language === 'he' ? 'פרטי ביקור' : 'Детали визита'}
+        >
+          <div className="space-y-3">
+            <div className="flex justify-between py-2 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{language === 'he' ? 'תאריך' : 'Дата'}</span>
+              <span className="text-sm font-medium">
+                {new Date(selectedVisit.scheduled_at).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU')}
+              </span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{language === 'he' ? 'שעה' : 'Время'}</span>
+              <span className="text-sm font-medium">
+                {new Date(selectedVisit.scheduled_at).toLocaleTimeString(language === 'he' ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{language === 'he' ? 'סטטוס' : 'Статус'}</span>
+              <span className="text-sm font-medium">{selectedVisit.status}</span>
+            </div>
+            {selectedVisit.price > 0 && (
+              <div className="flex justify-between py-2 border-b border-muted">
+                <span className="text-sm text-muted-foreground">{language === 'he' ? 'מחיר' : 'Цена'}</span>
+                <span className="text-sm font-medium">₪{selectedVisit.price}</span>
+              </div>
+            )}
+            {selectedVisit.notes && (
+              <div className="py-2">
+                <p className="text-sm text-muted-foreground mb-1">{language === 'he' ? 'הערות' : 'Заметки'}</p>
+                <p className="text-sm whitespace-pre-wrap">{selectedVisit.notes}</p>
+              </div>
+            )}
+          </div>
+        </TrinityBottomDrawer>
+      )}
     </div>
   )
 }

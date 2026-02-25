@@ -306,24 +306,36 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
         dueDateTimestamp = new Date(`${dueDate}T${timeStr}`).toISOString()
       }
 
+      const body = {
+        title: title.trim(),
+        description: description.trim() || null,
+        priority,
+        due_date: dueDateTimestamp,
+        assigned_to: assignedTo,
+        client_id: clientId,
+        visit_id: visitId,
+        contact_phone: contactPhone || null,
+        contact_email: contactEmail || null,
+        contact_address: contactAddress || null,
+      }
+
+      console.log('=== CREATE TASK ===')
+      console.log('Body:', JSON.stringify(body))
+
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || null,
-          priority,
-          due_date: dueDateTimestamp,
-          assigned_to: assignedTo,
-          client_id: clientId,
-          visit_id: visitId,
-          contact_phone: contactPhone || null,
-          contact_email: contactEmail || null,
-          contact_address: contactAddress || null,
-        }),
+        body: JSON.stringify(body),
       })
 
-      if (!response.ok) throw new Error('Failed to create task')
+      console.log('Status:', response.status)
+      const data = await response.json()
+      console.log('Response:', JSON.stringify(data))
+
+      if (!response.ok) {
+        alert((data.error || (locale === 'he' ? 'שגיאה' : 'Ошибка')))
+        return
+      }
       
       // Reset form
       setTitle('')

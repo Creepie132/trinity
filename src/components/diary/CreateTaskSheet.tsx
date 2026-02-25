@@ -454,29 +454,43 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
         {/* Привязать визит */}
         <div>
           <label className="block text-sm font-medium mb-2">{labels.visit}</label>
-          <TrinitySearchDropdown
-            data={visits}
-            searchKeys={['status', 'notes']}
-            minChars={1}
-            placeholder={labels.searchVisit}
-            onSelect={handleVisitSelect}
-            renderItem={(visit: any) => (
-              <div>
-                <p className="font-medium text-sm">
-                  {new Date(visit.scheduled_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU')}
-                  {' '}
-                  {new Date(visit.scheduled_at).toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {visit.status} {visit.price ? `₪${visit.price}` : ''}
-                </p>
-              </div>
-            )}
-            locale={locale}
-          />
+          {visits.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {locale === 'he' ? 'אין ביקורים' : 'Нет визитов'}
+            </p>
+          ) : (
+            <div className="space-y-1 max-h-40 overflow-y-auto border rounded-xl p-2">
+              {visits.map((visit: any) => (
+                <button
+                  key={visit.id}
+                  type="button"
+                  onClick={() => handleVisitSelect(visit)}
+                  className={`w-full text-start px-3 py-2.5 rounded-lg transition text-sm ${
+                    visitId === visit.id
+                      ? 'bg-primary/10 border border-primary/30'
+                      : 'hover:bg-muted/50'
+                  }`}
+                >
+                  <p className="font-medium">
+                    {new Date(visit.scheduled_at).toLocaleDateString(
+                      locale === 'he' ? 'he-IL' : 'ru-RU'
+                    )}
+                    {' '}
+                    {new Date(visit.scheduled_at).toLocaleTimeString(
+                      locale === 'he' ? 'he-IL' : 'ru-RU',
+                      { hour: '2-digit', minute: '2-digit' }
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {visit.status} {visit.price ? `₪${visit.price}` : ''}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
           {selectedVisitName && (
-            <p className="text-sm text-muted-foreground mt-1 px-1">
-              {locale === 'he' ? 'נבחר' : 'Выбрано'}: {selectedVisitName}
+            <p className="text-sm text-primary mt-1 px-1">
+              ✓ {selectedVisitName}
             </p>
           )}
         </div>

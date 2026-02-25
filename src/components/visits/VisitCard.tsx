@@ -47,7 +47,7 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
   const [editOpen, setEditOpen] = useState(false)
 
   // Parse time and date
-  const startTime = visit.start_time || visit.scheduled_at || ''
+  const startTime = visit.scheduled_at || visit.start_time || ''
   const time = startTime
     ? new Date(startTime).toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', {
         hour: '2-digit',

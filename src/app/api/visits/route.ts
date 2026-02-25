@@ -20,11 +20,16 @@ export async function GET(request: NextRequest) {
 
     if (!orgUser) return NextResponse.json({ error: 'No organization' }, { status: 403 })
 
+    const oneWeekAgo = new Date()
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+
     const { data, error } = await supabase
       .from('visits')
       .select('*')
       .eq('org_id', orgUser.org_id)
-      .limit(5)
+      .gte('scheduled_at', oneWeekAgo.toISOString())
+      .order('scheduled_at', { ascending: false })
+      .limit(100)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -147,14 +152,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Combine date and time into ISO timestamp
-    const start_time = new Date(`${date}T${time}`).toISOString()
-    console.log('[API /api/visits POST] Start time (ISO):', start_time)
+    const scheduled_at = new Date(`${date}T${time}`).toISOString()
+    console.log('[API /api/visits POST] Scheduled at (ISO):', scheduled_at)
 
     // Prepare insert data
     const insertData: any = {
       client_id: clientId,
       org_id: org_id,
-      start_time: start_time,
+      scheduled_at: scheduled_at,
       duration_minutes: duration !== null && duration !== undefined 
         ? (typeof duration === 'number' ? duration : parseInt(duration))
         : (isMeetingMode ? null : 60), // null for meetings, default 60 for visits

@@ -16,12 +16,12 @@ interface EditVisitSheetProps {
 
 export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeetingMode }: EditVisitSheetProps) {
   // Парсим текущую дату и время
-  const startDate = visit?.start_time ? new Date(visit.start_time) : new Date()
+  const startDate = visit?.scheduled_at ? new Date(visit.scheduled_at) : new Date()
   
   const [form, setForm] = useState({
     date: formatDateInput(startDate),
     time: formatTimeInput(startDate),
-    duration: visit?.duration || 30,
+    duration: visit?.duration_minutes || 30,
     notes: visit?.notes || '',
     price: visit?.price || '',
   })
@@ -85,14 +85,14 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
 
     setSaving(true)
     try {
-      const start_time = new Date(`${form.date}T${form.time}`).toISOString()
+      const scheduled_at = new Date(`${form.date}T${form.time}`).toISOString()
       
       const res = await fetch(`/api/visits/${visit.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          start_time,
-          duration: isMeetingMode ? null : Number(form.duration),
+          scheduled_at,
+          duration_minutes: isMeetingMode ? null : Number(form.duration),
           notes: form.notes,
           price: form.price ? Number(form.price) : null,
         }),

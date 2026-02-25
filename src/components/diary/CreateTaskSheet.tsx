@@ -40,9 +40,9 @@ interface Client {
 interface Visit {
   id: string
   client_id: string
-  start_time: string
+  scheduled_at: string
   status: string
-  duration?: number
+  duration_minutes?: number
   price?: number
   notes?: string
 }
@@ -231,7 +231,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
   function handleVisitSelect(visit: Visit) {
     setVisitId(visit.id)
     setSelectedVisitName(
-      `${new Date(visit.start_time).toLocaleDateString()} - ${visit.status || ''}`
+      `${new Date(visit.scheduled_at).toLocaleDateString()} - ${visit.status || ''}`
     )
   }
 
@@ -456,17 +456,17 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
           <label className="block text-sm font-medium mb-2">{labels.visit}</label>
           <TrinitySearchDropdown
             data={visits}
-            searchKeys={['start_time', 'status']}
+            searchKeys={['scheduled_at', 'status']}
             minChars={1}
             placeholder={labels.searchVisit}
             onSelect={handleVisitSelect}
             renderItem={(visit) => (
               <div>
                 <p className="font-medium text-sm">
-                  {visit.start_time ? new Date(visit.start_time).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU') : ''}
+                  {visit.scheduled_at ? new Date(visit.scheduled_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU') : ''}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {visit.status || ''} {visit.price ? `• ₪${visit.price}` : ''}
+                  {visit.status || ''}
                 </p>
               </div>
             )}

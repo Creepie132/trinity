@@ -14,7 +14,7 @@ export async function PUT(
 
   const { id } = await params
   const body = await request.json()
-  const { start_time, duration, notes, price } = body
+  const { scheduled_at, duration_minutes, notes, price } = body
 
   // Получаем org_id пользователя
   const { data: orgUser } = await supabase
@@ -31,8 +31,8 @@ export async function PUT(
     updated_at: new Date().toISOString()
   }
 
-  if (start_time !== undefined) updateData.start_time = start_time
-  if (duration !== undefined) updateData.duration = duration
+  if (scheduled_at !== undefined) updateData.scheduled_at = scheduled_at
+  if (duration_minutes !== undefined) updateData.duration_minutes = duration_minutes
   if (notes !== undefined) updateData.notes = notes
   if (price !== undefined) updateData.price = price
 

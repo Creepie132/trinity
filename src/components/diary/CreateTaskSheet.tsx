@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { TrinitySearchDropdown } from '@/components/ui/TrinitySearch'
-import { Phone, MessageSquare, Navigation, AlertCircle } from 'lucide-react'
+import { Phone, MessageSquare, Navigation, AlertCircle, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { getClientName } from '@/lib/client-utils'
 
@@ -140,6 +140,10 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
   const [selectedVisitName, setSelectedVisitName] = useState('')
   const [selectedUserName, setSelectedUserName] = useState('')
 
+  // Visit search state
+  const [visitSearch, setVisitSearch] = useState('')
+  const [visitDropdownOpen, setVisitDropdownOpen] = useState(false)
+
   // Load org users
   useEffect(() => {
     if (isOpen) {
@@ -159,6 +163,26 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
       setContactPhone(prefill.contact_phone || '')
     }
   }, [isOpen, prefill])
+
+  // Закрытие dropdown при клике вне
+  useEffect(() => {
+    function handleClick() {
+      setVisitDropdownOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  // Фильтрация визитов
+  const filteredVisits = useMemo(() => {
+    if (!visitSearch) return visits
+    const q = visitSearch.toLowerCase()
+    return visits.filter((v: any) => {
+      const clientName = getClientNameForVisit(v).toLowerCase()
+      const date = new Date(v.scheduled_at).toLocaleDateString()
+      return clientName.includes(q) || date.includes(q) || (v.notes || '').toLowerCase().includes(q)
+    })
+  }, [visits, visitSearch, clients])
 
   async function loadOrgUsers() {
     try {
@@ -228,11 +252,23 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
     if (client.email) setContactEmail(client.email)
   }
 
-  function handleVisitSelect(visit: Visit) {
+  function getClientNameForVisit(visit: any): string {
+    const client = clients.find((c: any) => c.id === visit.client_id)
+    if (!client) return locale === 'he' ? 'לקוח לא ידוע' : 'Неизвестный клиент'
+    return `${client.first_name || ''} ${client.last_name || ''}`.trim()
+  }
+
+  function handleVisitSelect(visit: any) {
     setVisitId(visit.id)
-    setSelectedVisitName(
-      `${new Date(visit.scheduled_at).toLocaleDateString()} - ${visit.status || ''}`
+    const clientName = getClientNameForVisit(visit)
+    const date = new Date(visit.scheduled_at).toLocaleDateString(
+      locale === 'he' ? 'he-IL' : 'ru-RU'
     )
+    const time = new Date(visit.scheduled_at).toLocaleTimeString(
+      locale === 'he' ? 'he-IL' : 'ru-RU',
+      { hour: '2-digit', minute: '2-digit' }
+    )
+    setSelectedVisitName(`${clientName} — ${date} ${time}`)
   }
 
   function handleUserSelect(user: OrgUser) {
@@ -454,44 +490,67 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
         {/* Привязать визит */}
         <div>
           <label className="block text-sm font-medium mb-2">{labels.visit}</label>
-          {visits.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {locale === 'he' ? 'אין ביקורים' : 'Нет визитов'}
-            </p>
-          ) : (
-            <div className="space-y-1 max-h-40 overflow-y-auto border rounded-xl p-2">
-              {visits.map((visit: any) => (
-                <button
-                  key={visit.id}
-                  type="button"
-                  onClick={() => handleVisitSelect(visit)}
-                  className={`w-full text-start px-3 py-2.5 rounded-lg transition text-sm ${
-                    visitId === visit.id
-                      ? 'bg-primary/10 border border-primary/30'
-                      : 'hover:bg-muted/50'
-                  }`}
-                >
-                  <p className="font-medium">
-                    {new Date(visit.scheduled_at).toLocaleDateString(
-                      locale === 'he' ? 'he-IL' : 'ru-RU'
-                    )}
-                    {' '}
-                    {new Date(visit.scheduled_at).toLocaleTimeString(
-                      locale === 'he' ? 'he-IL' : 'ru-RU',
-                      { hour: '2-digit', minute: '2-digit' }
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {visit.status} {visit.price ? `₪${visit.price}` : ''}
-                  </p>
-                </button>
-              ))}
+          {selectedVisitName ? (
+            <div className="flex items-center justify-between px-3 py-2.5 border rounded-xl bg-primary/5">
+              <p className="text-sm font-medium text-primary">{selectedVisitName}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setVisitId('')
+                  setSelectedVisitName('')
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X size={16} />
+              </button>
             </div>
-          )}
-          {selectedVisitName && (
-            <p className="text-sm text-primary mt-1 px-1">
-              ✓ {selectedVisitName}
-            </p>
+          ) : (
+            <div className="relative">
+              <input
+                type="text"
+                value={visitSearch}
+                onChange={(e) => setVisitSearch(e.target.value)}
+                onFocus={() => setVisitDropdownOpen(true)}
+                placeholder={locale === 'he' ? 'חפש ביקור...' : 'Поиск визита...'}
+                className="w-full py-3 px-4 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              {visitDropdownOpen && (
+                <div className="absolute z-50 w-full bg-card border rounded-xl shadow-lg max-h-48 overflow-y-auto bottom-full mb-1 md:bottom-auto md:top-full md:mb-0 md:mt-1">
+                  {filteredVisits.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      {locale === 'he' ? 'אין ביקורים' : 'Нет визитов'}
+                    </p>
+                  ) : (
+                    filteredVisits.map((visit: any) => (
+                      <button
+                        key={visit.id}
+                        type="button"
+                        onClick={() => {
+                          handleVisitSelect(visit)
+                          setVisitSearch('')
+                          setVisitDropdownOpen(false)
+                        }}
+                        className="w-full text-start px-4 py-3 hover:bg-muted/50 transition border-b border-muted last:border-0"
+                      >
+                        <p className="font-medium text-sm">{getClientNameForVisit(visit)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(visit.scheduled_at).toLocaleDateString(
+                            locale === 'he' ? 'he-IL' : 'ru-RU'
+                          )}
+                          {' '}
+                          {new Date(visit.scheduled_at).toLocaleTimeString(
+                            locale === 'he' ? 'he-IL' : 'ru-RU',
+                            { hour: '2-digit', minute: '2-digit' }
+                          )}
+                          {' · '}
+                          {visit.status}
+                        </p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
 

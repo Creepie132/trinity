@@ -737,7 +737,7 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
               <div className="p-4 bg-gray-800 rounded-lg border border-gray-700 hover:border-purple-500 transition-colors cursor-pointer">
                 <Calendar className="w-8 h-8 text-purple-400 mx-auto mb-2" />
                 <div className="font-semibold">Создать визит</div>
-                <div className="text-sm text-gray-400 mt-1">Запланируйте первую встречу</div>
+                <div className="text-sm text-gray-400 mt-1">Запланируйте первый визит</div>
               </div>
               <div className="p-4 bg-gray-800 rounded-lg border border-gray-700 hover:border-purple-500 transition-colors cursor-pointer">
                 <ExternalLink className="w-8 h-8 text-purple-400 mx-auto mb-2" />

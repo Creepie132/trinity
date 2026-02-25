@@ -59,7 +59,7 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
   const [loading, setLoading] = useState(true)
   const [todayVisits, setTodayVisits] = useState<any[]>([])
   const [todayTasks, setTodayTasks] = useState<any[]>([])
-  const [revenueData, setRevenueData] = useState<any[]>([])
+  const [revenueData, setRevenueData] = useState<{ date: string; amount: number }[]>([])
 
   useEffect(() => {
     async function loadStats() {
@@ -136,31 +136,20 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
         setTodayTasks(todayTasksFiltered.slice(0, 5))
 
         // Revenue chart data (last 7 days)
-        const revenueByDay = []
+        const revenueByDay: { date: string; amount: number }[] = []
         for (let i = 6; i >= 0; i--) {
-          const day = new Date()
-          day.setDate(day.getDate() - i)
-          day.setHours(0, 0, 0, 0)
-          const dayEnd = new Date(day)
-          dayEnd.setDate(dayEnd.getDate() + 1)
+          const d = new Date()
+          d.setDate(d.getDate() - i)
+          const dateStr = d.toISOString().split('T')[0]
           
-          const dayPayments = paymentsArr.filter((p: any) => {
-            const paymentDate = new Date(p.created_at || p.paid_at)
-            return paymentDate >= day && paymentDate < dayEnd && 
-                   (p.status === 'completed' || p.status === 'success')
-          })
+          const dayTotal = paymentsArr
+            .filter((p: any) => {
+              const pDate = new Date(p.created_at).toISOString().split('T')[0]
+              return pDate === dateStr && (p.status === 'completed' || p.status === 'success')
+            })
+            .reduce((sum: number, p: any) => sum + (p.amount || p.price || 0), 0)
           
-          const dayRevenue = dayPayments.reduce((sum: number, p: any) => 
-            sum + (p.amount || p.price || 0), 0
-          )
-          
-          revenueByDay.push({
-            date: day.toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU', { 
-              day: 'numeric', 
-              month: 'short' 
-            }),
-            revenue: dayRevenue,
-          })
+          revenueByDay.push({ date: dateStr, amount: dayTotal })
         }
         setRevenueData(revenueByDay)
 
@@ -230,7 +219,7 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
             {/* Ряд 3: Графики */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <RevenueChartWidget data={revenueData} locale={locale} />
-              <IncomeExpensesWidget locale={locale} orgId={orgId} />
+              <IncomeExpensesWidget locale={locale} />
             </div>
           </div>
 

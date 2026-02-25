@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StatsCards from '@/components/dashboard/StatsCards'
 import TodayBlock from '@/components/dashboard/TodayBlock'
+import TodayTasksBlock from '@/components/dashboard/TodayTasksBlock'
 import FABMenu from '@/components/dashboard/FABMenu'
 import { StatsCardsSkeleton } from '@/components/dashboard/StatsCardsSkeleton'
 import { DashboardClient } from '@/components/dashboard/DashboardClient'
@@ -48,10 +49,15 @@ export default async function DashboardPage() {
         <StatsCards orgId={orgId} />
       </Suspense>
 
-      {/* Today Block */}
-      <Suspense fallback={<div className="h-48 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />}>
-        <TodayBlock orgId={orgId} />
-      </Suspense>
+      {/* Today Blocks - Visits & Tasks */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Suspense fallback={<div className="h-48 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />}>
+          <TodayBlock orgId={orgId} />
+        </Suspense>
+        <Suspense fallback={<div className="h-48 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" />}>
+          <TodayTasksBlock />
+        </Suspense>
+      </div>
 
       {/* Charts and Onboarding - Client Component */}
       <DashboardClient orgId={orgId} />

@@ -6,7 +6,6 @@ import { TrinityCard } from '@/components/ui/TrinityCard'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CreateTaskSheet } from '@/components/diary/CreateTaskSheet'
-import { TaskDetailSheet } from '@/components/diary/TaskDetailSheet'
 import { useAuth } from '@/hooks/useAuth'
 import { getClientName } from '@/lib/client-utils'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -68,8 +67,6 @@ export default function DiaryPage() {
   const [filter, setFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
 
   // ===== Загрузка задач =====
   useEffect(() => {
@@ -234,19 +231,6 @@ export default function DiaryPage() {
     }
   }
 
-  // ===== Обработчик клика на задачу =====
-  function handleTaskClick(task: Task) {
-    setSelectedTask(task)
-    setDetailOpen(true)
-  }
-
-  // ===== Обработчик изменения статуса =====
-  async function handleStatusChange(taskId: string, status: Task['status']) {
-    await updateTaskStatus(taskId, status)
-    setDetailOpen(false)
-    setSelectedTask(null)
-  }
-
   // ===== Рендер карточки задачи =====
   function renderTaskCard(task: Task) {
     const clientName = getTaskClientName(task)
@@ -276,31 +260,92 @@ export default function DiaryPage() {
     }
 
     return (
-      <div key={task.id} onClick={() => handleTaskClick(task)} className="cursor-pointer">
-        <TrinityCard
-          avatar={{
-            type: 'icon',
-            icon: getTaskIcon(task),
-            iconBg: getIconBg(task),
-          }}
-          title={task.title}
-          subtitle={task.description ? (task.description.length > 60 ? task.description.slice(0, 60) + '...' : task.description) : clientName}
-          badge={badge}
-          stats={[
-            ...(task.due_date ? [{
-              icon: <Clock size={13} />,
-              text: format(parseISO(task.due_date), 'dd MMM, HH:mm', { locale: dateLocale }),
-            }] : []),
-            ...(clientName ? [{
-              icon: <Circle size={13} />,
-              text: clientName,
-            }] : []),
-          ]}
-          quickActions={quickActions.length > 0 ? quickActions : undefined}
-          isInactive={task.status === 'done' || task.status === 'cancelled'}
-          locale={language === 'he' ? 'he' : 'ru'}
-        />
-      </div>
+      <TrinityCard
+        key={task.id}
+        avatar={{
+          type: 'icon',
+          icon: getTaskIcon(task),
+          iconBg: getIconBg(task),
+        }}
+        title={task.title}
+        subtitle={task.description ? (task.description.length > 60 ? task.description.slice(0, 60) + '...' : task.description) : clientName}
+        badge={badge}
+        stats={[
+          ...(task.due_date ? [{
+            icon: <Clock size={13} />,
+            text: format(parseISO(task.due_date), 'dd MMM, HH:mm', { locale: dateLocale }),
+          }] : []),
+          ...(clientName ? [{
+            icon: <Circle size={13} />,
+            text: clientName,
+          }] : []),
+        ]}
+        quickActions={quickActions.length > 0 ? quickActions : undefined}
+        drawerTitle={task.title}
+        detailFields={[
+          ...(task.description ? [{
+            label: language === 'he' ? 'תיאור' : 'Описание',
+            value: task.description,
+            type: 'multiline' as const,
+          }] : []),
+          {
+            label: language === 'he' ? 'סטטוס' : 'Статус',
+            value: badge.text,
+          },
+          {
+            label: language === 'he' ? 'עדיפות' : 'Приоритет',
+            value: task.priority === 'urgent' ? '🔴 ' + (language === 'he' ? 'דחוף' : 'Срочный') :
+                   task.priority === 'high' ? '🟡 ' + (language === 'he' ? 'גבוה' : 'Высокий') :
+                   task.priority === 'normal' ? (language === 'he' ? 'רגיל' : 'Обычный') :
+                   (language === 'he' ? 'נמוך' : 'Низкий'),
+          },
+          ...(task.due_date ? [{
+            label: language === 'he' ? 'תאריך יעד' : 'Дедлайн',
+            value: new Date(task.due_date).toLocaleString(
+              language === 'he' ? 'he-IL' : 'ru-RU',
+              { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }
+            ),
+          }] : []),
+          ...(clientName ? [{
+            label: language === 'he' ? 'לקוח' : 'Клиент',
+            value: clientName,
+          }] : []),
+          ...(task.contact_phone ? [{
+            label: language === 'he' ? 'טלפון' : 'Телефон',
+            value: task.contact_phone,
+          }] : []),
+          ...(task.contact_email ? [{
+            label: 'Email',
+            value: task.contact_email,
+          }] : []),
+          ...(task.contact_address ? [{
+            label: language === 'he' ? 'כתובת' : 'Адрес',
+            value: task.contact_address,
+          }] : []),
+        ]}
+        detailActions={[
+          ...(task.status === 'open' ? [{
+            label: language === 'he' ? '▶ התחל' : '▶ Начать',
+            icon: undefined,
+            onClick: () => updateTaskStatus(task.id, 'in_progress'),
+            className: 'border-2 border-amber-400 text-amber-600 hover:bg-amber-50',
+          }] : []),
+          ...(task.status === 'in_progress' ? [{
+            label: language === 'he' ? '✓ סיים' : '✓ Завершить',
+            icon: undefined,
+            onClick: () => updateTaskStatus(task.id, 'done'),
+            className: 'border-2 border-emerald-400 text-emerald-600 hover:bg-emerald-50',
+          }] : []),
+          ...(task.status !== 'done' && task.status !== 'cancelled' ? [{
+            label: language === 'he' ? '✕ בטל' : '✕ Отменить',
+            icon: undefined,
+            onClick: () => updateTaskStatus(task.id, 'cancelled'),
+            className: 'border border-slate-300 text-slate-500 hover:bg-slate-50',
+          }] : []),
+        ]}
+        isInactive={task.status === 'cancelled' || task.status === 'done'}
+        locale={language}
+      />
     )
   }
 
@@ -431,18 +476,6 @@ export default function DiaryPage() {
           setCreateOpen(false)
           loadTasks()
         }}
-        locale={language === 'he' ? 'he' : 'ru'}
-      />
-
-      {/* Детальный просмотр задачи */}
-      <TaskDetailSheet
-        task={selectedTask}
-        isOpen={detailOpen}
-        onClose={() => {
-          setDetailOpen(false)
-          setSelectedTask(null)
-        }}
-        onStatusChange={handleStatusChange}
         locale={language === 'he' ? 'he' : 'ru'}
       />
     </div>

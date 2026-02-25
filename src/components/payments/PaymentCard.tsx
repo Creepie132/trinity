@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CreditCard, Banknote, Receipt, Copy, RotateCcw, FileText } from 'lucide-react'
+import { CreditCard, Banknote, Receipt, Copy, RotateCcw, FileText, MessageCircle, MessageSquare, ExternalLink } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { toast } from 'sonner'
@@ -15,10 +15,12 @@ interface PaymentCardProps {
     payment_method?: string
     client_name?: string
     client?: { first_name?: string; last_name?: string }
+    client_phone?: string
     description?: string
     created_at: string
     transaction_id?: string
     link?: string
+    payment_url?: string
     notes?: string
     payment_number?: string
   }
@@ -275,16 +277,93 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
 
         {/* Кнопки действий */}
         <div className="space-y-2">
-          {payment.link && (
-            <button
-              onClick={copyLink}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition"
-            >
-              <Copy size={18} />
-              {text.copyLink}
-            </button>
+          {/* Pending payment - share buttons */}
+          {payment.status === 'pending' && (
+            <>
+              {payment.client_phone && (
+                <button
+                  onClick={() => {
+                    const phone = payment.client_phone?.replace(/[^0-9]/g, '') || ''
+                    const link = payment.payment_url || payment.link || ''
+                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(link)}`, '_blank')
+                  }}
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-50 text-green-600 font-medium hover:bg-green-100 transition"
+                >
+                  <MessageCircle size={18} />
+                  WhatsApp
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  toast.info(locale === 'he' ? 'בקרוב' : 'SMS скоро')
+                }}
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-50 text-blue-600 font-medium hover:bg-blue-100 transition"
+              >
+                <MessageSquare size={18} />
+                SMS
+              </button>
+
+              {(payment.payment_url || payment.link) && (
+                <button
+                  onClick={() => {
+                    const url = payment.payment_url || payment.link
+                    if (url) window.open(url, '_blank')
+                  }}
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-100 text-slate-600 font-medium hover:bg-slate-200 transition"
+                >
+                  <ExternalLink size={18} />
+                  {locale === 'he' ? 'פתח קישור' : 'Перейти по ссылке'}
+                </button>
+              )}
+
+              {(payment.payment_url || payment.link) && (
+                <button
+                  onClick={() => {
+                    const url = payment.payment_url || payment.link
+                    if (url) {
+                      navigator.clipboard.writeText(url)
+                      toast.success(text.linkCopied)
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border text-slate-600 font-medium hover:bg-muted/50 transition"
+                >
+                  <Copy size={18} />
+                  {locale === 'he' ? 'העתק קישור' : 'Копировать ссылку'}
+                </button>
+              )}
+            </>
           )}
 
+          {/* Completed payment - receipt button */}
+          {payment.status === 'completed' && (
+            <>
+              <button
+                onClick={() => {
+                  toast.info(locale === 'he' ? 'בקרוב' : 'Скоро')
+                }}
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-primary text-primary font-medium hover:bg-primary/10 transition"
+              >
+                <FileText size={18} />
+                {locale === 'he' ? 'קבלה' : 'Квитанция'}
+              </button>
+
+              {onRefund && (
+                <button
+                  onClick={() => {
+                    onRefund(payment)
+                    setDetailOpen(false)
+                  }}
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-red-50 text-red-600 font-medium hover:bg-red-100 transition"
+                >
+                  <RotateCcw size={18} />
+                  {text.refund}
+                </button>
+              )}
+            </>
+          )}
+
+          {/* Failed payment - retry */}
           {payment.status === 'failed' && onRetry && (
             <button
               onClick={() => {
@@ -297,30 +376,6 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
               {text.retry}
             </button>
           )}
-
-          {payment.status === 'completed' && onRefund && (
-            <button
-              onClick={() => {
-                onRefund(payment)
-                setDetailOpen(false)
-              }}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition"
-            >
-              <RotateCcw size={18} />
-              {text.refund}
-            </button>
-          )}
-
-          <button
-            onClick={() => {
-              // TODO: Generate receipt
-              setDetailOpen(false)
-            }}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-muted text-foreground font-medium hover:bg-muted/80 transition"
-          >
-            <FileText size={18} />
-            {text.receipt}
-          </button>
         </div>
       </TrinityBottomDrawer>
     </>

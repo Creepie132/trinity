@@ -694,8 +694,6 @@ export default function VisitsPage() {
                           created_at: visit.created_at,
                           clients: visit.clients,
                           service_type: visit.service_type,
-                          duration_minutes: visit.duration_minutes,
-                          scheduled_at: visit.scheduled_at,
                         }}
                         locale={language === 'he' ? 'he' : 'ru'}
                         isMeetingMode={meetingMode.isMeetingMode}
@@ -729,8 +727,6 @@ export default function VisitsPage() {
                           created_at: visit.created_at,
                           clients: visit.clients,
                           service_type: visit.service_type,
-                          duration_minutes: visit.duration_minutes,
-                          scheduled_at: visit.scheduled_at,
                         }}
                         locale={language === 'he' ? 'he' : 'ru'}
                         isMeetingMode={meetingMode.isMeetingMode}
@@ -765,8 +761,6 @@ export default function VisitsPage() {
                             created_at: visit.created_at,
                             clients: visit.clients,
                             service_type: visit.service_type,
-                            duration_minutes: visit.duration_minutes,
-                            scheduled_at: visit.scheduled_at,
                           }}
                           locale={language === 'he' ? 'he' : 'ru'}
                           isMeetingMode={meetingMode.isMeetingMode}

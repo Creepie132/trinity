@@ -36,9 +36,9 @@ const VARIANT_CLASSES: Record<TrinityButtonVariant, string> = {
   outline: 'border-2 border-primary/30 text-primary bg-transparent hover:bg-primary/5',
   ghost: 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
   danger: 'bg-red-600 text-white hover:bg-red-700',
-  call: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50',
-  whatsapp: 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50',
-  edit: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700',
+  call: 'bg-blue-600 text-white hover:bg-blue-700',
+  whatsapp: 'bg-emerald-600 text-white hover:bg-emerald-700',
+  edit: 'bg-slate-200 text-slate-700 hover:bg-slate-300',
   icon: 'rounded-full hover:opacity-80',
 }
 

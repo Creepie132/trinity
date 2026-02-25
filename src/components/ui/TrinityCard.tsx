@@ -155,9 +155,9 @@ export function TrinityCard({
       {/* ===== КАРТОЧКА ===== */}
       <div
         onClick={handleCardClick}
-        className={`bg-card border rounded-xl mb-2 active:bg-muted/50 transition cursor-pointer ${
+        className={`bg-white rounded-2xl mb-2 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
           isInactive ? 'opacity-50' : ''
-        } ${highlightBorder ? `border-${highlightBorder}` : ''} ${cardClassName}`}
+        } ${highlightBorder ? `border-2 border-${highlightBorder}` : ''} ${cardClassName}`}
       >
         {avatar?.type === 'timeline' ? (
           // Timeline layout (визиты)
@@ -166,8 +166,8 @@ export function TrinityCard({
             <div className="flex-1 py-3 px-3 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm truncate">{title}</p>
-                  {subtitle && <p className="text-xs text-muted-foreground truncate mt-0.5">{subtitle}</p>}
+                  <p className="font-bold text-base leading-snug truncate">{title}</p>
+                  {subtitle && <p className="text-sm text-slate-400 truncate mt-0.5">{subtitle}</p>}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {badge && <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.className}`}>{badge.text}</span>}
@@ -184,10 +184,10 @@ export function TrinityCard({
               {renderAvatar()}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-semibold text-base truncate">{title}</h4>
+                  <h4 className="font-bold text-base leading-snug truncate">{title}</h4>
                   {badge && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.className}`}>{badge.text}</span>}
                 </div>
-                {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
+                {subtitle && <p className="text-sm text-slate-400 truncate">{subtitle}</p>}
               </div>
               <ChevronRight className="text-muted-foreground flex-shrink-0" size={18} />
             </div>
@@ -196,7 +196,7 @@ export function TrinityCard({
             {stats && stats.length > 0 && (
               <div className="flex items-center gap-4 mt-3 pt-3 border-t border-muted">
                 {stats.map((stat, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <div key={i} className="flex items-center gap-1.5 text-xs text-slate-400">
                     {stat.icon}
                     <span>{stat.text}</span>
                   </div>

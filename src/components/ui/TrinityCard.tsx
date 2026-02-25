@@ -73,6 +73,9 @@ interface TrinityCardProps {
   isInactive?: boolean // opacity-50
   highlightBorder?: string // border-amber-300 и т.д.
   locale?: 'he' | 'ru'
+
+  // === Кастомный обработчик клика ===
+  onClick?: () => void // если указан, вызывается вместо открытия drawer
 }
 
 export function TrinityCard({
@@ -92,9 +95,18 @@ export function TrinityCard({
   isInactive = false,
   highlightBorder = '',
   locale = 'ru',
+  onClick,
 }: TrinityCardProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const isRTL = locale === 'he'
+
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick()
+    } else {
+      setDrawerOpen(true)
+    }
+  }
 
   // ===== Рендер аватара =====
   function renderAvatar() {
@@ -142,7 +154,7 @@ export function TrinityCard({
     <>
       {/* ===== КАРТОЧКА ===== */}
       <div
-        onClick={() => setDrawerOpen(true)}
+        onClick={handleCardClick}
         className={`bg-card border rounded-xl mb-2 active:bg-muted/50 transition cursor-pointer ${
           isInactive ? 'opacity-50' : ''
         } ${highlightBorder ? `border-${highlightBorder}` : ''} ${cardClassName}`}

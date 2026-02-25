@@ -31,6 +31,7 @@ interface VisitCardProps {
   onComplete?: (id: string) => void
   onCancel?: (id: string) => void
   onEdit?: (visit: any) => void
+  onClick?: (visit: any) => void
 }
 
 const STATUS_LABELS: Record<string, { he: string; ru: string }> = {
@@ -40,9 +41,17 @@ const STATUS_LABELS: Record<string, { he: string; ru: string }> = {
   cancelled: { he: 'בוטל', ru: 'Отменён' },
 }
 
-export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, onCancel, onEdit }: VisitCardProps) {
+export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, onCancel, onEdit, onClick }: VisitCardProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick(visit)
+    } else {
+      setDrawerOpen(true)
+    }
+  }
 
   // Parse time and date
   const startTime = visit.scheduled_at || ''
@@ -80,7 +89,7 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
     <>
       {/* Компактная карточка */}
       <div
-        onClick={() => setDrawerOpen(true)}
+        onClick={handleCardClick}
         className={`bg-card border rounded-xl mb-2 active:bg-muted/50 transition cursor-pointer ${
           isCancelled ? 'opacity-50' : ''
         } ${visit.status === 'in_progress' ? 'border-amber-300 dark:border-amber-700' : ''}`}

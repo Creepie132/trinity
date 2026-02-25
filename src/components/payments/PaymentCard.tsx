@@ -25,10 +25,19 @@ interface PaymentCardProps {
   locale: 'he' | 'ru'
   onRefund?: (payment: any) => void
   onRetry?: (payment: any) => void
+  onClick?: (payment: any) => void
 }
 
-export function PaymentCard({ payment, locale, onRefund, onRetry }: PaymentCardProps) {
+export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: PaymentCardProps) {
   const [detailOpen, setDetailOpen] = useState(false)
+  
+  const handleCardClick = () => {
+    if (onClick) {
+      onClick(payment)
+    } else {
+      setDetailOpen(true)
+    }
+  }
 
   const t = {
     he: {
@@ -192,7 +201,7 @@ export function PaymentCard({ payment, locale, onRefund, onRetry }: PaymentCardP
     <>
       {/* Мобильная карточка */}
       <div
-        onClick={() => setDetailOpen(true)}
+        onClick={handleCardClick}
         className="bg-card border rounded-xl p-4 mb-2 active:bg-muted/50 cursor-pointer"
       >
         <div className="flex items-center justify-between">

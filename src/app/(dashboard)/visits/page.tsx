@@ -30,6 +30,7 @@ import { toast } from 'sonner'
 import { Visit } from '@/types/visits'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { ExportButton } from '@/components/ExportButton'
+import { VisitDesktopPanel } from '@/components/visits/VisitDesktopPanel'
 
 export default function VisitsPage() {
   const router = useRouter()
@@ -50,6 +51,7 @@ export default function VisitsPage() {
   const [serviceColors, setServiceColors] = useState<Record<string, string>>({})
   const [page, setPage] = useState(1)
   const pageSize = 20
+  const [desktopPanelVisit, setDesktopPanelVisit] = useState<Visit | null>(null)
   
   // Bookings hook
   // Bookings view removed - online bookings now show in main list with badge
@@ -297,6 +299,32 @@ export default function VisitsPage() {
       refetch()
     } catch (error) {
       console.error('Error starting visit:', error)
+      toast.error(t('common.error'))
+    }
+  }
+
+  const handleVisitClick = (visit: any) => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      setDesktopPanelVisit(visit)
+    } else {
+      // Mobile - карточка сама открывает drawer
+    }
+  }
+
+  const handleStatusChange = async (visitId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('visits')
+        .update({ status: newStatus })
+        .eq('id', visitId)
+
+      if (error) throw error
+
+      toast.success('✓')
+      refetch()
+      setDesktopPanelVisit(null)
+    } catch (error) {
+      console.error('Error updating visit status:', error)
       toast.error(t('common.error'))
     }
   }
@@ -700,6 +728,7 @@ export default function VisitsPage() {
                         onStart={handleStartVisit}
                         onComplete={() => handleCompleteVisit(visit)}
                         onCancel={handleCancelVisit}
+                        onClick={handleVisitClick}
                       />
                     ))}
                   </>
@@ -733,6 +762,7 @@ export default function VisitsPage() {
                         onStart={handleStartVisit}
                         onComplete={() => handleCompleteVisit(visit)}
                         onCancel={handleCancelVisit}
+                        onClick={handleVisitClick}
                       />
                     ))}
                   </>
@@ -767,6 +797,7 @@ export default function VisitsPage() {
                           onStart={handleStartVisit}
                           onComplete={() => handleCompleteVisit(visit)}
                           onCancel={handleCancelVisit}
+                          onClick={handleVisitClick}
                         />
                       ))}
                     </div>
@@ -900,6 +931,19 @@ export default function VisitsPage() {
       >
         <Plus className="w-6 h-6" />
       </button>
+
+      {/* Desktop Panel */}
+      <VisitDesktopPanel
+        visit={desktopPanelVisit}
+        isOpen={!!desktopPanelVisit}
+        onClose={() => setDesktopPanelVisit(null)}
+        locale={language === 'he' ? 'he' : 'ru'}
+        clients={visits.map((v: any) => v.clients).filter(Boolean)}
+        onStatusChange={handleStatusChange}
+        onClientClick={(clientId) => {
+          // TODO: open ClientDesktopPanel
+        }}
+      />
     </div>
   )
 }

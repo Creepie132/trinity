@@ -7,10 +7,12 @@ import { TrinityButton } from '@/components/ui/TrinityButton'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CreateTaskSheet } from '@/components/diary/CreateTaskSheet'
+import { TaskDesktopPanel } from '@/components/diary/TaskDesktopPanel'
 import { ClientBottomSheet } from '@/components/clients/ClientBottomSheet'
 import { useAuth } from '@/hooks/useAuth'
 import { getClientName } from '@/lib/client-utils'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { format, isToday, isTomorrow, isPast, startOfDay, parseISO } from 'date-fns'
 import { he, ru } from 'date-fns/locale'
 
@@ -62,6 +64,7 @@ export default function DiaryPage() {
   const { t, language } = useLanguage()
   const isRTL = language === 'he'
   const dateLocale = language === 'he' ? he : ru
+  const supabase = createSupabaseBrowserClient()
 
   const [tasks, setTasks] = useState<Task[]>([])
   const [clients, setClients] = useState<any[]>([])
@@ -72,6 +75,7 @@ export default function DiaryPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<any>(null)
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
+  const [desktopPanelTask, setDesktopPanelTask] = useState<Task | null>(null)
 
   // ===== Загрузка задач =====
   useEffect(() => {
@@ -474,6 +478,7 @@ export default function DiaryPage() {
         )}
         isInactive={task.status === 'cancelled' || task.status === 'done'}
         locale={language}
+        onClick={() => handleTaskClick(task)}
       />
     )
   }
@@ -487,6 +492,29 @@ export default function DiaryPage() {
         </div>
       </div>
     )
+  }
+
+  const handleTaskClick = (task: Task) => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      setDesktopPanelTask(task)
+    }
+    // Mobile - TrinityCard has embedded drawer
+  }
+
+  const handleTaskStatusChange = async (taskId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: newStatus as any })
+        .eq('id', taskId)
+
+      if (error) throw error
+
+      loadTasks()
+      setDesktopPanelTask(null)
+    } catch (error) {
+      console.error('Error updating task status:', error)
+    }
   }
 
   return (
@@ -657,6 +685,25 @@ export default function DiaryPage() {
           </div>
         </TrinityBottomDrawer>
       )}
+
+      {/* Desktop Panel */}
+      <TaskDesktopPanel
+        task={desktopPanelTask}
+        isOpen={!!desktopPanelTask}
+        onClose={() => setDesktopPanelTask(null)}
+        locale={language === 'he' ? 'he' : 'ru'}
+        clients={clients}
+        visits={visits}
+        onStatusChange={handleTaskStatusChange}
+        onClientClick={(clientId) => {
+          const client = clients.find((c: any) => c.id === clientId)
+          if (client) setSelectedClient(client)
+        }}
+        onVisitClick={(visitId) => {
+          const visit = visits.find((v: any) => v.id === visitId)
+          if (visit) setSelectedVisit(visit)
+        }}
+      />
     </div>
   )
 }

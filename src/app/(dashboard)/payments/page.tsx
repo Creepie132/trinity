@@ -26,6 +26,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { ExportButton } from '@/components/ExportButton'
 import { PaymentCard } from '@/components/payments/PaymentCard'
+import { PaymentDesktopPanel } from '@/components/payments/PaymentDesktopPanel'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { EmptyState } from '@/components/ui/EmptyState'
 
@@ -45,6 +46,7 @@ export default function PaymentsPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(0)
+  const [desktopPanelPayment, setDesktopPanelPayment] = useState<any>(null)
 
   // Parse payment info with priority logic
   function parsePaymentInfo(description: string | undefined, payment: any) {
@@ -159,6 +161,13 @@ export default function PaymentsPage() {
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
+  }
+
+  const handlePaymentClick = (payment: any) => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      setDesktopPanelPayment(payment)
+    }
+    // Mobile - PaymentCard has own drawer logic
   }
 
   return (
@@ -519,6 +528,7 @@ export default function PaymentsPage() {
               key={payment.id}
               payment={payment}
               locale={language === 'he' ? 'he' : 'ru'}
+              onClick={handlePaymentClick}
             />
           ))
         ) : (
@@ -619,6 +629,18 @@ export default function PaymentsPage() {
       <CreatePaymentLinkDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       <CreateSubscriptionDialog open={subscriptionDialogOpen} onOpenChange={setSubscriptionDialogOpen} />
       <CreateCashPaymentDialog open={cashDialogOpen} onOpenChange={setCashDialogOpen} />
+
+      {/* Desktop Panel */}
+      <PaymentDesktopPanel
+        payment={desktopPanelPayment}
+        isOpen={!!desktopPanelPayment}
+        onClose={() => setDesktopPanelPayment(null)}
+        locale={language === 'he' ? 'he' : 'ru'}
+        clients={payments?.map((p: any) => p.client || p.clients).filter(Boolean) || []}
+        onClientClick={(clientId) => {
+          // TODO: open ClientDesktopPanel
+        }}
+      />
     </div>
   )
 }

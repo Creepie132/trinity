@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Calendar, Clock, User, Filter, CheckCircle, Circle, AlertCircle, Phone, MessageSquare, Search, X } from 'lucide-react'
+import { Plus, Calendar, Clock, User, Filter, CheckCircle, CheckCircle2, Circle, AlertCircle, Phone, MessageSquare, Search, X } from 'lucide-react'
 import { TrinityCard } from '@/components/ui/TrinityCard'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -63,6 +63,7 @@ export default function DiaryPage() {
   const dateLocale = language === 'he' ? he : ru
 
   const [tasks, setTasks] = useState<Task[]>([])
+  const [clients, setClients] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -73,6 +74,7 @@ export default function DiaryPage() {
   // ===== Загрузка задач =====
   useEffect(() => {
     loadTasks()
+    loadClients()
   }, [filter])
 
   async function loadTasks() {
@@ -94,16 +96,27 @@ export default function DiaryPage() {
     }
   }
 
+  async function loadClients() {
+    try {
+      const response = await fetch('/api/clients')
+      if (!response.ok) return
+      const data = await response.json()
+      setClients(data)
+    } catch (error) {
+      console.error('Load clients error:', error)
+    }
+  }
+
   // ===== Фильтрация и поиск =====
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const matchesSearch = !searchQuery || 
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         task.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        getClientName(task.client).toLowerCase().includes(searchQuery.toLowerCase())
+        getTaskClientName(task).toLowerCase().includes(searchQuery.toLowerCase())
       return matchesSearch
     })
-  }, [tasks, searchQuery])
+  }, [tasks, searchQuery, clients])
 
   // ===== Группировка задач =====
   const groupedTasks = useMemo((): TaskGroup[] => {
@@ -137,41 +150,62 @@ export default function DiaryPage() {
     return groups.filter((group) => group.tasks.length > 0)
   }, [filteredTasks, language])
 
+  // ===== Получить имя клиента для задачи =====
+  function getTaskClientName(task: Task): string {
+    if (!task.client_id) return ''
+    const client = clients.find((c: any) => c.id === task.client_id)
+    if (!client) return ''
+    return `${client.first_name || ''} ${client.last_name || ''}`.trim()
+  }
+
   // ===== Рендер иконки по приоритету =====
   function getTaskIcon(task: Task) {
     if (task.status === 'done') {
-      return <CheckCircle className="w-5 h-5" />
+      return <CheckCircle2 size={18} />
     }
     if (task.status === 'cancelled') {
-      return <Circle className="w-5 h-5" />
+      return <Circle size={18} />
     }
     if (task.priority === 'urgent' || (task.due_date && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date)))) {
-      return <AlertCircle className="w-5 h-5" />
+      return <AlertCircle size={18} />
     }
-    return <Circle className="w-5 h-5" />
+    if (task.status === 'in_progress') {
+      return <Clock size={18} />
+    }
+    return <Circle size={18} />
   }
 
   // ===== Цвет иконки =====
   function getIconBg(task: Task) {
-    if (task.status === 'done') return 'bg-green-100 dark:bg-green-900/30'
-    if (task.status === 'cancelled') return 'bg-gray-100 dark:bg-gray-900/30'
-    if (task.priority === 'urgent') return 'bg-red-100 dark:bg-red-900/30'
-    if (task.priority === 'high') return 'bg-orange-100 dark:bg-orange-900/30'
+    if (task.status === 'done') return 'bg-emerald-50 dark:bg-emerald-900/20'
+    if (task.status === 'cancelled') return 'bg-slate-50 dark:bg-slate-800'
+    if (task.priority === 'urgent') return 'bg-red-50 dark:bg-red-900/20'
+    if (task.priority === 'high') return 'bg-amber-50 dark:bg-amber-900/20'
+    if (task.status === 'in_progress') return 'bg-blue-50 dark:bg-blue-900/20'
     if (task.due_date && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date))) {
-      return 'bg-red-100 dark:bg-red-900/30'
+      return 'bg-red-50 dark:bg-red-900/20'
     }
-    return 'bg-blue-100 dark:bg-blue-900/30'
+    return 'bg-slate-50 dark:bg-slate-800'
   }
 
   // ===== Статус бейдж =====
   function getStatusBadge(task: Task) {
-    const labels = {
-      open: language === 'he' ? 'פתוח' : 'Открыто',
-      in_progress: language === 'he' ? 'בתהליך' : 'В процессе',
-      done: language === 'he' ? 'הושלם' : 'Завершено',
-      cancelled: language === 'he' ? 'בוטל' : 'Отменено',
+    const labels: Record<string, Record<string, string>> = {
+      open: { he: 'פתוח', ru: 'Открыта' },
+      in_progress: { he: 'בביצוע', ru: 'В процессе' },
+      done: { he: 'הושלם', ru: 'Завершена' },
+      cancelled: { he: 'בוטל', ru: 'Отменена' },
     }
-    return labels[task.status] || task.status
+    const colors: Record<string, string> = {
+      open: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+      in_progress: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+      done: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+      cancelled: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
+    }
+    return {
+      text: labels[task.status]?.[language] || task.status,
+      className: colors[task.status] || colors.open,
+    }
   }
 
   // ===== Звонок =====
@@ -215,11 +249,13 @@ export default function DiaryPage() {
 
   // ===== Рендер карточки задачи =====
   function renderTaskCard(task: Task) {
+    const clientName = getTaskClientName(task)
+    const badge = getStatusBadge(task)
     const quickActions = []
 
     if (task.contact_phone) {
       quickActions.push({
-        icon: <Phone className="w-4 h-4" />,
+        icon: <Phone size={16} />,
         label: language === 'he' ? 'חייג' : 'Позвонить',
         onClick: () => handleCall(task.contact_phone!),
         color: 'bg-blue-50',
@@ -229,7 +265,7 @@ export default function DiaryPage() {
       })
 
       quickActions.push({
-        icon: <MessageSquare className="w-4 h-4" />,
+        icon: <MessageSquare size={16} />,
         label: 'WhatsApp',
         onClick: () => handleWhatsApp(task.contact_phone!),
         color: 'bg-green-50',
@@ -248,29 +284,18 @@ export default function DiaryPage() {
             iconBg: getIconBg(task),
           }}
           title={task.title}
-          subtitle={getClientName(task.client) !== 'Без имени' ? getClientName(task.client) : (task.description || '')}
-          badge={{
-            text: getStatusBadge(task),
-            className: task.status === 'done' 
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-              : task.status === 'in_progress'
-              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-              : task.status === 'cancelled'
-              ? 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
-              : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-          }}
+          subtitle={task.description ? (task.description.length > 60 ? task.description.slice(0, 60) + '...' : task.description) : clientName}
+          badge={badge}
           stats={[
-            task.due_date ? {
-              icon: <Calendar className="w-4 h-4" />,
+            ...(task.due_date ? [{
+              icon: <Clock size={13} />,
               text: format(parseISO(task.due_date), 'dd MMM, HH:mm', { locale: dateLocale }),
-            } : null,
-            task.priority !== 'normal' ? {
-              icon: <AlertCircle className="w-4 h-4" />,
-              text: task.priority === 'urgent' ? (language === 'he' ? 'דחוף' : 'Срочно') :
-                    task.priority === 'high' ? (language === 'he' ? 'גבוה' : 'Высокий') :
-                    (language === 'he' ? 'נמוך' : 'Низкий'),
-            } : null,
-          ].filter(Boolean) as any[]}
+            }] : []),
+            ...(clientName ? [{
+              icon: <Circle size={13} />,
+              text: clientName,
+            }] : []),
+          ]}
           quickActions={quickActions.length > 0 ? quickActions : undefined}
           isInactive={task.status === 'done' || task.status === 'cancelled'}
           locale={language === 'he' ? 'he' : 'ru'}

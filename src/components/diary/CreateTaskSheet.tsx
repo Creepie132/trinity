@@ -456,17 +456,19 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
           <label className="block text-sm font-medium mb-2">{labels.visit}</label>
           <TrinitySearchDropdown
             data={visits}
-            searchKeys={['scheduled_at', 'status']}
+            searchKeys={['status', 'notes']}
             minChars={1}
             placeholder={labels.searchVisit}
             onSelect={handleVisitSelect}
-            renderItem={(visit) => (
+            renderItem={(visit: any) => (
               <div>
                 <p className="font-medium text-sm">
-                  {visit.scheduled_at ? new Date(visit.scheduled_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU') : ''}
+                  {new Date(visit.scheduled_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU')}
+                  {' '}
+                  {new Date(visit.scheduled_at).toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {visit.status || ''}
+                  {visit.status} {visit.price ? `₪${visit.price}` : ''}
                 </p>
               </div>
             )}

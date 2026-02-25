@@ -5,8 +5,374 @@
 
 Этот файл содержит полную структуру проекта, технологии, базу данных и все компоненты. Прочитав только его, можно продолжить разработку с нуля.
 
-**Последнее обновление:** 2026-02-23 20:37 UTC  
-**Версия:** 2.35.0
+**Последнее обновление:** 2026-02-25 17:50 UTC  
+**Версия:** 2.36.0
+
+---
+
+## 🔧 ОБНОВЛЕНИЯ v2.36.0 (2026-02-25) - Desktop Split-View Panels & Light Theme Only 🖥️
+
+### ✅ 1. Dark Theme Removal (commit 842613a)
+
+**Цель:** Полностью удалить поддержку тёмной темы, оставить только светлую тему.
+
+**Реализовано:**
+
+**Удалены компоненты переключения темы:**
+- ❌ Кнопка переключения темы из Sidebar.tsx
+- ❌ Секция "Dark Mode" из profile/page.tsx
+- ❌ ThemeProvider из dashboard layout
+- ❌ Импорты Moon, Sun иконок
+
+**Удалены все dark: классы:**
+- ✅ Массовая замена в 300+ файлах `.tsx` и `.ts`
+- ✅ Удалено ~970 строк кода с `dark:` префиксами
+- ✅ Использован sed для batch-замены
+
+**Зафиксирована светлая тема:**
+- ✅ `<html className="light">` в layout.tsx
+- ✅ Удалён `darkMode: ['class']` из tailwind.config.js
+- ✅ Удалены `.dark` CSS блоки из globals.css
+
+**Упрощены страницы настроек:**
+- ✅ `/settings/display` → простая заглушка "В разработке"
+- ✅ `/settings/customize` → простая заглушка "В разработке"
+- ✅ `/settings/page-old` → редирект на `/settings`
+
+**Files Changed:**
+- ✅ `src/components/layout/Sidebar.tsx` - удалена кнопка темы, useEffect, toggleTheme
+- ✅ `src/app/(dashboard)/profile/page.tsx` - удалена секция Dark Mode
+- ✅ `src/app/(dashboard)/layout.tsx` - удалён ThemeProvider
+- ✅ `src/app/layout.tsx` - добавлен className="light"
+- ✅ `src/app/globals.css` - удалены .dark блоки
+- ✅ `tailwind.config.js` - удалён darkMode
+- ✅ `src/app/(dashboard)/settings/customize/page.tsx` - упрощён
+- ✅ `src/app/(dashboard)/settings/display/page.tsx` - упрощён
+- ✅ 300+ файлов - удалены dark: классы
+
+**Результат:** -977 строк кода, только светлая тема, нулевые ошибки билда.
+
+---
+
+### ✅ 2. Desktop Split-View Panels for Visits, Payments, Tasks (commit 7102554)
+
+**Цель:** Создать десктопные split-view панели для визитов, платежей и задач по аналогии с ClientDesktopPanel.
+
+**Архитектура:**
+- Grid layout: `350px | 1fr` (левая панель + правая панель)
+- Overlay: `bg-black/30`
+- Panel: `max-w-5xl mx-auto my-4 rounded-2xl`
+- Левая панель: `border-e border-muted bg-muted/20 p-6` (профиль + контакты + действия)
+- Правая панель: `flex flex-col` (tabs + scrollable content)
+- RTL автоматически (grid меняет направление, border-e переходит влево)
+
+**Реализовано:**
+
+**VisitDesktopPanel.tsx (9.3KB):**
+- **Левая панель:** Дата/время (крупно), статус badge, имя клиента (кликабельное), телефон + WhatsApp, цена, кнопки действий (Начать/Завершить/Отменить)
+- **Правая панель:** Tabs (Услуги | Заметки), список услуг с ценами, заметки (whitespace-pre-wrap)
+- **Props:** visit, isOpen, onClose, locale, clients, onStatusChange, onClientClick
+
+**PaymentDesktopPanel.tsx (8.7KB):**
+- **Левая панель:** Сумма (крупно, ₪), статус badge, метод оплаты, имя клиента (кликабельное), дата, номер платежа
+- **Правая панель:** Tabs (Детали | Заметки), все поля платежа в grid 2x2, описание
+- **Props:** payment, isOpen, onClose, locale, clients, onClientClick
+
+**TaskDesktopPanel.tsx (12KB):**
+- **Левая панель:** Иконка приоритета + заголовок, статус badge, дедлайн, назначена кому, клиент (кликабельный), контакты (телефон/email/адрес с навигацией), кнопки действий
+- **Правая панель:** Полное описание задачи (whitespace-pre-wrap), привязанный визит (кликабельный)
+- **Props:** task, isOpen, onClose, locale, clients, visits, onStatusChange, onClientClick, onVisitClick
+
+**Подключение в страницах:**
+
+**visits/page.tsx:**
+```typescript
+function handleVisitClick(visit: any) {
+  if (window.innerWidth >= 1024) {
+    setDesktopPanelVisit(visit)
+  } else {
+    // Mobile - карточка сама открывает drawer
+  }
+}
+
+<VisitDesktopPanel
+  visit={desktopPanelVisit}
+  isOpen={!!desktopPanelVisit}
+  onClose={() => setDesktopPanelVisit(null)}
+  locale={language === 'he' ? 'he' : 'ru'}
+  clients={visits.map((v: any) => v.clients).filter(Boolean)}
+  onStatusChange={handleStatusChange}
+  onClientClick={(clientId) => { /* TODO */ }}
+/>
+```
+
+**payments/page.tsx:**
+```typescript
+function handlePaymentClick(payment: any) {
+  if (window.innerWidth >= 1024) {
+    setDesktopPanelPayment(payment)
+  }
+  // Mobile - PaymentCard has own drawer logic
+}
+
+<PaymentDesktopPanel
+  payment={desktopPanelPayment}
+  isOpen={!!desktopPanelPayment}
+  onClose={() => setDesktopPanelPayment(null)}
+  locale={language === 'he' ? 'he' : 'ru'}
+  clients={payments?.map((p: any) => p.client || p.clients).filter(Boolean) || []}
+/>
+```
+
+**diary/page.tsx:**
+```typescript
+function handleTaskClick(task: Task) {
+  if (window.innerWidth >= 1024) {
+    setDesktopPanelTask(task)
+  }
+  // Mobile - TrinityCard has embedded drawer
+}
+
+<TaskDesktopPanel
+  task={desktopPanelTask}
+  isOpen={!!desktopPanelTask}
+  onClose={() => setDesktopPanelTask(null)}
+  locale={language === 'he' ? 'he' : 'ru'}
+  clients={clients}
+  visits={visits}
+  onStatusChange={handleTaskStatusChange}
+  onClientClick={(clientId) => { /* open ClientDesktopPanel */ }}
+  onVisitClick={(visitId) => { /* open visit drawer */ }}
+/>
+```
+
+**Обновлены компоненты карточек:**
+
+**VisitCard.tsx:**
+- Добавлен `onClick?: (visit: any) => void` prop
+- Добавлен `handleCardClick()` — вызывает `onClick` если задан, иначе `setDrawerOpen`
+
+**PaymentCard.tsx:**
+- Добавлен `onClick?: (payment: any) => void` prop
+- Добавлен `handleCardClick()` — вызывает `onClick` если задан, иначе `setDetailOpen`
+
+**TrinityCard.tsx:**
+- Добавлен `onClick?: () => void` prop
+- Добавлен `handleCardClick()` — вызывает `onClick` если задан, иначе `setDrawerOpen(true)`
+
+**Files Changed:**
+- ✅ `src/components/visits/VisitDesktopPanel.tsx` - NEW (350px + 1fr grid, tabs)
+- ✅ `src/components/payments/PaymentDesktopPanel.tsx` - NEW (сумма, статус, tabs)
+- ✅ `src/components/diary/TaskDesktopPanel.tsx` - NEW (приоритет, контакты, tabs)
+- ✅ `src/app/(dashboard)/visits/page.tsx` - handleVisitClick, desktop panel
+- ✅ `src/app/(dashboard)/payments/page.tsx` - handlePaymentClick, desktop panel
+- ✅ `src/app/(dashboard)/diary/page.tsx` - handleTaskClick, desktop panel, supabase import
+- ✅ `src/components/visits/VisitCard.tsx` - onClick prop, handleCardClick
+- ✅ `src/components/payments/PaymentCard.tsx` - onClick prop, handleCardClick
+- ✅ `src/components/ui/TrinityCard.tsx` - onClick prop, handleCardClick
+
+**Результат:** +1006 строк, 3 новых файла, responsive UX (desktop panel vs mobile drawer).
+
+---
+
+### ✅ 3. Desktop Client Edit State Setup (commit d8b175f)
+
+**Цель:** Подготовить state для inline-редактирования клиента в ClientDesktopPanel.
+
+**Проблема:** Кнопка "Изменить" открывала мобильный popup вместо inline-формы.
+
+**Реализовано:**
+
+**Добавлен state для редактирования:**
+```typescript
+const [isEditing, setIsEditing] = useState(false)
+const [editForm, setEditForm] = useState({
+  first_name: '',
+  last_name: '',
+  phone: '',
+  email: '',
+  address: '',
+  date_of_birth: '',
+  notes: '',
+})
+const [saving, setSaving] = useState(false)
+```
+
+**Добавлен useEffect для инициализации формы:**
+```typescript
+useEffect(() => {
+  if (client) {
+    setEditForm({
+      first_name: client.first_name || '',
+      last_name: client.last_name || '',
+      phone: client.phone || '',
+      email: client.email || '',
+      address: client.address || '',
+      date_of_birth: client.date_of_birth ? client.date_of_birth.split('T')[0] : '',
+      notes: client.notes || '',
+    })
+    setIsEditing(false)
+  }
+}, [client])
+```
+
+**Добавлен `onSaved` в interface:**
+```typescript
+interface ClientDesktopPanelProps {
+  client: any
+  isOpen: boolean
+  onClose: () => void
+  onEdit: (client: any) => void
+  onSaved?: (client: any) => void  // <-- NEW
+  locale: 'he' | 'ru'
+}
+```
+
+**Заменён onClick кнопки Edit:**
+```typescript
+// БЫЛО:
+onClick={() => onEdit(client)}
+
+// СТАЛО:
+onClick={() => setIsEditing(true)}
+```
+
+**Files Changed:**
+- ✅ `src/components/clients/ClientDesktopPanel.tsx` - state, useEffect, onSaved prop
+
+**Результат:** +30 строк, -2 строки, готов для inline-редактирования.
+
+---
+
+### ✅ 4. Desktop Client Inline Edit Form (commit 12efbb1)
+
+**Цель:** Реализовать inline-форму редактирования клиента прямо в desktop panel без popup.
+
+**Реализовано:**
+
+**Добавлена функция handleSave:**
+```typescript
+async function handleSave() {
+  setSaving(true)
+  try {
+    const res = await fetch(`/api/clients/${client.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editForm),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setIsEditing(false)
+      if (onSaved) onSaved(updated)
+    }
+  } catch (e) {
+    console.error(e)
+  }
+  setSaving(false)
+}
+```
+
+**Обернут блок данных клиента в условие:**
+```typescript
+{isEditing ? (
+  <div className="space-y-3 flex-1">
+    {/* 7 полей ввода: first_name, last_name, phone, email, address, date_of_birth, notes */}
+    <div>
+      <label className="text-xs text-muted-foreground">{locale === 'he' ? 'שם פרטי' : 'Имя'}</label>
+      <input
+        value={editForm.first_name}
+        onChange={(e) => setEditForm({...editForm, first_name: e.target.value})}
+        className="w-full py-2 px-3 rounded-lg border bg-background text-sm mt-1"
+      />
+    </div>
+    {/* ... остальные поля ... */}
+    
+    <div className="flex gap-2 mt-4">
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50"
+      >
+        {saving ? '...' : (locale === 'he' ? 'שמור' : 'Сохранить')}
+      </button>
+      <button
+        onClick={() => setIsEditing(false)}
+        className="flex-1 py-2.5 rounded-xl bg-muted text-foreground text-sm font-medium hover:bg-muted/80 transition"
+      >
+        {locale === 'he' ? 'ביטול' : 'Отмена'}
+      </button>
+    </div>
+  </div>
+) : (
+  <div className="space-y-3 flex-1">
+    {/* Оригинальный блок данных с read-only полями */}
+  </div>
+)}
+```
+
+**Скрыта кнопка "Изменить" в режиме редактирования:**
+```typescript
+{!isEditing && (
+  <TrinityButton variant="edit" onClick={() => setIsEditing(true)}>
+    {l.edit}
+  </TrinityButton>
+)}
+```
+
+**Поля формы:**
+- Все поля двустороннее связаны с `editForm` state
+- Телефон, email, date — `dir="ltr"` для правильного отображения в RTL
+- Textarea для заметок (3 строки, resize-none)
+- Кнопки Сохранить (disabled при saving) / Отмена
+
+**Files Changed:**
+- ✅ `src/components/clients/ClientDesktopPanel.tsx` - handleSave, conditional rendering
+
+**Результат:** +139 строк, -36 строк, inline-редактирование работает без popup.
+
+---
+
+### ✅ 5. Desktop Client Panel Scrollable + Save Handler (commit 50a59a3)
+
+**Цель:** 
+1. Исправить баг - левая панель не скроллится в режиме редактирования (поля ниже Email обрезаны)
+2. Добавить обработчик сохранения в clients/page.tsx
+
+**Реализовано:**
+
+**Исправлен скролл левой панели:**
+```typescript
+// БЫЛО:
+<div className={`p-6 flex flex-col border-e border-muted bg-muted/20`}>
+
+// СТАЛО:
+<div className="p-6 flex flex-col border-e border-muted bg-muted/20 overflow-y-auto">
+```
+
+**Добавлен save handler в clients/page.tsx:**
+```typescript
+import { useQueryClient } from '@tanstack/react-query'
+
+const queryClient = useQueryClient()
+
+<ClientDesktopPanel
+  client={desktopPanelClient}
+  isOpen={!!desktopPanelClient}
+  onClose={() => setDesktopPanelClient(null)}
+  onEdit={(client) => {...}}
+  onSaved={(updated) => {
+    setDesktopPanelClient(updated)  // Обновляем локальный state
+    queryClient.invalidateQueries({ queryKey: ['clients'] })  // Инвалидируем кеш списка
+  }}
+  locale={language === 'he' ? 'he' : 'ru'}
+/>
+```
+
+**Files Changed:**
+- ✅ `src/components/clients/ClientDesktopPanel.tsx` - добавлен overflow-y-auto
+- ✅ `src/app/(dashboard)/clients/page.tsx` - useQueryClient, onSaved callback
+
+**Результат:** +7 строк, -1 строка, скролл работает, данные обновляются после сохранения.
 
 ---
 

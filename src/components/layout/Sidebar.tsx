@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Moon, Sun, Calendar, Settings, BookOpen } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Calendar, Settings, BookOpen } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
@@ -28,14 +28,10 @@ const baseNavigation = [
 const translations = {
   he: {
     adminPanel: 'פאנל ניהול',
-    darkMode: 'מצב כהה',
-    lightMode: 'מצב בהיר',
     logout: 'יציאה מהמערכת',
   },
   ru: {
     adminPanel: 'Панель управления',
-    darkMode: 'Темная тема',
-    lightMode: 'Светлая тема',
     logout: 'Выход',
   },
 }
@@ -52,26 +48,9 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const { adminProfile } = useAdminProfile()
   const features = useFeatures()
   const { language } = useLanguage()
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
   
   const t = translations[language]
   const locale = language === 'he' ? 'he' : 'ru'
-
-  useEffect(() => {
-    // Load theme from localStorage
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-    if (savedTheme) {
-      setTheme(savedTheme)
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark')
-    }
-  }, [])
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
-    document.documentElement.classList.toggle('dark', newTheme === 'dark')
-  }
 
   // Если пользователь админ/модератор - берем имя из admin_users, иначе из user_metadata
   const displayName = (isAdmin && adminProfile?.full_name)
@@ -174,22 +153,6 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
             </Link>
           </>
         )}
-
-        {/* Theme Toggle */}
-        <Separator className="my-4 bg-gray-200 dark:bg-slate-700" />
-        <button
-          onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group text-gray-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 hover:shadow-md active:scale-[0.98]"
-        >
-          <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-700 group-hover:bg-yellow-50 dark:group-hover:bg-yellow-900/30">
-            {theme === 'light' ? (
-              <Moon className="w-5 h-5 text-gray-600 dark:text-slate-400" />
-            ) : (
-              <Sun className="w-5 h-5 text-yellow-500" />
-            )}
-          </div>
-          <span className="flex-1 text-right">{theme === 'light' ? t.darkMode : t.lightMode}</span>
-        </button>
       </nav>
 
       {/* User Profile + Logout */}

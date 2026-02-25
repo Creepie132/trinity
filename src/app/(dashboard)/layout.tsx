@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileHeader } from '@/components/layout/MobileHeader'
-import { ThemeProvider } from '@/contexts/ThemeContext'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GlobalSearch } from '@/components/GlobalSearch'
@@ -38,7 +37,7 @@ export default function DashboardLayout({
 
   return (
     <AuthProvider>
-      <ThemeProvider>
+      
         <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col">
           {/* Мобильный header */}
           <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
@@ -68,7 +67,7 @@ export default function DashboardLayout({
 
         {/* Global Search */}
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-      </ThemeProvider>
+      
     </AuthProvider>
   )
 }

@@ -10,17 +10,15 @@ import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { useTheme } from '@/contexts/ThemeContext'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { User, Building2, Calendar, Globe, Moon, Sun, LogOut } from 'lucide-react'
+import { User, Building2, Calendar, Globe, LogOut } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function ProfilePage() {
   const { user, orgId, signOut, isLoading: authLoading } = useAuth()
   const { data: organization, isLoading: orgLoading } = useOrganization()
   const { language, setLanguage } = useLanguage()
-  const { darkMode, setDarkMode } = useTheme()
   const router = useRouter()
   const [userRole, setUserRole] = useState<string>('')
   const [joinedAt, setJoinedAt] = useState<string>('')
@@ -169,20 +167,6 @@ export default function ProfilePage() {
             >
               {language === 'he' ? 'עברית' : 'Русский'}
             </Button>
-          </div>
-
-          {/* Dark Mode */}
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                {darkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                {language === 'he' ? 'מצב כהה' : 'Тёмная тема'}
-              </Label>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {language === 'he' ? 'החלף בין מצב בהיר לכהה' : 'Переключение между светлой и тёмной темой'}
-              </p>
-            </div>
-            <Switch checked={darkMode} onCheckedChange={setDarkMode} />
           </div>
         </CardContent>
       </Card>

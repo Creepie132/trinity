@@ -185,6 +185,11 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Debug: log visit selection state
+  useEffect(() => {
+    console.log('visitId:', visitId, 'selectedVisitName:', selectedVisitName)
+  }, [visitId, selectedVisitName])
+
   // Фильтрация визитов
   const filteredVisits = useMemo(() => {
     if (!visitSearch) return visits
@@ -271,6 +276,10 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
   }
 
   function handleVisitSelect(visit: any) {
+    console.log('=== VISIT SELECT ===')
+    console.log('visit:', visit)
+    console.log('visit.id:', visit.id)
+    
     setVisitId(visit.id)
     const clientName = getClientNameForVisit(visit)
     const date = new Date(visit.scheduled_at).toLocaleDateString(
@@ -280,7 +289,10 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
       locale === 'he' ? 'he-IL' : 'ru-RU',
       { hour: '2-digit', minute: '2-digit' }
     )
-    setSelectedVisitName(`${clientName} — ${date} ${time}`)
+    const visitName = `${clientName} — ${date} ${time}`
+    console.log('selectedVisitName:', visitName)
+    
+    setSelectedVisitName(visitName)
   }
 
   function handleUserSelect(user: OrgUser) {

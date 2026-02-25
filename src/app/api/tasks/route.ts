@@ -109,11 +109,7 @@ export async function POST(request: NextRequest) {
       contact_address: contact_address || null,
       status: 'open',
     })
-    .select(`
-      *,
-      client:clients(id, name, phone),
-      assigned_user:org_users!tasks_assigned_to_fkey(user_id, full_name)
-    `)
+    .select('*')
     .single()
 
   if (error) {

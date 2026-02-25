@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Calendar, Clock, User, Filter, CheckCircle, CheckCircle2, Circle, AlertCircle, Phone, MessageSquare, Search, X } from 'lucide-react'
+import { Plus, Calendar, Clock, User, Filter, CheckCircle, CheckCircle2, Circle, AlertCircle, Phone, MessageSquare, Search, X, Mail, MapPin, ChevronRight } from 'lucide-react'
 import { TrinityCard } from '@/components/ui/TrinityCard'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -264,12 +264,23 @@ export default function DiaryPage() {
         key={task.id}
         avatar={{
           type: 'icon',
-          icon: getTaskIcon(task),
+          icon: (
+            <div className="flex flex-col items-center gap-1">
+              {getTaskIcon(task)}
+              <span className={`text-[9px] font-medium leading-none ${
+                task.status === 'done' ? 'text-emerald-600' :
+                task.status === 'in_progress' ? 'text-amber-600' :
+                task.status === 'cancelled' ? 'text-slate-400' :
+                'text-blue-600'
+              }`}>
+                {badge.text}
+              </span>
+            </div>
+          ),
           iconBg: getIconBg(task),
         }}
         title={task.title}
         subtitle={task.description ? (task.description.length > 60 ? task.description.slice(0, 60) + '...' : task.description) : clientName}
-        badge={badge}
         stats={[
           ...(task.due_date ? [{
             icon: <Clock size={13} />,
@@ -282,67 +293,150 @@ export default function DiaryPage() {
         ]}
         quickActions={quickActions.length > 0 ? quickActions : undefined}
         drawerTitle={task.title}
-        detailFields={[
-          ...(task.description ? [{
-            label: language === 'he' ? 'תיאור' : 'Описание',
-            value: task.description,
-            type: 'multiline' as const,
-          }] : []),
-          {
-            label: language === 'he' ? 'סטטוס' : 'Статус',
-            value: badge.text,
-          },
-          {
-            label: language === 'he' ? 'עדיפות' : 'Приоритет',
-            value: task.priority === 'urgent' ? '🔴 ' + (language === 'he' ? 'דחוף' : 'Срочный') :
-                   task.priority === 'high' ? '🟡 ' + (language === 'he' ? 'גבוה' : 'Высокий') :
-                   task.priority === 'normal' ? (language === 'he' ? 'רגיל' : 'Обычный') :
-                   (language === 'he' ? 'נמוך' : 'Низкий'),
-          },
-          ...(task.due_date ? [{
-            label: language === 'he' ? 'תאריך יעד' : 'Дедлайн',
-            value: new Date(task.due_date).toLocaleString(
-              language === 'he' ? 'he-IL' : 'ru-RU',
-              { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }
-            ),
-          }] : []),
-          ...(clientName ? [{
-            label: language === 'he' ? 'לקוח' : 'Клиент',
-            value: clientName,
-          }] : []),
-          ...(task.contact_phone ? [{
-            label: language === 'he' ? 'טלפון' : 'Телефон',
-            value: task.contact_phone,
-          }] : []),
-          ...(task.contact_email ? [{
-            label: 'Email',
-            value: task.contact_email,
-          }] : []),
-          ...(task.contact_address ? [{
-            label: language === 'he' ? 'כתובת' : 'Адрес',
-            value: task.contact_address,
-          }] : []),
-        ]}
-        detailActions={[
-          ...(task.status === 'open' ? [{
-            label: language === 'he' ? '▶ התחל' : '▶ Начать',
-            icon: undefined,
-            onClick: () => updateTaskStatus(task.id, 'in_progress'),
-            className: 'border-2 border-amber-400 text-amber-600 hover:bg-amber-50',
-          }] : []),
-          ...(task.status === 'in_progress' ? [{
-            label: language === 'he' ? '✓ סיים' : '✓ Завершить',
-            icon: undefined,
-            onClick: () => updateTaskStatus(task.id, 'done'),
-            className: 'border-2 border-emerald-400 text-emerald-600 hover:bg-emerald-50',
-          }] : []),
-          ...(task.status !== 'done' && task.status !== 'cancelled' ? [{
-            label: language === 'he' ? '✕ בטל' : '✕ Отменить',
-            icon: undefined,
-            onClick: () => updateTaskStatus(task.id, 'cancelled'),
-            className: 'border border-slate-300 text-slate-500 hover:bg-slate-50',
-          }] : []),
-        ]}
+        drawerContent={(
+          <div className="space-y-4">
+            {/* Описание */}
+            {task.description && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'תיאור' : 'Описание'}</p>
+                <p className="text-sm whitespace-pre-wrap break-words">{task.description}</p>
+              </div>
+            )}
+
+            {/* Статус и приоритет */}
+            <div className="flex gap-2">
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.className}`}>
+                {badge.text}
+              </span>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                task.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                task.priority === 'high' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+              }`}>
+                {task.priority === 'urgent' ? '🔴' : task.priority === 'high' ? '🟡' : '⚪'}
+                {' '}
+                {{
+                  urgent: language === 'he' ? 'דחוף' : 'Срочный',
+                  high: language === 'he' ? 'גבוה' : 'Высокий',
+                  normal: language === 'he' ? 'רגיל' : 'Обычный',
+                  low: language === 'he' ? 'נמוך' : 'Низкий'
+                }[task.priority] || task.priority}
+              </span>
+            </div>
+
+            {/* Дедлайн */}
+            {task.due_date && (
+              <div className="flex items-center gap-2 py-2 border-b border-muted">
+                <Clock size={14} className="text-muted-foreground" />
+                <span className="text-sm">{new Date(task.due_date).toLocaleString(language === 'he' ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            )}
+
+            {/* Визит — КЛИКАБЕЛЬНЫЙ */}
+            {task.visit_id && (
+              <button
+                onClick={() => {
+                  window.location.href = `/visits?highlight=${task.visit_id}`
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 transition text-start"
+              >
+                <Calendar size={16} className="text-amber-600" />
+                <span className="text-sm font-medium text-amber-700">
+                  {language === 'he' ? 'צפה בביקור' : 'Перейти к визиту'}
+                </span>
+                <ChevronRight size={14} className="text-amber-400 ms-auto" />
+              </button>
+            )}
+
+            {/* Контакты */}
+            {(task.contact_phone || task.contact_email || task.contact_address) && (
+              <div className="space-y-2 pt-2 border-t border-muted">
+                <p className="text-xs text-muted-foreground">{language === 'he' ? 'יצירת קשר' : 'Контакты'}</p>
+                
+                {/* Телефон + WhatsApp */}
+                {task.contact_phone && (
+                  <div className="flex gap-2">
+                    <a
+                      href={`tel:${task.contact_phone}`}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-sm font-medium"
+                    >
+                      <Phone size={16} />
+                      {task.contact_phone}
+                    </a>
+                    <a
+                      href={`https://wa.me/${task.contact_phone.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 text-sm font-medium"
+                    >
+                      <MessageSquare size={16} />
+                      WhatsApp
+                    </a>
+                  </div>
+                )}
+
+                {/* Email */}
+                {task.contact_email && (
+                  <a
+                    href={`mailto:${task.contact_email}`}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 text-sm font-medium"
+                  >
+                    <Mail size={16} />
+                    {task.contact_email}
+                  </a>
+                )}
+
+                {/* Адрес + Навигация */}
+                {task.contact_address && (
+                  <button
+                    onClick={() => {
+                      const encoded = encodeURIComponent(task.contact_address!)
+                      const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
+                      if (isMobile) {
+                        window.location.href = `geo:0,0?q=${encoded}`
+                      } else {
+                        window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank')
+                      }
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-violet-50 dark:bg-violet-900/20 text-violet-600 text-sm font-medium text-start"
+                  >
+                    <MapPin size={16} />
+                    <span className="flex-1">{task.contact_address}</span>
+                    <span className="text-xs text-violet-400">{language === 'he' ? 'נווט' : 'Навигация'} →</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Действия */}
+            <div className="space-y-2 pt-2">
+              {task.status === 'open' && (
+                <button
+                  onClick={() => updateTaskStatus(task.id, 'in_progress')}
+                  className="w-full py-3 rounded-xl border-2 border-amber-400 text-amber-600 text-sm font-semibold hover:bg-amber-50 transition"
+                >
+                  ▶ {language === 'he' ? 'התחל' : 'Начать'}
+                </button>
+              )}
+              {task.status === 'in_progress' && (
+                <button
+                  onClick={() => updateTaskStatus(task.id, 'done')}
+                  className="w-full py-3 rounded-xl border-2 border-emerald-400 text-emerald-600 text-sm font-semibold hover:bg-emerald-50 transition"
+                >
+                  ✓ {language === 'he' ? 'סיים' : 'Завершить'}
+                </button>
+              )}
+              {task.status !== 'done' && task.status !== 'cancelled' && (
+                <button
+                  onClick={() => updateTaskStatus(task.id, 'cancelled')}
+                  className="w-full py-3 rounded-xl border border-slate-300 text-slate-500 text-sm font-medium hover:bg-slate-50 transition"
+                >
+                  ✕ {language === 'he' ? 'בטל' : 'Отменить'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         isInactive={task.status === 'cancelled' || task.status === 'done'}
         locale={language}
       />

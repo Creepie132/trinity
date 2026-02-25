@@ -320,9 +320,8 @@ export default function VisitsPage() {
   function handleVisitClick(visit: any) {
     if (window.innerWidth >= 1024) {
       setDesktopVisit(visit)
-    } else {
-      setSelectedVisit(visit)
     }
+    // На мобильном ничего не делаем - VisitCard сам откроет свой drawer
   }
 
   async function updateVisitStatus(visitId: string, newStatus: string) {
@@ -747,10 +746,7 @@ export default function VisitsPage() {
       {viewMode === 'calendar' && (
         <CalendarView
           visits={visits || []}
-          onVisitClick={(visit) => {
-            setSelectedVisit(visit as any)
-            setPaymentDialogOpen(true)
-          }}
+          onVisitClick={(visit) => handleVisitClick(visit)}
           onDateClick={(date) => {
             setSelectedDate(date)
             setAddDialogOpen(true)

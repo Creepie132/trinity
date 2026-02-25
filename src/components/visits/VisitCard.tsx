@@ -46,9 +46,11 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
   const [editOpen, setEditOpen] = useState(false)
   
   const handleCardClick = () => {
-    if (onClick) {
+    if (onClick && typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      // Десктоп: вызываем onClick (откроет desktop panel)
       onClick(visit)
     } else {
+      // Мобильный: открываем встроенный drawer
       setDrawerOpen(true)
     }
   }

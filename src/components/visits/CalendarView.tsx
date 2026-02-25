@@ -32,6 +32,9 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
+  // Фильтр: показывать только активные визиты (scheduled и in_progress)
+  const activeVisits = visits.filter((v: any) => v.status === 'scheduled' || v.status === 'in_progress')
+
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
   
@@ -54,7 +57,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
   }
 
   const getVisitsForDay = (day: Date) => {
-    return visits.filter(visit => {
+    return activeVisits.filter(visit => {
       const visitDate = new Date(visit.scheduled_at)
       return isSameDay(visitDate, day)
     }).sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())

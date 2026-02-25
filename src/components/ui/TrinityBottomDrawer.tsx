@@ -22,18 +22,27 @@ export function TrinityBottomDrawer({
 
   useEffect(() => {
     function handleResize() {
-      // visualViewport учитывает клавиатуру
       if (window.visualViewport) {
-        setViewportHeight(`${window.visualViewport.height}px`)
+        const vh = window.visualViewport.height
+        setViewportHeight(`${vh}px`)
       }
     }
 
+    // Слушаем И открытие И закрытие клавиатуры
     window.visualViewport?.addEventListener('resize', handleResize)
-    window.visualViewport?.addEventListener('scroll', handleResize)
+
+    // Сброс при закрытии клавиатуры — с задержкой
+    function handleFocusOut() {
+      setTimeout(() => {
+        setViewportHeight('100dvh')
+      }, 100)
+    }
+
+    document.addEventListener('focusout', handleFocusOut)
 
     return () => {
       window.visualViewport?.removeEventListener('resize', handleResize)
-      window.visualViewport?.removeEventListener('scroll', handleResize)
+      document.removeEventListener('focusout', handleFocusOut)
     }
   }, [])
 

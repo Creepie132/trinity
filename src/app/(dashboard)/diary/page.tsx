@@ -332,6 +332,20 @@ export default function DiaryPage() {
               </div>
             )}
 
+            {/* Клиент — КЛИКАБЕЛЬНЫЙ */}
+            {clientName && task.client_id && (
+              <button
+                onClick={() => {
+                  window.location.href = `/clients`
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary/5 hover:bg-primary/10 transition text-start"
+              >
+                <User size={16} className="text-primary" />
+                <span className="text-sm font-medium text-primary">{clientName}</span>
+                <ChevronRight size={14} className="text-primary/50 ms-auto" />
+              </button>
+            )}
+
             {/* Визит — КЛИКАБЕЛЬНЫЙ */}
             {task.visit_id && (
               <button
@@ -379,7 +393,7 @@ export default function DiaryPage() {
                 {task.contact_email && (
                   <a
                     href={`mailto:${task.contact_email}`}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 text-sm font-medium"
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-medium"
                   >
                     <Mail size={16} />
                     {task.contact_email}
@@ -398,11 +412,11 @@ export default function DiaryPage() {
                         window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank')
                       }
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-violet-50 dark:bg-violet-900/20 text-violet-600 text-sm font-medium text-start"
+                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-medium text-start"
                   >
                     <MapPin size={16} />
                     <span className="flex-1">{task.contact_address}</span>
-                    <span className="text-xs text-violet-400">{language === 'he' ? 'נווט' : 'Навигация'} →</span>
+                    <span className="text-xs opacity-60">{language === 'he' ? 'נווט' : 'Навигация'} →</span>
                   </button>
                 )}
               </div>

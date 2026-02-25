@@ -601,18 +601,83 @@ export default function DiaryPage() {
           }}
         />
       ) : (
-        <div className="space-y-6">
-          {groupedTasks.map((group) => (
-            <div key={group.key}>
-              <h2 className={`text-sm font-semibold text-muted-foreground mb-3 ${group.color ? `border-l-4 ${group.color} pl-3` : ''}`}>
-                {group.label} ({group.tasks.length})
-              </h2>
-              <div className="space-y-3">
-                {group.tasks.map((task) => renderTaskCard(task))}
+        <>
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-card rounded-2xl border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-muted bg-muted/30">
+                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'משימה' : 'Задача'}</th>
+                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'לקוח' : 'Клиент'}</th>
+                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'תאריך יעד' : 'Дедлайн'}</th>
+                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'עדיפות' : 'Приоритет'}</th>
+                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'סטטוס' : 'Статус'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groupedTasks.flatMap((group) => group.tasks).map((task: Task) => {
+                  const client = task.client_id ? clients.find((c: any) => c.id === task.client_id) : null
+                  const clientName = client ? getClientName(client) : '—'
+                  const badge = task.status === 'done'
+                    ? { text: language === 'he' ? 'הושלם' : 'Выполнено', className: 'bg-emerald-100 text-emerald-700' }
+                    : task.status === 'in_progress'
+                    ? { text: language === 'he' ? 'בתהליך' : 'В работе', className: 'bg-amber-100 text-amber-700' }
+                    : task.status === 'cancelled'
+                    ? { text: language === 'he' ? 'בוטל' : 'Отменено', className: 'bg-slate-100 text-slate-500' }
+                    : { text: language === 'he' ? 'פתוח' : 'Открыто', className: 'bg-blue-100 text-blue-700' }
+                  
+                  return (
+                    <tr
+                      key={task.id}
+                      onClick={() => handleTaskClick(task)}
+                      className={`border-b border-muted/50 hover:bg-muted/30 cursor-pointer transition ${
+                        task.status === 'cancelled' || task.status === 'done' ? 'opacity-50' : ''
+                      }`}
+                    >
+                      <td className="py-3 px-4 font-medium">{task.title}</td>
+                      <td className="py-3 px-4 text-muted-foreground">{clientName}</td>
+                      <td className="py-3 px-4 text-muted-foreground">
+                        {task.due_date ? new Date(task.due_date).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU') : '—'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            task.priority === 'urgent'
+                              ? 'bg-red-100 text-red-700'
+                              : task.priority === 'high'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {task.priority}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.className}`}>
+                          {badge.text}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-6">
+            {groupedTasks.map((group) => (
+              <div key={group.key}>
+                <h2 className={`text-sm font-semibold text-muted-foreground mb-3 ${group.color ? `border-l-4 ${group.color} pl-3` : ''}`}>
+                  {group.label} ({group.tasks.length})
+                </h2>
+                <div className="space-y-3">
+                  {group.tasks.map((task) => renderTaskCard(task))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* FAB мобильный */}

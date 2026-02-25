@@ -85,11 +85,11 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
       <div className="p-6 pb-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
               <img
                 src="/logo.png"
                 alt="Amber Solutions"
-                className="h-10 w-auto object-contain"
+                className="w-10 h-10 object-cover rounded-lg"
               />
             </div>
             <div>

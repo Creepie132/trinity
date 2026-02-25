@@ -854,7 +854,8 @@ export default function VisitsPage() {
                   <>
                     <button
                       onClick={() => {
-                        updateVisitStatus(desktopVisit.id, 'completed')
+                        setSelectedVisit(desktopVisit)
+                        setPaymentDialogOpen(true)
                         setDesktopVisit(null)
                       }}
                       className="flex-1 py-3 rounded-xl border-2 border-emerald-400 text-emerald-600 text-sm font-semibold hover:bg-emerald-50 transition"

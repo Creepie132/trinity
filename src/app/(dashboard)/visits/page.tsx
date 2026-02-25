@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play } from 'lucide-react'
+import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -30,7 +30,6 @@ import { toast } from 'sonner'
 import { Visit } from '@/types/visits'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { ExportButton } from '@/components/ExportButton'
-import { VisitDesktopPanel } from '@/components/visits/VisitDesktopPanel'
 
 export default function VisitsPage() {
   const router = useRouter()
@@ -51,7 +50,7 @@ export default function VisitsPage() {
   const [serviceColors, setServiceColors] = useState<Record<string, string>>({})
   const [page, setPage] = useState(1)
   const pageSize = 20
-  const [desktopPanelVisit, setDesktopPanelVisit] = useState<Visit | null>(null)
+  const [desktopVisit, setDesktopVisit] = useState<any>(null)
   const [allClients, setAllClients] = useState<any[]>([])
   
   // Bookings hook
@@ -318,15 +317,15 @@ export default function VisitsPage() {
     }
   }
 
-  const handleVisitClick = (visit: any) => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      setDesktopPanelVisit(visit)
+  function handleVisitClick(visit: any) {
+    if (window.innerWidth >= 1024) {
+      setDesktopVisit(visit)
     } else {
-      // Mobile - карточка сама открывает drawer
+      setSelectedVisit(visit)
     }
   }
 
-  const handleStatusChange = async (visitId: string, newStatus: string) => {
+  async function updateVisitStatus(visitId: string, newStatus: string) {
     try {
       const { error } = await supabase
         .from('visits')
@@ -337,7 +336,6 @@ export default function VisitsPage() {
 
       toast.success('✓')
       refetch()
-      setDesktopPanelVisit(null)
     } catch (error) {
       console.error('Error updating visit status:', error)
       toast.error(t('common.error'))
@@ -783,17 +781,92 @@ export default function VisitsPage() {
       </button>
 
       {/* Desktop Panel */}
-      <VisitDesktopPanel
-        visit={desktopPanelVisit}
-        isOpen={!!desktopPanelVisit}
-        onClose={() => setDesktopPanelVisit(null)}
-        locale={language === 'he' ? 'he' : 'ru'}
-        clients={visits.map((v: any) => v.clients).filter(Boolean)}
-        onStatusChange={handleStatusChange}
-        onClientClick={(clientId) => {
-          // TODO: open ClientDesktopPanel
-        }}
-      />
+      {desktopVisit && (
+        <div className="fixed inset-0 z-50" onClick={() => setDesktopVisit(null)}>
+          <div className="absolute inset-0 bg-black/30" />
+          <div
+            className="relative z-10 bg-background shadow-2xl max-w-3xl mx-auto my-8 rounded-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className="text-xl font-bold">{getClientName(desktopVisit)}</h2>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    {new Date(desktopVisit.scheduled_at).toLocaleString(language === 'he' ? 'he-IL' : 'ru-RU')}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setDesktopVisit(null)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-muted/30 rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground">{language === 'he' ? 'סטטוס' : 'Статус'}</p>
+                  <p className="font-semibold mt-1">{desktopVisit.status}</p>
+                </div>
+                <div className="bg-muted/30 rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground">{language === 'he' ? 'משך' : 'Длительность'}</p>
+                  <p className="font-semibold mt-1">
+                    {desktopVisit.duration_minutes ? `${desktopVisit.duration_minutes} мин` : '—'}
+                  </p>
+                </div>
+                <div className="bg-muted/30 rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground">{language === 'he' ? 'מחיר' : 'Цена'}</p>
+                  <p className="font-semibold mt-1">{desktopVisit.price ? `₪${desktopVisit.price}` : '—'}</p>
+                </div>
+              </div>
+
+              {desktopVisit.notes && (
+                <div className="mb-6">
+                  <p className="text-xs text-muted-foreground mb-2">{language === 'he' ? 'הערות' : 'Заметки'}</p>
+                  <p className="text-sm whitespace-pre-wrap bg-muted/20 rounded-xl p-4">{desktopVisit.notes}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                {desktopVisit.status === 'scheduled' && (
+                  <button
+                    onClick={() => {
+                      updateVisitStatus(desktopVisit.id, 'in_progress')
+                      setDesktopVisit(null)
+                    }}
+                    className="flex-1 py-3 rounded-xl border-2 border-amber-400 text-amber-600 text-sm font-semibold hover:bg-amber-50 transition"
+                  >
+                    ▶ {language === 'he' ? 'התחל' : 'Начать'}
+                  </button>
+                )}
+                {desktopVisit.status === 'in_progress' && (
+                  <button
+                    onClick={() => {
+                      updateVisitStatus(desktopVisit.id, 'completed')
+                      setDesktopVisit(null)
+                    }}
+                    className="flex-1 py-3 rounded-xl border-2 border-emerald-400 text-emerald-600 text-sm font-semibold hover:bg-emerald-50 transition"
+                  >
+                    ✓ {language === 'he' ? 'סיים' : 'Завершить'}
+                  </button>
+                )}
+                {desktopVisit.status !== 'completed' && desktopVisit.status !== 'cancelled' && (
+                  <button
+                    onClick={() => {
+                      updateVisitStatus(desktopVisit.id, 'cancelled')
+                      setDesktopVisit(null)
+                    }}
+                    className="py-3 px-6 rounded-xl border border-slate-300 text-slate-500 text-sm font-medium hover:bg-slate-50 transition"
+                  >
+                    ✕ {language === 'he' ? 'בטל' : 'Отменить'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

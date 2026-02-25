@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { TrinitySearchDropdown } from '@/components/ui/TrinitySearch'
@@ -143,6 +143,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
   // Visit search state
   const [visitSearch, setVisitSearch] = useState('')
   const [visitDropdownOpen, setVisitDropdownOpen] = useState(false)
+  const visitDropdownRef = useRef<HTMLDivElement>(null)
 
   // Load org users
   useEffect(() => {
@@ -166,11 +167,13 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
 
   // Закрытие dropdown при клике вне
   useEffect(() => {
-    function handleClick() {
-      setVisitDropdownOpen(false)
+    function handleClickOutside(e: MouseEvent) {
+      if (visitDropdownRef.current && !visitDropdownRef.current.contains(e.target as Node)) {
+        setVisitDropdownOpen(false)
+      }
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   // Фильтрация визитов
@@ -517,7 +520,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
               </button>
             </div>
           ) : (
-            <div className="relative">
+            <div ref={visitDropdownRef} className="relative">
               <input
                 type="text"
                 value={visitSearch}

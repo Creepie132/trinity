@@ -199,7 +199,7 @@ export default function InventoryPage() {
         >
           {locale === 'he' ? 'הכל' : 'Все'}
         </button>
-        {categories.map((cat: string) => (
+        {categories.filter((cat): cat is string => !!cat).map((cat) => (
           <button
             key={cat}
             onClick={() => setCategoryFilter(cat)}

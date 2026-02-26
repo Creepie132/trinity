@@ -31,10 +31,13 @@ export default function ClientsPage() {
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<ClientSummary | null>(null)
   const [clientSheetOpen, setClientSheetOpen] = useState(false)
   const [desktopPanelClient, setDesktopPanelClient] = useState<ClientSummary | null>(null)
+
+  const perPage = 20
 
   const pageSize = 25
   const { data: clientsData, isLoading } = useClients('', page, pageSize)
@@ -50,12 +53,23 @@ export default function ClientsPage() {
       c.email?.toLowerCase().includes(q)
     )
   }, [clients, searchQuery])
+
+  // Client-side pagination for filtered results
+  const totalFilteredPages = Math.ceil(filteredClients.length / perPage)
+  const paginatedClients = useMemo(() => {
+    return filteredClients.slice((currentPage - 1) * perPage, currentPage * perPage)
+  }, [filteredClients, currentPage, perPage])
   
   const totalCount = clientsData?.count || 0
   const clientCount = searchQuery ? filteredClients.length : totalCount
   const totalPages = Math.ceil(totalCount / pageSize)
   const from = (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, totalCount)
+
+  // Reset page when search query changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
 
   // Check organization status and feature access
   useEffect(() => {
@@ -143,7 +157,7 @@ export default function ClientsPage() {
 
       {/* Desktop - Table */}
       <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[400px]">
-        {filteredClients && filteredClients.length > 0 ? (
+        {paginatedClients && paginatedClients.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -156,7 +170,7 @@ export default function ClientsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredClients.map((client) => (
+              {paginatedClients.map((client) => (
                 <TableRow
                   key={client.id}
                   className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
@@ -220,8 +234,8 @@ export default function ClientsPage() {
 
       {/* Mobile - ClientCard */}
       <div className="md:hidden space-y-2">
-        {filteredClients && filteredClients.length > 0 ? (
-          filteredClients.map((client) => (
+        {paginatedClients && paginatedClients.length > 0 ? (
+          paginatedClients.map((client) => (
             <ClientCard
               key={client.id}
               client={{
@@ -262,6 +276,52 @@ export default function ClientsPage() {
             {language === 'he' 
               ? `נמצאו ${filteredClients.length} לקוחות` 
               : `Найдено ${filteredClients.length} клиентов`}
+          </div>
+        )}
+
+        {/* Client-side pagination for filtered results */}
+        {searchQuery && totalFilteredPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6 pb-4">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-xl text-sm border disabled:opacity-30"
+            >
+              {language === 'he' ? '→' : '←'}
+            </button>
+
+            {Array.from({ length: Math.min(totalFilteredPages, 7) }).map((_, i) => {
+              let pageNum: number
+              if (totalFilteredPages <= 7) {
+                pageNum = i + 1
+              } else if (currentPage <= 4) {
+                pageNum = i + 1
+              } else if (currentPage >= totalFilteredPages - 3) {
+                pageNum = totalFilteredPages - 6 + i
+              } else {
+                pageNum = currentPage - 3 + i
+              }
+
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-10 h-10 rounded-xl text-sm font-medium transition ${
+                    currentPage === pageNum ? 'bg-blue-600 text-white' : 'border hover:bg-slate-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              )
+            })}
+
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalFilteredPages, p + 1))}
+              disabled={currentPage === totalFilteredPages}
+              className="px-3 py-2 rounded-xl text-sm border disabled:opacity-30"
+            >
+              {language === 'he' ? '←' : '→'}
+            </button>
           </div>
         )}
 
@@ -340,6 +400,52 @@ export default function ClientsPage() {
                 »
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* Desktop pagination for filtered results */}
+        {searchQuery && totalFilteredPages > 1 && (
+          <div className="hidden md:flex items-center justify-center gap-2 mt-6 pb-4">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-xl text-sm border disabled:opacity-30"
+            >
+              {language === 'he' ? '→' : '←'}
+            </button>
+
+            {Array.from({ length: Math.min(totalFilteredPages, 7) }).map((_, i) => {
+              let pageNum: number
+              if (totalFilteredPages <= 7) {
+                pageNum = i + 1
+              } else if (currentPage <= 4) {
+                pageNum = i + 1
+              } else if (currentPage >= totalFilteredPages - 3) {
+                pageNum = totalFilteredPages - 6 + i
+              } else {
+                pageNum = currentPage - 3 + i
+              }
+
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-10 h-10 rounded-xl text-sm font-medium transition ${
+                    currentPage === pageNum ? 'bg-blue-600 text-white' : 'border hover:bg-slate-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              )
+            })}
+
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalFilteredPages, p + 1))}
+              disabled={currentPage === totalFilteredPages}
+              className="px-3 py-2 rounded-xl text-sm border disabled:opacity-30"
+            >
+              {language === 'he' ? '←' : '→'}
+            </button>
           </div>
         )}
       </div>

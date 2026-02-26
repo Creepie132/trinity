@@ -317,16 +317,15 @@ export default function InventoryPage() {
 
       <ProductDetailSheet
         product={selectedProduct}
-        isOpen={detailSheetOpen}
+        open={detailSheetOpen}
         onClose={() => {
           setDetailSheetOpen(false)
           setSelectedProduct(null)
         }}
-        onUpdate={() => refetch()}
       />
 
       <BarcodeScanner
-        isOpen={scannerOpen}
+        open={scannerOpen}
         onClose={() => setScannerOpen(false)}
         onScan={handleBarcodeScanned}
       />

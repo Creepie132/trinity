@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
-import { Monitor, Globe, ArrowLeft, Package, FileText, Calendar } from 'lucide-react'
+import { Globe, ArrowLeft, Package, FileText, Calendar } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -13,13 +13,8 @@ export default function SettingsPage() {
   const features = useFeatures()
 
   const settingsCategories = [
-    {
-      id: 'display',
-      href: '/settings/display',
-      icon: Monitor,
-      title: t('settings.display'),
-      description: t('settings.display.desc'),
-    },
+    // { id: 'dashboard', href: '/settings/dashboard', icon: LayoutDashboard, title: t('dashboard.settings'), description: t('dashboard.settingsSubtitle') },
+    // { id: 'display', href: '/settings/display', icon: Monitor, title: t('settings.display'), description: t('settings.display.desc') },
     {
       id: 'language',
       href: '/settings/language',
@@ -34,6 +29,10 @@ export default function SettingsPage() {
       title: t('settings.booking'),
       description: t('settings.booking.desc'),
     },
+    // { id: 'notifications', href: '/settings/notifications', icon: Bell, title: 'Telegram Notifications / התראות Telegram', description: 'Receive instant notifications about bookings and payments' },
+    // { id: 'loyalty', href: '/settings/loyalty', icon: Star, title: 'Loyalty Program / תוכנית נאמנות', description: 'Manage customer loyalty points and rewards' },
+    // { id: 'templates', href: '/settings/templates', icon: MessageSquare, title: 'Message Templates / תבניות הודעות', description: 'Manage SMS message templates / נהל תבניות הודעות SMS' },
+    // { id: 'birthday-templates', href: '/settings/birthday-templates', icon: Cake, title: t('birthdays.templatesTitle'), description: t('birthdays.templatesSubtitle') },
     {
       id: 'services',
       href: '/settings/services',
@@ -48,6 +47,8 @@ export default function SettingsPage() {
       title: t('careInstructions.title'),
       description: t('careInstructions.noInstructions'),
     },
+    // { id: 'users', href: '/settings/users', icon: Users, title: t('settings.users'), description: t('settings.users.desc') },
+    // { id: 'service-colors', href: '/settings/service-colors', icon: Palette, title: t('settings.serviceColors'), description: t('settings.serviceColors.desc') },
   ]
 
   // Filter settings based on permissions AND module access
@@ -103,6 +104,7 @@ export default function SettingsPage() {
         ))}
       </div>
 
+      {/* Advanced Settings Placeholder - REMOVED */}
     </div>
   )
 }

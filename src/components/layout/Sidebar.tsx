@@ -15,13 +15,13 @@ import { useState, useEffect } from 'react'
 
 const baseNavigation = [
   { name_he: 'דשבורד', name_ru: 'Дашборд', href: '/dashboard', icon: Home, requireFeature: null },
-  { name_he: 'לקוחות', name_ru: 'Клиенты', href: '/clients', icon: Users, requireFeature: null },
-  { name_he: 'ביקורים', name_ru: 'Визиты', href: '/visits', icon: Calendar, requireFeature: null },
+  { name_he: 'לקוחות', name_ru: 'Клиенты', href: '/clients', icon: Users, requireFeature: 'clients' },
+  { name_he: 'ביקורים', name_ru: 'Визиты', href: '/visits', icon: Calendar, requireFeature: 'visits' },
   { name_he: 'תשלומים', name_ru: 'Платежи', href: '/payments', icon: CreditCard, requireFeature: 'payments' },
   { name_he: 'מלאי', name_ru: 'Склад', href: '/inventory', icon: Package, requireFeature: 'inventory' },
-  { name_he: 'יומן', name_ru: 'Дневник', href: '/diary', icon: BookOpen, requireFeature: null },
+  { name_he: 'יומן', name_ru: 'Дневник', href: '/diary', icon: BookOpen, requireFeature: 'diary' },
   // { name_he: 'הודעות SMS', name_ru: 'SMS-сообщения', href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
-  // { name_he: 'סטטיסטיקה', name_ru: 'Статистика', href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
+  // { name_he: 'סטטיסטיקה', name_ru: 'Статистика', href: '/stats', icon: BarChart3, requireFeature: 'statistics' },
   // { name_he: 'הצעות שותפים', name_ru: 'Предложения партнёров', href: '/partners', icon: Gift, requireFeature: null },
   { name_he: 'הגדרות', name_ru: 'Настройки', href: '/settings', icon: Settings, requireFeature: null },
 ]
@@ -72,11 +72,23 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const navigation = baseNavigation.filter((item) => {
     if (!item.requireFeature) return true
     
-    if (item.requireFeature === 'payments') return features.hasPayments
-    if (item.requireFeature === 'sms') return features.hasSms
-    if (item.requireFeature === 'analytics') return features.hasAnalytics
+    // Map feature names to feature flags
+    const featureMap: Record<string, boolean> = {
+      'clients': features.hasClients,
+      'visits': features.hasVisits,
+      'payments': features.hasPayments,
+      'inventory': features.hasInventory,
+      'diary': true, // Always visible (alwaysVisible in modules-config)
+      'sms': features.hasSms,
+      'statistics': features.hasStatistics,
+      'reports': features.hasReports,
+      'subscriptions': features.hasSubscriptions,
+      'booking': features.hasBooking,
+      'telegram': features.hasTelegram,
+      'loyalty': features.hasLoyalty,
+    }
     
-    return true
+    return featureMap[item.requireFeature] ?? true
   })
 
   return (

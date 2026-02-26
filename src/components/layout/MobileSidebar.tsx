@@ -62,17 +62,17 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   }
 
   const baseNavigation = [
-    { name: t('nav.dashboard'), href: '/dashboard', icon: Home, moduleKey: null },
-    { name: getModuleName('clients'), href: '/clients', icon: Users, moduleKey: 'clients' },
-    { name: meetingMode.t.visits, href: '/visits', icon: Calendar, moduleKey: 'visits' },
-    { name: getModuleName('diary'), href: '/diary', icon: BookOpen, moduleKey: 'diary' },
-    { name: getModuleName('inventory'), href: '/inventory', icon: Package, moduleKey: 'inventory' },
-    { name: getModuleName('payments'), href: '/payments', icon: CreditCard, moduleKey: 'payments' },
-    // { name: getModuleName('sms'), href: '/sms', icon: MessageSquare, moduleKey: 'sms' },
-    // { name: getModuleName('statistics'), href: '/stats', icon: BarChart3, moduleKey: 'statistics' },
-    // { name: getModuleName('reports'), href: '/analytics', icon: BarChart3, moduleKey: 'reports' },
-    // { name: t('nav.partners'), href: '/partners', icon: Gift, moduleKey: null },
-    { name: t('nav.settings'), href: '/settings', icon: Settings, moduleKey: null },
+    { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
+    { name: getModuleName('clients'), href: '/clients', icon: Users, requireFeature: 'clients' },
+    { name: meetingMode.t.visits, href: '/visits', icon: Calendar, requireFeature: 'visits' },
+    { name: getModuleName('diary'), href: '/diary', icon: BookOpen, requireFeature: 'diary' },
+    { name: getModuleName('inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
+    { name: getModuleName('payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
+    // { name: getModuleName('sms'), href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
+    // { name: getModuleName('statistics'), href: '/stats', icon: BarChart3, requireFeature: 'statistics' },
+    // { name: getModuleName('reports'), href: '/analytics', icon: BarChart3, requireFeature: 'reports' },
+    // { name: t('nav.partners'), href: '/partners', icon: Gift, requireFeature: null },
+    { name: t('nav.settings'), href: '/settings', icon: Settings, requireFeature: null },
   ]
 
   // Load avatar URL
@@ -113,30 +113,33 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   // Pages allowed in DEMO mode
   const DEMO_ALLOWED_PATHS = ['/dashboard', '/clients', '/partners', '/settings']
 
-  // Filter navigation based on features
-  // Filter navigation based on modules configuration
+  // Filter navigation based on features (consistent with desktop Sidebar)
   const navigation = baseNavigation.filter((item) => {
     // In DEMO mode, only show allowed paths
     if (isDemo && !DEMO_ALLOWED_PATHS.includes(item.href)) {
       return false
     }
 
-    // Items without moduleKey are always visible (dashboard, partners, settings)
-    if (!item.moduleKey) return true
-
-    // Get module config
-    const module = MODULES.find(m => m.key === item.moduleKey)
+    // Items without requireFeature are always visible (dashboard, settings)
+    if (!item.requireFeature) return true
     
-    // If module has alwaysVisible flag - show it (unless explicitly disabled)
-    if (module?.alwaysVisible) {
-      const enabledModules = organization?.features?.modules || {}
-      // Show if not explicitly set to false
-      return enabledModules[item.moduleKey] !== false
+    // Map feature names to feature flags
+    const featureMap: Record<string, boolean> = {
+      'clients': features.hasClients,
+      'visits': features.hasVisits,
+      'payments': features.hasPayments,
+      'inventory': features.hasInventory,
+      'diary': true, // Always visible (alwaysVisible in modules-config)
+      'sms': features.hasSms,
+      'statistics': features.hasStatistics,
+      'reports': features.hasReports,
+      'subscriptions': features.hasSubscriptions,
+      'booking': features.hasBooking,
+      'telegram': features.hasTelegram,
+      'loyalty': features.hasLoyalty,
     }
-
-    // For other modules - check if enabled in organization features
-    const enabledModules = organization?.features?.modules || {}
-    return enabledModules[item.moduleKey] !== false
+    
+    return featureMap[item.requireFeature] ?? true
   })
 
   return (

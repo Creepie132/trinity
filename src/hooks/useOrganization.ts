@@ -1,7 +1,9 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export interface Organization {
   id: string
@@ -67,10 +69,71 @@ async function fetchCurrentOrganization(): Promise<Organization | null> {
 }
 
 export function useOrganization() {
-  return useQuery({
+  const queryClient = useQueryClient()
+  const router = useRouter()
+  
+  const query = useQuery({
     queryKey: ['organization'],
     queryFn: fetchCurrentOrganization,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
   })
+
+  // Real-time subscription for organization changes
+  useEffect(() => {
+    if (!query.data?.id) return
+
+    const orgId = query.data.id
+    
+    // Subscribe to changes in organizations table
+    const channel = supabase
+      .channel(`organization:${orgId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'organizations',
+          filter: `id=eq.${orgId}`,
+        },
+        (payload) => {
+          console.log('[useOrganization] Real-time update received:', payload)
+          
+          // Invalidate and refetch organization data
+          queryClient.invalidateQueries({ queryKey: ['organization'] })
+          
+          // If on a module-specific page, check if module is still accessible
+          const currentPath = window.location.pathname
+          const newModules = (payload.new as any)?.features?.modules || {}
+          
+          // Map routes to module keys
+          const moduleRoutes: Record<string, string> = {
+            '/payments': 'payments',
+            '/inventory': 'inventory',
+            '/sms': 'sms',
+            '/stats': 'statistics',
+            '/reports': 'reports',
+            '/subscriptions': 'subscriptions',
+            '/booking': 'booking',
+          }
+          
+          // Check if current route requires a module
+          for (const [route, moduleKey] of Object.entries(moduleRoutes)) {
+            if (currentPath.startsWith(route) && !newModules[moduleKey]) {
+              // Module was disabled, redirect to dashboard
+              console.log(`[useOrganization] Module ${moduleKey} disabled, redirecting to dashboard`)
+              router.push('/dashboard')
+              break
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [query.data?.id, queryClient, router])
+
+  return query
 }

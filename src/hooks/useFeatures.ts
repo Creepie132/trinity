@@ -95,14 +95,16 @@ export function useFeatures(): Features {
   
   if (modules) {
     return {
+      // Always visible modules (clients, visits, diary)
       hasClients: modules.clients ?? true,
-      hasSms: modules.sms ?? false,
-      hasPayments: modules.payments ?? true,
-      hasAnalytics: (modules.statistics || modules.reports) ?? true,
-      hasStatistics: modules.statistics ?? true,
-      hasReports: modules.reports ?? true,
-      hasSubscriptions: modules.subscriptions ?? false,
       hasVisits: modules.visits ?? true,
+      // Optional modules (default to false unless explicitly enabled)
+      hasSms: modules.sms ?? false,
+      hasPayments: modules.payments ?? false,
+      hasAnalytics: (modules.statistics || modules.reports) ?? false,
+      hasStatistics: modules.statistics ?? false,
+      hasReports: modules.reports ?? false,
+      hasSubscriptions: modules.subscriptions ?? false,
       hasInventory: modules.inventory ?? false,
       hasBooking: modules.booking ?? false,
       hasTelegram: modules.telegram ?? false,

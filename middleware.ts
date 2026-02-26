@@ -130,10 +130,10 @@ export async function middleware(req: NextRequest) {
 
       // Admins always have access
       if (!adminUser) {
-        // Check organization subscription status
+        // Check organization subscription status and features
         const { data: orgUser } = await supabase
           .from('org_users')
-          .select('org_id, organizations(subscription_status, subscription_expires_at)')
+          .select('org_id, organizations(subscription_status, subscription_expires_at, features)')
           .eq('user_id', session.user.id)
           .maybeSingle()
 
@@ -163,6 +163,34 @@ export async function middleware(req: NextRequest) {
           const url = req.nextUrl.clone()
           url.pathname = '/access-pending'
           return NextResponse.redirect(url)
+        }
+
+        // Module-based access control (Trinity requirement)
+        if (hasAccess && org?.features?.modules) {
+          const modules = org.features.modules as Record<string, boolean>
+          
+          // Map routes to module keys
+          const moduleRoutes: Record<string, string> = {
+            '/payments': 'payments',
+            '/inventory': 'inventory',
+            '/sms': 'sms',
+            '/stats': 'statistics',
+            '/reports': 'reports',
+            '/subscriptions': 'subscriptions',
+            '/booking': 'booking',
+            '/loyalty': 'loyalty',
+          }
+
+          // Check if current route requires a module
+          for (const [route, moduleKey] of Object.entries(moduleRoutes)) {
+            if (pathname.startsWith(route) && !modules[moduleKey]) {
+              // Module is disabled, redirect to dashboard
+              console.log(`[middleware] Module ${moduleKey} access denied for route ${pathname}`)
+              const url = req.nextUrl.clone()
+              url.pathname = '/dashboard'
+              return NextResponse.redirect(url)
+            }
+          }
         }
       }
     } catch (error) {

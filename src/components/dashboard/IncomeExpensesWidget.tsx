@@ -1,6 +1,7 @@
 'use client'
 
 import { TrendingUp } from 'lucide-react'
+import { WidgetCard } from '@/components/ui/WidgetCard'
 
 interface IncomeExpensesWidgetProps {
   locale: string
@@ -10,7 +11,7 @@ export function IncomeExpensesWidget({ locale }: IncomeExpensesWidgetProps) {
   const l = locale === 'he'
 
   return (
-    <div className="bg-white rounded-2xl border border-[#f1f5f9] shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4">
+    <WidgetCard className="p-4">
       <h3 className="text-sm font-semibold mb-4">
         {l ? 'הכנסות מול הוצאות' : 'Доходы vs Расходы'}
       </h3>
@@ -23,6 +24,6 @@ export function IncomeExpensesWidget({ locale }: IncomeExpensesWidgetProps) {
           {l ? 'יהיה זמין עם מודול ההוצאות' : 'Доступно с модулем расходов'}
         </p>
       </div>
-    </div>
+    </WidgetCard>
   )
 }

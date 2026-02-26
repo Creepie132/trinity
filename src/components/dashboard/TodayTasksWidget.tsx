@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { WidgetCard } from '@/components/ui/WidgetCard'
 
 interface TodayTasksWidgetProps {
   tasks: any[]
@@ -15,7 +16,7 @@ export function TodayTasksWidget({ tasks, locale }: TodayTasksWidgetProps) {
   const current = tasks.slice(page * perPage, (page + 1) * perPage)
 
   return (
-    <div className="bg-white rounded-2xl border border-[#f1f5f9] shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4">
+    <WidgetCard className="p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold">{l ? 'משימות להיום' : 'Задачи сегодня'}</h3>
         <span className="text-xs text-slate-400">{tasks.length}</span>
@@ -67,6 +68,6 @@ export function TodayTasksWidget({ tasks, locale }: TodayTasksWidgetProps) {
           )}
         </>
       )}
-    </div>
+    </WidgetCard>
   )
 }

@@ -2,6 +2,7 @@
 
 import { UserPlus, CreditCard, ListPlus, Printer, Upload } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { WidgetCard } from '@/components/ui/WidgetCard'
 
 interface QuickActionsPanelProps {
   locale: string
@@ -52,7 +53,7 @@ export function QuickActionsPanel({ locale }: QuickActionsPanelProps) {
   ]
 
   return (
-    <div className="bg-white rounded-2xl border border-[#f1f5f9] shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4 sticky top-6">
+    <WidgetCard className="p-4 sticky top-6">
       <h3 className="text-sm font-semibold mb-4">{l ? 'פעולות מהירות' : 'Быстрые действия'}</h3>
       
       <div className="space-y-2">
@@ -77,6 +78,6 @@ export function QuickActionsPanel({ locale }: QuickActionsPanelProps) {
           </button>
         ))}
       </div>
-    </div>
+    </WidgetCard>
   )
 }

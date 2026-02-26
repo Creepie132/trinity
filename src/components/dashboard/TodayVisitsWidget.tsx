@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { WidgetCard } from '@/components/ui/WidgetCard'
 
 interface TodayVisitsWidgetProps {
   visits: any[]
@@ -15,7 +16,7 @@ export function TodayVisitsWidget({ visits, locale }: TodayVisitsWidgetProps) {
   const current = visits.slice(page * perPage, (page + 1) * perPage)
 
   return (
-    <div className="bg-white rounded-2xl border border-[#f1f5f9] shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4">
+    <WidgetCard className="p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold">{l ? 'ביקורים להיום' : 'Визиты сегодня'}</h3>
         <span className="text-xs text-slate-400">{visits.length}</span>
@@ -76,6 +77,6 @@ export function TodayVisitsWidget({ visits, locale }: TodayVisitsWidgetProps) {
           )}
         </>
       )}
-    </div>
+    </WidgetCard>
   )
 }

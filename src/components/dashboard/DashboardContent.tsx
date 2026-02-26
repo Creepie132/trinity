@@ -4,6 +4,7 @@ import { useEffect, useState, ReactNode } from 'react'
 import { Users, Calendar, TrendingUp, Receipt, UserPlus, CreditCard, ListPlus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { WidgetCard } from '@/components/ui/WidgetCard'
 import { TodayVisitsWidget } from './TodayVisitsWidget'
 import { TodayTasksWidget } from './TodayTasksWidget'
 import { RevenueChartWidget } from './RevenueChartWidget'
@@ -34,7 +35,7 @@ function KpiCard({
   color: string 
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-[#f1f5f9] shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4 hover:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)] transition-shadow">
+    <WidgetCard className="p-4 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm text-slate-400">{title}</span>
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
@@ -42,7 +43,7 @@ function KpiCard({
         </div>
       </div>
       <p className="text-2xl font-bold">{value}</p>
-    </div>
+    </WidgetCard>
   )
 }
 

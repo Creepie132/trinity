@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
 import { Building2, Save, X } from 'lucide-react'
+import { ClientSearchInput } from '@/components/ui/ClientSearchInput'
 
 interface EditOrganizationModalProps {
   isOpen: boolean
@@ -139,19 +140,26 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
             />
           </div>
 
-          {/* Владелец */}
+          {/* Владелец - поиск по клиентам */}
           <div>
             <Label htmlFor="owner_name">{t.owner}</Label>
-            <Input
-              id="owner_name"
+            <ClientSearchInput
               value={formData.owner_name}
-              onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
+              onSelect={(name, phone) => {
+                setFormData({
+                  ...formData,
+                  owner_name: name,
+                  mobile: phone,
+                })
+              }}
               placeholder={t.owner}
+              locale={language}
+              orgId={organization?.id}
               className="mt-1"
             />
           </div>
 
-          {/* Телефон */}
+          {/* Телефон - автозаполняется при выборе клиента */}
           <div>
             <Label htmlFor="mobile">{t.phone}</Label>
             <Input

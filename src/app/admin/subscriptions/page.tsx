@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch'
 import { PLANS, getPlan, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
 import { ResponsiveDataView } from '@/components/ui/ResponsiveDataView'
+import { EditOrganizationModal } from '@/components/modals/other/EditOrganizationModal'
 
 interface Organization {
   id: string
@@ -96,6 +97,10 @@ export default function AdminSubscriptionsPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteMessage, setInviteMessage] = useState('')
   const [sendingInvite, setSendingInvite] = useState(false)
+
+  // Edit organization modal
+  const [editOrgModalOpen, setEditOrgModalOpen] = useState(false)
+  const [orgToEdit, setOrgToEdit] = useState<Organization | null>(null)
 
   const translations = {
     he: {
@@ -403,6 +408,11 @@ export default function AdminSubscriptionsPage() {
         setCustomClientLimit(plan.client_limit || 0)
       }
     }
+  }
+
+  const handleEditOrg = (org: Organization) => {
+    setOrgToEdit(org)
+    setEditOrgModalOpen(true)
   }
 
   const handleDeactivate = async (orgId: string) => {
@@ -857,6 +867,7 @@ export default function AdminSubscriptionsPage() {
                 variant: 'destructive',
               },
             ]}
+            onTitleClick={handleEditOrg}
             locale={language}
           />
         </CardContent>
@@ -1339,6 +1350,17 @@ export default function AdminSubscriptionsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Organization Modal */}
+      <EditOrganizationModal
+        isOpen={editOrgModalOpen}
+        onClose={() => {
+          setEditOrgModalOpen(false)
+          setOrgToEdit(null)
+        }}
+        organization={orgToEdit}
+        onSaved={loadData}
+      />
     </div>
   )
 }

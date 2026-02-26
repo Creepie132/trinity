@@ -18,6 +18,7 @@ interface ResponsiveDataViewProps {
   badgeColorMap?: Record<string, string>
   actions?: (row: any) => { label: string; onClick: () => void; variant?: 'default' | 'destructive' }[]
   locale: 'he' | 'ru'
+  onTitleClick?: (row: any) => void // добавлено: обработчик клика на название
 }
 
 export function ResponsiveDataView({
@@ -29,6 +30,7 @@ export function ResponsiveDataView({
   badgeColorMap,
   actions,
   locale,
+  onTitleClick,
 }: ResponsiveDataViewProps) {
   return (
     <>
@@ -53,7 +55,16 @@ export function ResponsiveDataView({
               <tr key={i} className="border-b hover:bg-muted/50">
                 {columns.map(col => (
                   <td key={col.key} className="p-3 text-sm">
-                    {col.render ? col.render(row[col.key], row) : row[col.key]}
+                    {col.key === titleKey && onTitleClick ? (
+                      <button
+                        onClick={() => onTitleClick(row)}
+                        className="text-start text-primary hover:underline font-medium"
+                      >
+                        {col.render ? col.render(row[col.key], row) : row[col.key]}
+                      </button>
+                    ) : (
+                      col.render ? col.render(row[col.key], row) : row[col.key]
+                    )}
                   </td>
                 ))}
                 {actions && (
@@ -103,6 +114,7 @@ export function ResponsiveDataView({
               compact: col.compact,
             }))}
             actions={actions ? actions(row) : undefined}
+            onTitleClick={onTitleClick ? () => onTitleClick(row) : undefined}
           />
         ))}
       </div>

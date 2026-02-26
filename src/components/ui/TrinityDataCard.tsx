@@ -28,6 +28,7 @@ interface TrinityDataCardProps {
   badge?: Badge
   fields: Field[]
   actions?: Action[]
+  onTitleClick?: () => void // добавлено: обработчик клика на заголовок
 }
 
 const badgeColors = {
@@ -38,7 +39,7 @@ const badgeColors = {
   red: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100',
 }
 
-export function TrinityDataCard({ title, subtitle, badge, fields, actions }: TrinityDataCardProps) {
+export function TrinityDataCard({ title, subtitle, badge, fields, actions, onTitleClick }: TrinityDataCardProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   // Compact fields shown in card
@@ -57,7 +58,19 @@ export function TrinityDataCard({ title, subtitle, badge, fields, actions }: Tri
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-base truncate">{title}</h3>
+            {onTitleClick ? (
+              <h3 
+                className="font-medium text-base truncate text-primary hover:underline cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onTitleClick()
+                }}
+              >
+                {title}
+              </h3>
+            ) : (
+              <h3 className="font-medium text-base truncate">{title}</h3>
+            )}
             {subtitle && (
               <p className="text-sm text-muted-foreground truncate">{subtitle}</p>
             )}
@@ -90,7 +103,20 @@ export function TrinityDataCard({ title, subtitle, badge, fields, actions }: Tri
 
       {/* Bottom Sheet */}
       <BottomSheet isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <h2 className="text-xl font-semibold mb-1">{title}</h2>
+        {onTitleClick ? (
+          <h2 
+            className="text-xl font-semibold mb-1 text-primary hover:underline cursor-pointer inline-block"
+            onClick={(e) => {
+              e.stopPropagation()
+              onTitleClick()
+              setIsOpen(false)
+            }}
+          >
+            {title}
+          </h2>
+        ) : (
+          <h2 className="text-xl font-semibold mb-1">{title}</h2>
+        )}
         {subtitle && <p className="text-muted-foreground mb-4">{subtitle}</p>}
         
         {badge && (

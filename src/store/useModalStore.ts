@@ -1,15 +1,44 @@
 import { create } from 'zustand'
 
 export type ModalType = 
+  // Clients
   | 'client-details'
+  | 'client-add'
   | 'client-edit'
+  | 'client-delete'
+  // Visits
   | 'visit-create'
+  | 'visit-edit'
+  | 'visit-complete-payment'
+  | 'visit-add-product'
+  | 'visit-add-service'
+  // Products
   | 'product-create'
   | 'product-details'
   | 'product-sell'
   | 'product-add-stock'
   | 'product-return'
   | 'quick-sale'
+  // Payments
+  | 'payment-create'
+  | 'payment-create-link'
+  | 'payment-create-cash'
+  | 'payment-create-stripe'
+  | 'payment-create-subscription'
+  // Services
+  | 'service-create'
+  | 'service-details'
+  // Diary
+  | 'task-create'
+  | 'task-details'
+  // Admin
+  | 'admin-profile'
+  | 'user-profile'
+  // SMS
+  | 'sms-campaign-details'
+  // Other
+  | 'care-instruction-create'
+  | 'org-subscription-create'
 
 interface ModalData {
   [key: string]: any

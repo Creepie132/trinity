@@ -99,13 +99,14 @@ export async function PUT(request: NextRequest) {
 
     // Get request body
     const body = await request.json()
-    const { org_id, features, plan, subscription_update } = body
+    const { org_id, features, plan, subscription_update, owner_email } = body
 
     console.log('=== UPDATE ORGANIZATION ===')
     console.log('org_id:', org_id)
     console.log('plan:', plan)
     console.log('features:', features ? JSON.stringify(features) : 'none')
     console.log('subscription_update:', subscription_update ? JSON.stringify(subscription_update) : 'none')
+    console.log('owner_email:', owner_email || 'none')
 
     // Validate required fields
     if (!org_id) {
@@ -114,6 +115,26 @@ export async function PUT(request: NextRequest) {
         { error: 'Missing org_id' },
         { status: 400 }
       )
+    }
+
+    // Validate owner_email if provided
+    if (owner_email) {
+      // Check if email exists in auth.users
+      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.listUsers()
+      
+      if (authError) {
+        console.error('Error checking auth users:', authError)
+        return NextResponse.json({ error: authError.message }, { status: 500 })
+      }
+
+      const userExists = authUser.users.some(u => u.email === owner_email)
+      
+      if (!userExists) {
+        return NextResponse.json(
+          { error: `Email ${owner_email} not found in auth.users` },
+          { status: 400 }
+        )
+      }
     }
 
     // Validate subscription_status if provided
@@ -185,6 +206,10 @@ export async function PUT(request: NextRequest) {
     
     if (plan) {
       updateData.plan = plan
+    }
+    
+    if (owner_email !== undefined) {
+      updateData.owner_email = owner_email
     }
     
     if (subscription_update) {

@@ -33,11 +33,14 @@ const translations = {
     phone: 'טלפון',
     address: 'כתובת',
     city: 'עיר',
+    email: 'אימייל',
+    emailError: 'רק כתובת Gmail',
     save: 'שמור',
     cancel: 'ביטול',
     saving: 'שומר...',
     saved: 'הארגון עודכן בהצלחה',
     error: 'שגיאה בעדכון הארגון',
+    emailNotInAuth: 'המשתמש עם אימייל זה לא קיים במערכת',
   },
   ru: {
     title: 'Редактирование организации',
@@ -46,11 +49,14 @@ const translations = {
     phone: 'Телефон',
     address: 'Адрес',
     city: 'Город',
+    email: 'Email',
+    emailError: 'Только Gmail адрес',
     save: 'Сохранить',
     cancel: 'Отмена',
     saving: 'Сохранение...',
     saved: 'Организация успешно обновлена',
     error: 'Ошибка обновления организации',
+    emailNotInAuth: 'Пользователь с этим email не существует в системе',
   },
   en: {
     title: 'Edit Organization',
@@ -59,11 +65,14 @@ const translations = {
     phone: 'Phone',
     address: 'Address',
     city: 'City',
+    email: 'Email',
+    emailError: 'Gmail address only',
     save: 'Save',
     cancel: 'Cancel',
     saving: 'Saving...',
     saved: 'Organization updated successfully',
     error: 'Error updating organization',
+    emailNotInAuth: 'User with this email does not exist in the system',
   },
 }
 
@@ -78,7 +87,9 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
     mobile: '',
     address: '',
     city: '',
+    owner_email: '',
   })
+  const [emailError, setEmailError] = useState('')
 
   // Инициализация формы при открытии модалки
   useEffect(() => {
@@ -97,16 +108,24 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
         mobile: cleanValue(businessInfo.mobile || organization.phone),
         address: cleanValue(businessInfo.address),
         city: cleanValue(businessInfo.city),
+        owner_email: cleanValue(businessInfo.owner_email || (organization as any).owner_email),
       })
+      setEmailError('')
     }
   }, [organization, isOpen])
 
   const handleSave = async () => {
     if (!organization) return
 
+    // Validate Gmail
+    if (formData.owner_email && !formData.owner_email.endsWith('@gmail.com')) {
+      setEmailError(t.emailError)
+      return
+    }
+
     setLoading(true)
     try {
-      // Обновляем business_info в features
+      // Обновляем business_info в features + owner_email
       const currentFeatures = organization.features || {}
       const updatedFeatures = {
         ...currentFeatures,
@@ -122,11 +141,17 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
         body: JSON.stringify({
           org_id: organization.id,
           features: updatedFeatures,
+          owner_email: formData.owner_email,
         }),
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        if (errorData.error?.includes('not found in auth.users')) {
+          toast.error(t.emailNotInAuth)
+          setLoading(false)
+          return
+        }
         console.error('❌ ERROR updating organization:', {
           status: response.status,
           statusText: response.statusText,
@@ -205,6 +230,25 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
               type="tel"
               className="mt-1"
             />
+          </div>
+
+          {/* Email - только Gmail */}
+          <div>
+            <Label htmlFor="owner_email">{t.email}</Label>
+            <Input
+              id="owner_email"
+              value={formData.owner_email}
+              onChange={(e) => {
+                setFormData({ ...formData, owner_email: e.target.value })
+                setEmailError('')
+              }}
+              placeholder="example@gmail.com"
+              type="email"
+              className={`mt-1 ${emailError ? 'border-red-500' : ''}`}
+            />
+            {emailError && (
+              <p className="text-sm text-red-500 mt-1">{emailError}</p>
+            )}
           </div>
 
           {/* Адрес */}

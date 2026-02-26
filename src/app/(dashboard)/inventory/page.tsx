@@ -8,8 +8,8 @@ import { Package, Plus, Minus, Camera, Search } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { CreateProductDialog } from '@/components/inventory/CreateProductDialog'
-import { ProductDetailSheet } from '@/components/inventory/ProductDetailSheet'
 import { BarcodeScanner } from '@/components/inventory/BarcodeScanner'
+import { useModalStore } from '@/store/useModalStore'
 import type { Product } from '@/types/inventory'
 
 export default function InventoryPage() {
@@ -22,8 +22,8 @@ export default function InventoryPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [detailSheetOpen, setDetailSheetOpen] = useState(false)
+
+  const { openModal } = useModalStore()
 
   const { data: products = [], isLoading, refetch } = useProducts(searchQuery)
   const { data: lowStockProducts = [] } = useLowStockProducts()
@@ -83,8 +83,7 @@ export default function InventoryPage() {
   }
 
   const handleProductClick = (product: Product) => {
-    setSelectedProduct(product)
-    setDetailSheetOpen(true)
+    openModal('product-details', { product, locale })
   }
 
   const handleBarcodeScanned = (barcode: string) => {
@@ -313,15 +312,6 @@ export default function InventoryPage() {
       <CreateProductDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
-      />
-
-      <ProductDetailSheet
-        product={selectedProduct}
-        open={detailSheetOpen}
-        onClose={() => {
-          setDetailSheetOpen(false)
-          setSelectedProduct(null)
-        }}
       />
 
       <BarcodeScanner

@@ -169,6 +169,23 @@ export default function AdminSubscriptionsPage() {
       inviteUrl: 'קישור הזמנה:',
       copied: 'הקישור הועתק',
       emailRequired: 'נדרש אימייל',
+      // Toast messages
+      accessExtended: 'הגישה הוארכה',
+      errorExtending: 'שגיאה בהארכה',
+      deactivated: 'הושבת',
+      errorDeactivating: 'שגיאה בהשבתה',
+      requestApproved: 'הבקשה אושרה',
+      errorApproving: 'שגיאה באישור',
+      requestRejected: 'הבקשה נדחתה',
+      errorRejecting: 'שגיאה בדחייה',
+      planSaved: 'נשמר בהצלחה',
+      errorSaving: 'שגיאה בשמירה',
+      planDeleted: 'נמחק',
+      errorDeleting: 'שגיאה במחיקה',
+      planCreated: 'תוכנית נוצרה',
+      errorCreating: 'שגיאה ביצירה',
+      confirmDeactivate: 'להשבית ארגון?',
+      confirmDeletePlan: 'למחוק תוכנית?',
     },
     ru: {
       title: 'Подписки и доступ',
@@ -236,6 +253,23 @@ export default function AdminSubscriptionsPage() {
       inviteUrl: 'Ссылка приглашения:',
       copied: 'Ссылка скопирована',
       emailRequired: 'Требуется email',
+      // Toast messages
+      accessExtended: 'Доступ продлён',
+      errorExtending: 'Ошибка продления',
+      deactivated: 'Деактивировано',
+      errorDeactivating: 'Ошибка деактивации',
+      requestApproved: 'Запрос одобрен',
+      errorApproving: 'Ошибка одобрения',
+      requestRejected: 'Запрос отклонён',
+      errorRejecting: 'Ошибка отклонения',
+      planSaved: 'Сохранено',
+      errorSaving: 'Ошибка сохранения',
+      planDeleted: 'Удалено',
+      errorDeleting: 'Ошибка удаления',
+      planCreated: 'План создан',
+      errorCreating: 'Ошибка создания',
+      confirmDeactivate: 'Деактивировать организацию?',
+      confirmDeletePlan: 'Удалить план?',
     },
   }
 
@@ -418,7 +452,7 @@ export default function AdminSubscriptionsPage() {
   }
 
   const handleDeactivate = async (orgId: string) => {
-    if (!confirm('Деактивировать организацию?')) return
+    if (!confirm(t.confirmDeactivate)) return
 
     try {
       const response = await fetch('/api/admin/organizations/features', {
@@ -434,11 +468,11 @@ export default function AdminSubscriptionsPage() {
 
       if (!response.ok) throw new Error('Failed to deactivate')
 
-      toast.success('Деактивировано')
+      toast.success(t.deactivated)
       loadData()
     } catch (error) {
       console.error('Error deactivating:', error)
-      toast.error('Ошибка деактивации')
+      toast.error(t.errorDeactivating)
     }
   }
 
@@ -524,12 +558,12 @@ export default function AdminSubscriptionsPage() {
 
       if (!response.ok) throw new Error('Failed to extend')
 
-      toast.success('Доступ продлён')
+      toast.success(t.accessExtended)
       setExtendDialogOpen(false)
       loadData()
     } catch (error) {
       console.error('Error extending:', error)
-      toast.error('Ошибка продления')
+      toast.error(t.errorExtending)
     }
   }
 
@@ -541,16 +575,16 @@ export default function AdminSubscriptionsPage() {
 
       if (!response.ok) throw new Error('Failed to approve')
 
-      toast.success('Запрос одобрен')
+      toast.success(t.requestApproved)
       loadData()
     } catch (error) {
       console.error('Error approving:', error)
-      toast.error('Ошибка одобрения')
+      toast.error(t.errorApproving)
     }
   }
 
   const handleRejectRequest = async (userId: string) => {
-    if (!confirm('Отклонить запрос?')) return
+    if (!confirm(language === 'he' ? 'לדחות בקשה?' : 'Отклонить запрос?')) return
 
     try {
       const response = await fetch(`/api/access/review?user_id=${userId}&action=reject&token=admin`, {
@@ -559,11 +593,11 @@ export default function AdminSubscriptionsPage() {
 
       if (!response.ok) throw new Error('Failed to reject')
 
-      toast.success('Запрос отклонён')
+      toast.success(t.requestRejected)
       loadData()
     } catch (error) {
       console.error('Error rejecting:', error)
-      toast.error('Ошибка отклонения')
+      toast.error(t.errorRejecting)
     }
   }
 
@@ -646,18 +680,18 @@ export default function AdminSubscriptionsPage() {
 
       if (!res.ok) throw new Error('Failed to save')
 
-      toast.success(language === 'he' ? 'נשמר בהצלחה' : 'Сохранено')
+      toast.success(t.planSaved)
       loadData()
     } catch (error) {
       console.error('Error saving plan:', error)
-      toast.error(language === 'he' ? 'שגיאה בשמירה' : 'Ошибка сохранения')
+      toast.error(t.errorSaving)
     } finally {
       setSavingPlan(null)
     }
   }
 
   const deletePlan = async (id: string) => {
-    if (!confirm(language === 'he' ? 'למחוק תוכנית?' : 'Удалить план?')) return
+    if (!confirm(t.confirmDeletePlan)) return
 
     try {
       const res = await fetch('/api/admin/plans', {
@@ -668,11 +702,11 @@ export default function AdminSubscriptionsPage() {
 
       if (!res.ok) throw new Error('Failed to delete')
 
-      toast.success(language === 'he' ? 'נמחק' : 'Удалено')
+      toast.success(t.planDeleted)
       loadData()
     } catch (error) {
       console.error('Error deleting plan:', error)
-      toast.error(language === 'he' ? 'שגיאה במחיקה' : 'Ошибка удаления')
+      toast.error(t.errorDeleting)
     }
   }
 
@@ -701,11 +735,11 @@ export default function AdminSubscriptionsPage() {
 
       if (!res.ok) throw new Error('Failed to create')
 
-      toast.success(language === 'he' ? 'תוכנית נוצרה' : 'План создан')
+      toast.success(t.planCreated)
       loadData()
     } catch (error) {
       console.error('Error creating plan:', error)
-      toast.error(language === 'he' ? 'שגיאה ביצירה' : 'Ошибка создания')
+      toast.error(t.errorCreating)
     }
   }
 

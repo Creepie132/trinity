@@ -85,7 +85,7 @@ export default function ClientsPage() {
       client,
       locale: language === 'he' ? 'he' : 'ru',
       enabledModules: {
-        appointments: features.hasAppointments,
+        appointments: features.hasVisits,
       },
       onSelect: (editClient: any) => {
         // Handle edit logic if needed

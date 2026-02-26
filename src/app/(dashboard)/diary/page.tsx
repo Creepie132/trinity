@@ -476,7 +476,7 @@ export default function DiaryPage() {
         )}
         isInactive={task.status === 'cancelled' || task.status === 'done'}
         locale={language}
-        onClick={() => handleTaskClick(task)}
+        // No onClick - TrinityCard will open drawer automatically on mobile
       />
     )
   }
@@ -493,10 +493,8 @@ export default function DiaryPage() {
   }
 
   const handleTaskClick = (task: Task) => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      setDesktopPanelTask(task)
-    }
-    // Mobile - TrinityCard has embedded drawer
+    // Used for desktop table only
+    setDesktopPanelTask(task)
   }
 
   const handleTaskStatusChange = async (taskId: string, newStatus: string) => {

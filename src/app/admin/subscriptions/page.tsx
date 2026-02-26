@@ -557,14 +557,43 @@ export default function AdminSubscriptionsPage() {
       const data = await response.json()
       console.log('Response data:', JSON.stringify(data))
 
-      if (!response.ok) throw new Error('Failed to extend')
+      if (!response.ok) {
+        // Log detailed error
+        console.error('❌ SAVE EXTENSION FAILED:', {
+          status: response.status,
+          error: data.error,
+          code: data.code,
+          details: data.details,
+          hint: data.hint,
+          org_id: data.org_id,
+        })
+        
+        // Show detailed error to user
+        const errorMessage = data.error || 'Failed to extend'
+        const detailsMessage = data.details ? `\n\nDetails: ${data.details}` : ''
+        const hintMessage = data.hint ? `\n\nHint: ${data.hint}` : ''
+        
+        toast.error(`${errorMessage}${detailsMessage}${hintMessage}`, {
+          duration: 10000, // Show for 10 seconds
+        })
+        
+        throw new Error(errorMessage)
+      }
 
       toast.success(t.accessExtended)
       setExtendDialogOpen(false)
       loadData()
-    } catch (error) {
-      console.error('Error extending:', error)
-      toast.error(t.errorExtending)
+    } catch (error: any) {
+      console.error('❌ Error extending access:', {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+      })
+      
+      // Only show generic error if we haven't already shown a detailed one
+      if (!error?.message?.includes('Database error')) {
+        toast.error(t.errorExtending)
+      }
     }
   }
 

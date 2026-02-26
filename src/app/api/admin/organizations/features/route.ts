@@ -60,20 +60,38 @@ export async function PUT(request: NextRequest) {
     console.log('=== UPDATE ORGANIZATION ===')
     console.log('org_id:', org_id)
     console.log('plan:', plan)
-    console.log('features:', features ? 'present' : 'none')
-    console.log('subscription_update:', subscription_update ? 'present' : 'none')
+    console.log('features:', features ? JSON.stringify(features) : 'none')
+    console.log('subscription_update:', subscription_update ? JSON.stringify(subscription_update) : 'none')
 
+    // Validate required fields
     if (!org_id) {
+      console.error('❌ Validation error: Missing org_id')
       return NextResponse.json(
         { error: 'Missing org_id' },
         { status: 400 }
       )
     }
 
+    // Validate subscription_status if provided
+    if (subscription_update?.subscription_status) {
+      const validStatuses = ['none', 'trial', 'active', 'manual', 'expired']
+      if (!validStatuses.includes(subscription_update.subscription_status)) {
+        console.error('❌ Validation error: Invalid subscription_status:', subscription_update.subscription_status)
+        return NextResponse.json(
+          { 
+            error: 'Invalid subscription_status',
+            details: `Must be one of: ${validStatuses.join(', ')}`,
+            provided: subscription_update.subscription_status
+          },
+          { status: 400 }
+        )
+      }
+    }
+
     // Read current organization
     const { data: currentOrg, error: readError } = await supabaseAdmin
       .from('organizations')
-      .select('features')
+      .select('id, name, features, plan, subscription_status, subscription_expires_at')
       .eq('id', org_id)
       .single()
 
@@ -86,10 +104,30 @@ export async function PUT(request: NextRequest) {
         hint: readError.hint,
         org_id,
       })
+      
+      // Check if organization doesn't exist
+      if (readError.code === 'PGRST116') {
+        return NextResponse.json({ 
+          error: 'Organization not found',
+          details: `No organization with id: ${org_id}`,
+          code: readError.code,
+        }, { status: 404 })
+      }
+      
       return NextResponse.json({ 
-        error: `Failed to read organization: ${readError.message}` 
+        error: `Failed to read organization: ${readError.message}`,
+        code: readError.code,
+        details: readError.details || 'No additional details',
+        hint: readError.hint || 'Check RLS policies and permissions',
       }, { status: 500 })
     }
+
+    console.log('✅ Current organization loaded:', {
+      id: currentOrg.id,
+      name: currentOrg.name,
+      plan: currentOrg.plan,
+      status: currentOrg.subscription_status,
+    })
 
     // Merge features (preserve existing fields)
     const mergedFeatures = {
@@ -114,7 +152,15 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    console.log('Update data:', JSON.stringify(updateData))
+    console.log('📦 Update data prepared:', {
+      org_id,
+      fields_to_update: Object.keys(updateData),
+      plan: updateData.plan || 'unchanged',
+      subscription_status: updateData.subscription_status || 'unchanged',
+      subscription_expires_at: updateData.subscription_expires_at || 'unchanged',
+      modules: updateData.features?.modules ? Object.keys(updateData.features.modules).length : 0,
+    })
+    console.log('📦 Full update data:', JSON.stringify(updateData, null, 2))
 
     // Update organization
     const { data: updateResult, error } = await supabaseAdmin
@@ -131,19 +177,30 @@ export async function PUT(request: NextRequest) {
         details: error.details,
         hint: error.hint,
         org_id,
-        updateData,
+        updateData: JSON.stringify(updateData),
+        stack: error.stack || 'No stack',
       })
+      
+      // Return detailed error to client
       return NextResponse.json({ 
-        error: `Failed to update organization: ${error.message}${error.hint ? ` (Hint: ${error.hint})` : ''}` 
+        error: `Database error: ${error.message}`,
+        code: error.code,
+        details: error.details || 'No additional details',
+        hint: error.hint || 'No hint available',
+        org_id,
       }, { status: 500 })
     }
 
     console.log('✅ Organization updated successfully:', {
       org_id,
       result: updateResult,
+      updatedFields: Object.keys(updateData),
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ 
+      success: true, 
+      organization: updateResult?.[0] 
+    })
   } catch (error: any) {
     console.error('Error in PUT /api/admin/organizations/features:', error)
     return NextResponse.json(

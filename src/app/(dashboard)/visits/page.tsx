@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play, X } from 'lucide-react'
+import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play, X, MessageCircle, MessageSquare } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -57,6 +57,7 @@ export default function VisitsPage() {
   const [addServiceVisit, setAddServiceVisit] = useState<any>(null)
   const [services, setServices] = useState<any[]>([])
   const [allClients, setAllClients] = useState<any[]>([])
+  const [newVisitNotify, setNewVisitNotify] = useState<any>(null)
   
   // Bookings hook
   // Bookings view removed - online bookings now show in main list with badge
@@ -775,12 +776,70 @@ export default function VisitsPage() {
         open={addDialogOpen} 
         onOpenChange={setAddDialogOpen}
         preselectedDate={selectedDate}
+        onVisitCreated={(visitData) => setNewVisitNotify(visitData)}
       />
       <CompleteVisitPaymentDialog 
         visit={selectedVisit} 
         open={paymentDialogOpen} 
         onOpenChange={setPaymentDialogOpen} 
       />
+
+      {/* Notify client after visit creation */}
+      {newVisitNotify && (
+        <TrinityBottomDrawer
+          isOpen={!!newVisitNotify}
+          onClose={() => setNewVisitNotify(null)}
+          title={language === 'he' ? 'שלח הודעה ללקוח' : 'Уведомить клиента'}
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-slate-400 text-center mb-4">
+              {language === 'he' 
+                ? 'שלח ללקוח הודעה על התור החדש' 
+                : 'Отправить клиенту уведомление о визите'}
+            </p>
+
+            {newVisitNotify.clientPhone && (
+              <>
+                <button
+                  onClick={() => {
+                    const orgAddress = '' // TODO: подтянуть из org settings
+                    const msg = language === 'he'
+                      ? `שלום ${newVisitNotify.clientName}, נקבע לך תור ל-${newVisitNotify.date} בשעה ${newVisitNotify.time}${orgAddress ? `. כתובת: ${orgAddress}` : ''}`
+                      : `Здравствуйте ${newVisitNotify.clientName}, для вас забронирован визит на ${newVisitNotify.date} в ${newVisitNotify.time}${orgAddress ? `. Адрес: ${orgAddress}` : ''}`
+                    window.open(
+                      `https://wa.me/${newVisitNotify.clientPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`,
+                      '_blank'
+                    )
+                    setNewVisitNotify(null)
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-600 text-white text-sm font-semibold"
+                >
+                  <MessageCircle size={16} />
+                  WhatsApp
+                </button>
+
+                <button
+                  onClick={() => {
+                    toast.info(language === 'he' ? 'SMS בקרוב' : 'SMS скоро')
+                    setNewVisitNotify(null)
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-blue-600 text-white text-sm font-semibold"
+                >
+                  <MessageSquare size={16} />
+                  SMS
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => setNewVisitNotify(null)}
+              className="w-full py-3 rounded-2xl bg-slate-100 text-slate-500 text-sm font-medium"
+            >
+              {language === 'he' ? 'דלג' : 'Пропустить'}
+            </button>
+          </div>
+        </TrinityBottomDrawer>
+      )}
 
       {/* Mobile FAB (Floating Action Button) */}
       <button

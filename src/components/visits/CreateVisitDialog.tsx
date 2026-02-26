@@ -53,6 +53,7 @@ interface CreateVisitDialogProps {
   onOpenChange: (open: boolean) => void
   preselectedClientId?: string
   preselectedDate?: Date | null
+  onVisitCreated?: (visitData: { clientName: string; clientPhone?: string; date: string; time: string }) => void
 }
 
 // Default services (fallback if organization has no custom services)
@@ -79,7 +80,7 @@ const durations = [
   { value: 120, labelKey: 'duration.120min' },
 ]
 
-export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, preselectedDate }: CreateVisitDialogProps) {
+export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, preselectedDate, onVisitCreated }: CreateVisitDialogProps) {
   const { t, language } = useLanguage()
   const { orgId } = useAuth()
   const router = useRouter()
@@ -203,6 +204,16 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['visits'] })
+      
+      // Notify parent about visit creation
+      if (onVisitCreated && selectedClient) {
+        onVisitCreated({
+          clientName: `${selectedClient.first_name} ${selectedClient.last_name}`.trim(),
+          clientPhone: selectedClient.phone,
+          date: formData.date,
+          time: formData.time,
+        })
+      }
       
       onOpenChange(false)
       

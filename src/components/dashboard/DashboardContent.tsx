@@ -309,8 +309,10 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
         </div>
       </div>
 
-      {/* Floating Action Button */}
-      <FABMenu />
+      {/* Floating Action Button - only mobile */}
+      <div className="lg:hidden">
+        <FABMenu />
+      </div>
     </>
   )
 }

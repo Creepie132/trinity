@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useModalStore } from '@/store/useModalStore'
 
 interface TodayVisit {
   id: string
@@ -23,6 +24,7 @@ interface TodayBlockClientProps {
 export default function TodayBlockClient({ visits }: TodayBlockClientProps) {
   const { language } = useLanguage()
   const router = useRouter()
+  const { openModal } = useModalStore()
 
   // Format today's date based on user's language
   const today = new Date()
@@ -87,7 +89,8 @@ export default function TodayBlockClient({ visits }: TodayBlockClientProps) {
             {visits.map((visit) => (
               <div
                 key={visit.id}
-                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-start"
+                onClick={() => openModal('visit-edit', { visit, locale: language })}
+                className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer text-start"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <span className="font-mono text-sm text-gray-700 dark:text-gray-300 w-12 flex-shrink-0">

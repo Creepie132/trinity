@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, CreditCard, Megaphone, Settings, Home, Moon, Sun, ChevronRight, Shield, Mail, Package } from 'lucide-react'
+import { LayoutDashboard, CreditCard, Megaphone, Settings, Home, ChevronRight, Shield, Mail, Package } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -24,7 +24,6 @@ export function AdminSidebar() {
   const { user } = useAuth()
   const { adminProfile, isLoading } = useAdminProfile()
   const { t } = useLanguage()
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
   const [profileOpen, setProfileOpen] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
@@ -51,20 +50,6 @@ export function AdminSidebar() {
     },
   ]
 
-  useEffect(() => {
-    // Load theme from localStorage
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-    if (savedTheme) {
-      setTheme(savedTheme)
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark')
-    } else {
-      // Default to dark for admin
-      setTheme('dark')
-      localStorage.setItem('theme', 'dark')
-      document.documentElement.classList.add('dark')
-    }
-  }, [])
-
   // Load avatar URL
   useEffect(() => {
     if (user) {
@@ -80,13 +65,6 @@ export function AdminSidebar() {
         })
     }
   }, [user])
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
-    setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
-    document.documentElement.classList.toggle('dark', newTheme === 'dark')
-  }
 
   const displayName = adminProfile?.full_name || user?.email?.split('@')[0] || 'Admin'
   const displayEmail = adminProfile?.email || user?.email || ''
@@ -160,22 +138,6 @@ export function AdminSidebar() {
           </div>
           <span className="flex-1 text-green-300 font-semibold">{t('nav.backToMain')}</span>
         </Link>
-
-        {/* Theme Toggle */}
-        <Separator className="my-4 bg-slate-700" />
-        <button
-          onClick={toggleTheme}
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group text-slate-300 hover:bg-slate-700 hover:text-white active:scale-[0.98]"
-        >
-          <div className="p-1.5 rounded-lg bg-slate-700 group-hover:bg-yellow-900/30">
-            {theme === 'light' ? (
-              <Moon className="w-5 h-5 text-slate-400" />
-            ) : (
-              <Sun className="w-5 h-5 text-yellow-500" />
-            )}
-          </div>
-          <span className="flex-1 text-right">{theme === 'light' ? t('nav.darkMode') : t('nav.lightMode')}</span>
-        </button>
       </nav>
 
       {/* User Profile - Clickable */}

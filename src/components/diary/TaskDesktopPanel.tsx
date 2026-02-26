@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Phone, Mail, MapPin, Calendar, Clock, User, AlertCircle, CheckCircle2, Circle } from 'lucide-react'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { getClientName } from '@/lib/client-utils'
@@ -105,23 +105,43 @@ export function TaskDesktopPanel({
     }, 500)
   }
 
+  // Scroll Lock: блокируем прокрутку фона, когда модалка открыта
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
+
+  // Escape Handler: закрытие по Esc
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [isOpen, onClose])
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm"
       onClick={onClose}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/30" />
-
-      {/* Panel */}
+      {/* Карточка с жесткими лимитами */}
       <div
-        className="relative z-10 bg-background shadow-2xl flex h-full w-full max-w-5xl mx-auto my-4 rounded-2xl overflow-hidden"
+        className="relative w-full max-w-4xl h-fit max-h-[85vh] bg-white rounded-[32px] shadow-2xl flex overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         style={{ display: 'grid', gridTemplateColumns: '350px 1fr' }}
       >
         {/* === ЛЕВАЯ ПАНЕЛЬ === */}
-        <div className="p-6 flex flex-col border-e border-muted bg-muted/20">
+        <div className="p-6 flex flex-col border-e border-muted bg-muted/20 overflow-y-auto">
           {/* Закрыть */}
           <button
             onClick={onClose}
@@ -265,9 +285,7 @@ export function TaskDesktopPanel({
         </div>
 
         {/* === ПРАВАЯ ПАНЕЛЬ === */}
-        <div className="flex flex-col">
-          {/* Описание */}
-          <div className="flex-1 overflow-y-auto p-6">
+        <div className="p-6 bg-gray-50 overflow-y-auto">
             <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase">
               {l.description}
             </h3>
@@ -314,7 +332,6 @@ export function TaskDesktopPanel({
                 </button>
               </div>
             )}
-          </div>
         </div>
       </div>
     </div>

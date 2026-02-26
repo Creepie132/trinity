@@ -87,9 +87,6 @@ export default function ClientsPage() {
       enabledModules: {
         appointments: features.hasVisits,
       },
-      onSelect: (editClient: any) => {
-        // Handle edit logic if needed
-      },
     })
   }
 
@@ -240,22 +237,19 @@ export default function ClientsPage() {
               key={client.id}
               client={{
                 id: client.id,
-                name: `${client.first_name} ${client.last_name}`,
+                first_name: client.first_name,
+                last_name: client.last_name,
                 phone: client.phone || undefined,
                 email: client.email || undefined,
-                total_visits: client.total_visits,
+                visits_count: client.total_visits,
                 last_visit: client.last_visit || undefined,
                 total_paid: client.total_paid,
                 notes: client.notes || undefined,
                 created_at: client.created_at || undefined,
               }}
-              locale={language}
+              locale={language === 'he' ? 'he' : 'ru'}
               isDemo={isDemo}
-              enabledModules={{ visits: features.hasVisits }}
-              onSelect={(c) => {
-                setSelectedClient(client)
-                setClientSheetOpen(true)
-              }}
+              enabledModules={{ appointments: features.hasVisits }}
             />
           ))
         ) : (

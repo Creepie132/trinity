@@ -22,7 +22,7 @@ interface ClientCardProps {
   locale: 'he' | 'ru'
   isDemo?: boolean
   enabledModules?: Record<string, boolean>
-  onSelect: (client: any) => void
+  onSelect?: (client: any) => void
 }
 
 export function ClientCard({
@@ -68,7 +68,6 @@ export function ClientCard({
       client,
       locale,
       enabledModules,
-      onSelect,
     })
   }
 

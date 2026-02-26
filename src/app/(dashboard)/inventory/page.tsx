@@ -68,7 +68,7 @@ export default function InventoryPage() {
 
       const newQty = Math.max(0, (product.quantity || 0) + delta)
 
-      const res = await fetch(`/api/inventory/${productId}`, {
+      const res = await fetch(`/api/products/${productId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity: newQty }),

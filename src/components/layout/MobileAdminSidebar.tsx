@@ -49,11 +49,6 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
       icon: Shield,
     },
     {
-      name: t('admin.plans') || 'Тарифные планы',
-      href: '/admin/plans',
-      icon: Package,
-    },
-    {
       name: t('admin.modulePricing') || 'Цены модулей',
       href: '/admin/module-pricing',
       icon: DollarSign,

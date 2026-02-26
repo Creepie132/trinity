@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
-import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users } from 'lucide-react'
+import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Package, Plus, Trash2, Save, Settings } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { PLANS, getPlan, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
@@ -38,6 +38,22 @@ interface AccessRequest {
   full_name: string
   requested_at: string
   status: string
+}
+
+interface Plan {
+  id: string
+  key: string
+  name_he: string
+  name_ru: string
+  desc_he: string
+  desc_ru: string
+  color: string
+  modules: Record<string, boolean>
+  client_limit: number | null
+  price_monthly: number | null
+  price_yearly: number | null
+  is_active: boolean
+  sort_order: number
 }
 
 const SUBSCRIPTION_STATUSES = [
@@ -68,9 +84,15 @@ export default function AdminSubscriptionsPage() {
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [manualPrice, setManualPrice] = useState<number>(0)
 
+  // Plans management modal
+  const [plansModalOpen, setPlansModalOpen] = useState(false)
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [savingPlan, setSavingPlan] = useState<string | null>(null)
+
   const translations = {
     he: {
       title: 'מנויים וגישה',
+      managePlans: 'ניהול תוכניות',
       organizations: 'ארגונים',
       accessRequests: 'בקשות גישה',
       name: 'שם',
@@ -109,9 +131,23 @@ export default function AdminSubscriptionsPage() {
         manual: 'ידני',
         expired: 'פג תוקף',
       },
+      // Plans modal
+      plansTitle: 'ניהול תוכניות תמחור',
+      addPlan: 'הוסף תוכנית',
+      nameRu: 'שם רוסית',
+      nameHe: 'שם עברית',
+      descRu: 'תיאור רוסית',
+      descHe: 'תיאור עברית',
+      price: 'מחיר חודשי',
+      modules: 'מודולים',
+      active: 'פעיל',
+      color: 'צבע',
+      key: 'מזהה',
+      delete: 'מחק',
     },
     ru: {
       title: 'Подписки и доступ',
+      managePlans: 'Управление планами',
       organizations: 'Организации',
       accessRequests: 'Запросы на доступ',
       name: 'Название',
@@ -150,6 +186,19 @@ export default function AdminSubscriptionsPage() {
         manual: 'Ручной доступ',
         expired: 'Истекла',
       },
+      // Plans modal
+      plansTitle: 'Управление тарифными планами',
+      addPlan: 'Добавить план',
+      nameRu: 'Название (русский)',
+      nameHe: 'Название (иврит)',
+      descRu: 'Описание (русский)',
+      descHe: 'Описание (иврит)',
+      price: 'Цена/месяц',
+      modules: 'Модули',
+      active: 'Активен',
+      color: 'Цвет',
+      key: 'Ключ',
+      delete: 'Удалить',
     },
   }
 
@@ -167,6 +216,7 @@ export default function AdminSubscriptionsPage() {
         if (plansRes.ok) {
           const plansData = await plansRes.json()
           setDbPlans(plansData || [])
+          setPlans(plansData || [])
         }
       } catch (err) {
         console.warn('Failed to load plans from DB, using hardcoded plans')
@@ -467,6 +517,109 @@ export default function AdminSubscriptionsPage() {
     }
   }
 
+  // Plans management functions
+  const updatePlan = (id: string, field: string, value: any) => {
+    setPlans((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
+    )
+  }
+
+  const updatePlanModule = (id: string, moduleKey: string, enabled: boolean) => {
+    setPlans((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, modules: { ...p.modules, [moduleKey]: enabled } }
+          : p
+      )
+    )
+  }
+
+  const savePlan = async (plan: Plan) => {
+    setSavingPlan(plan.id)
+    try {
+      const res = await fetch('/api/admin/plans', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(plan),
+      })
+
+      if (!res.ok) throw new Error('Failed to save')
+
+      toast.success(language === 'he' ? 'נשמר בהצלחה' : 'Сохранено')
+      loadData()
+    } catch (error) {
+      console.error('Error saving plan:', error)
+      toast.error(language === 'he' ? 'שגיאה בשמירה' : 'Ошибка сохранения')
+    } finally {
+      setSavingPlan(null)
+    }
+  }
+
+  const deletePlan = async (id: string) => {
+    if (!confirm(language === 'he' ? 'למחוק תוכנית?' : 'Удалить план?')) return
+
+    try {
+      const res = await fetch('/api/admin/plans', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+
+      if (!res.ok) throw new Error('Failed to delete')
+
+      toast.success(language === 'he' ? 'נמחק' : 'Удалено')
+      loadData()
+    } catch (error) {
+      console.error('Error deleting plan:', error)
+      toast.error(language === 'he' ? 'שגיאה במחיקה' : 'Ошибка удаления')
+    }
+  }
+
+  const addNewPlan = async () => {
+    const newPlan = {
+      key: `plan_${Date.now()}`,
+      name_he: language === 'he' ? 'תוכנית חדשה' : 'Новый план',
+      name_ru: language === 'ru' ? 'Новый план' : 'תוכנית חדשה',
+      desc_he: '',
+      desc_ru: '',
+      color: 'gray',
+      modules: {},
+      client_limit: null,
+      price_monthly: null,
+      price_yearly: null,
+      is_active: true,
+      sort_order: plans.length,
+    }
+
+    try {
+      const res = await fetch('/api/admin/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPlan),
+      })
+
+      if (!res.ok) throw new Error('Failed to create')
+
+      toast.success(language === 'he' ? 'תוכנית נוצרה' : 'План создан')
+      loadData()
+    } catch (error) {
+      console.error('Error creating plan:', error)
+      toast.error(language === 'he' ? 'שגיאה ביצירה' : 'Ошибка создания')
+    }
+  }
+
+  const getColorClass = (color: string) => {
+    const classes: Record<string, string> = {
+      red: 'bg-red-500',
+      blue: 'bg-blue-500',
+      amber: 'bg-amber-500',
+      green: 'bg-green-500',
+      purple: 'bg-purple-500',
+      gray: 'bg-gray-500',
+    }
+    return classes[color] || 'bg-gray-500'
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -478,9 +631,18 @@ export default function AdminSubscriptionsPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Shield className="w-8 h-8 text-amber-600" />
-        <h1 className="text-3xl font-bold">{t.title}</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Shield className="w-8 h-8 text-amber-600" />
+          <h1 className="text-3xl font-bold">{t.title}</h1>
+        </div>
+        <Button 
+          onClick={() => setPlansModalOpen(true)}
+          className="bg-red-600 hover:bg-red-700 text-white"
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          {t.managePlans}
+        </Button>
       </div>
 
       {/* Access Requests */}
@@ -811,6 +973,177 @@ export default function AdminSubscriptionsPage() {
               </Button>
               <Button onClick={handleSaveExtension}>{t.save}</Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Plans Management Modal */}
+      <Dialog open={plansModalOpen} onOpenChange={setPlansModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="w-6 h-6 text-amber-600" />
+                {t.plansTitle}
+              </div>
+              <Button onClick={addNewPlan} size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                {t.addPlan}
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Plans Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {plans.map((plan) => (
+              <Card key={plan.id} className="border-2 relative">
+                {/* Color bar */}
+                <div
+                  className={`absolute top-0 left-0 right-0 h-1 rounded-t-xl ${getColorClass(
+                    plan.color
+                  )}`}
+                />
+
+                <CardHeader className="pt-6">
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">{plan.key}</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => deletePlan(plan.id)}
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent className="space-y-3">
+                  {/* Names */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">{t.nameRu}</Label>
+                      <Input
+                        value={plan.name_ru}
+                        onChange={(e) => updatePlan(plan.id, 'name_ru', e.target.value)}
+                        className="text-sm font-bold"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">{t.nameHe}</Label>
+                      <Input
+                        value={plan.name_he}
+                        onChange={(e) => updatePlan(plan.id, 'name_he', e.target.value)}
+                        dir="rtl"
+                        className="text-sm font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Price & Client Limit */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">{t.price}</Label>
+                      <div className="flex items-center gap-1">
+                        <span className="text-muted-foreground text-sm">₪</span>
+                        <Input
+                          type="number"
+                          value={plan.price_monthly || ''}
+                          onChange={(e) =>
+                            updatePlan(
+                              plan.id,
+                              'price_monthly',
+                              e.target.value ? parseFloat(e.target.value) : null
+                            )
+                          }
+                          placeholder="0"
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">{t.clientLimit}</Label>
+                      <Input
+                        type="number"
+                        value={plan.client_limit || ''}
+                        onChange={(e) =>
+                          updatePlan(
+                            plan.id,
+                            'client_limit',
+                            e.target.value ? parseInt(e.target.value) : null
+                          )
+                        }
+                        placeholder={t.unlimited}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Color */}
+                  <div>
+                    <Label className="text-xs">{t.color}</Label>
+                    <select
+                      value={plan.color}
+                      onChange={(e) => updatePlan(plan.id, 'color', e.target.value)}
+                      className="w-full border rounded px-2 py-1 text-sm"
+                    >
+                      <option value="red">Red</option>
+                      <option value="blue">Blue</option>
+                      <option value="amber">Amber</option>
+                      <option value="green">Green</option>
+                      <option value="purple">Purple</option>
+                      <option value="gray">Gray</option>
+                    </select>
+                  </div>
+
+                  {/* Modules */}
+                  <div>
+                    <Label className="text-xs mb-1 block">{t.modules}</Label>
+                    <div className="space-y-1 max-h-32 overflow-y-auto border rounded p-2 text-sm">
+                      {MODULES.map((mod) => (
+                        <div key={mod.key} className="flex items-center justify-between text-xs">
+                          <span>
+                            {language === 'he' ? mod.name_he : mod.name_ru}
+                          </span>
+                          <Switch
+                            checked={plan.modules[mod.key] || false}
+                            onCheckedChange={(val) =>
+                              updatePlanModule(plan.id, mod.key, val)
+                            }
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Active status */}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="text-xs font-medium">{t.active}</span>
+                    <Switch
+                      checked={plan.is_active}
+                      onCheckedChange={(val) => updatePlan(plan.id, 'is_active', val)}
+                    />
+                  </div>
+
+                  {/* Save button */}
+                  <Button
+                    onClick={() => savePlan(plan)}
+                    disabled={savingPlan === plan.id}
+                    className="w-full"
+                    size="sm"
+                  >
+                    {savingPlan === plan.id ? (
+                      <span>{language === 'he' ? 'שומר...' : 'Сохранение...'}</span>
+                    ) : (
+                      <>
+                        <Save className="w-3 h-3 mr-2" />
+                        {t.save}
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </DialogContent>
       </Dialog>

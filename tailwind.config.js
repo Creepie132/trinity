@@ -70,6 +70,20 @@ module.exports = {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
       },
+      boxShadow: {
+        'card': '0 1px 3px rgba(0, 0, 0, 0.05)',
+        'card-hover': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+        'card-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+      },
+      borderColor: {
+        'card': '#f1f5f9',
+      },
+      backgroundColor: {
+        'page': '#f8fafc',
+      },
+      borderRadius: {
+        'card': '16px',
+      },
     },
   },
   plugins: [require('tailwindcss-animate')],

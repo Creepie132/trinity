@@ -85,12 +85,12 @@ export function VisitDesktopPanel({
 
       {/* Panel */}
       <div
-        className="relative z-10 bg-background shadow-2xl flex h-full w-full max-w-5xl mx-auto my-4 rounded-2xl overflow-hidden"
+        className="relative z-10 bg-background shadow-2xl flex flex-col md:grid h-full w-full max-w-5xl mx-auto my-0 md:my-4 rounded-none md:rounded-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
-        style={{ display: 'grid', gridTemplateColumns: '350px 1fr' }}
+        style={{ gridTemplateColumns: 'minmax(300px, 350px) 1fr' }}
       >
-        {/* === ЛЕВАЯ ПАНЕЛЬ === */}
-        <div className="p-6 flex flex-col border-e border-muted bg-muted/20">
+        {/* === ЛЕВАЯ ПАНЕЛЬ (или верхняя на мобиле) === */}
+        <div className="p-6 flex flex-col border-b md:border-b-0 md:border-e border-muted bg-muted/20">
           {/* Закрыть */}
           <button
             onClick={onClose}

@@ -136,12 +136,12 @@ export function TaskDesktopPanel({
     >
       {/* Карточка с жесткими лимитами */}
       <div
-        className="relative w-full max-w-4xl h-fit max-h-[85vh] bg-white rounded-[32px] shadow-2xl flex overflow-hidden"
+        className="relative w-full max-w-4xl h-full md:h-fit max-h-none md:max-h-[85vh] bg-white rounded-none md:rounded-[32px] shadow-2xl flex flex-col md:grid overflow-hidden"
         onClick={(e) => e.stopPropagation()}
-        style={{ display: 'grid', gridTemplateColumns: '350px 1fr' }}
+        style={{ gridTemplateColumns: '350px 1fr' }}
       >
-        {/* === ЛЕВАЯ ПАНЕЛЬ === */}
-        <div className="p-6 flex flex-col border-e border-muted bg-muted/20 overflow-y-auto">
+        {/* === ЛЕВАЯ ПАНЕЛЬ (верхняя на мобиле) === */}
+        <div className="p-6 flex flex-col border-b md:border-b-0 md:border-e border-muted bg-muted/20 overflow-y-auto">
           {/* Закрыть */}
           <button
             onClick={onClose}

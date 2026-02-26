@@ -78,7 +78,7 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
           fetch('/api/clients'),
           fetch('/api/visits'),
           fetch('/api/payments'),
-          fetch(`/api/visits?date=${todayStart.toISOString()}`),
+          fetch(`/api/dashboard/today?org_id=${orgId}`),
           fetch('/api/tasks'),
         ])
 
@@ -92,8 +92,14 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
         const clientsArr = Array.isArray(clientsData) ? clientsData : clientsData?.data || []
         const visitsArr = Array.isArray(visitsData) ? visitsData : visitsData?.data || []
         const paymentsArr = Array.isArray(paymentsData) ? paymentsData : paymentsData?.data || []
-        const todayVisitsArr = Array.isArray(todayVisitsData) ? todayVisitsData : todayVisitsData?.data || []
+        const todayVisitsArr = Array.isArray(todayVisitsData) ? todayVisitsData : []
         const tasksArr = Array.isArray(tasksData) ? tasksData : tasksData?.data || []
+        
+        console.log('=== DASHBOARD VISITS ===')
+        console.log('All visits:', visitsArr.length)
+        console.log('Today visits:', todayVisitsArr.length)
+        console.log('Today start:', todayStart.toISOString())
+        console.log('First today visit:', todayVisitsArr[0])
 
         // Calculate stats
         const totalClients = clientsArr.length
@@ -127,7 +133,7 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
         })
 
         // Today's visits
-        setTodayVisits(todayVisitsArr.slice(0, 5))
+        setTodayVisits(todayVisitsArr)
 
         // Today's tasks
         const todayTasksFiltered = tasksArr.filter((t: any) => {

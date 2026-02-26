@@ -30,41 +30,43 @@ export async function GET(request: NextRequest) {
         scheduled_at,
         status,
         notes,
+        service_type,
         clients(
           id,
-          name
+          first_name,
+          last_name
+        ),
+        services(
+          name,
+          name_ru
         )
       `)
       .eq('org_id', org_id)
       .gte('scheduled_at', todayStart.toISOString())
       .lte('scheduled_at', todayEnd.toISOString())
+      .in('status', ['scheduled', 'in_progress'])
       .order('scheduled_at', { ascending: true })
       .limit(10)
 
     if (error) throw error
 
-    // Format visits for response
+    // Return full visit objects with client details
     const formattedVisits = visits?.map(visit => {
-      const scheduledDate = new Date(visit.scheduled_at)
-      const hours = scheduledDate.getHours().toString().padStart(2, '0')
-      const minutes = scheduledDate.getMinutes().toString().padStart(2, '0')
-      
-      // clients is an object, not an array (using inner join)
+      // clients is an object (inner join), not an array
       const client: any = visit.clients
-      
       return {
-        id: visit.id,
-        time: `${hours}:${minutes}`,
-        clientName: client?.name || 'Unknown',
-        service: visit.notes || 'ביקור',
-        status: visit.status || 'scheduled',
+        ...visit,
+        // Keep original data structure for compatibility
+        clientName: client 
+          ? `${client.first_name || ''} ${client.last_name || ''}`.trim() 
+          : 'Unknown'
       }
     }) || []
 
-    return NextResponse.json({
-      visits: formattedVisits,
-      count: formattedVisits.length,
-    })
+    console.log('[API /dashboard/today] Found visits:', formattedVisits.length)
+    console.log('[API /dashboard/today] First visit:', formattedVisits[0])
+
+    return NextResponse.json(formattedVisits)
   } catch (error: any) {
     console.error('Today visits error:', error)
     return NextResponse.json(

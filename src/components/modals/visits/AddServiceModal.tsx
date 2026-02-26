@@ -13,8 +13,7 @@ export function AddServiceModal() {
     <AddServiceDialog
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('visit-add-service')}
-      visitId={data?.visitId}
-      onSuccess={data?.onSuccess}
+      onAddService={data?.onAddService || (() => Promise.resolve())}
     />
   )
 }

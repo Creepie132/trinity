@@ -14,7 +14,7 @@ export function CreatePaymentModal() {
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('payment-create')}
       clientId={data?.clientId}
-      onSuccess={data?.onSuccess}
+      clientName={data?.clientName}
     />
   )
 }

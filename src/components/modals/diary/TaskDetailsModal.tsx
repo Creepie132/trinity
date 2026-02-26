@@ -16,8 +16,9 @@ export function TaskDetailsModal() {
       task={data.task}
       isOpen={isOpen}
       onClose={() => closeModal('task-details')}
-      onTaskUpdated={data?.onTaskUpdated}
-      onTaskDeleted={data?.onTaskDeleted}
+      onStatusChange={data?.onStatusChange}
+      onClientClick={data?.onClientClick}
+      locale={data?.locale || 'he'}
     />
   )
 }

@@ -13,9 +13,6 @@ export function CreateStripePaymentModal() {
     <CreateStripePaymentDialog
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('payment-create-stripe')}
-      clientId={data?.clientId}
-      amount={data?.amount}
-      onSuccess={data?.onSuccess}
     />
   )
 }

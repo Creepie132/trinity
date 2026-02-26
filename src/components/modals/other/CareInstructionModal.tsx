@@ -13,7 +13,6 @@ export function CareInstructionModal() {
     <CreateCareInstructionDialog
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('care-instruction-create')}
-      onSuccess={data?.onSuccess}
     />
   )
 }

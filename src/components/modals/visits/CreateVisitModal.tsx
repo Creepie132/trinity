@@ -13,8 +13,9 @@ export function CreateVisitModal() {
     <CreateVisitDialog
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('visit-create')}
-      clientId={data?.clientId}
-      onSuccess={data?.onSuccess}
+      preselectedClientId={data?.clientId}
+      preselectedDate={data?.date}
+      onVisitCreated={data?.onVisitCreated}
     />
   )
 }

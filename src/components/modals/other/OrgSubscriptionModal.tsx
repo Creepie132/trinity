@@ -13,8 +13,6 @@ export function OrgSubscriptionModal() {
     <CreateOrgSubscriptionDialog
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('org-subscription-create')}
-      organizationId={data?.organizationId}
-      onSuccess={data?.onSuccess}
     />
   )
 }

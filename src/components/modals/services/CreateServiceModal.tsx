@@ -13,7 +13,6 @@ export function CreateServiceModal() {
     <CreateServiceDialog
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('service-create')}
-      onSuccess={data?.onSuccess}
     />
   )
 }

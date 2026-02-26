@@ -14,7 +14,6 @@ export function AddProductModal() {
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('visit-add-product')}
       visitId={data?.visitId}
-      onSuccess={data?.onSuccess}
     />
   )
 }

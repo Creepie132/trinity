@@ -16,7 +16,8 @@ export function EditClientModal() {
       client={data.client}
       isOpen={isOpen}
       onClose={() => closeModal('client-edit')}
-      onSaved={data?.onSaved}
+      onSaved={data?.onSaved || (() => {})}
+      locale={data?.locale || 'he'}
     />
   )
 }

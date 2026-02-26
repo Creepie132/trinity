@@ -13,8 +13,9 @@ export function CreateTaskModal() {
     <CreateTaskSheet
       isOpen={isOpen}
       onClose={() => closeModal('task-create')}
-      onTaskCreated={data?.onTaskCreated}
-      initialDate={data?.initialDate}
+      onCreated={data?.onCreated || (() => {})}
+      locale={data?.locale || 'he'}
+      prefill={data?.prefill}
     />
   )
 }

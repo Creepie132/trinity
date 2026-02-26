@@ -13,8 +13,6 @@ export function CreatePaymentLinkModal() {
     <CreatePaymentLinkDialog
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('payment-create-link')}
-      clientId={data?.clientId}
-      onSuccess={data?.onSuccess}
     />
   )
 }

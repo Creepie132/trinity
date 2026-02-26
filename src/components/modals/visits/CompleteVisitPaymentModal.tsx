@@ -16,7 +16,6 @@ export function CompleteVisitPaymentModal() {
       visit={data.visit}
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('visit-complete-payment')}
-      onSuccess={data?.onSuccess}
     />
   )
 }

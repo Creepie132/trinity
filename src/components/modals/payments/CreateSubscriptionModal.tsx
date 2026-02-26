@@ -13,8 +13,6 @@ export function CreateSubscriptionModal() {
     <CreateSubscriptionDialog
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('payment-create-subscription')}
-      clientId={data?.clientId}
-      onSuccess={data?.onSuccess}
     />
   )
 }

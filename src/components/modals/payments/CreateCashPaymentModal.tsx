@@ -13,8 +13,6 @@ export function CreateCashPaymentModal() {
     <CreateCashPaymentDialog
       open={isOpen}
       onOpenChange={(open) => !open && closeModal('payment-create-cash')}
-      clientId={data?.clientId}
-      onSuccess={data?.onSuccess}
     />
   )
 }

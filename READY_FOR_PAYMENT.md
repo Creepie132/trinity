@@ -195,8 +195,35 @@ const handleTaskClick = (task: Task) => {
 
 ---
 
-**Последний коммит:** `032987c` - "fix: inventory categories type filter"  
-**Всего исправлений:** 10 коммитов за последний день  
+### ✅ БАГ 5: Календарь — клик на визит (ИСПРАВЛЕН)
+**Commit:** `b466fe6` - "fix: calendar visit click responsive state handling"
+
+**Что сделано:**
+- ✅ `handleVisitClick` передаёт полный объект визита (не только id)
+- ✅ Правильная обработка для desktop (setDesktopVisit) и mobile (setSelectedVisit)
+- ✅ CalendarView передаёт `onVisitClick: (visit: Visit) => void`
+- ✅ VisitFlowCard получает полный объект selectedVisit
+
+**Файлы:**
+- `src/app/(dashboard)/visits/page.tsx` (функция handleVisitClick)
+- `src/components/visits/CalendarView.tsx` (onVisitClick с типом Visit)
+
+**Код:**
+```typescript
+function handleVisitClick(visit: any) {
+  // Открываем detail panel на всех устройствах
+  if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+    setDesktopVisit(visit)
+  } else {
+    setSelectedVisit(visit)
+  }
+}
+```
+
+---
+
+**Последний коммит:** `b466fe6` - "fix: calendar visit click responsive state handling"  
+**Всего исправлений:** 12 коммитов за последний день  
 **Статус:** 🟢 ГОТОВ К PRODUCTION
 
 ---

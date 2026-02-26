@@ -25,11 +25,11 @@ export default function ModalWrapper({ isOpen, onClose, children }: ModalWrapper
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="relative bg-white rounded-[32px] max-h-[90vh] overflow-auto"
+        className="relative bg-white dark:bg-gray-900 rounded-[32px] max-h-[90vh] overflow-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {children}

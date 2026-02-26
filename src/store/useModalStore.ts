@@ -5,6 +5,7 @@ export type ModalType =
   | 'client-edit'
   | 'visit-create'
   | 'product-create'
+  | 'product-details'
   | 'product-sell'
   | 'product-add-stock'
   | 'product-return'

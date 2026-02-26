@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
 import { Building2, Save, X } from 'lucide-react'
+import { ClientSearchInput } from '@/components/ui/ClientSearchInput'
+import ModalWrapper from '@/components/ModalWrapper'
 
 interface EditOrganizationModalProps {
   isOpen: boolean
@@ -82,12 +84,19 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
   useEffect(() => {
     if (organization && isOpen) {
       const businessInfo = organization.features?.business_info || {}
+      
+      // Функция для очистки значений "—"
+      const cleanValue = (value: any) => {
+        if (!value || value === '—') return ''
+        return value
+      }
+      
       setFormData({
-        display_name: businessInfo.display_name || organization.display_name || organization.name || '',
-        owner_name: businessInfo.owner_name || organization.owner_name || '',
-        mobile: businessInfo.mobile || organization.phone || '',
-        address: businessInfo.address || '',
-        city: businessInfo.city || '',
+        display_name: cleanValue(businessInfo.display_name || organization.display_name || organization.name),
+        owner_name: cleanValue(businessInfo.owner_name || organization.owner_name),
+        mobile: cleanValue(businessInfo.mobile || organization.phone),
+        address: cleanValue(businessInfo.address),
+        city: cleanValue(businessInfo.city),
       })
     }
   }, [organization, isOpen])
@@ -144,14 +153,14 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <ModalWrapper isOpen={isOpen} onClose={onClose}>
+      <div className="w-full max-w-md p-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
             <Building2 className="w-5 h-5 text-primary" />
             {t.title}
-          </DialogTitle>
-        </DialogHeader>
+          </h2>
+        </div>
 
         <div className="space-y-4 mt-4">
           {/* Название организации */}
@@ -166,19 +175,26 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
             />
           </div>
 
-          {/* Владелец */}
+          {/* Владелец - поиск по клиентам */}
           <div>
             <Label htmlFor="owner_name">{t.owner}</Label>
-            <Input
-              id="owner_name"
+            <ClientSearchInput
               value={formData.owner_name}
-              onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
+              onSelect={(name, phone) => {
+                setFormData({
+                  ...formData,
+                  owner_name: name,
+                  mobile: phone,
+                })
+              }}
               placeholder={t.owner}
+              locale={language}
+              orgId={organization?.id}
               className="mt-1"
             />
           </div>
 
-          {/* Телефон */}
+          {/* Телефон - автозаполняется при выборе клиента */}
           <div>
             <Label htmlFor="mobile">{t.phone}</Label>
             <Input
@@ -234,7 +250,7 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ModalWrapper>
   )
 }

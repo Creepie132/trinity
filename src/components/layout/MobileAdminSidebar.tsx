@@ -34,11 +34,6 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
       icon: LayoutDashboard,
     },
     {
-      name: t('admin.invitations') || 'Приглашения',
-      href: '/admin/invitations',
-      icon: Mail,
-    },
-    {
       name: t('admin.subscriptions') || 'Подписки и доступ',
       href: '/admin/subscriptions',
       icon: Shield,

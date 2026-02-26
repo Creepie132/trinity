@@ -20,6 +20,7 @@ import { VisitCard } from '@/components/visits/VisitCard'
 import { ActiveVisitCard } from '@/components/visits/ActiveVisitCard'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { MeetingDetailCard } from '@/components/visits/MeetingDetailCard'
+import { VisitFlowCard } from '@/components/visits/VisitFlowCard'
 import { format } from 'date-fns'
 import {
   Select,
@@ -78,6 +79,27 @@ export default function VisitsPage() {
     const client = allClients?.find((c: any) => c.id === visit.client_id)
     if (client) return `${client.first_name || ''} ${client.last_name || ''}`.trim()
     return ''
+  }
+
+  function getClientPhone(visit: any): string {
+    if (!visit?.client_id) return ''
+    const client = allClients.find((c: any) => c.id === visit.client_id)
+    return client?.phone || ''
+  }
+
+  function getServiceName(visit: any): string {
+    if (!visit?.service_id) return ''
+    const service = services.find((s: any) => s.id === visit.service_id || s.id === visit.service_type)
+    return service?.name || ''
+  }
+
+  function getLastVisitDate(visit: any): string {
+    if (!visit?.client_id || !visitsData?.data) return ''
+    const clientVisits = visitsData.data
+      .filter((v: any) => v.client_id === visit.client_id && v.id !== visit.id && v.status === 'completed')
+      .sort((a: any, b: any) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
+    if (clientVisits.length === 0) return ''
+    return new Date(clientVisits[0].scheduled_at).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU')
   }
 
   // Check organization status and feature access
@@ -1181,22 +1203,48 @@ export default function VisitsPage() {
         </TrinityBottomDrawer>
       )}
 
-      {/* Mobile MeetingDetailCard */}
-      <MeetingDetailCard
+      {/* Mobile VisitFlowCard */}
+      <VisitFlowCard
         visit={selectedVisit}
         isOpen={!!selectedVisit}
         onClose={() => setSelectedVisit(null)}
         locale={language === 'he' ? 'he' : 'ru'}
         clientName={selectedVisit ? getClientName(selectedVisit) : ''}
-        onStart={() => selectedVisit && updateVisitStatus(selectedVisit.id, 'in_progress')}
-        onComplete={() => selectedVisit && handleCompleteVisit(selectedVisit)}
-        onCancel={() => selectedVisit && updateVisitStatus(selectedVisit.id, 'cancelled')}
-        onAddService={() => {
+        clientPhone={selectedVisit ? getClientPhone(selectedVisit) : ''}
+        serviceName={selectedVisit ? getServiceName(selectedVisit) : ''}
+        onStart={() => {
+          if (selectedVisit) {
+            updateVisitStatus(selectedVisit.id, 'in_progress')
+            setSelectedVisit(null)
+          }
+        }}
+        onComplete={() => {
+          if (selectedVisit) {
+            handleCompleteVisit(selectedVisit)
+            setSelectedVisit(null)
+          }
+        }}
+        onCancel={() => {
+          if (selectedVisit) {
+            updateVisitStatus(selectedVisit.id, 'cancelled')
+            setSelectedVisit(null)
+          }
+        }}
+        onEdit={() => {
+          // TODO: implement edit
+          setSelectedVisit(null)
+        }}
+        onAddService={(serviceId) => {
           if (selectedVisit) {
             setAddServiceVisit(selectedVisit)
             setAddServiceOpen(true)
             setSelectedVisit(null)
           }
+        }}
+        lastVisitDate={selectedVisit ? getLastVisitDate(selectedVisit) : ''}
+        onShowHistory={() => {
+          // TODO: implement history
+          setSelectedVisit(null)
         }}
       />
     </div>

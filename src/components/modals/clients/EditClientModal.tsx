@@ -11,13 +11,15 @@ export function EditClientModal() {
 
   if (!data?.client) return null
 
+  const locale = (data?.locale || 'he') as 'he' | 'ru'
+
   return (
     <EditClientSheet
       client={data.client}
       isOpen={isOpen}
       onClose={() => closeModal('client-edit')}
       onSaved={data?.onSaved || (() => {})}
-      locale={data?.locale || 'he'}
+      locale={locale}
     />
   )
 }

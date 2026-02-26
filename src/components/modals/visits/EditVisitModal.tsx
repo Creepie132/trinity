@@ -11,12 +11,15 @@ export function EditVisitModal() {
 
   if (!data?.visit) return null
 
+  const locale = (data?.locale || 'he') as 'he' | 'ru'
+
   return (
     <EditVisitSheet
       visit={data.visit}
       isOpen={isOpen}
       onClose={() => closeModal('visit-edit')}
-      onSaved={data?.onSaved}
+      onSaved={data?.onSaved || (() => {})}
+      locale={locale}
     />
   )
 }

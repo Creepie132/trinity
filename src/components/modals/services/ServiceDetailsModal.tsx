@@ -15,8 +15,7 @@ export function ServiceDetailsModal() {
     <ServiceDetailSheet
       service={data.service}
       open={isOpen}
-      onClose={() => closeModal('service-details')}
-      onEdit={data?.onEdit}
+      onOpenChange={(open) => !open && closeModal('service-details')}
     />
   )
 }

@@ -15,7 +15,7 @@ export function CampaignDetailsModal() {
     <CampaignDetailsSheet
       campaign={data.campaign}
       open={isOpen}
-      onClose={() => closeModal('sms-campaign-details')}
+      onOpenChange={(open) => !open && closeModal('sms-campaign-details')}
     />
   )
 }

@@ -1,13 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +18,7 @@ import { toast } from 'sonner'
 import { Camera, RotateCcw } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { BarcodeScanner } from './BarcodeScanner'
+import ModalWrapper from '@/components/ModalWrapper'
 import type { Product } from '@/types/inventory'
 
 interface ReturnProductDialogProps {
@@ -87,14 +81,14 @@ export function ReturnProductDialog({ open, onClose }: ReturnProductDialogProps)
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RotateCcw className="w-5 h-5" />
+      <ModalWrapper isOpen={open} onClose={onClose}>
+        <div className="w-full max-w-md p-6">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <RotateCcw className="w-6 h-6" />
               {t('inventory.return.title')}
-            </DialogTitle>
-          </DialogHeader>
+            </h2>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Product Selection */}
@@ -177,7 +171,7 @@ export function ReturnProductDialog({ open, onClose }: ReturnProductDialogProps)
               </div>
             )}
 
-            <DialogFooter>
+            <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
                 {t('common.cancel')}
               </Button>
@@ -186,10 +180,10 @@ export function ReturnProductDialog({ open, onClose }: ReturnProductDialogProps)
                   ? t('common.saving')
                   : t('inventory.return.confirm')}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </ModalWrapper>
 
       <BarcodeScanner
         open={scannerOpen}

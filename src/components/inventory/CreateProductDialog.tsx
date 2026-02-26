@@ -1,13 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,6 +17,7 @@ import { toast } from 'sonner'
 import { Camera, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { BarcodeScanner } from './BarcodeScanner'
+import ModalWrapper from '@/components/ModalWrapper'
 import type { CreateProductDTO } from '@/types/inventory'
 
 interface CreateProductDialogProps {
@@ -100,9 +94,9 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="relative">
+      <ModalWrapper isOpen={open} onClose={onClose}>
+        <div className="w-full max-w-2xl p-6">
+          <div className="relative mb-6">
             <Button
               type="button"
               onClick={onClose}
@@ -117,8 +111,8 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
                 <ArrowLeft className="h-6 w-6" />
               )}
             </Button>
-            <DialogTitle className="pr-12">{t('inventory.newProduct')}</DialogTitle>
-          </DialogHeader>
+            <h2 className="text-2xl font-bold pr-12">{t('inventory.newProduct')}</h2>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name */}
@@ -293,17 +287,17 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
               </Select>
             </div>
 
-            <DialogFooter>
+            <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
                 {t('common.cancel')}
               </Button>
               <Button type="submit" disabled={createProduct.isPending}>
                 {createProduct.isPending ? t('common.saving') : t('inventory.create')}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </ModalWrapper>
 
       <BarcodeScanner
         open={scannerOpen}

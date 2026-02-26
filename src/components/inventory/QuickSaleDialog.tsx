@@ -3,13 +3,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 
 import { useState } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,6 +22,7 @@ import { toast } from 'sonner'
 import { Camera, Plus, Trash2, ShoppingCart, Check } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { BarcodeScanner } from './BarcodeScanner'
+import ModalWrapper from '@/components/ModalWrapper'
 import type { Product } from '@/types/inventory'
 import { Banknote, Smartphone, CreditCard, Building2, Phone, Zap } from 'lucide-react'
 
@@ -187,14 +181,14 @@ export function QuickSaleDialog({ open, onClose }: QuickSaleDialogProps) {
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5" />
+      <ModalWrapper isOpen={open} onClose={onClose}>
+        <div className="w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <ShoppingCart className="w-6 h-6" />
               {t('inventory.quickSale.title')}
-            </DialogTitle>
-          </DialogHeader>
+            </h2>
+          </div>
 
           <div className="space-y-4">
             {/* Add Product */}
@@ -329,7 +323,7 @@ export function QuickSaleDialog({ open, onClose }: QuickSaleDialogProps) {
             </div>
           </div>
 
-          <DialogFooter>
+          <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button variant="outline" onClick={onClose}>
               {t('common.cancel')}
             </Button>
@@ -339,9 +333,9 @@ export function QuickSaleDialog({ open, onClose }: QuickSaleDialogProps) {
             >
               {isProcessing ? t('common.saving') : t('inventory.quickSale.complete')}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      </ModalWrapper>
 
       <BarcodeScanner
         open={scannerOpen}

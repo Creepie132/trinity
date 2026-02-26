@@ -1,13 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,6 +9,7 @@ import { useCreateTransaction } from '@/hooks/useInventory'
 import { toast } from 'sonner'
 import { ArrowRight, ArrowLeft } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import ModalWrapper from '@/components/ModalWrapper'
 import type { Product } from '@/types/inventory'
 
 interface AddStockDialogProps {
@@ -70,9 +64,9 @@ export function AddStockDialog({ open, onClose, product }: AddStockDialogProps) 
   if (!product) return null
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader className="relative">
+    <ModalWrapper isOpen={open} onClose={onClose}>
+      <div className="w-full max-w-md p-6">
+        <div className="relative mb-6">
           <Button
             type="button"
             onClick={onClose}
@@ -87,8 +81,8 @@ export function AddStockDialog({ open, onClose, product }: AddStockDialogProps) 
               <ArrowLeft className="h-6 w-6" />
             )}
           </Button>
-          <DialogTitle className="pr-12">{t('inventory.addStockDialog.title')}</DialogTitle>
-        </DialogHeader>
+          <h2 className="text-2xl font-bold pr-12">{t('inventory.addStockDialog.title')}</h2>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Product Name */}
@@ -159,7 +153,7 @@ export function AddStockDialog({ open, onClose, product }: AddStockDialogProps) 
             </div>
           )}
 
-          <DialogFooter>
+          <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               {t('common.cancel')}
             </Button>
@@ -168,9 +162,9 @@ export function AddStockDialog({ open, onClose, product }: AddStockDialogProps) 
                 ? t('common.saving')
                 : t('inventory.addStockDialog.confirm')}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ModalWrapper>
   )
 }

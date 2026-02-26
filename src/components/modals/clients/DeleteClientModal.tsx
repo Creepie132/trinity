@@ -15,7 +15,6 @@ export function DeleteClientModal() {
       onOpenChange={(open) => !open && closeModal('client-delete')}
       clientId={data?.clientId}
       clientName={data?.clientName}
-      onSuccess={data?.onSuccess}
     />
   )
 }

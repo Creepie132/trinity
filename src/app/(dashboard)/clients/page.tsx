@@ -9,9 +9,8 @@ import { Plus, Search, Eye, Edit, MessageSquare, CreditCard, Upload, Users } fro
 import { useClients } from '@/hooks/useClients'
 import { useQueryClient } from '@tanstack/react-query'
 import { AddClientDialog } from '@/components/clients/AddClientDialog'
-import { ClientBottomSheet } from '@/components/clients/ClientBottomSheet'
-import { ClientDesktopPanel } from '@/components/clients/ClientDesktopPanel'
 import { ClientSummary } from '@/types/database'
+import { useModalStore } from '@/store/useModalStore'
 import { format } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -33,9 +32,8 @@ export default function ClientsPage() {
   const [page, setPage] = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [selectedClient, setSelectedClient] = useState<ClientSummary | null>(null)
-  const [clientSheetOpen, setClientSheetOpen] = useState(false)
-  const [desktopPanelClient, setDesktopPanelClient] = useState<ClientSummary | null>(null)
+  
+  const { openModal } = useModalStore()
 
   const perPage = 20
 
@@ -83,14 +81,16 @@ export default function ClientsPage() {
   }, [features.isActive, features.hasClients, features.isLoading, router])
 
   const handleClientClick = (client: ClientSummary) => {
-    // Десктоп (>= lg = 1024px) — открыть панель
-    // Мобильный — открыть TrinityBottomDrawer
-    if (window.innerWidth >= 1024) {
-      setDesktopPanelClient(client)
-    } else {
-      setSelectedClient(client)
-      setClientSheetOpen(true)
-    }
+    openModal('client-details', {
+      client,
+      locale: language === 'he' ? 'he' : 'ru',
+      enabledModules: {
+        appointments: features.hasAppointments,
+      },
+      onSelect: (editClient: any) => {
+        // Handle edit logic if needed
+      },
+    })
   }
 
   // Show loading screen while fetching data
@@ -452,70 +452,6 @@ export default function ClientsPage() {
 
       {/* Dialogs */}
       <AddClientDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
-
-      {/* ClientBottomSheet (mobile + desktop) */}
-      {selectedClient && (
-        <ClientBottomSheet
-            client={{
-              id: selectedClient.id,
-              name: `${selectedClient.first_name} ${selectedClient.last_name}`,
-              phone: selectedClient.phone || undefined,
-              email: selectedClient.email || undefined,
-              visits_count: selectedClient.total_visits,
-              last_visit: selectedClient.last_visit || undefined,
-              notes: selectedClient.notes || undefined,
-              created_at: selectedClient.created_at || undefined,
-            }}
-            isOpen={clientSheetOpen}
-            onClose={() => {
-              setClientSheetOpen(false)
-              setSelectedClient(null)
-            }}
-            locale={language === 'he' ? 'he' : 'ru'}
-            isDemo={isDemo}
-            enabledModules={{ visits: features.hasVisits, payments: features.hasPayments, sms: features.hasSms }}
-            onDelete={async (clientId) => {
-              // Handle delete via GDPR endpoint
-              try {
-                const res = await fetch(`/api/clients/${clientId}/gdpr-delete`, { method: 'DELETE' })
-                if (res.ok) {
-                  router.refresh()
-                }
-              } catch (e) {
-                console.error(e)
-              }
-            }}
-          />
-      )}
-
-      {/* Desktop Panel */}
-      {desktopPanelClient && (
-        <ClientDesktopPanel
-          client={{
-            id: desktopPanelClient.id,
-            first_name: desktopPanelClient.first_name,
-            last_name: desktopPanelClient.last_name,
-            phone: desktopPanelClient.phone,
-            email: desktopPanelClient.email,
-            date_of_birth: desktopPanelClient.date_of_birth,
-            address: desktopPanelClient.address,
-            notes: desktopPanelClient.notes,
-          }}
-          isOpen={!!desktopPanelClient}
-          onClose={() => setDesktopPanelClient(null)}
-          onEdit={(client) => {
-            setDesktopPanelClient(null)
-            // TODO: открыть форму редактирования
-            setSelectedClient(desktopPanelClient)
-            setClientSheetOpen(true)
-          }}
-          onSaved={(updated) => {
-            setDesktopPanelClient(updated)
-            queryClient.invalidateQueries({ queryKey: ['clients'] })
-          }}
-          locale={language === 'he' ? 'he' : 'ru'}
-        />
-      )}
 
       {/* Mobile FAB (Floating Action Button) */}
       <button

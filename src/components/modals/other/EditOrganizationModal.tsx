@@ -70,12 +70,19 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
   useEffect(() => {
     if (organization && isOpen) {
       const businessInfo = organization.features?.business_info || {}
+      
+      // Функция для очистки значений "—"
+      const cleanValue = (value: any) => {
+        if (!value || value === '—') return ''
+        return value
+      }
+      
       setFormData({
-        display_name: businessInfo.display_name || organization.display_name || organization.name || '',
-        owner_name: businessInfo.owner_name || organization.owner_name || '',
-        mobile: businessInfo.mobile || organization.phone || '',
-        address: businessInfo.address || '',
-        city: businessInfo.city || '',
+        display_name: cleanValue(businessInfo.display_name || organization.display_name || organization.name),
+        owner_name: cleanValue(businessInfo.owner_name || organization.owner_name),
+        mobile: cleanValue(businessInfo.mobile || organization.phone),
+        address: cleanValue(businessInfo.address),
+        city: cleanValue(businessInfo.city),
       })
     }
   }, [organization, isOpen])

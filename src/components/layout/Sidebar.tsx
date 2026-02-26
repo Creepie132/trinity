@@ -20,9 +20,9 @@ const baseNavigation = [
   { name_he: 'תשלומים', name_ru: 'Платежи', href: '/payments', icon: CreditCard, requireFeature: 'payments' },
   { name_he: 'מלאי', name_ru: 'Склад', href: '/inventory', icon: Package, requireFeature: 'inventory' },
   { name_he: 'יומן', name_ru: 'Дневник', href: '/diary', icon: BookOpen, requireFeature: null },
-  { name_he: 'הודעות SMS', name_ru: 'SMS-сообщения', href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
-  { name_he: 'סטטיסטיקה', name_ru: 'Статистика', href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
-  { name_he: 'הצעות שותפים', name_ru: 'Предложения партнёров', href: '/partners', icon: Gift, requireFeature: null },
+  // { name_he: 'הודעות SMS', name_ru: 'SMS-сообщения', href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
+  // { name_he: 'סטטיסטיקה', name_ru: 'Статистика', href: '/stats', icon: BarChart3, requireFeature: 'analytics' },
+  // { name_he: 'הצעות שותפים', name_ru: 'Предложения партнёров', href: '/partners', icon: Gift, requireFeature: null },
   { name_he: 'הגדרות', name_ru: 'Настройки', href: '/settings', icon: Settings, requireFeature: null },
 ]
 

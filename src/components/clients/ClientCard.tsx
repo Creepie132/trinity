@@ -1,7 +1,9 @@
 'use client'
 
-import { Calendar, Clock, Phone, MessageCircle, CalendarPlus, Pencil, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { Calendar, Clock, Phone, MessageCircle, CalendarPlus, Pencil, ChevronRight, X, Mail } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
+import ModalWrapper from '../ModalWrapper'
 
 interface ClientCardProps {
   client: {
@@ -31,11 +33,11 @@ export function ClientCard({
   enabledModules,
   onSelect,
 }: ClientCardProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const clientName = getClientName(client)
   const initials = getClientInitials(client)
 
-  // Цвет аватара — генерируем из имени (стабильный)
   const colors = [
     'bg-blue-500',
     'bg-emerald-500',
@@ -60,6 +62,9 @@ export function ClientCard({
       edit: 'ערוך פרטים',
       notes: 'הערות',
       createdAt: 'נוצר',
+      totalPaid: 'סה"כ שולם',
+      clientDetails: 'פרטי לקוח',
+      actions: 'פעולות',
     },
     ru: {
       visits: 'Визитов',
@@ -71,16 +76,30 @@ export function ClientCard({
       edit: 'Редактировать',
       notes: 'Заметки',
       createdAt: 'Создан',
+      totalPaid: 'Всего оплачено',
+      clientDetails: 'Детали клиента',
+      actions: 'Действия',
     },
   }
 
   const text = t[locale]
 
+  const handleCardClick = () => {
+    setIsModalOpen(true)
+  }
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsModalOpen(false)
+    onSelect(client)
+  }
+
   return (
-    <div
-      onClick={() => onSelect(client)}
-      className="bg-card border rounded-xl p-4 mb-2 active:bg-muted/50 transition cursor-pointer"
-    >
+    <>
+      <div
+        onClick={handleCardClick}
+        className="bg-card border rounded-xl p-4 mb-2 active:bg-muted/50 transition cursor-pointer"
+      >
         {/* Header: Аватар + Имя + Телефон */}
         <div className="flex items-center gap-3">
           {/* Аватар */}
@@ -121,6 +140,118 @@ export function ClientCard({
             </div>
           )}
         </div>
-    </div>
+      </div>
+
+      <ModalWrapper isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <div className="w-full max-w-md p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold">{text.clientDetails}</h2>
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="p-2 hover:bg-gray-100 rounded-full transition"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Аватар и имя */}
+          <div className="flex flex-col items-center mb-6">
+            <div
+              className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3`}
+            >
+              {initials}
+            </div>
+            <h3 className="text-2xl font-bold text-center">{clientName}</h3>
+          </div>
+
+          {/* Информация */}
+          <div className="space-y-4 mb-6">
+            {client.phone && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Phone size={18} className="text-muted-foreground" />
+                <span className="text-sm">{client.phone}</span>
+              </div>
+            )}
+
+            {client.email && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Mail size={18} className="text-muted-foreground" />
+                <span className="text-sm">{client.email}</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <Calendar size={18} className="text-muted-foreground" />
+              <span className="text-sm">
+                {text.visits}: {visitsCount}
+              </span>
+            </div>
+
+            {client.last_visit && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Clock size={18} className="text-muted-foreground" />
+                <span className="text-sm">
+                  {text.lastVisit}:{' '}
+                  {new Date(client.last_visit).toLocaleDateString(
+                    locale === 'he' ? 'he-IL' : 'ru-RU'
+                  )}
+                </span>
+              </div>
+            )}
+
+            {client.total_paid && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm font-medium">
+                  {text.totalPaid}: ₪{client.total_paid}
+                </span>
+              </div>
+            )}
+
+            {client.notes && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium mb-1">{text.notes}:</p>
+                <p className="text-sm text-muted-foreground">{client.notes}</p>
+              </div>
+            )}
+
+            {client.created_at && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-muted-foreground">
+                  {text.createdAt}:{' '}
+                  {new Date(client.created_at).toLocaleDateString(
+                    locale === 'he' ? 'he-IL' : 'ru-RU'
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Действия */}
+          <div className="space-y-2">
+            <button
+              onClick={handleEditClick}
+              className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition"
+            >
+              <Pencil size={18} />
+              {text.edit}
+            </button>
+
+            {enabledModules?.appointments && (
+              <button
+                onClick={() => {
+                  setIsModalOpen(false)
+                  // Здесь можно добавить логику для создания нового визита
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-secondary text-secondary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition"
+              >
+                <CalendarPlus size={18} />
+                {text.newVisit}
+              </button>
+            )}
+          </div>
+        </div>
+      </ModalWrapper>
+    </>
   )
 }

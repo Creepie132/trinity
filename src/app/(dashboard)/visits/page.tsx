@@ -58,6 +58,8 @@ export default function VisitsPage() {
   const [services, setServices] = useState<any[]>([])
   const [allClients, setAllClients] = useState<any[]>([])
   const [newVisitNotify, setNewVisitNotify] = useState<any>(null)
+  const [paymentVisit, setPaymentVisit] = useState<any>(null)
+  const [paymentMethod, setPaymentMethod] = useState<string>('')
   
   // Bookings hook
   // Bookings view removed - online bookings now show in main list with badge
@@ -291,8 +293,8 @@ export default function VisitsPage() {
   }
 
   const handleCompleteVisit = (visit: Visit) => {
-    setSelectedVisit(visit)
-    setPaymentDialogOpen(true)
+    setPaymentVisit(visit)
+    setPaymentMethod('') // Reset payment method
   }
 
   const handleCancelVisit = async (visitId: string) => {
@@ -836,6 +838,65 @@ export default function VisitsPage() {
               className="w-full py-3 rounded-2xl bg-slate-100 text-slate-500 text-sm font-medium"
             >
               {language === 'he' ? 'דלג' : 'Пропустить'}
+            </button>
+          </div>
+        </TrinityBottomDrawer>
+      )}
+
+      {/* Payment flow after visit completion */}
+      {paymentVisit && (
+        <TrinityBottomDrawer
+          isOpen={!!paymentVisit}
+          onClose={() => setPaymentVisit(null)}
+          title={language === 'he' ? 'תשלום' : 'Оплата'}
+        >
+          <div className="space-y-4">
+            {/* Сумма */}
+            <div className="text-center py-4">
+              <p className="text-sm text-slate-400">{language === 'he' ? 'סכום לתשלום' : 'К оплате'}</p>
+              <p className="text-4xl font-bold mt-1">₪{paymentVisit.price || 0}</p>
+            </div>
+
+            {/* Способы оплаты */}
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { key: 'cash', label: language === 'he' ? 'מזומן' : 'Наличные', emoji: '💵' },
+                { key: 'card', label: language === 'he' ? 'כרטיס' : 'Карта', emoji: '💳' },
+                { key: 'transfer', label: language === 'he' ? 'העברה' : 'Перевод', emoji: '🏦' },
+                { key: 'bit', label: 'Bit', emoji: '📱' },
+              ].map(m => (
+                <button
+                  key={m.key}
+                  onClick={() => setPaymentMethod(m.key)}
+                  className={`py-3 rounded-2xl text-sm font-medium transition ${
+                    paymentMethod === m.key
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {m.emoji} {m.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Кнопки */}
+            <button
+              onClick={async () => {
+                await updateVisitStatus(paymentVisit.id, 'completed')
+                // TODO: создать запись платежа
+                setPaymentVisit(null)
+              }}
+              disabled={!paymentMethod}
+              className="w-full py-3.5 rounded-2xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50"
+            >
+              {language === 'he' ? 'אשר תשלום' : 'Подтвердить оплату'}
+            </button>
+
+            <button
+              onClick={() => setPaymentVisit(null)}
+              className="w-full py-3 rounded-2xl bg-slate-100 text-slate-500 text-sm font-medium"
+            >
+              {language === 'he' ? 'צא' : 'Выйти'}
             </button>
           </div>
         </TrinityBottomDrawer>

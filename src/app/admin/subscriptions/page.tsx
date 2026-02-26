@@ -19,6 +19,7 @@ import { PLANS, getPlan, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
 import { ResponsiveDataView } from '@/components/ui/ResponsiveDataView'
 import { EditOrganizationModal } from '@/components/modals/other/EditOrganizationModal'
+import ModalWrapper from '@/components/ModalWrapper'
 
 interface Organization {
   id: string
@@ -930,16 +931,16 @@ export default function AdminSubscriptionsPage() {
       </Card>
 
       {/* Extend Dialog */}
-      <Dialog open={extendDialogOpen} onOpenChange={setExtendDialogOpen}>
-        <DialogContent className="max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>
+      <ModalWrapper isOpen={extendDialogOpen} onClose={() => setExtendDialogOpen(false)}>
+        <div className="w-full max-w-3xl p-6 max-h-[90vh] flex flex-col">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold">
               {t.extendAccess} - {selectedOrg?.name}
-            </DialogTitle>
-            <DialogDescription>
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {selectedOrg?.owner_email}
-            </DialogDescription>
-          </DialogHeader>
+            </p>
+          </div>
           <div className="overflow-y-auto flex-1 px-1">
             <div className="space-y-4 mt-4">
             {/* Plan Selection */}
@@ -1176,18 +1177,18 @@ export default function AdminSubscriptionsPage() {
             </Button>
             <Button onClick={handleSaveExtension}>{t.save}</Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </ModalWrapper>
 
       {/* Invitation Modal */}
-      <Dialog open={inviteModalOpen} onOpenChange={setInviteModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <ModalWrapper isOpen={inviteModalOpen} onClose={() => setInviteModalOpen(false)}>
+        <div className="w-full max-w-md p-6">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
               <Send className="w-5 h-5" />
               {t.sendInvitation}
-            </DialogTitle>
-          </DialogHeader>
+            </h2>
+          </div>
           <form onSubmit={handleSendInvitation} className="space-y-4 mt-4">
             <div>
               <Label htmlFor="invite-email">{t.email} *</Label>
@@ -1235,24 +1236,22 @@ export default function AdminSubscriptionsPage() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </ModalWrapper>
 
       {/* Plans Management Modal */}
-      <Dialog open={plansModalOpen} onOpenChange={setPlansModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Package className="w-6 h-6 text-amber-600" />
-                {t.plansTitle}
-              </div>
-              <Button onClick={addNewPlan} size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                {t.addPlan}
-              </Button>
-            </DialogTitle>
-          </DialogHeader>
+      <ModalWrapper isOpen={plansModalOpen} onClose={() => setPlansModalOpen(false)}>
+        <div className="w-full max-w-6xl p-6 max-h-[90vh] overflow-y-auto">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="w-6 h-6 text-amber-600" />
+              <h2 className="text-xl font-semibold">{t.plansTitle}</h2>
+            </div>
+            <Button onClick={addNewPlan} size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              {t.addPlan}
+            </Button>
+          </div>
 
           {/* Plans Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -1406,8 +1405,8 @@ export default function AdminSubscriptionsPage() {
               </Card>
             ))}
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </ModalWrapper>
 
       {/* Edit Organization Modal */}
       <EditOrganizationModal

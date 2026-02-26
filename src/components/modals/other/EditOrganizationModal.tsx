@@ -9,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
 import { Building2, Save, X } from 'lucide-react'
 import { ClientSearchInput } from '@/components/ui/ClientSearchInput'
+import ModalWrapper from '@/components/ModalWrapper'
 
 interface EditOrganizationModalProps {
   isOpen: boolean
@@ -125,14 +126,14 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <ModalWrapper isOpen={isOpen} onClose={onClose}>
+      <div className="w-full max-w-md p-6">
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
             <Building2 className="w-5 h-5 text-primary" />
             {t.title}
-          </DialogTitle>
-        </DialogHeader>
+          </h2>
+        </div>
 
         <div className="space-y-4 mt-4">
           {/* Название организации */}
@@ -222,7 +223,7 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ModalWrapper>
   )
 }

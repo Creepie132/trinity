@@ -78,8 +78,17 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (readError) {
-      console.error('Error reading organization:', readError)
-      return NextResponse.json({ error: readError.message }, { status: 500 })
+      console.error('❌ Error reading organization:', {
+        error: readError,
+        code: readError.code,
+        message: readError.message,
+        details: readError.details,
+        hint: readError.hint,
+        org_id,
+      })
+      return NextResponse.json({ 
+        error: `Failed to read organization: ${readError.message}` 
+      }, { status: 500 })
     }
 
     // Merge features (preserve existing fields)
@@ -108,15 +117,31 @@ export async function PUT(request: NextRequest) {
     console.log('Update data:', JSON.stringify(updateData))
 
     // Update organization
-    const { error } = await supabaseAdmin
+    const { data: updateResult, error } = await supabaseAdmin
       .from('organizations')
       .update(updateData)
       .eq('id', org_id)
+      .select()
 
     if (error) {
-      console.error('Update org error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('❌ Update organization ERROR:', {
+        error,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        org_id,
+        updateData,
+      })
+      return NextResponse.json({ 
+        error: `Failed to update organization: ${error.message}${error.hint ? ` (Hint: ${error.hint})` : ''}` 
+      }, { status: 500 })
     }
+
+    console.log('✅ Organization updated successfully:', {
+      org_id,
+      result: updateResult,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

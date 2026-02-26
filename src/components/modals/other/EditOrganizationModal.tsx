@@ -50,6 +50,19 @@ const translations = {
     saved: 'Организация успешно обновлена',
     error: 'Ошибка обновления организации',
   },
+  en: {
+    title: 'Edit Organization',
+    orgName: 'Organization Name',
+    owner: 'Owner',
+    phone: 'Phone',
+    address: 'Address',
+    city: 'City',
+    save: 'Save',
+    cancel: 'Cancel',
+    saving: 'Saving...',
+    saved: 'Organization updated successfully',
+    error: 'Error updating organization',
+  },
 }
 
 export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }: EditOrganizationModalProps) {
@@ -103,14 +116,28 @@ export function EditOrganizationModal({ isOpen, onClose, organization, onSaved }
         }),
       })
 
-      if (!response.ok) throw new Error('Failed to update organization')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('❌ ERROR updating organization:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+          orgId: organization.id,
+          features: updatedFeatures,
+        })
+        throw new Error(errorData.error || 'Failed to update organization')
+      }
 
       toast.success(t.saved)
       onClose()
       if (onSaved) onSaved()
-    } catch (error) {
-      console.error('Error updating organization:', error)
-      toast.error(t.error)
+    } catch (error: any) {
+      console.error('❌ EXCEPTION updating organization:', {
+        message: error?.message,
+        stack: error?.stack,
+        orgId: organization?.id,
+      })
+      toast.error(`${t.error}: ${error?.message || 'Unknown error'}`)
     } finally {
       setLoading(false)
     }

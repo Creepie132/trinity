@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@supabase/ssr'
 
 // Service role client (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -15,43 +16,86 @@ const supabaseAdmin = createClient(
 
 export async function PUT(request: NextRequest) {
   try {
-    // Check auth
-    const authHeader = request.headers.get('cookie')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get current user from cookie
-    const supabase = createClient(
+    console.log('🔐 === AUTH CHECK START ===')
+    
+    // Create Supabase client with proper cookie handling
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        global: {
-          headers: {
-            cookie: authHeader,
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            // No-op for GET requests
           },
         },
       }
     )
 
+    // Get current user from session
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser()
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    console.log('🔐 User from session:', {
+      userId: user?.id || 'null',
+      email: user?.email || 'null',
+      userError: userError?.message || 'none',
+      hasCookies: request.cookies.getAll().length > 0,
+      cookieNames: request.cookies.getAll().map(c => c.name),
+    })
+
+    if (userError || !user) {
+      console.error('❌ Auth failed:', {
+        error: userError?.message || 'No user in session',
+        hasCookies: request.cookies.getAll().length > 0,
+      })
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        details: 'No valid session found',
+      }, { status: 401 })
     }
 
-    // Check if user is admin
+    // Check if user is admin using service role client
     const { data: adminData, error: adminError } = await supabaseAdmin
       .from('admin_users')
-      .select('user_id')
+      .select('user_id, email, role, full_name')
       .eq('user_id', user.id)
       .single()
 
+    console.log('🔐 Admin check:', {
+      userId: user.id,
+      adminFound: !!adminData,
+      adminRole: adminData?.role || 'not found',
+      adminEmail: adminData?.email || 'not found',
+      adminError: adminError?.message || 'none',
+      errorCode: adminError?.code || 'none',
+    })
+
     if (adminError || !adminData) {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
+      console.error('❌ Admin access denied:', {
+        userId: user.id,
+        email: user.email,
+        error: adminError?.message || 'User not in admin_users table',
+        code: adminError?.code,
+      })
+      return NextResponse.json({ 
+        error: 'Forbidden: Admin access required',
+        details: 'User is not an administrator',
+        userId: user.id,
+        email: user.email,
+      }, { status: 403 })
     }
+
+    console.log('✅ Admin authenticated:', {
+      userId: user.id,
+      email: user.email,
+      role: adminData.role,
+      fullName: adminData.full_name,
+    })
 
     // Get request body
     const body = await request.json()

@@ -69,10 +69,10 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     { name: getModuleName('diary'), href: '/diary', icon: BookOpen, moduleKey: 'diary' },
     { name: getModuleName('inventory'), href: '/inventory', icon: Package, moduleKey: 'inventory' },
     { name: getModuleName('payments'), href: '/payments', icon: CreditCard, moduleKey: 'payments' },
-    { name: getModuleName('sms'), href: '/sms', icon: MessageSquare, moduleKey: 'sms' },
-    { name: getModuleName('statistics'), href: '/stats', icon: BarChart3, moduleKey: 'statistics' },
-    { name: getModuleName('reports'), href: '/analytics', icon: BarChart3, moduleKey: 'reports' },
-    { name: t('nav.partners'), href: '/partners', icon: Gift, moduleKey: null },
+    // { name: getModuleName('sms'), href: '/sms', icon: MessageSquare, moduleKey: 'sms' },
+    // { name: getModuleName('statistics'), href: '/stats', icon: BarChart3, moduleKey: 'statistics' },
+    // { name: getModuleName('reports'), href: '/analytics', icon: BarChart3, moduleKey: 'reports' },
+    // { name: t('nav.partners'), href: '/partners', icon: Gift, moduleKey: null },
     { name: t('nav.settings'), href: '/settings', icon: Settings, moduleKey: null },
   ]
 

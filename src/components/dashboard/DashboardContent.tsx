@@ -84,30 +84,39 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
           fetch('/api/tasks'),
         ])
 
+        // Helper: отказоустойчивый парсинг ответа
+        async function safeParse(response: Response, name: string) {
+          try {
+            console.log(`${name} status:`, response.status)
+            
+            if (!response.ok) {
+              console.error(`Сбой API ${name}: Сервер вернул статус ${response.status}`)
+              return []
+            }
+            
+            const data = await response.json()
+            console.log(`${name} data:`, typeof data, Array.isArray(data), JSON.stringify(data)?.slice(0, 200))
+            return data
+          } catch (error) {
+            console.error(`Критическая ошибка загрузки ${name}:`, error)
+            return []
+          }
+        }
+
         // Клиенты
-        console.log('Clients status:', clientsRes.status)
-        const clientsData = await clientsRes.json()
-        console.log('Clients data:', typeof clientsData, Array.isArray(clientsData), JSON.stringify(clientsData)?.slice(0, 200))
+        const clientsData = await safeParse(clientsRes, 'Clients')
 
         // Визиты
-        console.log('Visits status:', visitsRes.status)
-        const visitsData = await visitsRes.json()
-        console.log('Visits data:', typeof visitsData, Array.isArray(visitsData), JSON.stringify(visitsData)?.slice(0, 200))
+        const visitsData = await safeParse(visitsRes, 'Visits')
 
         // Платежи
-        console.log('Payments status:', paymentsRes.status)
-        const paymentsData = await paymentsRes.json()
-        console.log('Payments data:', typeof paymentsData, Array.isArray(paymentsData), JSON.stringify(paymentsData)?.slice(0, 200))
+        const paymentsData = await safeParse(paymentsRes, 'Payments')
 
         // Сегодняшние визиты
-        console.log('Today visits status:', todayVisitsRes.status)
-        const todayVisitsData = await todayVisitsRes.json()
-        console.log('Today visits data:', typeof todayVisitsData, Array.isArray(todayVisitsData), JSON.stringify(todayVisitsData)?.slice(0, 200))
+        const todayVisitsData = await safeParse(todayVisitsRes, 'Today visits')
 
         // Задачи
-        console.log('Tasks status:', tasksRes.status)
-        const tasksData = await tasksRes.json()
-        console.log('Tasks data:', typeof tasksData, Array.isArray(tasksData), JSON.stringify(tasksData)?.slice(0, 200))
+        const tasksData = await safeParse(tasksRes, 'Tasks')
 
         // Universal array parser
         function parseArray(data: any): any[] {

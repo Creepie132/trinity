@@ -1005,7 +1005,7 @@ export default function AdminSubscriptionsPage() {
             {selectedPlan === 'custom' && (
               <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <p className="font-medium mb-3 text-sm">{t.selectModules}:</p>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-2 max-h-96 overflow-y-auto">
                   {modulePricing.length > 0 ? (
                     modulePricing.map((mod) => {
                       const isEnabled = customModules[mod.module_key] || false
@@ -1014,13 +1014,38 @@ export default function AdminSubscriptionsPage() {
                         : parseFloat(mod.price_monthly || 0)
                       
                       return (
-                        <div key={mod.module_key} className="p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2 flex-1">
-                              <span className="text-sm font-medium">
-                                {language === 'he' ? mod.name_he : mod.name_ru}
-                              </span>
-                            </div>
+                        <div key={mod.module_key} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-2 px-2 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-colors">
+                          {/* Название модуля */}
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium">
+                              {language === 'he' ? mod.name_he : mod.name_ru}
+                            </span>
+                          </div>
+                          
+                          {/* Цена */}
+                          <div className="flex items-center gap-1 sm:min-w-[140px]">
+                            <span className="text-sm text-muted-foreground">₪</span>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={currentPrice}
+                              onChange={(e) => {
+                                const newPrice = parseFloat(e.target.value) || 0
+                                setCustomModulePrices((prev) => ({ 
+                                  ...prev, 
+                                  [mod.module_key]: newPrice 
+                                }))
+                              }}
+                              className="h-8 w-20 text-sm"
+                            />
+                            <span className="text-sm text-muted-foreground whitespace-nowrap">
+                              /{language === 'he' ? 'חודש' : 'мес'}
+                            </span>
+                          </div>
+                          
+                          {/* Тумблер */}
+                          <div className="flex items-center justify-end sm:justify-start">
                             <Switch
                               checked={isEnabled}
                               onCheckedChange={(val) => {
@@ -1028,50 +1053,59 @@ export default function AdminSubscriptionsPage() {
                               }}
                             />
                           </div>
-                          {isEnabled && (
-                            <div className="flex items-center gap-2 mt-2">
-                              <Label className="text-xs text-muted-foreground whitespace-nowrap">
-                                {language === 'he' ? 'מחיר:' : 'Цена:'}
-                              </Label>
-                              <div className="flex items-center gap-1 flex-1">
-                                <span className="text-xs text-muted-foreground">₪</span>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={currentPrice}
-                                  onChange={(e) => {
-                                    const newPrice = parseFloat(e.target.value) || 0
-                                    setCustomModulePrices((prev) => ({ 
-                                      ...prev, 
-                                      [mod.module_key]: newPrice 
-                                    }))
-                                  }}
-                                  className="h-8 text-sm"
-                                />
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                  / {language === 'he' ? 'חודש' : 'мес'}
-                                </span>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       )
                     })
                   ) : (
-                    MODULES.map((mod) => (
-                      <div key={mod.key} className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded">
-                        <span className="text-sm">
-                          {language === 'he' ? mod.name_he : mod.name_ru}
-                        </span>
-                        <Switch
-                          checked={customModules[mod.key] || false}
-                          onCheckedChange={(val) =>
-                            setCustomModules((prev) => ({ ...prev, [mod.key]: val }))
-                          }
-                        />
-                      </div>
-                    ))
+                    MODULES.map((mod) => {
+                      const isEnabled = customModules[mod.key] || false
+                      const currentPrice = customModulePrices[mod.key] !== undefined 
+                        ? customModulePrices[mod.key] 
+                        : 0
+                      
+                      return (
+                        <div key={mod.key} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-2 px-2 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-colors">
+                          {/* Название модуля */}
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium">
+                              {language === 'he' ? mod.name_he : mod.name_ru}
+                            </span>
+                          </div>
+                          
+                          {/* Цена */}
+                          <div className="flex items-center gap-1 sm:min-w-[140px]">
+                            <span className="text-sm text-muted-foreground">₪</span>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={currentPrice}
+                              onChange={(e) => {
+                                const newPrice = parseFloat(e.target.value) || 0
+                                setCustomModulePrices((prev) => ({ 
+                                  ...prev, 
+                                  [mod.key]: newPrice 
+                                }))
+                              }}
+                              className="h-8 w-20 text-sm"
+                            />
+                            <span className="text-sm text-muted-foreground whitespace-nowrap">
+                              /{language === 'he' ? 'חודש' : 'мес'}
+                            </span>
+                          </div>
+                          
+                          {/* Тумблер */}
+                          <div className="flex items-center justify-end sm:justify-start">
+                            <Switch
+                              checked={isEnabled}
+                              onCheckedChange={(val) =>
+                                setCustomModules((prev) => ({ ...prev, [mod.key]: val }))
+                              }
+                            />
+                          </div>
+                        </div>
+                      )
+                    })
                   )}
                 </div>
                 <div className="mt-4">

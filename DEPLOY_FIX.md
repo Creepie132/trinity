@@ -134,16 +134,82 @@ await fetch(`/api/products/${id}`, {
 
 ---
 
+## 📝 Дополнительные исправления TypeScript
+
+### Commit: `fabc2b9` (2026-02-26 10:20 UTC)
+**"fix: ProductDetailSheet and BarcodeScanner props"**
+
+**Проблема:**
+TypeScript ошибка: `Type '{ product: Product | null; isOpen: boolean; ... }' is not assignable`
+
+**Причина:**
+Компоненты `ProductDetailSheet` и `BarcodeScanner` используют стандартный prop `open` (как в shadcn/ui и Radix), а не `isOpen`.
+
+**Исправления:**
+
+1. **ProductDetailSheet:**
+   ```typescript
+   // ❌ БЫЛО (неверно):
+   <ProductDetailSheet
+     isOpen={detailSheetOpen}  // Не существует в интерфейсе
+     onUpdate={() => refetch()}  // Не существует в интерфейсе
+   />
+   
+   // ✅ СТАЛО (правильно):
+   <ProductDetailSheet
+     open={detailSheetOpen}  // Корректный prop
+     // onUpdate убран - его нет в интерфейсе
+   />
+   ```
+
+2. **BarcodeScanner:**
+   ```typescript
+   // ❌ БЫЛО (неверно):
+   <BarcodeScanner
+     isOpen={scannerOpen}  // Не существует в интерфейсе
+   />
+   
+   // ✅ СТАЛО (правильно):
+   <BarcodeScanner
+     open={scannerOpen}  // Корректный prop
+   />
+   ```
+
+**Интерфейсы компонентов:**
+
+```typescript
+// ProductDetailSheet
+interface ProductDetailSheetProps {
+  open: boolean        // ✅ Не isOpen!
+  onClose: () => void
+  product: Product | null
+  onEdit?: (product: Product) => void  // Опциональный
+}
+
+// BarcodeScanner
+interface BarcodeScannerProps {
+  open: boolean        // ✅ Не isOpen!
+  onClose: () => void
+  onScan: (barcode: string) => void
+}
+```
+
+---
+
 ## 📝 Проверочный чеклист
 
 - [x] API endpoint исправлен на правильный (/api/products)
 - [x] CreateProductDialog props исправлены
+- [x] ProductDetailSheet props исправлены (open вместо isOpen)
+- [x] BarcodeScanner props исправлены (open вместо isOpen)
+- [x] Удалён несуществующий prop onUpdate
 - [x] Calendar click обработка адаптивная
 - [x] Categories filter с type guard
 - [x] Dashboard parseArray работает
 - [x] Все импорты существуют
 - [x] Все компоненты существуют
 - [x] Хуки useProducts, useLowStockProducts существуют
+- [x] TypeScript ошибки исправлены
 
 ---
 

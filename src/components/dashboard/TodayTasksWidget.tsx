@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { WidgetCard } from '@/components/ui/WidgetCard'
+import { useModalStore } from '@/store/useModalStore'
 
 interface TodayTasksWidgetProps {
   tasks: any[]
@@ -14,6 +15,7 @@ export function TodayTasksWidget({ tasks, locale }: TodayTasksWidgetProps) {
   const perPage = 5
   const totalPages = Math.ceil(tasks.length / perPage)
   const current = tasks.slice(page * perPage, (page + 1) * perPage)
+  const { openModal } = useModalStore()
 
   return (
     <WidgetCard className="p-4">
@@ -30,7 +32,7 @@ export function TodayTasksWidget({ tasks, locale }: TodayTasksWidgetProps) {
             {current.map((t: any) => (
               <div 
                 key={t.id} 
-                onClick={() => window.location.href = '/diary'}
+                onClick={() => openModal('task-details', { task: t, locale })}
                 className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition"
               >
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${

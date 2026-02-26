@@ -9,10 +9,11 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
-import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Package, Plus, Trash2, Save, Settings } from 'lucide-react'
+import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Package, Plus, Trash2, Save, Settings, Mail, Send, Loader2 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { PLANS, getPlan, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
@@ -89,6 +90,12 @@ export default function AdminSubscriptionsPage() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [savingPlan, setSavingPlan] = useState<string | null>(null)
 
+  // Invitation modal
+  const [inviteModalOpen, setInviteModalOpen] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteMessage, setInviteMessage] = useState('')
+  const [sendingInvite, setSendingInvite] = useState(false)
+
   const translations = {
     he: {
       title: 'מנויים וגישה',
@@ -144,6 +151,17 @@ export default function AdminSubscriptionsPage() {
       color: 'צבע',
       key: 'מזהה',
       delete: 'מחק',
+      // Invitation modal
+      inviteOrg: 'הזמן ארגון',
+      sendInvitation: 'שלח הזמנה',
+      message: 'הודעה',
+      messagePlaceholder: 'הודעה אישית למקבל...',
+      send: 'שלח',
+      sending: 'שולח...',
+      successSent: 'ההזמנה נשלחה ל',
+      inviteUrl: 'קישור הזמנה:',
+      copied: 'הקישור הועתק',
+      emailRequired: 'נדרש אימייל',
     },
     ru: {
       title: 'Подписки и доступ',
@@ -199,6 +217,17 @@ export default function AdminSubscriptionsPage() {
       color: 'Цвет',
       key: 'Ключ',
       delete: 'Удалить',
+      // Invitation modal
+      inviteOrg: 'Пригласить организацию',
+      sendInvitation: 'Отправить приглашение',
+      message: 'Сообщение',
+      messagePlaceholder: 'Персональное сообщение для получателя...',
+      send: 'Отправить',
+      sending: 'Отправка...',
+      successSent: 'Приглашение отправлено на',
+      inviteUrl: 'Ссылка приглашения:',
+      copied: 'Ссылка скопирована',
+      emailRequired: 'Требуется email',
     },
   }
 
@@ -517,6 +546,57 @@ export default function AdminSubscriptionsPage() {
     }
   }
 
+  const handleSendInvitation = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!inviteEmail) {
+      toast.error(t.emailRequired)
+      return
+    }
+
+    setSendingInvite(true)
+
+    try {
+      const response = await fetch('/api/admin/invitations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inviteEmail, message: inviteMessage || null }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to send invitation')
+      }
+
+      const data = await response.json()
+
+      // Show warning if user already exists
+      if (data.warning && data.message) {
+        toast.info(data.message, {
+          duration: 8000,
+        })
+      } else {
+        toast.success(`${t.successSent} ${inviteEmail}`)
+      }
+      
+      // Show invite URL
+      if (data.inviteUrl) {
+        toast.info(`${t.inviteUrl} ${data.inviteUrl}`, {
+          duration: 10000,
+        })
+      }
+
+      setInviteEmail('')
+      setInviteMessage('')
+      setInviteModalOpen(false)
+    } catch (error: any) {
+      console.error('Error sending invitation:', error)
+      toast.error(error.message || 'Failed to send invitation')
+    } finally {
+      setSendingInvite(false)
+    }
+  }
+
   // Plans management functions
   const updatePlan = (id: string, field: string, value: any) => {
     setPlans((prev) =>
@@ -636,13 +716,22 @@ export default function AdminSubscriptionsPage() {
           <Shield className="w-8 h-8 text-amber-600" />
           <h1 className="text-3xl font-bold">{t.title}</h1>
         </div>
-        <Button 
-          onClick={() => setPlansModalOpen(true)}
-          className="bg-red-600 hover:bg-red-700 text-white"
-        >
-          <Settings className="w-4 h-4 mr-2" />
-          {t.managePlans}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setInviteModalOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Mail className="w-4 h-4 mr-2" />
+            {t.inviteOrg}
+          </Button>
+          <Button 
+            onClick={() => setPlansModalOpen(true)}
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            {t.managePlans}
+          </Button>
+        </div>
       </div>
 
       {/* Access Requests */}
@@ -974,6 +1063,65 @@ export default function AdminSubscriptionsPage() {
               <Button onClick={handleSaveExtension}>{t.save}</Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invitation Modal */}
+      <Dialog open={inviteModalOpen} onOpenChange={setInviteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5" />
+              {t.sendInvitation}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSendInvitation} className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="invite-email">{t.email} *</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="user@example.com"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="invite-message">{t.message}</Label>
+              <Textarea
+                id="invite-message"
+                value={inviteMessage}
+                onChange={(e) => setInviteMessage(e.target.value)}
+                placeholder={t.messagePlaceholder}
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setInviteModalOpen(false)}
+              >
+                {t.cancel}
+              </Button>
+              <Button type="submit" disabled={sendingInvite}>
+                {sendingInvite ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {t.sending}
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    {t.send}
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 

@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Search, Eye, Edit, MessageSquare, CreditCard, Upload, Users } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { useQueryClient } from '@tanstack/react-query'
-import { AddClientDialog } from '@/components/clients/AddClientDialog'
 import { ClientSummary } from '@/types/database'
 import { useModalStore } from '@/store/useModalStore'
 import { format } from 'date-fns'
@@ -31,7 +30,6 @@ export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
-  const [addDialogOpen, setAddDialogOpen] = useState(false)
   
   const { openModal } = useModalStore()
 
@@ -114,7 +112,7 @@ export default function ClientsPage() {
             </Button>
           </Link>
           <Button 
-            onClick={() => setAddDialogOpen(true)} 
+            onClick={() => openModal('client-add')} 
             disabled={isDemo && clientCount >= 10}
             className="hidden md:flex bg-theme-primary text-white hover:opacity-90 disabled:opacity-50"
           >
@@ -221,7 +219,7 @@ export default function ClientsPage() {
         ) : (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400 mb-4">{t('clients.noClients')}</p>
-            <Button onClick={() => setAddDialogOpen(true)} className="bg-theme-primary text-white hover:opacity-90">
+            <Button onClick={() => openModal('client-add')} className="bg-theme-primary text-white hover:opacity-90">
               <Plus className="w-4 h-4 ml-2" />
               {t('clients.addFirst')}
             </Button>
@@ -259,7 +257,7 @@ export default function ClientsPage() {
             description={language === 'he' ? 'הוסף את הלקוח הראשון שלך' : 'Добавьте первого клиента'}
             action={{
               label: language === 'he' ? 'הוסף לקוח' : 'Добавить',
-              onClick: () => setAddDialogOpen(true),
+              onClick: () => openModal('client-add'),
             }}
           />
         )}
@@ -444,12 +442,9 @@ export default function ClientsPage() {
         )}
       </div>
 
-      {/* Dialogs */}
-      <AddClientDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
-
       {/* Mobile FAB (Floating Action Button) */}
       <button
-        onClick={() => setAddDialogOpen(true)}
+        onClick={() => openModal('client-add')}
         disabled={isDemo && clientCount >= 10}
         className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-theme-primary text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50 disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label={t('clients.addNew')}

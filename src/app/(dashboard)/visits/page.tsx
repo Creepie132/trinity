@@ -13,8 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
 import { useQuery } from '@tanstack/react-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
-import { CompleteVisitPaymentDialog } from '@/components/visits/CompleteVisitPaymentDialog'
+import { useModalStore } from '@/store/useModalStore'
 import { CalendarView } from '@/components/visits/CalendarView'
 import { VisitCard } from '@/components/visits/VisitCard'
 import { ActiveVisitCard } from '@/components/visits/ActiveVisitCard'
@@ -42,9 +41,8 @@ export default function VisitsPage() {
   const { orgId } = useAuth()
   const supabase = createSupabaseBrowserClient()
 
-  const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
+  const { openModal } = useModalStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFilter, setDateFilter] = useState<string>('week')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -404,7 +402,7 @@ export default function VisitsPage() {
         {/* Desktop Buttons */}
         <div className="flex gap-2">
           <ExportButton type="visits" />
-          <Button onClick={() => setAddDialogOpen(true)} className="hidden md:flex bg-theme-primary text-white hover:opacity-90">
+          <Button onClick={() => openModal('visit-create')} className="hidden md:flex bg-theme-primary text-white hover:opacity-90">
             <Plus className="w-4 h-4 ml-2" />
             {meetingMode.t.newVisit}
           </Button>
@@ -794,28 +792,13 @@ export default function VisitsPage() {
           onVisitClick={(visit) => handleVisitClick(visit)}
           onDateClick={(date) => {
             setSelectedDate(date)
-            setAddDialogOpen(true)
+            openModal('visit-create')
           }}
           serviceColors={serviceColors}
         />
       )}
 
-      {/* Dialogs */}
-      <CreateVisitDialog 
-        open={addDialogOpen} 
-        onOpenChange={(open) => {
-          setAddDialogOpen(open)
-          if (!open) setCreateVisitPrefill(null) // Reset prefill on close
-        }}
-        preselectedDate={selectedDate}
-        preselectedClientId={createVisitPrefill?.clientId}
-        onVisitCreated={(visitData) => setNewVisitNotify(visitData)}
-      />
-      <CompleteVisitPaymentDialog 
-        visit={selectedVisit} 
-        open={paymentDialogOpen} 
-        onOpenChange={setPaymentDialogOpen} 
-      />
+      {/* Dialogs managed by ModalManager */}
 
       {/* Notify client after visit creation */}
       {newVisitNotify && (
@@ -1020,7 +1003,7 @@ export default function VisitsPage() {
                   clientName: receiptVisit.clientName,
                   date: nextDate.toISOString().split('T')[0],
                 })
-                setAddDialogOpen(true)
+                openModal('visit-create')
               }}
               className="w-full py-3.5 rounded-2xl border-2 border-blue-600 text-blue-600 text-sm font-semibold"
             >
@@ -1039,7 +1022,7 @@ export default function VisitsPage() {
 
       {/* Mobile FAB (Floating Action Button) */}
       <button
-        onClick={() => setAddDialogOpen(true)}
+        onClick={() => openModal('visit-create')}
         className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-theme-primary text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50"
         aria-label={meetingMode.t.newVisit}
       >
@@ -1110,8 +1093,7 @@ export default function VisitsPage() {
                   <>
                     <button
                       onClick={() => {
-                        setSelectedVisit(desktopVisit)
-                        setPaymentDialogOpen(true)
+                        openModal('visit-complete-payment', { visit: desktopVisit })
                         setDesktopVisit(null)
                       }}
                       className="flex-1 py-3 rounded-xl border-2 border-emerald-400 text-emerald-600 text-sm font-semibold hover:bg-emerald-50 transition"

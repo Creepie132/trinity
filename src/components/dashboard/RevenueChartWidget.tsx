@@ -10,7 +10,7 @@ export function RevenueChartWidget({ data, locale }: RevenueChartWidgetProps) {
   const maxAmount = Math.max(...data.map(d => d.amount), 1)
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-4">
+    <div className="bg-white rounded-2xl border border-[#f1f5f9] shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4">
       <h3 className="text-sm font-semibold mb-4">
         {l ? 'הכנסות 7 ימים אחרונים' : 'Доход за 7 дней'}
       </h3>

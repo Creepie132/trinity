@@ -38,7 +38,7 @@ export default function DashboardLayout({
   return (
     <AuthProvider>
       
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col">
+        <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 flex flex-col">
           {/* Мобильный header */}
           <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
 

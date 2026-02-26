@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play, X, MessageCircle, MessageSquare } from 'lucide-react'
+import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play, X, MessageCircle, MessageSquare, CheckCircle2, Mail, Download } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -60,6 +60,8 @@ export default function VisitsPage() {
   const [newVisitNotify, setNewVisitNotify] = useState<any>(null)
   const [paymentVisit, setPaymentVisit] = useState<any>(null)
   const [paymentMethod, setPaymentMethod] = useState<string>('')
+  const [receiptVisit, setReceiptVisit] = useState<any>(null)
+  const [createVisitPrefill, setCreateVisitPrefill] = useState<any>(null)
   
   // Bookings hook
   // Bookings view removed - online bookings now show in main list with badge
@@ -776,8 +778,12 @@ export default function VisitsPage() {
       {/* Dialogs */}
       <CreateVisitDialog 
         open={addDialogOpen} 
-        onOpenChange={setAddDialogOpen}
+        onOpenChange={(open) => {
+          setAddDialogOpen(open)
+          if (!open) setCreateVisitPrefill(null) // Reset prefill on close
+        }}
         preselectedDate={selectedDate}
+        preselectedClientId={createVisitPrefill?.clientId}
         onVisitCreated={(visitData) => setNewVisitNotify(visitData)}
       />
       <CompleteVisitPaymentDialog 
@@ -884,6 +890,14 @@ export default function VisitsPage() {
               onClick={async () => {
                 await updateVisitStatus(paymentVisit.id, 'completed')
                 // TODO: создать запись платежа
+                
+                // Открыть окно квитанции
+                const clientData = allClients?.find((c: any) => c.id === paymentVisit.client_id)
+                setReceiptVisit({
+                  ...paymentVisit,
+                  client_phone: clientData?.phone,
+                  clientName: clientData ? `${clientData.first_name} ${clientData.last_name}`.trim() : '',
+                })
                 setPaymentVisit(null)
               }}
               disabled={!paymentMethod}
@@ -894,6 +908,102 @@ export default function VisitsPage() {
 
             <button
               onClick={() => setPaymentVisit(null)}
+              className="w-full py-3 rounded-2xl bg-slate-100 text-slate-500 text-sm font-medium"
+            >
+              {language === 'he' ? 'צא' : 'Выйти'}
+            </button>
+          </div>
+        </TrinityBottomDrawer>
+      )}
+
+      {/* Receipt and next visit after payment */}
+      {receiptVisit && (
+        <TrinityBottomDrawer
+          isOpen={!!receiptVisit}
+          onClose={() => setReceiptVisit(null)}
+          title={language === 'he' ? 'הביקור הושלם' : 'Визит завершён'}
+        >
+          <div className="space-y-4">
+            {/* Успех */}
+            <div className="text-center py-4">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle2 size={32} className="text-emerald-500" />
+              </div>
+              <p className="text-lg font-bold">₪{receiptVisit.price || 0}</p>
+              <p className="text-sm text-slate-400">
+                {language === 'he' ? 'התשלום התקבל' : 'Оплата получена'}
+              </p>
+            </div>
+
+            {/* Отправить квитанцию */}
+            <p className="text-xs text-slate-400 text-center">
+              {language === 'he' ? 'שלח קבלה' : 'Отправить квитанцию'}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  const phone = receiptVisit.client_phone || ''
+                  const msg = language === 'he'
+                    ? `קבלה: תשלום ₪${receiptVisit.price} התקבל. תודה!`
+                    : `Квитанция: оплата ₪${receiptVisit.price} получена. Спасибо!`
+                  window.open(
+                    `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`,
+                    '_blank'
+                  )
+                }}
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-emerald-600 text-white text-sm font-medium"
+              >
+                <MessageCircle size={16} />
+                WhatsApp
+              </button>
+
+              <button
+                onClick={() => toast.info(language === 'he' ? 'בקרוב' : 'Скоро')}
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-600 text-white text-sm font-medium"
+              >
+                <Mail size={16} />
+                Email
+              </button>
+
+              <button
+                onClick={() => toast.info(language === 'he' ? 'SMS בקרוב' : 'SMS скоро')}
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-500 text-white text-sm font-medium"
+              >
+                <MessageSquare size={16} />
+                SMS
+              </button>
+
+              <button
+                onClick={() => toast.success(language === 'he' ? 'נשמר' : 'Сохранено')}
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-200 text-slate-600 text-sm font-medium"
+              >
+                <Download size={16} />
+                {language === 'he' ? 'שמור' : 'Сохранить'}
+              </button>
+            </div>
+
+            {/* Следующий визит */}
+            <button
+              onClick={() => {
+                const nextDate = new Date()
+                nextDate.setDate(nextDate.getDate() + 14)
+                setReceiptVisit(null)
+                
+                // Открыть форму создания визита с prefill
+                setCreateVisitPrefill({
+                  clientId: receiptVisit.client_id,
+                  clientName: receiptVisit.clientName,
+                  date: nextDate.toISOString().split('T')[0],
+                })
+                setAddDialogOpen(true)
+              }}
+              className="w-full py-3.5 rounded-2xl border-2 border-blue-600 text-blue-600 text-sm font-semibold"
+            >
+              {language === 'he' ? 'תור הבא (+2 שבועות)' : 'Следующий визит (+2 недели)'}
+            </button>
+
+            <button
+              onClick={() => setReceiptVisit(null)}
               className="w-full py-3 rounded-2xl bg-slate-100 text-slate-500 text-sm font-medium"
             >
               {language === 'he' ? 'צא' : 'Выйти'}

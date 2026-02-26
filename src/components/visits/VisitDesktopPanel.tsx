@@ -11,6 +11,7 @@ interface VisitDesktopPanelProps {
   onClose: () => void
   locale: 'he' | 'ru'
   clients: any[]
+  visitServices?: any[]
   onStatusChange?: (visitId: string, newStatus: string) => void
   onClientClick?: (clientId: string) => void
 }
@@ -21,6 +22,7 @@ export function VisitDesktopPanel({
   onClose,
   locale,
   clients,
+  visitServices = [],
   onStatusChange,
   onClientClick,
 }: VisitDesktopPanelProps) {
@@ -249,7 +251,14 @@ export function VisitDesktopPanel({
           <div className="flex-1 overflow-y-auto p-6">
             {activeTab === 'services' ? (
               <div className="space-y-3">
-                {visit.service_type ? (
+                {visitServices.length > 0 ? (
+                  visitServices.map((vs: any) => (
+                    <div key={vs.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/30">
+                      <span className="text-sm font-medium">{vs.services?.name || vs.service_name || '—'}</span>
+                      {vs.price > 0 && <span className="text-sm">₪{vs.price}</span>}
+                    </div>
+                  ))
+                ) : visit.service_type ? (
                   <div className="flex justify-between items-center p-3 rounded-lg bg-muted/30">
                     <span className="text-sm font-medium">{visit.service_type}</span>
                     {visit.price > 0 && <span className="text-sm">₪{visit.price}</span>}

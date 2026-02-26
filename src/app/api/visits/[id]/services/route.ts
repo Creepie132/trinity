@@ -37,7 +37,7 @@ export async function GET(
 
     const { data: visitServices, error } = await supabase
       .from('visit_services')
-      .select('*')
+      .select('*, services(id, name, name_ru)')
       .eq('visit_id', id)
       .order('created_at', { ascending: true })
 
@@ -46,7 +46,7 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ services: visitServices || [] })
+    return NextResponse.json(visitServices || [])
   } catch (error) {
     console.error('[API] GET /api/visits/[id]/services exception:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

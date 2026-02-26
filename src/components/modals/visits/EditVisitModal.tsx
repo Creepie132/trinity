@@ -11,12 +11,14 @@ export function EditVisitModal() {
   const data = getModalData('visit-edit')
 
   const [clients, setClients] = useState<any[]>([])
+  const [visitServices, setVisitServices] = useState<any[]>([])
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && data?.visit) {
       loadClients()
+      loadVisitServices(data.visit.id)
     }
-  }, [isOpen])
+  }, [isOpen, data?.visit])
 
   async function loadClients() {
     try {
@@ -27,6 +29,18 @@ export function EditVisitModal() {
       }
     } catch (error) {
       console.error('Failed to load clients:', error)
+    }
+  }
+
+  async function loadVisitServices(visitId: string) {
+    try {
+      const response = await fetch(`/api/visits/${visitId}/services`)
+      if (response.ok) {
+        const data = await response.json()
+        setVisitServices(data)
+      }
+    } catch (error) {
+      console.error('Failed to load visit services:', error)
     }
   }
 
@@ -68,6 +82,7 @@ export function EditVisitModal() {
       onClose={() => closeModal('visit-edit')}
       locale={locale}
       clients={clients}
+      visitServices={visitServices}
       onStatusChange={handleStatusChange}
       onClientClick={handleClientClick}
     />

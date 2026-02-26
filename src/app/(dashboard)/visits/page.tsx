@@ -361,9 +361,12 @@ export default function VisitsPage() {
   }
 
   function handleVisitClick(visit: any) {
-    // Открываем detail panel на всех устройствах (адаптивная модалка)
-    // VisitCard имеет свой встроенный drawer, но клик из календаря использует эту модалку
-    setDesktopVisit(visit)
+    // Открываем detail panel на всех устройствах
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      setDesktopVisit(visit)
+    } else {
+      setSelectedVisit(visit)
+    }
   }
 
   async function updateVisitStatus(visitId: string, newStatus: string) {

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
-import { Globe, ArrowLeft, Package, FileText, Calendar } from 'lucide-react'
+import { Monitor, Globe, ArrowLeft, Package, FileText, Calendar } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -13,6 +13,13 @@ export default function SettingsPage() {
   const features = useFeatures()
 
   const settingsCategories = [
+    {
+      id: 'display',
+      href: '/settings/display',
+      icon: Monitor,
+      title: t('settings.display'),
+      description: t('settings.display.desc'),
+    },
     {
       id: 'language',
       href: '/settings/language',

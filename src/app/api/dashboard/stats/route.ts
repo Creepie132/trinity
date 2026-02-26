@@ -39,17 +39,17 @@ export async function GET(request: NextRequest) {
       ? ((clientsCount || 0) - clientsPrevCount) / clientsPrevCount * 100 
       : 0
 
-    // 2. Visits this month vs previous month
+    // 2. Visits this month vs previous month (join through clients to filter by org_id)
     const { count: visitsCount } = await supabase
       .from('visits')
-      .select('*', { count: 'exact', head: true })
-      .eq('org_id', org_id)
+      .select('*, clients!inner(org_id)', { count: 'exact', head: true })
+      .eq('clients.org_id', org_id)
       .gte('scheduled_at', currentMonthStart.toISOString())
 
     const { count: visitsPrevCount } = await supabase
       .from('visits')
-      .select('*', { count: 'exact', head: true })
-      .eq('org_id', org_id)
+      .select('*, clients!inner(org_id)', { count: 'exact', head: true })
+      .eq('clients.org_id', org_id)
       .gte('scheduled_at', previousMonthStart.toISOString())
       .lt('scheduled_at', currentMonthStart.toISOString())
 
@@ -57,11 +57,11 @@ export async function GET(request: NextRequest) {
       ? ((visitsCount || 0) - visitsPrevCount) / visitsPrevCount * 100 
       : 0
 
-    // 3. Revenue this month vs previous month
+    // 3. Revenue this month vs previous month (join through clients to filter by org_id)
     const { data: revenueData } = await supabase
       .from('payments')
-      .select('amount')
-      .eq('org_id', org_id)
+      .select('amount, clients!inner(org_id)')
+      .eq('clients.org_id', org_id)
       .eq('status', 'completed')
       .gte('paid_at', currentMonthStart.toISOString())
 
@@ -69,8 +69,8 @@ export async function GET(request: NextRequest) {
 
     const { data: revenuePrevData } = await supabase
       .from('payments')
-      .select('amount')
-      .eq('org_id', org_id)
+      .select('amount, clients!inner(org_id)')
+      .eq('clients.org_id', org_id)
       .eq('status', 'completed')
       .gte('paid_at', previousMonthStart.toISOString())
       .lte('paid_at', previousMonthEnd.toISOString())
@@ -78,11 +78,11 @@ export async function GET(request: NextRequest) {
     const revenuePrev = revenuePrevData?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
     const revenueChange = revenuePrev > 0 ? (revenue - revenuePrev) / revenuePrev * 100 : 0
 
-    // 4. Average check this month vs previous month
+    // 4. Average check this month vs previous month (join through clients to filter by org_id)
     const { count: paidVisitsCount } = await supabase
       .from('visits')
-      .select('*', { count: 'exact', head: true })
-      .eq('org_id', org_id)
+      .select('*, clients!inner(org_id)', { count: 'exact', head: true })
+      .eq('clients.org_id', org_id)
       .eq('status', 'completed')
       .gte('scheduled_at', currentMonthStart.toISOString())
 
@@ -90,8 +90,8 @@ export async function GET(request: NextRequest) {
 
     const { count: paidVisitsPrevCount } = await supabase
       .from('visits')
-      .select('*', { count: 'exact', head: true })
-      .eq('org_id', org_id)
+      .select('*, clients!inner(org_id)', { count: 'exact', head: true })
+      .eq('clients.org_id', org_id)
       .eq('status', 'completed')
       .gte('scheduled_at', previousMonthStart.toISOString())
       .lt('scheduled_at', currentMonthStart.toISOString())

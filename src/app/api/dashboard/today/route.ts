@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0)
     const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)
 
-    // Fetch today's visits with client and service details
+    // Fetch today's visits with client and service details (join through clients to filter by org_id)
     const { data: visits, error } = await supabase
       .from('visits')
       .select(`
@@ -31,17 +31,18 @@ export async function GET(request: NextRequest) {
         status,
         notes,
         service_type,
-        clients(
+        clients!inner(
           id,
           first_name,
-          last_name
+          last_name,
+          org_id
         ),
         services(
           name,
           name_ru
         )
       `)
-      .eq('org_id', org_id)
+      .eq('clients.org_id', org_id)
       .gte('scheduled_at', todayStart.toISOString())
       .lte('scheduled_at', todayEnd.toISOString())
       .in('status', ['scheduled', 'in_progress'])

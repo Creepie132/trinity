@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState, ReactNode } from 'react'
-import { Users, Calendar, TrendingUp, Receipt } from 'lucide-react'
+import { Users, Calendar, TrendingUp, Receipt, UserPlus, CreditCard, ListPlus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { TodayVisitsWidget } from './TodayVisitsWidget'
 import { TodayTasksWidget } from './TodayTasksWidget'
@@ -48,6 +49,7 @@ function KpiCard({
 export function DashboardContent({ orgId }: DashboardContentProps) {
   const { language } = useLanguage()
   const locale = language
+  const router = useRouter()
   
   const [stats, setStats] = useState<StatsData>({
     clients: 0,
@@ -204,6 +206,31 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
             icon={<Receipt size={20} />}
             color="bg-purple-50 text-purple-600"
           />
+        </div>
+
+        {/* Quick Actions — мобильная версия */}
+        <div className="lg:hidden flex gap-3 overflow-x-auto pb-2 mb-4 -mx-4 px-4">
+          <button 
+            onClick={() => router.push('/clients?action=new')} 
+            className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white shadow-sm text-sm font-medium"
+          >
+            <UserPlus size={16} className="text-blue-600" />
+            {locale === 'he' ? 'לקוח +' : 'Клиент +'}
+          </button>
+          <button 
+            onClick={() => router.push('/payments?action=new')} 
+            className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white shadow-sm text-sm font-medium"
+          >
+            <CreditCard size={16} className="text-emerald-600" />
+            {locale === 'he' ? 'מכירה +' : 'Продажа +'}
+          </button>
+          <button 
+            onClick={() => router.push('/diary?action=new')} 
+            className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white shadow-sm text-sm font-medium"
+          >
+            <ListPlus size={16} className="text-amber-600" />
+            {locale === 'he' ? 'משימה +' : 'Задача +'}
+          </button>
         </div>
 
         {/* Основной контент — 3 колонки на десктопе */}

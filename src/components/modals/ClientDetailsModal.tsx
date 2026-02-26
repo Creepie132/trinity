@@ -63,8 +63,8 @@ export function ClientDetailsModal() {
 
   return (
     <ModalWrapper isOpen={isOpen} onClose={() => closeModal('client-details')}>
-      <div className="w-full max-w-md p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="w-[400px] max-w-[90vw] h-[600px] max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
           <h2 className="text-xl font-bold">{text.clientDetails}</h2>
           <button
             onClick={() => closeModal('client-details')}
@@ -74,16 +74,17 @@ export function ClientDetailsModal() {
           </button>
         </div>
 
-        <div className="flex flex-col items-center mb-6">
-          <div
-            className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3`}
-          >
-            {initials}
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
+          <div className="flex flex-col items-center mb-6">
+            <div
+              className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3`}
+            >
+              {initials}
+            </div>
+            <h3 className="text-2xl font-bold text-center">{clientName}</h3>
           </div>
-          <h3 className="text-2xl font-bold text-center">{clientName}</h3>
-        </div>
 
-        <div className="space-y-4 mb-6">
+          <div className="space-y-4 mb-6">
           {client.phone && (
             <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <Phone size={18} className="text-muted-foreground" />
@@ -142,26 +143,27 @@ export function ClientDetailsModal() {
               </p>
             </div>
           )}
-        </div>
+          </div>
 
-        <div className="space-y-2">
-          <button
-            onClick={handleEditClick}
-            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition"
-          >
-            <Pencil size={18} />
-            {text.edit}
-          </button>
-
-          {enabledModules.appointments && (
+          <div className="space-y-2">
             <button
-              onClick={() => closeModal('client-details')}
-              className="w-full flex items-center justify-center gap-2 bg-secondary text-secondary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition"
+              onClick={handleEditClick}
+              className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition"
             >
-              <CalendarPlus size={18} />
-              {text.newVisit}
+              <Pencil size={18} />
+              {text.edit}
             </button>
-          )}
+
+            {enabledModules.appointments && (
+              <button
+                onClick={() => closeModal('client-details')}
+                className="w-full flex items-center justify-center gap-2 bg-secondary text-secondary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition"
+              >
+                <CalendarPlus size={18} />
+                {text.newVisit}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </ModalWrapper>

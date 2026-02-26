@@ -931,7 +931,7 @@ export default function AdminSubscriptionsPage() {
 
       {/* Extend Dialog */}
       <Dialog open={extendDialogOpen} onOpenChange={setExtendDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {t.extendAccess} - {selectedOrg?.name}
@@ -940,7 +940,8 @@ export default function AdminSubscriptionsPage() {
               {selectedOrg?.owner_email}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
+          <div className="overflow-y-auto flex-1 px-1">
+            <div className="space-y-4 mt-4">
             {/* Plan Selection */}
             <div>
               <Label>{t.selectPlan}</Label>
@@ -1167,12 +1168,13 @@ export default function AdminSubscriptionsPage() {
                 onChange={(e) => setNewExpiryDate(e.target.value)}
               />
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setExtendDialogOpen(false)}>
-                {t.cancel}
-              </Button>
-              <Button onClick={handleSaveExtension}>{t.save}</Button>
             </div>
+          </div>
+          <div className="flex gap-2 justify-end pt-4 border-t mt-4">
+            <Button variant="outline" onClick={() => setExtendDialogOpen(false)}>
+              {t.cancel}
+            </Button>
+            <Button onClick={handleSaveExtension}>{t.save}</Button>
           </div>
         </DialogContent>
       </Dialog>

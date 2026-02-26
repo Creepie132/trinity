@@ -10,8 +10,8 @@ export function UserProfileModal() {
 
   return (
     <UserProfileSheet
-      isOpen={isOpen}
-      onClose={() => closeModal('user-profile')}
+      open={isOpen}
+      onOpenChange={(open) => !open && closeModal('user-profile')}
     />
   )
 }

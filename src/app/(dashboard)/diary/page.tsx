@@ -81,8 +81,7 @@ export default function DiaryPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [createOpen, setCreateOpen] = useState(false)
-  const [selectedClient, setSelectedClient] = useState<any>(null)
+  const { openModal } = useModalStore()
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
   const [desktopPanelTask, setDesktopPanelTask] = useState<Task | null>(null)
 
@@ -355,7 +354,7 @@ export default function DiaryPage() {
               <button
                 onClick={() => {
                   const client = clients.find((c: any) => c.id === task.client_id)
-                  if (client) setSelectedClient(client)
+                  if (client) openModal('client-details', { client, locale: language === 'he' ? 'he' : 'ru' })
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 transition text-start"
               >
@@ -525,7 +524,7 @@ export default function DiaryPage() {
             variant="primary"
             size="md"
             icon={<Plus className="w-5 h-5" />}
-            onClick={() => setCreateOpen(true)}
+            onClick={() => openModal('task-create')}
           >
             {language === 'he' ? 'משימה חדשה' : 'Новая задача'}
           </TrinityButton>
@@ -592,7 +591,7 @@ export default function DiaryPage() {
           description={language === 'he' ? 'צור משימה חדשה כדי להתחיל' : 'Создайте первую задачу для начала работы'}
           action={{
             label: language === 'he' ? 'צור משימה' : 'Создать задачу',
-            onClick: () => setCreateOpen(true),
+            onClick: () => openModal('task-create'),
           }}
         />
       ) : (
@@ -676,33 +675,14 @@ export default function DiaryPage() {
       {/* FAB мобильный */}
       <div className="md:hidden fixed bottom-20 end-4 z-30">
         <button
-          onClick={() => setCreateOpen(true)}
+          onClick={() => openModal('task-create')}
           className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 flex items-center justify-center transition"
         >
           <Plus className="w-6 h-6" />
         </button>
       </div>
 
-      {/* Форма создания задачи */}
-      <CreateTaskSheet
-        isOpen={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreated={() => {
-          setCreateOpen(false)
-          loadTasks()
-        }}
-        locale={language === 'he' ? 'he' : 'ru'}
-      />
-
-      {/* Drawer клиента */}
-      {selectedClient && (
-        <ClientBottomSheet
-          client={selectedClient}
-          isOpen={!!selectedClient}
-          onClose={() => setSelectedClient(null)}
-          locale={language}
-        />
-      )}
+      {/* Modals managed by ModalManager */}
 
       {/* Drawer визита */}
       {selectedVisit && (
@@ -755,7 +735,7 @@ export default function DiaryPage() {
         onStatusChange={handleTaskStatusChange}
         onClientClick={(clientId) => {
           const client = clients.find((c: any) => c.id === clientId)
-          if (client) setSelectedClient(client)
+          if (client) openModal('client-details', { client, locale: language === 'he' ? 'he' : 'ru' })
         }}
         onVisitClick={(visitId) => {
           const visit = visits.find((v: any) => v.id === visitId)

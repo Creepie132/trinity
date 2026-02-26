@@ -10,8 +10,8 @@ export function AdminProfileModal() {
 
   return (
     <AdminProfileSheet
-      isOpen={isOpen}
-      onClose={() => closeModal('admin-profile')}
+      open={isOpen}
+      onOpenChange={(open) => !open && closeModal('admin-profile')}
     />
   )
 }

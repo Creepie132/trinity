@@ -312,11 +312,7 @@ export default function InventoryPage() {
       {/* Dialogs */}
       <CreateProductDialog
         open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        onSuccess={() => {
-          refetch()
-          setCreateDialogOpen(false)
-        }}
+        onClose={() => setCreateDialogOpen(false)}
       />
 
       <ProductDetailSheet

@@ -1,4 +1,4 @@
-export type PlanKey = 'demo' | 'basic' | 'professional' | 'corporate' | 'custom'
+export type PlanKey = 'demo' | 'basic' | 'pro' | 'enterprise' | 'custom'
 
 export interface Plan {
   key: PlanKey
@@ -62,7 +62,7 @@ export const PLANS: Plan[] = [
     price_monthly: 99,
   },
   {
-    key: 'professional',
+    key: 'pro',
     name_he: 'מקצועי',
     name_ru: 'Профессиональный',
     desc_he: 'לעסקים צומחים',
@@ -86,7 +86,7 @@ export const PLANS: Plan[] = [
     price_monthly: 199,
   },
   {
-    key: 'corporate',
+    key: 'enterprise',
     name_he: 'ארגוני',
     name_ru: 'Корпоративный',
     desc_he: 'כל הפיצ\'רים',

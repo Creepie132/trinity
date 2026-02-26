@@ -113,6 +113,7 @@ export default function AdminSubscriptionsPage() {
       email: 'אימייל',
       phone: 'טלפון',
       plan: 'תוכנית',
+      payment: 'תשלום',
       status: 'סטטוס',
       expires: 'תוקף',
       actions: 'פעולות',
@@ -179,6 +180,7 @@ export default function AdminSubscriptionsPage() {
       email: 'Email',
       phone: 'Телефон',
       plan: 'План',
+      payment: 'Оплата',
       status: 'Статус',
       expires: 'Истекает',
       actions: 'Действия',
@@ -827,6 +829,26 @@ export default function AdminSubscriptionsPage() {
                 key: 'plan',
                 label: t.plan,
                 render: (val) => getPlanBadge(val || 'demo'),
+              },
+              {
+                key: 'subscription_status',
+                label: t.payment,
+                compact: true,
+                render: (val) => {
+                  const isPaid = val === 'active' || val === 'trial' || val === 'manual'
+                  return (
+                    <div className="flex items-center justify-center">
+                      <div
+                        className={`w-4 h-4 rounded-full ${
+                          isPaid
+                            ? 'bg-green-500 shadow-lg shadow-green-500/50'
+                            : 'bg-red-500 shadow-lg shadow-red-500/50'
+                        }`}
+                        title={isPaid ? (language === 'he' ? 'שולם' : 'Оплачено') : (language === 'he' ? 'לא שולם' : 'Не оплачено')}
+                      />
+                    </div>
+                  )
+                },
               },
               {
                 key: 'subscription_status',

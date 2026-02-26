@@ -40,11 +40,6 @@ export function AdminSidebar() {
       icon: Shield,
     },
     {
-      name: t('admin.billing'),
-      href: '/admin/billing',
-      icon: CreditCard,
-    },
-    {
       name: t('admin.ads'),
       href: '/admin/ads',
       icon: Megaphone,

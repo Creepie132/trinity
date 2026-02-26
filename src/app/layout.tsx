@@ -5,6 +5,7 @@ import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster } from "@/components/ui/sonner";
 import ConditionalChatWidget from "@/components/ConditionalChatWidget";
+import { ModalManager } from "@/components/modals/ModalManager";
 
 const inter = Inter({ subsets: ["latin"] });
 const assistant = Assistant({ subsets: ["hebrew"] });
@@ -48,6 +49,7 @@ export default function RootLayout({
               }}
             />
             <ConditionalChatWidget />
+            <ModalManager />
           </LanguageProvider>
         </QueryProvider>
       </body>

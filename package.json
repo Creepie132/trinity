@@ -42,7 +42,8 @@
     "three": "^0.183.0",
     "vaul": "^1.1.2",
     "xlsx": "^0.18.5",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@types/node": "^20",

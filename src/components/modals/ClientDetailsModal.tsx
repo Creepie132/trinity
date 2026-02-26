@@ -1,17 +1,28 @@
 'use client'
 
 import { useModalStore } from '@/store/useModalStore'
-import ModalWrapper from '../ModalWrapper'
 import { Calendar, Clock, Phone, Mail, CalendarPlus, Pencil, X } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
+import { useEffect } from 'react'
 
 export function ClientDetailsModal() {
   const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
   
   const isOpen = isModalOpen('client-details')
   const data = getModalData('client-details')
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
   
-  if (!data?.client) return null
+  if (!data?.client || !isOpen) return null
 
   const { client, locale = 'he', enabledModules = {} } = data
 
@@ -62,9 +73,15 @@ export function ClientDetailsModal() {
   }
 
   return (
-    <ModalWrapper isOpen={isOpen} onClose={() => closeModal('client-details')}>
-      <div className="w-[400px] max-w-[90vw] h-[600px] max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={() => closeModal('client-details')}
+    >
+      <div
+        className="w-[400px] max-w-[90vw] h-[600px] max-h-[90vh] bg-white dark:bg-gray-900 rounded-[32px] shadow-2xl flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0 border-b border-gray-200 dark:border-gray-800">
           <h2 className="text-xl font-bold">{text.clientDetails}</h2>
           <button
             onClick={() => closeModal('client-details')}
@@ -74,7 +91,7 @@ export function ClientDetailsModal() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-6">
           <div className="flex flex-col items-center mb-6">
             <div
               className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3`}
@@ -166,6 +183,6 @@ export function ClientDetailsModal() {
           </div>
         </div>
       </div>
-    </ModalWrapper>
+    </div>
   )
 }

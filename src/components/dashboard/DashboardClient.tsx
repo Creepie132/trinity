@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useQuery } from '@tanstack/react-query'
-import { OnboardingWizard } from '@/components/OnboardingWizard'
+import NewUserOnboardingModal from '@/components/NewUserOnboardingModal'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -280,11 +280,11 @@ export function DashboardClient({ orgId }: { orgId: string }) {
         </Card>
       )}
 
-      {/* Onboarding Wizard */}
-      {onboardingData?.showOnboarding && (
-        <OnboardingWizard
-          open={true}
-          organizationName={onboardingData.organizationName}
+      {/* Onboarding Modal */}
+      {onboardingData?.showOnboarding && orgId && (
+        <NewUserOnboardingModal
+          isOpen={true}
+          orgId={orgId}
         />
       )}
     </>

@@ -73,6 +73,8 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
         const todayEnd = new Date(todayStart)
         todayEnd.setDate(todayEnd.getDate() + 1)
 
+        console.log('=== DASHBOARD DEBUG ===')
+        
         // Fetch all data in parallel
         const [clientsRes, visitsRes, paymentsRes, todayVisitsRes, tasksRes] = await Promise.all([
           fetch('/api/clients'),
@@ -82,24 +84,51 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
           fetch('/api/tasks'),
         ])
 
+        // Клиенты
+        console.log('Clients status:', clientsRes.status)
         const clientsData = await clientsRes.json()
-        const visitsData = await visitsRes.json()
-        const paymentsData = await paymentsRes.json()
-        const todayVisitsData = await todayVisitsRes.json()
-        const tasksData = await tasksRes.json()
+        console.log('Clients data:', typeof clientsData, Array.isArray(clientsData), JSON.stringify(clientsData)?.slice(0, 200))
 
-        // Ensure arrays
-        const clientsArr = Array.isArray(clientsData) ? clientsData : clientsData?.data || []
-        const visitsArr = Array.isArray(visitsData) ? visitsData : visitsData?.data || []
-        const paymentsArr = Array.isArray(paymentsData) ? paymentsData : paymentsData?.data || []
+        // Визиты
+        console.log('Visits status:', visitsRes.status)
+        const visitsData = await visitsRes.json()
+        console.log('Visits data:', typeof visitsData, Array.isArray(visitsData), JSON.stringify(visitsData)?.slice(0, 200))
+
+        // Платежи
+        console.log('Payments status:', paymentsRes.status)
+        const paymentsData = await paymentsRes.json()
+        console.log('Payments data:', typeof paymentsData, Array.isArray(paymentsData), JSON.stringify(paymentsData)?.slice(0, 200))
+
+        // Сегодняшние визиты
+        console.log('Today visits status:', todayVisitsRes.status)
+        const todayVisitsData = await todayVisitsRes.json()
+        console.log('Today visits data:', typeof todayVisitsData, Array.isArray(todayVisitsData), JSON.stringify(todayVisitsData)?.slice(0, 200))
+
+        // Задачи
+        console.log('Tasks status:', tasksRes.status)
+        const tasksData = await tasksRes.json()
+        console.log('Tasks data:', typeof tasksData, Array.isArray(tasksData), JSON.stringify(tasksData)?.slice(0, 200))
+
+        // Universal array parser
+        function parseArray(data: any): any[] {
+          if (Array.isArray(data)) return data
+          if (data?.data && Array.isArray(data.data)) return data.data
+          // Проверь первый ключ объекта
+          const keys = Object.keys(data || {})
+          for (const key of keys) {
+            if (Array.isArray(data[key])) return data[key]
+          }
+          return []
+        }
+
+        // Parse arrays
+        const clientsArr = parseArray(clientsData)
+        const visitsArr = parseArray(visitsData)
+        const paymentsArr = parseArray(paymentsData)
         const todayVisitsArr = Array.isArray(todayVisitsData) ? todayVisitsData : []
-        const tasksArr = Array.isArray(tasksData) ? tasksData : tasksData?.data || []
+        const tasksArr = parseArray(tasksData)
         
-        console.log('=== DASHBOARD VISITS ===')
-        console.log('All visits:', visitsArr.length)
-        console.log('Today visits:', todayVisitsArr.length)
-        console.log('Today start:', todayStart.toISOString())
-        console.log('First today visit:', todayVisitsArr[0])
+        console.log('Parsed: clients=', clientsArr.length, 'visits=', visitsArr.length, 'payments=', paymentsArr.length, 'todayVisits=', todayVisitsArr.length, 'tasks=', tasksArr.length)
 
         // Calculate stats
         const totalClients = clientsArr.length
@@ -125,15 +154,19 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
           ? Math.round(revenue / monthPayments.length) 
           : 0
 
-        setStats({
+        const statsToSet = {
           clients: clientsArr.length,
           visits: monthVisits.length,
           revenue,
           avgCheck,
-        })
+        }
+        
+        setStats(statsToSet)
+        console.log('Stats set:', statsToSet)
 
         // Today's visits
         setTodayVisits(todayVisitsArr)
+        console.log('Today visits set:', todayVisitsArr.length)
 
         // Today's tasks
         const todayTasksFiltered = tasksArr.filter((t: any) => {
@@ -142,6 +175,7 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
           return taskDate >= todayStart && taskDate < todayEnd
         })
         setTodayTasks(todayTasksFiltered.slice(0, 5))
+        console.log('Today tasks set:', todayTasksFiltered.length)
 
         // Revenue chart data (last 7 days)
         const revenueByDay: { date: string; amount: number }[] = []
@@ -160,8 +194,10 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
           revenueByDay.push({ date: dateStr, amount: dayTotal })
         }
         setRevenueData(revenueByDay)
+        console.log('Revenue data set:', revenueByDay.length, 'days')
 
         setLoading(false)
+        console.log('=== DASHBOARD DEBUG END ===')
       } catch (error) {
         console.error('Error loading dashboard stats:', error)
         setLoading(false)

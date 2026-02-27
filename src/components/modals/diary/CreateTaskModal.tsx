@@ -2,6 +2,7 @@
 
 import { useModalStore } from '@/store/useModalStore'
 import { CreateTaskSheet } from '@/components/diary/CreateTaskSheet'
+import ModalWrapper from '@/components/ModalWrapper'
 
 export function CreateTaskModal() {
   const { isModalOpen, closeModal, getModalData } = useModalStore()
@@ -10,12 +11,14 @@ export function CreateTaskModal() {
   const data = getModalData('task-create')
 
   return (
-    <CreateTaskSheet
-      isOpen={isOpen}
-      onClose={() => closeModal('task-create')}
-      onCreated={data?.onCreated || (() => {})}
-      locale={data?.locale || 'he'}
-      prefill={data?.prefill}
-    />
+    <ModalWrapper isOpen={isOpen} onClose={() => closeModal('task-create')}>
+      <CreateTaskSheet
+        isOpen={isOpen}
+        onClose={() => closeModal('task-create')}
+        onCreated={data?.onCreated || (() => {})}
+        locale={data?.locale || 'he'}
+        prefill={data?.prefill}
+      />
+    </ModalWrapper>
   )
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { TrinitySearchDropdown } from '@/components/ui/TrinitySearch'
 import { Phone, MessageSquare, Navigation, AlertCircle, X } from 'lucide-react'
@@ -401,13 +400,23 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
     { key: 'urgent', label: labels.urgent, bgColor: 'bg-red-100 dark:bg-red-900/30', textColor: 'text-red-700 dark:text-red-400' },
   ]
 
+  if (!isOpen) return null
+
   return (
-    <TrinityBottomDrawer
-      isOpen={isOpen}
-      onClose={onClose}
-      title={labels.newTask}
-    >
-      <div className="space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="w-full max-w-2xl mx-auto p-6 md:p-8" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold">{labels.newTask}</h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-muted rounded-xl transition"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+      <div className="space-y-4">
         {/* Заголовок */}
         <div>
           <label className="block text-sm font-medium mb-2">
@@ -707,6 +716,6 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
           </TrinityButton>
         </div>
       </div>
-    </TrinityBottomDrawer>
+    </div>
   )
 }

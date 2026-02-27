@@ -1259,8 +1259,6 @@ export default function VisitsPage() {
         </div>
       )}
 
-      )}
-
       {/* Mobile VisitFlowCard */}
       <VisitFlowCard
         visit={selectedVisit}

@@ -1285,8 +1285,30 @@ export default function VisitsPage() {
         }}
         onAddService={(serviceId) => {
           if (selectedVisit) {
-            setAddServiceVisit(selectedVisit)
-            setAddServiceOpen(true)
+            openModal('visit-add-service', {
+              visitId: selectedVisit.id,
+              onAddService: async (service: any) => {
+                const res = await fetch(`/api/visits/${selectedVisit.id}/services`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    visit_id: selectedVisit.id,
+                    service_id: service.id,
+                    service_name: service.name,
+                    service_name_ru: service.name_ru,
+                    price: service.price || 0,
+                    duration_minutes: service.duration_minutes,
+                  }),
+                })
+
+                if (res.ok) {
+                  toast.success(language === 'he' ? 'שירות נוסף' : 'Услуга добавлена')
+                  refetch()
+                } else {
+                  toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
+                }
+              }
+            })
             setSelectedVisit(null)
           }
         }}

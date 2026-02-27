@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play, X, MessageCircle, MessageSquare, CheckCircle2, Mail, Download } from 'lucide-react'
+import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play, X, MessageCircle, MessageSquare, CheckCircle2, Mail, Download, Scissors, Pencil } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -1062,14 +1062,28 @@ export default function VisitsPage() {
         <div className="fixed inset-0 z-50" onClick={() => setDesktopVisit(null)}>
           <div className="absolute inset-0 bg-black/30" />
           <div
-            className="relative z-10 bg-background shadow-2xl md:max-w-3xl w-full h-full md:h-auto mx-auto md:my-8 md:rounded-2xl overflow-y-auto"
+            className="relative z-10 bg-background shadow-xl md:max-w-3xl w-full h-full md:h-auto mx-auto md:my-8 md:rounded-[32px] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h2 className="text-xl font-bold">{getClientName(desktopVisit)}</h2>
-                  <p className="text-muted-foreground text-sm mt-1">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-2xl font-bold">{getClientName(desktopVisit)}</h2>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      desktopVisit.status === 'scheduled' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                      desktopVisit.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
+                      desktopVisit.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
+                      'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                    }`}>
+                      {desktopVisit.status === 'scheduled' ? (language === 'he' ? 'מתוכנן' : 'Запланирован') :
+                       desktopVisit.status === 'in_progress' ? (language === 'he' ? 'בתהליך' : 'В процессе') :
+                       desktopVisit.status === 'completed' ? (language === 'he' ? 'הושלם' : 'Завершён') :
+                       (language === 'he' ? 'בוטל' : 'Отменён')}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
                     {new Date(desktopVisit.scheduled_at).toLocaleString(language === 'he' ? 'he-IL' : 'ru-RU')}
                   </p>
                 </div>
@@ -1077,81 +1091,98 @@ export default function VisitsPage() {
                   onClick={() => setDesktopVisit(null)}
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  <X size={20} />
+                  <X size={24} />
                 </button>
               </div>
 
-              {/* Service name */}
-              {getServiceName(desktopVisit) && (
-                <div className="mb-4">
-                  <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'שירות' : 'Услуга'}</p>
-                  <p className="text-base font-medium">{getServiceName(desktopVisit)}</p>
-                </div>
-              )}
-
-              {/* Additional services */}
-              {desktopVisitServices.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-xs text-muted-foreground mb-2">{language === 'he' ? 'שירותים נוספים' : 'Дополнительные услуги'}</p>
-                  <div className="space-y-2">
-                    {desktopVisitServices.map((service: any) => (
-                      <div key={service.id} className="flex justify-between items-center px-3 py-2 bg-muted/20 rounded-lg">
-                        <span className="text-sm font-medium">
-                          {language === 'ru' ? (service.service_name_ru || service.service_name) : service.service_name}
-                        </span>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                          <span>{service.duration_minutes} {language === 'he' ? 'דק' : 'мин'}</span>
-                          {service.price > 0 && <span className="font-medium text-foreground">₪{service.price}</span>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
+              {/* Three columns */}
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="bg-muted/30 rounded-xl p-4">
-                  <p className="text-xs text-muted-foreground">{language === 'he' ? 'סטטוס' : 'Статус'}</p>
-                  <p className="font-semibold mt-1">{desktopVisit.status}</p>
-                </div>
-                <div className="bg-muted/30 rounded-xl p-4">
-                  <p className="text-xs text-muted-foreground">{language === 'he' ? 'משך' : 'Длительность'}</p>
-                  <p className="font-semibold mt-1">
-                    {desktopVisit.duration_minutes ? `${desktopVisit.duration_minutes} мин` : '—'}
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'סטטוס' : 'Статус'}</p>
+                  <p className="text-lg font-bold">
+                    {desktopVisit.status === 'scheduled' ? (language === 'he' ? 'מתוכנן' : 'Запланирован') :
+                     desktopVisit.status === 'in_progress' ? (language === 'he' ? 'בתהליך' : 'В процессе') :
+                     desktopVisit.status === 'completed' ? (language === 'he' ? 'הושלם' : 'Завершён') :
+                     (language === 'he' ? 'בוטל' : 'Отменён')}
                   </p>
                 </div>
                 <div className="bg-muted/30 rounded-xl p-4">
-                  <p className="text-xs text-muted-foreground">{language === 'he' ? 'מחיר' : 'Цена'}</p>
-                  <p className="font-semibold mt-1">{desktopVisit.price ? `₪${desktopVisit.price}` : '—'}</p>
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'משך' : 'Длительность'}</p>
+                  <p className="text-lg font-bold">
+                    {(() => {
+                      const mainDuration = desktopVisit.services?.duration_minutes || desktopVisit.duration_minutes || 0
+                      const additionalDuration = desktopVisitServices.reduce((sum: number, s: any) => sum + (s.duration_minutes || 0), 0)
+                      const totalDuration = mainDuration + additionalDuration
+                      return totalDuration > 0 ? `${totalDuration} ${language === 'he' ? 'דק' : 'мин'}` : '—'
+                    })()}
+                  </p>
+                </div>
+                <div className="bg-muted/30 rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'מחיר' : 'Цена'}</p>
+                  <p className="text-lg font-bold">{desktopVisit.price ? `₪${desktopVisit.price}` : '—'}</p>
                 </div>
               </div>
 
-              {/* End time */}
-              {(() => {
-                const mainDuration = desktopVisit.services?.duration_minutes || desktopVisit.duration_minutes || 0
-                const additionalDuration = desktopVisitServices.reduce((sum: number, s: any) => sum + (s.duration_minutes || 0), 0)
-                const totalDuration = mainDuration + additionalDuration
-                const endTime = totalDuration > 0
-                  ? new Date(new Date(desktopVisit.scheduled_at).getTime() + totalDuration * 60000)
-                  : null
-                
-                return endTime && (
-                  <div className="mb-6 flex items-center justify-between px-4 py-3 bg-muted/20 rounded-xl">
-                    <span className="text-sm text-muted-foreground">{language === 'he' ? 'סיום' : 'Окончание'}</span>
-                    <span className="text-sm font-semibold">
-                      {endTime.toLocaleTimeString(language === 'he' ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+              {/* Service and End time rows */}
+              <div className="space-y-3 mb-6">
+                {getServiceName(desktopVisit) && (
+                  <div className="flex items-center gap-3 py-3 border-b border-muted">
+                    <Scissors size={18} className="text-muted-foreground" />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">{language === 'he' ? 'שירות' : 'Услуга'}</p>
+                      <p className="text-sm font-medium">{getServiceName(desktopVisit)}</p>
+                    </div>
                   </div>
-                )
-              })()}
+                )}
+
+                {/* Additional services */}
+                {desktopVisitServices.length > 0 && (
+                  <div className="py-3 border-b border-muted">
+                    <p className="text-xs text-muted-foreground mb-2">{language === 'he' ? 'שירותים נוספים' : 'Дополнительные услуги'}</p>
+                    <div className="space-y-1.5">
+                      {desktopVisitServices.map((service: any) => (
+                        <div key={service.id} className="flex justify-between items-center text-sm">
+                          <span>{language === 'ru' ? (service.service_name_ru || service.service_name) : service.service_name}</span>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <span>{service.duration_minutes} {language === 'he' ? 'דק' : 'мин'}</span>
+                            {service.price > 0 && <span className="font-medium text-foreground">₪{service.price}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(() => {
+                  const mainDuration = desktopVisit.services?.duration_minutes || desktopVisit.duration_minutes || 0
+                  const additionalDuration = desktopVisitServices.reduce((sum: number, s: any) => sum + (s.duration_minutes || 0), 0)
+                  const totalDuration = mainDuration + additionalDuration
+                  const endTime = totalDuration > 0
+                    ? new Date(new Date(desktopVisit.scheduled_at).getTime() + totalDuration * 60000)
+                    : null
+                  
+                  return endTime && (
+                    <div className="flex items-center gap-3 py-3">
+                      <Clock size={18} className="text-muted-foreground" />
+                      <div className="flex-1">
+                        <p className="text-xs text-muted-foreground">{language === 'he' ? 'סיום' : 'Окончание'}</p>
+                        <p className="text-sm font-medium">
+                          {endTime.toLocaleTimeString(language === 'he' ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
 
               {desktopVisit.notes && (
-                <div className="mb-6">
-                  <p className="text-xs text-muted-foreground mb-2">{language === 'he' ? 'הערות' : 'Заметки'}</p>
-                  <p className="text-sm whitespace-pre-wrap bg-muted/20 rounded-xl p-4">{desktopVisit.notes}</p>
+                <div className="mb-6 p-4 bg-muted/20 rounded-xl">
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'הערות' : 'Заметки'}</p>
+                  <p className="text-sm whitespace-pre-wrap">{desktopVisit.notes}</p>
                 </div>
               )}
 
+              {/* Action buttons */}
               <div className="flex gap-3">
                 {desktopVisit.status === 'scheduled' && (
                   <button
@@ -1159,7 +1190,7 @@ export default function VisitsPage() {
                       updateVisitStatus(desktopVisit.id, 'in_progress')
                       setDesktopVisit(null)
                     }}
-                    className="flex-1 py-3 rounded-xl border-2 border-amber-400 text-amber-600 text-sm font-semibold hover:bg-amber-50 transition"
+                    className="flex-1 py-3.5 rounded-2xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
                   >
                     ▶ {language === 'he' ? 'התחל' : 'Начать'}
                   </button>
@@ -1171,7 +1202,7 @@ export default function VisitsPage() {
                         openModal('visit-complete-payment', { visit: desktopVisit })
                         setDesktopVisit(null)
                       }}
-                      className="flex-1 py-3 rounded-xl border-2 border-emerald-400 text-emerald-600 text-sm font-semibold hover:bg-emerald-50 transition"
+                      className="flex-1 py-3.5 rounded-2xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
                     >
                       ✓ {language === 'he' ? 'סיים' : 'Завершить'}
                     </button>
@@ -1180,20 +1211,36 @@ export default function VisitsPage() {
                         setAddServiceVisit(desktopVisit)
                         setAddServiceOpen(true)
                       }}
-                      className="w-12 h-12 flex items-center justify-center rounded-xl border-2 border-primary/30 text-primary hover:bg-primary/5 transition flex-shrink-0"
+                      className="w-12 h-12 flex items-center justify-center rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition flex-shrink-0"
                       title={language === 'he' ? 'הוסף שירות' : 'Добавить услугу'}
                     >
                       <Plus size={20} />
                     </button>
                   </>
                 )}
+                
+                {/* Edit button */}
+                {desktopVisit.status !== 'completed' && desktopVisit.status !== 'cancelled' && (
+                  <button
+                    onClick={() => {
+                      openModal('visit-edit', { visit: desktopVisit })
+                      setDesktopVisit(null)
+                    }}
+                    className="py-3.5 px-6 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition flex items-center gap-2"
+                  >
+                    <Pencil size={16} />
+                    {language === 'he' ? 'ערוך' : 'Редактировать'}
+                  </button>
+                )}
+
+                {/* Cancel button */}
                 {desktopVisit.status !== 'completed' && desktopVisit.status !== 'cancelled' && (
                   <button
                     onClick={() => {
                       updateVisitStatus(desktopVisit.id, 'cancelled')
                       setDesktopVisit(null)
                     }}
-                    className="py-3 px-6 rounded-xl border border-slate-300 text-slate-500 text-sm font-medium hover:bg-slate-50 transition"
+                    className="py-3.5 px-6 rounded-2xl border-2 border-red-500 text-red-500 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition"
                   >
                     ✕ {language === 'he' ? 'בטל' : 'Отменить'}
                   </button>

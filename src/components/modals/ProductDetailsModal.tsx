@@ -55,7 +55,7 @@ export function ProductDetailsModal() {
 
   const handleEditClick = () => {
     closeModal('product-details')
-    // openModal('product-edit', { product })
+    openModal('product-edit', { product })
   }
 
   const handleSellClick = () => {

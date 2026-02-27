@@ -15,6 +15,9 @@ import { AddServiceModal } from './visits/AddServiceModal'
 
 // Products
 import { ProductDetailsModal } from './ProductDetailsModal'
+import { SellProductModal } from './products/SellProductModal'
+import { AddStockModal } from './products/AddStockModal'
+import { EditProductModal } from './products/EditProductModal'
 
 // Payments
 import { CreatePaymentModal } from './payments/CreatePaymentModal'
@@ -60,6 +63,9 @@ export function ModalManager() {
       
       {/* Products */}
       <ProductDetailsModal />
+      <SellProductModal />
+      <AddStockModal />
+      <EditProductModal />
       
       {/* Payments */}
       <CreatePaymentModal />

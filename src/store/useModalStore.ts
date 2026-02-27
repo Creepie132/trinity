@@ -15,6 +15,7 @@ export type ModalType =
   // Products
   | 'product-create'
   | 'product-details'
+  | 'product-edit'
   | 'product-sell'
   | 'product-add-stock'
   | 'product-return'

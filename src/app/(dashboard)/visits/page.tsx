@@ -87,19 +87,12 @@ export default function VisitsPage() {
   }
 
   function getServiceName(visit: any): string {
-    // First try to get from joined services table
+    // Get from joined services table
     if (visit?.services) {
       return language === 'he' ? visit.services.name : (visit.services.name_ru || visit.services.name)
     }
-    // Fallback to local services array
-    if (visit?.service_id) {
-      const service = services.find((s: any) => s.id === visit.service_id || s.id === visit.service_type)
-      if (service) {
-        return language === 'he' ? service.name : (service.name_ru || service.name)
-      }
-    }
-    // Last resort: service_type field
-    return visit?.service_type || ''
+    // Fallback: empty string (service name should come from JOIN)
+    return ''
   }
 
   function getLastVisitDate(visit: any): string {

@@ -1,24 +1,20 @@
 // ================================================
 // TRINITY CRM - Products Hooks
 // React Query hooks for products CRUD
-// Version: 2.23.0
+// Version: 2.24.0 - Local search optimization
 // ================================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Product, CreateProductDTO, UpdateProductDTO } from '@/types/inventory'
 
 /**
- * useProducts - Fetch all products (with optional search)
+ * useProducts - Fetch all products (search is done locally in component)
  */
 export function useProducts(searchQuery?: string) {
   return useQuery({
-    queryKey: ['products', searchQuery],
+    queryKey: ['products'],
     queryFn: async () => {
-      const url = searchQuery
-        ? `/api/products?search=${encodeURIComponent(searchQuery)}`
-        : '/api/products'
-
-      const response = await fetch(url)
+      const response = await fetch('/api/products')
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to fetch products')

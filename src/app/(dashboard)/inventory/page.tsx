@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useProducts, useLowStockProducts } from '@/hooks/useProducts'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -25,7 +25,8 @@ export default function InventoryPage() {
 
   const { openModal } = useModalStore()
 
-  const { data: products = [], isLoading, refetch } = useProducts(searchQuery)
+  // Fetch all products without search - only once
+  const { data: products = [], isLoading, refetch } = useProducts()
   const { data: lowStockProducts = [] } = useLowStockProducts()
 
   // Feature check
@@ -35,13 +36,27 @@ export default function InventoryPage() {
     }
   }, [features.hasInventory, features.isActive, features.isLoading, router])
 
-  // Filter products
-  const filteredProducts = products.filter((product) => {
-    if (categoryFilter && categoryFilter !== 'all' && product.category !== categoryFilter) {
-      return false
+  // Local filtering - only when 2+ characters
+  const filteredProducts = useMemo(() => {
+    let result = products
+
+    // Search filter (local, starting from 2 characters)
+    if (searchQuery.length >= 2) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter((product) =>
+        product.name.toLowerCase().includes(query) ||
+        (product.barcode && product.barcode.toLowerCase().includes(query)) ||
+        (product.category && product.category.toLowerCase().includes(query))
+      )
     }
-    return true
-  })
+
+    // Category filter
+    if (categoryFilter && categoryFilter !== 'all') {
+      result = result.filter((product) => product.category === categoryFilter)
+    }
+
+    return result
+  }, [products, searchQuery, categoryFilter])
 
   // Categories
   const categories = Array.from(
@@ -184,6 +199,11 @@ export default function InventoryPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-card bg-white shadow-card focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        {searchQuery.length > 0 && searchQuery.length < 2 && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+            {locale === 'he' ? 'הקלד עוד תו אחד...' : 'Введите ещё символ...'}
+          </div>
+        )}
       </div>
 
       {/* Category Filter - Horizontal Chips */}
@@ -219,7 +239,13 @@ export default function InventoryPage() {
           <div className="bg-white rounded-2xl shadow-card border border-card p-12 text-center">
             <Package size={48} className="mx-auto text-slate-300 mb-3" />
             <p className="text-sm text-slate-400">
-              {locale === 'he' ? 'אין מוצרים' : 'Нет товаров'}
+              {searchQuery.length >= 2
+                ? locale === 'he'
+                  ? 'לא נמצאו תוצאות'
+                  : 'Ничего не найдено'
+                : locale === 'he'
+                ? 'אין מוצרים'
+                : 'Нет товаров'}
             </p>
           </div>
         ) : (

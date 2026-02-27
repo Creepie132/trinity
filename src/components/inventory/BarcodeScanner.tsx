@@ -65,7 +65,17 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
 
     const initScanner = async () => {
       try {
-        // Get available video devices
+        // First, request camera permission explicitly
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: { ideal: 'environment' } 
+          } 
+        })
+
+        // Stop the permission stream immediately (we'll use ZXing's stream)
+        stream.getTracks().forEach(track => track.stop())
+
+        // Get available video devices after permission is granted
         const videoDevices = await navigator.mediaDevices.enumerateDevices()
         const cameras = videoDevices.filter((device) => device.kind === 'videoinput')
         setDevices(cameras)
@@ -99,7 +109,23 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         )
       } catch (err: any) {
         console.error('Camera access error:', err)
-        setError(t('inventory.scanner.cameraError'))
+        
+        // Provide specific error messages based on error type
+        let errorMessage = t('inventory.scanner.cameraError')
+        
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          errorMessage = t('inventory.scanner.permissionDenied') || 'אישור גישה למצלמה נדרש. אנא אשר גישה בהגדרות הדפדפן.'
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          errorMessage = t('inventory.scanner.noCameraFound') || 'לא נמצאה מצלמה במכשיר זה.'
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          errorMessage = t('inventory.scanner.cameraInUse') || 'המצלמה בשימוש על ידי אפליקציה אחרת.'
+        } else if (err.name === 'OverconstrainedError') {
+          errorMessage = t('inventory.scanner.unsupportedConstraints') || 'המצלמה אינה תומכת בהגדרות הנדרשות.'
+        } else if (err.name === 'TypeError') {
+          errorMessage = t('inventory.scanner.notSupported') || 'הדפדפן אינו תומך בגישה למצלמה. אנא השתמש בדפדפן מעודכן.'
+        }
+        
+        setError(errorMessage)
         setManualEntry(true)
       }
     }
@@ -175,7 +201,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
             </div>
 
             <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-              {t('inventory.scanner.cameraError') || 'Поместите штрих-код в рамку камеры'}
+              {t('inventory.scanner.placeBarcode') || 'Поместите штрих-код в рамку камеры'}
             </p>
           </div>
         ) : (

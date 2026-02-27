@@ -87,7 +87,7 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
     }
 
     try {
-      await updateProduct.mutateAsync({ id: product.id, ...formData })
+      await updateProduct.mutateAsync({ id: product.id, data: formData })
       toast.success(t('common.success'))
       onClose()
     } catch (error: any) {

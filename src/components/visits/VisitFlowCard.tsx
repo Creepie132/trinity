@@ -70,6 +70,7 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
   // Handle adding service
   const handleAddService = async (service: any) => {
     await addServiceMutation.mutateAsync({
+      visit_id: visit.id,
       service_id: service.id,
       service_name: service.name,
       service_name_ru: service.name_ru,

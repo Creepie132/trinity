@@ -21,9 +21,10 @@ interface CreateOrgSubscriptionDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-type Plan = 'basic' | 'pro' | 'enterprise'
+type Plan = 'demo' | 'basic' | 'pro' | 'enterprise'
 
 const PLANS = {
+  demo: { name: 'Демо', price: 0, nameHe: 'דמו' },
   basic: { name: 'Базовый', price: 149, nameHe: 'בסיסי' },
   pro: { name: 'Профессиональный', price: 299, nameHe: 'מקצועי' },
   enterprise: { name: 'Корпоративный', price: 499, nameHe: 'ארגוני' },

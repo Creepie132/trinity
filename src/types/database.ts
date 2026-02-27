@@ -79,7 +79,7 @@ export interface Organization {
   email: string | null
   phone: string | null
   category: 'salon' | 'carwash' | 'clinic' | 'restaurant' | 'gym' | 'other'
-  plan: 'basic' | 'pro' | 'enterprise'
+  plan: 'demo' | 'basic' | 'pro' | 'enterprise' | 'custom'
   is_active: boolean
   features: {
     clients?: boolean

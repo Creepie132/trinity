@@ -76,7 +76,7 @@ export default function OrganizationsPage() {
   const [newOrg, setNewOrg] = useState({
     name: '',
     category: 'other',
-    plan: 'basic',
+    plan: 'demo',
   })
 
   const queryClient = useQueryClient()
@@ -110,7 +110,7 @@ export default function OrganizationsPage() {
       setSelectedOwnerClientId('')
       setClientMode('existing')
       setNewClient({ firstName: '', lastName: '', email: '', phone: '' })
-      setNewOrg({ name: '', category: 'other', plan: 'basic' })
+      setNewOrg({ name: '', category: 'other', plan: 'demo' })
     }
   }, [addDialogOpen])
 
@@ -192,7 +192,7 @@ export default function OrganizationsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'organizations'] })
       
       setAddDialogOpen(false)
-      setNewOrg({ name: '', category: 'other', plan: 'basic' })
+      setNewOrg({ name: '', category: 'other', plan: 'demo' })
       setSelectedOwnerClientId('')
       setNewClient({ firstName: '', lastName: '', email: '', phone: '' })
       setClientMode('existing')

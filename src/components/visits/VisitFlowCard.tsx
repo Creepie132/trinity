@@ -67,16 +67,17 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
     ? new Date(date.getTime() + visit.duration_minutes * 60000)
     : null
 
-  // Handle adding service
+  // Handle adding service to visit
   const handleAddService = async (service: any) => {
-    await addServiceMutation.mutateAsync({
+    const serviceData = {
       visit_id: visit.id,
       service_id: service.id,
       service_name: service.name,
       service_name_ru: service.name_ru,
       price: service.price,
       duration_minutes: service.duration_minutes,
-    })
+    }
+    await addServiceMutation.mutateAsync(serviceData)
   }
 
   const content = (

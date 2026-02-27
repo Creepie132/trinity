@@ -104,6 +104,19 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
   // Calculate total from visitServices only (visit.price is already included if service was added)
   const totalPrice = visitServices?.reduce((sum, s) => sum + (s.price || 0), 0) || 0;
   const totalDuration = visitServices?.reduce((sum, s) => sum + (s.duration_minutes || 0), 0) || 0;
+  
+  // Calculate end time (start time + main service duration + additional services duration)
+  const mainServiceDuration = visit.services?.duration_minutes || visit.duration_minutes || 0;
+  const fullDuration = mainServiceDuration + totalDuration;
+  const startTime = visit.started_at ? new Date(visit.started_at) : new Date(visit.scheduled_at);
+  const endTime = new Date(startTime.getTime() + fullDuration * 60000);
+  
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString(language === 'he' ? 'he-IL' : 'ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   const clientName = `${visit.clients?.first_name} ${visit.clients?.last_name}`;
   
@@ -165,6 +178,13 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
               <Clock className="w-4 h-4" />
               {elapsedTime}
             </div>
+            
+            {fullDuration > 0 && (
+              <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                <span>{language === 'he' ? 'סיום:' : 'Конец:'}</span>
+                <span className="font-semibold">{formatTime(endTime)}</span>
+              </div>
+            )}
           </div>
 
           {/* Right: Total Price */}
@@ -213,6 +233,12 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
                 <Clock className="w-3 h-3" />
                 {elapsedTime}
               </div>
+              {fullDuration > 0 && (
+                <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                  <span>{language === 'he' ? 'סיום:' : 'Конец:'}</span>
+                  <span className="font-semibold">{formatTime(endTime)}</span>
+                </div>
+              )}
               <div className="flex items-center gap-1 font-bold text-green-700 dark:text-green-400 text-base">
                 ₪{totalPrice.toFixed(2)}
               </div>

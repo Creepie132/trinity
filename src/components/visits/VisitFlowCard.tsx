@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock, Calendar, User, Scissors, FileText, History } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { toast } from 'sonner'
-import { useVisitServices } from '@/hooks/useVisitServices'
+import { useVisitServices, useAddVisitService } from '@/hooks/useVisitServices'
+import { AddServiceDialog } from './AddServiceDialog'
 
 interface VisitFlowCardProps {
   visit: any
@@ -41,13 +42,22 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
     onShowHistory
   } = props
 
+  // State for AddServiceDialog
+  const [isAddServiceDialogOpen, setIsAddServiceDialogOpen] = useState(false)
+
   // Fetch visit services
   const { data: visitServices = [] } = useVisitServices(visit?.id || '')
+  const addServiceMutation = useAddVisitService(visit?.id || '')
 
   if (!visit || !isOpen) return null
 
   const l = locale === 'he'
   const date = new Date(visit.scheduled_at)
+  
+  // Get service name from visit.services JOIN (fallback to prop)
+  const displayServiceName = visit.services
+    ? (locale === 'ru' ? (visit.services.name_ru || visit.services.name) : visit.services.name)
+    : serviceName
   
   // Calculate total duration including all services
   const totalDuration = visitServices.reduce((sum, service) => sum + (service.duration_minutes || 0), 0)
@@ -56,6 +66,17 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
     : visit.duration_minutes
     ? new Date(date.getTime() + visit.duration_minutes * 60000)
     : null
+
+  // Handle adding service
+  const handleAddService = async (service: any) => {
+    await addServiceMutation.mutateAsync({
+      service_id: service.id,
+      service_name: service.name,
+      service_name_ru: service.name_ru,
+      price: service.price,
+      duration_minutes: service.duration_minutes,
+    })
+  }
 
   const content = (
     <div className="space-y-4">
@@ -69,7 +90,7 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
         <InfoRow
           icon={<Scissors size={16} />}
           label={l ? 'שירות' : 'Услуга'}
-          value={serviceName || '—'}
+          value={displayServiceName || '—'}
         />
         
         {/* Display additional services */}
@@ -106,7 +127,7 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
         />
         <InfoRow
           icon={<Clock size={16} />}
-          label={l ? 'שעת סיום' : 'Время окончания'}
+          label={l ? 'סיום' : 'Окончание'}
           value={
             endTime
               ? endTime.toLocaleTimeString(l ? 'he-IL' : 'ru-RU', {
@@ -221,19 +242,13 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
             ✓ {l ? 'סיים' : 'Завершить'}
           </button>
 
-          {onAddService && (
-            <button
-              onClick={() => {
-                if (onAddService) {
-                  onAddService(visit.service_id || '')
-                }
-              }}
-              className="w-full py-3.5 rounded-2xl border-2 border-blue-600 text-blue-600 text-sm font-semibold flex items-center justify-center gap-2"
-            >
-              <Plus size={20} />
-              {l ? 'הוסף שירות' : 'Добавить услугу'}
-            </button>
-          )}
+          <button
+            onClick={() => setIsAddServiceDialogOpen(true)}
+            className="w-full py-3.5 rounded-2xl border-2 border-blue-600 text-blue-600 text-sm font-semibold flex items-center justify-center gap-2"
+          >
+            <Plus size={20} />
+            {l ? 'הוסף שירות' : 'Добавить услугу'}
+          </button>
 
           <button
             onClick={() => {
@@ -250,13 +265,22 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
   )
 
   return (
-    <TrinityBottomDrawer
-      isOpen={isOpen}
-      onClose={onClose}
-      title={clientName || (l ? 'פרטי ביקור' : 'Детали визита')}
-    >
-      {content}
-    </TrinityBottomDrawer>
+    <>
+      <TrinityBottomDrawer
+        isOpen={isOpen}
+        onClose={onClose}
+        title={clientName || (l ? 'פרטי ביקור' : 'Детали визита')}
+      >
+        {content}
+      </TrinityBottomDrawer>
+
+      <AddServiceDialog
+        open={isAddServiceDialogOpen}
+        onOpenChange={setIsAddServiceDialogOpen}
+        onAddService={handleAddService}
+        isPending={addServiceMutation.isPending}
+      />
+    </>
   )
 }
 

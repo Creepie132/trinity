@@ -53,9 +53,6 @@ export default function VisitsPage() {
   const [page, setPage] = useState(1)
   const pageSize = 20
   const [desktopVisit, setDesktopVisit] = useState<any>(null)
-  const [addServiceOpen, setAddServiceOpen] = useState(false)
-  const [addServiceVisit, setAddServiceVisit] = useState<any>(null)
-  const [services, setServices] = useState<any[]>([])
   const [allClients, setAllClients] = useState<any[]>([])
   const [newVisitNotify, setNewVisitNotify] = useState<any>(null)
   const [paymentVisit, setPaymentVisit] = useState<any>(null)
@@ -249,16 +246,6 @@ export default function VisitsPage() {
   const from = (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, totalCount)
 
-  // Load services for add-service form
-  useEffect(() => {
-    if (!orgId) return
-    fetch('/api/services')
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) setServices(data)
-      })
-      .catch(console.error)
-  }, [orgId])
 
   // Sort visits by status groups
   const statusOrder: Record<string, number> = {
@@ -1208,11 +1195,32 @@ export default function VisitsPage() {
                     </button>
                     <button
                       onClick={() => {
-                        setAddServiceVisit(desktopVisit)
-                        setAddServiceOpen(true)
+                        openModal('visit-add-service', {
+                          visitId: desktopVisit.id,
+                          onAddService: async (service: any) => {
+                            const res = await fetch(`/api/visits/${desktopVisit.id}/services`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                visit_id: desktopVisit.id,
+                                service_id: service.id,
+                                service_name: service.name,
+                                service_name_ru: service.name_ru,
+                                price: service.price || 0,
+                                duration_minutes: service.duration_minutes,
+                              }),
+                            })
+
+                            if (res.ok) {
+                              toast.success(language === 'he' ? 'שירות נוסף' : 'Услуга добавлена')
+                              refetch()
+                            } else {
+                              toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
+                            }
+                          }
+                        })
                       }}
                       className="w-12 h-12 flex items-center justify-center rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition flex-shrink-0"
-                      title={language === 'he' ? 'הוסף שירות' : 'Добавить услугу'}
                     >
                       <Plus size={20} />
                     </button>
@@ -1251,63 +1259,6 @@ export default function VisitsPage() {
         </div>
       )}
 
-      {/* Add Service Drawer */}
-      {addServiceOpen && addServiceVisit && (
-        <TrinityBottomDrawer
-          isOpen={addServiceOpen}
-          onClose={() => setAddServiceOpen(false)}
-          title={language === 'he' ? 'הוסף שירות' : 'Добавить услугу'}
-        >
-          <div className="space-y-3">
-            {services.map((service: any) => (
-              <button
-                key={service.id}
-                onClick={async () => {
-                  // Calculate new price and duration
-                  const currentPrice = addServiceVisit.price || 0
-                  const currentDuration = addServiceVisit.duration_minutes || 0
-                  const servicePrice = service.price || 0
-                  const serviceDuration = service.duration_minutes || 0
-                  
-                  const newPrice = currentPrice + servicePrice
-                  const newDuration = currentDuration + serviceDuration
-
-                  // Update visit
-                  const res = await fetch(`/api/visits/${addServiceVisit.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      price: newPrice,
-                      duration_minutes: newDuration,
-                    }),
-                  })
-
-                  if (res.ok) {
-                    toast.success(language === 'he' ? 'שירות נוסף' : 'Услуга добавлена')
-                    setAddServiceOpen(false)
-                    refetch() // Refresh visits list
-                    // Update desktop panel if open
-                    if (desktopVisit?.id === addServiceVisit.id) {
-                      setDesktopVisit({
-                        ...desktopVisit,
-                        price: newPrice,
-                        duration_minutes: newDuration,
-                      })
-                    }
-                  } else {
-                    toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
-                  }
-                }}
-                className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-muted/50 transition border"
-              >
-                <span className="text-sm font-medium">{service.name}</span>
-                <span className="text-sm text-muted-foreground">
-                  ₪{service.price} · {service.duration_minutes} {language === 'he' ? 'דק' : 'мин'}
-                </span>
-              </button>
-            ))}
-          </div>
-        </TrinityBottomDrawer>
       )}
 
       {/* Mobile VisitFlowCard */}

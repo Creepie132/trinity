@@ -20,6 +20,7 @@ import { ActiveVisitCard } from '@/components/visits/ActiveVisitCard'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { MeetingDetailCard } from '@/components/visits/MeetingDetailCard'
 import { VisitFlowCard } from '@/components/visits/VisitFlowCard'
+import { useVisitServices } from '@/hooks/useVisitServices'
 import { format } from 'date-fns'
 import {
   Select,
@@ -61,6 +62,9 @@ export default function VisitsPage() {
   const [paymentMethod, setPaymentMethod] = useState<string>('')
   const [receiptVisit, setReceiptVisit] = useState<any>(null)
   const [createVisitPrefill, setCreateVisitPrefill] = useState<any>(null)
+  
+  // Load visit services for desktop visit
+  const { data: desktopVisitServices = [] } = useVisitServices(desktopVisit?.id || '')
   
   // Bookings hook
   // Bookings view removed - online bookings now show in main list with badge
@@ -1073,6 +1077,34 @@ export default function VisitsPage() {
                 </button>
               </div>
 
+              {/* Service name */}
+              {getServiceName(desktopVisit) && (
+                <div className="mb-4">
+                  <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'שירות' : 'Услуга'}</p>
+                  <p className="text-base font-medium">{getServiceName(desktopVisit)}</p>
+                </div>
+              )}
+
+              {/* Additional services */}
+              {desktopVisitServices.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs text-muted-foreground mb-2">{language === 'he' ? 'שירותים נוספים' : 'Дополнительные услуги'}</p>
+                  <div className="space-y-2">
+                    {desktopVisitServices.map((service: any) => (
+                      <div key={service.id} className="flex justify-between items-center px-3 py-2 bg-muted/20 rounded-lg">
+                        <span className="text-sm font-medium">
+                          {language === 'ru' ? (service.service_name_ru || service.service_name) : service.service_name}
+                        </span>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                          <span>{service.duration_minutes} {language === 'he' ? 'דק' : 'мин'}</span>
+                          {service.price > 0 && <span className="font-medium text-foreground">₪{service.price}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="bg-muted/30 rounded-xl p-4">
                   <p className="text-xs text-muted-foreground">{language === 'he' ? 'סטטוס' : 'Статус'}</p>
@@ -1089,6 +1121,25 @@ export default function VisitsPage() {
                   <p className="font-semibold mt-1">{desktopVisit.price ? `₪${desktopVisit.price}` : '—'}</p>
                 </div>
               </div>
+
+              {/* End time */}
+              {(() => {
+                const mainDuration = desktopVisit.services?.duration_minutes || desktopVisit.duration_minutes || 0
+                const additionalDuration = desktopVisitServices.reduce((sum: number, s: any) => sum + (s.duration_minutes || 0), 0)
+                const totalDuration = mainDuration + additionalDuration
+                const endTime = totalDuration > 0
+                  ? new Date(new Date(desktopVisit.scheduled_at).getTime() + totalDuration * 60000)
+                  : null
+                
+                return endTime && (
+                  <div className="mb-6 flex items-center justify-between px-4 py-3 bg-muted/20 rounded-xl">
+                    <span className="text-sm text-muted-foreground">{language === 'he' ? 'סיום' : 'Окончание'}</span>
+                    <span className="text-sm font-semibold">
+                      {endTime.toLocaleTimeString(language === 'he' ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                )
+              })()}
 
               {desktopVisit.notes && (
                 <div className="mb-6">

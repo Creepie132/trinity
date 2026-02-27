@@ -221,7 +221,11 @@ export default function VisitsPage() {
 
       const { data, error, count } = await query
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error fetching visits:', error)
+        console.error('Error details:', JSON.stringify(error, null, 2))
+        throw error
+      }
 
       // Client search filter (client-side for now)
       let filteredData = data as Visit[]

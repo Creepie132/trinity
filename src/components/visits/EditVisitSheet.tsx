@@ -58,7 +58,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
   }
 
-  function handleFocus(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleFocus(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     setTimeout(() => {
       e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }, 300)

@@ -22,7 +22,8 @@ export default async function TodayBlock({ orgId }: { orgId: string }) {
         id,
         first_name,
         last_name
-      )
+      ),
+      services(id, name, name_ru)
     `)
     .eq('org_id', orgId)
     .gte('scheduled_at', todayStart.toISOString())

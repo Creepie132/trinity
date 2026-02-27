@@ -85,7 +85,8 @@ export async function GET(request: NextRequest) {
           name,
           features,
           phone
-        )
+        ),
+        services(id, name, name_ru)
       `)
       .gte('scheduled_at', tomorrow.toISOString())
       .lte('scheduled_at', tomorrowEnd.toISOString())
@@ -157,7 +158,8 @@ export async function GET(request: NextRequest) {
           id,
           name,
           features
-        )
+        ),
+        services(id, name, name_ru)
       `)
       .gte('scheduled_at', twoHoursStart.toISOString())
       .lte('scheduled_at', twoHoursEnd.toISOString())

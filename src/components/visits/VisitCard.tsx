@@ -109,10 +109,17 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
 
   const clientPhone = visit.client_phone || visit.clients?.phone || null
 
+  // Helper: check if string is UUID
+  const isUUID = (str?: string) => {
+    if (!str) return false
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+  }
+
   // Get service name from services table (joined data) or fallback
+  // Priority: 1) visit.services JOIN, 2) visit.service_name, 3) empty (never show UUID)
   const serviceName = visit.services 
-    ? (locale === 'he' ? visit.services.name : (visit.services.name_ru || visit.services.name))
-    : visit.service_name || visit.service_type || ''
+    ? (locale === 'ru' ? (visit.services.name_ru || visit.services.name) : visit.services.name)
+    : (!isUUID(visit.service_name) && visit.service_name) || (!isUUID(visit.service_type) && visit.service_type) || ''
   
   const duration = visit.duration_minutes || 0
 

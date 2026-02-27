@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { X, Phone, MessageCircle, Calendar, Clock, User } from 'lucide-react'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { getClientName } from '@/lib/client-utils'
+import { useVisitServices } from '@/hooks/useVisitServices'
 
 interface VisitDesktopPanelProps {
   visit: any
@@ -28,10 +29,23 @@ export function VisitDesktopPanel({
 }: VisitDesktopPanelProps) {
   const [activeTab, setActiveTab] = useState<'services' | 'notes'>('services')
 
+  // Fetch visit services
+  const { data: fetchedServices = [] } = useVisitServices(visit?.id || '')
+  const allServices = fetchedServices.length > 0 ? fetchedServices : visitServices
+
   const isRTL = locale === 'he'
   
   const client = clients.find((c: any) => c.id === visit?.client_id)
   const clientName = client ? getClientName(client) : '—'
+  
+  // Calculate end time based on all services
+  const totalDuration = allServices.reduce((sum: number, service: any) => sum + (service.duration_minutes || 0), 0)
+  const endTime = visit?.scheduled_at && totalDuration > 0
+    ? new Date(new Date(visit.scheduled_at).getTime() + totalDuration * 60000).toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null
 
   const t = {
     he: {
@@ -119,7 +133,12 @@ export function VisitDesktopPanel({
                 hour: '2-digit',
                 minute: '2-digit',
               })}
-              {visit.duration_minutes && (
+              {endTime && (
+                <span className="text-sm text-muted-foreground">
+                  → {endTime}
+                </span>
+              )}
+              {visit.duration_minutes && !endTime && (
                 <span className="text-sm text-muted-foreground">
                   · {visit.duration_minutes} {l.minutes}
                 </span>
@@ -251,11 +270,23 @@ export function VisitDesktopPanel({
           <div className="flex-1 overflow-y-auto p-6">
             {activeTab === 'services' ? (
               <div className="space-y-3">
-                {visitServices.length > 0 ? (
-                  visitServices.map((vs: any) => (
+                {allServices.length > 0 ? (
+                  allServices.map((vs: any) => (
                     <div key={vs.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/30">
-                      <span className="text-sm font-medium">{vs.services?.name || vs.service_name || '—'}</span>
-                      {vs.price > 0 && <span className="text-sm">₪{vs.price}</span>}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium">
+                          {locale === 'ru' 
+                            ? (vs.service_name_ru || vs.services?.name_ru || vs.service_name || vs.services?.name || '—')
+                            : (vs.service_name || vs.services?.name || '—')
+                          }
+                        </span>
+                        {vs.duration_minutes > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {vs.duration_minutes} {l.minutes}
+                          </span>
+                        )}
+                      </div>
+                      {vs.price > 0 && <span className="text-sm font-medium">₪{vs.price}</span>}
                     </div>
                   ))
                 ) : visit.service_type ? (

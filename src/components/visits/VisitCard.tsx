@@ -5,6 +5,7 @@ import { Clock, User, ChevronRight, Play, CheckCircle, X, Phone, MessageCircle, 
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EditVisitSheet } from './EditVisitSheet'
+import { useVisitServices } from '@/hooks/useVisitServices'
 
 interface VisitCardProps {
   visit: {
@@ -45,6 +46,9 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   
+  // Fetch visit services
+  const { data: visitServices = [] } = useVisitServices(visit.id)
+  
   const handleCardClick = () => {
     if (onClick && typeof window !== 'undefined' && window.innerWidth >= 1024) {
       // Десктоп: вызываем onClick (откроет desktop panel)
@@ -70,6 +74,15 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
         month: 'short',
       })
     : ''
+  
+  // Calculate end time based on all services
+  const totalDuration = visitServices.reduce((sum, service) => sum + (service.duration_minutes || 0), 0)
+  const endTime = startTime && totalDuration > 0
+    ? new Date(new Date(startTime).getTime() + totalDuration * 60000).toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null
 
   // Client info
   const clientName =
@@ -164,6 +177,13 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
             <span className="text-sm font-medium text-start">{time}</span>
           </div>
 
+          {endTime && (
+            <div className="flex justify-between py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground">{locale === 'he' ? 'סיום' : 'Окончание'}</span>
+              <span className="text-sm font-medium text-start">{endTime}</span>
+            </div>
+          )}
+
           {duration > 0 && !isMeetingMode && (
             <div className="flex justify-between py-2.5 border-b border-muted">
               <span className="text-sm text-muted-foreground">{locale === 'he' ? 'משך' : 'Длительность'}</span>
@@ -177,6 +197,25 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
             <div className="flex justify-between py-2.5 border-b border-muted">
               <span className="text-sm text-muted-foreground">{locale === 'he' ? 'שירות' : 'Услуга'}</span>
               <span className="text-sm text-start">{serviceName}</span>
+            </div>
+          )}
+
+          {visitServices.length > 0 && (
+            <div className="py-2.5 border-b border-muted">
+              <span className="text-sm text-muted-foreground block mb-2">{locale === 'he' ? 'שירותים נוספים' : 'Услуги'}</span>
+              <div className="space-y-1.5">
+                {visitServices.map((service) => (
+                  <div key={service.id} className="flex justify-between items-center text-sm">
+                    <span className="text-start">
+                      {locale === 'ru' ? (service.service_name_ru || service.service_name) : service.service_name}
+                    </span>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span>{service.duration_minutes} {locale === 'he' ? "ד'" : 'мин'}</span>
+                      {service.price > 0 && <span className="font-medium text-foreground">₪{service.price}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

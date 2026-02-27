@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock, Calendar, User, Scissors, FileText, History } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { toast } from 'sonner'
+import { useVisitServices } from '@/hooks/useVisitServices'
 
 interface VisitFlowCardProps {
   visit: any
@@ -40,11 +41,19 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
     onShowHistory
   } = props
 
+  // Fetch visit services
+  const { data: visitServices = [] } = useVisitServices(visit?.id || '')
+
   if (!visit || !isOpen) return null
 
   const l = locale === 'he'
   const date = new Date(visit.scheduled_at)
-  const endTime = visit.duration_minutes
+  
+  // Calculate total duration including all services
+  const totalDuration = visitServices.reduce((sum, service) => sum + (service.duration_minutes || 0), 0)
+  const endTime = totalDuration > 0
+    ? new Date(date.getTime() + totalDuration * 60000)
+    : visit.duration_minutes
     ? new Date(date.getTime() + visit.duration_minutes * 60000)
     : null
 
@@ -62,10 +71,38 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
           label={l ? 'שירות' : 'Услуга'}
           value={serviceName || '—'}
         />
+        
+        {/* Display additional services */}
+        {visitServices.length > 0 && (
+          <div className="px-1">
+            <div className="flex items-start gap-3">
+              <span className="text-slate-400 mt-0.5">
+                <Plus size={16} />
+              </span>
+              <div className="flex-1">
+                <p className="text-xs text-slate-400 mb-1">{l ? 'שירותים נוספים' : 'Дополнительные услуги'}</p>
+                <div className="space-y-1">
+                  {visitServices.map((service) => (
+                    <div key={service.id} className="flex justify-between items-center text-sm py-1 px-2 rounded bg-slate-50">
+                      <span className="font-medium">
+                        {locale === 'ru' ? (service.service_name_ru || service.service_name) : service.service_name}
+                      </span>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <span>{service.duration_minutes} {l ? 'דק' : 'мин'}</span>
+                        {service.price > 0 && <span className="font-medium text-foreground">₪{service.price}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <InfoRow
           icon={<Clock size={16} />}
           label={l ? 'משך' : 'Длительность'}
-          value={visit.duration_minutes ? `${visit.duration_minutes} ${l ? 'דק' : 'мин'}` : '—'}
+          value={totalDuration > 0 ? `${totalDuration} ${l ? 'דק' : 'мин'}` : visit.duration_minutes ? `${visit.duration_minutes} ${l ? 'דק' : 'мин'}` : '—'}
         />
         <InfoRow
           icon={<Clock size={16} />}

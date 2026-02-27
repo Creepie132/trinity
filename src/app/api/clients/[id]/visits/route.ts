@@ -26,7 +26,18 @@ export async function GET(
 
     const { data } = await supabase
       .from('visits')
-      .select('id, scheduled_at, duration_minutes, status, notes, price, service_type, created_at')
+      .select(`
+        id, 
+        scheduled_at, 
+        duration_minutes, 
+        status, 
+        notes, 
+        price, 
+        service_type, 
+        created_at,
+        services(id, name, name_ru, duration_minutes, price),
+        visit_services(id, service_name, service_name_ru, duration_minutes, price)
+      `)
       .eq('org_id', orgUser.org_id)
       .eq('client_id', id)
       .order('scheduled_at', { ascending: false })

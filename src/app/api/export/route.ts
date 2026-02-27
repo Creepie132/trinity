@@ -81,7 +81,8 @@ export async function GET(request: NextRequest) {
           service_id,
           price,
           status,
-          clients!inner(first_name, last_name, org_id)
+          clients!inner(first_name, last_name, org_id),
+          services(name, name_ru)
         `)
         .eq('clients.org_id', org_id)
         .order('scheduled_at', { ascending: false })
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
       data = visits.map((v: any) => ({
         Date: new Date(v.scheduled_at).toLocaleString(),
         Client: `${v.clients.first_name} ${v.clients.last_name}`,
-        Service: v.service_type || v.service_id || '',
+        Service: v.services?.name_ru || v.services?.name || v.service_type || '',
         Amount: v.price || 0,
         Status: v.status,
       }))

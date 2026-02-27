@@ -75,6 +75,13 @@ export function ClientSheet({ client, open, onOpenChange }: ClientSheetProps) {
           clients (
             first_name,
             last_name
+          ),
+          services (
+            id,
+            name,
+            name_ru,
+            duration_minutes,
+            price
           )
         `)
         .eq('client_id', client.id)

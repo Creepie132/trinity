@@ -105,7 +105,8 @@ export async function GET(request: NextRequest) {
         service_type,
         price,
         services (
-          name
+          name,
+          name_ru
         )
       `)
       .eq('org_id', org_id)
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
 
     for (const visit of servicesData || []) {
       const service = visit.services as any
-      const serviceName = service?.name || visit.service_type || 'Other'
+      const serviceName = service?.name_ru || service?.name || 'Other'
 
       if (!serviceStats.has(serviceName)) {
         serviceStats.set(serviceName, {

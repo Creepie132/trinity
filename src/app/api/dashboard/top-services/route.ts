@@ -22,16 +22,17 @@ export async function GET(request: NextRequest) {
     // Fetch visits this month with service info
     const { data: visits } = await supabase
       .from('visits')
-      .select('service_type')
+      .select('service_id, services(name, name_ru)')
       .eq('org_id', org_id)
       .gte('scheduled_at', startOfMonth)
-      .not('service_type', 'is', null)
+      .not('service_id', 'is', null)
 
     // Count by service
     const serviceCounts: Record<string, number> = {}
-    visits?.forEach((visit) => {
-      if (visit.service_type) {
-        serviceCounts[visit.service_type] = (serviceCounts[visit.service_type] || 0) + 1
+    visits?.forEach((visit: any) => {
+      const serviceName = visit.services?.name_ru || visit.services?.name
+      if (serviceName) {
+        serviceCounts[serviceName] = (serviceCounts[serviceName] || 0) + 1
       }
     })
 

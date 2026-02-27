@@ -89,8 +89,11 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
       })
     : ''
   
-  // Calculate end time based on all services
-  const totalDuration = visitServices.reduce((sum, service) => sum + (service.duration_minutes || 0), 0)
+  // Calculate end time: start + main service duration + additional services
+  const mainDuration = visit.services?.duration_minutes || visit.duration_minutes || 0
+  const additionalDuration = visitServices.reduce((sum, service) => sum + (service.duration_minutes || 0), 0)
+  const totalDuration = mainDuration + additionalDuration
+  
   const endTime = startTime && totalDuration > 0
     ? new Date(new Date(startTime).getTime() + totalDuration * 60000).toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', {
         hour: '2-digit',
@@ -106,10 +109,10 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
 
   const clientPhone = visit.client_phone || visit.clients?.phone || null
 
-  // Get service name from services table or fallback to service_type
-  const serviceName = visit.service_name || 
-    (visit.services ? (locale === 'he' ? visit.services.name : (visit.services.name_ru || visit.services.name)) : '') ||
-    visit.service_type || ''
+  // Get service name from services table (joined data) or fallback
+  const serviceName = visit.services 
+    ? (locale === 'he' ? visit.services.name : (visit.services.name_ru || visit.services.name))
+    : visit.service_name || visit.service_type || ''
   
   const duration = visit.duration_minutes || 0
 
@@ -195,10 +198,10 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
             <span className="text-sm font-medium text-start">{time}</span>
           </div>
 
-          {endTime && (
+          {totalDuration > 0 && (
             <div className="flex justify-between py-2.5 border-b border-muted">
               <span className="text-sm text-muted-foreground">{locale === 'he' ? 'סיום' : 'Окончание'}</span>
-              <span className="text-sm font-medium text-start">{endTime}</span>
+              <span className="text-sm font-medium text-start">{endTime || '—'}</span>
             </div>
           )}
 
@@ -211,12 +214,10 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
             </div>
           )}
 
-          {serviceName && (
-            <div className="flex justify-between py-2.5 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{locale === 'he' ? 'שירות' : 'Услуга'}</span>
-              <span className="text-sm text-start">{serviceName}</span>
-            </div>
-          )}
+          <div className="flex justify-between py-2.5 border-b border-muted">
+            <span className="text-sm text-muted-foreground">{locale === 'he' ? 'שירות' : 'Услуга'}</span>
+            <span className="text-sm text-start">{serviceName || (locale === 'he' ? 'לא צוין' : 'Не указано')}</span>
+          </div>
 
           {visitServices.length > 0 && (
             <div className="py-2.5 border-b border-muted">

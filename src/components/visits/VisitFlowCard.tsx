@@ -214,26 +214,26 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
       {/* Кнопки — In Progress */}
       {visit.status === 'in_progress' && (
         <div className="space-y-2">
-          <div className="flex gap-2">
-            <button
-              onClick={onComplete}
-              className="flex-1 py-3.5 rounded-2xl bg-emerald-500 text-white text-sm font-semibold"
-            >
-              ✓ {l ? 'סיים' : 'Завершить'}
-            </button>
+          <button
+            onClick={onComplete}
+            className="w-full py-3.5 rounded-2xl bg-emerald-500 text-white text-sm font-semibold"
+          >
+            ✓ {l ? 'סיים' : 'Завершить'}
+          </button>
 
-            {onAddService && (
-              <button
-                onClick={() => {
-                  /* откроет AddServiceSheet */
-                  toast.info(l ? 'הוספת שירות בקרוב' : 'Добавление услуги скоро')
-                }}
-                className="w-12 h-12 flex items-center justify-center rounded-2xl border-2 border-blue-600/30 text-blue-600"
-              >
-                <Plus size={20} />
-              </button>
-            )}
-          </div>
+          {onAddService && (
+            <button
+              onClick={() => {
+                if (onAddService) {
+                  onAddService(visit.service_id || '')
+                }
+              }}
+              className="w-full py-3.5 rounded-2xl border-2 border-blue-600 text-blue-600 text-sm font-semibold flex items-center justify-center gap-2"
+            >
+              <Plus size={20} />
+              {l ? 'הוסף שירות' : 'Добавить услугу'}
+            </button>
+          )}
 
           <button
             onClick={() => {

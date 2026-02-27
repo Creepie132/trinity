@@ -5,7 +5,7 @@ import { Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock, Calendar, 
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { toast } from 'sonner'
 import { useVisitServices, useAddVisitService } from '@/hooks/useVisitServices'
-import { AddServiceDialog } from './AddServiceDialog'
+import { useModalStore } from '@/store/useModalStore'
 
 interface VisitFlowCardProps {
   visit: any
@@ -42,12 +42,9 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
     onShowHistory
   } = props
 
-  // State for AddServiceDialog
-  const [isAddServiceDialogOpen, setIsAddServiceDialogOpen] = useState(false)
-
   // Fetch visit services
   const { data: visitServices = [] } = useVisitServices(visit?.id || '')
-  const addServiceMutation = useAddVisitService(visit?.id || '')
+  const { openModal } = useModalStore()
 
   if (!visit || !isOpen) return null
 
@@ -66,19 +63,6 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
     : visit.duration_minutes
     ? new Date(date.getTime() + visit.duration_minutes * 60000)
     : null
-
-  // Handle adding service to visit
-  const handleAddService = async (service: any) => {
-    const serviceData = {
-      visit_id: visit.id,
-      service_id: service.id,
-      service_name: service.name,
-      service_name_ru: service.name_ru,
-      price: service.price,
-      duration_minutes: service.duration_minutes,
-    }
-    await addServiceMutation.mutateAsync(serviceData)
-  }
 
   const content = (
     <div className="space-y-4">
@@ -245,7 +229,13 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
           </button>
 
           <button
-            onClick={() => setIsAddServiceDialogOpen(true)}
+            onClick={() => {
+              if (onAddService) {
+                onAddService(visit.id)
+              } else {
+                openModal('visit-add-service', { visitId: visit.id })
+              }
+            }}
             className="w-full py-3.5 rounded-2xl border-2 border-blue-600 text-blue-600 text-sm font-semibold flex items-center justify-center gap-2"
           >
             <Plus size={20} />
@@ -267,22 +257,13 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
   )
 
   return (
-    <>
-      <TrinityBottomDrawer
-        isOpen={isOpen}
-        onClose={onClose}
-        title={clientName || (l ? 'פרטי ביקור' : 'Детали визита')}
-      >
-        {content}
-      </TrinityBottomDrawer>
-
-      <AddServiceDialog
-        open={isAddServiceDialogOpen}
-        onOpenChange={setIsAddServiceDialogOpen}
-        onAddService={handleAddService}
-        isPending={addServiceMutation.isPending}
-      />
-    </>
+    <TrinityBottomDrawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title={clientName || (l ? 'פרטי ביקור' : 'Детали визита')}
+    >
+      {content}
+    </TrinityBottomDrawer>
   )
 }
 

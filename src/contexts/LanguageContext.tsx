@@ -365,6 +365,7 @@ const translations: Record<Language, Record<string, string>> = {
     'task.status.in_progress': 'בתהליך',
     'task.status.completed': 'הושלם',
     'task.status.cancelled': 'בוטל',
+    'task.action.start': 'התחל',
     
     // Clients
     'clients.title': 'לקוחות',
@@ -1253,6 +1254,7 @@ const translations: Record<Language, Record<string, string>> = {
     'task.status.in_progress': 'В процессе',
     'task.status.completed': 'Завершён',
     'task.status.cancelled': 'Отменён',
+    'task.action.start': 'Начать',
     
     // Clients
     'clients.title': 'Клиенты',

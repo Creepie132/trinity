@@ -264,6 +264,19 @@ export default function DiaryPage() {
     const badge = getStatusBadge(task)
     const quickActions = []
 
+    // Кнопка "Начать" для задач со статусом open
+    if (task.status === 'open') {
+      quickActions.push({
+        icon: <PlayCircle size={16} />,
+        label: t('task.action.start'),
+        onClick: () => updateTaskStatus(task.id, 'in_progress'),
+        color: 'bg-emerald-50',
+        textColor: 'text-emerald-600',
+        darkBg: 'dark:bg-emerald-900/30',
+        darkText: 'dark:text-emerald-400',
+      })
+    }
+
     if (task.contact_phone) {
       quickActions.push({
         icon: <Phone size={16} />,
@@ -446,9 +459,9 @@ export default function DiaryPage() {
               {task.status === 'open' && (
                 <button
                   onClick={() => updateTaskStatus(task.id, 'in_progress')}
-                  className="w-full py-3 rounded-xl border-2 border-amber-400 text-amber-600 text-sm font-semibold hover:bg-amber-50 transition"
+                  className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition"
                 >
-                  ▶ {language === 'he' ? 'התחל' : 'Начать'}
+                  ▶ {t('task.action.start')}
                 </button>
               )}
               {task.status === 'in_progress' && (
@@ -604,6 +617,7 @@ export default function DiaryPage() {
                   <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'תאריך יעד' : 'Дедлайн'}</th>
                   <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'עדיפות' : 'Приоритет'}</th>
                   <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'סטטוס' : 'Статус'}</th>
+                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'פעולות' : 'Действия'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -615,17 +629,16 @@ export default function DiaryPage() {
                   return (
                     <tr
                       key={task.id}
-                      onClick={() => handleTaskClick(task)}
-                      className={`border-b border-muted/50 hover:bg-muted/30 cursor-pointer transition ${
+                      className={`border-b border-muted/50 hover:bg-muted/30 transition ${
                         task.status === 'cancelled' || task.status === 'done' ? 'opacity-50' : ''
                       }`}
                     >
-                      <td className="py-3 px-4 font-medium">{task.title}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{clientName}</td>
-                      <td className="py-3 px-4 text-muted-foreground">
+                      <td className="py-3 px-4 font-medium cursor-pointer" onClick={() => handleTaskClick(task)}>{task.title}</td>
+                      <td className="py-3 px-4 text-muted-foreground cursor-pointer" onClick={() => handleTaskClick(task)}>{clientName}</td>
+                      <td className="py-3 px-4 text-muted-foreground cursor-pointer" onClick={() => handleTaskClick(task)}>
                         {task.due_date ? new Date(task.due_date).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU') : '—'}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 cursor-pointer" onClick={() => handleTaskClick(task)}>
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full ${
                             task.priority === 'urgent'
@@ -638,10 +651,24 @@ export default function DiaryPage() {
                           {task.priority}
                         </span>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 cursor-pointer" onClick={() => handleTaskClick(task)}>
                         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.className}`}>
                           {badge.text}
                         </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        {task.status === 'open' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              updateTaskStatus(task.id, 'in_progress')
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition"
+                          >
+                            <PlayCircle size={14} />
+                            {t('task.action.start')}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )

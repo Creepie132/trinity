@@ -607,20 +607,7 @@ export default function VisitsPage() {
                     {scheduledVisits.map((visit) => (
                       <VisitCard
                         key={visit.id}
-                        visit={{
-                          id: visit.id,
-                          client_name: visit.clients ? `${visit.clients.first_name} ${visit.clients.last_name}`.trim() : undefined,
-                          client_phone: visit.clients?.phone,
-                          service_name: getServiceLabel(visit.service_type),
-                          scheduled_at: visit.scheduled_at,
-                          duration_minutes: visit.duration_minutes,
-                          status: visit.status,
-                          notes: visit.notes || undefined,
-                          price: visit.price,
-                          created_at: visit.created_at,
-                          clients: visit.clients,
-                          service_type: visit.service_type,
-                        }}
+                        visit={visit}
                         locale={language === 'he' ? 'he' : 'ru'}
                         isMeetingMode={meetingMode.isMeetingMode}
                         onStart={handleStartVisit}
@@ -641,20 +628,7 @@ export default function VisitsPage() {
                     {completedVisits.map((visit) => (
                       <VisitCard
                         key={visit.id}
-                        visit={{
-                          id: visit.id,
-                          client_name: visit.clients ? `${visit.clients.first_name} ${visit.clients.last_name}`.trim() : undefined,
-                          client_phone: visit.clients?.phone,
-                          service_name: getServiceLabel(visit.service_type),
-                          scheduled_at: visit.scheduled_at,
-                          duration_minutes: visit.duration_minutes,
-                          status: visit.status,
-                          notes: visit.notes || undefined,
-                          price: visit.price,
-                          created_at: visit.created_at,
-                          clients: visit.clients,
-                          service_type: visit.service_type,
-                        }}
+                        visit={visit}
                         locale={language === 'he' ? 'he' : 'ru'}
                         isMeetingMode={meetingMode.isMeetingMode}
                         onStart={handleStartVisit}
@@ -676,20 +650,7 @@ export default function VisitsPage() {
                       {cancelledVisits.map((visit) => (
                         <VisitCard
                           key={visit.id}
-                          visit={{
-                            id: visit.id,
-                            client_name: visit.clients ? `${visit.clients.first_name} ${visit.clients.last_name}`.trim() : undefined,
-                            client_phone: visit.clients?.phone,
-                            service_name: getServiceLabel(visit.service_type),
-                            scheduled_at: visit.scheduled_at,
-                            duration_minutes: visit.duration_minutes,
-                            status: visit.status,
-                            notes: visit.notes || undefined,
-                            price: visit.price,
-                            created_at: visit.created_at,
-                            clients: visit.clients,
-                            service_type: visit.service_type,
-                          }}
+                          visit={visit}
                           locale={language === 'he' ? 'he' : 'ru'}
                           isMeetingMode={meetingMode.isMeetingMode}
                           onStart={handleStartVisit}

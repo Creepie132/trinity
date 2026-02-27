@@ -78,6 +78,8 @@ export function TaskDetailSheet({
       urgent: 'דחופה',
       birthdayToday: 'יום הולדת היום!',
       call: 'חייג',
+      sms: 'SMS',
+      sendEmail: 'שלח אימייל',
     },
     ru: {
       description: 'Описание',
@@ -104,6 +106,8 @@ export function TaskDetailSheet({
       urgent: 'Срочный',
       birthdayToday: 'День рождения сегодня!',
       call: 'Позвонить',
+      sms: 'SMS',
+      sendEmail: 'Отправить email',
     },
   }
 
@@ -130,6 +134,14 @@ export function TaskDetailSheet({
   function handleWhatsApp(phone: string) {
     const cleanPhone = phone.replace(/[^0-9]/g, '')
     window.open(`https://wa.me/${cleanPhone}`, '_blank')
+  }
+
+  function handleSMS(phone: string) {
+    window.location.href = `sms:${phone}`
+  }
+
+  function handleEmail(email: string) {
+    window.location.href = `mailto:${email}`
   }
 
   function handleNavigate(address: string) {
@@ -189,6 +201,13 @@ export function TaskDetailSheet({
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span className="text-sm font-medium">WhatsApp</span>
+                </button>
+                <button
+                  onClick={() => handleSMS(task.contact_phone!)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">{labels.sms}</span>
                 </button>
               </div>
             )}
@@ -269,7 +288,7 @@ export function TaskDetailSheet({
         {task.contact_phone && (
           <div>
             <label className="block text-sm font-medium mb-2">{labels.phone}</label>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <a
                 href={`tel:${task.contact_phone}`}
                 className="text-sm text-primary underline hover:text-primary/80"
@@ -291,22 +310,37 @@ export function TaskDetailSheet({
               >
                 <MessageCircle size={14} />
               </button>
+              <button
+                onClick={() => handleSMS(task.contact_phone!)}
+                className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/50 flex items-center justify-center transition"
+                title={labels.sms}
+              >
+                <MessageCircle size={14} />
+              </button>
             </div>
           </div>
         )}
 
-        {/* Email - кликабельный */}
+        {/* Email - кликабельный с кнопкой */}
         {task.contact_email && (
           <div>
             <label className="block text-sm font-medium mb-2">{labels.email}</label>
-            <a
-              href={`mailto:${task.contact_email}`}
-              className="text-sm text-primary underline hover:text-primary/80 flex items-center gap-2"
-              dir="ltr"
-            >
-              <Mail size={14} />
-              {task.contact_email}
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href={`mailto:${task.contact_email}`}
+                className="text-sm text-primary underline hover:text-primary/80"
+                dir="ltr"
+              >
+                {task.contact_email}
+              </a>
+              <button
+                onClick={() => handleEmail(task.contact_email!)}
+                className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center justify-center transition"
+                title={labels.sendEmail}
+              >
+                <Mail size={14} />
+              </button>
+            </div>
           </div>
         )}
 

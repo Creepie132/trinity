@@ -216,20 +216,18 @@ export default function DiaryPage() {
 
   // ===== Статус бейдж =====
   function getStatusBadge(task: Task) {
-    const labels: Record<string, Record<string, string>> = {
-      open: { he: 'פתוח', ru: 'Открыта' },
-      in_progress: { he: 'בביצוע', ru: 'В процессе' },
-      done: { he: 'הושלם', ru: 'Завершена' },
-      cancelled: { he: 'בוטל', ru: 'Отменена' },
-    }
+    // Map 'done' to 'completed' for translation key
+    const statusKey = task.status === 'done' ? 'completed' : task.status
+    
     const colors: Record<string, string> = {
       open: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
       in_progress: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
       done: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-      cancelled: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
+      cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
     }
+    
     return {
-      text: labels[task.status]?.[language] || task.status,
+      text: t(`task.status.${statusKey}`),
       className: colors[task.status] || colors.open,
     }
   }
@@ -612,13 +610,7 @@ export default function DiaryPage() {
                 {groupedTasks.flatMap((group) => group.tasks).map((task: Task) => {
                   const client = task.client_id ? clients.find((c: any) => c.id === task.client_id) : null
                   const clientName = client ? getClientName(client) : '—'
-                  const badge = task.status === 'done'
-                    ? { text: language === 'he' ? 'הושלם' : 'Выполнено', className: 'bg-emerald-100 text-emerald-700' }
-                    : task.status === 'in_progress'
-                    ? { text: language === 'he' ? 'בתהליך' : 'В работе', className: 'bg-amber-100 text-amber-700' }
-                    : task.status === 'cancelled'
-                    ? { text: language === 'he' ? 'בוטל' : 'Отменено', className: 'bg-slate-100 text-slate-500' }
-                    : { text: language === 'he' ? 'פתוח' : 'Открыто', className: 'bg-blue-100 text-blue-700' }
+                  const badge = getStatusBadge(task)
                   
                   return (
                     <tr
@@ -647,7 +639,9 @@ export default function DiaryPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <TaskStatusIcon status={task.status} priority={task.priority} />
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.className}`}>
+                          {badge.text}
+                        </span>
                       </td>
                     </tr>
                   )

@@ -360,6 +360,12 @@ const translations: Record<Language, Record<string, string>> = {
     'birthdays.varDiscount': 'אחוז ההנחה',
     'birthdays.varExpiryDate': 'תאריך תפוגה',
     
+    // Task statuses
+    'task.status.open': 'פתוח',
+    'task.status.in_progress': 'בתהליך',
+    'task.status.completed': 'הושלם',
+    'task.status.cancelled': 'בוטל',
+    
     // Clients
     'clients.title': 'לקוחות',
     'clients.subtitle': 'ניהול לקוחות והיסטוריית ביקורים',
@@ -1241,6 +1247,12 @@ const translations: Record<Language, Record<string, string>> = {
     'birthdays.varOrg': 'Название организации',
     'birthdays.varDiscount': 'Процент скидки',
     'birthdays.varExpiryDate': 'Дата окончания',
+    
+    // Task statuses
+    'task.status.open': 'Открытый',
+    'task.status.in_progress': 'В процессе',
+    'task.status.completed': 'Завершён',
+    'task.status.cancelled': 'Отменён',
     
     // Clients
     'clients.title': 'Клиенты',

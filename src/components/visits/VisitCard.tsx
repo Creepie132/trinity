@@ -25,6 +25,20 @@ interface VisitCardProps {
       phone?: string
     }
     service_type?: string
+    services?: {
+      id: string
+      name: string
+      name_ru?: string
+      duration_minutes?: number
+      price?: number
+    }
+    visit_services?: Array<{
+      id: string
+      service_name: string
+      service_name_ru?: string
+      duration_minutes?: number
+      price?: number
+    }>
   }
   locale: 'he' | 'ru'
   isMeetingMode?: boolean

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { Save } from 'lucide-react'
 import { toast } from 'sonner'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 interface EditVisitSheetProps {
   visit: any
@@ -15,6 +16,8 @@ interface EditVisitSheetProps {
 }
 
 export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeetingMode }: EditVisitSheetProps) {
+  const supabase = createSupabaseBrowserClient()
+  
   // Парсим текущую дату и время
   const startDate = visit?.scheduled_at ? new Date(visit.scheduled_at) : new Date()
   
@@ -24,9 +27,28 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
     duration: visit?.duration_minutes || 30,
     notes: visit?.notes || '',
     price: visit?.price || '',
+    serviceId: visit?.service_id || '',
   })
   
+  const [services, setServices] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
+  
+  // Load services
+  useEffect(() => {
+    async function loadServices() {
+      const { data } = await supabase
+        .from('services')
+        .select('id, name, name_ru, price, duration_minutes')
+        .eq('is_active', true)
+        .order('name')
+      
+      if (data) setServices(data)
+    }
+    
+    if (isOpen) {
+      loadServices()
+    }
+  }, [isOpen, supabase])
 
   function formatDateInput(d: Date): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -53,23 +75,27 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
   const t = {
     he: {
       title: 'עריכת ביקור',
+      service: 'שירות',
       date: 'תאריך',
       time: 'שעה',
       duration: 'משך (דקות)',
       notes: 'הערות',
       price: 'מחיר (₪)',
       save: 'שמור',
-      pastError: 'לא ניתן לבחור תאריך או שעה שעברו'
+      pastError: 'לא ניתן לבחור תאריך או שעה שעברו',
+      selectService: 'בחר שירות'
     },
     ru: {
       title: 'Редактирование визита',
+      service: 'Услуга',
       date: 'Дата',
       time: 'Время',
       duration: 'Длительность (мин)',
       notes: 'Заметки',
       price: 'Цена (₪)',
       save: 'Сохранить',
-      pastError: 'Нельзя выбрать прошедшую дату или время'
+      pastError: 'Нельзя выбрать прошедшую дату или время',
+      selectService: 'Выберите услугу'
     },
   }
 
@@ -92,6 +118,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scheduled_at,
+          service_id: form.serviceId || null,
           duration_minutes: isMeetingMode ? null : Number(form.duration),
           notes: form.notes,
           price: form.price ? Number(form.price) : null,
@@ -104,7 +131,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
       console.log('Response:', JSON.stringify(data))
 
       if (res.ok) {
-        toast.success(locale === 'he' ? 'נשמר בהצלחה' : 'Сохранено')
+        toast.success(locale === 'he' ? 'נשמר בהצлחה' : 'Сохранено')
         onSaved(data)
         onClose()
       } else {
@@ -114,6 +141,20 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
       toast.error(locale === 'he' ? 'שגיאה' : 'Ошибка')
     }
     setSaving(false)
+  }
+  
+  function handleServiceChange(serviceId: string) {
+    const selectedService = services.find(s => s.id === serviceId)
+    if (selectedService) {
+      setForm({
+        ...form,
+        serviceId,
+        price: selectedService.price?.toString() || form.price,
+        duration: selectedService.duration_minutes || form.duration,
+      })
+    } else {
+      setForm({ ...form, serviceId })
+    }
   }
 
   const inputClass = "w-full px-4 py-3 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
@@ -147,6 +188,24 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeet
             className={inputClass}
             dir="ltr"
           />
+        </div>
+
+        {/* Услуга */}
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">{l.service}</label>
+          <select
+            value={form.serviceId}
+            onChange={(e) => handleServiceChange(e.target.value)}
+            onFocus={handleFocus}
+            className={inputClass}
+          >
+            <option value="">{l.selectService}</option>
+            {services.map((service) => (
+              <option key={service.id} value={service.id}>
+                {locale === 'he' ? service.name : (service.name_ru || service.name)}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Длительность — только если НЕ meeting mode */}

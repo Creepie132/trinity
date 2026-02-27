@@ -86,9 +86,19 @@ export default function VisitsPage() {
   }
 
   function getServiceName(visit: any): string {
-    if (!visit?.service_id) return ''
-    const service = services.find((s: any) => s.id === visit.service_id || s.id === visit.service_type)
-    return service?.name || ''
+    // First try to get from joined services table
+    if (visit?.services) {
+      return language === 'he' ? visit.services.name : (visit.services.name_ru || visit.services.name)
+    }
+    // Fallback to local services array
+    if (visit?.service_id) {
+      const service = services.find((s: any) => s.id === visit.service_id || s.id === visit.service_type)
+      if (service) {
+        return language === 'he' ? service.name : (service.name_ru || service.name)
+      }
+    }
+    // Last resort: service_type field
+    return visit?.service_type || ''
   }
 
   function getLastVisitDate(visit: any): string {
@@ -150,8 +160,18 @@ export default function VisitsPage() {
             email
           ),
           services (
+            id,
             name,
-            name_ru
+            name_ru,
+            duration_minutes,
+            price
+          ),
+          visit_services (
+            id,
+            service_name,
+            service_name_ru,
+            duration_minutes,
+            price
           )
         `, { count: 'exact' })
         .eq('org_id', orgId)

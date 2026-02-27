@@ -92,7 +92,11 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
 
   const clientPhone = visit.client_phone || visit.clients?.phone || null
 
-  const serviceName = visit.service_name || visit.service_type || ''
+  // Get service name from services table or fallback to service_type
+  const serviceName = visit.service_name || 
+    (visit.services ? (locale === 'he' ? visit.services.name : (visit.services.name_ru || visit.services.name)) : '') ||
+    visit.service_type || ''
+  
   const duration = visit.duration_minutes || 0
 
   const statusLabel = STATUS_LABELS[visit.status]?.[locale] || visit.status

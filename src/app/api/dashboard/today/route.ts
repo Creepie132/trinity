@@ -31,15 +31,28 @@ export async function GET(request: NextRequest) {
         status,
         notes,
         service_type,
+        duration_minutes,
+        price,
         clients!inner(
           id,
           first_name,
           last_name,
-          org_id
+          org_id,
+          phone
         ),
         services(
+          id,
           name,
-          name_ru
+          name_ru,
+          duration_minutes,
+          price
+        ),
+        visit_services(
+          id,
+          service_name,
+          service_name_ru,
+          duration_minutes,
+          price
         )
       `)
       .eq('clients.org_id', org_id)

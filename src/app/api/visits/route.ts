@@ -25,7 +25,12 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('visits')
-      .select('*')
+      .select(`
+        *,
+        clients(*),
+        services(*),
+        visit_services(*)
+      `)
       .eq('org_id', orgUser.org_id)
       .gte('scheduled_at', oneWeekAgo.toISOString())
       .order('scheduled_at', { ascending: false })

@@ -124,11 +124,11 @@ export function ProductDetailSheet({
                 <img
                   src={product.image_url}
                   alt={product.name}
-                  className="w-20 h-20 object-cover rounded-[16px]"
+                  className="w-[120px] h-[120px] object-cover rounded-[20px]"
                 />
               ) : (
-                <div className="w-20 h-20 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-[16px]">
-                  <Package className="w-10 h-10 text-gray-400 dark:text-gray-600" />
+                <div className="w-[120px] h-[120px] flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-[20px]">
+                  <Package className="w-16 h-16 text-gray-400 dark:text-gray-600" />
                 </div>
               )}
             </div>

@@ -83,6 +83,32 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
     }
   }
 
+  const sendWhatsApp = () => {
+    if (paymentLink && selectedClient && selectedClient.phone) {
+      // Clean phone number and format for Israeli numbers
+      let cleanPhone = selectedClient.phone.replace(/\D/g, '')
+      
+      // Remove leading 0 if present
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = cleanPhone.substring(1)
+      }
+      
+      // Add Israeli country code
+      const formattedPhone = `972${cleanPhone}`
+      
+      // Create message text based on language
+      const messageText = language === 'ru' 
+        ? `Ссылка для оплаты: ${paymentLink}`
+        : `קישור לתשלום: ${paymentLink}`
+      
+      // Open WhatsApp
+      const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(messageText)}`
+      window.open(whatsappUrl, '_blank')
+    } else if (!selectedClient?.phone) {
+      toast.error(language === 'ru' ? 'У клиента нет номера телефона' : 'אין מספר טלפון ללקוח')
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
@@ -171,6 +197,10 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
               <Button type="button" onClick={sendSMS} variant="outline" className="flex-1">
                 <MessageSquare className="w-4 h-4 ml-2" />
                 {t('sms.send')} SMS
+              </Button>
+              <Button type="button" onClick={sendWhatsApp} variant="outline" className="flex-1">
+                <span className="ml-2">💬</span>
+                {language === 'ru' ? 'Отправить WhatsApp' : 'שלח WhatsApp'}
               </Button>
             </div>
 

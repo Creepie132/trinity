@@ -13,6 +13,83 @@ const supabaseAdmin = createClient(
   }
 )
 
+export async function GET(req: NextRequest) {
+  try {
+    // Get current user from session
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Create regular supabase client to verify user
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: authHeader,
+          },
+        },
+      }
+    )
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      console.error('User error:', userError)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Get org_id from org_users table
+    const { data: orgUser, error: orgError } = await supabaseAdmin
+      .from('org_users')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
+
+    if (orgError) {
+      console.error('org_id lookup error:', orgError)
+      return NextResponse.json(
+        { error: `Database error: ${orgError.message}` },
+        { status: 500 }
+      )
+    }
+
+    if (!orgUser?.org_id) {
+      console.error('User not linked to any organization')
+      return NextResponse.json(
+        { error: 'User is not linked to any organization. Please contact support.' },
+        { status: 403 }
+      )
+    }
+
+    // Get clients for this organization
+    const { data: clients, error: clientsError } = await supabaseAdmin
+      .from('clients')
+      .select('*')
+      .eq('org_id', orgUser.org_id)
+      .order('created_at', { ascending: false })
+
+    if (clientsError) {
+      console.error('Clients fetch error:', clientsError)
+      return NextResponse.json(
+        { error: `Database error: ${clientsError.message}` },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(clients, { status: 200 })
+  } catch (error: any) {
+    console.error('API error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Get current user from session

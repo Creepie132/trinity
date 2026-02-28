@@ -82,11 +82,6 @@ export async function POST(req: NextRequest) {
 
     console.log('Client created successfully:', client.id)
 
-    if (insertError) {
-      console.error('Insert error:', insertError)
-      return NextResponse.json({ error: insertError.message }, { status: 500 })
-    }
-
     return NextResponse.json(client, { status: 201 })
   } catch (error: any) {
     console.error('API error:', error)

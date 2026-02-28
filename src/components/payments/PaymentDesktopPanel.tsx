@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X, CreditCard, Calendar, Hash, User } from 'lucide-react'
 import { getClientName } from '@/lib/client-utils'
+import { toast } from 'sonner'
 
 interface PaymentDesktopPanelProps {
   payment: any
@@ -47,6 +48,7 @@ export function PaymentDesktopPanel({
       completed: 'הושלם',
       pending: 'ממתין',
       failed: 'נכשל',
+      cancelled: 'בוטל',
     },
     ru: {
       details: 'Детали',
@@ -65,7 +67,8 @@ export function PaymentDesktopPanel({
       check: 'Чек',
       completed: 'Завершён',
       pending: 'Ожидание',
-      failed: 'Отменён',
+      failed: 'Ошибка',
+      cancelled: 'Отменён',
     },
   }
 
@@ -86,6 +89,28 @@ export function PaymentDesktopPanel({
     completed: l.completed,
     pending: l.pending,
     failed: l.failed,
+    cancelled: l.cancelled,
+  }
+
+  const cancelPayment = async (paymentId: string) => {
+    try {
+      const response = await fetch(`/api/payments/${paymentId}/cancel`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel payment')
+      }
+
+      toast.success(locale === 'he' ? 'התשלום בוטל בהצלחה' : 'Платёж успешно отменён')
+      onClose()
+      
+      // Refresh page
+      window.location.reload()
+    } catch (error) {
+      console.error('Cancel payment error:', error)
+      toast.error(locale === 'he' ? 'שגיאה בביטול התשלום' : 'Ошибка при отмене платежа')
+    }
   }
 
   return (
@@ -239,6 +264,23 @@ export function PaymentDesktopPanel({
                   <div className="mt-6">
                     <p className="text-xs text-muted-foreground mb-2">{l.description}</p>
                     <p className="text-sm whitespace-pre-wrap">{payment.description}</p>
+                  </div>
+                )}
+                
+                {/* Cancel button for pending credit card payments */}
+                {payment.status === 'pending' && 
+                 (payment.payment_method === 'credit_card' || 
+                  payment.payment_method === 'credit' || 
+                  payment.payment_method === 'אשראי' || 
+                  payment.payment_method === 'card') && (
+                  <div className="mt-6">
+                    <button
+                      onClick={() => cancelPayment(payment.id)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-red-50 text-red-600 font-medium hover:bg-red-100 transition"
+                    >
+                      <X size={18} />
+                      {locale === 'he' ? 'ביטול' : 'Отменить'}
+                    </button>
                   </div>
                 )}
               </div>

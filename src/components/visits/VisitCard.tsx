@@ -16,7 +16,7 @@ interface VisitCardProps {
     scheduled_at: string
     duration_minutes?: number
     status: string // scheduled | in_progress | completed | cancelled
-    notes?: string
+    notes?: string | null
     price?: number
     created_at?: string
     clients?: {

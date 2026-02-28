@@ -20,6 +20,7 @@ import { toast } from 'sonner'
 import { ArrowRight, ArrowLeft } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import ModalWrapper from '@/components/ModalWrapper'
+import { PaymentLinkResultModal } from '@/components/modals/products/PaymentLinkResultModal'
 import type { Product } from '@/types/inventory'
 
 interface SellProductDialogProps {
@@ -39,6 +40,9 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
   const [price, setPrice] = useState(0)
   const [clientId, setClientId] = useState<string>('')
   const [paymentMethod, setPaymentMethod] = useState<string>('')
+  const [paymentLink, setPaymentLink] = useState<string | null>(null)
+  const [showPaymentLinkModal, setShowPaymentLinkModal] = useState(false)
+  const [isCreatingLink, setIsCreatingLink] = useState(false)
 
   useEffect(() => {
     if (product && open) {
@@ -46,10 +50,53 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
       setQuantity(1)
       setClientId('')
       setPaymentMethod('')
+      setPaymentLink(null)
+      setShowPaymentLinkModal(false)
+      setIsCreatingLink(false)
     }
   }, [product, open])
 
   const total = quantity * price
+
+  const selectedClient = clients?.data?.find((c) => c.id === clientId)
+
+  const createPaymentLink = async () => {
+    if (!clientId) {
+      toast.error(language === 'ru' ? 'Выберите клиента для создания ссылки' : 'בחר לקוח ליצירת קישור')
+      return
+    }
+
+    setIsCreatingLink(true)
+
+    try {
+      const response = await fetch('/api/payments/create-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: clientId,
+          amount: total,
+          description: `${product?.name} - ${quantity} ${product?.unit}`,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create payment link')
+      }
+
+      const data = await response.json()
+      setPaymentLink(data.payment_link)
+      setShowPaymentLinkModal(true)
+    } catch (error) {
+      console.error('Payment link creation error:', error)
+      toast.error(
+        language === 'ru'
+          ? 'Ошибка создания ссылки на оплату'
+          : 'שגיאה ביצירת קישור לתשלום'
+      )
+    } finally {
+      setIsCreatingLink(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,6 +115,12 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
 
     if (!paymentMethod) {
       toast.error('נא לבחור אמצעי תשלום')
+      return
+    }
+
+    // If payment method is credit, create payment link instead
+    if (paymentMethod === 'credit') {
+      await createPaymentLink()
       return
     }
 
@@ -111,8 +164,25 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
   if (!product) return null
 
   return (
-    <ModalWrapper isOpen={open} onClose={onClose}>
-      <div className="w-full max-w-md p-6">
+    <>
+      <PaymentLinkResultModal
+        open={showPaymentLinkModal}
+        onClose={() => {
+          setShowPaymentLinkModal(false)
+          onClose()
+        }}
+        paymentLink={paymentLink || ''}
+        amount={total}
+        clientPhone={selectedClient?.phone}
+        clientName={
+          selectedClient
+            ? `${selectedClient.first_name} ${selectedClient.last_name}`
+            : undefined
+        }
+      />
+      
+      <ModalWrapper isOpen={open} onClose={onClose}>
+        <div className="w-full max-w-md p-6">
         <div className="relative mb-6">
           <Button
             type="button"
@@ -174,9 +244,12 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
             />
           </div>
 
-          {/* Client (Optional) */}
+          {/* Client */}
           <div>
-            <Label htmlFor="client">{t('inventory.sellDialog.client')}</Label>
+            <Label htmlFor="client">
+              {t('inventory.sellDialog.client')}
+              {paymentMethod === 'credit' && <span className="text-red-500"> *</span>}
+            </Label>
             <Select value={clientId} onValueChange={setClientId}>
               <SelectTrigger className="bg-white dark:bg-gray-800">
                 <SelectValue placeholder={t('inventory.sellDialog.client')} />
@@ -189,6 +262,13 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
                 ))}
               </SelectContent>
             </Select>
+            {paymentMethod === 'credit' && !clientId && (
+              <p className="text-xs text-red-500 mt-1">
+                {language === 'ru'
+                  ? 'Выберите клиента для создания ссылки'
+                  : 'בחר לקוח ליצירת קישור'}
+              </p>
+            )}
           </div>
 
           {/* Payment Method (Required) */}
@@ -223,8 +303,19 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
             <Button type="button" variant="outline" onClick={onClose}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit" disabled={createTransaction.isPending}>
-              {createTransaction.isPending
+            <Button
+              type="submit"
+              disabled={createTransaction.isPending || isCreatingLink}
+            >
+              {isCreatingLink
+                ? language === 'ru'
+                  ? 'Создание...'
+                  : 'יוצר...'
+                : paymentMethod === 'credit'
+                ? language === 'ru'
+                  ? 'Создать ссылку на оплату'
+                  : 'צור קישור לתשלום'
+                : createTransaction.isPending
                 ? t('common.saving')
                 : t('inventory.sellDialog.confirm')}
             </Button>
@@ -232,5 +323,6 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
         </form>
       </div>
     </ModalWrapper>
+    </>
   )
 }

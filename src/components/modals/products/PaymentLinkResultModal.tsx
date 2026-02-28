@@ -1,12 +1,12 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Copy, ExternalLink, MessageSquare } from 'lucide-react'
 import { toast } from 'sonner'
 import { useLanguage } from '@/contexts/LanguageContext'
-import ModalWrapper from '@/components/ModalWrapper'
 
 interface PaymentLinkResultModalProps {
   open: boolean
@@ -26,6 +26,18 @@ export function PaymentLinkResultModal({
   clientName,
 }: PaymentLinkResultModalProps) {
   const { t, language } = useLanguage()
+
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [open])
 
   const copyLink = () => {
     navigator.clipboard.writeText(paymentLink)
@@ -72,8 +84,15 @@ export function PaymentLinkResultModal({
   }
 
   return (
-    <ModalWrapper isOpen={open} onClose={onClose}>
-      <div className="w-full max-w-md p-6">
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      style={{ display: open ? 'flex' : 'none' }}
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-white dark:bg-gray-900 rounded-[32px] max-h-[90vh] w-full max-w-md overflow-auto shadow-2xl p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-2xl font-bold mb-6">
           {language === 'ru' ? 'Ссылка на оплату создана' : 'קישור לתשלום נוצר'}
         </h2>
@@ -152,6 +171,6 @@ export function PaymentLinkResultModal({
           </div>
         </div>
       </div>
-    </ModalWrapper>
+    </div>
   )
 }

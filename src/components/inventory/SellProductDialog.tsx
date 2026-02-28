@@ -85,7 +85,12 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
 
       const data = await response.json()
       setPaymentLink(data.payment_link)
-      setShowPaymentLinkModal(true)
+      // Close current modal before opening payment link modal
+      onClose()
+      // Wait for animation to complete
+      setTimeout(() => {
+        setShowPaymentLinkModal(true)
+      }, 150)
     } catch (error) {
       console.error('Payment link creation error:', error)
       toast.error(
@@ -167,10 +172,7 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
     <>
       <PaymentLinkResultModal
         open={showPaymentLinkModal}
-        onClose={() => {
-          setShowPaymentLinkModal(false)
-          onClose()
-        }}
+        onClose={() => setShowPaymentLinkModal(false)}
         paymentLink={paymentLink || ''}
         amount={total}
         clientPhone={selectedClient?.phone}

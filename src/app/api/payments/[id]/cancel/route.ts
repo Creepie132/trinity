@@ -48,7 +48,8 @@ export async function POST(
     }
 
     // Update payment status to cancelled
-    const { error: updateError } = await supabase
+    console.log('Cancelling payment id:', paymentId)
+    const { data, error: updateError } = await supabase
       .from('payments')
       .update({ 
         status: 'cancelled',
@@ -56,11 +57,13 @@ export async function POST(
       })
       .eq('id', paymentId)
       .eq('org_id', org_id)
+    
+    console.log('Cancel result:', { data, error: updateError })
 
     if (updateError) {
       console.error('Failed to cancel payment:', updateError)
       return NextResponse.json(
-        { error: 'Failed to cancel payment' },
+        { error: 'Failed to cancel payment', details: updateError.message },
         { status: 500 }
       )
     }

@@ -43,12 +43,17 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
 
   const cancelPayment = async (paymentId: string) => {
     try {
+      console.log('Cancelling payment from client:', paymentId)
       const response = await fetch(`/api/payments/${paymentId}/cancel`, {
         method: 'POST',
       })
 
+      console.log('Response status:', response.status)
+      const responseData = await response.json()
+      console.log('Response data:', responseData)
+
       if (!response.ok) {
-        throw new Error('Failed to cancel payment')
+        throw new Error(responseData.error || 'Failed to cancel payment')
       }
 
       toast.success(locale === 'he' ? 'התשלום בוטל בהצלחה' : 'Платёж успешно отменён')
@@ -56,9 +61,9 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
       
       // Refresh page
       window.location.reload()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Cancel payment error:', error)
-      toast.error(locale === 'he' ? 'שגיאה בביטול התשלום' : 'Ошибка при отмене платежа')
+      toast.error(`${locale === 'he' ? 'שגיאה' : 'Ошибка'}: ${error.message}`)
     }
   }
 

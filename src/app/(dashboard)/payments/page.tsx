@@ -150,21 +150,26 @@ export default function PaymentsPage() {
 
   const cancelPayment = async (paymentId: string) => {
     try {
+      console.log('Cancelling payment from page:', paymentId)
       const response = await fetch(`/api/payments/${paymentId}/cancel`, {
         method: 'POST',
       })
 
+      console.log('Response status:', response.status)
+      const responseData = await response.json()
+      console.log('Response data:', responseData)
+
       if (!response.ok) {
-        throw new Error('Failed to cancel payment')
+        throw new Error(responseData.error || 'Failed to cancel payment')
       }
 
-      toast.success(language === 'he' ? 'התשלום בוטל בהצלחה' : 'Платёж успешно отменён')
+      toast.success(language === 'he' ? 'התשלום бוטל בהצלחה' : 'Платёж успешно отменён')
       
       // Refresh payments list
       window.location.reload()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Cancel payment error:', error)
-      toast.error(language === 'he' ? 'שגיאה בביטול התשלום' : 'Ошибка при отмене платежа')
+      toast.error(`${language === 'he' ? 'שגיאה' : 'Ошибка'}: ${error.message}`)
     }
   }
 

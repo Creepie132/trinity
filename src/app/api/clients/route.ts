@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 // Admin client with SERVICE_ROLE key (bypasses RLS)
@@ -15,32 +17,12 @@ const supabaseAdmin = createClient(
 
 export async function GET(req: NextRequest) {
   try {
-    // Get current user from session
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Create regular supabase client to verify user
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: authHeader,
-          },
-        },
-      }
-    )
-
+    const supabase = createRouteHandlerClient({ cookies })
     const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+      data: { session },
+    } = await supabase.auth.getSession()
 
-    if (userError || !user) {
-      console.error('User error:', userError)
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -48,7 +30,7 @@ export async function GET(req: NextRequest) {
     const { data: orgUser, error: orgError } = await supabaseAdmin
       .from('org_users')
       .select('org_id')
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
       .limit(1)
       .maybeSingle()
 
@@ -92,42 +74,22 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Get current user from session
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Create regular supabase client to verify user
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: authHeader,
-          },
-        },
-      }
-    )
-
+    const supabase = createRouteHandlerClient({ cookies })
     const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+      data: { session },
+    } = await supabase.auth.getSession()
 
-    console.log('1. User:', user?.id)
-
-    if (userError || !user) {
-      console.error('User error:', userError)
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    console.log('1. User:', session.user.id)
 
     // Get org_id from org_users table
     const { data: orgUser, error: orgError } = await supabaseAdmin
       .from('org_users')
       .select('org_id')
-      .eq('user_id', user.id)
+      .eq('user_id', session.user.id)
       .limit(1)
       .maybeSingle()
 

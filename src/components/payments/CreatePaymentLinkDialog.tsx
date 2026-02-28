@@ -111,7 +111,7 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md min-w-[480px] w-[90vw] sm:w-full rounded-[32px]">
         <DialogHeader>
           <DialogTitle>{t('payments.createLink')}</DialogTitle>
         </DialogHeader>
@@ -189,16 +189,18 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <Button type="button" onClick={copyLink} variant="outline" className="flex-1">
-                <Copy className="w-4 h-4 ml-2" />
-                {t('payments.copyLink')}
-              </Button>
-              <Button type="button" onClick={sendSMS} variant="outline" className="flex-1">
-                <MessageSquare className="w-4 h-4 ml-2" />
-                {t('sms.send')} SMS
-              </Button>
-              <Button type="button" onClick={sendWhatsApp} variant="outline" className="flex-1">
+            <div className="space-y-2 pt-2">
+              <div className="flex gap-2">
+                <Button type="button" onClick={copyLink} variant="outline" className="flex-1">
+                  <Copy className="w-4 h-4 ml-2" />
+                  {t('payments.copyLink')}
+                </Button>
+                <Button type="button" onClick={sendSMS} variant="outline" className="flex-1">
+                  <MessageSquare className="w-4 h-4 ml-2" />
+                  {t('sms.send')} SMS
+                </Button>
+              </div>
+              <Button type="button" onClick={sendWhatsApp} variant="outline" className="w-full">
                 <span className="ml-2">💬</span>
                 {language === 'ru' ? 'Отправить WhatsApp' : 'שלח WhatsApp'}
               </Button>

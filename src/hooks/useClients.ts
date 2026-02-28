@@ -16,8 +16,9 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
       const from = (page - 1) * pageSize
       const to = page * pageSize - 1
 
+      // Загружаем клиентов напрямую из таблицы clients (обход проблемы с view)
       let query = supabase
-        .from('client_summary')
+        .from('clients')
         .select('*', { count: 'exact' })
         .eq('org_id', orgId)
         .order('created_at', { ascending: false })
@@ -29,7 +30,7 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
         )
       }
 
-      const { data, error, count } = await query
+      const { data: clients, error, count } = await query
       
       if (error) {
         console.error('Error loading clients:', error)
@@ -38,7 +39,42 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
       
       console.log('Loaded clients count:', count)
       
-      return { data: data as ClientSummary[], count: count || 0 }
+      if (!clients || clients.length === 0) {
+        return { data: [], count: 0 }
+      }
+
+      // Загружаем статистику визитов и платежей
+      const clientIds = clients.map(c => c.id)
+      
+      const { data: visits } = await supabase
+        .from('visits')
+        .select('client_id, visit_date')
+        .in('client_id', clientIds)
+
+      const { data: payments } = await supabase
+        .from('payments')
+        .select('client_id, amount, status')
+        .in('client_id', clientIds)
+        .eq('status', 'completed')
+
+      // Собираем данные с статистикой
+      const clientsWithStats = clients.map(client => {
+        const clientVisits = visits?.filter(v => v.client_id === client.id) || []
+        const clientPayments = payments?.filter(p => p.client_id === client.id) || []
+        
+        return {
+          ...client,
+          last_visit: clientVisits.length > 0 
+            ? clientVisits.sort((a, b) => 
+                new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime()
+              )[0].visit_date
+            : null,
+          total_visits: clientVisits.length,
+          total_paid: clientPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+        }
+      })
+      
+      return { data: clientsWithStats as ClientSummary[], count: count || 0 }
     },
   })
 }

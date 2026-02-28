@@ -78,8 +78,7 @@ export async function POST(
     const { data, error: updateError } = await supabase
       .from('payments')
       .update({ 
-        status: 'cancelled',
-        updated_at: new Date().toISOString()
+        status: 'cancelled'
       })
       .eq('id', paymentId)
       .eq('org_id', org_id)

@@ -12,7 +12,6 @@ import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-</invoke>
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useModalStore } from '@/store/useModalStore'
 import { CalendarView } from '@/components/visits/CalendarView'

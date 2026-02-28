@@ -58,32 +58,40 @@ export function useClient(id?: string) {
 
 export function useAddClient() {
   const queryClient = useQueryClient()
-  const { orgId, isLoading } = useAuth()
+  const { isLoading } = useAuth()
 
   return useMutation({
-    mutationFn: async (client: Omit<Client, 'id' | 'created_at' | 'updated_at'>) => {
-      // Проверяем что orgId загружен и не null
+    mutationFn: async (client: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'org_id'>) => {
+      // Проверяем что auth загружен
       if (isLoading) {
         throw new Error('אנא המתן, הנתונים נטענים...')
       }
+
+      // Получаем токен для авторизации API запроса
+      const { data: { session } } = await supabase.auth.getSession()
       
-      if (!orgId || orgId === '0') {
+      if (!session) {
         throw new Error('לא נמצא ארגון למשתמש הנוכחי. אנא פנה לתמיכה.')
       }
 
-      console.log('Adding client with orgId:', orgId) // debug
+      console.log('Adding client via API route') // debug
 
-      const { data, error } = await supabase
-        .from('clients')
-        .insert([{ ...client, org_id: orgId }])
-        .select()
-        .single()
+      // Вызываем API роут вместо прямого обращения к Supabase
+      const response = await fetch('/api/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(client),
+      })
 
-      if (error) {
-        console.error('Supabase error:', error)
-        throw error
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to add client')
       }
-      
+
+      const data = await response.json()
       return data
     },
     onSuccess: () => {

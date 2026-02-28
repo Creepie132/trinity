@@ -1,61 +1,85 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
 
-// GET /api/clients - список клиентов для текущей организации
-export async function GET() {
+// Admin client with SERVICE_ROLE key (bypasses RLS)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+)
+
+export async function POST(req: NextRequest) {
   try {
-    console.log('=== GET /api/clients START ===')
-    
-    const supabase = await createClient()
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    console.log('User ID:', user?.id)
-    console.log('Auth error:', authError?.message)
-    
-    if (!user) {
-      console.log('❌ No user - returning 401')
+    // Get current user from session
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Получаем org_id пользователя
-    const { data: orgUser, error: orgError } = await supabase
+    // Create regular supabase client to verify user
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: authHeader,
+          },
+        },
+      }
+    )
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Get org_id from org_users table
+    const { data: orgUser, error: orgError } = await supabaseAdmin
       .from('org_users')
       .select('org_id')
       .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (orgError || !orgUser?.org_id) {
+      return NextResponse.json(
+        { error: 'Organization not found for user' },
+        { status: 404 }
+      )
+    }
+
+    // Parse request body
+    const body = await req.json()
+
+    // Insert client using admin client (bypasses RLS)
+    const { data: client, error: insertError } = await supabaseAdmin
+      .from('clients')
+      .insert([
+        {
+          ...body,
+          org_id: orgUser.org_id,
+        },
+      ])
+      .select()
       .single()
 
-    console.log('Org user:', orgUser)
-    console.log('Org error:', orgError?.message)
-
-    if (!orgUser) {
-      console.log('❌ No organization - returning 403')
-      return NextResponse.json({ error: 'No organization' }, { status: 403 })
+    if (insertError) {
+      console.error('Insert error:', insertError)
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
-    console.log('Organization ID:', orgUser.org_id)
-
-    // Получаем всех клиентов организации (все поля)
-    // NOTE: clients table has first_name, last_name (not 'name')
-    const { data: clients, error } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('org_id', orgUser.org_id)
-      .limit(100)
-
-    console.log('Query error:', error?.message)
-    console.log('Clients count:', clients?.length)
-    console.log('First client:', clients?.[0] ? JSON.stringify(clients[0]) : 'none')
-
-    if (error) {
-      console.error('❌ Clients query error:', JSON.stringify(error))
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    console.log('✅ Returning', clients?.length || 0, 'clients')
-    return NextResponse.json(clients || [])
-  } catch (e: any) {
-    console.error('❌ Catch error in GET /api/clients:', e.message)
-    console.error('Stack:', e.stack)
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return NextResponse.json(client, { status: 201 })
+  } catch (error: any) {
+    console.error('API error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

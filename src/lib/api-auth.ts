@@ -139,7 +139,32 @@ export function checkFeature(
   }
 
   const features = organization.features || {}
+  console.log('🔍 [checkFeature] User modules:', JSON.stringify(features))
+  console.log('🔍 [checkFeature] Checking feature:', featureName)
+  
+  // Check new modular system first
+  const modules = features.modules
+  if (modules) {
+    console.log('🔍 [checkFeature] Using new modular system, modules:', JSON.stringify(modules))
+    const hasAccess = modules[featureName] === true
+    console.log(`🔍 [checkFeature] Has ${featureName}:`, hasAccess)
+    
+    if (!hasAccess) {
+      return {
+        hasAccess: false,
+        response: NextResponse.json(
+          { error: 'הפיצ\'ר לא זמין בתוכנית שלך' },
+          { status: 403 }
+        ),
+      }
+    }
+    return { hasAccess: true }
+  }
+  
+  // Fallback to old feature system
+  console.log('🔍 [checkFeature] Using old feature system')
   const hasAccess = features[featureName] === true
+  console.log(`🔍 [checkFeature] Has ${featureName}:`, hasAccess)
 
   if (!hasAccess) {
     return {

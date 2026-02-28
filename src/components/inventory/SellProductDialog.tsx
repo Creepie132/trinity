@@ -50,8 +50,9 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
       setQuantity(1)
       setClientId('')
       setPaymentMethod('')
-      setPaymentLink(null)
-      setShowPaymentLinkModal(false)
+      // Don't reset payment link state here - it needs to persist after closing
+      // setPaymentLink(null)
+      // setShowPaymentLinkModal(false)
       setIsCreatingLink(false)
     }
   }, [product, open])
@@ -170,19 +171,6 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
 
   return (
     <>
-      <PaymentLinkResultModal
-        open={showPaymentLinkModal}
-        onClose={() => setShowPaymentLinkModal(false)}
-        paymentLink={paymentLink || ''}
-        amount={total}
-        clientPhone={selectedClient?.phone}
-        clientName={
-          selectedClient
-            ? `${selectedClient.first_name} ${selectedClient.last_name}`
-            : undefined
-        }
-      />
-      
       <ModalWrapper isOpen={open} onClose={onClose}>
         <div className="w-full max-w-md p-6">
         <div className="relative mb-6">
@@ -325,6 +313,24 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
         </form>
       </div>
     </ModalWrapper>
+    
+    <PaymentLinkResultModal
+      open={showPaymentLinkModal}
+      onClose={() => {
+        setShowPaymentLinkModal(false)
+        setPaymentLink(null)
+        setClientId('')
+        setPaymentMethod('')
+      }}
+      paymentLink={paymentLink || ''}
+      amount={total}
+      clientPhone={selectedClient?.phone}
+      clientName={
+        selectedClient
+          ? `${selectedClient.first_name} ${selectedClient.last_name}`
+          : undefined
+      }
+    />
     </>
   )
 }

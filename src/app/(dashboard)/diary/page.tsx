@@ -23,7 +23,7 @@ interface Task {
   assigned_to: string | null
   title: string
   description: string | null
-  status: 'open' | 'in_progress' | 'done' | 'cancelled'
+  status: 'open' | 'in_progress' | 'completed' | 'cancelled'
   priority: 'low' | 'normal' | 'high' | 'urgent'
   due_date: string | null
   completed_at: string | null
@@ -49,7 +49,7 @@ interface Task {
   } | null
 }
 
-type FilterType = 'all' | 'open' | 'in_progress' | 'done'
+type FilterType = 'all' | 'open' | 'in_progress' | 'completed'
 
 interface TaskGroup {
   key: string
@@ -60,7 +60,7 @@ interface TaskGroup {
 
 // ===== TaskStatusIcon - иконки статусов =====
 function TaskStatusIcon({ status, priority }: { status: string; priority: string }) {
-  if (status === 'done') return <CheckCircle2 size={20} className="text-emerald-500" />
+  if (status === 'completed') return <CheckCircle2 size={20} className="text-emerald-500" />
   if (status === 'cancelled') return <XCircle size={20} className="text-slate-300" />
   if (status === 'in_progress') return <PlayCircle size={20} className="text-amber-500" />
   if (priority === 'urgent') return <AlertTriangle size={20} className="text-red-500" />
@@ -161,7 +161,7 @@ export default function DiaryPage() {
         const dueDate = parseISO(task.due_date)
         const now = new Date()
 
-        if (isPast(dueDate) && !isToday(dueDate) && task.status !== 'done') {
+        if (isPast(dueDate) && !isToday(dueDate) && task.status !== 'completed') {
           groups[0].tasks.push(task)
         } else if (isToday(dueDate)) {
           groups[1].tasks.push(task)
@@ -186,7 +186,7 @@ export default function DiaryPage() {
 
   // ===== Рендер иконки по приоритету =====
   function getTaskIcon(task: Task) {
-    if (task.status === 'done') {
+    if (task.status === 'completed') {
       return <CheckCircle2 size={18} />
     }
     if (task.status === 'cancelled') {
@@ -203,7 +203,7 @@ export default function DiaryPage() {
 
   // ===== Цвет иконки =====
   function getIconBg(task: Task) {
-    if (task.status === 'done') return 'bg-emerald-50 dark:bg-emerald-900/20'
+    if (task.status === 'completed') return 'bg-emerald-50 dark:bg-emerald-900/20'
     if (task.status === 'cancelled') return 'bg-slate-50 dark:bg-slate-800'
     if (task.priority === 'urgent') return 'bg-red-50 dark:bg-red-900/20'
     if (task.priority === 'high') return 'bg-amber-50 dark:bg-amber-900/20'
@@ -216,18 +216,15 @@ export default function DiaryPage() {
 
   // ===== Статус бейдж =====
   function getStatusBadge(task: Task) {
-    // Map 'done' to 'completed' for translation key
-    const statusKey = task.status === 'done' ? 'completed' : task.status
-    
     const colors: Record<string, string> = {
       open: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
       in_progress: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      done: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+      completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
       cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
     }
     
     return {
-      text: t(`task.status.${statusKey}`),
+      text: t(`task.status.${task.status}`),
       className: colors[task.status] || colors.open,
     }
   }
@@ -246,12 +243,16 @@ export default function DiaryPage() {
   // ===== Обновление статуса задачи =====
   async function updateTaskStatus(taskId: string, status: Task['status']) {
     try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      })
-      if (!response.ok) throw new Error('Failed to update task')
+      const { data, error } = await supabase
+        .from('tasks')
+        .update({ status })
+        .eq('id', taskId)
+        .select()
+      
+      console.log('Complete task result:', data, error)
+      
+      if (error) throw error
+      
       await loadTasks()
     } catch (error) {
       console.error('Update task error:', error)
@@ -342,11 +343,11 @@ export default function DiaryPage() {
     }
 
     // Завершить (если задача не завершена)
-    if (task.status !== 'done' && task.status !== 'cancelled') {
+    if (task.status !== 'completed' && task.status !== 'cancelled') {
       quickActions.push({
         icon: <CheckCircle size={16} />,
         label: language === 'he' ? 'סיים' : 'Завершить',
-        onClick: () => updateTaskStatus(task.id, 'done'),
+        onClick: () => updateTaskStatus(task.id, 'completed'),
         color: 'bg-emerald-50',
         textColor: 'text-emerald-600',
         darkBg: 'dark:bg-emerald-900/30',
@@ -521,13 +522,13 @@ export default function DiaryPage() {
               )}
               {task.status === 'in_progress' && (
                 <button
-                  onClick={() => updateTaskStatus(task.id, 'done')}
+                  onClick={() => updateTaskStatus(task.id, 'completed')}
                   className="w-full py-3 rounded-xl border-2 border-emerald-400 text-emerald-600 text-sm font-semibold hover:bg-emerald-50 transition"
                 >
                   ✓ {language === 'he' ? 'סיים' : 'Завершить'}
                 </button>
               )}
-              {task.status !== 'done' && task.status !== 'cancelled' && (
+              {task.status !== 'completed' && task.status !== 'cancelled' && (
                 <button
                   onClick={() => updateTaskStatus(task.id, 'cancelled')}
                   className="w-full py-3 rounded-xl border border-slate-300 text-slate-500 text-sm font-medium hover:bg-slate-50 transition"
@@ -538,7 +539,7 @@ export default function DiaryPage() {
             </div>
           </div>
         )}
-        isInactive={task.status === 'cancelled' || task.status === 'done'}
+        isInactive={task.status === 'cancelled' || task.status === 'completed'}
         locale={language}
         // No onClick - TrinityCard will open drawer automatically on mobile
       />
@@ -633,7 +634,7 @@ export default function DiaryPage() {
           { key: 'all', label: language === 'he' ? 'הכל' : 'Все' },
           { key: 'open', label: language === 'he' ? 'פתוח' : 'Открытые' },
           { key: 'in_progress', label: language === 'he' ? 'בתהליך' : 'В процессе' },
-          { key: 'done', label: language === 'he' ? 'הושלם' : 'Завершённые' },
+          { key: 'completed', label: language === 'he' ? 'הושלם' : 'Завершённые' },
         ].map((item) => (
           <button
             key={item.key}
@@ -685,7 +686,7 @@ export default function DiaryPage() {
                     <tr
                       key={task.id}
                       className={`border-b border-muted/50 hover:bg-muted/30 transition ${
-                        task.status === 'cancelled' || task.status === 'done' ? 'opacity-50' : ''
+                        task.status === 'cancelled' || task.status === 'completed' ? 'opacity-50' : ''
                       }`}
                     >
                       <td className="py-3 px-4 font-medium cursor-pointer" onClick={() => handleTaskClick(task)}>{task.title}</td>
@@ -772,11 +773,11 @@ export default function DiaryPage() {
                           )}
                           
                           {/* Завершить */}
-                          {task.status !== 'done' && task.status !== 'cancelled' && (
+                          {task.status !== 'completed' && task.status !== 'cancelled' && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                updateTaskStatus(task.id, 'done')
+                                updateTaskStatus(task.id, 'completed')
                               }}
                               className="w-7 h-7 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition"
                               title={language === 'he' ? 'סיים' : 'Завершить'}

@@ -118,6 +118,17 @@ export function ProductDetailSheet({
           </SheetHeader>
 
           <div className="mt-6 space-y-6">
+            {/* Product Image */}
+            {product.image_url && (
+              <div className="w-full h-48 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
             {/* Product Info */}
             <div className="space-y-4">
               <div>

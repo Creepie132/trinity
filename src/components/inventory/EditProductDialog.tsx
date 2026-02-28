@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,11 +14,12 @@ import {
 } from '@/components/ui/select'
 import { useUpdateProduct } from '@/hooks/useProducts'
 import { toast } from 'sonner'
-import { Camera, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Camera, ArrowRight, ArrowLeft, Upload, X } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { BarcodeScanner } from './BarcodeScanner'
 import ModalWrapper from '@/components/ModalWrapper'
 import type { Product } from '@/types/inventory'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 interface EditProductDialogProps {
   open: boolean
@@ -30,6 +31,9 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
   const { t, language } = useLanguage()
   const updateProduct = useUpdateProduct()
   const [scannerOpen, setScannerOpen] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -42,6 +46,7 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
     quantity: 0,
     min_quantity: 0,
     unit: 'יחידה',
+    image_url: undefined as string | undefined,
   })
 
   useEffect(() => {
@@ -57,7 +62,9 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
         quantity: product.quantity || 0,
         min_quantity: product.min_quantity || 0,
         unit: product.unit || 'יחידה',
+        image_url: product.image_url,
       })
+      setImagePreview(null)
     }
   }, [product, open])
 
@@ -100,6 +107,65 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
     setScannerOpen(false)
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error(language === 'he' ? 'יש להעלות קובץ תמונה' : 'Загрузите файл изображения')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(language === 'he' ? 'גודל התמונה חורג מ-5MB' : 'Размер изображения превышает 5MB')
+      return
+    }
+
+    try {
+      setUploading(true)
+      const supabase = createSupabaseBrowserClient()
+
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const filePath = `inventory/${fileName}`
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('inventory')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        })
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('inventory')
+        .getPublicUrl(filePath)
+
+      setFormData({ ...formData, image_url: data.publicUrl })
+      setImagePreview(URL.createObjectURL(file))
+      toast.success(language === 'he' ? 'התמונה הועלתה בהצלחה' : 'Изображение загружено')
+    } catch (error: any) {
+      console.error('Error uploading image:', error)
+      toast.error(error.message || (language === 'he' ? 'שגיאה בהעלאת התמונה' : 'Ошибка загрузки изображения'))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setFormData({ ...formData, image_url: undefined })
+    setImagePreview(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   if (!product) return null
 
   return (
@@ -138,6 +204,61 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
                 required
                 className="bg-white dark:bg-gray-800"
               />
+            </div>
+
+            {/* Image Upload */}
+            <div>
+              <Label htmlFor="image">
+                {language === 'he' ? 'תמונה' : 'Фотография'}
+              </Label>
+              <div className="flex items-center gap-4">
+                {imagePreview || formData.image_url ? (
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <img
+                      src={imagePreview || formData.image_url}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                    <Upload className="w-8 h-8 text-gray-400" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    ref={fileInputRef}
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="w-full"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    {uploading
+                      ? (language === 'he' ? 'מעלה...' : 'Загрузка...')
+                      : (language === 'he' ? 'העלה תמונה' : 'Загрузить фото')}
+                  </Button>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {language === 'he' ? 'עד 5MB, JPG, PNG, GIF' : 'До 5MB, JPG, PNG, GIF'}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Barcode with Scanner */}

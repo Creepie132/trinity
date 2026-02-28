@@ -39,7 +39,10 @@ export async function POST(req: NextRequest) {
       error: userError,
     } = await supabase.auth.getUser()
 
+    console.log('1. User:', user?.id)
+
     if (userError || !user) {
+      console.error('User error:', userError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -50,6 +53,8 @@ export async function POST(req: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle()
 
+    console.log('2. Org_id найден:', orgUser?.org_id)
+
     if (orgError || !orgUser?.org_id) {
       console.error('org_id lookup error:', orgError)
       return NextResponse.json(
@@ -58,29 +63,32 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log('Saving client with org_id:', orgUser.org_id)
-
     // Parse request body
     const body = await req.json()
+
+    const clientData = {
+      ...body,
+      org_id: orgUser.org_id,
+    }
+
+    console.log('3. Данные клиента для вставки:', clientData)
 
     // Insert client using admin client (bypasses RLS)
     const { data: client, error: insertError } = await supabaseAdmin
       .from('clients')
-      .insert([
-        {
-          ...body,
-          org_id: orgUser.org_id,
-        },
-      ])
+      .insert([clientData])
       .select()
       .single()
 
+    console.log('4. Результат вставки:', client)
+    console.log('5. Ошибка вставки:', insertError)
+
     if (insertError) {
       console.error('Insert error:', insertError)
-      return NextResponse.json({ error: insertError.message }, { status: 500 })
+      return NextResponse.json({ error: String(insertError) }, { status: 500 })
     }
 
-    console.log('Client created successfully:', client.id)
+    console.log('Client created successfully:', client?.id)
 
     return NextResponse.json(client, { status: 201 })
   } catch (error: any) {

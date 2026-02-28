@@ -258,44 +258,99 @@ export default function DiaryPage() {
     }
   }
 
+  // ===== Форматирование телефона для WhatsApp (Израиль) =====
+  function formatPhoneForWhatsApp(phone: string): string {
+    const cleanPhone = phone.replace(/[^0-9]/g, '')
+    // Если начинается с 0, убираем и добавляем код 972
+    if (cleanPhone.startsWith('0')) {
+      return '972' + cleanPhone.slice(1)
+    }
+    // Если уже с кодом страны
+    if (cleanPhone.startsWith('972')) {
+      return cleanPhone
+    }
+    // По умолчанию добавляем код Израиля
+    return '972' + cleanPhone
+  }
+
   // ===== Рендер карточки задачи =====
   function renderTaskCard(task: Task) {
     const clientName = getTaskClientName(task)
     const badge = getStatusBadge(task)
     const quickActions = []
 
-    // Кнопка "Начать" для задач со статусом open
-    if (task.status === 'open') {
+    // WhatsApp (если есть телефон)
+    if (task.contact_phone) {
       quickActions.push({
-        icon: <PlayCircle size={16} />,
-        label: t('task.action.start'),
-        onClick: () => updateTaskStatus(task.id, 'in_progress'),
-        color: 'bg-emerald-50',
-        textColor: 'text-emerald-600',
-        darkBg: 'dark:bg-emerald-900/30',
-        darkText: 'dark:text-emerald-400',
+        icon: <MessageSquare size={16} />,
+        label: 'WhatsApp',
+        onClick: () => {
+          const formattedPhone = formatPhoneForWhatsApp(task.contact_phone!)
+          window.open(`https://wa.me/${formattedPhone}`, '_blank')
+        },
+        color: 'bg-green-50',
+        textColor: 'text-green-600',
+        darkBg: 'dark:bg-green-900/30',
+        darkText: 'dark:text-green-400',
       })
     }
 
+    // SMS (если есть телефон)
     if (task.contact_phone) {
       quickActions.push({
-        icon: <Phone size={16} />,
-        label: language === 'he' ? 'חייג' : 'Позвонить',
-        onClick: () => handleCall(task.contact_phone!),
+        icon: <MessageSquare size={16} />,
+        label: 'SMS',
+        onClick: () => {
+          window.location.href = `sms:${task.contact_phone}`
+        },
         color: 'bg-blue-50',
         textColor: 'text-blue-600',
         darkBg: 'dark:bg-blue-900/30',
         darkText: 'dark:text-blue-400',
       })
+    }
 
+    // Навигация (если есть адрес)
+    if (task.contact_address) {
       quickActions.push({
-        icon: <MessageSquare size={16} />,
-        label: 'WhatsApp',
-        onClick: () => handleWhatsApp(task.contact_phone!),
-        color: 'bg-green-50',
-        textColor: 'text-green-600',
-        darkBg: 'dark:bg-green-900/30',
-        darkText: 'dark:text-green-400',
+        icon: <MapPin size={16} />,
+        label: language === 'he' ? 'ניווט' : 'Навигация',
+        onClick: () => {
+          const encoded = encodeURIComponent(task.contact_address!)
+          window.open(`https://waze.com/ul?q=${encoded}`, '_blank')
+        },
+        color: 'bg-purple-50',
+        textColor: 'text-purple-600',
+        darkBg: 'dark:bg-purple-900/30',
+        darkText: 'dark:text-purple-400',
+      })
+    }
+
+    // Email (если есть email)
+    if (task.contact_email) {
+      quickActions.push({
+        icon: <Mail size={16} />,
+        label: 'Email',
+        onClick: () => {
+          window.location.href = `mailto:${task.contact_email}`
+        },
+        color: 'bg-red-50',
+        textColor: 'text-red-600',
+        darkBg: 'dark:bg-red-900/30',
+        darkText: 'dark:text-red-400',
+      })
+    }
+
+    // Завершить (если задача не завершена)
+    if (task.status !== 'done' && task.status !== 'cancelled') {
+      quickActions.push({
+        icon: <CheckCircle size={16} />,
+        label: language === 'he' ? 'סיים' : 'Завершить',
+        onClick: () => updateTaskStatus(task.id, 'done'),
+        color: 'bg-emerald-50',
+        textColor: 'text-emerald-600',
+        darkBg: 'dark:bg-emerald-900/30',
+        darkText: 'dark:text-emerald-400',
       })
     }
 
@@ -657,18 +712,79 @@ export default function DiaryPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        {task.status === 'open' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              updateTaskStatus(task.id, 'in_progress')
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition"
-                          >
-                            <PlayCircle size={14} />
-                            {t('task.action.start')}
-                          </button>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {/* WhatsApp */}
+                          {task.contact_phone && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const formattedPhone = formatPhoneForWhatsApp(task.contact_phone!)
+                                window.open(`https://wa.me/${formattedPhone}`, '_blank')
+                              }}
+                              className="w-7 h-7 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center transition"
+                              title="WhatsApp"
+                            >
+                              <MessageSquare size={14} />
+                            </button>
+                          )}
+                          
+                          {/* SMS */}
+                          {task.contact_phone && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                window.location.href = `sms:${task.contact_phone}`
+                              }}
+                              className="w-7 h-7 rounded-full bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center transition"
+                              title="SMS"
+                            >
+                              <MessageSquare size={14} />
+                            </button>
+                          )}
+                          
+                          {/* Навигация */}
+                          {task.contact_address && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const encoded = encodeURIComponent(task.contact_address!)
+                                window.open(`https://waze.com/ul?q=${encoded}`, '_blank')
+                              }}
+                              className="w-7 h-7 rounded-full bg-purple-500 hover:bg-purple-600 text-white flex items-center justify-center transition"
+                              title={language === 'he' ? 'ניווט' : 'Навигация'}
+                            >
+                              <MapPin size={14} />
+                            </button>
+                          )}
+                          
+                          {/* Email */}
+                          {task.contact_email && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                window.location.href = `mailto:${task.contact_email}`
+                              }}
+                              className="w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition"
+                              title="Email"
+                            >
+                              <Mail size={14} />
+                            </button>
+                          )}
+                          
+                          {/* Завершить */}
+                          {task.status !== 'done' && task.status !== 'cancelled' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                updateTaskStatus(task.id, 'done')
+                              }}
+                              className="w-7 h-7 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition"
+                              title={language === 'he' ? 'סיים' : 'Завершить'}
+                            >
+                              <CheckCircle size={14} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )

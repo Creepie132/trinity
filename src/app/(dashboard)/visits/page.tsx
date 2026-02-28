@@ -11,7 +11,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+</invoke>
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useModalStore } from '@/store/useModalStore'
 import { CalendarView } from '@/components/visits/CalendarView'
@@ -41,6 +42,7 @@ export default function VisitsPage() {
   const meetingMode = useMeetingMode()
   const { orgId } = useAuth()
   const supabase = createSupabaseBrowserClient()
+  const queryClient = useQueryClient()
 
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
   const { openModal } = useModalStore()
@@ -1167,6 +1169,7 @@ export default function VisitsPage() {
 
                             if (res.ok) {
                               toast.success(language === 'he' ? 'שירות נוסף' : 'Услуга добавлена')
+                              queryClient.invalidateQueries({ queryKey: ['visit-services', desktopVisit.id] })
                               refetch()
                             } else {
                               toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
@@ -1264,6 +1267,7 @@ export default function VisitsPage() {
 
                 if (res.ok) {
                   toast.success(language === 'he' ? 'שירות נוסף' : 'Услуга добавлена')
+                  queryClient.invalidateQueries({ queryKey: ['visit-services', selectedVisit.id] })
                   refetch()
                 } else {
                   toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')

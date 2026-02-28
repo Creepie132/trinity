@@ -38,6 +38,7 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
       }
       
       console.log('Loaded clients count:', count)
+      console.log('Clients query result:', { data: clients, error, count, orgId })
       
       if (!clients || clients.length === 0) {
         return { data: [], count: 0 }

@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // ✅ Check auth and feature access
@@ -18,7 +18,7 @@ export async function POST(
 
     const { org_id } = authResult.data
     const supabase = await getSupabaseServerClient()
-    const paymentId = params.id
+    const { id: paymentId } = await params
 
     // Get payment
     const { data: payment, error: fetchError } = await supabase

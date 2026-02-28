@@ -137,10 +137,20 @@ export function useAddClient() {
       }
 
       const data = await response.json()
+      console.log('Client added successfully, ID:', data.id)
       return data
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
+    onSuccess: async (data) => {
+      console.log('[useAddClient] onSuccess: invalidating clients queries')
+      
+      // Инвалидируем все запросы клиентов
+      await queryClient.invalidateQueries({ queryKey: ['clients'] })
+      
+      // Принудительно рефетчим все активные запросы клиентов
+      await queryClient.refetchQueries({ queryKey: ['clients'], type: 'active' })
+      
+      console.log('[useAddClient] Queries invalidated and refetched')
+      
       toast.success('הלקוח נוסף בהצלחה')
     },
     onError: (error: any) => {

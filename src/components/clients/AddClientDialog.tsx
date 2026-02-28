@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { RefreshCw } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface AddClientDialogProps {
   open: boolean
@@ -21,8 +22,9 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
   const { orgId, isLoading: authLoading, user } = useAuth()
   const { t, language } = useLanguage()
   const { isDemo, clientLimit } = useDemoMode()
-  const { data: clientsData } = useClients()
+  const { data: clientsData, refetch: refetchClients } = useClients()
   const clientCount = clientsData?.count || 0
+  const queryClient = useQueryClient()
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -58,28 +60,40 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
       return // Button should be disabled, but double check
     }
 
-    await addClient.mutateAsync({
-      first_name: formData.first_name,
-      last_name: formData.last_name,
-      phone: formData.phone,
-      email: formData.email || null,
-      address: formData.address || null,
-      date_of_birth: formData.date_of_birth || null,
-      notes: formData.notes || null,
-    })
+    try {
+      await addClient.mutateAsync({
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone: formData.phone,
+        email: formData.email || null,
+        address: formData.address || null,
+        date_of_birth: formData.date_of_birth || null,
+        notes: formData.notes || null,
+      })
 
-    // Reset form
-    setFormData({
-      first_name: '',
-      last_name: '',
-      phone: '',
-      email: '',
-      address: '',
-      date_of_birth: '',
-      notes: '',
-    })
+      console.log('[AddClientDialog] Client added successfully, invalidating queries')
 
-    onOpenChange(false)
+      // Явно инвалидируем и рефетчим клиентов
+      await queryClient.invalidateQueries({ queryKey: ['clients'] })
+      await refetchClients()
+
+      console.log('[AddClientDialog] Queries invalidated, list should refresh')
+
+      // Reset form
+      setFormData({
+        first_name: '',
+        last_name: '',
+        phone: '',
+        email: '',
+        address: '',
+        date_of_birth: '',
+        notes: '',
+      })
+
+      onOpenChange(false)
+    } catch (error) {
+      console.error('[AddClientDialog] Error adding client:', error)
+    }
   }
 
   return (

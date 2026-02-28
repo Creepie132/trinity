@@ -51,15 +51,24 @@ export async function POST(req: NextRequest) {
       .from('org_users')
       .select('org_id')
       .eq('user_id', user.id)
+      .limit(1)
       .maybeSingle()
 
     console.log('2. Org_id найден:', orgUser?.org_id)
 
-    if (orgError || !orgUser?.org_id) {
+    if (orgError) {
       console.error('org_id lookup error:', orgError)
       return NextResponse.json(
-        { error: 'Organization not found for user' },
-        { status: 404 }
+        { error: `Database error: ${orgError.message}` },
+        { status: 500 }
+      )
+    }
+
+    if (!orgUser?.org_id) {
+      console.error('User not linked to any organization')
+      return NextResponse.json(
+        { error: 'User is not linked to any organization. Please contact support.' },
+        { status: 403 }
       )
     }
 

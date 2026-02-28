@@ -5,17 +5,20 @@ import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface EditVisitSheetProps {
   visit: any
   isOpen: boolean
   onClose: () => void
   onSaved: (updated: any) => void
-  locale: 'he' | 'ru'
+  locale?: 'he' | 'ru' // Made optional since we'll use useLanguage
   isMeetingMode?: boolean
 }
 
-export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale, isMeetingMode }: EditVisitSheetProps) {
+export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale: propLocale, isMeetingMode }: EditVisitSheetProps) {
+  const { language } = useLanguage()
+  const locale = propLocale || language
   const supabase = createSupabaseBrowserClient()
   
   // Парсим текущую дату и время

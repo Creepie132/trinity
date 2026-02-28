@@ -1,16 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Phone, MessageCircle, Calendar, Clock, User } from 'lucide-react'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { getClientName } from '@/lib/client-utils'
 import { useVisitServices } from '@/hooks/useVisitServices'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 interface VisitDesktopPanelProps {
   visit: any
   isOpen: boolean
   onClose: () => void
-  locale: 'he' | 'ru'
+  locale?: 'he' | 'ru' // Made optional since we'll use useLanguage
   clients: any[]
   visitServices?: any[]
   onStatusChange?: (visitId: string, newStatus: string) => void
@@ -21,17 +23,72 @@ export function VisitDesktopPanel({
   visit,
   isOpen,
   onClose,
-  locale,
+  locale: propLocale,
   clients,
   visitServices = [],
   onStatusChange,
   onClientClick,
 }: VisitDesktopPanelProps) {
+  const { language } = useLanguage()
+  const locale = propLocale || language
   const [activeTab, setActiveTab] = useState<'services' | 'notes'>('services')
+  const [servicesWithNames, setServicesWithNames] = useState<any[]>([])
+  const supabase = createSupabaseBrowserClient()
 
   // Fetch visit services
   const { data: fetchedServices = [] } = useVisitServices(visit?.id || '')
   const allServices = fetchedServices.length > 0 ? fetchedServices : visitServices
+
+  // Load service names from services table
+  useEffect(() => {
+    async function loadServiceNames() {
+      if (!allServices || allServices.length === 0) {
+        setServicesWithNames([])
+        return
+      }
+
+      const serviceIds = allServices
+        .map((vs: any) => vs.service_id)
+        .filter((id: string) => id && id.trim() !== '')
+      
+      if (serviceIds.length === 0) {
+        setServicesWithNames(allServices)
+        return
+      }
+
+      try {
+        const { data: services } = await supabase
+          .from('services')
+          .select('id, name, name_ru')
+          .in('id', serviceIds)
+
+        if (services) {
+          const servicesMap = new Map(services.map((s: any) => [s.id, s]))
+          
+          const enriched = allServices.map((vs: any) => {
+            const service = servicesMap.get(vs.service_id)
+            if (service) {
+              return {
+                ...vs,
+                service_name: service.name,
+                service_name_ru: service.name_ru || service.name,
+              }
+            }
+            return vs
+          })
+          
+          setServicesWithNames(enriched)
+        } else {
+          setServicesWithNames(allServices)
+        }
+      } catch (error) {
+        console.error('Failed to load service names:', error)
+        setServicesWithNames(allServices)
+      }
+    }
+
+    loadServiceNames()
+  }, [allServices, supabase])
 
   const isRTL = locale === 'he'
   
@@ -39,7 +96,7 @@ export function VisitDesktopPanel({
   const clientName = client ? getClientName(client) : '—'
   
   // Calculate end time based on all services
-  const totalDuration = allServices.reduce((sum: number, service: any) => sum + (service.duration_minutes || 0), 0)
+  const totalDuration = servicesWithNames.reduce((sum: number, service: any) => sum + (service.duration_minutes || 0), 0)
   const endTime = visit?.scheduled_at && totalDuration > 0
     ? new Date(new Date(visit.scheduled_at).getTime() + totalDuration * 60000).toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', {
         hour: '2-digit',
@@ -270,8 +327,8 @@ export function VisitDesktopPanel({
           <div className="flex-1 overflow-y-auto p-6">
             {activeTab === 'services' ? (
               <div className="space-y-3">
-                {allServices.length > 0 ? (
-                  allServices.map((vs: any) => (
+                {servicesWithNames.length > 0 ? (
+                  servicesWithNames.map((vs: any) => (
                     <div key={vs.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/30">
                       <div className="flex flex-col gap-1">
                         <span className="text-sm font-medium">

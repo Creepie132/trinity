@@ -16,7 +16,6 @@ export function CreateTaskModal() {
         isOpen={isOpen}
         onClose={() => closeModal('task-create')}
         onCreated={data?.onCreated || (() => {})}
-        locale={data?.locale || 'he'}
         prefill={data?.prefill}
       />
     </ModalWrapper>

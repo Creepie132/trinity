@@ -1,28 +1,20 @@
-import { createClient } from '@supabase/supabase-js'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
-// Admin client with SERVICE_ROLE key (bypasses RLS)
-const supabaseAdmin = createClient(
+const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = await createClient()
     const {
-      data: { session },
-    } = await supabase.auth.getSession()
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -30,7 +22,7 @@ export async function GET(req: NextRequest) {
     const { data: orgUser, error: orgError } = await supabaseAdmin
       .from('org_users')
       .select('org_id')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .limit(1)
       .maybeSingle()
 
@@ -74,22 +66,22 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = await createClient()
     const {
-      data: { session },
-    } = await supabase.auth.getSession()
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('1. User:', session.user.id)
+    console.log('1. User:', user.id)
 
     // Get org_id from org_users table
     const { data: orgUser, error: orgError } = await supabaseAdmin
       .from('org_users')
       .select('org_id')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .limit(1)
       .maybeSingle()
 

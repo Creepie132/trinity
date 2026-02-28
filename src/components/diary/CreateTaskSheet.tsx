@@ -6,12 +6,13 @@ import { TrinitySearchDropdown } from '@/components/ui/TrinitySearch'
 import { Phone, MessageSquare, Navigation, AlertCircle, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { getClientName } from '@/lib/client-utils'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface CreateTaskSheetProps {
   isOpen: boolean
   onClose: () => void
   onCreated: () => void
-  locale: 'he' | 'ru'
+  locale?: 'he' | 'ru' // Made optional since we'll use useLanguage()
   prefill?: {
     visit_id?: string
     client_id?: string
@@ -106,8 +107,10 @@ const t = {
 
 export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }: CreateTaskSheetProps) {
   const { user } = useAuth()
-  const isRTL = locale === 'he'
-  const labels = t[locale]
+  const { language } = useLanguage()
+  const currentLocale = locale || language // Use prop if provided, otherwise use context
+  const isRTL = currentLocale === 'he'
+  const labels = t[currentLocale]
 
   // Хелпер для фокуса на мобильных - скроллит поле в видимую область
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -270,7 +273,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
 
   function getClientNameForVisit(visit: any): string {
     const client = clients.find((c: any) => c.id === visit.client_id)
-    if (!client) return locale === 'he' ? 'לקוח לא ידוע' : 'Неизвестный клиент'
+    if (!client) return currentLocale === 'he' ? 'לקוח לא ידוע' : 'Неизвестный клиент'
     return `${client.first_name || ''} ${client.last_name || ''}`.trim()
   }
 
@@ -282,10 +285,10 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
     setVisitId(visit.id)
     const clientName = getClientNameForVisit(visit)
     const date = new Date(visit.scheduled_at).toLocaleDateString(
-      locale === 'he' ? 'he-IL' : 'ru-RU'
+      currentLocale === 'he' ? 'he-IL' : 'ru-RU'
     )
     const time = new Date(visit.scheduled_at).toLocaleTimeString(
-      locale === 'he' ? 'he-IL' : 'ru-RU',
+      currentLocale === 'he' ? 'he-IL' : 'ru-RU',
       { hour: '2-digit', minute: '2-digit' }
     )
     const visitName = `${clientName} — ${date} ${time}`
@@ -310,13 +313,13 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
 
   async function handleSubmit() {
     if (!title.trim()) {
-      alert(locale === 'he' ? 'נא למלא כותרת' : 'Заполните заголовок')
+      alert(currentLocale === 'he' ? 'נא למלא כותרת' : 'Заполните заголовок')
       return
     }
 
     // Валидация адреса - либо оба заполнены, либо оба пусты
     if ((contactStreet && !contactCity) || (!contactStreet && contactCity)) {
-      alert(locale === 'he' ? 'נא למלא גם רחוב וגם עיר' : 'Заполните и адрес и город')
+      alert(currentLocale === 'he' ? 'נא למלא גם רחוב וגם עיר' : 'Заполните и адрес и город')
       return
     }
 
@@ -359,7 +362,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
       console.log('Response:', JSON.stringify(data))
 
       if (!response.ok) {
-        alert((data.error || (locale === 'he' ? 'שגיאה' : 'Ошибка')))
+        alert((data.error || (currentLocale === 'he' ? 'שגיאה' : 'Ошибка')))
         return
       }
       
@@ -383,7 +386,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
       onCreated()
     } catch (error) {
       console.error('Create task error:', error)
-      alert(locale === 'he' ? 'שגיאה ביצירת משימה' : 'Ошибка создания задачи')
+      alert(currentLocale === 'he' ? 'שגיאה ביצירת משימה' : 'Ошибка создания задачи')
     } finally {
       setSaving(false)
     }
@@ -507,7 +510,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
           )}
           {selectedUserName && (
             <p className="text-sm text-muted-foreground mt-1 px-1">
-              {locale === 'he' ? 'נבחר' : 'Выбрано'}: {selectedUserName}
+              {currentLocale === 'he' ? 'נבחר' : 'Выбрано'}: {selectedUserName}
             </p>
           )}
         </div>
@@ -531,7 +534,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
           />
           {selectedClientName && (
             <p className="text-sm text-muted-foreground mt-1 px-1">
-              {locale === 'he' ? 'נבחר' : 'Выбрано'}: {selectedClientName}
+              {currentLocale === 'he' ? 'נבחר' : 'Выбрано'}: {selectedClientName}
             </p>
           )}
         </div>
@@ -560,14 +563,14 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
                 value={visitSearch}
                 onChange={(e) => setVisitSearch(e.target.value)}
                 onFocus={() => setVisitDropdownOpen(true)}
-                placeholder={locale === 'he' ? 'חפש ביקור...' : 'Поиск визита...'}
+                placeholder={currentLocale === 'he' ? 'חפש ביקור...' : 'Поиск визита...'}
                 className="w-full py-3 px-4 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               {visitDropdownOpen && (
                 <div className="absolute z-50 w-full bg-card border rounded-xl shadow-lg max-h-48 overflow-y-auto bottom-full mb-1 md:bottom-auto md:top-full md:mb-0 md:mt-1">
                   {filteredVisits.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      {locale === 'he' ? 'אין ביקורים' : 'Нет визитов'}
+                      {currentLocale === 'he' ? 'אין ביקורים' : 'Нет визитов'}
                     </p>
                   ) : (
                     filteredVisits.map((visit: any) => (
@@ -584,11 +587,11 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
                         <p className="font-medium text-sm">{getClientNameForVisit(visit)}</p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(visit.scheduled_at).toLocaleDateString(
-                            locale === 'he' ? 'he-IL' : 'ru-RU'
+                            currentLocale === 'he' ? 'he-IL' : 'ru-RU'
                           )}
                           {' '}
                           {new Date(visit.scheduled_at).toLocaleTimeString(
-                            locale === 'he' ? 'he-IL' : 'ru-RU',
+                            currentLocale === 'he' ? 'he-IL' : 'ru-RU',
                             { hour: '2-digit', minute: '2-digit' }
                           )}
                           {' · '}
@@ -652,14 +655,14 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
         {/* Адрес */}
         <div>
           <label className="block text-sm font-medium mb-2">
-            {locale === 'he' ? 'כתובת' : 'Адрес'}
+            {currentLocale === 'he' ? 'כתובת' : 'Адрес'}
           </label>
           <div className="space-y-2">
             <input
               type="text"
               value={contactStreet}
               onChange={(e) => setContactStreet(e.target.value)}
-              placeholder={locale === 'he' ? 'רחוב ומספר' : 'Улица и номер'}
+              placeholder={currentLocale === 'he' ? 'רחוב ומספר' : 'Улица и номер'}
               className="w-full py-3 px-4 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               onFocus={handleInputFocus}
               dir={isRTL ? 'rtl' : 'ltr'}
@@ -668,7 +671,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
               type="text"
               value={contactCity}
               onChange={(e) => setContactCity(e.target.value)}
-              placeholder={locale === 'he' ? 'עיר' : 'Город'}
+              placeholder={currentLocale === 'he' ? 'עיר' : 'Город'}
               className="w-full py-3 px-4 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               onFocus={handleInputFocus}
               dir={isRTL ? 'rtl' : 'ltr'}
@@ -676,7 +679,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
             {/* Подсказка если заполнено только одно */}
             {((contactStreet && !contactCity) || (!contactStreet && contactCity)) && (
               <p className="text-xs text-amber-500 px-1">
-                {locale === 'he' ? 'נא למלא גם רחוב וגם עיר' : 'Заполните и улицу и город'}
+                {currentLocale === 'he' ? 'נא למלא גם רחוב וגם עיר' : 'Заполните и улицу и город'}
               </p>
             )}
           </div>

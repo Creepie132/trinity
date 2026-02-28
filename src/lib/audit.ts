@@ -9,7 +9,7 @@ interface AuditEntry {
   org_id: string
   user_id?: string
   user_email?: string
-  action: "create" | "update" | "delete" | "login" | "export" | "send_sms" | "import"
+  action: "create" | "update" | "delete" | "login" | "export" | "send_sms" | "import" | "cancel"
   entity_type: string
   entity_id?: string
   old_data?: Record<string, unknown>

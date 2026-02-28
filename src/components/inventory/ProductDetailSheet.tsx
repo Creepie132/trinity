@@ -118,16 +118,20 @@ export function ProductDetailSheet({
           </SheetHeader>
 
           <div className="mt-6 space-y-6">
-            {/* Product Image */}
-            {product.image_url && (
-              <div className="w-full h-48 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+            {/* Product Image/Icon */}
+            <div className="flex justify-center">
+              {product.image_url ? (
                 <img
                   src={product.image_url}
                   alt={product.name}
-                  className="w-full h-full object-cover"
+                  className="w-20 h-20 object-cover rounded-[16px]"
                 />
-              </div>
-            )}
+              ) : (
+                <div className="w-20 h-20 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-[16px]">
+                  <Package className="w-10 h-10 text-gray-400 dark:text-gray-600" />
+                </div>
+              )}
+            </div>
 
             {/* Product Info */}
             <div className="space-y-4">

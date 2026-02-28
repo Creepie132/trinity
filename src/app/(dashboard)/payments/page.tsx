@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Copy, ExternalLink, Eye, Banknote, CheckCircle, TrendingUp, SlidersHorizontal, Receipt } from 'lucide-react'
+import { Plus, Copy, ExternalLink, Eye, Banknote, CheckCircle, TrendingUp, SlidersHorizontal, Receipt, MessageCircle, MessageSquare } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
 import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
 import { CreateSubscriptionDialog } from '@/components/payments/CreateSubscriptionDialog'
@@ -146,6 +146,40 @@ export default function PaymentsPage() {
   const copyPaymentLink = (link: string) => {
     navigator.clipboard.writeText(link)
     toast.success(t('payments.linkCopied'))
+  }
+
+  const formatIsraeliPhone = (phone: string) => {
+    if (!phone) return ''
+    // Remove all non-digits
+    const cleaned = phone.replace(/\D/g, '')
+    // If starts with 0, remove it
+    if (cleaned.startsWith('0')) {
+      return cleaned.substring(1)
+    }
+    // If starts with 972, remove it
+    if (cleaned.startsWith('972')) {
+      return cleaned.substring(3)
+    }
+    return cleaned
+  }
+
+  const openWhatsApp = (phone: string, paymentLink: string) => {
+    const formattedPhone = formatIsraeliPhone(phone)
+    if (!formattedPhone) {
+      toast.error(language === 'he' ? 'אין מספר טלפון' : 'Номер телефона отсутствует')
+      return
+    }
+    const message = encodeURIComponent(paymentLink || '')
+    window.open(`https://wa.me/972${formattedPhone}?text=${message}`, '_blank')
+  }
+
+  const openSMS = (phone: string) => {
+    const formattedPhone = formatIsraeliPhone(phone)
+    if (!formattedPhone) {
+      toast.error(language === 'he' ? 'אין מספר טלפון' : 'Номер телефона отсутствует')
+      return
+    }
+    window.open(`sms:${formattedPhone}`, '_blank')
   }
 
   const getStatusBadge = (status: string) => {
@@ -474,6 +508,28 @@ export default function PaymentsPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
+                        )}
+                        {(payment.clients?.phone || payment.client_phone) && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openWhatsApp(payment.clients?.phone || payment.client_phone, payment.payment_link || '')}
+                              title={language === 'he' ? 'שלח ב-WhatsApp' : 'Отправить в WhatsApp'}
+                              className="hover:bg-green-50 dark:hover:bg-green-900/20"
+                            >
+                              <MessageCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openSMS(payment.clients?.phone || payment.client_phone)}
+                              title={language === 'he' ? 'שלח SMS' : 'Отправить SMS'}
+                              className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            >
+                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>

@@ -1,12 +1,14 @@
 'use client'
 
 import { useModalStore } from '@/store/useModalStore'
-import { Calendar, Clock, Phone, Mail, CalendarPlus, Pencil, X } from 'lucide-react'
+import { Pencil, X, Phone, MessageCircle, MessageSquare, Mail, Trash2 } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 
 export function ClientDetailsModal() {
-  const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
+  const { isModalOpen, closeModal, getModalData } = useModalStore()
+  const [showGdprDialog, setShowGdprDialog] = useState(false)
   
   const isOpen = isModalOpen('client-details')
   const data = getModalData('client-details')
@@ -44,24 +46,40 @@ export function ClientDetailsModal() {
 
   const t = {
     he: {
+      contacts: 'קשר',
+      call: 'התקשר',
+      whatsapp: 'WhatsApp',
+      sms: 'SMS',
+      sendEmail: 'שלח אימייל',
+      information: 'מידע',
       visits: 'ביקורים',
       lastVisit: 'ביקור אחרון',
-      newVisit: 'קבע ביקור חדש',
-      edit: 'ערוך פרטים',
-      notes: 'הערות',
-      createdAt: 'נוצר',
       totalPaid: 'סה"כ שולם',
-      clientDetails: 'פרטי לקוח',
+      notes: 'הערות',
+      createdAt: 'תאריך יצירה',
+      actions: 'פעולות',
+      edit: 'ערוך',
+      deleteGdpr: 'מחק (GDPR)',
+      status: 'סטטוס',
+      active: 'פעיל',
     },
     ru: {
+      contacts: 'КОНТАКТЫ',
+      call: 'Позвонить',
+      whatsapp: 'WhatsApp',
+      sms: 'SMS',
+      sendEmail: 'Отправить Email',
+      information: 'ИНФОРМАЦИЯ',
       visits: 'Визитов',
       lastVisit: 'Последний визит',
-      newVisit: 'Новый визит',
-      edit: 'Редактировать',
-      notes: 'Заметки',
-      createdAt: 'Создан',
       totalPaid: 'Всего оплачено',
-      clientDetails: 'Детали клиента',
+      notes: 'Заметки',
+      createdAt: 'Дата создания',
+      actions: 'ДЕЙСТВИЯ',
+      edit: 'Редактировать',
+      deleteGdpr: 'Удалить (GDPR)',
+      status: 'Статус',
+      active: 'Активен',
     },
   }
 
@@ -69,120 +87,230 @@ export function ClientDetailsModal() {
 
   const handleEditClick = () => {
     closeModal('client-details')
-    openModal('client-edit', { client })
+    const editModal = useModalStore.getState().openModal
+    editModal('client-edit', { client })
+  }
+
+  const handleCall = () => {
+    if (client.phone) {
+      window.location.href = `tel:${client.phone}`
+    }
+  }
+
+  const handleWhatsApp = () => {
+    if (client.phone) {
+      // Remove leading 0 and add 972 for Israeli numbers
+      const cleanPhone = client.phone.replace(/\D/g, '')
+      const whatsappPhone = cleanPhone.startsWith('0') 
+        ? '972' + cleanPhone.substring(1) 
+        : '972' + cleanPhone
+      window.open(`https://wa.me/${whatsappPhone}`, '_blank')
+    }
+  }
+
+  const handleSMS = () => {
+    if (client.phone) {
+      window.location.href = `sms:${client.phone}`
+    }
+  }
+
+  const handleEmail = () => {
+    if (client.email) {
+      window.location.href = `mailto:${client.email}`
+    }
+  }
+
+  const handleDeleteClick = () => {
+    setShowGdprDialog(true)
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-      onClick={() => closeModal('client-details')}
-    >
+    <>
       <div
-        className="w-[400px] max-w-[90vw] h-[600px] max-h-[90vh] bg-white dark:bg-gray-900 rounded-[32px] shadow-2xl flex flex-col"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+        onClick={() => closeModal('client-details')}
       >
-        <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0 border-b border-gray-200 dark:border-gray-800">
-          <h2 className="text-xl font-bold">{text.clientDetails}</h2>
-          <button
-            onClick={() => closeModal('client-details')}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-6">
-          <div className="flex flex-col items-center mb-6">
-            <div
-              className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3`}
-            >
-              {initials}
+        <div
+          className="w-[560px] max-w-full h-[90vh] bg-white dark:bg-gray-900 rounded-[32px] shadow-2xl flex flex-col overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header - Fixed */}
+          <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-800">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1" />
+              <button
+                onClick={() => closeModal('client-details')}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition"
+              >
+                <X size={20} />
+              </button>
             </div>
-            <h3 className="text-2xl font-bold text-center">{clientName}</h3>
+
+            {/* Avatar + Name + Status */}
+            <div className="flex flex-col items-center text-center">
+              <div
+                className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3`}
+              >
+                {initials}
+              </div>
+              <h2 className="text-2xl font-bold mb-1">{clientName}</h2>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-sm font-medium">
+                <div className="w-2 h-2 bg-green-500 rounded-full" />
+                {text.active}
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-4 mb-6">
-          {client.phone && (
-            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <Phone size={18} className="text-muted-foreground" />
-              <span className="text-sm">{client.phone}</span>
-            </div>
-          )}
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto px-6 py-6">
+            {/* Contacts Section */}
+            {client.phone && (
+              <div className="mb-6">
+                <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 tracking-wider">
+                  {text.contacts}
+                </h3>
+                
+                {/* Contact Buttons Row */}
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <button
+                    onClick={handleCall}
+                    className="flex flex-col items-center justify-center gap-2 p-4 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-2xl transition group"
+                  >
+                    <Phone className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition" />
+                    <span className="text-xs font-medium text-blue-900 dark:text-blue-100">
+                      {text.call}
+                    </span>
+                  </button>
 
-          {client.email && (
-            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <Mail size={18} className="text-muted-foreground" />
-              <span className="text-sm">{client.email}</span>
-            </div>
-          )}
+                  <button
+                    onClick={handleWhatsApp}
+                    className="flex flex-col items-center justify-center gap-2 p-4 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-2xl transition group"
+                  >
+                    <MessageCircle className="w-5 h-5 text-green-600 dark:text-green-400 group-hover:scale-110 transition" />
+                    <span className="text-xs font-medium text-green-900 dark:text-green-100">
+                      {text.whatsapp}
+                    </span>
+                  </button>
 
-          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <Calendar size={18} className="text-muted-foreground" />
-            <span className="text-sm">
-              {text.visits}: {visitsCount}
-            </span>
-          </div>
+                  <button
+                    onClick={handleSMS}
+                    className="flex flex-col items-center justify-center gap-2 p-4 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-2xl transition group"
+                  >
+                    <MessageSquare className="w-5 h-5 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition" />
+                    <span className="text-xs font-medium text-purple-900 dark:text-purple-100">
+                      SMS
+                    </span>
+                  </button>
+                </div>
 
-          {client.last_visit && (
-            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <Clock size={18} className="text-muted-foreground" />
-              <span className="text-sm">
-                {text.lastVisit}:{' '}
-                {new Date(client.last_visit).toLocaleDateString(
-                  locale === 'he' ? 'he-IL' : 'ru-RU'
+                {/* Email Button - Full Width if exists */}
+                {client.email && (
+                  <button
+                    onClick={handleEmail}
+                    className="w-full flex items-center justify-center gap-2 p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition group"
+                  >
+                    <Mail className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:scale-110 transition" />
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {text.sendEmail}
+                    </span>
+                  </button>
                 )}
-              </span>
-            </div>
-          )}
+              </div>
+            )}
 
-          {client.total_paid && (
-            <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <span className="text-sm font-medium">
-                {text.totalPaid}: ₪{client.total_paid}
-              </span>
-            </div>
-          )}
+            {/* Information Section */}
+            <div className="mb-6">
+              <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 tracking-wider">
+                {text.information}
+              </h3>
+              
+              <div className="space-y-3">
+                {/* Visits */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{text.visits}</span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                    {visitsCount}
+                  </span>
+                </div>
 
-          {client.notes && (
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <p className="text-sm font-medium mb-1">{text.notes}:</p>
-              <p className="text-sm text-muted-foreground">{client.notes}</p>
-            </div>
-          )}
-
-          {client.created_at && (
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <p className="text-xs text-muted-foreground">
-                {text.createdAt}:{' '}
-                {new Date(client.created_at).toLocaleDateString(
-                  locale === 'he' ? 'he-IL' : 'ru-RU'
+                {/* Last Visit */}
+                {client.last_visit && (
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{text.lastVisit}</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      {new Date(client.last_visit).toLocaleDateString(
+                        locale === 'he' ? 'he-IL' : 'ru-RU'
+                      )}
+                    </span>
+                  </div>
                 )}
-              </p>
+
+                {/* Total Paid */}
+                {client.total_paid !== undefined && client.total_paid !== null && (
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{text.totalPaid}</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      ₪{client.total_paid}
+                    </span>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {client.notes && (
+                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium">
+                      {text.notes}
+                    </p>
+                    <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                      {client.notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Created At */}
+                {client.created_at && (
+                  <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-2xl">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{text.createdAt}</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      {new Date(client.created_at).toLocaleDateString(
+                        locale === 'he' ? 'he-IL' : 'ru-RU'
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
           </div>
 
-          <div className="space-y-2">
+          {/* Action Buttons - Fixed at Bottom */}
+          <div className="flex-shrink-0 p-6 border-t border-gray-200 dark:border-gray-800 space-y-3">
             <button
               onClick={handleEditClick}
-              className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition"
+              className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3.5 rounded-2xl font-medium hover:opacity-90 transition"
             >
               <Pencil size={18} />
               {text.edit}
             </button>
 
-            {enabledModules.appointments && (
-              <button
-                onClick={() => closeModal('client-details')}
-                className="w-full flex items-center justify-center gap-2 bg-secondary text-secondary-foreground py-3 rounded-lg font-medium hover:opacity-90 transition"
-              >
-                <CalendarPlus size={18} />
-                {text.newVisit}
-              </button>
-            )}
+            <button
+              onClick={handleDeleteClick}
+              className="w-full flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white py-3.5 rounded-2xl font-medium transition"
+            >
+              <Trash2 size={18} />
+              {text.deleteGdpr}
+            </button>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* GDPR Delete Dialog */}
+      <GdprDeleteDialog
+        open={showGdprDialog}
+        onOpenChange={setShowGdprDialog}
+        clientId={client.id}
+        clientName={clientName}
+        locale={locale as 'he' | 'ru'}
+      />
+    </>
   )
 }

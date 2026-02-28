@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Copy, ExternalLink, Eye, Banknote, CheckCircle, TrendingUp, SlidersHorizontal, Receipt, MessageCircle, MessageSquare } from 'lucide-react'
+import { Plus, Copy, ExternalLink, Eye, Banknote, CheckCircle, TrendingUp, SlidersHorizontal, Receipt, MessageCircle, MessageSquare, X } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
 import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
 import { CreateSubscriptionDialog } from '@/components/payments/CreateSubscriptionDialog'
@@ -148,6 +148,26 @@ export default function PaymentsPage() {
     toast.success(t('payments.linkCopied'))
   }
 
+  const cancelPayment = async (paymentId: string) => {
+    try {
+      const response = await fetch(`/api/payments/${paymentId}/cancel`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel payment')
+      }
+
+      toast.success(language === 'he' ? 'התשלום בוטל בהצלחה' : 'Платёж успешно отменён')
+      
+      // Refresh payments list
+      window.location.reload()
+    } catch (error) {
+      console.error('Cancel payment error:', error)
+      toast.error(language === 'he' ? 'שגיאה בביטול התשלום' : 'Ошибка при отмене платежа')
+    }
+  }
+
   const formatIsraeliPhone = (phone: string) => {
     if (!phone) return ''
     // Remove all non-digits
@@ -192,6 +212,8 @@ export default function PaymentsPage() {
         return <Badge variant="destructive">{t('payments.failed')}</Badge>
       case 'refunded':
         return <Badge variant="secondary">{t('payments.refunded')}</Badge>
+      case 'cancelled':
+        return <Badge variant="secondary">{language === 'he' ? 'בוטל' : 'Отменён'}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -530,6 +552,22 @@ export default function PaymentsPage() {
                               <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                             </Button>
                           </>
+                        )}
+                        {/* Cancel button for pending credit card payments */}
+                        {payment.status === 'pending' && 
+                         (payment.payment_method === 'credit_card' || 
+                          payment.payment_method === 'credit' || 
+                          payment.payment_method === 'אשראי' || 
+                          payment.payment_method === 'card') && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => cancelPayment(payment.id)}
+                            title={language === 'he' ? 'ביטול' : 'Отменить'}
+                            className="hover:bg-red-50 dark:hover:bg-red-900/20"
+                          >
+                            <X className="w-4 h-4 text-red-600 dark:text-red-400" />
+                          </Button>
                         )}
                       </div>
                     </TableCell>

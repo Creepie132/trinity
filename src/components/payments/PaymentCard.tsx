@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CreditCard, Banknote, Receipt, Copy, RotateCcw, FileText, MessageCircle, MessageSquare, ExternalLink } from 'lucide-react'
+import { CreditCard, Banknote, Receipt, Copy, RotateCcw, FileText, MessageCircle, MessageSquare, ExternalLink, X } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { toast } from 'sonner'
@@ -41,6 +41,27 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
     }
   }
 
+  const cancelPayment = async (paymentId: string) => {
+    try {
+      const response = await fetch(`/api/payments/${paymentId}/cancel`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel payment')
+      }
+
+      toast.success(locale === 'he' ? 'התשלום בוטל בהצלחה' : 'Платёж успешно отменён')
+      setDetailOpen(false)
+      
+      // Refresh page
+      window.location.reload()
+    } catch (error) {
+      console.error('Cancel payment error:', error)
+      toast.error(locale === 'he' ? 'שגיאה בביטול התשלום' : 'Ошибка при отмене платежа')
+    }
+  }
+
   const t = {
     he: {
       paymentDetails: 'פרטי תשלום',
@@ -67,6 +88,7 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
       pending: 'ממתין',
       failed: 'נכשל',
       refunded: 'הוחזר',
+      cancelled: 'בוטל',
     },
     ru: {
       paymentDetails: 'Детали платежа',
@@ -93,6 +115,7 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
       pending: 'Ожидает',
       failed: 'Ошибка',
       refunded: 'Возвращено',
+      cancelled: 'Отменён',
     },
   }
 
@@ -190,6 +213,7 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
     pending: text.pending,
     failed: text.failed,
     refunded: text.refunded,
+    cancelled: text.cancelled,
   }[payment.status] || payment.status
 
   const copyLink = () => {
@@ -330,6 +354,20 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
                 >
                   <Copy size={18} />
                   {locale === 'he' ? 'העתק קישור' : 'Копировать ссылку'}
+                </button>
+              )}
+
+              {/* Cancel button for credit card payments */}
+              {(payment.payment_method === 'credit_card' || 
+                payment.payment_method === 'credit' || 
+                payment.payment_method === 'אשראי' || 
+                payment.payment_method === 'card') && (
+                <button
+                  onClick={() => cancelPayment(payment.id)}
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-red-50 text-red-600 font-medium hover:bg-red-100 transition"
+                >
+                  <X size={18} />
+                  {locale === 'he' ? 'ביטול' : 'Отменить'}
                 </button>
               )}
             </>

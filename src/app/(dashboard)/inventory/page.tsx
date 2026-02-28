@@ -233,10 +233,10 @@ export default function InventoryPage() {
         ))}
       </div>
 
-      {/* Products List */}
-      <div className="space-y-3">
+      {/* Products Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {filteredProducts.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-card border border-card p-12 text-center">
+          <div className="col-span-full bg-white rounded-[24px] shadow-md p-12 text-center">
             <Package size={48} className="mx-auto text-slate-300 mb-3" />
             <p className="text-sm text-slate-400">
               {searchQuery.length >= 2
@@ -264,10 +264,10 @@ export default function InventoryPage() {
               <div
                 key={product.id}
                 onClick={() => handleProductClick(product)}
-                className="bg-white rounded-2xl shadow-card border border-card p-4 flex items-center gap-4 cursor-pointer hover:shadow-card-hover transition"
+                className="bg-white rounded-[24px] shadow-md p-6 flex flex-col items-center cursor-pointer hover:shadow-lg transition-shadow"
               >
-                {/* Изображение */}
-                <div className="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                {/* Иконка товара */}
+                <div className="w-20 h-20 rounded-xl bg-slate-100 overflow-hidden flex items-center justify-center mb-4">
                   {product.image_url ? (
                     <img
                       src={product.image_url}
@@ -275,41 +275,53 @@ export default function InventoryPage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Package size={24} className="text-slate-300" />
+                    <Package size={32} className="text-slate-300" />
                   )}
                 </div>
 
-                {/* Инфо */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate">{product.name}</p>
-                  <p className="text-xs text-slate-400">{product.category || ''}</p>
+                {/* Название */}
+                <h3 className="text-base font-bold text-center mb-1 line-clamp-2 min-h-[2.5rem]">
+                  {product.name}
+                </h3>
 
-                  {/* Прогресс-бар */}
-                  <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${stockColor}`}
-                      style={{ width: `${stockPercent}%` }}
-                    />
-                  </div>
+                {/* Категория */}
+                <p className="text-xs text-slate-400 mb-3 text-center">
+                  {product.category || (locale === 'he' ? 'ללא קטגוריה' : 'Без категории')}
+                </p>
+
+                {/* Прогресс-бар количества */}
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-4">
+                  <div
+                    className={`h-full rounded-full transition-all ${stockColor}`}
+                    style={{ width: `${stockPercent}%` }}
+                  />
                 </div>
 
-                {/* Количество + Quick Edit */}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Цена и количество */}
+                <div className="w-full flex items-center justify-between mb-3">
+                  <p className="text-lg font-bold text-slate-700">₪{product.price || 0}</p>
+                  <p
+                    className={`text-sm font-semibold ${
+                      product.quantity === 0 ? 'text-red-500' : 'text-slate-600'
+                    }`}
+                  >
+                    {locale === 'he' ? 'כמות' : 'Кол-во'}: {product.quantity}
+                  </p>
+                </div>
+
+                {/* Кнопки + и - */}
+                <div className="w-full flex items-center justify-center gap-3">
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       updateQuantity(product.id, -1)
                     }}
-                    className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition"
+                    className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
                   >
-                    <Minus size={14} />
+                    <Minus size={18} />
                   </button>
 
-                  <span
-                    className={`text-sm font-bold w-8 text-center ${
-                      product.quantity === 0 ? 'text-red-500' : ''
-                    }`}
-                  >
+                  <span className="text-xl font-bold w-12 text-center">
                     {product.quantity}
                   </span>
 
@@ -318,16 +330,11 @@ export default function InventoryPage() {
                       e.stopPropagation()
                       updateQuantity(product.id, 1)
                     }}
-                    className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition"
+                    className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
                   >
-                    <Plus size={14} />
+                    <Plus size={18} />
                   </button>
                 </div>
-
-                {/* Цена */}
-                <p className="text-sm font-bold text-slate-600 flex-shrink-0 w-16 text-end">
-                  ₪{product.price || 0}
-                </p>
               </div>
             )
           })

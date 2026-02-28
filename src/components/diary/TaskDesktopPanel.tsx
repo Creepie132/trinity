@@ -221,25 +221,25 @@ export function TaskDesktopPanel({
             </div>
           )}
 
-          {/* Контакты клиента */}
-          {client && (client.phone || client.email || client.address) && (
+          {/* Контакты */}
+          {((client && (client.phone || client.email || client.address)) || (task.contact_phone || task.contact_email || task.contact_address)) && (
             <div className="space-y-2 mb-6">
-              {client.phone && (
+              {(client?.phone || task.contact_phone) && (
                 <div>
                   <div className="w-full flex items-center gap-2 py-2 px-3 rounded-lg bg-blue-50 text-blue-600">
                     <Phone size={16} />
-                    <span className="text-sm flex-1">{client.phone}</span>
+                    <span className="text-sm flex-1">{client?.phone || task.contact_phone}</span>
                   </div>
                   <div className="flex gap-2 mt-2">
                     <button
-                      onClick={() => (window.location.href = `tel:${client.phone}`)}
+                      onClick={() => (window.location.href = `tel:${client?.phone || task.contact_phone}`)}
                       className="flex-1 py-2 px-3 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition text-sm font-medium"
                     >
                       {l.phone}
                     </button>
                     <button
                       onClick={() => {
-                        const cleanPhone = client.phone.replace(/[^0-9]/g, '')
+                        const cleanPhone = (client?.phone || task.contact_phone)!.replace(/[^0-9]/g, '')
                         window.open(`https://wa.me/${cleanPhone}`, '_blank')
                       }}
                       className="flex-1 py-2 px-3 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition text-sm font-medium"
@@ -247,7 +247,7 @@ export function TaskDesktopPanel({
                       {l.whatsapp}
                     </button>
                     <button
-                      onClick={() => (window.location.href = `sms:${client.phone}`)}
+                      onClick={() => (window.location.href = `sms:${client?.phone || task.contact_phone}`)}
                       className="flex-1 py-2 px-3 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition text-sm font-medium"
                     >
                       {l.sms}
@@ -255,94 +255,34 @@ export function TaskDesktopPanel({
                   </div>
                 </div>
               )}
-              {client.email && (
+              {(client?.email || task.contact_email) && (
                 <div>
                   <div className="w-full flex items-center gap-2 py-2 px-3 rounded-lg bg-red-50 text-red-600">
                     <Mail size={16} />
-                    <span className="text-sm flex-1 truncate">{client.email}</span>
+                    <span className="text-sm flex-1 truncate">{client?.email || task.contact_email}</span>
                   </div>
                   <button
-                    onClick={() => (window.location.href = `mailto:${client.email}`)}
+                    onClick={() => (window.location.href = `mailto:${client?.email || task.contact_email}`)}
                     className="w-full mt-2 py-2 px-3 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition text-sm font-medium"
                   >
                     {l.sendEmail}
                   </button>
                 </div>
               )}
-              {client.address && (
-                <button
-                  onClick={handleAddressClick}
-                  className="w-full flex items-center gap-3 py-2 px-3 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-                >
-                  <MapPin size={16} />
-                  <span className="text-sm flex-1 text-start truncate">{client.address}</span>
-                  <span className="text-xs opacity-75">{l.navigate}</span>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Контакты задачи */}
-          {(task.contact_phone || task.contact_email || task.contact_address) && (
-            <div className="space-y-2 mb-6">
-              {task.contact_phone && (
-                <div>
-                  <div className="w-full flex items-center gap-2 py-2 px-3 rounded-lg bg-blue-50 text-blue-600">
-                    <Phone size={16} />
-                    <span className="text-sm flex-1">{task.contact_phone}</span>
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => (window.location.href = `tel:${task.contact_phone}`)}
-                      className="flex-1 py-2 px-3 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition text-sm font-medium"
-                    >
-                      {l.phone}
-                    </button>
-                    <button
-                      onClick={() => {
-                        const cleanPhone = task.contact_phone.replace(/[^0-9]/g, '')
-                        window.open(`https://wa.me/${cleanPhone}`, '_blank')
-                      }}
-                      className="flex-1 py-2 px-3 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition text-sm font-medium"
-                    >
-                      {l.whatsapp}
-                    </button>
-                    <button
-                      onClick={() => (window.location.href = `sms:${task.contact_phone}`)}
-                      className="flex-1 py-2 px-3 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition text-sm font-medium"
-                    >
-                      {l.sms}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {task.contact_email && (
-                <div>
-                  <div className="w-full flex items-center gap-2 py-2 px-3 rounded-lg bg-red-50 text-red-600">
-                    <Mail size={16} />
-                    <span className="text-sm flex-1 truncate">{task.contact_email}</span>
-                  </div>
-                  <button
-                    onClick={() => (window.location.href = `mailto:${task.contact_email}`)}
-                    className="w-full mt-2 py-2 px-3 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition text-sm font-medium"
-                  >
-                    {l.sendEmail}
-                  </button>
-                </div>
-              )}
-              {task.contact_address && (
+              {(client?.address || task.contact_address) && (
                 <button
                   onClick={() => {
-                    const geoUrl = `geo:0,0?q=${encodeURIComponent(task.contact_address)}`
+                    const address = client?.address || task.contact_address
+                    const geoUrl = `geo:0,0?q=${encodeURIComponent(address!)}`
                     window.location.href = geoUrl
                     setTimeout(() => {
-                      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(task.contact_address)}`, '_blank')
+                      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address!)}`, '_blank')
                     }, 500)
                   }}
                   className="w-full flex items-center gap-3 py-2 px-3 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
                 >
                   <MapPin size={16} />
-                  <span className="text-sm flex-1 text-start truncate">{task.contact_address}</span>
+                  <span className="text-sm flex-1 text-start truncate">{client?.address || task.contact_address}</span>
                   <span className="text-xs opacity-75">{l.navigate}</span>
                 </button>
               )}

@@ -186,31 +186,6 @@ export function TaskDetailSheet({
             <p className="text-3xl mb-2">🎂</p>
             <p className="font-semibold text-lg">{getClientName(task.client)}</p>
             <p className="text-sm text-muted-foreground mt-1">{labels.birthdayToday}</p>
-            {task.contact_phone && (
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={() => handleCall(task.contact_phone!)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
-                >
-                  <Phone className="w-4 h-4" />
-                  <span className="text-sm font-medium">{labels.call}</span>
-                </button>
-                <button
-                  onClick={() => handleWhatsApp(task.contact_phone!)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-green-600 text-white hover:bg-green-700 transition"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">WhatsApp</span>
-                </button>
-                <button
-                  onClick={() => handleSMS(task.contact_phone!)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">{labels.sms}</span>
-                </button>
-              </div>
-            )}
           </div>
         )}
 

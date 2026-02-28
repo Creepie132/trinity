@@ -51,11 +51,14 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     if (orgError || !orgUser?.org_id) {
+      console.error('org_id lookup error:', orgError)
       return NextResponse.json(
         { error: 'Organization not found for user' },
         { status: 404 }
       )
     }
+
+    console.log('Saving client with org_id:', orgUser.org_id)
 
     // Parse request body
     const body = await req.json()
@@ -71,6 +74,13 @@ export async function POST(req: NextRequest) {
       ])
       .select()
       .single()
+
+    if (insertError) {
+      console.error('Insert error:', insertError)
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
+    }
+
+    console.log('Client created successfully:', client.id)
 
     if (insertError) {
       console.error('Insert error:', insertError)

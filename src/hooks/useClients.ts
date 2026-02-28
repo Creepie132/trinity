@@ -11,6 +11,8 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
     queryKey: ['clients', orgId, searchQuery, page, pageSize],
     enabled: !!orgId,
     queryFn: async () => {
+      console.log('Loading clients for org_id:', orgId)
+      
       const from = (page - 1) * pageSize
       const to = page * pageSize - 1
 
@@ -28,7 +30,14 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
       }
 
       const { data, error, count } = await query
-      if (error) throw error
+      
+      if (error) {
+        console.error('Error loading clients:', error)
+        throw error
+      }
+      
+      console.log('Loaded clients count:', count)
+      
       return { data: data as ClientSummary[], count: count || 0 }
     },
   })

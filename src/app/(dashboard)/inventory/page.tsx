@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useProducts, useLowStockProducts } from '@/hooks/useProducts'
 import { useFeatures } from '@/hooks/useFeatures'
-import { Package, Plus, Minus, Camera, Search } from 'lucide-react'
+import { Package, Plus, Camera, Search } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { CreateProductDialog } from '@/components/inventory/CreateProductDialog'
@@ -65,7 +65,7 @@ export default function InventoryPage() {
 
   // KPI calculations
   const totalValue = products.reduce((sum: number, p: any) => 
-    sum + (p.price || 0) * (p.quantity || 0), 0
+    sum + (p.sell_price || 0) * (p.quantity || 0), 0
   )
   const outOfStockCount = products.filter((p: any) => (p.quantity || 0) === 0).length
   const activeCount = products.filter((p: any) => (p.quantity || 0) > 0).length
@@ -74,28 +74,6 @@ export default function InventoryPage() {
   const lowStock = products.filter((p: any) => 
     p.quantity > 0 && p.min_quantity && p.quantity <= p.min_quantity
   )
-
-  // Quick Edit quantity
-  async function updateQuantity(productId: string, delta: number) {
-    try {
-      const product = products.find((p: any) => p.id === productId)
-      if (!product) return
-
-      const newQty = Math.max(0, (product.quantity || 0) + delta)
-
-      const res = await fetch(`/api/products/${productId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity: newQty }),
-      })
-
-      if (res.ok) {
-        refetch()
-      }
-    } catch (e) {
-      console.error(e)
-    }
-  }
 
   const handleProductClick = (product: Product) => {
     openModal('product-details', { product, locale })
@@ -297,43 +275,22 @@ export default function InventoryPage() {
                   />
                 </div>
 
-                {/* Цена и количество */}
-                <div className="w-full flex items-center justify-between mb-3">
-                  <p className="text-lg font-bold text-slate-700">₪{product.price || 0}</p>
+                {/* Цена */}
+                <div className="w-full text-center mb-2">
+                  <p className="text-lg font-bold text-slate-700">
+                    ₪{product.sell_price || product.purchase_price || 0}
+                  </p>
+                </div>
+
+                {/* Количество */}
+                <div className="w-full text-center">
                   <p
                     className={`text-sm font-semibold ${
                       product.quantity === 0 ? 'text-red-500' : 'text-slate-600'
                     }`}
                   >
-                    {locale === 'he' ? 'כמות' : 'Кол-во'}: {product.quantity}
+                    {locale === 'he' ? 'במלאי' : 'В наличии'}: {product.quantity}
                   </p>
-                </div>
-
-                {/* Кнопки + и - */}
-                <div className="w-full flex items-center justify-center gap-3">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      updateQuantity(product.id, -1)
-                    }}
-                    className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
-                  >
-                    <Minus size={18} />
-                  </button>
-
-                  <span className="text-xl font-bold w-12 text-center">
-                    {product.quantity}
-                  </span>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      updateQuantity(product.id, 1)
-                    }}
-                    className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
-                  >
-                    <Plus size={18} />
-                  </button>
                 </div>
               </div>
             )

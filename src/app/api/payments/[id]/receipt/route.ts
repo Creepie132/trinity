@@ -4,9 +4,10 @@ import { generateReceipt } from '@/lib/generate-receipt'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await getSupabaseServerClient()
 
     // Get current user
@@ -31,7 +32,7 @@ export async function GET(
           phone
         )
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (paymentError || !payment) {

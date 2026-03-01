@@ -29,6 +29,7 @@ export interface CareInstruction {
   title_ru?: string
   content: string
   content_ru?: string
+  file_url?: string
   is_active: boolean
   created_at: string
   
@@ -68,6 +69,7 @@ export interface CreateCareInstructionDTO {
   title_ru?: string
   content: string
   content_ru?: string
+  file_url?: string
 }
 
 /**

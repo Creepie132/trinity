@@ -6,7 +6,7 @@ import { useCareInstructions, useDeleteCareInstruction } from '@/hooks/useCareIn
 import { useServices } from '@/hooks/useServices';
 import { CareInstruction } from '@/types/services';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit2, Trash2, FileText } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileText, Download } from 'lucide-react';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { CreateCareInstructionDialog } from '@/components/care-instructions/CreateCareInstructionDialog';
 import { toast } from 'sonner';
@@ -40,6 +40,26 @@ export default function CareInstructionsPage() {
     } catch (error) {
       console.error('Error deleting instruction:', error);
       toast.error(t('errors.somethingWentWrong'));
+    }
+  };
+
+  const handleDownload = (instruction: CareInstruction) => {
+    if (instruction.file_url) {
+      // Open real PDF file
+      window.open(instruction.file_url, '_blank');
+    } else {
+      // Download as TXT if no file
+      const content = language === 'he' ? instruction.content : (instruction.content_ru || instruction.content);
+      const title = language === 'he' ? instruction.title : (instruction.title_ru || instruction.title);
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
   };
 
@@ -114,12 +134,10 @@ export default function CareInstructionsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => {
-                              // TODO: Edit dialog
-                              toast.info('Edit functionality coming soon');
-                            }}
+                            onClick={() => handleDownload(instruction)}
+                            title={instruction.file_url ? t('common.download') : t('careInstructions.downloadAsTxt')}
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Download className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -169,12 +187,10 @@ export default function CareInstructionsPage() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => {
-                        toast.info('Edit functionality coming soon');
-                      }}
+                      onClick={() => handleDownload(instruction)}
                     >
-                      <Edit2 className="w-4 h-4 mr-2" />
-                      {t('common.edit')}
+                      <Download className="w-4 h-4 mr-2" />
+                      {t('common.download')}
                     </Button>
                     <Button
                       variant="destructive"

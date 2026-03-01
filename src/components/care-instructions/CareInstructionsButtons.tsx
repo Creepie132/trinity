@@ -41,6 +41,14 @@ export function CareInstructionsButtons({ serviceType, clientName, clientPhone }
 
   const handleDownloadPDF = () => {
     try {
+      // If there's a file_url, open the real PDF
+      if (matchingInstruction.file_url) {
+        window.open(matchingInstruction.file_url, '_blank');
+        toast.success(t('careInstructions.downloadPDF') + ' ✓');
+        return;
+      }
+
+      // Otherwise, generate PDF from content
       const doc = generateCareInstructionsPDF({
         organizationName: organization.name,
         clientName,

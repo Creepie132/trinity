@@ -50,13 +50,32 @@ export function CreateCareInstructionDialog({ open, onOpenChange }: CreateCareIn
 
     // Content is optional if file is uploaded
     // Auto-fill content with title if empty
-    const dataToSubmit = {
+    let dataToSubmit = {
       ...formData,
       content: formData.content.trim() || formData.title,
       content_ru: formData.content_ru?.trim() || formData.title_ru || formData.title,
     }
 
     try {
+      // Upload file if selected
+      if (selectedFile) {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', selectedFile);
+
+        const uploadResponse = await fetch('/api/care-instructions/upload', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || 'File upload failed');
+        }
+
+        const { file_url } = await uploadResponse.json();
+        dataToSubmit = { ...dataToSubmit, file_url };
+      }
+
       await createInstruction.mutateAsync(dataToSubmit);
 
       toast.success(t('careInstructions.created'));
@@ -70,6 +89,7 @@ export function CreateCareInstructionDialog({ open, onOpenChange }: CreateCareIn
         content_ru: '',
         service_id: undefined,
       });
+      setSelectedFile(null);
     } catch (error) {
       console.error('Error creating care instruction:', error);
       toast.error(t('errors.somethingWentWrong'));

@@ -216,7 +216,7 @@ export function PaymentDetailsModal() {
                       : `Квитанция: ${paymentUrl}`
                     openWhatsApp(message)
                   }}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-50 text-green-600 font-medium hover:bg-green-100 transition"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-50 text-green-600 font-medium hover:bg-green-100 transition touch-manipulation"
                 >
                   <MessageCircle size={18} />
                   {text.whatsappReceipt}
@@ -224,7 +224,7 @@ export function PaymentDetailsModal() {
 
                 <button
                   onClick={() => openSMS()}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-50 text-blue-600 font-medium hover:bg-blue-100 transition"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-50 text-blue-600 font-medium hover:bg-blue-100 transition touch-manipulation"
                 >
                   <MessageSquare size={18} />
                   {text.smsReceipt}
@@ -232,7 +232,7 @@ export function PaymentDetailsModal() {
 
                 <button
                   onClick={downloadReceipt}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-100 text-slate-600 font-medium hover:bg-slate-200 transition"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-100 text-slate-600 font-medium hover:bg-slate-200 transition touch-manipulation"
                 >
                   <Download size={18} />
                   {text.download}
@@ -250,7 +250,7 @@ export function PaymentDetailsModal() {
                       : `Ссылка для оплаты: ${paymentUrl}`
                     openWhatsApp(message)
                   }}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-50 text-green-600 font-medium hover:bg-green-100 transition"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-50 text-green-600 font-medium hover:bg-green-100 transition touch-manipulation"
                 >
                   <MessageCircle size={18} />
                   {text.whatsappLink}
@@ -263,7 +263,7 @@ export function PaymentDetailsModal() {
                       : `Ссылка для оплаты: ${paymentUrl}`
                     openSMS(message)
                   }}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-50 text-blue-600 font-medium hover:bg-blue-100 transition"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-50 text-blue-600 font-medium hover:bg-blue-100 transition touch-manipulation"
                 >
                   <MessageSquare size={18} />
                   {text.smsLink}
@@ -271,7 +271,7 @@ export function PaymentDetailsModal() {
 
                 <button
                   onClick={copyLink}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border text-slate-600 font-medium hover:bg-muted/50 transition"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border text-slate-600 font-medium hover:bg-muted/50 transition touch-manipulation"
                 >
                   <Copy size={18} />
                   {text.copy}
@@ -279,7 +279,7 @@ export function PaymentDetailsModal() {
 
                 <button
                   onClick={openLink}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-100 text-slate-600 font-medium hover:bg-slate-200 transition"
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-100 text-slate-600 font-medium hover:bg-slate-200 transition touch-manipulation"
                 >
                   <ExternalLink size={18} />
                   {text.openLink}

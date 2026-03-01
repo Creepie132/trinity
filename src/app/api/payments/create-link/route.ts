@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       amount,
       description: description || 'תשלום',
       paymentId: payment.id,
-      successUrl: `${origin}/payments?success=true`,
+      successUrl: `${origin}/api/payments/cardcom-success`,
       failUrl: `${origin}/payments?failed=true`,
       webhookUrl: `${origin}/api/payments/webhook`,
     })

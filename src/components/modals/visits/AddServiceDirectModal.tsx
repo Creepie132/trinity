@@ -17,7 +17,9 @@ export function AddServiceDirectModal() {
     if (!visitId) return
 
     await addService({
+      visit_id: visitId,
       service_id: service.id,
+      service_name: service.name,
       price: service.price,
       duration_minutes: service.duration_minutes,
     })

@@ -106,6 +106,10 @@ export async function POST(request: NextRequest) {
 
     const paymentLink = cardComResult.url
 
+    console.log('CardCom result:', JSON.stringify(cardComResult))
+    console.log('Payment link to save:', paymentLink)
+    console.log('Payment ID:', payment.id)
+
     // Update payment record with link and lowProfileId
     const { error: updateError } = await supabase
       .from('payments')

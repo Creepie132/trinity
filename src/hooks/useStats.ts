@@ -162,8 +162,8 @@ export function useVisitsByMonth() {
           .from('visits')
           .select('*, clients!inner(org_id)', { count: 'exact', head: true })
           .eq('clients.org_id', orgId)
-          .gte('visit_date', firstDay.toISOString())
-          .lte('visit_date', lastDay.toISOString())
+          .gte('scheduled_at', firstDay.toISOString())
+          .lte('scheduled_at', lastDay.toISOString())
 
         months.push({
           month: date.toLocaleDateString('he-IL', { month: 'short', year: 'numeric' }),

@@ -49,7 +49,7 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
       
       const { data: visits } = await supabase
         .from('visits')
-        .select('client_id, visit_date')
+        .select('client_id, scheduled_at')
         .in('client_id', clientIds)
 
       const { data: payments } = await supabase
@@ -67,8 +67,8 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
           ...client,
           last_visit: clientVisits.length > 0 
             ? clientVisits.sort((a, b) => 
-                new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime()
-              )[0].visit_date
+                new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime()
+              )[0].scheduled_at
             : null,
           total_visits: clientVisits.length,
           total_paid: clientPayments.reduce((sum, p) => sum + (p.amount || 0), 0),

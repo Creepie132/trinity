@@ -239,7 +239,7 @@ export function AppointmentCalendar({ locale = 'en' as Locale }) {
     // TODO: supabase update
     // await supabase
     //   .from('visits')
-    //   .update({ visit_date: newDay, start_time: newStartTime })
+    //   .update({ scheduled_at: newDay, start_time: newStartTime })
     //   .eq('id', active.id)
   }
 

@@ -20,7 +20,6 @@ import { ActiveVisitCard } from '@/components/visits/ActiveVisitCard'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { MeetingDetailCard } from '@/components/visits/MeetingDetailCard'
 import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
-import { useVisitServices } from '@/hooks/useVisitServices'
 import { format } from 'date-fns'
 import {
   Select,
@@ -53,16 +52,12 @@ export default function VisitsPage() {
   const [serviceColors, setServiceColors] = useState<Record<string, string>>({})
   const [page, setPage] = useState(1)
   const pageSize = 20
-  const [desktopVisit, setDesktopVisit] = useState<any>(null)
   const [allClients, setAllClients] = useState<any[]>([])
   const [newVisitNotify, setNewVisitNotify] = useState<any>(null)
   const [paymentVisit, setPaymentVisit] = useState<any>(null)
   const [paymentMethod, setPaymentMethod] = useState<string>('')
   const [receiptVisit, setReceiptVisit] = useState<any>(null)
   const [createVisitPrefill, setCreateVisitPrefill] = useState<any>(null)
-  
-  // Load visit services for desktop visit
-  const { data: desktopVisitServices = [] } = useVisitServices(desktopVisit?.id || '')
   
   // Bookings hook
   // Bookings view removed - online bookings now show in main list with badge
@@ -372,12 +367,8 @@ export default function VisitsPage() {
   }
 
   function handleVisitClick(visit: any) {
-    // Открываем detail panel на всех устройствах
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      setDesktopVisit(visit)
-    } else {
-      setSelectedVisit(visit)
-    }
+    // Открываем detail panel на всех устройствах (используем один компонент)
+    setSelectedVisit(visit)
   }
 
   async function updateVisitStatus(visitId: string, newStatus: string) {
@@ -1003,47 +994,7 @@ export default function VisitsPage() {
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* Visit Detail Modal (Desktop) */}
-      <VisitDetailModal
-        visit={desktopVisit}
-        isOpen={!!desktopVisit}
-        onClose={() => setDesktopVisit(null)}
-        locale={language === 'he' ? 'he' : 'ru'}
-        clientName={desktopVisit ? getClientName(desktopVisit) : ''}
-        clientPhone={desktopVisit ? getClientPhone(desktopVisit) : ''}
-        serviceName={desktopVisit ? getServiceName(desktopVisit) : ''}
-        onStart={() => {
-          if (desktopVisit) {
-            updateVisitStatus(desktopVisit.id, 'in_progress')
-            setDesktopVisit(null)
-          }
-        }}
-        onComplete={() => {
-          if (desktopVisit) {
-            handleCompleteVisit(desktopVisit)
-            setDesktopVisit(null)
-          }
-        }}
-        onCancel={() => {
-          if (desktopVisit) {
-            updateVisitStatus(desktopVisit.id, 'cancelled')
-            setDesktopVisit(null)
-          }
-        }}
-        onEdit={() => {
-          if (desktopVisit) {
-            openModal('edit-visit', { visitId: desktopVisit.id, visit: desktopVisit })
-            setDesktopVisit(null)
-          }
-        }}
-        lastVisitDate={desktopVisit ? getLastVisitDate(desktopVisit) : ''}
-        onShowHistory={() => {
-          // TODO: implement history
-          setDesktopVisit(null)
-        }}
-      />
-
-      {/* Mobile - using VisitDetailModal for all devices */}
+      {/* Visit Detail Modal - for all devices */}
       {selectedVisit && console.log('selectedVisit:', selectedVisit)}
       <VisitDetailModal
         visit={selectedVisit}

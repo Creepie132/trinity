@@ -59,6 +59,7 @@ export function CreateCareInstructionDialog({ open, onOpenChange }: CreateCareIn
     try {
       // Upload file if selected
       if (selectedFile) {
+        console.log('[Upload] Starting upload:', selectedFile.name, selectedFile.size);
         const uploadFormData = new FormData();
         uploadFormData.append('file', selectedFile);
 
@@ -69,10 +70,13 @@ export function CreateCareInstructionDialog({ open, onOpenChange }: CreateCareIn
 
         if (!uploadResponse.ok) {
           const errorData = await uploadResponse.json();
+          console.error('[Upload] Upload failed:', errorData);
+          toast.error(`Upload failed: ${errorData.error}`);
           throw new Error(errorData.error || 'File upload failed');
         }
 
         const { file_url } = await uploadResponse.json();
+        console.log('[Upload] Upload successful, file_url:', file_url);
         dataToSubmit = { ...dataToSubmit, file_url };
       }
 

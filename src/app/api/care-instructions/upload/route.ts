@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('[API] POST /api/care-instructions/upload - Start')
+    
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,6 +27,8 @@ export async function POST(request: NextRequest) {
     )
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()
+    console.log('[API] User check:', user ? `User: ${user.id}` : 'No user', userError ? `Error: ${userError.message}` : '')
+    
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -61,7 +65,26 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = new Uint8Array(arrayBuffer)
 
+    // Check if bucket exists, create if not
+    const { data: buckets } = await supabase.storage.listBuckets()
+    const bucketExists = buckets?.some(b => b.id === 'care-instructions')
+    
+    if (!bucketExists) {
+      console.log('[API] Creating care-instructions bucket...')
+      const { error: bucketError } = await supabase.storage.createBucket('care-instructions', {
+        public: true,
+        fileSizeLimit: 10485760, // 10MB
+      })
+      
+      if (bucketError) {
+        console.error('[API] Bucket creation error:', JSON.stringify(bucketError, null, 2))
+        return NextResponse.json({ error: 'Failed to create storage bucket: ' + bucketError.message }, { status: 500 })
+      }
+      console.log('[API] Bucket created successfully')
+    }
+
     // Upload to Supabase Storage
+    console.log('[API] Uploading file:', fileName, 'size:', buffer.length)
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('care-instructions')
       .upload(fileName, buffer, {
@@ -70,9 +93,15 @@ export async function POST(request: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('[API] File upload error:', uploadError)
-      return NextResponse.json({ error: uploadError.message }, { status: 500 })
+      console.error('[API] File upload error:', JSON.stringify(uploadError, null, 2))
+      console.error('[API] Upload details - fileName:', fileName, 'bufferSize:', buffer.length)
+      return NextResponse.json({ 
+        error: uploadError.message,
+        details: uploadError,
+      }, { status: 500 })
     }
+    
+    console.log('[API] File uploaded successfully:', uploadData)
 
     // Get public URL
     const { data: urlData } = supabase.storage

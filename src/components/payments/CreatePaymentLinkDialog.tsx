@@ -16,9 +16,10 @@ import { useAuth } from '@/hooks/useAuth'
 interface CreatePaymentLinkDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
 }
 
-export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLinkDialogProps) {
+export function CreatePaymentLinkDialog({ open, onOpenChange, onSuccess }: CreatePaymentLinkDialogProps) {
   const [selectedClient, setSelectedClient] = useState<any>(null)
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
@@ -56,11 +57,15 @@ export function CreatePaymentLinkDialog({ open, onOpenChange }: CreatePaymentLin
   }
 
   const handleClose = () => {
+    const wasPaymentCreated = !!paymentLink
     setSelectedClient(null)
     setAmount('')
     setDescription('')
     setPaymentLink(null)
     onOpenChange(false)
+    if (wasPaymentCreated && onSuccess) {
+      onSuccess()
+    }
   }
 
   const copyLink = () => {

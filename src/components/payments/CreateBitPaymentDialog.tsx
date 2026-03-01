@@ -19,13 +19,13 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useRouter } from 'next/navigation'
 import { ClientSearch } from '@/components/ui/ClientSearch'
 
-interface CreateCashPaymentDialogProps {
+interface CreateBitPaymentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
 }
 
-export function CreateCashPaymentDialog({ open, onOpenChange, onSuccess }: CreateCashPaymentDialogProps) {
+export function CreateBitPaymentDialog({ open, onOpenChange, onSuccess }: CreateBitPaymentDialogProps) {
   const { t, language } = useLanguage()
   const { orgId } = useAuth()
   const router = useRouter()
@@ -58,14 +58,14 @@ export function CreateCashPaymentDialog({ open, onOpenChange, onSuccess }: Creat
           client_id: clientId,
           org_id: orgId,
           amount: parseFloat(amount),
-          payment_method: 'cash',
+          payment_method: 'bit',
           status: 'completed',
-          description: notes || `${t('payments.cashPayment')} - ${selectedClient?.first_name} ${selectedClient?.last_name}`,
+          description: notes || `BIT - ${selectedClient?.first_name} ${selectedClient?.last_name}`,
         })
 
       if (error) throw error
 
-      toast.success(t('payments.cashPaymentSuccess'))
+      toast.success(language === 'he' ? 'תשלום BIT נוצר בהצלחה' : 'BIT платёж успешно создан')
       onOpenChange(false)
       setClientId('')
       setSelectedClient(null)
@@ -74,7 +74,7 @@ export function CreateCashPaymentDialog({ open, onOpenChange, onSuccess }: Creat
       router.refresh()
       if (onSuccess) onSuccess()
     } catch (error: any) {
-      console.error('Error creating cash payment:', error)
+      console.error('Error creating BIT payment:', error)
       toast.error(error.message || t('common.error'))
     } finally {
       setIsProcessing(false)
@@ -83,34 +83,27 @@ export function CreateCashPaymentDialog({ open, onOpenChange, onSuccess }: Creat
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{t('payments.cashPayment')}</DialogTitle>
+          <DialogTitle>
+            {language === 'he' ? '📱 תשלום BIT' : '📱 BIT платёж'}
+          </DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Client Selection */}
           <div>
-            <Label htmlFor="client">
-              {t('visits.client')} <span className="text-red-500">*</span>
-            </Label>
+            <Label>{t('clients.client')}</Label>
             <ClientSearch
-              orgId={orgId || ''}
-              onSelect={(client) => {
+              onClientSelect={(client) => {
                 setSelectedClient(client)
-                setClientId(client?.id || '')
+                setClientId(client.id)
               }}
-              placeholder={t('visits.selectClient')}
-              locale={language as 'he' | 'ru' | 'en'}
-              value={selectedClient}
+              selectedClient={selectedClient}
+              placeholder={t('clients.searchClient')}
             />
           </div>
 
-          {/* Amount */}
           <div>
-            <Label htmlFor="amount">
-              {t('payments.amount')} <span className="text-red-500">*</span>
-            </Label>
+            <Label htmlFor="amount">{t('payments.amount')}</Label>
             <Input
               id="amount"
               type="number"
@@ -120,20 +113,17 @@ export function CreateCashPaymentDialog({ open, onOpenChange, onSuccess }: Creat
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
               required
-              className="bg-white dark:bg-gray-800"
             />
           </div>
 
-          {/* Notes */}
           <div>
             <Label htmlFor="notes">{t('common.notes')}</Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder={t('common.notes')}
+              placeholder={language === 'he' ? 'הערות נוספות...' : 'Дополнительные заметки...'}
               rows={3}
-              className="bg-white dark:bg-gray-800"
             />
           </div>
 
@@ -141,8 +131,8 @@ export function CreateCashPaymentDialog({ open, onOpenChange, onSuccess }: Creat
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit" disabled={isProcessing} className="bg-green-600 hover:bg-green-700">
-              {isProcessing ? t('common.saving') : t('common.save')}
+            <Button type="submit" disabled={isProcessing}>
+              {isProcessing ? t('common.processing') : t('common.create')}
             </Button>
           </DialogFooter>
         </form>

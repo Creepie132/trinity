@@ -17,6 +17,8 @@ import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
 import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
 import { CreateSubscriptionDialog } from '@/components/payments/CreateSubscriptionDialog'
 import { CreateCashPaymentDialog } from '@/components/payments/CreateCashPaymentDialog'
+import { CreateBitPaymentDialog } from '@/components/payments/CreateBitPaymentDialog'
+import { PaymentMethodModal } from '@/components/payments/PaymentMethodModal'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
@@ -24,7 +26,6 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { ExportButton } from '@/components/ExportButton'
 import { PaymentCard } from '@/components/payments/PaymentCard'
 import { PaymentDesktopPanel } from '@/components/payments/PaymentDesktopPanel'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
@@ -36,9 +37,12 @@ export default function PaymentsPage() {
   const features = useFeatures()
   const { data: isAdmin } = useIsAdmin()
   const { t, language } = useLanguage()
-  const [dialogOpen, setDialogOpen] = useState(false)
+  
+  const [methodModalOpen, setMethodModalOpen] = useState(false)
+  const [cardDialogOpen, setCardDialogOpen] = useState(false)
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false)
   const [cashDialogOpen, setCashDialogOpen] = useState(false)
+  const [bitDialogOpen, setBitDialogOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all')
@@ -105,7 +109,7 @@ export default function PaymentsPage() {
     return [method, number].filter(Boolean).join(' — ')
   }
 
-  const { data: payments, isLoading } = usePayments(undefined, {
+  const { data: payments, isLoading, refetch } = usePayments(undefined, {
     status: statusFilter,
     paymentMethod: paymentMethodFilter !== 'all' ? paymentMethodFilter : undefined,
     clientId: clientFilter !== 'all' ? clientFilter : undefined,
@@ -143,6 +147,11 @@ export default function PaymentsPage() {
     }
   }, [searchParams, t])
 
+  const handlePaymentSuccess = () => {
+    refetch()
+    router.refresh()
+  }
+
   const copyPaymentLink = (link: string) => {
     navigator.clipboard.writeText(link)
     toast.success(t('payments.linkCopied'))
@@ -163,10 +172,10 @@ export default function PaymentsPage() {
         throw new Error(responseData.error || 'Failed to cancel payment')
       }
 
-      toast.success(language === 'he' ? 'התשלום бוטל בהצלחה' : 'Платёж успешно отменён')
+      toast.success(language === 'he' ? 'התשלום בוטל בהצלחה' : 'Платёж успешно отменён')
       
       // Refresh payments list
-      window.location.reload()
+      handlePaymentSuccess()
     } catch (error: any) {
       console.error('Cancel payment error:', error)
       toast.error(`${language === 'he' ? 'שגיאה' : 'Ошибка'}: ${error.message}`)
@@ -224,6 +233,20 @@ export default function PaymentsPage() {
     }
   }
 
+  const handleMethodSelect = (method: 'card' | 'cash' | 'bit') => {
+    switch (method) {
+      case 'card':
+        setCardDialogOpen(true)
+        break
+      case 'cash':
+        setCashDialogOpen(true)
+        break
+      case 'bit':
+        setBitDialogOpen(true)
+        break
+    }
+  }
+
   return (
     <div className="space-y-6 min-h-screen">
       {/* Header - Mobile centered, Desktop left-aligned */}
@@ -236,60 +259,24 @@ export default function PaymentsPage() {
           </p>
         </div>
 
-        {/* Desktop buttons */}
-        <div className="hidden md:flex flex-wrap gap-3">
-          <ExportButton type="payments" />
-          {features.hasPayments && (
-            <>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="w-4 h-4 ml-2" />
-                {t('payments.createLink')}
-              </Button>
-            </>
-          )}
-          {features.hasSubscriptions && (
-            <Button 
-              onClick={() => setSubscriptionDialogOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700"
-            >
-              <Plus className="w-4 h-4 ml-2" />
-              {t('subscriptions.create')}
-            </Button>
-          )}
-          {features.hasPayments && (
-            <Button 
-              onClick={() => setCashDialogOpen(true)}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Banknote className="w-4 h-4 ml-2" />
-              {t('payments.cashPayment')}
-            </Button>
-          )}
+        {/* Desktop single button */}
+        <div className="hidden md:flex">
+          <Button onClick={() => setMethodModalOpen(true)} size="lg" className="bg-primary hover:opacity-90">
+            <Plus className="w-5 h-5 ml-2" />
+            {language === 'he' ? 'עסקה חדשה' : 'Новая сделка'}
+          </Button>
         </div>
 
-        {/* Mobile: Single button with dropdown */}
+        {/* Mobile single button */}
         <div className="md:hidden">
-          <Select onValueChange={(value) => {
-            if (value === 'tranzilla') setDialogOpen(true)
-            if (value === 'subscription') setSubscriptionDialogOpen(true)
-            if (value === 'cash') setCashDialogOpen(true)
-          }}>
-            <SelectTrigger className="w-full bg-theme-primary dark:bg-gray-700 dark:text-white dark:border-gray-600 hover:opacity-90 [&>span]:!text-gray-900 dark:[&>span]:!text-white [&_svg]:text-gray-900 dark:[&_svg]:text-white">
-              <Plus className="w-4 h-4 ml-2 text-gray-900 dark:text-white" />
-              <SelectValue placeholder={t('payments.selectPaymentMethod')} className="text-gray-900 dark:text-white" />
-            </SelectTrigger>
-            <SelectContent className="bg-white dark:bg-gray-700 dark:border-gray-600">
-              {features.hasPayments && (
-                <>
-                  <SelectItem value="tranzilla" className="dark:text-white">{t('payments.createLink')}</SelectItem>
-                  <SelectItem value="cash" className="dark:text-white">{t('payments.cashPayment')}</SelectItem>
-                </>
-              )}
-              {features.hasSubscriptions && (
-                <SelectItem value="subscription" className="dark:text-white">{t('subscriptions.create')}</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+          <Button 
+            onClick={() => setMethodModalOpen(true)} 
+            className="w-full bg-theme-primary dark:bg-gray-700 hover:opacity-90"
+            size="lg"
+          >
+            <Plus className="w-5 h-5 ml-2" />
+            {language === 'he' ? 'עסקה חדשה' : 'Новая сделка'}
+          </Button>
         </div>
       </div>
 
@@ -577,7 +564,7 @@ export default function PaymentsPage() {
         ) : (
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">{t('payments.noPayments')}</p>
-            <Button onClick={() => setDialogOpen(true)}>
+            <Button onClick={() => setMethodModalOpen(true)}>
               <Plus className="w-4 h-4 ml-2" />
               {t('payments.createFirst')}
             </Button>
@@ -629,7 +616,7 @@ export default function PaymentsPage() {
             description={language === 'he' ? 'צור את התשלום הראשון' : 'Создайте первый платёж'}
             action={{
               label: language === 'he' ? 'הוסף תשלום' : 'Добавить',
-              onClick: () => setDialogOpen(true),
+              onClick: () => setMethodModalOpen(true),
             }}
           />
         )}
@@ -716,10 +703,30 @@ export default function PaymentsPage() {
         </div>
       </TrinityBottomDrawer>
 
-      {/* Dialogs */}
-      <CreatePaymentLinkDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      {/* Payment Method Selection Modal */}
+      <PaymentMethodModal
+        open={methodModalOpen}
+        onOpenChange={setMethodModalOpen}
+        onSelectMethod={handleMethodSelect}
+      />
+
+      {/* Payment Dialogs */}
+      <CreatePaymentLinkDialog 
+        open={cardDialogOpen} 
+        onOpenChange={setCardDialogOpen}
+        onSuccess={handlePaymentSuccess}
+      />
       <CreateSubscriptionDialog open={subscriptionDialogOpen} onOpenChange={setSubscriptionDialogOpen} />
-      <CreateCashPaymentDialog open={cashDialogOpen} onOpenChange={setCashDialogOpen} />
+      <CreateCashPaymentDialog 
+        open={cashDialogOpen} 
+        onOpenChange={setCashDialogOpen}
+        onSuccess={handlePaymentSuccess}
+      />
+      <CreateBitPaymentDialog 
+        open={bitDialogOpen} 
+        onOpenChange={setBitDialogOpen}
+        onSuccess={handlePaymentSuccess}
+      />
 
       {/* Desktop Panel */}
       <PaymentDesktopPanel

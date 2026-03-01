@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, CreditCard, Calendar, Hash, User } from 'lucide-react'
+import { X, CreditCard, Calendar, Hash, User, Download } from 'lucide-react'
 import { getClientName } from '@/lib/client-utils'
 import { toast } from 'sonner'
 
@@ -73,6 +73,11 @@ export function PaymentDesktopPanel({
   }
 
   const l = t[locale]
+
+  const downloadReceipt = () => {
+    const url = `/api/payments/${payment.id}/receipt?locale=${locale}`
+    window.open(url, '_blank')
+  }
 
   if (!isOpen || !payment) return null
 
@@ -269,6 +274,19 @@ export function PaymentDesktopPanel({
                   <div className="mt-6">
                     <p className="text-xs text-muted-foreground mb-2">{l.description}</p>
                     <p className="text-sm whitespace-pre-wrap">{payment.description}</p>
+                  </div>
+                )}
+                
+                {/* Download receipt button for completed payments */}
+                {payment.status === 'completed' && (
+                  <div className="mt-6">
+                    <button
+                      onClick={downloadReceipt}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-slate-100 text-slate-600 font-medium hover:bg-slate-200 transition"
+                    >
+                      <Download size={18} />
+                      {locale === 'he' ? 'הורד קבלה' : 'Скачать квитанцию'}
+                    </button>
                   </div>
                 )}
                 

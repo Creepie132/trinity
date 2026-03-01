@@ -149,7 +149,8 @@ export function PaymentDetailsModal() {
   }
 
   const downloadReceipt = () => {
-    toast.info(text.downloadPending)
+    const url = `/api/payments/${payment.id}/receipt?locale=${locale}`
+    window.open(url, '_blank')
   }
 
   const isPaid = payment.status === 'completed' || payment.status === 'paid'

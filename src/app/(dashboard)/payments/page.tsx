@@ -224,13 +224,6 @@ export default function PaymentsPage() {
     }
   }
 
-  const handlePaymentClick = (payment: any) => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      setDesktopPanelPayment(payment)
-    }
-    // Mobile - PaymentCard has own drawer logic
-  }
-
   return (
     <div className="space-y-6 min-h-screen">
       {/* Header - Mobile centered, Desktop left-aligned */}
@@ -627,7 +620,6 @@ export default function PaymentsPage() {
               key={payment.id}
               payment={payment}
               locale={language === 'he' ? 'he' : 'ru'}
-              onClick={handlePaymentClick}
             />
           ))
         ) : (

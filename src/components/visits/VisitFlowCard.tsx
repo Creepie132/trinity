@@ -73,11 +73,25 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
           label={l ? 'לקוח' : 'Клиент'}
           value={clientName}
         />
-        <InfoRow
-          icon={<Scissors size={16} />}
-          label={l ? 'שירות' : 'Услуга'}
-          value={displayServiceName || '—'}
-        />
+        <div className="flex items-start gap-3 px-1">
+          <span className="text-slate-400 mt-0.5">
+            <Scissors size={16} />
+          </span>
+          <div className="flex-1">
+            <p className="text-xs text-slate-400">{l ? 'שירות' : 'Услуга'}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium">{displayServiceName || '—'}</p>
+              {visit.status === 'in_progress' && (
+                <button
+                  onClick={() => openModal('add-to-visit', { visitId: visit.id })}
+                  className="text-blue-500 font-bold text-lg leading-none"
+                >
+                  +
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
         
         {/* Display additional services */}
         {visitServices.length > 0 && (

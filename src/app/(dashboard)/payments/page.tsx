@@ -203,17 +203,23 @@ export default function PaymentsPage() {
       toast.error(language === 'he' ? 'אין מספר טלפון' : 'Номер телефона отсутствует')
       return
     }
-    const message = encodeURIComponent(paymentLink || '')
+    const msg = language === 'he' 
+      ? `לתשלום לחץ כאן: ${paymentLink}` 
+      : `Ссылка для оплаты: ${paymentLink}`
+    const message = encodeURIComponent(msg)
     window.open(`https://wa.me/972${formattedPhone}?text=${message}`, '_blank')
   }
 
-  const openSMS = (phone: string) => {
+  const openSMS = (phone: string, paymentLink: string) => {
     const formattedPhone = formatIsraeliPhone(phone)
     if (!formattedPhone) {
-      toast.error(language === 'he' ? 'אין מספר טלפון' : 'Номер телефона отсутствует')
+      toast.error(language === 'he' ? 'אין мספר טלפון' : 'Номер телефона отсутствует')
       return
     }
-    window.open(`sms:${formattedPhone}`, '_blank')
+    const msg = language === 'he' 
+      ? `לתשלום לחץ כאן: ${paymentLink}` 
+      : `Ссылка для оплаты: ${paymentLink}`
+    window.open(`sms:${formattedPhone}&body=${encodeURIComponent(msg)}`)
   }
 
   const getStatusBadge = (status: string) => {
@@ -487,26 +493,7 @@ export default function PaymentsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        {payment.payment_link && payment.status === 'pending' && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => copyPaymentLink(payment.payment_link)}
-                              title={t('payments.copyLink')}
-                            >
-                              <Copy className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => window.open(payment.payment_link, '_blank')}
-                              title={t('payments.openLink')}
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
+                        {/* 👁 Details - always show if transaction_id exists */}
                         {payment.transaction_id && (
                           <Button
                             size="sm"
@@ -516,7 +503,9 @@ export default function PaymentsPage() {
                             <Eye className="w-4 h-4" />
                           </Button>
                         )}
-                        {(payment.clients?.phone || payment.client_phone) && (
+                        
+                        {/* 💬 WhatsApp and 📱 SMS - always show if phone exists */}
+                        {(payment.clients?.phone || payment.client_phone) && payment.status === 'pending' && payment.payment_method === 'credit_card' && (
                           <>
                             <Button
                               size="sm"
@@ -530,7 +519,7 @@ export default function PaymentsPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => openSMS(payment.clients?.phone || payment.client_phone)}
+                              onClick={() => openSMS(payment.clients?.phone || payment.client_phone, payment.payment_link || '')}
                               title={language === 'he' ? 'שלח SMS' : 'Отправить SMS'}
                               className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
                             >
@@ -538,12 +527,34 @@ export default function PaymentsPage() {
                             </Button>
                           </>
                         )}
-                        {/* Cancel button for pending credit card payments */}
-                        {payment.status === 'pending' && 
-                         (payment.payment_method === 'credit_card' || 
-                          payment.payment_method === 'credit' || 
-                          payment.payment_method === 'אשראי' || 
-                          payment.payment_method === 'card') && (
+                        
+                        {/* 📋 Copy and 🔗 Open - only for pending + credit_card */}
+                        {payment.payment_link && payment.status === 'pending' && payment.payment_method === 'credit_card' && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                navigator.clipboard.writeText(payment.payment_link)
+                                toast.success(language === 'he' ? 'הקישור הועתק' : 'Ссылка скопирована')
+                              }}
+                              title={language === 'he' ? 'העתק קישור' : 'Копировать ссылку'}
+                            >
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => window.open(payment.payment_link, '_blank')}
+                              title={language === 'he' ? 'פתח קישור' : 'Открыть ссылку'}
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                        
+                        {/* ✕ Cancel button - only for pending + credit_card */}
+                        {payment.status === 'pending' && payment.payment_method === 'credit_card' && (
                           <Button
                             size="sm"
                             variant="ghost"

@@ -244,7 +244,12 @@ export function PaymentDetailsModal() {
             {isPendingCard && (
               <>
                 <button
-                  onClick={() => openWhatsApp(paymentUrl)}
+                  onClick={() => {
+                    const message = locale === 'he' 
+                      ? `לתשלום לחץ כאן: ${paymentUrl}`
+                      : `Ссылка для оплаты: ${paymentUrl}`
+                    openWhatsApp(message)
+                  }}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-50 text-green-600 font-medium hover:bg-green-100 transition"
                 >
                   <MessageCircle size={18} />
@@ -252,7 +257,12 @@ export function PaymentDetailsModal() {
                 </button>
 
                 <button
-                  onClick={() => openSMS(paymentUrl)}
+                  onClick={() => {
+                    const message = locale === 'he' 
+                      ? `לתשלום לחץ כאן: ${paymentUrl}`
+                      : `Ссылка для оплаты: ${paymentUrl}`
+                    openSMS(message)
+                  }}
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-50 text-blue-600 font-medium hover:bg-blue-100 transition"
                 >
                   <MessageSquare size={18} />

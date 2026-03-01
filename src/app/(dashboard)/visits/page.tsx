@@ -82,6 +82,12 @@ export default function VisitsPage() {
     return client?.phone || ''
   }
 
+  function getClientEmail(visit: any): string {
+    if (!visit?.client_id) return ''
+    const client = allClients.find((c: any) => c.id === visit.client_id)
+    return client?.email || ''
+  }
+
   function getServiceName(visit: any): string {
     // Get from joined services table
     if (visit?.services) {
@@ -1003,6 +1009,7 @@ export default function VisitsPage() {
         locale={language === 'he' ? 'he' : 'ru'}
         clientName={selectedVisit ? getClientName(selectedVisit) : ''}
         clientPhone={selectedVisit ? getClientPhone(selectedVisit) : ''}
+        clientEmail={selectedVisit ? getClientEmail(selectedVisit) : ''}
         serviceName={selectedVisit ? getServiceName(selectedVisit) : ''}
         onStart={() => {
           if (selectedVisit) {

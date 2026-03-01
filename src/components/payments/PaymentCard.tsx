@@ -40,7 +40,7 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
     }
   }
 
-  const t = {
+  const t: Record<'he' | 'ru', Record<string, string>> = {
     he: {
       paid: 'שולם',
       pending: 'ממתין',
@@ -48,6 +48,7 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
       refunded: 'הוחזר',
       cancelled: 'בוטל',
       noClient: 'ללא לקוח',
+      other: 'אחר',
     },
     ru: {
       paid: 'Оплачено',
@@ -56,6 +57,7 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
       refunded: 'Возвращено',
       cancelled: 'Отменён',
       noClient: 'Без клиента',
+      other: 'Другое',
     },
   }
 
@@ -163,16 +165,9 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
     failed: text.failed,
     refunded: text.refunded,
     cancelled: text.cancelled,
-    other: locale === 'he' ? 'אחר' : 'Другое',
+    other: text.other,
   }
   const statusLabel = statusLabels[payment.status] || payment.status
-
-  const copyLink = () => {
-    if (payment.link) {
-      navigator.clipboard.writeText(payment.link)
-      toast.success(text.linkCopied)
-    }
-  }
 
   return (
     <div

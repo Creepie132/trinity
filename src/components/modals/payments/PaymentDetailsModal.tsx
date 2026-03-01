@@ -114,7 +114,7 @@ export function PaymentDetailsModal() {
   const statusLabel = statusLabels[payment.status] || payment.status
 
   const phone = payment.clients?.phone || payment.client_phone || ''
-  const paymentUrl = payment.payment_url || payment.link || ''
+  const paymentUrl = payment.payment_link || payment.payment_url || payment.link || ''
 
   const openWhatsApp = (message: string) => {
     if (!phone) {

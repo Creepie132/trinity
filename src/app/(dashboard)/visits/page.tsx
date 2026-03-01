@@ -19,7 +19,6 @@ import { VisitCard } from '@/components/visits/VisitCard'
 import { ActiveVisitCard } from '@/components/visits/ActiveVisitCard'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { MeetingDetailCard } from '@/components/visits/MeetingDetailCard'
-import { VisitFlowCard } from '@/components/visits/VisitFlowCard'
 import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
 import { useVisitServices } from '@/hooks/useVisitServices'
 import { format } from 'date-fns'
@@ -1044,9 +1043,9 @@ export default function VisitsPage() {
         }}
       />
 
-      {/* Mobile VisitFlowCard */}
+      {/* Mobile - using VisitDetailModal for all devices */}
       {selectedVisit && console.log('selectedVisit:', selectedVisit)}
-      <VisitFlowCard
+      <VisitDetailModal
         visit={selectedVisit}
         isOpen={!!selectedVisit}
         onClose={() => setSelectedVisit(null)}
@@ -1075,36 +1074,6 @@ export default function VisitsPage() {
         onEdit={() => {
           if (selectedVisit) {
             openModal('edit-visit', { visitId: selectedVisit.id, visit: selectedVisit })
-            setSelectedVisit(null)
-          }
-        }}
-        onAddService={(serviceId) => {
-          if (selectedVisit) {
-            openModal('visit-add-service', {
-              visitId: selectedVisit.id,
-              onAddService: async (service: any) => {
-                const res = await fetch(`/api/visits/${selectedVisit.id}/services`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    visit_id: selectedVisit.id,
-                    service_id: service.id,
-                    service_name: service.name,
-                    service_name_ru: service.name_ru,
-                    price: service.price || 0,
-                    duration_minutes: service.duration_minutes,
-                  }),
-                })
-
-                if (res.ok) {
-                  toast.success(language === 'he' ? 'שירות נוסף' : 'Услуга добавлена')
-                  queryClient.invalidateQueries({ queryKey: ['visit-services', selectedVisit.id] })
-                  refetch()
-                } else {
-                  toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
-                }
-              }
-            })
             setSelectedVisit(null)
           }
         }}

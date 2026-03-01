@@ -10,13 +10,13 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
-import { useFeatures } from '@/hooks/useFeatures'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Copy, Check, Download, Printer, QrCode } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import QRCode from 'qrcode'
 import { generateBookingCode } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
 
@@ -61,7 +61,6 @@ const defaultSettings: BookingSettings = {
 export default function BookingSettingsPage() {
   const { t, language } = useLanguage()
   const { orgId, user } = useAuth()
-  const features = useFeatures()
   const router = useRouter()
   const [settings, setSettings] = useState<BookingSettings>(defaultSettings)
   const [loading, setLoading] = useState(true)
@@ -73,10 +72,26 @@ export default function BookingSettingsPage() {
 
   // Check if booking module is enabled
   useEffect(() => {
-    if (!features.isLoading && !features.hasBooking) {
-      router.push('/settings')
+    async function checkAccess() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('organizations')
+        .select('features')
+        .eq('id', orgId)
+        .single()
+
+      const modules = (data?.features as any)?.modules || {}
+      const hasBooking = modules.booking === true || modules.online_booking === true
+
+      if (!hasBooking) {
+        router.push('/settings')
+      }
     }
-  }, [features.hasBooking, features.isLoading, router])
+
+    if (orgId) {
+      checkAccess()
+    }
+  }, [orgId, router])
 
   // Load settings
   useEffect(() => {
@@ -286,11 +301,6 @@ export default function BookingSettingsPage() {
     setCopied(true)
     toast.success(t('booking.slug.copied'))
     setTimeout(() => setCopied(false), 2000)
-  }
-
-  // Redirect if booking module is disabled
-  if (!features.isLoading && !features.hasBooking) {
-    return null
   }
 
   if (loading) {

@@ -178,17 +178,25 @@ export async function middleware(req: NextRequest) {
             '/reports': 'reports',
             '/subscriptions': 'subscriptions',
             '/booking': 'booking',
+            '/settings/booking': 'booking',
             '/loyalty': 'loyalty',
           }
 
           // Check if current route requires a module
           for (const [route, moduleKey] of Object.entries(moduleRoutes)) {
-            if (pathname.startsWith(route) && !modules[moduleKey]) {
-              // Module is disabled, redirect to dashboard
-              console.log(`[middleware] Module ${moduleKey} access denied for route ${pathname}`)
-              const url = req.nextUrl.clone()
-              url.pathname = '/dashboard'
-              return NextResponse.redirect(url)
+            if (pathname.startsWith(route)) {
+              // For booking, check both 'booking' and 'online_booking' module keys
+              const hasModule = moduleKey === 'booking' 
+                ? (modules.booking === true || modules.online_booking === true)
+                : modules[moduleKey] === true
+
+              if (!hasModule) {
+                // Module is disabled, redirect to dashboard
+                console.log(`[middleware] Module ${moduleKey} access denied for route ${pathname}`)
+                const url = req.nextUrl.clone()
+                url.pathname = '/dashboard'
+                return NextResponse.redirect(url)
+              }
             }
           }
         }

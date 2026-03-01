@@ -86,6 +86,9 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
             <p className="text-xs text-slate-400">{l ? 'שירות' : 'Услуга'}</p>
             <div className="flex items-center gap-1">
               <p className="text-sm font-medium">{displayServiceName || '—'}</p>
+              <button onClick={() => alert('test')} style={{color: 'red', fontWeight: 'bold', fontSize: '20px'}} >
+                TEST+
+              </button>
               {(visit.status === 'in_progress' || visit.status_display === 'В процессе' || true) && (
                 <button
                   onClick={() => openModal('add-to-visit', { visitId: visit.id })}

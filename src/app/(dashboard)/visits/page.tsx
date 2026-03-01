@@ -1187,7 +1187,7 @@ export default function VisitsPage() {
                 {desktopVisit.status !== 'completed' && desktopVisit.status !== 'cancelled' && (
                   <button
                     onClick={() => {
-                      openModal('visit-edit', { visit: desktopVisit })
+                      openModal('edit-visit', { visitId: desktopVisit.id, visit: desktopVisit })
                       setDesktopVisit(null)
                     }}
                     className="py-3.5 px-6 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition flex items-center gap-2"
@@ -1243,8 +1243,10 @@ export default function VisitsPage() {
           }
         }}
         onEdit={() => {
-          // TODO: implement edit
-          setSelectedVisit(null)
+          if (selectedVisit) {
+            openModal('edit-visit', { visitId: selectedVisit.id, visit: selectedVisit })
+            setSelectedVisit(null)
+          }
         }}
         onAddService={(serviceId) => {
           if (selectedVisit) {

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Clock, User, ChevronRight, Play, CheckCircle, X, Phone, MessageCircle, Pencil } from 'lucide-react'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EditVisitSheet } from './EditVisitSheet'
 import { useVisitServices } from '@/hooks/useVisitServices'
@@ -57,20 +56,13 @@ const STATUS_LABELS: Record<string, { he: string; ru: string }> = {
 }
 
 export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, onCancel, onEdit, onClick }: VisitCardProps) {
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   
   // Fetch visit services
   const { data: visitServices = [] } = useVisitServices(visit.id)
   
   const handleCardClick = () => {
-    if (onClick && typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      // Десктоп: вызываем onClick (откроет desktop panel)
-      onClick(visit)
-    } else {
-      // Мобильный: открываем встроенный drawer
-      setDrawerOpen(true)
-    }
+    onClick && onClick(visit)
   }
 
   // Parse time and date
@@ -181,159 +173,6 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
           </div>
         </div>
       </div>
-
-      {/* Bottom Drawer с деталями */}
-      <TrinityBottomDrawer
-        isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        title={clientName}
-      >
-        {/* Статус бейдж */}
-        <div className="mb-4">
-          <StatusBadge status={visit.status} label={statusLabel} />
-        </div>
-
-        {/* Детали */}
-        <div className="space-y-1">
-          <div className="flex justify-between py-2.5 border-b border-muted">
-            <span className="text-sm text-muted-foreground">{locale === 'he' ? 'תאריך' : 'Дата'}</span>
-            <span className="text-sm font-medium text-start">{date}</span>
-          </div>
-
-          <div className="flex justify-between py-2.5 border-b border-muted">
-            <span className="text-sm text-muted-foreground">{locale === 'he' ? 'שעה' : 'Время'}</span>
-            <span className="text-sm font-medium text-start">{time}</span>
-          </div>
-
-          {totalDuration > 0 && (
-            <div className="flex justify-between py-2.5 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{locale === 'he' ? 'סיום' : 'Окончание'}</span>
-              <span className="text-sm font-medium text-start">{endTime || '—'}</span>
-            </div>
-          )}
-
-          {duration > 0 && !isMeetingMode && (
-            <div className="flex justify-between py-2.5 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{locale === 'he' ? 'משך' : 'Длительность'}</span>
-              <span className="text-sm text-start">
-                {duration} {locale === 'he' ? 'דקות' : 'мин'}
-              </span>
-            </div>
-          )}
-
-          <div className="flex justify-between py-2.5 border-b border-muted">
-            <span className="text-sm text-muted-foreground">{locale === 'he' ? 'שירות' : 'Услуга'}</span>
-            <span className="text-sm text-start">{serviceName || (locale === 'he' ? 'לא צוין' : 'Не указано')}</span>
-          </div>
-
-          {visitServices.length > 0 && (
-            <div className="py-2.5 border-b border-muted">
-              <span className="text-sm text-muted-foreground block mb-2">{locale === 'he' ? 'שירותים נוספים' : 'Услуги'}</span>
-              <div className="space-y-1.5">
-                {visitServices.map((service) => (
-                  <div key={service.id} className="flex justify-between items-center text-sm">
-                    <span className="text-start">
-                      {locale === 'ru' ? (service.service_name_ru || service.service_name) : service.service_name}
-                    </span>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <span>{service.duration_minutes} {locale === 'he' ? "ד'" : 'мин'}</span>
-                      {service.price > 0 && <span className="font-medium text-foreground">₪{service.price}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {visit.price != null && (
-            <div className="flex justify-between py-2.5 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{locale === 'he' ? 'מחיר' : 'Цена'}</span>
-              <span className="text-sm font-bold text-start">₪{visit.price}</span>
-            </div>
-          )}
-
-          {visit.notes && (
-            <div className="py-2.5 border-b border-muted">
-              <span className="text-sm text-muted-foreground block mb-1">{locale === 'he' ? 'הערות' : 'Заметки'}</span>
-              <p className="text-sm text-start">{visit.notes}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Контакт клиента */}
-        {clientPhone && (
-          <div className="flex gap-2 mt-4">
-            <a
-              href={`tel:${clientPhone}`}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-sm font-medium"
-            >
-              <Phone size={16} />
-              {locale === 'he' ? 'התקשר' : 'Позвонить'}
-            </a>
-            <button
-              onClick={() => {
-                setDrawerOpen(false)
-                setEditOpen(true)
-              }}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-sm font-medium"
-            >
-              <Pencil size={16} />
-              {locale === 'he' ? 'עריכה' : 'Изменить'}
-            </button>
-            <a
-              href={`https://wa.me/${clientPhone.replace(/[^0-9]/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 text-sm font-medium"
-            >
-              <MessageCircle size={16} />
-              WhatsApp
-            </a>
-          </div>
-        )}
-
-        {/* Кнопки действий — outline стиль, в одну строку */}
-        <div className="flex gap-2 mt-4">
-          {visit.status === 'scheduled' && onStart && (
-            <button
-              onClick={() => {
-                onStart(visit.id)
-                setDrawerOpen(false)
-              }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-amber-500 text-amber-600 dark:text-amber-400 font-medium text-sm hover:bg-amber-50 dark:hover:bg-amber-900/20 transition"
-            >
-              <Play size={16} />
-              {locale === 'he' ? 'התחל' : 'Начать'}
-            </button>
-          )}
-
-          {visit.status === 'in_progress' && onComplete && (
-            <button
-              onClick={() => {
-                onComplete(visit.id)
-                setDrawerOpen(false)
-              }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-green-500 text-green-600 dark:text-green-400 font-medium text-sm hover:bg-green-50 dark:hover:bg-green-900/20 transition"
-            >
-              <CheckCircle size={16} />
-              {locale === 'he' ? 'סיים' : 'Завершить'}
-            </button>
-          )}
-
-          {isActive && onCancel && (
-            <button
-              onClick={() => {
-                onCancel(visit.id)
-                setDrawerOpen(false)
-              }}
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-muted text-muted-foreground text-sm hover:bg-muted/50 transition"
-            >
-              <X size={16} />
-              {locale === 'he' ? 'בטל' : 'Отмена'}
-            </button>
-          )}
-        </div>
-      </TrinityBottomDrawer>
 
       {/* Форма редактирования */}
       <EditVisitSheet

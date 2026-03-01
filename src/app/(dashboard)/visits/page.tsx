@@ -165,10 +165,13 @@ export default function VisitsPage() {
           ),
           visit_services (
             id,
+            visit_id,
+            service_id,
             service_name,
             service_name_ru,
+            price,
             duration_minutes,
-            price
+            created_at
           )
         `, { count: 'exact' })
         .eq('org_id', orgId)

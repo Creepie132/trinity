@@ -221,26 +221,21 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
       {/* Кнопки — In Progress */}
       {visit.status === 'in_progress' && (
         <div className="space-y-2">
-          <button
-            onClick={onComplete}
-            className="w-full py-3.5 rounded-2xl bg-emerald-500 text-white text-sm font-semibold"
-          >
-            ✓ {l ? 'סיים' : 'Завершить'}
-          </button>
-
-          <button
-            onClick={() => {
-              if (onAddService) {
-                onAddService(visit.id)
-              } else {
-                openModal('visit-add-service', { visitId: visit.id })
-              }
-            }}
-            className="w-full py-3.5 rounded-2xl border-2 border-blue-600 text-blue-600 text-sm font-semibold flex items-center justify-center gap-2"
-          >
-            <Plus size={20} />
-            {l ? 'הוסף שירות' : 'Добавить услугу'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onComplete}
+              className="flex-1 py-3.5 rounded-2xl bg-emerald-500 text-white text-sm font-semibold"
+            >
+              ✓ {l ? 'סיים' : 'Завершить'}
+            </button>
+            
+            <button
+              onClick={() => openModal('add-service', { visitId: visit.id })}
+              className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center"
+            >
+              <Plus size={24} />
+            </button>
+          </div>
 
           <button
             onClick={() => {

@@ -13,6 +13,7 @@ export type ModalType =
   | 'visit-complete-payment'
   | 'visit-add-product'
   | 'visit-add-service'
+  | 'add-service'
   // Products
   | 'product-create'
   | 'product-details'

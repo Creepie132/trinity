@@ -157,13 +157,15 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
 
   const methodLabel = methodLabels[method]?.[locale] || text.other
 
-  const statusLabel = {
+  const statusLabels: Record<string, string> = {
     completed: text.paid,
     pending: text.pending,
     failed: text.failed,
     refunded: text.refunded,
     cancelled: text.cancelled,
-  }[payment.status] || payment.status
+    other: locale === 'he' ? 'אחר' : 'Другое',
+  }
+  const statusLabel = statusLabels[payment.status] || payment.status
 
   const copyLink = () => {
     if (payment.link) {

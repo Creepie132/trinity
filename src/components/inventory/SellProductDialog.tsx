@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { TrinityMobileSearch } from '@/components/ui/TrinitySearch'
 import { useCreateTransaction } from '@/hooks/useInventory'
 import { useClients } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
@@ -22,6 +23,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import ModalWrapper from '@/components/ModalWrapper'
 import { PaymentLinkResultModal } from '@/components/modals/products/PaymentLinkResultModal'
 import type { Product } from '@/types/inventory'
+import type { ClientSummary } from '@/types/database'
 
 interface SellProductDialogProps {
   open: boolean
@@ -39,6 +41,7 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
   const [quantity, setQuantity] = useState(1)
   const [price, setPrice] = useState(0)
   const [clientId, setClientId] = useState<string>('')
+  const [selectedClient, setSelectedClient] = useState<ClientSummary | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<string>('')
   const [paymentLink, setPaymentLink] = useState<string | null>(null)
   const [showPaymentLinkModal, setShowPaymentLinkModal] = useState(false)
@@ -49,6 +52,7 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
       setPrice(product.sell_price)
       setQuantity(1)
       setClientId('')
+      setSelectedClient(null)
       setPaymentMethod('')
       // Don't reset payment link state here - it needs to persist after closing
       // setPaymentLink(null)
@@ -58,8 +62,6 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
   }, [product, open])
 
   const total = quantity * price
-
-  const selectedClient = clients?.data?.find((c) => c.id === clientId)
 
   const createPaymentLink = async () => {
     if (!clientId) {
@@ -234,24 +236,67 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
             />
           </div>
 
-          {/* Client */}
+          {/* Client Search */}
           <div>
             <Label htmlFor="client">
               {t('inventory.sellDialog.client')}
               {paymentMethod === 'credit' && <span className="text-red-500"> *</span>}
             </Label>
-            <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger className="bg-white dark:bg-gray-800">
-                <SelectValue placeholder={t('inventory.sellDialog.client')} />
-              </SelectTrigger>
-              <SelectContent>
-                {clients?.data?.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.first_name} {client.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {selectedClient ? (
+              <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                <div className="flex-1">
+                  <p className="font-medium text-sm">
+                    {selectedClient.first_name} {selectedClient.last_name}
+                  </p>
+                  {selectedClient.phone && (
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {selectedClient.phone}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedClient(null)
+                    setClientId('')
+                  }}
+                  className="h-8 w-8 p-0"
+                >
+                  ✕
+                </Button>
+              </div>
+            ) : (
+              <TrinityMobileSearch
+                data={clients?.data || []}
+                searchKeys={['first_name', 'last_name', 'phone']}
+                minChars={2}
+                placeholder={
+                  language === 'ru'
+                    ? 'Поиск клиента...'
+                    : 'חיפוש לקוח...'
+                }
+                onSelect={(client) => {
+                  setSelectedClient(client)
+                  setClientId(client.id)
+                }}
+                renderItem={(client) => (
+                  <div>
+                    <p className="font-medium text-sm">
+                      {client.first_name} {client.last_name}
+                    </p>
+                    {client.phone && (
+                      <p className="text-xs text-muted-foreground">
+                        {client.phone}
+                      </p>
+                    )}
+                  </div>
+                )}
+                locale={language === 'ru' ? 'ru' : 'he'}
+                dropDirection="up"
+              />
+            )}
             {paymentMethod === 'credit' && !clientId && (
               <p className="text-xs text-red-500 mt-1">
                 {language === 'ru'
@@ -320,6 +365,7 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
         setShowPaymentLinkModal(false)
         setPaymentLink(null)
         setClientId('')
+        setSelectedClient(null)
         setPaymentMethod('')
       }}
       paymentLink={paymentLink || ''}

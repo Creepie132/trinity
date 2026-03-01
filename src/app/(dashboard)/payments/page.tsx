@@ -30,6 +30,7 @@ import { PaymentCard } from '@/components/payments/PaymentCard'
 import { PaymentDesktopPanel } from '@/components/payments/PaymentDesktopPanel'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useModalStore } from '@/store/useModalStore'
 
 export default function PaymentsPage() {
   const searchParams = useSearchParams()
@@ -37,6 +38,7 @@ export default function PaymentsPage() {
   const features = useFeatures()
   const { data: isAdmin } = useIsAdmin()
   const { t, language } = useLanguage()
+  const { openModal } = useModalStore()
   
   const [methodModalOpen, setMethodModalOpen] = useState(false)
   const [cardDialogOpen, setCardDialogOpen] = useState(false)
@@ -493,16 +495,15 @@ export default function PaymentsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        {/* 👁 Details - always show if transaction_id exists */}
-                        {payment.transaction_id && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title={`${t('payments.transactionId')}: ${payment.transaction_id}`}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        )}
+                        {/* 👁 Details - always show for all payments */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openModal('payment-details', { payment, locale: language === 'he' ? 'he' : 'ru' })}
+                          title={language === 'he' ? 'פרטים' : 'Детали'}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
                         
                         {/* 💬 WhatsApp and 📱 SMS - always show if phone exists */}
                         {(payment.clients?.phone || payment.client_phone) && payment.status === 'pending' && payment.payment_method === 'credit_card' && (

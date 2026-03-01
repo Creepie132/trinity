@@ -20,6 +20,7 @@ import { ActiveVisitCard } from '@/components/visits/ActiveVisitCard'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { MeetingDetailCard } from '@/components/visits/MeetingDetailCard'
 import { VisitFlowCard } from '@/components/visits/VisitFlowCard'
+import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
 import { useVisitServices } from '@/hooks/useVisitServices'
 import { format } from 'date-fns'
 import {
@@ -999,221 +1000,45 @@ export default function VisitsPage() {
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* Visit Detail Panel (Desktop & Mobile) */}
-      {desktopVisit && (
-        <div className="fixed inset-0 z-50" onClick={() => setDesktopVisit(null)}>
-          <div className="absolute inset-0 bg-black/30" />
-          <div
-            className="relative z-10 bg-background shadow-xl md:max-w-3xl w-full h-full md:h-auto mx-auto md:my-8 md:rounded-[32px] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6">
-              {/* Header */}
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h2 className="text-2xl font-bold">{getClientName(desktopVisit)}</h2>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      desktopVisit.status === 'scheduled' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
-                      desktopVisit.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
-                      desktopVisit.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
-                      'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                    }`}>
-                      {desktopVisit.status === 'scheduled' ? (language === 'he' ? 'מתוכנן' : 'Запланирован') :
-                       desktopVisit.status === 'in_progress' ? (language === 'he' ? 'בתהליך' : 'В процессе') :
-                       desktopVisit.status === 'completed' ? (language === 'he' ? 'הושלם' : 'Завершён') :
-                       (language === 'he' ? 'בוטל' : 'Отменён')}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(desktopVisit.scheduled_at).toLocaleString(language === 'he' ? 'he-IL' : 'ru-RU')}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setDesktopVisit(null)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              {/* Three columns */}
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-muted/30 rounded-xl p-4">
-                  <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'סטטוס' : 'Статус'}</p>
-                  <p className="text-lg font-bold">
-                    {desktopVisit.status === 'scheduled' ? (language === 'he' ? 'מתוכנן' : 'Запланирован') :
-                     desktopVisit.status === 'in_progress' ? (language === 'he' ? 'בתהליך' : 'В процессе') :
-                     desktopVisit.status === 'completed' ? (language === 'he' ? 'הושלם' : 'Завершён') :
-                     (language === 'he' ? 'בוטל' : 'Отменён')}
-                  </p>
-                </div>
-                <div className="bg-muted/30 rounded-xl p-4">
-                  <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'משך' : 'Длительность'}</p>
-                  <p className="text-lg font-bold">
-                    {(() => {
-                      const mainDuration = desktopVisit.services?.duration_minutes || desktopVisit.duration_minutes || 0
-                      const additionalDuration = desktopVisitServices.reduce((sum: number, s: any) => sum + (s.duration_minutes || 0), 0)
-                      const totalDuration = mainDuration + additionalDuration
-                      return totalDuration > 0 ? `${totalDuration} ${language === 'he' ? 'דק' : 'мин'}` : '—'
-                    })()}
-                  </p>
-                </div>
-                <div className="bg-muted/30 rounded-xl p-4">
-                  <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'מחיר' : 'Цена'}</p>
-                  <p className="text-lg font-bold">{desktopVisit.price ? `₪${desktopVisit.price}` : '—'}</p>
-                </div>
-              </div>
-
-              {/* Service and End time rows */}
-              <div className="space-y-3 mb-6">
-                {getServiceName(desktopVisit) && (
-                  <div className="flex items-center gap-3 py-3 border-b border-muted">
-                    <Scissors size={18} className="text-muted-foreground" />
-                    <div className="flex-1">
-                      <p className="text-xs text-muted-foreground">{language === 'he' ? 'שירות' : 'Услуга'}</p>
-                      <p className="text-sm font-medium">{getServiceName(desktopVisit)}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Additional services */}
-                {desktopVisitServices.length > 0 && (
-                  <div className="py-3 border-b border-muted">
-                    <p className="text-xs text-muted-foreground mb-2">{language === 'he' ? 'שירותים נוספים' : 'Дополнительные услуги'}</p>
-                    <div className="space-y-1.5">
-                      {desktopVisitServices.map((service: any) => (
-                        <div key={service.id} className="flex justify-between items-center text-sm">
-                          <span>{language === 'ru' ? (service.service_name_ru || service.service_name) : service.service_name}</span>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <span>{service.duration_minutes} {language === 'he' ? 'דק' : 'мин'}</span>
-                            {service.price > 0 && <span className="font-medium text-foreground">₪{service.price}</span>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {(() => {
-                  const mainDuration = desktopVisit.services?.duration_minutes || desktopVisit.duration_minutes || 0
-                  const additionalDuration = desktopVisitServices.reduce((sum: number, s: any) => sum + (s.duration_minutes || 0), 0)
-                  const totalDuration = mainDuration + additionalDuration
-                  const endTime = totalDuration > 0
-                    ? new Date(new Date(desktopVisit.scheduled_at).getTime() + totalDuration * 60000)
-                    : null
-                  
-                  return endTime && (
-                    <div className="flex items-center gap-3 py-3">
-                      <Clock size={18} className="text-muted-foreground" />
-                      <div className="flex-1">
-                        <p className="text-xs text-muted-foreground">{language === 'he' ? 'סיום' : 'Окончание'}</p>
-                        <p className="text-sm font-medium">
-                          {endTime.toLocaleTimeString(language === 'he' ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })()}
-              </div>
-
-              {desktopVisit.notes && (
-                <div className="mb-6 p-4 bg-muted/20 rounded-xl">
-                  <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'הערות' : 'Заметки'}</p>
-                  <p className="text-sm whitespace-pre-wrap">{desktopVisit.notes}</p>
-                </div>
-              )}
-
-              {/* Action buttons */}
-              <div className="flex gap-3">
-                {desktopVisit.status === 'scheduled' && (
-                  <button
-                    onClick={() => {
-                      updateVisitStatus(desktopVisit.id, 'in_progress')
-                      setDesktopVisit(null)
-                    }}
-                    className="flex-1 py-3.5 rounded-2xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
-                  >
-                    ▶ {language === 'he' ? 'התחל' : 'Начать'}
-                  </button>
-                )}
-                {desktopVisit.status === 'in_progress' && (
-                  <>
-                    <button
-                      onClick={() => {
-                        openModal('visit-complete-payment', { visit: desktopVisit })
-                        setDesktopVisit(null)
-                      }}
-                      className="flex-1 py-3.5 rounded-2xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition"
-                    >
-                      ✓ {language === 'he' ? 'סיים' : 'Завершить'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        openModal('visit-add-service', {
-                          visitId: desktopVisit.id,
-                          onAddService: async (service: any) => {
-                            const res = await fetch(`/api/visits/${desktopVisit.id}/services`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                visit_id: desktopVisit.id,
-                                service_id: service.id,
-                                service_name: service.name,
-                                service_name_ru: service.name_ru,
-                                price: service.price || 0,
-                                duration_minutes: service.duration_minutes,
-                              }),
-                            })
-
-                            if (res.ok) {
-                              toast.success(language === 'he' ? 'שירות נוסף' : 'Услуга добавлена')
-                              queryClient.invalidateQueries({ queryKey: ['visit-services', desktopVisit.id] })
-                              refetch()
-                            } else {
-                              toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
-                            }
-                          }
-                        })
-                      }}
-                      className="w-12 h-12 flex items-center justify-center rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition flex-shrink-0"
-                    >
-                      <Plus size={20} />
-                    </button>
-                  </>
-                )}
-                
-                {/* Edit button */}
-                {desktopVisit.status !== 'completed' && desktopVisit.status !== 'cancelled' && (
-                  <button
-                    onClick={() => {
-                      openModal('edit-visit', { visitId: desktopVisit.id, visit: desktopVisit })
-                      setDesktopVisit(null)
-                    }}
-                    className="py-3.5 px-6 rounded-2xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition flex items-center gap-2"
-                  >
-                    <Pencil size={16} />
-                    {language === 'he' ? 'ערוך' : 'Редактировать'}
-                  </button>
-                )}
-
-                {/* Cancel button */}
-                {desktopVisit.status !== 'completed' && desktopVisit.status !== 'cancelled' && (
-                  <button
-                    onClick={() => {
-                      updateVisitStatus(desktopVisit.id, 'cancelled')
-                      setDesktopVisit(null)
-                    }}
-                    className="py-3.5 px-6 rounded-2xl border-2 border-red-500 text-red-500 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition"
-                  >
-                    ✕ {language === 'he' ? 'בטל' : 'Отменить'}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Visit Detail Modal (Desktop) */}
+      <VisitDetailModal
+        visit={desktopVisit}
+        isOpen={!!desktopVisit}
+        onClose={() => setDesktopVisit(null)}
+        locale={language === 'he' ? 'he' : 'ru'}
+        clientName={desktopVisit ? getClientName(desktopVisit) : ''}
+        clientPhone={desktopVisit ? getClientPhone(desktopVisit) : ''}
+        serviceName={desktopVisit ? getServiceName(desktopVisit) : ''}
+        onStart={() => {
+          if (desktopVisit) {
+            updateVisitStatus(desktopVisit.id, 'in_progress')
+            setDesktopVisit(null)
+          }
+        }}
+        onComplete={() => {
+          if (desktopVisit) {
+            handleCompleteVisit(desktopVisit)
+            setDesktopVisit(null)
+          }
+        }}
+        onCancel={() => {
+          if (desktopVisit) {
+            updateVisitStatus(desktopVisit.id, 'cancelled')
+            setDesktopVisit(null)
+          }
+        }}
+        onEdit={() => {
+          if (desktopVisit) {
+            openModal('edit-visit', { visitId: desktopVisit.id, visit: desktopVisit })
+            setDesktopVisit(null)
+          }
+        }}
+        lastVisitDate={desktopVisit ? getLastVisitDate(desktopVisit) : ''}
+        onShowHistory={() => {
+          // TODO: implement history
+          setDesktopVisit(null)
+        }}
+      />
 
       {/* Mobile VisitFlowCard */}
       <VisitFlowCard

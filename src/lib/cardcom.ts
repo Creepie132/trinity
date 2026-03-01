@@ -52,7 +52,7 @@ export async function createCardComPaymentLink({
   }
 
   return {
-    url: data.LowProfileUrl,
+    url: data.Url,
     lowProfileId: data.LowProfileId,
   }
 }

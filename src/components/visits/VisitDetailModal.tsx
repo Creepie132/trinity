@@ -322,7 +322,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           )}
 
           {/* Action buttons - In Progress */}
-          {visit.status === 'in_progress' && (
+          {true && (
             <div className="space-y-2">
               <div className="flex gap-2">
                 <button

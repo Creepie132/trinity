@@ -336,7 +336,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
                   onClick={() => openModal('add-to-visit', { visitId: visit.id })}
                   className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition"
                 >
-                  <Plus size={20} />
+                  <span style={{fontSize: '24px', color: 'white'}}>+</span>
                 </button>
               </div>
 

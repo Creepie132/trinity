@@ -14,6 +14,7 @@ interface PaymentCardProps {
     method?: string
     payment_method?: string
     client_name?: string
+    clients?: { first_name?: string; last_name?: string; phone?: string }
     client?: { first_name?: string; last_name?: string }
     client_phone?: string
     description?: string
@@ -94,6 +95,7 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
       failed: 'נכשל',
       refunded: 'הוחזר',
       cancelled: 'בוטל',
+      noClient: 'ללא לקוח',
     },
     ru: {
       paymentDetails: 'Детали платежа',
@@ -121,6 +123,7 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
       failed: 'Ошибка',
       refunded: 'Возвращено',
       cancelled: 'Отменён',
+      noClient: 'Без клиента',
     },
   }
 
@@ -128,12 +131,21 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
 
   // Parse payment info with priority logic
   function parsePaymentInfo(description: string | undefined, payment: any) {
-    // Priority: separate fields from object
+    // Priority 1: payment.clients (Supabase JOIN result)
+    if (payment.clients) {
+      const clientName = `${payment.clients.first_name || ''} ${payment.clients.last_name || ''}`.trim() || text.noClient
+      return {
+        clientName,
+        subtitle: formatSubtitle(payment, null)
+      }
+    }
+
+    // Priority 2: payment.client_name or payment.client (legacy/fallback)
     if (payment.client_name || payment.client) {
       const clientName = payment.client_name ||
         (payment.client
           ? `${payment.client.first_name || ''} ${payment.client.last_name || ''}`.trim()
-          : '—')
+          : text.noClient)
       return {
         clientName,
         subtitle: formatSubtitle(payment, null)
@@ -146,13 +158,13 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
       const method = parts[0].trim()
       const name = parts.slice(1).join(' - ').trim() // handle dashes in name
       return {
-        clientName: name || '—',
+        clientName: name || text.noClient,
         subtitle: formatSubtitle(payment, method)
       }
     }
 
     return {
-      clientName: description || '—',
+      clientName: text.noClient,
       subtitle: formatSubtitle(payment, null)
     }
   }
@@ -309,10 +321,10 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
           {/* Pending payment - share buttons */}
           {payment.status === 'pending' && (
             <>
-              {payment.client_phone && (
+              {(payment.clients?.phone || payment.client_phone) && (
                 <button
                   onClick={() => {
-                    const phone = payment.client_phone?.replace(/[^0-9]/g, '') || ''
+                    const phone = (payment.clients?.phone || payment.client_phone)?.replace(/[^0-9]/g, '') || ''
                     const link = payment.payment_url || payment.link || ''
                     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(link)}`, '_blank')
                   }}

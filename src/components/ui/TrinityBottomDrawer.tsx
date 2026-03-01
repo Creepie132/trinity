@@ -55,7 +55,7 @@ export function TrinityBottomDrawer({
           style={{ maxHeight: `calc(${viewportHeight} - 2rem)` }}
         >
           {/* Handle — не скроллится */}
-          <div className="flex-shrink-0 flex justify-center pt-3 pb-2">
+          <div className="flex-shrink-0 flex justify-center pt-2 pb-2">
             <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
           </div>
 

@@ -134,7 +134,7 @@ export function ClientDetailsModal() {
           onClick={(e) => e.stopPropagation()}
         >
           {/* ШАПКА - Fixed Header */}
-          <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex-shrink-0 px-6 pt-3 pb-6 border-b border-gray-200 dark:border-gray-800">
             {/* Close Button */}
             <div className="flex justify-end mb-4">
               <button

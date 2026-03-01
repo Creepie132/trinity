@@ -122,12 +122,12 @@ export default function VisitsPage() {
     if (orgId) {
       supabase
         .from('organizations')
-        .select('settings')
+        .select('features')
         .eq('id', orgId)
         .single()
         .then(({ data }) => {
-          if (data?.settings?.serviceColors) {
-            setServiceColors(data.settings.serviceColors)
+          if (data?.features?.serviceColors) {
+            setServiceColors(data.features.serviceColors)
           }
         })
     }

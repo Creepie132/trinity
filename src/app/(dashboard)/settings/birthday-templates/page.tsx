@@ -40,14 +40,14 @@ export default function BirthdayTemplatesPage() {
       try {
         const { data, error } = await supabase
           .from('organizations')
-          .select('settings, features')
+          .select('features')
           .eq('id', orgId)
           .single()
 
         if (error) throw error
 
-        if (data?.settings?.birthday_templates) {
-          setTemplates({ ...templates, ...data.settings.birthday_templates })
+        if (data?.features?.birthday_templates) {
+          setTemplates({ ...templates, ...data.features.birthday_templates })
         }
 
         // Load birthday SMS settings from features

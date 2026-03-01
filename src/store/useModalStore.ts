@@ -27,6 +27,7 @@ export type ModalType =
   | 'payment-create-cash'
   | 'payment-create-stripe'
   | 'payment-create-subscription'
+  | 'payment-details'
   // Services
   | 'service-create'
   | 'service-details'

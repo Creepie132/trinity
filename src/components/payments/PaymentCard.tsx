@@ -1,10 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { CreditCard, Banknote, Receipt, Copy, RotateCcw, FileText, MessageCircle, MessageSquare, ExternalLink, X, Download } from 'lucide-react'
-import ModalWrapper from '@/components/ModalWrapper'
+import { CreditCard, Banknote, Receipt } from 'lucide-react'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { toast } from 'sonner'
+import { useModalStore } from '@/store/useModalStore'
 
 interface PaymentCardProps {
   payment: {
@@ -32,64 +30,18 @@ interface PaymentCardProps {
 }
 
 export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: PaymentCardProps) {
-  const [detailOpen, setDetailOpen] = useState(false)
+  const { openModal } = useModalStore()
   
   const handleCardClick = () => {
     if (onClick) {
       onClick(payment)
     } else {
-      setDetailOpen(true)
-    }
-  }
-
-  const cancelPayment = async (paymentId: string) => {
-    try {
-      console.log('Cancelling payment from client:', paymentId)
-      const response = await fetch(`/api/payments/${paymentId}/cancel`, {
-        method: 'POST',
-      })
-
-      console.log('Response status:', response.status)
-      const responseData = await response.json()
-      console.log('Response data:', responseData)
-
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to cancel payment')
-      }
-
-      toast.success(locale === 'he' ? 'התשלום בוטל בהצלחה' : 'Платёж успешно отменён')
-      setDetailOpen(false)
-      
-      // Refresh page
-      window.location.reload()
-    } catch (error: any) {
-      console.error('Cancel payment error:', error)
-      toast.error(`${locale === 'he' ? 'שגיאה' : 'Ошибка'}: ${error.message}`)
+      openModal('payment-details', { payment, locale })
     }
   }
 
   const t = {
     he: {
-      paymentDetails: 'פרטי תשלום',
-      amount: 'סכום',
-      client: 'לקוח',
-      method: 'אמצעי תשלום',
-      status: 'סטטוס',
-      date: 'תאריך',
-      description: 'תיאור',
-      transactionId: 'מזהה עסקה',
-      id: 'מזהה',
-      notes: 'הערות',
-      card: 'כרטיס',
-      cash: 'מזומן',
-      bankTransfer: 'העברה',
-      bit: 'ביט',
-      other: 'אחר',
-      retry: 'נסה שוב',
-      refund: 'החזר כספי',
-      receipt: 'קבלה',
-      copyLink: 'העתק קישור',
-      linkCopied: 'הקישור הועתק',
       paid: 'שולם',
       pending: 'ממתין',
       failed: 'נכשל',
@@ -98,26 +50,6 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
       noClient: 'ללא לקוח',
     },
     ru: {
-      paymentDetails: 'Детали платежа',
-      amount: 'Сумма',
-      client: 'Клиент',
-      method: 'Способ оплаты',
-      status: 'Статус',
-      date: 'Дата',
-      description: 'Описание',
-      transactionId: 'ID транзакции',
-      id: 'ID',
-      notes: 'Заметки',
-      card: 'Карта',
-      cash: 'Наличные',
-      bankTransfer: 'Перевод',
-      bit: 'Bit',
-      other: 'Другое',
-      retry: 'Повторить',
-      refund: 'Возврат',
-      receipt: 'Квитанция',
-      copyLink: 'Скопировать ссылку',
-      linkCopied: 'Ссылка скопирована',
       paid: 'Оплачено',
       pending: 'Ожидает',
       failed: 'Ошибка',
@@ -241,199 +173,30 @@ export function PaymentCard({ payment, locale, onRefund, onRetry, onClick }: Pay
   }
 
   return (
-    <>
-      {/* Мобильная карточка */}
-      <div
-        onClick={handleCardClick}
-        className="bg-card border rounded-xl p-4 mb-2 active:bg-muted/50 cursor-pointer"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            {/* Иконка метода */}
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${methodBg}`}>
-              {methodIcon}
-            </div>
-
-            <div className="min-w-0 flex-1">
-              {/* Header — Имя клиента */}
-              <p className="font-semibold text-sm truncate text-start">{clientName}</p>
-              {/* Subtext — Метод + номер */}
-              <p className="text-xs text-muted-foreground truncate text-start">{subtitle}</p>
-            </div>
+    <div
+      onClick={handleCardClick}
+      className="bg-card border rounded-xl p-4 mb-2 active:bg-muted/50 cursor-pointer"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Иконка метода */}
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${methodBg}`}>
+            {methodIcon}
           </div>
 
-          <div className="text-end flex-shrink-0 ms-3">
-            <p className="font-bold text-base">₪{payment.amount}</p>
-            <StatusBadge status={payment.status} label={statusLabel} />
+          <div className="min-w-0 flex-1">
+            {/* Header — Имя клиента */}
+            <p className="font-semibold text-sm truncate text-start">{clientName}</p>
+            {/* Subtext — Метод + номер */}
+            <p className="text-xs text-muted-foreground truncate text-start">{subtitle}</p>
           </div>
+        </div>
+
+        <div className="text-end flex-shrink-0 ms-3">
+          <p className="font-bold text-base">₪{payment.amount}</p>
+          <StatusBadge status={payment.status} label={statusLabel} />
         </div>
       </div>
-
-      {/* Modal с деталями */}
-      <ModalWrapper
-        isOpen={detailOpen}
-        onClose={() => setDetailOpen(false)}
-      >
-        <div className="p-6">
-          {/* Заголовок - Имя клиента крупно */}
-          <h2 className="text-2xl font-bold mb-6 text-center">{clientName}</h2>
-          
-          {/* Карточка деталей */}
-          <div className="space-y-1 mb-6">
-            <div className="flex justify-between py-3 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{text.amount}</span>
-              <span className="text-xl font-bold">₪{payment.amount}</span>
-            </div>
-
-            <div className="flex justify-between py-3 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{text.date}</span>
-              <span className="text-sm text-start">
-                {new Date(payment.created_at).toLocaleString(
-                  locale === 'he' ? 'he-IL' : 'ru-RU'
-                )}
-              </span>
-            </div>
-
-            <div className="flex justify-between py-3 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{text.method}</span>
-              <span className="text-sm text-start">{methodLabel}</span>
-            </div>
-
-            <div className="flex justify-between py-3 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{text.status}</span>
-              <StatusBadge status={payment.status} label={statusLabel} />
-            </div>
-          </div>
-
-          {/* Кнопки действий */}
-          <div className="space-y-2">
-            {/* Completed payment - receipt buttons */}
-            {payment.status === 'completed' && (
-              <>
-                {(payment.clients?.phone || payment.client_phone) && (
-                  <button
-                    onClick={() => {
-                      const phone = (payment.clients?.phone || payment.client_phone)?.replace(/[^0-9]/g, '') || ''
-                      const receiptLink = payment.link || payment.payment_url || ''
-                      const message = locale === 'he' 
-                        ? `קבלה: ${receiptLink}`
-                        : `Квитанция: ${receiptLink}`
-                      window.open(`https://wa.me/972${phone}?text=${encodeURIComponent(message)}`, '_blank')
-                    }}
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-50 text-green-600 font-medium hover:bg-green-100 transition"
-                  >
-                    <MessageCircle size={18} />
-                    {locale === 'he' ? '💬 קבלה WhatsApp' : '💬 Квитанция WhatsApp'}
-                  </button>
-                )}
-
-                {(payment.clients?.phone || payment.client_phone) && (
-                  <button
-                    onClick={() => {
-                      const phone = (payment.clients?.phone || payment.client_phone)?.replace(/[^0-9]/g, '') || ''
-                      window.open(`sms:${phone}`, '_blank')
-                    }}
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-50 text-blue-600 font-medium hover:bg-blue-100 transition"
-                  >
-                    <MessageSquare size={18} />
-                    {locale === 'he' ? 'SMS קבלה' : 'SMS Квитанция'}
-                  </button>
-                )}
-
-                <button
-                  onClick={() => {
-                    toast.info(locale === 'he' ? 'הורדת PDF בקרוב' : 'Скачивание PDF скоро')
-                  }}
-                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-100 text-slate-600 font-medium hover:bg-slate-200 transition"
-                >
-                  <Download size={18} />
-                  {locale === 'he' ? '⬇️ הורד קבלה' : '⬇️ Скачать квитанцию'}
-                </button>
-              </>
-            )}
-
-            {/* Pending payment + credit card - link sharing buttons */}
-            {payment.status === 'pending' && 
-             (payment.payment_method === 'credit_card' || 
-              payment.payment_method === 'credit' || 
-              payment.payment_method === 'אשראי' || 
-              payment.payment_method === 'card') && (
-              <>
-                {(payment.clients?.phone || payment.client_phone) && (
-                  <button
-                    onClick={() => {
-                      const phone = (payment.clients?.phone || payment.client_phone)?.replace(/[^0-9]/g, '') || ''
-                      const link = payment.payment_url || payment.link || ''
-                      window.open(`https://wa.me/972${phone}?text=${encodeURIComponent(link)}`, '_blank')
-                    }}
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-50 text-green-600 font-medium hover:bg-green-100 transition"
-                  >
-                    <MessageCircle size={18} />
-                    {locale === 'he' ? '💬 קישור WhatsApp' : '💬 Ссылка WhatsApp'}
-                  </button>
-                )}
-
-                {(payment.clients?.phone || payment.client_phone) && (payment.payment_url || payment.link) && (
-                  <button
-                    onClick={() => {
-                      const phone = (payment.clients?.phone || payment.client_phone)?.replace(/[^0-9]/g, '') || ''
-                      const link = payment.payment_url || payment.link || ''
-                      window.open(`sms:${phone}&body=${encodeURIComponent(link)}`, '_blank')
-                    }}
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-50 text-blue-600 font-medium hover:bg-blue-100 transition"
-                  >
-                    <MessageSquare size={18} />
-                    {locale === 'he' ? 'SMS קישור' : 'SMS Ссылка'}
-                  </button>
-                )}
-
-                {(payment.payment_url || payment.link) && (
-                  <button
-                    onClick={() => {
-                      const url = payment.payment_url || payment.link
-                      if (url) {
-                        navigator.clipboard.writeText(url)
-                        toast.success(text.linkCopied)
-                      }
-                    }}
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border text-slate-600 font-medium hover:bg-muted/50 transition"
-                  >
-                    <Copy size={18} />
-                    {locale === 'he' ? '📋 העתק' : '📋 Скопировать'}
-                  </button>
-                )}
-
-                {(payment.payment_url || payment.link) && (
-                  <button
-                    onClick={() => {
-                      const url = payment.payment_url || payment.link
-                      if (url) window.open(url, '_blank')
-                    }}
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-slate-100 text-slate-600 font-medium hover:bg-slate-200 transition"
-                  >
-                    <ExternalLink size={18} />
-                    {locale === 'he' ? '🔗 פתח קישור' : '🔗 Перейти по ссылке'}
-                  </button>
-                )}
-              </>
-            )}
-
-            {/* Failed payment - retry */}
-            {payment.status === 'failed' && onRetry && (
-              <button
-                onClick={() => {
-                  onRetry(payment)
-                  setDetailOpen(false)
-                }}
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 transition"
-              >
-                <RotateCcw size={18} />
-                {text.retry}
-              </button>
-            )}
-          </div>
-        </div>
-      </ModalWrapper>
-    </>
+    </div>
   )
 }

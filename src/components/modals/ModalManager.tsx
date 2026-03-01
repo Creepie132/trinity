@@ -25,6 +25,7 @@ import { CreatePaymentLinkModal } from './payments/CreatePaymentLinkModal'
 import { CreateCashPaymentModal } from './payments/CreateCashPaymentModal'
 import { CreateStripePaymentModal } from './payments/CreateStripePaymentModal'
 import { CreateSubscriptionModal } from './payments/CreateSubscriptionModal'
+import { PaymentDetailsModal } from './payments/PaymentDetailsModal'
 
 // Services
 import { CreateServiceModal } from './services/CreateServiceModal'
@@ -73,6 +74,7 @@ export function ModalManager() {
       <CreateCashPaymentModal />
       <CreateStripePaymentModal />
       <CreateSubscriptionModal />
+      <PaymentDetailsModal />
       
       {/* Services */}
       <CreateServiceModal />

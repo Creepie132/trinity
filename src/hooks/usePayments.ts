@@ -125,10 +125,6 @@ export function useCreatePaymentLink() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] })
       queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
-      toast.success('קישור התשלום נוצר בהצלחה')
-    },
-    onError: (error: any) => {
-      toast.error('שגיאה ביצירת קישור תשלום: ' + error.message)
     },
   })
 }

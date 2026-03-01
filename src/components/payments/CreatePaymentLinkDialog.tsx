@@ -50,7 +50,10 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, onSuccess }: Creat
         description: description || 'תשלום',
       })
 
-      setPaymentLink(result.payment_link)
+      if (result.success || result.payment_link) {
+        toast.success(t('payments.successMessage'))
+        onOpenChange(false)
+      }
     } catch (error) {
       console.error('Failed to create payment:', error)
     }

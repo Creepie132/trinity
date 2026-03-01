@@ -9,6 +9,7 @@ export type ModalType =
   // Visits
   | 'visit-create'
   | 'visit-edit'
+  | 'edit-visit'
   | 'visit-complete-payment'
   | 'visit-add-product'
   | 'visit-add-service'

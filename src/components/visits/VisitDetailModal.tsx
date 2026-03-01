@@ -30,6 +30,7 @@ interface CareInstruction {
   title_ru: string
   content: string
   content_ru: string
+  file_url?: string
   service_id?: string
   services?: {
     id: string
@@ -273,20 +274,83 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
     toast.success(locale === 'ru' ? 'Файл загружен' : 'הקובץ הורד')
   }
 
+  // Download PDF file
+  const downloadPDF = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url)
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(blobUrl)
+      return true
+    } catch (error) {
+      console.error('Failed to download PDF:', error)
+      return false
+    }
+  }
+
   // Send instruction via WhatsApp
-  const sendViaWhatsApp = (instruction: CareInstruction) => {
+  const sendViaWhatsApp = async (instruction: CareInstruction) => {
     if (!clientPhone) {
       toast.error(locale === 'ru' ? 'Нет номера телефона' : 'אין מספר טלפון')
       return
     }
-    const content = getInstructionContent(instruction)
+
     const phone = clientPhone.replace(/[^0-9]/g, '')
-    // Ensure Israeli format
     const formattedPhone = phone.startsWith('972') ? phone : `972${phone.replace(/^0/, '')}`
-    window.open(
-      `https://wa.me/${formattedPhone}?text=${encodeURIComponent(content)}`,
-      '_blank'
-    )
+
+    // Check if instruction is PDF
+    if (instruction.file_url) {
+      // PDF instruction
+      const title = getInstructionTitle(instruction)
+      const filename = `${title}.pdf`
+      
+      // Download PDF automatically
+      const downloaded = await downloadPDF(instruction.file_url, filename)
+      
+      if (downloaded) {
+        // Show toast notification
+        const toastMessage = locale === 'ru' 
+          ? 'PDF скачан. Откройте WhatsApp и прикрепите файл.'
+          : locale === 'he'
+          ? 'PDF הורד. פתח WhatsApp וצרף את הקובץ.'
+          : 'PDF downloaded. Open WhatsApp and attach the file.'
+        
+        toast.success(toastMessage)
+        
+        // Open WhatsApp with instruction text
+        const message = locale === 'ru'
+          ? 'Инструкция готова к отправке. Прикрепи скачанный файл вручную.'
+          : locale === 'he'
+          ? 'ההוראה מוכנה לשליחה. צרף את הקובץ שהורד באופן ידני.'
+          : 'Instruction ready to send. Attach the downloaded file manually.'
+        
+        window.open(
+          `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`,
+          '_blank'
+        )
+      } else {
+        const errorMessage = locale === 'ru'
+          ? 'Ошибка скачивания PDF'
+          : locale === 'he'
+          ? 'שגיאה בהורדת PDF'
+          : 'PDF download error'
+        
+        toast.error(errorMessage)
+      }
+    } else {
+      // Text instruction
+      const content = getInstructionContent(instruction)
+      window.open(
+        `https://wa.me/${formattedPhone}?text=${encodeURIComponent(content)}`,
+        '_blank'
+      )
+    }
   }
 
   // Send instruction via SMS

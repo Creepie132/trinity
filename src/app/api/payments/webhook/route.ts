@@ -1,7 +1,7 @@
 // src/app/api/payments/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { parseTranzillaWebhook } from '@/lib/tranzilla'
+import { parseCardComWebhook } from '@/lib/cardcom'
 import { sendTelegramMessage } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
@@ -14,32 +14,21 @@ const supabaseAdmin = createClient(
 
 async function handleWebhook(request: NextRequest) {
   try {
-    const contentType = request.headers.get('content-type')
-    let webhookData: any
+    const webhookData = await request.json()
 
-    if (contentType?.includes('application/json')) {
-      webhookData = await request.json()
-    } else if (contentType?.includes('application/x-www-form-urlencoded')) {
-      const formData = await request.formData()
-      webhookData = Object.fromEntries(formData)
-    } else {
-      const searchParams = request.nextUrl.searchParams
-      webhookData = Object.fromEntries(searchParams)
-    }
+    console.log('[CardCom Webhook] Raw data:', webhookData)
 
-    console.log('[Tranzilla Webhook] Raw data:', webhookData)
+    const parsed = parseCardComWebhook(webhookData)
+    console.log('[CardCom Webhook] Parsed:', parsed)
 
-    const parsed = parseTranzillaWebhook(webhookData)
-    console.log('[Tranzilla Webhook] Parsed:', parsed)
-
-    // Tranzilla sends payment ID in 'contact' field
-    const paymentId = webhookData.contact || webhookData.order_id
+    // CardCom sends payment ID in 'ReturnValue' field
+    const paymentId = parsed.paymentId
     if (!paymentId) {
-      console.error('[Tranzilla Webhook] Missing payment ID in webhook data')
+      console.error('[CardCom Webhook] Missing payment ID in webhook data')
       return NextResponse.json({ error: 'Payment ID not found' }, { status: 400 })
     }
 
-    console.log('[Tranzilla Webhook] Processing payment:', paymentId)
+    console.log('[CardCom Webhook] Processing payment:', paymentId)
 
     // 1) Find payment and its org_id
     const { data: existingPayment, error: findError } = await supabaseAdmin
@@ -56,7 +45,7 @@ async function handleWebhook(request: NextRequest) {
     const orgId = existingPayment.org_id
 
     // 2) Prepare update data
-    // Response: '000' = success, anything else = failed
+    // ResponseCode: 0 = success, anything else = failed
     const updateData: any = {
       status: parsed.success ? 'completed' : 'failed',
       transaction_id: parsed.transactionId ?? null,
@@ -64,12 +53,12 @@ async function handleWebhook(request: NextRequest) {
 
     if (parsed.success) {
       updateData.paid_at = new Date().toISOString()
-      console.log(`[Tranzilla Webhook] ✅ Payment ${paymentId} completed (Response: 000)`)
-      console.log(`[Tranzilla Webhook] Transaction ID: ${parsed.transactionId}`)
-      console.log(`[Tranzilla Webhook] Amount: ${parsed.amount} ${parsed.currency}`)
-      console.log(`[Tranzilla Webhook] Card: ***${parsed.cardNumber}`)
+      console.log(`[CardCom Webhook] ✅ Payment ${paymentId} completed (ResponseCode: 0)`)
+      console.log(`[CardCom Webhook] Transaction ID: ${parsed.transactionId}`)
+      console.log(`[CardCom Webhook] Amount: ${parsed.amount} ${parsed.currency}`)
     } else {
-      console.log(`[Tranzilla Webhook] ❌ Payment ${paymentId} failed (Response: ${parsed.responseCode})`)
+      console.log(`[CardCom Webhook] ❌ Payment ${paymentId} failed (ResponseCode: ${parsed.responseCode})`)
+      console.log(`[CardCom Webhook] Description: ${parsed.description}`)
     }
 
     // 3) Update payment within org
@@ -82,11 +71,11 @@ async function handleWebhook(request: NextRequest) {
       .single()
 
     if (updateError) {
-      console.error('[Tranzilla Webhook] Failed to update payment:', updateError)
+      console.error('[CardCom Webhook] Failed to update payment:', updateError)
       return NextResponse.json({ error: 'Failed to update payment' }, { status: 500 })
     }
 
-    console.log('[Tranzilla Webhook] Payment updated successfully')
+    console.log('[CardCom Webhook] Payment updated successfully')
 
     // Send Telegram notification for successful payment
     if (parsed.success && updateData.status === 'completed') {
@@ -122,7 +111,7 @@ async function handleWebhook(request: NextRequest) {
           await sendTelegramMessage(org.telegram_chat_id, telegramMessage)
         }
       } catch (error) {
-        console.error('[Tranzilla Webhook] Failed to send Telegram notification:', error)
+        console.error('[CardCom Webhook] Failed to send Telegram notification:', error)
         // Don't fail the webhook if telegram fails
       }
 
@@ -146,11 +135,11 @@ async function handleWebhook(request: NextRequest) {
                 description: `Оплата ${existingPayment.amount}₪`,
                 reference_id: paymentId,
               })
-              console.log('[Tranzilla Webhook] Awarded loyalty points:', points)
+              console.log('[CardCom Webhook] Awarded loyalty points:', points)
             }
           }
         } catch (error) {
-          console.error('[Tranzilla Webhook] Loyalty points error (non-critical):', error)
+          console.error('[CardCom Webhook] Loyalty points error (non-critical):', error)
           // Don't fail the webhook if loyalty fails
         }
       }

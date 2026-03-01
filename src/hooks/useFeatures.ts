@@ -17,6 +17,7 @@ export interface Features {
   hasTelegram: boolean
   hasLoyalty: boolean
   hasBirthday: boolean
+  hasDiary: boolean
   isActive: boolean
   category: string
   isLoading: boolean
@@ -41,6 +42,7 @@ export function useFeatures(): Features {
       hasTelegram: false,
       hasLoyalty: false,
       hasBirthday: false,
+      hasDiary: false,
       isActive: false,
       category: 'other',
       isLoading: true,
@@ -63,6 +65,7 @@ export function useFeatures(): Features {
       hasTelegram: true,
       hasLoyalty: true,
       hasBirthday: true,
+      hasDiary: true,
       isActive: true,
       category: organization?.category ?? 'other',
       isLoading: false,
@@ -84,6 +87,7 @@ export function useFeatures(): Features {
       hasTelegram: false,
       hasLoyalty: false,
       hasBirthday: false,
+      hasDiary: false,
       isActive: false,
       category: 'other',
       isLoading: false,
@@ -98,6 +102,7 @@ export function useFeatures(): Features {
       // Always visible modules (clients, visits, diary)
       hasClients: modules.clients ?? true,
       hasVisits: modules.visits ?? true,
+      hasDiary: modules.diary ?? true,
       // Optional modules (default to false unless explicitly enabled)
       hasSms: modules.sms ?? false,
       hasPayments: modules.payments ?? false,
@@ -131,6 +136,7 @@ export function useFeatures(): Features {
     hasTelegram: false,
     hasLoyalty: false,
     hasBirthday: false,
+    hasDiary: (organization.features as any)?.diary ?? true,
     isActive: organization.is_active ?? false,
     category: organization.category ?? 'other',
     isLoading: false,

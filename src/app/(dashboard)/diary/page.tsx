@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, Calendar, Clock, User, Filter, CheckCircle, CheckCircle2, Circle, AlertCircle, Phone, MessageSquare, Search, X, Mail, MapPin, ChevronRight, PlayCircle, XCircle, AlertTriangle } from 'lucide-react'
 import { TrinityCard } from '@/components/ui/TrinityCard'
 import { TrinityButton } from '@/components/ui/TrinityButton'
@@ -8,6 +9,7 @@ import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TaskDesktopPanel } from '@/components/diary/TaskDesktopPanel'
 import { useAuth } from '@/hooks/useAuth'
+import { useFeatures } from '@/hooks/useFeatures'
 import { useModalStore } from '@/store/useModalStore'
 import { getClientName } from '@/lib/client-utils'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -69,7 +71,9 @@ function TaskStatusIcon({ status, priority }: { status: string; priority: string
 }
 
 export default function DiaryPage() {
+  const router = useRouter()
   const { user, orgId } = useAuth()
+  const { hasDiary } = useFeatures()
   const { t, language } = useLanguage()
   const isRTL = language === 'he'
   const dateLocale = language === 'he' ? he : ru
@@ -84,6 +88,13 @@ export default function DiaryPage() {
   const { openModal } = useModalStore()
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
   const [desktopPanelTask, setDesktopPanelTask] = useState<Task | null>(null)
+
+  // ===== Проверка доступа =====
+  useEffect(() => {
+    if (!hasDiary) {
+      router.push('/dashboard')
+    }
+  }, [hasDiary, router])
 
   // ===== Загрузка задач =====
   useEffect(() => {

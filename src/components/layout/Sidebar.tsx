@@ -77,7 +77,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
       'visits': features.hasVisits,
       'payments': features.hasPayments,
       'inventory': features.hasInventory,
-      'diary': true, // Always visible (alwaysVisible in modules-config)
+      'diary': features.hasDiary,
       'sms': features.hasSms,
       'statistics': features.hasStatistics,
       'reports': features.hasReports,

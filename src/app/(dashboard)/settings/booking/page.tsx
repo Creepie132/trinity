@@ -10,6 +10,8 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
+import { useFeatures } from '@/hooks/useFeatures'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, Copy, Check, Download, Printer, QrCode } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -59,6 +61,8 @@ const defaultSettings: BookingSettings = {
 export default function BookingSettingsPage() {
   const { t, language } = useLanguage()
   const { orgId, user } = useAuth()
+  const features = useFeatures()
+  const router = useRouter()
   const [settings, setSettings] = useState<BookingSettings>(defaultSettings)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -66,6 +70,13 @@ export default function BookingSettingsPage() {
   const [hasBreak, setHasBreak] = useState(true)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [orgName, setOrgName] = useState<string>('')
+
+  // Check if booking module is enabled
+  useEffect(() => {
+    if (!features.isLoading && !features.hasBooking) {
+      router.push('/settings')
+    }
+  }, [features.hasBooking, features.isLoading, router])
 
   // Load settings
   useEffect(() => {
@@ -275,6 +286,11 @@ export default function BookingSettingsPage() {
     setCopied(true)
     toast.success(t('booking.slug.copied'))
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  // Redirect if booking module is disabled
+  if (!features.isLoading && !features.hasBooking) {
+    return null
   }
 
   if (loading) {

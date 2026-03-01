@@ -83,7 +83,12 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       scheduled: 'מתוכנן',
       inProgress: 'בתהליך',
       completed: 'הושלם',
-      cancelled: 'בוטל'
+      cancelled: 'בוטל',
+      downloadReceipt: 'הורד קבלה',
+      whatsappReceipt: 'WhatsApp קבלה',
+      sms: 'SMS',
+      email: 'Email',
+      accompanyingDocument: 'מסמך נלווה'
     },
     ru: {
       date: 'Дата',
@@ -104,7 +109,12 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       scheduled: 'Запланирован',
       inProgress: 'В процессе',
       completed: 'Завершён',
-      cancelled: 'Отменён'
+      cancelled: 'Отменён',
+      downloadReceipt: 'Скачать квитанцию',
+      whatsappReceipt: 'WhatsApp квитанция',
+      sms: 'SMS',
+      email: 'Email',
+      accompanyingDocument: 'Сопроводительный документ'
     }
   }
 
@@ -322,7 +332,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           )}
 
           {/* Action buttons - In Progress */}
-          {true && (
+          {visit.status === 'in_progress' && (
             <div className="space-y-2">
               <div className="flex gap-2">
                 <button
@@ -352,8 +362,79 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             </div>
           )}
 
-          {/* Action buttons - Completed/Cancelled */}
-          {(visit.status === 'completed' || visit.status === 'cancelled') && (
+          {/* Action buttons - Completed */}
+          {visit.status === 'completed' && (
+            <div className="space-y-2">
+              {/* Download receipt - full width */}
+              <button
+                onClick={() => {
+                  toast.success(locale === 'ru' ? 'Квитанция загружается...' : 'מוריד קבלה...')
+                }}
+                className="w-full py-3.5 rounded-2xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 transition"
+              >
+                ⬇️ {labels.downloadReceipt}
+              </button>
+
+              {/* WhatsApp / SMS / Email - three in a row */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const receiptText = locale === 'ru'
+                      ? `Квитанция: визит ${date.toLocaleDateString('ru-RU')}, услуга: ${displayServiceName}, сумма: ₪${visit.price || 0}. Спасибо!`
+                      : `קבלה: ביקור ${date.toLocaleDateString('he-IL')}, שירות: ${displayServiceName}, סכום: ₪${visit.price || 0}. תודה!`
+                    if (clientPhone) {
+                      window.open(
+                        `https://wa.me/${clientPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(receiptText)}`,
+                        '_blank'
+                      )
+                    }
+                  }}
+                  className="flex-1 py-3 rounded-2xl bg-green-50 text-green-600 text-sm font-medium hover:bg-green-100 transition"
+                >
+                  💬 {labels.whatsappReceipt}
+                </button>
+
+                <button
+                  onClick={() => {
+                    const receiptText = locale === 'ru'
+                      ? `Квитанция: визит ${date.toLocaleDateString('ru-RU')}, услуга: ${displayServiceName}, сумма: ₪${visit.price || 0}. Спасибо!`
+                      : `קבלה: ביקור ${date.toLocaleDateString('he-IL')}, שירות: ${displayServiceName}, סכום: ₪${visit.price || 0}. תודה!`
+                    if (clientPhone) {
+                      window.location.href = `sms:${clientPhone}?body=${encodeURIComponent(receiptText)}`
+                    }
+                  }}
+                  className="flex-1 py-3 rounded-2xl bg-blue-50 text-blue-600 text-sm font-medium hover:bg-blue-100 transition"
+                >
+                  📱 {labels.sms}
+                </button>
+
+                <button
+                  onClick={() => {
+                    const receiptText = locale === 'ru'
+                      ? `Квитанция: визит ${date.toLocaleDateString('ru-RU')}, услуга: ${displayServiceName}, сумма: ₪${visit.price || 0}. Спасибо!`
+                      : `קבלה: ביקור ${date.toLocaleDateString('he-IL')}, שירות: ${displayServiceName}, סכום: ₪${visit.price || 0}. תודה!`
+                    window.location.href = `mailto:?subject=${encodeURIComponent(locale === 'ru' ? 'Квитанция' : 'קבלה')}&body=${encodeURIComponent(receiptText)}`
+                  }}
+                  className="flex-1 py-3 rounded-2xl bg-purple-50 text-purple-600 text-sm font-medium hover:bg-purple-100 transition"
+                >
+                  ✉️ {labels.email}
+                </button>
+              </div>
+
+              {/* Accompanying document - full width, blue border */}
+              <button
+                onClick={() => {
+                  toast.info(locale === 'ru' ? 'Выберите способ отправки' : 'בחר אמצעי משלוח')
+                }}
+                className="w-full py-3.5 rounded-2xl bg-white border-2 border-blue-500 text-blue-600 text-sm font-semibold hover:bg-blue-50 transition"
+              >
+                📋 {labels.accompanyingDocument}
+              </button>
+            </div>
+          )}
+
+          {/* Action buttons - Cancelled */}
+          {visit.status === 'cancelled' && (
             <button
               onClick={onEdit}
               className="w-full py-3.5 rounded-2xl bg-slate-100 text-slate-600 text-sm font-semibold hover:bg-slate-200 transition flex items-center justify-center gap-2"

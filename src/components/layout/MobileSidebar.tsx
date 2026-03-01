@@ -91,12 +91,11 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     }
   }, [user])
 
-  // Если пользователь админ/модератор - берем имя из admin_users, иначе из user_metadata
-  const displayName = (isAdmin && adminProfile?.full_name)
-    ? adminProfile.full_name
-    : (user?.user_metadata?.full_name as string) ||
-      (user?.user_metadata?.name as string) ||
-      null
+  // Display name from user metadata (adminProfile.full_name now comes from user_metadata)
+  const displayName = adminProfile?.full_name ||
+    (user?.user_metadata?.full_name as string) ||
+    (user?.user_metadata?.name as string) ||
+    null
   
   const displayEmail = user?.email || ''
   

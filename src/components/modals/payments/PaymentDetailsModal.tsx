@@ -103,14 +103,15 @@ export function PaymentDetailsModal() {
   const methodLabel = methodLabels[method]?.[locale as 'he' | 'ru'] || text.other
 
   // Status label
-  const statusLabel = {
+  const statusLabels: Record<string, string> = {
     completed: text.paid,
     paid: text.paid,
     pending: text.pending,
     failed: text.failed,
     refunded: text.refunded,
     cancelled: text.cancelled,
-  }[payment.status] || payment.status
+  }
+  const statusLabel = statusLabels[payment.status] || payment.status
 
   const phone = payment.clients?.phone || payment.client_phone || ''
   const paymentUrl = payment.payment_url || payment.link || ''

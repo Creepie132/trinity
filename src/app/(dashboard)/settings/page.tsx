@@ -47,6 +47,13 @@ export default function SettingsPage() {
       title: t('careInstructions.title'),
       description: t('careInstructions.noInstructions'),
     },
+    {
+      id: 'aftercare',
+      href: '/settings/aftercare',
+      icon: FileText,
+      title: t('aftercareInstructions.title'),
+      description: t('aftercareInstructions.description'),
+    },
     // { id: 'users', href: '/settings/users', icon: Users, title: t('settings.users'), description: t('settings.users.desc') },
     // { id: 'service-colors', href: '/settings/service-colors', icon: Palette, title: t('settings.serviceColors'), description: t('settings.serviceColors.desc') },
   ]
@@ -59,6 +66,7 @@ export default function SettingsPage() {
     // Owner-only settings (check permissions)
     if (category.id === 'services' && !permissions.canManageServices) return false
     if (category.id === 'care-instructions' && !permissions.canManageCareInstructions) return false
+    if (category.id === 'aftercare' && !permissions.canManageAftercareInstructions) return false
     if (category.id === 'booking' && !permissions.canManageBookingSettings) return false
     
     return true

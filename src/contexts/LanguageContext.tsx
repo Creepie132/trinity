@@ -657,6 +657,25 @@ const translations: Record<Language, Record<string, string>> = {
     'careInstructions.noInstructions': 'אין הוראות טיפול',
     'careInstructions.noInstructionsForService': 'אין הוראות טיפול לשירות זה',
     
+    // Aftercare Instructions (Simple)
+    'aftercareInstructions.title': 'הוראות לאחר הטיפול',
+    'aftercareInstructions.description': 'נהל הוראות כלליות ללקוחות לאחר השירותים',
+    'aftercareInstructions.newInstruction': 'הוסף הוראה',
+    'aftercareInstructions.editInstruction': 'ערוך הוראה',
+    'aftercareInstructions.instructionTitle': 'כותרת',
+    'aftercareInstructions.instructionTitleRu': 'כותרת (רוסית)',
+    'aftercareInstructions.instructionContent': 'תוכן ההוראה',
+    'aftercareInstructions.instructionContentRu': 'תוכן (רוסית)',
+    'aftercareInstructions.titlePlaceholder': 'לדוגמה: לאחר צביעת שיער',
+    'aftercareInstructions.titlePlaceholderRu': 'Например: После окрашивания волос',
+    'aftercareInstructions.contentPlaceholder': 'הקלד את הוראות הטיפול כאן...',
+    'aftercareInstructions.contentPlaceholderRu': 'Введите инструкции здесь...',
+    'aftercareInstructions.created': 'ההוראה נוצרה בהצלחה',
+    'aftercareInstructions.updated': 'ההוראה עודכנה בהצלחה',
+    'aftercareInstructions.deleted': 'ההוראה נמחקה בהצלחה',
+    'aftercareInstructions.deleteConfirm': 'למחוק הוראה זו?',
+    'aftercareInstructions.noInstructions': 'אין הוראות לאחר טיפול',
+    
     // Settings - Service Colors
     'settings.serviceColors': 'צבעי שירותים',
     'settings.serviceColors.desc': 'התאם צבעים לכל סוג שירות',
@@ -1544,6 +1563,25 @@ const translations: Record<Language, Record<string, string>> = {
     'careInstructions.sendWhatsApp': 'Отправить в WhatsApp',
     'careInstructions.noInstructions': 'Нет инструкций по уходу',
     'careInstructions.noInstructionsForService': 'Нет инструкций для этой услуги',
+    
+    // Aftercare Instructions (Simple)
+    'aftercareInstructions.title': 'Инструкции по уходу',
+    'aftercareInstructions.description': 'Управление общими инструкциями для клиентов после услуг',
+    'aftercareInstructions.newInstruction': 'Добавить инструкцию',
+    'aftercareInstructions.editInstruction': 'Редактировать инструкцию',
+    'aftercareInstructions.instructionTitle': 'Заголовок',
+    'aftercareInstructions.instructionTitleRu': 'Заголовок (русский)',
+    'aftercareInstructions.instructionContent': 'Содержание инструкции',
+    'aftercareInstructions.instructionContentRu': 'Содержание (русский)',
+    'aftercareInstructions.titlePlaceholder': 'לדוגמה: לאחר צביעת שיער',
+    'aftercareInstructions.titlePlaceholderRu': 'Например: После окрашивания волос',
+    'aftercareInstructions.contentPlaceholder': 'הקלד את הוראות הטיפול כאן...',
+    'aftercareInstructions.contentPlaceholderRu': 'Введите инструкции здесь...',
+    'aftercareInstructions.created': 'Инструкция успешно создана',
+    'aftercareInstructions.updated': 'Инструкция успешно обновлена',
+    'aftercareInstructions.deleted': 'Инструкция успешно удалена',
+    'aftercareInstructions.deleteConfirm': 'Удалить эту инструкцию?',
+    'aftercareInstructions.noInstructions': 'Нет инструкций по уходу',
     
     // Settings - Service Colors
     'settings.serviceColors': 'Цвета услуг',

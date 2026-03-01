@@ -219,6 +219,11 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
       )}
 
       {/* Кнопки — In Progress */}
+      {(() => {
+        console.log('Mobile visit status:', visit.status)
+        console.log('Show + button:', visit.status === 'in_progress')
+        return null
+      })()}
       {visit.status === 'in_progress' && (
         <div className="space-y-2">
           <div className="flex gap-2">

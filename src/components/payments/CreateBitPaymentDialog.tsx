@@ -93,12 +93,14 @@ export function CreateBitPaymentDialog({ open, onOpenChange, onSuccess }: Create
           <div>
             <Label>{t('clients.client')}</Label>
             <ClientSearch
-              onClientSelect={(client) => {
+              orgId={orgId || ''}
+              onSelect={(client) => {
                 setSelectedClient(client)
-                setClientId(client.id)
+                setClientId(client?.id || '')
               }}
-              selectedClient={selectedClient}
+              value={selectedClient}
               placeholder={t('clients.searchClient')}
+              locale={language as 'he' | 'ru' | 'en'}
             />
           </div>
 

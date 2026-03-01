@@ -45,6 +45,7 @@ export async function createCardComPaymentLink({
   })
 
   const data = await response.json()
+  console.log('CardCom FULL response:', JSON.stringify(data))
 
   if (data.ResponseCode !== 0) {
     throw new Error(`CardCom error: ${data.Description}`)

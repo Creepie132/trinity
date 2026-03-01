@@ -16,7 +16,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import QRCode from 'qrcode'
 import { generateBookingCode } from '@/lib/utils'
-import { createClient } from '@/lib/supabase/client'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
 
@@ -73,7 +73,7 @@ export default function BookingSettingsPage() {
   // Check if booking module is enabled
   useEffect(() => {
     async function checkAccess() {
-      const supabase = createClient()
+      const supabase = createSupabaseBrowserClient()
       const { data } = await supabase
         .from('organizations')
         .select('features')

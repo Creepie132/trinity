@@ -230,10 +230,10 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
             </button>
             
             <button
-              onClick={() => openModal('add-service', { visitId: visit.id })}
-              className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center"
+              onClick={() => openModal('add-to-visit', { visitId: visit.id })}
+              className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center"
             >
-              <Plus size={24} />
+              <Plus size={20} />
             </button>
           </div>
 

@@ -14,6 +14,7 @@ export type ModalType =
   | 'visit-add-product'
   | 'visit-add-service'
   | 'add-service'
+  | 'add-to-visit'
   // Products
   | 'product-create'
   | 'product-details'

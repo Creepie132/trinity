@@ -13,6 +13,7 @@ import { CompleteVisitPaymentModal } from './visits/CompleteVisitPaymentModal'
 import { AddProductModal } from './visits/AddProductModal'
 import { AddServiceModal } from './visits/AddServiceModal'
 import { AddServiceDirectModal } from './visits/AddServiceDirectModal'
+import { AddToVisitModal } from './visits/AddToVisitModal'
 
 // Products
 import { ProductDetailsModal } from './ProductDetailsModal'
@@ -63,6 +64,7 @@ export function ModalManager() {
       <AddProductModal />
       <AddServiceModal />
       <AddServiceDirectModal />
+      <AddToVisitModal />
       
       {/* Products */}
       <ProductDetailsModal />

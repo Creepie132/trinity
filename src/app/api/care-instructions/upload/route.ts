@@ -65,24 +65,6 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = new Uint8Array(arrayBuffer)
 
-    // Check if bucket exists, create if not
-    const { data: buckets } = await supabase.storage.listBuckets()
-    const bucketExists = buckets?.some(b => b.id === 'care-instructions')
-    
-    if (!bucketExists) {
-      console.log('[API] Creating care-instructions bucket...')
-      const { error: bucketError } = await supabase.storage.createBucket('care-instructions', {
-        public: true,
-        fileSizeLimit: 10485760, // 10MB
-      })
-      
-      if (bucketError) {
-        console.error('[API] Bucket creation error:', JSON.stringify(bucketError, null, 2))
-        return NextResponse.json({ error: 'Failed to create storage bucket: ' + bucketError.message }, { status: 500 })
-      }
-      console.log('[API] Bucket created successfully')
-    }
-
     // Upload to Supabase Storage
     console.log('[API] Uploading file:', fileName, 'size:', buffer.length)
     const { data: uploadData, error: uploadError } = await supabase.storage

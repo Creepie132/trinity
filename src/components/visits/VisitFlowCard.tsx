@@ -46,6 +46,11 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
   const { data: visitServices = [] } = useVisitServices(visit?.id || '')
   const { openModal } = useModalStore()
 
+  useEffect(() => {
+    console.log('visit.status value:', visit?.status)
+    console.log('type:', typeof visit?.status)
+  }, [visit])
+
   if (!visit || !isOpen) return null
 
   const l = locale === 'he'

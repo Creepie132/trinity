@@ -4,6 +4,8 @@ import { Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock, Calendar, 
 import { useVisitServices } from '@/hooks/useVisitServices'
 import { useModalStore } from '@/store/useModalStore'
 import { toast } from 'sonner'
+import { useState } from 'react'
+import { AftercareInstructionSendModal } from '@/components/modals/other/AftercareInstructionSendModal'
 
 interface VisitDetailModalProps {
   visit: any
@@ -43,6 +45,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   // Fetch visit services
   const { data: visitServices = [] } = useVisitServices(visit?.id || '')
   const { openModal } = useModalStore()
+  const [isAftercareModalOpen, setIsAftercareModalOpen] = useState(false)
 
   if (!visit || !isOpen) return null
 
@@ -115,10 +118,36 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       sms: 'SMS',
       email: 'Email',
       accompanyingDocument: 'Сопроводительный документ'
+    },
+    en: {
+      date: 'Date',
+      time: 'Time',
+      end: 'End',
+      duration: 'Duration',
+      service: 'Service',
+      price: 'Price',
+      notes: 'Notes',
+      client: 'Client',
+      additionalServices: 'Additional Services',
+      lastVisit: 'Last Visit',
+      start: 'Start',
+      complete: 'Complete',
+      cancel: 'Cancel',
+      edit: 'Edit',
+      minutes: 'min',
+      scheduled: 'Scheduled',
+      inProgress: 'In Progress',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+      downloadReceipt: 'Download Receipt',
+      whatsappReceipt: 'WhatsApp Receipt',
+      sms: 'SMS',
+      email: 'Email',
+      accompanyingDocument: 'Aftercare Document'
     }
   }
 
-  const labels = t[locale]
+  const labels = t[locale] || t.en
 
   // Get status label
   const getStatusLabel = () => {
@@ -423,9 +452,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
 
               {/* Accompanying document - full width, blue border */}
               <button
-                onClick={() => {
-                  toast.info(locale === 'ru' ? 'Выберите способ отправки' : 'בחר אמצעי משלוח')
-                }}
+                onClick={() => setIsAftercareModalOpen(true)}
                 className="w-full py-3.5 rounded-2xl bg-white border-2 border-blue-500 text-blue-600 text-sm font-semibold hover:bg-blue-50 transition"
               >
                 📋 {labels.accompanyingDocument}
@@ -445,6 +472,16 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           )}
         </div>
       </div>
+
+      {/* Aftercare Instruction Send Modal */}
+      <AftercareInstructionSendModal
+        isOpen={isAftercareModalOpen}
+        onClose={() => setIsAftercareModalOpen(false)}
+        locale={locale as 'he' | 'ru' | 'en'}
+        clientPhone={clientPhone || visit.clients?.phone}
+        clientEmail={visit.clients?.email}
+        clientName={clientName}
+      />
     </div>
   )
 }

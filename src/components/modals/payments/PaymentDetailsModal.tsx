@@ -5,9 +5,11 @@ import { MessageCircle, MessageSquare, Download, Copy, ExternalLink, X } from 'l
 import { useEffect } from 'react'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 
 export function PaymentDetailsModal() {
   const { isModalOpen, closeModal, getModalData } = useModalStore()
+  const queryClient = useQueryClient()
   
   const isOpen = isModalOpen('payment-details')
   const data = getModalData('payment-details')
@@ -53,6 +55,8 @@ export function PaymentDetailsModal() {
       transfer: 'העברה',
       bit: 'ביט',
       other: 'אחר',
+      cancel: 'ביטול',
+      paymentCancelled: 'בוטל',
     },
     ru: {
       amount: 'Сумма',
@@ -78,6 +82,8 @@ export function PaymentDetailsModal() {
       transfer: 'Перевод',
       bit: 'Bit',
       other: 'Другое',
+      cancel: 'Отменить',
+      paymentCancelled: 'Платёж отменён',
     },
   }
 
@@ -286,6 +292,27 @@ export function PaymentDetailsModal() {
                   {text.openLink}
                 </button>
               </>
+            )}
+
+            {/* Cancel button for pending payments */}
+            {payment.status === 'pending' && (
+              <button
+                type="button"
+                onClick={async (e) => {
+                  e.preventDefault()
+                  const res = await fetch(`/api/payments/${payment.id}/cancel`, {
+                    method: 'POST'
+                  })
+                  if (res.ok) {
+                    toast.success(text.paymentCancelled)
+                    closeModal('payment-details')
+                    queryClient.invalidateQueries({ queryKey: ['payments'] })
+                  }
+                }}
+                className="w-full py-3 rounded-2xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 transition touch-manipulation"
+              >
+                × {text.cancel}
+              </button>
             )}
           </div>
         </div>

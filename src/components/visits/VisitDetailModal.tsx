@@ -5,7 +5,7 @@ import { useVisitServices } from '@/hooks/useVisitServices'
 import { useModalStore } from '@/store/useModalStore'
 import { toast } from 'sonner'
 import { useState } from 'react'
-import { AftercareInstructionSendModal } from '@/components/modals/other/AftercareInstructionSendModal'
+import { CareInstructionSendModal } from '@/components/modals/other/CareInstructionSendModal'
 
 interface VisitDetailModalProps {
   visit: any
@@ -45,7 +45,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   // Fetch visit services
   const { data: visitServices = [] } = useVisitServices(visit?.id || '')
   const { openModal } = useModalStore()
-  const [isAftercareModalOpen, setIsAftercareModalOpen] = useState(false)
+  const [isCareModalOpen, setIsCareModalOpen] = useState(false)
 
   if (!visit || !isOpen) return null
 
@@ -452,7 +452,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
 
               {/* Accompanying document - full width, blue border */}
               <button
-                onClick={() => setIsAftercareModalOpen(true)}
+                onClick={() => setIsCareModalOpen(true)}
                 className="w-full py-3.5 rounded-2xl bg-white border-2 border-blue-500 text-blue-600 text-sm font-semibold hover:bg-blue-50 transition"
               >
                 📋 {labels.accompanyingDocument}
@@ -473,10 +473,10 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
         </div>
       </div>
 
-      {/* Aftercare Instruction Send Modal */}
-      <AftercareInstructionSendModal
-        isOpen={isAftercareModalOpen}
-        onClose={() => setIsAftercareModalOpen(false)}
+      {/* Care Instruction Send Modal */}
+      <CareInstructionSendModal
+        isOpen={isCareModalOpen}
+        onClose={() => setIsCareModalOpen(false)}
         locale={locale as 'he' | 'ru' | 'en'}
         clientPhone={clientPhone || visit.clients?.phone}
         clientEmail={visit.clients?.email}

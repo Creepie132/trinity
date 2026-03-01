@@ -16,7 +16,6 @@ export interface Permissions {
   // Owner-only permissions
   canManageServices: boolean // manage services list
   canManageCareInstructions: boolean // manage care instructions
-  canManageAftercareInstructions: boolean // manage aftercare instructions
   canManageBookingSettings: boolean // configure online booking
   canManageBirthdayTemplates: boolean // configure birthday message templates
   canManageUsers: boolean // invite/remove/change roles of org users
@@ -38,7 +37,6 @@ export function usePermissions(): Permissions {
       canSendSMS: false,
       canManageServices: false,
       canManageCareInstructions: false,
-      canManageAftercareInstructions: false,
       canManageBookingSettings: false,
       canManageBirthdayTemplates: false,
       canManageUsers: false,
@@ -67,7 +65,6 @@ export function usePermissions(): Permissions {
     ...moderatorPermissions,
     canManageServices: role === 'owner',
     canManageCareInstructions: role === 'owner',
-    canManageAftercareInstructions: role === 'owner',
     canManageBookingSettings: role === 'owner',
     canManageBirthdayTemplates: role === 'owner',
     canManageUsers: role === 'owner',

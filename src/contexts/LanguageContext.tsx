@@ -652,29 +652,13 @@ const translations: Record<Language, Record<string, string>> = {
     'careInstructions.deleted': 'ההוראה נמחקה בהצלחה',
     'careInstructions.deleteConfirm': 'למחוק הוראה זו?',
     'careInstructions.sendInstructions': 'שליחת קובץ',
+    'careInstructions.sendInstruction': 'שלח הוראה',
+    'careInstructions.selectInstruction': 'בחר הוראה',
+    'careInstructions.sendTo': 'שלח ל',
     'careInstructions.downloadPDF': 'הורד PDF',
     'careInstructions.sendWhatsApp': 'שלח בוואטסאפ',
     'careInstructions.noInstructions': 'אין הוראות טיפול',
     'careInstructions.noInstructionsForService': 'אין הוראות טיפול לשירות זה',
-    
-    // Aftercare Instructions (Simple)
-    'aftercareInstructions.title': 'הוראות לאחר הטיפול',
-    'aftercareInstructions.description': 'נהל הוראות כלליות ללקוחות לאחר השירותים',
-    'aftercareInstructions.newInstruction': 'הוסף הוראה',
-    'aftercareInstructions.editInstruction': 'ערוך הוראה',
-    'aftercareInstructions.instructionTitle': 'כותרת',
-    'aftercareInstructions.instructionTitleRu': 'כותרת (רוסית)',
-    'aftercareInstructions.instructionContent': 'תוכן ההוראה',
-    'aftercareInstructions.instructionContentRu': 'תוכן (רוסית)',
-    'aftercareInstructions.titlePlaceholder': 'לדוגמה: לאחר צביעת שיער',
-    'aftercareInstructions.titlePlaceholderRu': 'Например: После окрашивания волос',
-    'aftercareInstructions.contentPlaceholder': 'הקלד את הוראות הטיפול כאן...',
-    'aftercareInstructions.contentPlaceholderRu': 'Введите инструкции здесь...',
-    'aftercareInstructions.created': 'ההוראה נוצרה בהצלחה',
-    'aftercareInstructions.updated': 'ההוראה עודכנה בהצלחה',
-    'aftercareInstructions.deleted': 'ההוראה נמחקה בהצלחה',
-    'aftercareInstructions.deleteConfirm': 'למחוק הוראה זו?',
-    'aftercareInstructions.noInstructions': 'אין הוראות לאחר טיפול',
     
     // Settings - Service Colors
     'settings.serviceColors': 'צבעי שירותים',
@@ -917,6 +901,15 @@ const translations: Record<Language, Record<string, string>> = {
     'common.saving': 'שומר...',
     'common.deleting': 'מוחק...',
     'common.notAvailable': 'לא זמין',
+    'common.openedWhatsApp': 'נפתח ב-WhatsApp',
+    'common.smsSent': 'SMS נשלח בהצלחה',
+    'common.openedEmail': 'נפתח בדוא״ל',
+    
+    // Errors
+    'errors.noPhone': 'אין מספר טלפון ללקוח',
+    'errors.noEmail': 'אין כתובת אימייל ללקוח',
+    'errors.noContactInfo': 'אין פרטי התקשרות ללקוח',
+    'errors.somethingWentWrong': 'משהו השתבש',
     
     // Error page
     'error.message': 'משהו השתבש. אנא נסה שוב או פנה לתמיכה.',
@@ -1559,29 +1552,13 @@ const translations: Record<Language, Record<string, string>> = {
     'careInstructions.deleted': 'Инструкция успешно удалена',
     'careInstructions.deleteConfirm': 'Удалить эту инструкцию?',
     'careInstructions.sendInstructions': 'Отправка файла',
+    'careInstructions.sendInstruction': 'Отправить инструкцию',
+    'careInstructions.selectInstruction': 'Выберите инструкцию',
+    'careInstructions.sendTo': 'Отправить',
     'careInstructions.downloadPDF': 'Скачать PDF',
     'careInstructions.sendWhatsApp': 'Отправить в WhatsApp',
     'careInstructions.noInstructions': 'Нет инструкций по уходу',
     'careInstructions.noInstructionsForService': 'Нет инструкций для этой услуги',
-    
-    // Aftercare Instructions (Simple)
-    'aftercareInstructions.title': 'Инструкции по уходу',
-    'aftercareInstructions.description': 'Управление общими инструкциями для клиентов после услуг',
-    'aftercareInstructions.newInstruction': 'Добавить инструкцию',
-    'aftercareInstructions.editInstruction': 'Редактировать инструкцию',
-    'aftercareInstructions.instructionTitle': 'Заголовок',
-    'aftercareInstructions.instructionTitleRu': 'Заголовок (русский)',
-    'aftercareInstructions.instructionContent': 'Содержание инструкции',
-    'aftercareInstructions.instructionContentRu': 'Содержание (русский)',
-    'aftercareInstructions.titlePlaceholder': 'לדוגמה: לאחר צביעת שיער',
-    'aftercareInstructions.titlePlaceholderRu': 'Например: После окрашивания волос',
-    'aftercareInstructions.contentPlaceholder': 'הקלד את הוראות הטיפול כאן...',
-    'aftercareInstructions.contentPlaceholderRu': 'Введите инструкции здесь...',
-    'aftercareInstructions.created': 'Инструкция успешно создана',
-    'aftercareInstructions.updated': 'Инструкция успешно обновлена',
-    'aftercareInstructions.deleted': 'Инструкция успешно удалена',
-    'aftercareInstructions.deleteConfirm': 'Удалить эту инструкцию?',
-    'aftercareInstructions.noInstructions': 'Нет инструкций по уходу',
     
     // Settings - Service Colors
     'settings.serviceColors': 'Цвета услуг',
@@ -1824,6 +1801,15 @@ const translations: Record<Language, Record<string, string>> = {
     'common.saving': 'Сохранение...',
     'common.deleting': 'Удаление...',
     'common.notAvailable': 'Недоступно',
+    'common.openedWhatsApp': 'Открыто в WhatsApp',
+    'common.smsSent': 'SMS успешно отправлена',
+    'common.openedEmail': 'Открыто в почте',
+    
+    // Errors
+    'errors.noPhone': 'У клиента нет номера телефона',
+    'errors.noEmail': 'У клиента нет адреса электронной почты',
+    'errors.noContactInfo': 'У клиента нет контактной информации',
+    'errors.somethingWentWrong': 'Что-то пошло не так',
     
     // Error page
     'error.message': 'Что-то пошло не так. Пожалуйста, попробуйте снова или обратитесь в поддержку.',

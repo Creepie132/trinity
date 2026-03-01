@@ -149,6 +149,7 @@ export default function VisitsPage() {
         .from('visits')
         .select(`
           *,
+          status,
           clients (
             first_name,
             last_name,
@@ -1041,6 +1042,7 @@ export default function VisitsPage() {
       />
 
       {/* Mobile VisitFlowCard */}
+      {selectedVisit && console.log('selectedVisit:', selectedVisit)}
       <VisitFlowCard
         visit={selectedVisit}
         isOpen={!!selectedVisit}

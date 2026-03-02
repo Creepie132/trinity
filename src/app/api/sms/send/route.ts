@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     // ✅ Проверка авторизации и доступа к фиче "sms"
     const authResult = await checkAuthAndFeature('sms')
     if (!authResult.success) {
-      return authResult.response
+      return authResult.response as NextResponse
     }
 
     // ✅ Rate limiting (Upstash)

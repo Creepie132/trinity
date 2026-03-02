@@ -9,7 +9,7 @@ import { Visit } from '@/types/visits'
 
 interface CalendarViewProps {
   visits: Visit[]
-  onVisitClick: (visit: Visit) => void
+  onVisitClick: (visit: any) => void
   onDateClick: (date: Date) => void
   serviceColors: Record<string, string>
 }

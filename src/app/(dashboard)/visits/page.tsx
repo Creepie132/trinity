@@ -763,7 +763,7 @@ export default function VisitsPage() {
       )}
 
       {/* Calendar View */}
-      {viewMode === 'calendar' && (
+      {viewMode === 'calendar' ? (
         <CalendarView
           visits={visits || []}
           onVisitClick={(visit) => { handleVisitClick(visit) }}
@@ -773,7 +773,7 @@ export default function VisitsPage() {
           }}
           serviceColors={serviceColors}
         />
-      )}
+      ) : null}
 
       {/* Dialogs managed by ModalManager */}
 

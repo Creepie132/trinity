@@ -86,7 +86,7 @@ export default function NewUserOnboardingModal({ isOpen, orgId }: NewUserOnboard
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 999999 };
 
-      function randomInRange(min: number, max: number) {
+      const randomInRange = (min: number, max: number) => {
         return Math.random() * (max - min) + min;
       }
 

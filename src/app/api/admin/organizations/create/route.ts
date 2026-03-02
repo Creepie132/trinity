@@ -238,8 +238,8 @@ export async function POST(request: NextRequest) {
 
     // Find user by email (case-insensitive)
     // This returns the REAL auth user ID, NOT the CRM client ID
-    const existingAuthUser = authUsers?.users?.find(
-      u => u.email?.toLowerCase() === normalizedEmail
+    const existingAuthUser = (authUsers?.users as any[])?.find(
+      (u: any) => u.email?.toLowerCase() === normalizedEmail
     )
 
     let assignmentResult = {

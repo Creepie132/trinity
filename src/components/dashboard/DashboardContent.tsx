@@ -86,7 +86,7 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
         ])
 
         // Helper: отказоустойчивый парсинг ответа
-        async function safeParse(response: Response, name: string) {
+        const safeParse = async (response: Response, name: string) => {
           try {
             console.log(`${name} status:`, response.status)
             

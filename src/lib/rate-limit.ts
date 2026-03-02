@@ -13,11 +13,11 @@ const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
 // Cleanup old entries every 10 minutes
 setInterval(() => {
   const now = Date.now()
-  for (const [key, value] of rateLimitStore.entries()) {
+  rateLimitStore.forEach((value, key) => {
     if (value.resetAt < now) {
       rateLimitStore.delete(key)
     }
-  }
+  })
 }, 10 * 60 * 1000)
 
 export function rateLimit(

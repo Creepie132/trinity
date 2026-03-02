@@ -54,7 +54,7 @@ const PLAN_FEATURES: Record<string, Record<string, boolean>> = {
   },
 }
 
-async function handleWebhook(req: NextRequest) {
+const handleWebhook = async (req: NextRequest) => {
   try {
     // IP whitelist (только в production)
     if (process.env.NODE_ENV === 'production' && process.env.TRANZILA_IP_WHITELIST_ENABLED === 'true') {

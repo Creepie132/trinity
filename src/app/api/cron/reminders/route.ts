@@ -6,7 +6,7 @@ import { reminderEmail } from '@/lib/email-templates'
 
 export const dynamic = 'force-dynamic'
 
-async function sendSMS(phone: string, message: string) {
+const sendSMS = async (phone: string, message: string) => {
   const inforuUrl = 'https://api.inforu.co.il/SendMessageXml.ashx'
   const username = process.env.INFORU_USERNAME
   const password = process.env.INFORU_PASSWORD

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logAudit } from '@/lib/audit'
 
-async function sendSMS(phone: string, message: string) {
+const sendSMS = async (phone: string, message: string) => {
   const inforuUrl = 'https://api.inforu.co.il/SendMessageXml.ashx'
   const username = process.env.INFORU_USERNAME
   const password = process.env.INFORU_PASSWORD

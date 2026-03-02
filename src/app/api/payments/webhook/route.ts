@@ -12,7 +12,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-async function handleWebhook(request: NextRequest) {
+const handleWebhook = async (request: NextRequest) => {
   try {
     const webhookData = await request.json()
 

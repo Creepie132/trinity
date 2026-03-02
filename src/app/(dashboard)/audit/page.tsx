@@ -90,6 +90,7 @@ export default function AuditPage() {
       update: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
       delete: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
       send_sms: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      send_reminder: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
       export: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
       login: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
     }
@@ -133,6 +134,7 @@ export default function AuditPage() {
                   <SelectItem value="update">עדכון / Update</SelectItem>
                   <SelectItem value="delete">מחיקה / Delete</SelectItem>
                   <SelectItem value="send_sms">SMS</SelectItem>
+                  <SelectItem value="send_reminder">תזכורת / Reminder</SelectItem>
                   <SelectItem value="export">ייצוא / Export</SelectItem>
                   <SelectItem value="login">התחברות / Login</SelectItem>
                 </SelectContent>

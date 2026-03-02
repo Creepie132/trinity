@@ -55,17 +55,17 @@ export async function GET(request: NextRequest) {
       console.log('Payment update:', updateError || 'success')
 
       // Send receipt email if client has email
-      if (payment.client?.email) {
+      if (payment.client?.[0]?.email) {
         try {
           const serviceName = payment.visit?.[0]?.service?.name || 'Услуга | שירות'
           const paymentDate = new Date(payment.created_at).toLocaleDateString('he-IL')
           
           await resend.emails.send({
             from: 'Trinity CRM <notifications@ambersol.co.il>',
-            to: payment.client.email,
+            to: payment.client?.[0]?.email,
             subject: `קבלה | Квитанция ₪${payment.amount}`,
             html: receiptEmail(
-              payment.client.name,
+              payment.client?.[0]?.name,
               payment.amount,
               paymentDate,
               serviceName,
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
             ),
           })
           
-          console.log('Receipt email sent to:', payment.client.email)
+          console.log('Receipt email sent to:', payment.client?.[0]?.email)
         } catch (emailError) {
           console.error('Failed to send receipt email:', emailError)
         }

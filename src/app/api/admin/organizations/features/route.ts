@@ -127,7 +127,7 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: authError.message }, { status: 500 })
       }
 
-      const userExists = authUser.users.some(u => u.email === owner_email)
+      const userExists = (authUser.users as any[]).some((u: any) => u.email === owner_email)
       
       if (!userExists) {
         return NextResponse.json(

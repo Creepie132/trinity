@@ -34,11 +34,15 @@ export async function GET(request: NextRequest) {
     let clientName = null
     
     if (payment) {
-      const { data: client } = await supabase
+      const { data: client, error: clientError } = await supabase
         .from('clients')
         .select('name, email')
         .eq('id', payment.client_id)
         .single()
+      
+      console.log('Client query - id:', payment.client_id)
+      console.log('Client found:', client, clientError)
+      console.log('Client email:', client?.email)
       
       clientEmail = client?.email
       clientName = client?.name

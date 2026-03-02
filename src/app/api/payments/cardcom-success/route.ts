@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { resend } from '@/lib/resend'
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
       // Send receipt email if client has email
       if (payment.client?.[0]?.email) {
         try {
-          const serviceName = payment.visit?.[0]?.service?.name || 'Услуга | שירות'
+          const serviceName = (payment.visit?.[0]?.service as any)?.name || 'Услуга | שירות'
           const paymentDate = new Date(payment.created_at).toLocaleDateString('he-IL')
           
           await resend.emails.send({

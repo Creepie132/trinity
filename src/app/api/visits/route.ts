@@ -3,6 +3,8 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { validateBody, createVisitSchema } from '@/lib/validations'
 import { createClient } from '@/lib/supabase/server'
+import { resend } from '@/lib/resend'
+import { bookingConfirmEmail, newBookingNotifyEmail } from '@/lib/email-templates'
 
 // GET /api/visits - список визитов для текущей организации
 export async function GET(request: NextRequest) {
@@ -261,6 +263,81 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('[API /api/visits POST] Loyalty points error (non-critical):', error)
       // Don't fail the request if loyalty fails
+    }
+
+    // Send email notifications
+    try {
+      // Get client info
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('name, email, phone')
+        .eq('id', clientId)
+        .single()
+
+      // Get service name
+      let serviceName = 'Услуга | שירות'
+      if (insertData.service_id && uuidRegex.test(insertData.service_id)) {
+        const { data: serviceData } = await supabase
+          .from('services')
+          .select('name')
+          .eq('id', insertData.service_id)
+          .single()
+        if (serviceData) serviceName = serviceData.name
+      } else if (insertData.service_type) {
+        serviceName = insertData.service_type
+      }
+
+      // Get organization info
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('name, contact_email')
+        .eq('id', org_id)
+        .single()
+
+      const businessName = orgData?.name || 'Trinity CRM'
+      const businessEmail = orgData?.contact_email
+      const visitDate = new Date(scheduled_at).toLocaleDateString('he-IL')
+      const visitTime = new Date(scheduled_at).toLocaleTimeString('he-IL', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+
+      // Send confirmation email to client
+      if (clientData?.email) {
+        await resend.emails.send({
+          from: 'Trinity CRM <notifications@ambersol.co.il>',
+          to: clientData.email,
+          subject: `✓ התור שלך אושר | Ваша запись подтверждена - ${businessName}`,
+          html: bookingConfirmEmail(
+            clientData.name,
+            visitDate,
+            visitTime,
+            serviceName,
+            businessName
+          ),
+        })
+        console.log('[API /api/visits POST] Confirmation email sent to client:', clientData.email)
+      }
+
+      // Send notification email to business
+      if (businessEmail) {
+        await resend.emails.send({
+          from: 'Trinity CRM <notifications@ambersol.co.il>',
+          to: businessEmail,
+          subject: `🔔 תור חדש | Новая запись - ${clientData?.name || 'Клиент'}`,
+          html: newBookingNotifyEmail(
+            clientData?.name || 'Клиент | לקוח',
+            clientData?.phone || '',
+            visitDate,
+            visitTime,
+            serviceName
+          ),
+        })
+        console.log('[API /api/visits POST] Notification email sent to business:', businessEmail)
+      }
+    } catch (emailError) {
+      console.error('[API /api/visits POST] Email error (non-critical):', emailError)
+      // Don't fail the request if email fails
     }
 
     return NextResponse.json({ visit }, { status: 201 })

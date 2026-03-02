@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logAudit } from '@/lib/audit'
+import { resend } from '@/lib/resend'
+import { reminderEmail } from '@/lib/email-templates'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,9 +76,12 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         scheduled_at,
+        service_type,
         clients!inner (
           id,
           first_name,
+          name,
+          email,
           phone,
           org_id
         ),
@@ -96,6 +101,7 @@ export async function GET(request: NextRequest) {
     for (const visit of tomorrowVisits || []) {
       const org = visit.organizations as any
       const client = visit.clients as any
+      const service = visit.services as any
 
       // Проверить reminders_enabled
       if (org?.features?.reminders_enabled === false) {
@@ -107,11 +113,39 @@ export async function GET(request: NextRequest) {
         minute: '2-digit',
       })
 
-      const message = `שלום ${client.first_name}! תזכורת: יש לך תור מחר ב-${time} ב-${org.name}. לביטול: ${org.phone || ''}`
+      const date = new Date(visit.scheduled_at).toLocaleDateString('he-IL')
 
-      const success = await sendSMS(client.phone, message)
+      // SMS reminder
+      const smsMessage = `שלום ${client.first_name}! תזכורת: יש לך תור מחר ב-${time} ב-${org.name}. לביטול: ${org.phone || ''}`
+      const smsSuccess = await sendSMS(client.phone, smsMessage)
 
-      if (success) {
+      // Email reminder
+      let emailSuccess = false
+      if (client.email) {
+        try {
+          const serviceName = service?.name || visit.service_type || 'Услуга | שירות'
+          
+          await resend.emails.send({
+            from: 'Trinity CRM <notifications@ambersol.co.il>',
+            to: client.email,
+            subject: `⏰ תזכורת לתור מחר | Напоминание о записи - ${org.name}`,
+            html: reminderEmail(
+              client.name || client.first_name,
+              date,
+              time,
+              serviceName,
+              org.name
+            ),
+          })
+          
+          emailSuccess = true
+          console.log(`[Cron Reminders] Email reminder sent for visit ${visit.id} to ${client.email}`)
+        } catch (emailError) {
+          console.error(`[Cron Reminders] Failed to send email for visit ${visit.id}:`, emailError)
+        }
+      }
+
+      if (smsSuccess || emailSuccess) {
         stats.tomorrowReminders++
 
         // Логировать
@@ -119,13 +153,16 @@ export async function GET(request: NextRequest) {
           org_id: client.org_id,
           user_id: undefined,
           user_email: 'system',
-          action: 'send_sms',
+          action: 'send_reminder',
           entity_type: 'reminder_tomorrow',
           entity_id: visit.id,
           new_data: {
             client_name: client.first_name,
             phone: client.phone,
+            email: client.email,
             scheduled_at: visit.scheduled_at,
+            sms_sent: smsSuccess,
+            email_sent: emailSuccess,
           },
         })
       } else {

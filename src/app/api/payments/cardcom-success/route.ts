@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { resend } from '@/lib/resend'
+import { receiptEmail } from '@/lib/email-templates'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -21,7 +23,20 @@ export async function GET(request: NextRequest) {
     // Найти платёж по transaction_id = lowProfileCode
     const { data: payment, error: findError } = await supabase
       .from('payments')
-      .select('id')
+      .select(`
+        id,
+        amount,
+        created_at,
+        client:clients!inner(
+          name,
+          email
+        ),
+        visit:visits(
+          service:services(
+            name
+          )
+        )
+      `)
       .eq('transaction_id', lowProfileCode)
       .single()
 
@@ -38,6 +53,31 @@ export async function GET(request: NextRequest) {
         .eq('id', payment.id)
 
       console.log('Payment update:', updateError || 'success')
+
+      // Send receipt email if client has email
+      if (payment.client?.email) {
+        try {
+          const serviceName = payment.visit?.[0]?.service?.name || 'Услуга | שירות'
+          const paymentDate = new Date(payment.created_at).toLocaleDateString('he-IL')
+          
+          await resend.emails.send({
+            from: 'Trinity CRM <notifications@ambersol.co.il>',
+            to: payment.client.email,
+            subject: `קבלה | Квитанция ₪${payment.amount}`,
+            html: receiptEmail(
+              payment.client.name,
+              payment.amount,
+              paymentDate,
+              serviceName,
+              internalDealNumber || lowProfileCode
+            ),
+          })
+          
+          console.log('Receipt email sent to:', payment.client.email)
+        } catch (emailError) {
+          console.error('Failed to send receipt email:', emailError)
+        }
+      }
     }
   }
 

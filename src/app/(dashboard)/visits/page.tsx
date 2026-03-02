@@ -1007,7 +1007,6 @@ export default function VisitsPage() {
       </button>
 
       {/* Visit Detail Modal - for all devices */}
-      {selectedVisit && console.log('selectedVisit:', selectedVisit)}
       <VisitDetailModal
         visit={selectedVisit}
         isOpen={!!selectedVisit}

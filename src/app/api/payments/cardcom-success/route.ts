@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     if (payment) {
       const { data: client, error: clientError } = await supabase
         .from('clients')
-        .select('name, email')
+        .select('first_name, last_name, email')
         .eq('id', payment.client_id)
         .single()
       
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       console.log('Client email:', client?.email)
       
       clientEmail = client?.email
-      clientName = client?.name
+      clientName = `${client?.first_name || ''} ${client?.last_name || ''}`.trim()
 
       const { error: updateError } = await supabase
         .from('payments')

@@ -766,7 +766,7 @@ export default function VisitsPage() {
       {viewMode === 'calendar' && (
         <CalendarView
           visits={visits || []}
-          onVisitClick={(visit) => handleVisitClick(visit)}
+          onVisitClick={(visit) => { handleVisitClick(visit) }}
           onDateClick={(date) => {
             setSelectedDate(date)
             openModal('visit-create')

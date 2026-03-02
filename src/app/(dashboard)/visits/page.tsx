@@ -172,6 +172,12 @@ export default function VisitsPage() {
             price,
             duration_minutes,
             created_at
+          ),
+          visit_products (
+            id,
+            product_name,
+            price,
+            quantity
           )
         `, { count: 'exact' })
         .eq('org_id', orgId)

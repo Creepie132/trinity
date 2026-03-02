@@ -131,6 +131,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       notes: 'הערות',
       client: 'לקוח',
       additionalServices: 'שירותים נוספים',
+      products: 'מוצרים',
       lastVisit: 'ביקור אחרון',
       start: 'התחל',
       complete: 'סיים',
@@ -165,6 +166,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       notes: 'Заметки',
       client: 'Клиент',
       additionalServices: 'Дополнительные услуги',
+      products: 'Товары',
       lastVisit: 'Последний визит',
       start: 'Начать',
       complete: 'Завершить',
@@ -199,6 +201,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       notes: 'Notes',
       client: 'Client',
       additionalServices: 'Additional Services',
+      products: 'Products',
       lastVisit: 'Last Visit',
       start: 'Start',
       complete: 'Complete',
@@ -547,7 +550,34 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           value={displayServiceName || '—'}
         />
         
-        {/* Display additional services */}
+        {/* Display additional services from visit.visit_services */}
+        {visit.visit_services && visit.visit_services.length > 0 && (
+          <div className="space-y-1 mt-2 px-1">
+            {visit.visit_services.map((vs: any) => (
+              <div key={vs.id} className="flex justify-between text-sm py-1 px-2 rounded bg-slate-50">
+                <span className="font-medium">
+                  {locale === 'he' ? vs.service_name : (vs.service_name_ru || vs.service_name)}
+                </span>
+                {vs.price && <span className="font-medium">₪{vs.price}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {/* Display products from visit.visit_products */}
+        {visit.visit_products && visit.visit_products.length > 0 && (
+          <div className="space-y-1 mt-2 px-1">
+            <p className="text-xs text-slate-400">{labels.products}</p>
+            {visit.visit_products.map((vp: any) => (
+              <div key={vp.id} className="flex justify-between text-sm py-1 px-2 rounded bg-slate-50">
+                <span className="font-medium">{vp.product_name || vp.name}</span>
+                {vp.price && <span className="font-medium">₪{vp.price}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {/* Display additional services from visitServices hook (legacy) */}
         {visitServices.length > 0 && (
           <div className="px-1">
             <div className="flex items-start gap-3">

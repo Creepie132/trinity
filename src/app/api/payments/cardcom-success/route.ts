@@ -24,19 +24,25 @@ export async function GET(request: NextRequest) {
     // Найти платёж по transaction_id = lowProfileCode
     const { data: payment, error: findError } = await supabase
       .from('payments')
-      .select(`
-        id,
-        amount,
-        created_at,
-        client_id,
-        client:clients(name, email)
-      `)
+      .select('id, amount, created_at, client_id')
       .eq('transaction_id', lowProfileCode)
       .single()
 
     console.log('Payment found:', payment, findError)
 
+    let clientEmail = null
+    let clientName = null
+    
     if (payment) {
+      const { data: client } = await supabase
+        .from('clients')
+        .select('name, email')
+        .eq('id', payment.client_id)
+        .single()
+      
+      clientEmail = client?.email
+      clientName = client?.name
+
       const { error: updateError } = await supabase
         .from('payments')
         .update({
@@ -49,25 +55,24 @@ export async function GET(request: NextRequest) {
       console.log('Payment update:', updateError || 'success')
 
       // Send receipt email if client has email
-      if (payment.client?.email) {
+      if (clientEmail) {
         try {
-          const serviceName = (payment.visit?.[0]?.service as any)?.name || 'Услуга | שירות'
           const paymentDate = new Date(payment.created_at).toLocaleDateString('he-IL')
           
           await resend.emails.send({
             from: 'Trinity CRM <notifications@ambersol.co.il>',
-            to: payment.client?.email,
+            to: clientEmail,
             subject: `קבלה | Квитанция ₪${payment.amount}`,
             html: receiptEmail(
-              payment.client?.name,
+              clientName,
               payment.amount,
               paymentDate,
-              serviceName,
+              'Услуга | שירות',
               internalDealNumber || lowProfileCode
             ),
           })
           
-          console.log('Receipt email sent to:', payment.client?.email)
+          console.log('Receipt email sent to:', clientEmail)
         } catch (emailError) {
           console.error('Failed to send receipt email:', emailError)
         }

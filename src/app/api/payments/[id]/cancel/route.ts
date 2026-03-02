@@ -17,7 +17,7 @@ export async function POST(
     const authResult = await checkAuthAndFeature('payments')
     if (!authResult.success) {
       console.log('Step 1: Auth failed')
-      return authResult.response as NextResponse
+      return (authResult as { success: false; response: NextResponse }).response
     }
     console.log('Step 1: Auth OK, org_id:', authResult.data.org_id)
 

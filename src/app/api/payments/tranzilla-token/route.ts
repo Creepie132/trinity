@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     // ✅ Check auth and payments feature
     const authResult = await checkAuthAndFeature('payments')
     if (!authResult.success) {
-      return authResult.response as NextResponse
+      return (authResult as { success: false; response: NextResponse }).response
     }
 
     // ✅ Rate limiting

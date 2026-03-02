@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     // ✅ Проверка авторизации и доступа к фиче "payments"
     const authResult = await checkAuthAndFeature('payments')
     if (!authResult.success) {
-      return authResult.response as NextResponse
+      return (authResult as { success: false; response: NextResponse }).response
     }
 
     // ✅ Rate limiting

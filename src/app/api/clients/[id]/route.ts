@@ -35,7 +35,8 @@ export async function PUT(
   const { data, error } = await supabase
     .from('clients')
     .update({
-      name: name.trim(),
+      first_name: body.first_name,
+      last_name: body.last_name,
       phone: phone || null,
       email: email || null,
       address: address || null,

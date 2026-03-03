@@ -14,7 +14,7 @@ export async function PUT(
 
   const { id } = await params
   const body = await request.json()
-  const { phone, email, address, notes, avatar_url } = body
+  const { phone, email, address, notes } = body
 
   const name = body.name || `${body.first_name || ''} ${body.last_name || ''}`.trim()
   if (!name) {
@@ -40,7 +40,6 @@ export async function PUT(
       email: email || null,
       address: address || null,
       notes: notes || null,
-      avatar_url: avatar_url || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

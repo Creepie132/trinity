@@ -174,6 +174,14 @@ export function ClientDetailsModal() {
               </h3>
               
               <div className="space-y-2">
+                {/* Email */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Email</span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                    {client.email || '—'}
+                  </span>
+                </div>
+
                 {/* Визитов */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                   <span className="text-sm text-gray-600 dark:text-gray-400">{text.visits}</span>

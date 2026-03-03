@@ -1,5 +1,6 @@
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { resend } from '@/lib/resend'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -97,6 +98,32 @@ export async function GET(request: NextRequest) {
 
     console.log('=== APPROVE END ===')
     console.log('Expires at:', expiresAt.toISOString())
+
+    // Send welcome email to user
+    try {
+      await resend.emails.send({
+        from: 'Trinity CRM <notifications@ambersol.co.il>',
+        to: accessRequest.email,
+        subject: 'ברוך הבא ל-Trinity CRM! 🎉',
+        html: `
+          <div dir="rtl" style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #6366f1;">ברוך הבא ל-Trinity CRM! 🎉</h2>
+            <p>שלום ${accessRequest.full_name || accessRequest.email},</p>
+            <p>בקשתך לגישה אושרה!</p>
+            <p>כעת תוכל להתחבר למערכת ולהתחיל לנהל את העסק שלך.</p>
+            <a href="https://www.ambersol.co.il/login" style="background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:16px;font-size:16px;">
+              כניסה למערכת
+            </a>
+            <p style="margin-top:24px;color:#666;font-size:14px;">
+              אם יש לך שאלות, צור קשר: support@ambersol.co.il
+            </p>
+          </div>
+        `,
+      })
+      console.log('Welcome email sent to user:', accessRequest.email)
+    } catch (emailError) {
+      console.error('Error sending welcome email:', emailError)
+    }
 
     return new Response(
       `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">

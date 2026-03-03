@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { resend } from '@/lib/resend'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -111,70 +112,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Send email notification to admin via Resend
-    const RESEND_API_KEY = process.env.RESEND_API_KEY
-    const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'ambersolutions.systems@gmail.com'
-
-    if (RESEND_API_KEY) {
-      try {
-        // Generate review token (same as for Telegram)
-        const reviewToken = crypto.randomUUID().replace(/-/g, '').substring(0, 16)
-        
-        const approveUrl = `${APP_URL}/api/access/review?user_id=${user.id}&action=approve&token=${reviewToken}`
-        const rejectUrl = `${APP_URL}/api/access/review?user_id=${user.id}&action=reject&token=${reviewToken}`
-
-        const emailPayload = {
-          from: 'Trinity CRM <noreply@send.ambersol.co.il>',
-          to: ADMIN_EMAIL,
-          subject: '🔐 Новый запрос на доступ — Trinity CRM',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #1f2937;">Новый запрос на доступ</h2>
-              <p><b>Имя:</b> ${user.user_metadata?.full_name || 'Не указано'}</p>
-              <p><b>Email:</b> ${user.email}</p>
-              <p><b>Дата:</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Jerusalem' })}</p>
-              <br/>
-              <div style="margin-top: 20px;">
-                <a href="${approveUrl}" style="display: inline-block; padding: 12px 24px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; margin-right: 10px;">
-                  ✅ Одобрить (14 дней trial)
-                </a>
-                <a href="${rejectUrl}" style="display: inline-block; padding: 12px 24px; background: #ef4444; color: white; text-decoration: none; border-radius: 6px;">
-                  ❌ Отклонить
-                </a>
-              </div>
-            </div>
-          `,
-        }
-
-        console.log('Sending Resend email with payload:', {
-          from: emailPayload.from,
-          to: emailPayload.to,
-          subject: emailPayload.subject,
-        })
-
-        const emailResponse = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${RESEND_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(emailPayload),
-        })
-
-        const resendResult = await emailResponse.json()
-        console.log('Resend status:', emailResponse.status)
-        console.log('Resend response:', JSON.stringify(resendResult))
-
-        if (!emailResponse.ok) {
-          console.error('Resend email failed:', resendResult)
-        } else {
-          console.log('Resend email sent successfully to:', ADMIN_EMAIL)
-        }
-      } catch (emailError) {
-        console.error('Error sending Resend email:', emailError)
-        // Don't fail the request if notification fails
-      }
-    } else {
-      console.log('Resend API key not configured, skipping email notification')
+    try {
+      await resend.emails.send({
+        from: 'Trinity CRM <notifications@ambersol.co.il>',
+        to: 'crepie1357@gmail.com',
+        subject: '🔔 בקשת גישה חדשה | Trinity CRM',
+        html: `
+          <div dir="rtl" style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #6366f1;">🔔 בקשת גישה חדשה | Trinity CRM</h2>
+            <p><b>שם:</b> ${user.user_metadata?.full_name || '—'}</p>
+            <p><b>אימייל:</b> ${user.email || '—'}</p>
+            <p><b>טלפון:</b> ${user.user_metadata?.phone || '—'}</p>
+            <p><b>עסק:</b> ${user.user_metadata?.business_name || '—'}</p>
+            <p><b>זמן:</b> ${new Date().toLocaleString('he-IL')}</p>
+            <a href="https://www.ambersol.co.il/admin" style="background:#6366f1;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;margin-top:16px;">
+              פתח את פאנל הניהול
+            </a>
+          </div>
+        `,
+      })
+      console.log('Email notification sent to admin')
+    } catch (emailError) {
+      console.error('Error sending email notification:', emailError)
     }
 
     return NextResponse.json({

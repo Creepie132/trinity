@@ -106,8 +106,14 @@ export async function POST(req: NextRequest) {
     // Parse request body
     const body = await req.json()
 
+    const name = body.name || `${body.first_name || ''} ${body.last_name || ''}`.trim()
+    if (!name) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    }
+
     const clientData = {
       ...body,
+      name,
       org_id: orgUser.org_id,
     }
 

@@ -14,9 +14,10 @@ export async function PUT(
 
   const { id } = await params
   const body = await request.json()
-  const { name, phone, email, address, notes, avatar_url } = body
+  const { phone, email, address, notes, avatar_url } = body
 
-  if (!name?.trim()) {
+  const name = body.name || `${body.first_name || ''} ${body.last_name || ''}`.trim()
+  if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 })
   }
 

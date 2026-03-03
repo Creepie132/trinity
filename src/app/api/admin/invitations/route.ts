@@ -140,6 +140,8 @@ export async function POST(request: NextRequest) {
         htmlLength: emailBody.length
       })
 
+      console.log('Sending invite email to:', email.toLowerCase())
+      
       const resendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -150,6 +152,9 @@ export async function POST(request: NextRequest) {
       })
 
       const resendResult = await resendRes.json()
+      
+      console.log('Email send result:', resendResult)
+      console.log('Email error:', resendResult.error)
       console.log('Resend status:', resendRes.status)
       console.log('Resend result:', JSON.stringify(resendResult))
 

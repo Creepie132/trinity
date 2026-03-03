@@ -227,6 +227,7 @@ export async function POST(request: NextRequest) {
 
   if (RESEND_API_KEY) {
     console.log('Sending email notification to admin...')
+    console.log('Sending invite email to:', ADMIN_EMAIL)
     try {
       const emailResponse = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -284,10 +285,16 @@ export async function POST(request: NextRequest) {
         }),
       })
 
+      const resendResult = await emailResponse.json()
+      
+      console.log('Email send result:', resendResult)
+      console.log('Email error:', resendResult.error)
+      console.log('Resend status:', emailResponse.status)
+
       if (emailResponse.ok) {
         console.log('Email notification sent')
       } else {
-        console.error('Resend error:', await emailResponse.text())
+        console.error('Resend error:', resendResult)
       }
     } catch (err) {
       console.error('Failed to send email notification:', err)

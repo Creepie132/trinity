@@ -113,7 +113,9 @@ export async function POST(request: NextRequest) {
 
     // Send email notification to admin via Resend
     try {
-      await resend.emails.send({
+      console.log('Sending invite email to:', 'crepie1357@gmail.com')
+      
+      const emailResult = await resend.emails.send({
         from: 'Trinity CRM <notifications@ambersol.co.il>',
         to: 'crepie1357@gmail.com',
         subject: '🔔 בקשת גישה חדשה | Trinity CRM',
@@ -131,6 +133,9 @@ export async function POST(request: NextRequest) {
           </div>
         `,
       })
+      
+      console.log('Email send result:', emailResult)
+      console.log('Email error:', emailResult.error)
       console.log('Email notification sent to admin')
     } catch (emailError) {
       console.error('Error sending email notification:', emailError)

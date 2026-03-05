@@ -611,9 +611,9 @@ body {
   position: relative;
   background: 
     /* Тонкая вертикальная сетка */
-    linear-gradient(90deg, rgba(255, 191, 0, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 191, 0, 0.05) 1px, transparent 1px),
     /* Тонкая горизонтальная сетка */
-    linear-gradient(180deg, rgba(255, 191, 0, 0.02) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 191, 0, 0.05) 1px, transparent 1px),
     /* Темный базовый фон */
     hsl(var(--background));
   background-size: 60px 60px, 60px 60px, 100%;

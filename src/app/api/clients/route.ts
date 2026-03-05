@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
 
     // Parse request body
     const body = await req.json()
+    console.log('Create client body:', body)
 
     const name = body.name || `${body.first_name || ''} ${body.last_name || ''}`.trim()
     if (!name) {
@@ -138,6 +139,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(client, { status: 201 })
   } catch (error: any) {
+    console.log('Create client error:', error)
     console.error('API error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

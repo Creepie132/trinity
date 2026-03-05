@@ -47,6 +47,10 @@ export async function GET(request: NextRequest) {
       clientEmail = client?.email
       clientName = `${client?.first_name || ''} ${client?.last_name || ''}`.trim()
 
+      console.log('Client email found:', clientEmail)
+      console.log('Client name found:', clientName)
+      console.log('Attempting to send email...')
+
       const { error: updateError } = await supabase
         .from('payments')
         .update({
@@ -84,6 +88,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Редирект обратно на payments
-  return NextResponse.redirect('https://www.ambersol.co.il/payments?success=true')
+  // Редирект на страницу успеха
+  return NextResponse.redirect('https://www.ambersol.co.il/payment-success')
 }

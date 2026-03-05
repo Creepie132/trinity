@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createCardComPaymentLink } from '@/lib/cardcom'
+import { createTranzilaPaymentLink } from '@/lib/tranzila'
 import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
 import { rateLimit, PAYMENT_RATE_LIMIT } from '@/lib/rate-limit'
 import { validateBody, createPaymentSchema } from '@/lib/validations'
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
           amount,
           currency: 'ILS',
           status: 'pending',
-          provider: 'cardcom',
+          provider: 'tranzila',
           payment_method: 'credit_card',
         },
       ])
@@ -92,30 +92,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate CardCom payment link
+    // Generate Tranzila payment link
     const origin = request.nextUrl.origin
 
-    const cardComResult = await createCardComPaymentLink({
+    const tranzilaResult = await createTranzilaPaymentLink({
       amount,
       description: description || 'תשלום',
       paymentId: payment.id,
-      successUrl: `${origin}/api/payments/cardcom-success`,
+      successUrl: `${origin}/api/payments/tranzila-success`,
       failUrl: `${origin}/payments?failed=true`,
-      webhookUrl: `${origin}/api/payments/webhook`,
     })
 
-    const paymentLink = cardComResult.url
+    const paymentLink = tranzilaResult.url
 
-    console.log('CardCom result:', JSON.stringify(cardComResult))
+    console.log('Tranzila result:', JSON.stringify(tranzilaResult))
     console.log('Payment link to save:', paymentLink)
     console.log('Payment ID:', payment.id)
 
-    // Update payment record with link and lowProfileId
+    // Update payment record with link
     const { error: updateError } = await supabase
       .from('payments')
       .update({ 
         payment_link: paymentLink,
-        transaction_id: cardComResult.lowProfileId,
+        transaction_id: null,
       })
       .eq('id', payment.id)
       .eq('org_id', org_id)

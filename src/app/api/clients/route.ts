@@ -107,16 +107,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     console.log('Create client body:', body)
 
-    const name = body.name || `${body.first_name || ''} ${body.last_name || ''}`.trim()
-    if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
-    }
-
     const clientData = {
       ...body,
-      name,
+      first_name: body.first_name || body.name?.split(' ')[0] || '',
+      last_name: body.last_name || body.name?.split(' ').slice(1).join(' ') || '',
       org_id: orgUser.org_id,
     }
+    delete clientData.name
 
     console.log('3. Данные клиента для вставки:', clientData)
 

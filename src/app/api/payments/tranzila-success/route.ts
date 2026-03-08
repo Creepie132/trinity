@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
       .update({
         status: 'completed',
         transaction_id: transactionId,
-        paid_at: new Date().toISOString()
+        paid_at: new Date().toISOString(),
+        payment_url: null // инвалидируем ссылку
       })
       .eq('id', paymentId)
 
@@ -76,7 +77,8 @@ export async function POST(request: NextRequest) {
       .update({
         status: 'completed',
         transaction_id: transactionId,
-        paid_at: new Date().toISOString()
+        paid_at: new Date().toISOString(),
+        payment_url: null // инвалидируем ссылку
       })
       .eq('id', paymentId)
 

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Calendar, CalendarCheck } from 'lucide-react'
@@ -25,15 +26,18 @@ export default function TodayBlockClient({ visits }: TodayBlockClientProps) {
   const { language } = useLanguage()
   const router = useRouter()
   const { openModal } = useModalStore()
+  const [formattedDate, setFormattedDate] = useState('')
 
   // Format today's date based on user's language
-  const today = new Date()
-  const dateLocale = language === 'he' ? 'he-IL' : 'ru-RU'
-  const formattedDate = today.toLocaleDateString(dateLocale, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  })
+  useEffect(() => {
+    const today = new Date()
+    const dateLocale = language === 'he' ? 'he-IL' : 'ru-RU'
+    setFormattedDate(today.toLocaleDateString(dateLocale, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    }))
+  }, [language])
 
   const translations = {
     he: {

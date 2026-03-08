@@ -29,7 +29,7 @@ const defaultColors: Record<string, string> = {
 
 export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors }: CalendarViewProps) {
   const { t, language } = useLanguage()
-  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [currentMonth, setCurrentMonth] = useState<Date>(() => new Date())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
   // Фильтр: показывать только активные визиты (scheduled и in_progress)

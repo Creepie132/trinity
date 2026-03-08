@@ -10,6 +10,8 @@ interface ModalProps {
   title?: string
   subtitle?: string
   children: ReactNode
+  footer?: ReactNode
+  width?: string // e.g., '480px', '520px', '400px'
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
   accentColor?: string
   showCloseButton?: boolean
@@ -33,6 +35,8 @@ export function Modal({
   title,
   subtitle,
   children,
+  footer,
+  width,
   size = 'md',
   accentColor = '#4F46E5', // indigo-600
   showCloseButton = true,
@@ -80,9 +84,10 @@ export function Modal({
           'relative w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl',
           'animate-in fade-in-0 zoom-in-95 duration-200',
           'max-h-[90vh] flex flex-col',
-          sizeClasses[size],
+          !width && sizeClasses[size],
           className
         )}
+        style={width ? { maxWidth: width } : undefined}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
@@ -127,11 +132,19 @@ export function Modal({
         <div
           className={cn(
             'flex-1 overflow-y-auto p-5',
+            footer && 'pb-3',
             contentClassName
           )}
         >
           {children}
         </div>
+
+        {/* Footer */}
+        {footer && (
+          <div className="p-5 pt-2 border-t border-gray-100 dark:border-gray-800">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   )

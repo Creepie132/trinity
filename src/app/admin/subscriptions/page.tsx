@@ -19,7 +19,6 @@ import { PLANS, getPlan, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
 import { ResponsiveDataView } from '@/components/ui/ResponsiveDataView'
 import { EditOrganizationModal } from '@/components/modals/other/EditOrganizationModal'
-import ModalWrapper from '@/components/ModalWrapper'
 import Modal from '@/components/ui/Modal'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 
@@ -1229,80 +1228,85 @@ export default function AdminSubscriptionsPage() {
       )}
 
       {/* Invitation Modal */}
-      <ModalWrapper isOpen={inviteModalOpen} onClose={() => setInviteModalOpen(false)}>
-        <div className="w-full max-w-md p-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Send className="w-5 h-5" />
-              {t.sendInvitation}
-            </h2>
+      <Modal
+        open={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        title={t.sendInvitation}
+        width="440px"
+        footer={
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setInviteModalOpen(false)}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm hover:bg-gray-50 transition-colors"
+            >
+              {t.cancel}
+            </button>
+            <button
+              type="submit"
+              form="invite-form"
+              disabled={sendingInvite}
+              className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {sendingInvite ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t.sending}
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  {t.send}
+                </>
+              )}
+            </button>
           </div>
-          <form onSubmit={handleSendInvitation} className="space-y-4 mt-4">
-            <div>
-              <Label htmlFor="invite-email">{t.email} *</Label>
-              <Input
-                id="invite-email"
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="user@example.com"
-                required
-              />
-            </div>
+        }
+      >
+        <form id="invite-form" onSubmit={handleSendInvitation} className="space-y-4">
+          <div>
+            <Label htmlFor="invite-email">{t.email} *</Label>
+            <Input
+              id="invite-email"
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="user@example.com"
+              required
+            />
+          </div>
 
-            <div>
-              <Label htmlFor="invite-message">{t.message}</Label>
-              <Textarea
-                id="invite-message"
-                value={inviteMessage}
-                onChange={(e) => setInviteMessage(e.target.value)}
-                placeholder={t.messagePlaceholder}
-                rows={3}
-              />
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setInviteModalOpen(false)}
-              >
-                {t.cancel}
-              </Button>
-              <Button type="submit" disabled={sendingInvite}>
-                {sendingInvite ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {t.sending}
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-2" />
-                    {t.send}
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </ModalWrapper>
+          <div>
+            <Label htmlFor="invite-message">{t.message}</Label>
+            <Textarea
+              id="invite-message"
+              value={inviteMessage}
+              onChange={(e) => setInviteMessage(e.target.value)}
+              placeholder={t.messagePlaceholder}
+              rows={3}
+            />
+          </div>
+        </form>
+      </Modal>
 
       {/* Plans Management Modal */}
-      <ModalWrapper isOpen={plansModalOpen} onClose={() => setPlansModalOpen(false)}>
-        <div className="w-full max-w-6xl p-6 max-h-[90vh] overflow-y-auto">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Package className="w-6 h-6 text-amber-600" />
-              <h2 className="text-xl font-semibold">{t.plansTitle}</h2>
-            </div>
-            <Button onClick={addNewPlan} size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              {t.addPlan}
-            </Button>
-          </div>
+      <Modal
+        open={plansModalOpen}
+        onClose={() => setPlansModalOpen(false)}
+        title={t.plansTitle}
+        subtitle={language === 'he' ? 'ניהול תוכניות מנוי' : 'Управление тарифными планами'}
+        width="900px"
+        accentColor="#D97706"
+      >
+        <div className="flex items-center justify-end mb-4">
+          <Button onClick={addNewPlan} size="sm">
+            <Plus className="w-4 h-4 mr-2" />
+            {t.addPlan}
+          </Button>
+        </div>
 
-          {/* Plans Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        {/* Plans Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {plans.map((plan) => (
               <Card key={plan.id} className="border-2 relative">
                 {/* Color bar */}
@@ -1453,8 +1457,7 @@ export default function AdminSubscriptionsPage() {
               </Card>
             ))}
           </div>
-        </div>
-      </ModalWrapper>
+      </Modal>
 
       {/* Edit Organization Modal */}
       <EditOrganizationModal

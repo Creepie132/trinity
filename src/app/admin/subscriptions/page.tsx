@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
-import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Package, Plus, Trash2, Save, Settings, Mail, Send, Loader2, ChevronRight, X } from 'lucide-react'
+import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Package, Plus, Trash2, Save, Settings, Mail, Send, Loader2, ChevronRight, X, Pencil } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { PLANS, getPlan, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
@@ -1010,6 +1010,7 @@ export default function AdminSubscriptionsPage() {
 
               {/* Action buttons */}
               <div className="flex flex-col gap-2.5 mt-6">
+                {/* Продлить — primary */}
                 <button
                   onClick={() => {
                     handleExtend(selectedOrgSheet)
@@ -1019,6 +1020,20 @@ export default function AdminSubscriptionsPage() {
                 >
                   {language === 'he' ? 'הארכת מנוי' : 'Продлить подписку'}
                 </button>
+
+                {/* Редактировать — secondary */}
+                <button
+                  onClick={() => {
+                    handleEditOrg(selectedOrgSheet)
+                    setSelectedOrgSheet(null)
+                  }}
+                  className="w-full py-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-600 flex items-center justify-center gap-2"
+                >
+                  <Pencil className="w-4 h-4" />
+                  {language === 'he' ? 'עריכה' : 'Редактировать'}
+                </button>
+
+                {/* Деактивировать — destructive */}
                 <button
                   onClick={() => {
                     handleDeactivate(selectedOrgSheet.id)

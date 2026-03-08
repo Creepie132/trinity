@@ -81,8 +81,7 @@ export async function POST(request: NextRequest) {
       .update({
         status: 'completed',
         transaction_id: transactionId,
-        paid_at: new Date().toISOString(),
-        payment_url: null
+        paid_at: new Date().toISOString()
       })
       .eq('id', paymentId)
       .select()

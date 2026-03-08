@@ -7,6 +7,7 @@ const WEBHOOK_PATH = '/api/payments/webhook'
 const STRIPE_WEBHOOK_PATH = '/api/payments/stripe-webhook'
 const TRANZILA_WEBHOOK_PATH = '/api/payments/tranzila/webhook'
 const TRANZILA_SUCCESS_PATH = '/api/payments/tranzila-success'
+const TRANZILA_FAILED_PATH = '/api/payments/tranzila-failed'
 const CARDCOM_SUCCESS_PATH = '/api/payments/cardcom-success'
 const PAYMENT_SUCCESS_PATH = '/payment-success'
 const PAYMENT_FAILED_PATH = '/payment-failed'
@@ -34,6 +35,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith(TRANZILA_WEBHOOK_PATH + '/') ||
     pathname === TRANZILA_SUCCESS_PATH ||
     pathname.startsWith(TRANZILA_SUCCESS_PATH + '/') ||
+    pathname === TRANZILA_FAILED_PATH ||
     pathname === CARDCOM_SUCCESS_PATH ||
     pathname === PAYMENT_SUCCESS_PATH ||
     pathname === PAYMENT_FAILED_PATH ||

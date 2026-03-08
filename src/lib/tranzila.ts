@@ -1,3 +1,5 @@
+import crypto from 'crypto'
+
 export async function createTranzilaPaymentLink({
   amount,
   description,
@@ -11,8 +13,8 @@ export async function createTranzilaPaymentLink({
   successUrl: string
   failUrl: string
 }) {
-  const terminal = process.env.TRANZILLA_TERMINAL_ID
-  const password = process.env.TRANZILLA_TERMINAL_PASSWORD
+  const terminal = process.env.TRANZILA_TERMINAL_ID
+  const password = process.env.TRANZILA_TERMINAL_PASSWORD
 
   const params = new URLSearchParams({
     supplier: terminal!,
@@ -33,5 +35,26 @@ export async function createTranzilaPaymentLink({
   return {
     url: paymentLink,
     transactionId: null,
+  }
+}
+
+// Генерация заголовков для Tranzila Billing API
+export function generateTranzilaHeaders() {
+  const appKey = process.env.TRANZILA_BILLING_APP_KEY!
+  const secret = process.env.TRANZILA_BILLING_SECRET!
+  const requestTime = Date.now()
+  const nonce = crypto.randomBytes(40).toString('hex')
+
+  const accessToken = crypto
+    .createHmac('sha256', secret)
+    .update(appKey + requestTime + nonce)
+    .digest('hex')
+
+  return {
+    'X-tranzila-api-app-key': appKey,
+    'X-tranzila-api-request-time': requestTime.toString(),
+    'X-tranzila-api-nonce': nonce,
+    'X-tranzila-api-access-token': accessToken,
+    'Content-Type': 'application/json',
   }
 }

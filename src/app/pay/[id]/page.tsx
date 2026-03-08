@@ -88,6 +88,18 @@ export default function PaymentPage() {
           return
         }
 
+        if (data.status === 'completed') {
+          setLoading(false)
+          setError('תשלום זה כבר שולם. לא ניתן לשלם שנית.')
+          return
+        }
+
+        if (data.status === 'failed') {
+          setLoading(false)
+          setError('תשלום זה נכשל. אנא צור קשר עם בית העסק.')
+          return
+        }
+
         // If pending and has payment_link, redirect to Tranzilla
         if (data.status === 'pending' && data.payment_link) {
           // Short delay so user sees the loading state

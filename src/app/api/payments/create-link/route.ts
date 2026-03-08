@@ -92,6 +92,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Загружаем credentials организации
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('tranzila_terminal, tranzila_password')
+      .eq('id', org_id)
+      .single()
+
     // Generate Tranzila payment link
     const origin = request.nextUrl.origin
 
@@ -100,7 +107,9 @@ export async function POST(request: NextRequest) {
       description: description || 'תשלום',
       paymentId: payment.id,
       successUrl: `${origin}/api/payments/tranzila-success`,
-      failUrl: `${origin}/payments?failed=true`,
+      failUrl: `${origin}/api/payments/tranzila-failed`,
+      terminal: org?.tranzila_terminal || undefined,
+      password: org?.tranzila_password || undefined,
     })
 
     const paymentLink = tranzilaResult.url

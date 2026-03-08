@@ -6,19 +6,23 @@ export async function createTranzilaPaymentLink({
   paymentId,
   successUrl,
   failUrl,
+  terminal,
+  password,
 }: {
   amount: number
   description: string
   paymentId: string
   successUrl: string
   failUrl: string
+  terminal?: string
+  password?: string
 }) {
-  const terminal = process.env.TRANZILA_TERMINAL_ID
-  const password = process.env.TRANZILA_TERMINAL_PASSWORD
+  const terminalId = terminal || process.env.TRANZILA_TERMINAL_ID
+  const terminalPassword = password || process.env.TRANZILA_TERMINAL_PASSWORD
 
   const params = new URLSearchParams({
-    supplier: terminal!,
-    TranzilaPW: password!,
+    supplier: terminalId!,
+    TranzilaPW: terminalPassword!,
     sum: amount.toString(),
     currency: '1', // ILS
     description: description,
@@ -30,7 +34,7 @@ export async function createTranzilaPaymentLink({
     lang: 'il',
   })
 
-  const paymentLink = `https://direct.tranzila.com/${terminal}/iframenew.php?${params.toString()}`
+  const paymentLink = `https://direct.tranzila.com/${terminalId}/iframenew.php?${params.toString()}`
 
   return {
     url: paymentLink,

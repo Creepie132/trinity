@@ -39,23 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setHasError(true)
       }, 5000)
 
-      // Step 1: Check session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      // Check user authentication
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-      if (sessionError || !session) {
-        clearTimeout(timeoutId)
-        setUser(null)
-        setOrgId(null)
-        setRole(null)
-        setIsAdmin(false)
-        setIsLoading(false)
-        return
-      }
-
-      // Step 2: Get user
-      const { data: { user }, error: getUserError } = await supabase.auth.getUser()
-
-      if (getUserError || !user) {
+      if (userError || !user) {
         clearTimeout(timeoutId)
         setUser(null)
         setOrgId(null)

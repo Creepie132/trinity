@@ -113,10 +113,10 @@ export function useAddClient() {
         throw new Error('אנא המתן, הנתונים נטענים...')
       }
 
-      // Получаем токен для авторизации API запроса
-      const { data: { session } } = await supabase.auth.getSession()
+      // Проверяем авторизацию пользователя
+      const { data: { user } } = await supabase.auth.getUser()
       
-      if (!session) {
+      if (!user) {
         throw new Error('לא נמצא ארגון למשתמש הנוכחי. אנא פנה לתמיכה.')
       }
 

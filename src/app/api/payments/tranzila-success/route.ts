@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect('https://www.ambersol.co.il/payment-success')
+  return NextResponse.redirect('https://www.ambersol.co.il/payment-success', { status: 303 })
 }
 
 export async function POST(request: NextRequest) {
@@ -110,5 +110,5 @@ export async function POST(request: NextRequest) {
       .eq('id', paymentId)
   }
 
-  return NextResponse.redirect('https://www.ambersol.co.il/payment-success')
+  return NextResponse.redirect('https://www.ambersol.co.il/payment-success', { status: 303 })
 }

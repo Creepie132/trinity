@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -29,8 +29,28 @@ const defaultColors: Record<string, string> = {
 
 export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors }: CalendarViewProps) {
   const { t, language } = useLanguage()
-  const [currentMonth, setCurrentMonth] = useState<Date>(() => new Date())
+  // Initialize with null to avoid hydration mismatch, set actual date in useEffect
+  const [currentMonth, setCurrentMonth] = useState<Date | null>(null)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  
+  // Set current month after mount to avoid SSR/client date mismatch
+  useEffect(() => {
+    setCurrentMonth(new Date())
+  }, [])
+  
+  // Show loading state until mounted
+  if (!currentMonth) {
+    return (
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4 animate-pulse">
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 mx-auto mb-4" />
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: 35 }).map((_, i) => (
+            <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded" />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   // Фильтр: показывать только активные визиты (scheduled и in_progress)
   const activeVisits = visits.filter((v: any) => v.status === 'scheduled' || v.status === 'in_progress')

@@ -169,8 +169,13 @@ export default function BookingPage() {
   const [clientEmail, setClientEmail] = useState('')
   const [clientNotes, setClientNotes] = useState('')
   
-  // Calendar state
-  const [currentMonth, setCurrentMonth] = useState(new Date())
+  // Calendar state - initialized in useEffect to avoid hydration mismatch
+  const [currentMonth, setCurrentMonth] = useState<Date | null>(null)
+  
+  // Set current month after mount
+  useEffect(() => {
+    setCurrentMonth(new Date())
+  }, [])
   
   // Success state
   const [bookingSuccess, setBookingSuccess] = useState(false)
@@ -411,7 +416,8 @@ END:VCALENDAR`
     return `${year}-${month}-${dayStr}`
   }
 
-  if (loading) {
+  // Show loading while data or calendar not ready
+  if (loading || !currentMonth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-gray-50">
         <div className="text-xl text-gray-600">{t.loading}</div>

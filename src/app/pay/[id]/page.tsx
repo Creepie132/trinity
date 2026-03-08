@@ -16,12 +16,15 @@ export default function PaymentPage() {
   const [payment, setPayment] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Detect language from browser
-  const browserLang = typeof window !== 'undefined' 
-    ? (navigator.language.startsWith('he') ? 'he' : 'ru')
-    : 'he'
-  
-  const [language, setLanguage] = useState<'he' | 'ru'>(browserLang)
+  // Language state - initialized to 'he' for SSR consistency
+  const [language, setLanguage] = useState<'he' | 'ru'>('he')
+
+  // Detect language from browser after mount (avoids hydration mismatch)
+  useEffect(() => {
+    if (navigator.language.startsWith('ru')) {
+      setLanguage('ru')
+    }
+  }, [])
 
   // Translations
   const t = {

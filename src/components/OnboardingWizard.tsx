@@ -106,8 +106,14 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
 
-  // Detect locale (Russian by default, Hebrew if detected)
-  const locale = typeof window !== 'undefined' && window.navigator.language.includes('he') ? 'he' : 'ru'
+  // Locale state - 'ru' by default, detect Hebrew after mount (avoids hydration mismatch)
+  const [locale, setLocale] = useState<'he' | 'ru'>('ru')
+  
+  useEffect(() => {
+    if (window.navigator.language.includes('he')) {
+      setLocale('he')
+    }
+  }, [])
 
   // Step 1 data
   const [businessName, setBusinessName] = useState(organizationName)

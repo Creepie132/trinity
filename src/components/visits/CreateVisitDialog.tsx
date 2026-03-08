@@ -202,8 +202,10 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
 
       toast.success(t('common.success'))
       
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['visits'] })
+      // Invalidate queries to refresh data (all visits-related queries)
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === 'visits' 
+      })
       
       // Notify parent about visit creation
       if (onVisitCreated && selectedClient) {

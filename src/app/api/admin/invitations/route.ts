@@ -62,10 +62,14 @@ export async function POST(request: NextRequest) {
 
     if (existingAdmin) {
       warningMessage = 'Этот email принадлежит администратору. Приглашение отправлено но не изменит его права.'
-      console.log('Warning: Inviting existing admin:', email)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Warning: Inviting existing admin:', email)
+      }
     } else {
       warningMessage = 'Этот пользователь уже в системе. Приглашение отправлено но не изменит его текущий план.'
-      console.log('Warning: Inviting existing user:', email)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Warning: Inviting existing user:', email)
+      }
     }
   }
 
@@ -94,9 +98,11 @@ export async function POST(request: NextRequest) {
   }
 
   // Send email via Resend
-  console.log('=== RESEND EMAIL START ===')
-  console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY)
-  console.log('Sending to:', email)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('=== RESEND EMAIL START ===')
+    console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY)
+    console.log('Sending to:', email)
+  }
   
   const RESEND_API_KEY = process.env.RESEND_API_KEY
   let emailSent = false
@@ -137,14 +143,15 @@ export async function POST(request: NextRequest) {
         html: emailBody,
       }
 
-      console.log('Email payload:', {
-        from: emailPayload.from,
-        to: emailPayload.to,
-        subject: emailPayload.subject,
-        htmlLength: emailBody.length
-      })
-
-      console.log('Sending invite email to:', email.toLowerCase())
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Email payload:', {
+          from: emailPayload.from,
+          to: emailPayload.to,
+          subject: emailPayload.subject,
+          htmlLength: emailBody.length
+        })
+        console.log('Sending invite email to:', email.toLowerCase())
+      }
       
       const resendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -157,14 +164,18 @@ export async function POST(request: NextRequest) {
 
       const resendResult = await resendRes.json()
       
-      console.log('Email send result:', resendResult)
-      console.log('Email error:', resendResult.error)
-      console.log('Resend status:', resendRes.status)
-      console.log('Resend result:', JSON.stringify(resendResult))
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Email send result:', resendResult)
+        console.log('Email error:', resendResult.error)
+        console.log('Resend status:', resendRes.status)
+        console.log('Resend result:', JSON.stringify(resendResult))
+      }
 
       if (resendRes.ok) {
         emailSent = true
-        console.log('✅ Invitation email sent successfully to:', email)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Invitation email sent successfully to:', email)
+        }
       } else {
         console.error('❌ Resend API error:', resendResult)
       }
@@ -175,8 +186,10 @@ export async function POST(request: NextRequest) {
     console.warn('⚠️ RESEND_API_KEY not configured, skipping email')
   }
   
-  console.log('=== RESEND EMAIL END ===')
-  console.log('Email sent status:', emailSent)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('=== RESEND EMAIL END ===')
+    console.log('Email sent status:', emailSent)
+  }
 
   return NextResponse.json({
     success: true,

@@ -57,7 +57,9 @@ export async function POST(request: NextRequest) {
 
     if (newClient) {
       // MODE: New Client - Create client first
-      console.log('[CREATE ORG] 📝 Creating new client:', newClient.email)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[CREATE ORG] 📝 Creating new client:', newClient.email)
+      }
 
       if (!newClient.firstName || !newClient.lastName || !newClient.email) {
         return NextResponse.json(
@@ -229,7 +231,9 @@ export async function POST(request: NextRequest) {
 
     // CRITICAL FIX: Lookup user in auth.users by EMAIL (not by client.id!)
     // The client.id from public.clients is DIFFERENT from auth.users.id
-    console.log('[CREATE ORG] 🔍 Looking up user in auth.users by email:', normalizedEmail)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[CREATE ORG] 🔍 Looking up user in auth.users by email:', normalizedEmail)
+    }
     
     const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers()
 
@@ -254,11 +258,13 @@ export async function POST(request: NextRequest) {
 
     if (existingAuthUser) {
       // CRITICAL: User exists in auth.users → use AUTH USER ID (not client.id!)
-      console.log('[CREATE ORG] ✅ User found in auth.users:')
-      console.log('[CREATE ORG]    - Auth User ID:', existingAuthUser.id, '← USE THIS')
-      console.log('[CREATE ORG]    - Auth Email:', existingAuthUser.email)
-      console.log('[CREATE ORG]    - Client CRM ID:', client.id, '← IGNORE THIS')
-      console.log('[CREATE ORG]    - ⚠️  IMPORTANT: Using Auth ID, NOT Client ID!')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[CREATE ORG] ✅ User found in auth.users:')
+        console.log('[CREATE ORG]    - Auth User ID:', existingAuthUser.id, '← USE THIS')
+        console.log('[CREATE ORG]    - Auth Email:', existingAuthUser.email)
+        console.log('[CREATE ORG]    - Client CRM ID:', client.id, '← IGNORE THIS')
+        console.log('[CREATE ORG]    - ⚠️  IMPORTANT: Using Auth ID, NOT Client ID!')
+      }
       
       // CRITICAL: Insert into org_users with AUTH USER ID (existingAuthUser.id)
       // NEVER use client.id here - it's a different UUID!
@@ -335,7 +341,9 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       } else {
-        console.log('[CREATE ORG] ✅ Invitation created for email:', normalizedEmail)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[CREATE ORG] ✅ Invitation created for email:', normalizedEmail)
+        }
         assignmentResult.invitation = true
 
         // Send welcome email (don't block on failure)

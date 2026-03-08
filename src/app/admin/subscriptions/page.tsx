@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
-import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Package, Plus, Trash2, Save, Settings, Mail, Send, Loader2 } from 'lucide-react'
+import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Package, Plus, Trash2, Save, Settings, Mail, Send, Loader2, ChevronRight } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { PLANS, getPlan, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
@@ -867,95 +867,58 @@ export default function AdminSubscriptionsPage() {
         </Card>
       )}
 
-      {/* Organizations Table */}
+      {/* Organizations List - Compact Rows */}
       <Card>
         <CardHeader>
           <CardTitle>{t.organizations}</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveDataView
-            columns={[
-              {
-                key: 'display_name',
-                label: t.name,
-                compact: true,
-              },
-              {
-                key: 'owner_name',
-                label: t.owner,
-                compact: true,
-              },
-              {
-                key: 'phone',
-                label: t.phone,
-              },
-              {
-                key: 'plan',
-                label: t.plan,
-                render: (val) => getPlanBadge(val || 'demo'),
-              },
-              {
-                key: 'subscription_status',
-                label: t.payment,
-                compact: true,
-                render: (val) => {
-                  const isPaid = val === 'active' || val === 'trial' || val === 'manual'
-                  return (
-                    <div className="flex items-center justify-center">
-                      <div
-                        className={`w-4 h-4 rounded-full ${
-                          isPaid
-                            ? 'bg-green-500 shadow-lg shadow-green-500/50'
-                            : 'bg-red-500 shadow-lg shadow-red-500/50'
-                        }`}
-                        title={isPaid ? (language === 'he' ? 'שולם' : 'Оплачено') : (language === 'he' ? 'לא שולם' : 'Не оплачено')}
-                      />
+          <div className="flex flex-col gap-2">
+            {organizations.map((org) => {
+              const isPaid = org.subscription_status === 'active' || org.subscription_status === 'trial' || org.subscription_status === 'manual'
+              const planInfo = (() => {
+                const dbPlan = dbPlans.find((p) => p.key === org.plan)
+                if (dbPlan) return language === 'he' ? dbPlan.name_he : dbPlan.name_ru
+                const plan = getPlan((org.plan || 'demo') as PlanKey)
+                return plan ? (language === 'he' ? plan.name_he : plan.name_ru) : org.plan
+              })()
+
+              return (
+                <button
+                  key={org.id}
+                  onClick={() => handleExtend(org)}
+                  className="w-full flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-600 hover:shadow-sm transition-all duration-150 text-left"
+                >
+                  {/* Avatar */}
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                    {org.name?.charAt(0).toUpperCase()}
+                  </div>
+
+                  {/* Main info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">
+                        {org.display_name || org.name}
+                      </span>
+                      {getStatusBadge(org.subscription_status)}
                     </div>
-                  )
-                },
-              },
-              {
-                key: 'subscription_status',
-                label: t.status,
-                compact: true,
-                render: (val) => getStatusBadge(val),
-              },
-              {
-                key: 'subscription_expires_at',
-                label: t.expires,
-                render: (val) =>
-                  val
-                    ? new Date(val).toLocaleDateString(
-                        language === 'he' ? 'he-IL' : 'ru-RU'
-                      )
-                    : '-',
-              },
-            ]}
-            data={organizations}
-            titleKey="display_name"
-            subtitleKey="owner_name"
-            badgeKey="subscription_status"
-            badgeColorMap={{
-              trial: 'yellow',
-              active: 'green',
-              manual: 'blue',
-              expired: 'red',
-              none: 'gray',
-            }}
-            actions={(org) => [
-              {
-                label: t.extend,
-                onClick: () => handleExtend(org),
-              },
-              {
-                label: t.deactivate,
-                onClick: () => handleDeactivate(org.id),
-                variant: 'destructive',
-              },
-            ]}
-            onTitleClick={handleEditOrg}
-            locale={language}
-          />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                      {org.owner_name} · {planInfo}
+                    </p>
+                  </div>
+
+                  {/* Payment indicator + arrow */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span
+                      className={`w-2 h-2 rounded-full ${isPaid ? 'bg-emerald-500' : 'bg-red-400'}`}
+                      title={isPaid ? (language === 'he' ? 'שולם' : 'Оплачено') : (language === 'he' ? 'לא שולם' : 'Не оплачено')}
+                    />
+                    <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600" />
+                  </div>
+                </button>
+              )
+            })}
+          </div>
         </CardContent>
       </Card>
 

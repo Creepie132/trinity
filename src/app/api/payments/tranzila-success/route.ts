@@ -70,6 +70,8 @@ export async function POST(request: NextRequest) {
   }
 
   console.log('Tranzila POST callback:', { paymentId, responseCode, transactionId })
+  console.log('responseCode raw:', JSON.stringify(responseCode))
+  console.log('paymentId raw:', JSON.stringify(paymentId))
 
   if (responseCode === '000' && paymentId) {
     await supabase

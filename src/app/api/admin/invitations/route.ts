@@ -25,9 +25,11 @@ export async function POST(request: NextRequest) {
 
   if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
-  console.log('=== INVITATION CREATE ===')
-  console.log('Email:', email)
-  console.log('Invited by:', user.email)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('=== INVITATION CREATE ===')
+    console.log('Email:', email)
+    console.log('Invited by:', user.email)
+  }
 
   // Check for existing pending invitation
   const { data: existing } = await supabaseAdmin
@@ -86,8 +88,10 @@ export async function POST(request: NextRequest) {
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.ambersol.co.il'
   const inviteUrl = `${APP_URL}/invite/${invitation.token}`
 
-  console.log('Invitation created:', invitation.id)
-  console.log('Invite URL:', inviteUrl)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Invitation created:', invitation.id)
+    console.log('Invite URL:', inviteUrl)
+  }
 
   // Send email via Resend
   console.log('=== RESEND EMAIL START ===')

@@ -121,10 +121,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[CREATE ORG] ⚠️  Client details:')
-    console.log('[CREATE ORG]    - Client CRM ID:', client.id)
-    console.log('[CREATE ORG]    - Client Email:', client.email)
-    console.log('[CREATE ORG]    - ⚠️  DO NOT USE client.id for permissions!')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[CREATE ORG] ⚠️  Client details:')
+      console.log('[CREATE ORG]    - Client CRM ID:', client.id)
+      console.log('[CREATE ORG]    - Client Email:', client.email)
+      console.log('[CREATE ORG]    - ⚠️  DO NOT USE client.id for permissions!')
+    }
 
     // CRITICAL: Normalize email to lowercase for consistency
     const normalizedEmail = client.email.toLowerCase()

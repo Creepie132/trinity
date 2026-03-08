@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 // Используем service role для cron (admin права)
@@ -13,7 +13,13 @@ const supabaseAdmin = createClient(
   }
 )
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Auth check for cron endpoint
+  const authHeader = request.headers.get('authorization')
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     console.log('[CRON] Birthday tasks - starting')
 

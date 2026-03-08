@@ -22,9 +22,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token required' }, { status: 400 })
     }
 
-    console.log('=== INVITATION ACTIVATION ===')
-    console.log('User:', user.email)
-    console.log('Token:', token)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('=== INVITATION ACTIVATION ===')
+      console.log('User:', user.email)
+      console.log('Token:', token)
+    }
 
     // Find invitation
     const { data: invitation, error: inviteError } = await supabaseAdmin

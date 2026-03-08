@@ -16,10 +16,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ hasAccess: false })
     }
 
-    console.log('=== ACCESS CHECK START ===')
-    console.log('User ID:', user.id)
-    console.log('Email:', user.email)
-    console.log('Timestamp:', new Date().toISOString())
+    if (process.env.NODE_ENV === 'development') {
+      console.log('=== ACCESS CHECK START ===')
+      console.log('User ID:', user.id)
+      console.log('Email:', user.email)
+      console.log('Timestamp:', new Date().toISOString())
+    }
 
     // Check if admin
     const { data: admin } = await supabaseAdmin

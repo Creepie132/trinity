@@ -100,7 +100,9 @@ export async function POST(request: NextRequest) {
   console.log('Tranzila POST callback:', { paymentId, responseCode, transactionId })
 
   if (responseCode === '000' && paymentId) {
-    await supabase
+    console.log('Updating payment:', paymentId)
+    
+    const { data, error } = await supabase
       .from('payments')
       .update({
         status: 'paid',
@@ -108,6 +110,11 @@ export async function POST(request: NextRequest) {
         paid_at: new Date().toISOString()
       })
       .eq('id', paymentId)
+      .select()
+    
+    console.log('Update result:', { data, error })
+  } else {
+    console.log('Skipping update — responseCode:', responseCode, 'paymentId:', paymentId)
   }
 
   return NextResponse.redirect('https://www.ambersol.co.il/payment-success', { status: 303 })

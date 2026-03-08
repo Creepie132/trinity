@@ -804,22 +804,6 @@ export default function AdminSubscriptionsPage() {
           <Shield className="w-8 h-8 text-amber-600" />
           <h1 className="text-3xl font-bold">{t.title}</h1>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={() => setInviteModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Mail className="w-4 h-4 mr-2" />
-            {t.inviteOrg}
-          </Button>
-          <Button 
-            onClick={() => setPlansModalOpen(true)}
-            className="bg-red-600 hover:bg-red-700 text-white"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            {t.managePlans}
-          </Button>
-        </div>
       </div>
 
       {/* Access Requests */}
@@ -1467,6 +1451,75 @@ export default function AdminSubscriptionsPage() {
         organization={orgToEdit}
         onSaved={loadData}
       />
+
+      {/* FAB Button */}
+      <SubscriptionsFab
+        onInvite={() => setInviteModalOpen(true)}
+        onManagePlans={() => setPlansModalOpen(true)}
+        language={language}
+      />
+    </div>
+  )
+}
+
+// FAB Component
+function SubscriptionsFab({ 
+  onInvite, 
+  onManagePlans,
+  language 
+}: { 
+  onInvite: () => void
+  onManagePlans: () => void
+  language: 'he' | 'ru'
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+      {/* Menu items — appear bottom to top */}
+      <div className={`flex flex-col items-end gap-2 transition-all duration-200 ${open ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+        {/* Manage Plans */}
+        <div className="flex items-center gap-2">
+          <span className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium px-3 py-1.5 rounded-full shadow-md border border-gray-100 dark:border-gray-700 whitespace-nowrap">
+            {language === 'he' ? 'ניהול תוכניות' : 'Управление планами'}
+          </span>
+          <button
+            onClick={() => { onManagePlans(); setOpen(false) }}
+            className="w-12 h-12 rounded-full bg-orange-500 text-white shadow-lg flex items-center justify-center hover:bg-orange-600 transition-colors"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Invite Organization */}
+        <div className="flex items-center gap-2">
+          <span className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium px-3 py-1.5 rounded-full shadow-md border border-gray-100 dark:border-gray-700 whitespace-nowrap">
+            {language === 'he' ? 'הזמן ארגון' : 'Пригласить организацию'}
+          </span>
+          <button
+            onClick={() => { onInvite(); setOpen(false) }}
+            className="w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center hover:bg-indigo-700 transition-colors"
+          >
+            <Mail className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main FAB button */}
+      <button
+        onClick={() => setOpen(!open)}
+        className={`w-14 h-14 rounded-full text-white shadow-xl flex items-center justify-center transition-all duration-300 ${open ? 'bg-gray-700 rotate-45' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+      >
+        {open ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+      </button>
+
+      {/* Backdrop when open */}
+      {open && (
+        <div
+          className="fixed inset-0 z-[-1]"
+          onClick={() => setOpen(false)}
+        />
+      )}
     </div>
   )
 }

@@ -24,7 +24,7 @@ export function useAdminProfile() {
 
       const { data, error } = await supabase
         .from('org_users')
-        .select('id, user_id, org_id, role, created_at')
+        .select('id, user_id, org_id, role')
         .eq('user_id', user.id)
         .eq('org_id', orgId)
         .single()

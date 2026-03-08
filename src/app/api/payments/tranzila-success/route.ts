@@ -21,55 +21,26 @@ export async function GET(request: NextRequest) {
   })
 
   if (responseCode === '000' && paymentId) {
-    const { data: payment } = await supabase
+    await supabase
       .from('payments')
-      .select('id, amount, created_at, client_id')
+      .update({
+        status: 'completed',
+        transaction_id: transactionId,
+        paid_at: new Date().toISOString()
+      })
       .eq('id', paymentId)
-      .single()
 
-    console.log('Payment found:', payment)
-
-    if (payment) {
+    return NextResponse.redirect('https://www.ambersol.co.il/payment-success', { status: 303 })
+  } else {
+    if (paymentId) {
       await supabase
         .from('payments')
-        .update({
-          status: 'completed',
-          paid_at: new Date().toISOString(),
-          transaction_id: transactionId || paymentId,
-        })
-        .eq('id', payment.id)
-
-      console.log('Payment updated to completed')
-
-      const { data: client } = await supabase
-        .from('clients')
-        .select('first_name, last_name, email')
-        .eq('id', payment.client_id)
-        .single()
-
-      if (client?.email) {
-        const clientName = `${client.first_name || ''} ${client.last_name || ''}`.trim()
-        const paymentDate = new Date(payment.created_at).toLocaleDateString('he-IL')
-
-        await resend.emails.send({
-          from: 'Trinity CRM <notifications@ambersol.co.il>',
-          to: client.email,
-          subject: `קבלה | Квитанция ₪${payment.amount}`,
-          html: receiptEmail(
-            clientName,
-            payment.amount,
-            paymentDate,
-            'שירות',
-            transactionId || paymentId
-          ),
-        })
-
-        console.log('Receipt email sent to:', client.email)
-      }
+        .update({ status: 'failed' })
+        .eq('id', paymentId)
     }
-  }
 
-  return NextResponse.redirect('https://www.ambersol.co.il/payment-success', { status: 303 })
+    return NextResponse.redirect('https://www.ambersol.co.il/payment-failed', { status: 303 })
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -100,9 +71,7 @@ export async function POST(request: NextRequest) {
   console.log('Tranzila POST callback:', { paymentId, responseCode, transactionId })
 
   if (responseCode === '000' && paymentId) {
-    console.log('Updating payment:', paymentId)
-    
-    const { data, error } = await supabase
+    await supabase
       .from('payments')
       .update({
         status: 'completed',
@@ -110,12 +79,16 @@ export async function POST(request: NextRequest) {
         paid_at: new Date().toISOString()
       })
       .eq('id', paymentId)
-      .select()
-    
-    console.log('Update result:', { data, error })
-  } else {
-    console.log('Skipping update — responseCode:', responseCode, 'paymentId:', paymentId)
-  }
 
-  return NextResponse.redirect('https://www.ambersol.co.il/payment-success', { status: 303 })
+    return NextResponse.redirect('https://www.ambersol.co.il/payment-success', { status: 303 })
+  } else {
+    if (paymentId) {
+      await supabase
+        .from('payments')
+        .update({ status: 'failed' })
+        .eq('id', paymentId)
+    }
+
+    return NextResponse.redirect('https://www.ambersol.co.il/payment-failed', { status: 303 })
+  }
 }

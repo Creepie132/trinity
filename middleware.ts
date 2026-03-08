@@ -6,7 +6,10 @@ const CALLBACK_PATH = '/callback'
 const WEBHOOK_PATH = '/api/payments/webhook'
 const STRIPE_WEBHOOK_PATH = '/api/payments/stripe-webhook'
 const TRANZILA_WEBHOOK_PATH = '/api/payments/tranzila/webhook'
-const TRANZILA_SUCCESS_PATH = '/api/payments/tranzila/success'
+const TRANZILA_SUCCESS_PATH = '/api/payments/tranzila-success'
+const CARDCOM_SUCCESS_PATH = '/api/payments/cardcom-success'
+const PAYMENT_SUCCESS_PATH = '/payment-success'
+const PAYMENT_FAILED_PATH = '/payment-failed'
 const HEALTH_PATH = '/api/health'
 const ACCESS_API_PATH = '/api/access'
 
@@ -31,6 +34,9 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith(TRANZILA_WEBHOOK_PATH + '/') ||
     pathname === TRANZILA_SUCCESS_PATH ||
     pathname.startsWith(TRANZILA_SUCCESS_PATH + '/') ||
+    pathname === CARDCOM_SUCCESS_PATH ||
+    pathname === PAYMENT_SUCCESS_PATH ||
+    pathname === PAYMENT_FAILED_PATH ||
     pathname === HEALTH_PATH ||
     pathname.startsWith(ACCESS_API_PATH + '/') ||
     pathname.startsWith('/book/') ||

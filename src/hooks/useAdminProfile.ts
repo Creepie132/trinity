@@ -40,7 +40,7 @@ export function useAdminProfile() {
         user_id: data.user_id,
         email: user.email || '',
         full_name: (user.user_metadata?.full_name as string) || (user.user_metadata?.name as string) || null,
-        created_at: data.created_at,
+        created_at: new Date().toISOString(),
         role: data.role,
       } as AdminProfile
     },

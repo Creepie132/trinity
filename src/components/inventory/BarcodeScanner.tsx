@@ -72,6 +72,18 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     if (!open || manualEntry) return
 
     const initScanner = async () => {
+      // Check camera permission status first
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName })
+        if (permissionStatus.state === 'denied') {
+          setError('לא ניתן לגשת למצלמה. אנא אפשר גישה בהגדרות הדפדפן.')
+          setManualEntry(true)
+          return
+        }
+      } catch {
+        // permissions.query not supported, continue anyway
+      }
+
       try {
         // First, request camera permission explicitly
         const stream = await navigator.mediaDevices.getUserMedia({ 

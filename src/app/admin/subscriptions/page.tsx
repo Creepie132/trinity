@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
-import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Package, Plus, Trash2, Save, Settings, Mail, Send, Loader2, ChevronRight } from 'lucide-react'
+import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Package, Plus, Trash2, Save, Settings, Mail, Send, Loader2, ChevronRight, X } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { PLANS, getPlan, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
@@ -102,6 +102,9 @@ export default function AdminSubscriptionsPage() {
   // Edit organization modal
   const [editOrgModalOpen, setEditOrgModalOpen] = useState(false)
   const [orgToEdit, setOrgToEdit] = useState<Organization | null>(null)
+
+  // Bottom sheet for org details
+  const [selectedOrgSheet, setSelectedOrgSheet] = useState<Organization | null>(null)
 
   const translations = {
     he: {
@@ -886,7 +889,7 @@ export default function AdminSubscriptionsPage() {
               return (
                 <button
                   key={org.id}
-                  onClick={() => handleExtend(org)}
+                  onClick={() => setSelectedOrgSheet(org)}
                   className="w-full flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-600 hover:shadow-sm transition-all duration-150 text-left"
                 >
                   {/* Avatar */}
@@ -921,6 +924,115 @@ export default function AdminSubscriptionsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Organization Details Bottom Sheet */}
+      {selectedOrgSheet && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity duration-300"
+            onClick={() => setSelectedOrgSheet(null)}
+          />
+
+          {/* Sheet */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto animate-slide-up">
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
+            </div>
+
+            <div className="px-5 pb-8 pt-2">
+              {/* Header: avatar + name + status */}
+              <div className="flex items-start gap-4 mb-6 pb-5 border-b border-gray-100 dark:border-gray-800">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
+                  {selectedOrgSheet.name?.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight">
+                    {selectedOrgSheet.display_name || selectedOrgSheet.name}
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    {selectedOrgSheet.owner_email}
+                  </p>
+                  <div className="mt-2">
+                    {getStatusBadge(selectedOrgSheet.subscription_status)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedOrgSheet(null)}
+                  className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Info rows */}
+              <div className="space-y-0 divide-y divide-gray-50 dark:divide-gray-800">
+                {[
+                  { label: language === 'he' ? 'בעלים' : 'Владелец', value: selectedOrgSheet.owner_name },
+                  { label: language === 'he' ? 'טלפון' : 'Телефон', value: selectedOrgSheet.phone || '—' },
+                  { 
+                    label: language === 'he' ? 'תוכנית' : 'План', 
+                    value: (() => {
+                      const dbPlan = dbPlans.find((p) => p.key === selectedOrgSheet.plan)
+                      if (dbPlan) return language === 'he' ? dbPlan.name_he : dbPlan.name_ru
+                      const plan = getPlan((selectedOrgSheet.plan || 'demo') as PlanKey)
+                      return plan ? (language === 'he' ? plan.name_he : plan.name_ru) : selectedOrgSheet.plan
+                    })()
+                  },
+                  { 
+                    label: language === 'he' ? 'תשלום' : 'Оплата', 
+                    value: (() => {
+                      const isPaid = selectedOrgSheet.subscription_status === 'active' || 
+                                     selectedOrgSheet.subscription_status === 'trial' || 
+                                     selectedOrgSheet.subscription_status === 'manual'
+                      return (
+                        <span className={`inline-flex items-center gap-1.5 ${isPaid ? 'text-emerald-600' : 'text-red-500'}`}>
+                          <span className={`w-2 h-2 rounded-full ${isPaid ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                          {isPaid ? (language === 'he' ? 'שולם' : 'Оплачено') : (language === 'he' ? 'לא שולם' : 'Не оплачено')}
+                        </span>
+                      )
+                    })()
+                  },
+                  { 
+                    label: language === 'he' ? 'תוקף' : 'Истекает', 
+                    value: selectedOrgSheet.subscription_expires_at 
+                      ? new Date(selectedOrgSheet.subscription_expires_at).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU')
+                      : '—'
+                  },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between py-3">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-col gap-2.5 mt-6">
+                <button
+                  onClick={() => {
+                    handleExtend(selectedOrgSheet)
+                    setSelectedOrgSheet(null)
+                  }}
+                  className="w-full py-3 rounded-xl bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors shadow-sm shadow-indigo-200"
+                >
+                  {language === 'he' ? 'הארכת מנוי' : 'Продлить подписку'}
+                </button>
+                <button
+                  onClick={() => {
+                    handleDeactivate(selectedOrgSheet.id)
+                    setSelectedOrgSheet(null)
+                  }}
+                  className="w-full py-3 rounded-xl bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 font-medium text-sm hover:bg-red-100 dark:hover:bg-red-900 transition-colors border border-red-100 dark:border-red-800"
+                >
+                  {language === 'he' ? 'השבתה' : 'Деактивировать'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Extend Dialog */}
       <ModalWrapper isOpen={extendDialogOpen} onClose={() => setExtendDialogOpen(false)}>

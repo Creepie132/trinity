@@ -24,6 +24,14 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0)
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
 
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setManualEntry(false)
+      setError('')
+    }
+  }, [open])
+
   // USB Scanner Detection
   useEffect(() => {
     if (!open) return

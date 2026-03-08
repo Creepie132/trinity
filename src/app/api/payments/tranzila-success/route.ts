@@ -74,15 +74,20 @@ export async function POST(request: NextRequest) {
   console.log('paymentId raw:', JSON.stringify(paymentId))
 
   if (responseCode === '000' && paymentId) {
-    await supabase
+    console.log('Updating payment:', paymentId)
+    
+    const { data, error } = await supabase
       .from('payments')
       .update({
         status: 'completed',
         transaction_id: transactionId,
         paid_at: new Date().toISOString(),
-        payment_url: null // инвалидируем ссылку
+        payment_url: null
       })
       .eq('id', paymentId)
+      .select()
+    
+    console.log('Update result:', JSON.stringify({ data, error }))
 
     return NextResponse.redirect('https://www.ambersol.co.il/payment-success', { status: 303 })
   } else {

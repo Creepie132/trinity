@@ -22,6 +22,15 @@ export default function BirthdayPopup({ clients, onClose }: BirthdayPopupProps) 
   const { t, language } = useLanguage()
   const { orgId } = useAuth()
   const [showConfetti, setShowConfetti] = useState(true)
+  const [particles, setParticles] = useState<Array<{left: string, delay: string, duration: string}>>([])
+
+  useEffect(() => {
+    setParticles(Array.from({ length: 40 }, () => ({
+      left: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 0.5}s`,
+      duration: `${2.5 + Math.random()}s`,
+    })))
+  }, [])
   const [dontShowToday, setDontShowToday] = useState(false)
   const [templates, setTemplates] = useState({
     greeting_he: 'שלום {name}! 🎂🎉 צוות {org} מאחל/ת לך יום הולדת שמח! מחכים לראות אותך בקרוב 💛',
@@ -125,16 +134,16 @@ export default function BirthdayPopup({ clients, onClose }: BirthdayPopupProps) 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       {/* Confetti Animation */}
-      {showConfetti && (
+      {showConfetti && particles.length > 0 && (
         <div className="confetti-container">
-          {Array.from({ length: 40 }).map((_, i) => (
+          {particles.map((particle, i) => (
             <div
               key={i}
               className="confetti"
               style={{
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 0.5}s`,
-                animationDuration: `${2.5 + Math.random()}s`,
+                left: particle.left,
+                animationDelay: particle.delay,
+                animationDuration: particle.duration,
                 backgroundColor: ['#fbbf24', '#ec4899', '#60a5fa', '#34d399', '#a78bfa'][i % 5],
               }}
             />

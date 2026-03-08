@@ -71,3 +71,44 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.redirect('https://www.ambersol.co.il/payment-success')
 }
+
+export async function POST(request: NextRequest) {
+  let paymentId: string | null = null
+  let responseCode: string | null = null
+  let transactionId: string | null = null
+
+  try {
+    const contentType = request.headers.get('content-type') || ''
+
+    if (contentType.includes('application/json')) {
+      const body = await request.json()
+      paymentId = body.cField1
+      responseCode = body.Response
+      transactionId = body.index
+    } else {
+      // form-urlencoded
+      const body = await request.text()
+      const params = new URLSearchParams(body)
+      paymentId = params.get('cField1')
+      responseCode = params.get('Response')
+      transactionId = params.get('index')
+    }
+  } catch (e) {
+    console.error('Failed to parse Tranzila POST body:', e)
+  }
+
+  console.log('Tranzila POST callback:', { paymentId, responseCode, transactionId })
+
+  if (responseCode === '000' && paymentId) {
+    await supabase
+      .from('payments')
+      .update({
+        status: 'paid',
+        transaction_id: transactionId,
+        paid_at: new Date().toISOString()
+      })
+      .eq('id', paymentId)
+  }
+
+  return NextResponse.redirect('https://www.ambersol.co.il/payment-success')
+}

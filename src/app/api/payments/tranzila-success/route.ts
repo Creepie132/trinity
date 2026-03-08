@@ -48,6 +48,9 @@ export async function POST(request: NextRequest) {
   let paymentId: string | null = null
   let responseCode: string | null = null
   let transactionId: string | null = null
+  let cardToken: string | null = null
+  let cardLast4: string | null = null
+  let cardExpiry: string | null = null
 
   try {
     const contentType = request.headers.get('content-type') || ''
@@ -57,6 +60,9 @@ export async function POST(request: NextRequest) {
       paymentId = body.cField1
       responseCode = body.Response
       transactionId = body.index
+      cardToken = body.TranzilaTK || null
+      cardLast4 = body.last4digits || null
+      cardExpiry = body.expdate || null
     } else {
       // form-urlencoded
       const body = await request.text()
@@ -64,6 +70,9 @@ export async function POST(request: NextRequest) {
       paymentId = params.get('cField1')
       responseCode = params.get('Response')
       transactionId = params.get('index')
+      cardToken = params.get('TranzilaTK')
+      cardLast4 = params.get('last4digits')
+      cardExpiry = params.get('expdate')
     }
   } catch (e) {
     console.error('Failed to parse Tranzila POST body:', e)
@@ -87,6 +96,29 @@ export async function POST(request: NextRequest) {
       .select()
     
     console.log('Update result:', JSON.stringify({ data, error }))
+
+    // Проверяем есть ли токен карты в ответе
+    if (cardToken) {
+      // Получаем org_id из платежа
+      const { data: payment } = await supabase
+        .from('payments')
+        .select('org_id')
+        .eq('id', paymentId)
+        .single()
+
+      if (payment?.org_id) {
+        await supabase
+          .from('organizations')
+          .update({
+            tranzila_card_token: cardToken,
+            tranzila_card_last4: cardLast4,
+            tranzila_card_expiry: cardExpiry
+          })
+          .eq('id', payment.org_id)
+
+        console.log('Card token saved for org:', payment.org_id)
+      }
+    }
 
     return NextResponse.redirect('https://www.ambersol.co.il/payment-success', { status: 303 })
   } else {

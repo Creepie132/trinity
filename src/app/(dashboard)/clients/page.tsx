@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Eye, Edit, MessageSquare, CreditCard, Upload, Users } from 'lucide-react'
+import { Plus, Search, Eye, Edit, MessageSquare, CreditCard, Upload, Users, ShoppingCart } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { useQueryClient } from '@tanstack/react-query'
 import { ClientSummary } from '@/types/database'
@@ -19,6 +19,7 @@ import { useDemoMode } from '@/hooks/useDemoMode'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { ExportButton } from '@/components/ExportButton'
 import { ClientCard } from '@/components/clients/ClientCard'
+import { DraftSaleIndicator } from '@/components/clients/DraftSaleIndicator'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 export default function ClientsPage() {
@@ -187,7 +188,12 @@ export default function ClientsPage() {
                     ₪{Number(client.total_paid || 0).toFixed(2)}
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
+                      <DraftSaleIndicator 
+                        clientId={client.id} 
+                        client={client} 
+                        locale={language === 'he' ? 'he' : 'ru'} 
+                      />
                       <Button
                         size="sm"
                         variant="ghost"

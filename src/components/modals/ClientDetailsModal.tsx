@@ -2,7 +2,7 @@
 
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
-import { Pencil, Phone, MessageCircle, MessageSquare, Trash2 } from 'lucide-react'
+import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useState } from 'react'
 import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
@@ -43,6 +43,7 @@ export function ClientDetailsModal() {
       notes: 'הערות',
       createdAt: 'תאריך יצירה',
       edit: 'ערוך',
+      sale: 'עסקה',
       delete: 'מחק',
       status: 'סטטוס',
       active: 'פעיל',
@@ -57,6 +58,7 @@ export function ClientDetailsModal() {
       notes: 'Заметки',
       createdAt: 'Дата создания',
       edit: 'Редактировать',
+      sale: 'Продажа',
       delete: 'Удалить',
       status: 'Статус',
       active: 'Активен',
@@ -71,6 +73,7 @@ export function ClientDetailsModal() {
       notes: 'Notes',
       createdAt: 'Date Created',
       edit: 'Edit',
+      sale: 'Sale',
       delete: 'Delete',
       status: 'Status',
       active: 'Active',
@@ -85,6 +88,11 @@ export function ClientDetailsModal() {
   const handleEditClick = () => {
     closeModal('client-details')
     openModal('client-edit', { client })
+  }
+
+  const handleSaleClick = () => {
+    closeModal('client-details')
+    openModal('client-sale', { client, locale })
   }
 
   const handleCall = () => {
@@ -122,22 +130,36 @@ export function ClientDetailsModal() {
         width="480px"
         footer={
           <div className="space-y-2">
-            {/* Ряд 1: Редактировать + Удалить */}
-            <div className="flex gap-2">
+            {/* Ряд 1: Редактировать + Продажа + Удалить */}
+            <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={handleEditClick}
-                className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl font-medium hover:opacity-90 transition text-sm whitespace-nowrap"
+                className="flex flex-col items-center justify-center gap-1 p-3 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 rounded-xl transition"
               >
-                <Pencil size={16} />
-                {text.edit}
+                <Pencil className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-[10px] font-medium text-indigo-900 dark:text-indigo-100">
+                  {text.edit}
+                </span>
+              </button>
+
+              <button
+                onClick={handleSaleClick}
+                className="flex flex-col items-center justify-center gap-1 p-3 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-xl transition"
+              >
+                <ShoppingCart className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span className="text-[10px] font-medium text-amber-900 dark:text-amber-100">
+                  {text.sale}
+                </span>
               </button>
 
               <button
                 onClick={handleDeleteClick}
-                className="flex-1 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl font-medium transition text-sm whitespace-nowrap"
+                className="flex flex-col items-center justify-center gap-1 p-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl transition"
               >
-                <Trash2 size={16} />
-                {text.delete}
+                <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <span className="text-[10px] font-medium text-red-900 dark:text-red-100">
+                  {text.delete}
+                </span>
               </button>
             </div>
 

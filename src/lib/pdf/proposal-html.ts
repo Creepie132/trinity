@@ -99,14 +99,17 @@ export function buildProposalHTML(d: ProposalData, logoDataUri: string): string 
   </style>
 </head>
 <body>
-  <div style="background:#fff;width:794px;margin:0 auto;display:flex;flex-direction:column;font-family:'Heebo',Arial,sans-serif">
+  <div style="background:#fff;width:794px;min-height:1123px;margin:0 auto;display:flex;flex-direction:column;font-family:'Heebo',Arial,sans-serif">
 
     <!-- HEADER -->
     <div style="background:linear-gradient(135deg,#0f1e3d 0%,#1B2A4A 60%,#243560 100%);padding:28px 36px 22px;display:flex;justify-content:space-between;align-items:center">
       <div>
         ${logoDataUri
-          ? `<img src="${logoDataUri}" style="height:56px;object-fit:contain" alt="Logo">`
-          : `<div style="color:#D4AA50;font-size:18px;font-weight:800">${d.seller.name}</div>`
+          ? `<img src="${logoDataUri}" style="height:90px;width:auto;object-fit:contain;mix-blend-mode:screen;filter:brightness(1.1)" alt="Logo">`
+          : `<div style="color:#ffffff;font-size:20px;font-weight:800;letter-spacing:-0.5px;line-height:1.2">
+              ${d.seller.name}<br>
+              <span style="color:rgba(255,255,255,0.5);font-size:12px;font-weight:400">${d.seller.website ?? ''}</span>
+            </div>`
         }
       </div>
       <div style="text-align:left;color:#fff">
@@ -161,9 +164,12 @@ export function buildProposalHTML(d: ProposalData, logoDataUri: string): string 
       </table>
     </div>
 
+    <!-- BOTTOM SECTION - pinned to bottom -->
+    <div style="margin-top:auto">
+    
     <!-- TOTALS -->
     <div style="padding:0 36px 20px">
-      <div style="width:250px;background:#f8f9fb;border:1px solid #e2e6ed;border-radius:8px;overflow:hidden">
+      <div style="width:250px;background:#f8f9fb;border:1px solid #e2e6ed;border-radius:8px;overflow:hidden;margin-right:auto">
         <div style="display:flex;justify-content:space-between;padding:8px 12px;font-size:12px;color:#555;border-bottom:1px solid #e2e6ed"><label>סכום ביניים</label><span>${fmt(subtotal)}</span></div>
         ${discountRowHtml}
         ${vatRowHtml}
@@ -186,7 +192,7 @@ export function buildProposalHTML(d: ProposalData, logoDataUri: string): string 
     </div>
 
     <!-- FOOTER -->
-    <div style="background:#1B2A4A;padding:12px 36px;display:flex;justify-content:space-between;align-items:center;margin-top:auto">
+    <div style="background:#1B2A4A;padding:12px 36px;display:flex;justify-content:space-between;align-items:center">
       <div style="font-size:10px;color:rgba(255,255,255,.5);line-height:1.8">
         <div style="color:#D4AA50;font-weight:700;font-size:11px">${d.seller.name}</div>
         ${footerContacts}
@@ -196,6 +202,8 @@ export function buildProposalHTML(d: ProposalData, logoDataUri: string): string 
         הצעת מחיר #${d.docNumber}
       </div>
     </div>
+
+    </div><!-- /margin-top:auto -->
 
   </div>
 </body>

@@ -5,6 +5,7 @@ import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
 import { useProducts } from '@/hooks/useProducts'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrganization } from '@/hooks/useOrganization'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { toast } from 'sonner'
 import { getClientName } from '@/lib/client-utils'
@@ -41,6 +42,7 @@ const paymentMethods = [
 export function SaleModal() {
   const { isModalOpen, closeModal, getModalData } = useModalStore()
   const { orgId } = useAuth()
+  const { data: org } = useOrganization()
   const supabase = createSupabaseBrowserClient()
   const { data: products } = useProducts()
 
@@ -296,11 +298,12 @@ export function SaleModal() {
     issueDate: new Date().toLocaleDateString('he-IL').replace(/\./g, '/'),
     validDays: 30,
     seller: {
-      name: 'Amber Solutions',
-      email: 'ambersolutions.systems@gmail.com',
-      phone: '+972-54-485-8586',
-      website: 'ambersol.co.il',
-      logo: '/logo-amber.png',
+      name: org?.name || 'Amber Solutions',
+      email: org?.email || '',
+      phone: org?.phone || '',
+      website: (org as any)?.website || '',
+      address: (org as any)?.address || '',
+      logo: (org as any)?.logo_url || '/logo-amber.png',
     },
     buyer: {
       name: clientName,
@@ -355,7 +358,7 @@ export function SaleModal() {
     
     const msg = [
       `*הצעת מחיר #${buildProposalData().docNumber}*`,
-      `מאת: *Amber Solutions*`,
+      `מאת: *${org?.name || 'Amber Solutions'}*`,
       `ללקוח: ${clientName}`,
       `תאריך: ${new Date().toLocaleDateString('he-IL')}`,
       ``,
@@ -403,7 +406,7 @@ export function SaleModal() {
       await sendProposalEmail({
         toEmail: client.email,
         toName: clientName,
-        orgName: 'Amber Solutions',
+        orgName: org?.name || 'Amber Solutions',
         proposalNumber: buildProposalData().docNumber,
         totalAmount: `₪${total.toFixed(2)}`,
         itemsList,

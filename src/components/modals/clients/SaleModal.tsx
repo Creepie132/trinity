@@ -14,7 +14,8 @@ import {
   CreditCard, Banknote, Building2, ChevronLeft, Check
 } from 'lucide-react'
 import type { Product } from '@/types/inventory'
-import jsPDF from 'jspdf'
+import { useGeneratePDF } from '@/lib/pdf/use-generate-pdf'
+import type { ProposalData } from '@/lib/pdf/proposal-types'
 
 interface CartItem {
   product: Product
@@ -52,6 +53,8 @@ export function SaleModal() {
   const [paymentMethod, setPaymentMethod] = useState('credit')
   const [isProcessing, setIsProcessing] = useState(false)
   const [showProposalPanel, setShowProposalPanel] = useState(false)
+  
+  const { generate: generateProposalPDF, loading: pdfLoading } = useGeneratePDF()
 
   const client = data?.client
   const locale = data?.locale || 'he'
@@ -202,109 +205,38 @@ export function SaleModal() {
     }
   }
 
-  // Generate PDF proposal
+  // Generate PDF proposal using html2canvas
   const generatePDF = async () => {
-    const doc = new jsPDF()
-    const pageWidth = doc.internal.pageSize.getWidth()
-    
-    // Load and add logo
-    try {
-      const logoImg = new Image()
-      logoImg.crossOrigin = 'anonymous'
-      await new Promise((resolve, reject) => {
-        logoImg.onload = resolve
-        logoImg.onerror = reject
-        logoImg.src = '/logo-amber.png'
-      })
-      // Add logo (width 50, auto height to maintain aspect ratio)
-      const logoWidth = 50
-      const logoHeight = (logoImg.height / logoImg.width) * logoWidth
-      doc.addImage(logoImg, 'PNG', 20, 10, logoWidth, logoHeight)
-    } catch (e) {
-      console.log('Logo not loaded, continuing without it')
+    const proposalData: ProposalData = {
+      docNumber: `${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+      issueDate: new Date().toLocaleDateString('he-IL').replace(/\./g, '/'),
+      validDays: 30,
+      seller: {
+        name: 'Amber Solutions',
+        email: 'ambersolutions.systems@gmail.com',
+        phone: '+972-54-485-8586',
+        website: 'ambersol.co.il',
+        logo: '/logo-amber.png',
+      },
+      buyer: {
+        name: clientName,
+        phone: client?.phone || '',
+        email: client?.email || '',
+        address: client?.address || '',
+      },
+      items: cart.map(item => ({
+        name: item.product.name,
+        volume: item.product.unit || '',
+        desc: item.product.description || '',
+        qty: item.quantity,
+        price: item.price,
+      })),
+      discount: discount.value > 0 ? discount : undefined,
+      vat: 0,
+      notes: 'הצעת מחיר זו בתוקף למשך 30 יום ממועד הוצאתה.\nתנאי תשלום: 100% בעת מסירה.',
     }
-    
-    // Header
-    doc.setFontSize(18)
-    doc.setTextColor(30, 41, 59) // Dark blue
-    doc.text('הצעת מחיר / Коммерческое предложение', pageWidth - 20, 25, { align: 'right' })
-    
-    // Date & proposal number
-    doc.setFontSize(10)
-    doc.setTextColor(100, 116, 139) // Gray
-    const proposalNum = `#${Date.now().toString().slice(-6)}`
-    doc.text(`${new Date().toLocaleDateString('he-IL')} | ${proposalNum}`, pageWidth - 20, 35, { align: 'right' })
-    
-    // Divider line
-    doc.setDrawColor(226, 232, 240)
-    doc.line(20, 45, pageWidth - 20, 45)
-    
-    // Client info
-    doc.setFontSize(11)
-    doc.setTextColor(30, 41, 59)
-    doc.text(`${locale === 'he' ? 'לקוח' : 'Клиент'}: ${clientName}`, 20, 55)
-    if (client?.phone) doc.text(`${locale === 'he' ? 'טלפון' : 'Телефон'}: ${client.phone}`, 20, 62)
-    if (client?.email) doc.text(`Email: ${client.email}`, 20, 69)
-    
-    // Table header
-    let y = 85
-    doc.setFillColor(248, 250, 252) // Light gray bg
-    doc.rect(20, y - 6, pageWidth - 40, 12, 'F')
-    doc.setFontSize(10)
-    doc.setTextColor(71, 85, 105)
-    doc.text('מוצר / Товар', 25, y)
-    doc.text('כמות', 105, y)
-    doc.text('מחיר', 130, y)
-    doc.text('סה"כ', 160, y)
-    
-    // Items
-    y += 15
-    doc.setTextColor(30, 41, 59)
-    cart.forEach(item => {
-      doc.text(item.product.name.substring(0, 30), 25, y)
-      doc.text(item.quantity.toString(), 108, y)
-      doc.text(`₪${item.price.toFixed(2)}`, 130, y)
-      doc.text(`₪${(item.price * item.quantity).toFixed(2)}`, 160, y)
-      y += 10
-    })
-    
-    // Totals section
-    y += 10
-    doc.setDrawColor(226, 232, 240)
-    doc.line(100, y, pageWidth - 20, y)
-    y += 12
-    
-    // Subtotal
-    doc.setFontSize(10)
-    doc.setTextColor(100, 116, 139)
-    doc.text(`${locale === 'he' ? 'סכום ביניים' : 'Подитог'}:`, 110, y)
-    doc.setTextColor(30, 41, 59)
-    doc.text(`₪${subtotal.toFixed(2)}`, 165, y)
-    
-    if (discountAmount > 0) {
-      y += 10
-      doc.setTextColor(220, 38, 38) // Red for discount
-      doc.text(`${locale === 'he' ? 'הנחה' : 'Скидка'}:`, 110, y)
-      doc.text(`-₪${discountAmount.toFixed(2)}`, 165, y)
-    }
-    
-    // Total
-    y += 15
-    doc.setFontSize(14)
-    doc.setTextColor(5, 150, 105) // Green
-    doc.setFont(undefined as any, 'bold')
-    doc.text(`${locale === 'he' ? 'סה"כ לתשלום' : 'Итого'}:`, 110, y)
-    doc.text(`₪${total.toFixed(2)}`, 160, y)
-    
-    // Footer
-    y = 270
-    doc.setFontSize(8)
-    doc.setTextColor(148, 163, 184)
-    doc.setFont(undefined as any, 'normal')
-    doc.text('הצעת מחיר זו בתוקף ל-7 ימים | Предложение действительно 7 дней', pageWidth / 2, y, { align: 'center' })
-    doc.text('Amber Solutions | Trinity CRM', pageWidth / 2, y + 8, { align: 'center' })
-    
-    doc.save(`proposal_${client?.id}_${Date.now()}.pdf`)
+
+    await generateProposalPDF(proposalData)
     toast.success(locale === 'he' ? 'PDF הורד בהצלחה' : 'PDF скачан')
   }
 

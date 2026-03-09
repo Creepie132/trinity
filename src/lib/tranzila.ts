@@ -62,3 +62,151 @@ export function generateTranzilaHeaders() {
     'Content-Type': 'application/json',
   }
 }
+
+// ============================================
+// РЕКУРРЕНТНЫЕ ПЛАТЕЖИ — списание по токену карты
+// ============================================
+
+interface ChargeByTokenParams {
+  token: string
+  amount: number
+  description: string
+  terminal?: string
+  password?: string
+  expdate?: string // MMYY format
+}
+
+interface ChargeResult {
+  transactionId: string
+  last4: string
+  approvalNumber: string
+  response: string
+}
+
+/**
+ * Списание по сохранённому токену карты (TranzilaTK)
+ * Используется для рекуррентных платежей подписок
+ */
+export async function chargeByToken({
+  token,
+  amount,
+  description,
+  terminal = process.env.TRANZILA_TERMINAL!,
+  password = process.env.TRANZILA_PASSWORD!,
+  expdate,
+}: ChargeByTokenParams): Promise<ChargeResult> {
+  const apiUrl = process.env.TRANZILA_API_URL || 'https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi'
+
+  const params = new URLSearchParams({
+    supplier: terminal,
+    TranzilaPW: password,
+    TranzilaTK: token,
+    sum: amount.toFixed(2),
+    currency: '1', // ILS
+    pdesc: description,
+    response_return_format: 'json',
+  })
+
+  // Добавляем expdate если есть (требуется для некоторых транзакций)
+  if (expdate) {
+    params.append('expdate', expdate)
+  }
+
+  console.log('[Tranzila] Charging token:', {
+    terminal,
+    amount,
+    description,
+    tokenLast4: token.slice(-4),
+  })
+
+  const res = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: params.toString(),
+  })
+
+  const text = await res.text()
+  console.log('[Tranzila] Raw response:', text)
+
+  let data: any
+  try {
+    data = JSON.parse(text)
+  } catch {
+    // Tranzila иногда возвращает не JSON
+    throw new Error(`Tranzila invalid response: ${text}`)
+  }
+
+  // Tranzila возвращает Response=000 при успехе
+  if (data.Response !== '000') {
+    const errorMessages: Record<string, string> = {
+      '001': 'Blocked card',
+      '002': 'Stolen card',
+      '003': 'Contact credit company',
+      '004': 'Refusal',
+      '005': 'Fake card',
+      '006': 'CVV error',
+      '033': 'Expired card',
+      '036': 'Expired card',
+      '039': 'Incorrect card number',
+      '157': 'Card not permitted for this transaction',
+    }
+    const errorMsg = errorMessages[data.Response] || data.error || 'Unknown error'
+    throw new Error(`Tranzila error ${data.Response}: ${errorMsg}`)
+  }
+
+  return {
+    transactionId: data.ConfirmationCode || data.index,
+    last4: data.cardnum || '',
+    approvalNumber: data.ConfirmationCode || '',
+    response: data.Response,
+  }
+}
+
+/**
+ * Проверка валидности токена (без списания)
+ * sum=1 с tranmode=V делает проверку без реального списания
+ */
+export async function validateToken({
+  token,
+  terminal = process.env.TRANZILA_TERMINAL!,
+  password = process.env.TRANZILA_PASSWORD!,
+  expdate,
+}: {
+  token: string
+  terminal?: string
+  password?: string
+  expdate?: string
+}): Promise<boolean> {
+  const apiUrl = process.env.TRANZILA_API_URL || 'https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi'
+
+  const params = new URLSearchParams({
+    supplier: terminal,
+    TranzilaPW: password,
+    TranzilaTK: token,
+    sum: '1',
+    currency: '1',
+    tranmode: 'V', // Verification only
+    response_return_format: 'json',
+  })
+
+  if (expdate) {
+    params.append('expdate', expdate)
+  }
+
+  try {
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    })
+
+    const data = await res.json()
+    return data.Response === '000'
+  } catch {
+    return false
+  }
+}

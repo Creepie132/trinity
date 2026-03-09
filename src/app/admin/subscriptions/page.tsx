@@ -984,9 +984,9 @@ export default function AdminSubscriptionsPage() {
                   handleExtend(selectedOrgSheet)
                   setSelectedOrgSheet(null)
                 }}
-                className={`py-2.5 px-3 rounded-xl bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors whitespace-nowrap ${isDesktop ? 'flex-[1.4]' : 'w-full'}`}
+                className={`py-2.5 px-2 rounded-xl bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors whitespace-nowrap min-w-0 ${isDesktop ? 'flex-[1.5]' : 'w-full'}`}
               >
-                {language === 'he' ? 'הארכת מנוי' : 'Продлить подписку'}
+                {language === 'he' ? 'הארכה' : 'Продлить'}
               </button>
 
               {/* Редактировать — secondary */}
@@ -995,10 +995,10 @@ export default function AdminSubscriptionsPage() {
                   handleEditOrg(selectedOrgSheet)
                   setSelectedOrgSheet(null)
                 }}
-                className={`py-2.5 px-3 rounded-xl border border-gray-200 text-gray-600 font-medium text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0 ${isDesktop ? 'flex-1' : 'w-full'}`}
+                className={`py-2.5 px-2 rounded-xl border border-gray-200 text-gray-600 font-medium text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0 ${isDesktop ? 'flex-1' : 'w-full'}`}
               >
                 <Pencil className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>{language === 'he' ? 'עריכה' : 'Редактировать'}</span>
+                <span>{language === 'he' ? 'ערוך' : 'Ред.'}</span>
               </button>
 
               {/* Деактивировать — destructive */}
@@ -1007,9 +1007,9 @@ export default function AdminSubscriptionsPage() {
                   handleDeactivate(selectedOrgSheet.id)
                   setSelectedOrgSheet(null)
                 }}
-                className={`py-2.5 px-3 rounded-xl bg-red-50 text-red-500 font-medium text-sm hover:bg-red-100 transition-colors border border-red-100 whitespace-nowrap min-w-0 ${isDesktop ? 'flex-1' : 'w-full'}`}
+                className={`py-2.5 px-2 rounded-xl bg-red-50 text-red-500 font-medium text-sm hover:bg-red-100 transition-colors border border-red-100 whitespace-nowrap min-w-0 ${isDesktop ? 'flex-1' : 'w-full'}`}
               >
-                {language === 'he' ? 'השבתה' : 'Деактивировать'}
+                {language === 'he' ? 'השבת' : 'Деактив.'}
               </button>
             </div>
           </>

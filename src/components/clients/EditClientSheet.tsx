@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import Modal from '@/components/ui/Modal'
 import { Save, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -37,6 +37,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
       address: 'כתובת',
       notes: 'הערות',
       save: 'שמור',
+      cancel: 'ביטול',
       photo: 'שנה תמונה'
     },
     ru: {
@@ -48,6 +49,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
       address: 'Адрес',
       notes: 'Заметки',
       save: 'Сохранить',
+      cancel: 'Отмена',
       photo: 'Изменить фото'
     },
   }
@@ -60,12 +62,6 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
       setAvatarFile(file)
       setAvatarPreview(URL.createObjectURL(file))
     }
-  }
-
-  function handleFocus(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    setTimeout(() => {
-      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }, 300)
   }
 
   async function handleSave() {
@@ -95,10 +91,11 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
         body: JSON.stringify({ ...form, avatar_url }),
       })
 
-      console.log('=== SAVE CLIENT ===')
-      console.log('Status:', res.status)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('=== SAVE CLIENT ===')
+        console.log('Status:', res.status)
+      }
       const data = await res.json()
-      console.log('Response:', JSON.stringify(data))
 
       if (res.ok) {
         toast.success(locale === 'he' ? 'נשמר בהצלחה' : 'Сохранено')
@@ -124,7 +121,30 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
   const inputClass = "w-full px-4 py-3 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
 
   return (
-    <TrinityBottomDrawer isOpen={isOpen} onClose={onClose} title={l.title}>
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title={l.title}
+      width="480px"
+      footer={
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
+          >
+            {l.cancel}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !form.first_name.trim()}
+            className="flex-[1.5] py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition whitespace-nowrap"
+          >
+            <Save size={16} />
+            {saving ? '...' : l.save}
+          </button>
+        </div>
+      }
+    >
       {/* Аватар с загрузкой */}
       <div className="flex flex-col items-center mb-6">
         <label className="relative cursor-pointer group">
@@ -151,7 +171,6 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
             type="text"
             value={form.first_name}
             onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-            onFocus={handleFocus}
             className={inputClass}
             required
           />
@@ -163,7 +182,6 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
             type="text"
             value={form.last_name}
             onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-            onFocus={handleFocus}
             className={inputClass}
           />
         </div>
@@ -174,7 +192,6 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
             type="tel"
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            onFocus={handleFocus}
             className={inputClass}
             dir="ltr"
           />
@@ -186,7 +203,6 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            onFocus={handleFocus}
             className={inputClass}
             dir="ltr"
           />
@@ -198,7 +214,6 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
             type="text"
             value={form.address}
             onChange={(e) => setForm({ ...form, address: e.target.value })}
-            onFocus={handleFocus}
             className={inputClass}
           />
         </div>
@@ -208,22 +223,11 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
           <textarea
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            onFocus={handleFocus}
             className={`${inputClass} min-h-[80px] resize-none`}
             rows={3}
           />
         </div>
       </div>
-
-      {/* Кнопка сохранить */}
-      <button
-        onClick={handleSave}
-        disabled={saving || !form.first_name.trim()}
-        className="w-full mt-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition"
-      >
-        <Save size={16} />
-        {saving ? '...' : l.save}
-      </button>
-    </TrinityBottomDrawer>
+    </Modal>
   )
 }

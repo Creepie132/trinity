@@ -1,9 +1,10 @@
 'use client'
 
 import { useModalStore } from '@/store/useModalStore'
-import { Pencil, X, Phone, MessageCircle, MessageSquare, Trash2 } from 'lucide-react'
+import Modal from '@/components/ui/Modal'
+import { Pencil, Phone, MessageCircle, MessageSquare, Trash2 } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 
 export function ClientDetailsModal() {
@@ -12,17 +13,6 @@ export function ClientDetailsModal() {
   
   const isOpen = isModalOpen('client-details')
   const data = getModalData('client-details')
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [isOpen])
   
   if (!data?.client || !isOpen) return null
 
@@ -125,115 +115,18 @@ export function ClientDetailsModal() {
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-        onClick={() => closeModal('client-details')}
-      >
-        <div
-          className="w-full max-w-[480px] max-h-[85vh] bg-white dark:bg-gray-900 rounded-[32px] shadow-2xl flex flex-col overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* ШАПКА - Fixed Header */}
-          <div className="flex-shrink-0 px-6 pt-3 pb-6 border-b border-gray-200 dark:border-gray-800">
-            {/* Close Button */}
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => closeModal('client-details')}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Avatar + Name + Status */}
-            <div className="flex items-center gap-4">
-              {/* Avatar 56px */}
-              <div
-                className={`${avatarColor} w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}
-              >
-                {initials}
-              </div>
-
-              {/* Name + Status */}
-              <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold truncate">{clientName}</h2>
-                <div className="inline-flex items-center gap-2 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium mt-1">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                  {text.active}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ТЕЛО - Scrollable Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-4">
-            {/* Секция "Информация" */}
-            <div className="mb-4">
-              <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 tracking-wider uppercase">
-                {text.information}
-              </h3>
-              
-              <div className="space-y-2">
-                {/* Email */}
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Email</span>
-                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                    {client.email || '—'}
-                  </span>
-                </div>
-
-                {/* Визитов */}
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{text.visits}</span>
-                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                    {visitsCount}
-                  </span>
-                </div>
-
-                {/* Всего оплачено */}
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{text.totalPaid}</span>
-                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                    {totalPaid} ₪
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Секция "Заметки" */}
-            {(client.notes || true) && (
-              <div className="mb-4">
-                <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 tracking-wider uppercase">
-                  {text.notes}
-                </h3>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                  <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
-                    {client.notes || '—'}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Дата создания */}
-            {client.created_at && (
-              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{text.createdAt}</span>
-                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                  {new Date(client.created_at).toLocaleDateString(
-                    locale === 'he' ? 'he-IL' : locale === 'ru' ? 'ru-RU' : 'en-US'
-                  )}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* ФУТЕР - Fixed Footer */}
-          <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+      <Modal
+        open={isOpen}
+        onClose={() => closeModal('client-details')}
+        showCloseButton={true}
+        width="480px"
+        footer={
+          <div className="space-y-2">
             {/* Ряд 1: Редактировать + Удалить */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex gap-2">
               <button
                 onClick={handleEditClick}
-                className="flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-2xl font-medium hover:opacity-90 transition text-sm"
+                className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground py-2.5 rounded-xl font-medium hover:opacity-90 transition text-sm whitespace-nowrap"
               >
                 <Pencil size={16} />
                 {text.edit}
@@ -241,7 +134,7 @@ export function ClientDetailsModal() {
 
               <button
                 onClick={handleDeleteClick}
-                className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white py-3 rounded-2xl font-medium transition text-sm"
+                className="flex-1 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl font-medium transition text-sm whitespace-nowrap"
               >
                 <Trash2 size={16} />
                 {text.delete}
@@ -283,8 +176,86 @@ export function ClientDetailsModal() {
               </div>
             )}
           </div>
+        }
+      >
+        {/* ШАПКА с аватаром */}
+        <div className="flex items-center gap-4 mb-6">
+          {/* Avatar 56px */}
+          <div
+            className={`${avatarColor} w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}
+          >
+            {initials}
+          </div>
+
+          {/* Name + Status */}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-bold truncate">{clientName}</h2>
+            <div className="inline-flex items-center gap-2 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium mt-1">
+              <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+              {text.active}
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* Секция "Информация" */}
+        <div className="mb-4">
+          <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 tracking-wider uppercase">
+            {text.information}
+          </h3>
+          
+          <div className="space-y-2">
+            {/* Email */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Email</span>
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                {client.email || '—'}
+              </span>
+            </div>
+
+            {/* Визитов */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+              <span className="text-sm text-gray-600 dark:text-gray-400">{text.visits}</span>
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                {visitsCount}
+              </span>
+            </div>
+
+            {/* Всего оплачено */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+              <span className="text-sm text-gray-600 dark:text-gray-400">{text.totalPaid}</span>
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                {totalPaid} ₪
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Секция "Заметки" */}
+        {(client.notes || true) && (
+          <div className="mb-4">
+            <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 tracking-wider uppercase">
+              {text.notes}
+            </h3>
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+              <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                {client.notes || '—'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Дата создания */}
+        {client.created_at && (
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+            <span className="text-sm text-gray-600 dark:text-gray-400">{text.createdAt}</span>
+            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+              {new Date(client.created_at).toLocaleDateString(
+                locale === 'he' ? 'he-IL' : locale === 'ru' ? 'ru-RU' : 'en-US'
+              )}
+            </span>
+          </div>
+        )}
+      </Modal>
 
       {/* GDPR Delete Dialog */}
       <GdprDeleteDialog

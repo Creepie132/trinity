@@ -161,10 +161,12 @@ export async function middleware(req: NextRequest) {
         }
 
         // Check if user has active access
+        // 'active' and 'manual' always have access (manual = manually managed, no expiry check)
+        // 'trial' requires valid (non-expired) expiry date
         const hasAccess = org && (
           org.subscription_status === 'active' ||
-          (org.subscription_status === 'trial' && org.subscription_expires_at && new Date(org.subscription_expires_at) > now) ||
-          (org.subscription_status === 'manual' && org.subscription_expires_at && new Date(org.subscription_expires_at) > now)
+          org.subscription_status === 'manual' ||
+          (org.subscription_status === 'trial' && org.subscription_expires_at && new Date(org.subscription_expires_at) > now)
         )
 
         if (!hasAccess && !isExpired && pathname !== '/access-pending') {

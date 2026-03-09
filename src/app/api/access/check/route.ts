@@ -56,10 +56,12 @@ export async function GET(request: NextRequest) {
     const now = new Date()
     const expires = org?.subscription_expires_at ? new Date(org.subscription_expires_at) : null
 
+    // 'active' and 'manual' always have access (manual = manually managed, no expiry check)
+    // 'trial' requires valid (non-expired) expiry date
     const hasAccess =
       org?.subscription_status === 'active' ||
-      (org?.subscription_status === 'trial' && expires && expires > now) ||
-      (org?.subscription_status === 'manual' && expires && expires > now)
+      org?.subscription_status === 'manual' ||
+      (org?.subscription_status === 'trial' && expires && expires > now)
 
     console.log('Subscription status:', org?.subscription_status)
     console.log('Expires at:', org?.subscription_expires_at)

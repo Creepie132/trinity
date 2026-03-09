@@ -168,10 +168,88 @@ export async function POST(request: NextRequest) {
         trialExpiresAt: expiresAt.toISOString(),
       })
     } else {
-      console.log('No organization found for user, invitation accepted but no trial activated')
+      // Пользователь без организации — создаём организацию и добавляем его
+      console.log('Creating organization for user:', user.email)
+
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + 14) // 14 days trial
+
+      // Создаём организацию
+      const { data: newOrg, error: orgError } = await supabaseAdmin
+        .from('organizations')
+        .insert({
+          name: user.user_metadata?.business_name || user.user_metadata?.full_name || 'My Business',
+          subscription_status: 'trial',
+          subscription_expires_at: expiresAt.toISOString(),
+          trial_started_at: new Date().toISOString(),
+          is_active: true,
+        })
+        .select()
+        .single()
+
+      if (orgError || !newOrg) {
+        console.error('Error creating organization:', orgError)
+        return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 })
+      }
+
+      // Добавляем пользователя в org_users как owner
+      const { error: ouError } = await supabaseAdmin
+        .from('org_users')
+        .insert({
+          org_id: newOrg.id,
+          user_id: user.id,
+          email: user.email,
+          role: 'owner',
+        })
+
+      if (ouError) {
+        console.error('Error adding user to org:', ouError)
+      }
+
+      // Mark invitation as accepted
+      await supabaseAdmin
+        .from('invitations')
+        .update({
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+        })
+        .eq('id', invitation.id)
+
+      console.log('Organization created, user added, invitation accepted:', newOrg.id)
+
+      // Send Telegram notification
+      const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
+      const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID
+
+      if (TELEGRAM_BOT_TOKEN && ADMIN_CHAT_ID) {
+        try {
+          await fetch(
+            `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: ADMIN_CHAT_ID,
+                text: [
+                  '✅ Новый пользователь по приглашению!',
+                  '',
+                  `👤 ${user.user_metadata?.full_name || user.email}`,
+                  `📧 ${user.email}`,
+                  `🏢 Org: ${newOrg.id}`,
+                  `📅 Trial до ${expiresAt.toLocaleDateString('ru-RU', { timeZone: 'Asia/Jerusalem' })}`,
+                ].join('\n'),
+              }),
+            }
+          )
+        } catch (telegramError) {
+          console.error('Telegram notification error:', telegramError)
+        }
+      }
+
       return NextResponse.json({
         success: true,
-        message: 'Invitation accepted',
+        message: 'Organization created and trial activated',
+        trialExpiresAt: expiresAt.toISOString(),
       })
     }
   } catch (error: any) {

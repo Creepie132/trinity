@@ -49,13 +49,12 @@ export async function GET(request: NextRequest) {
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 14) // 14 days trial
 
-    // Update access request
+    // Update access request status
     await supabaseAdmin
       .from('access_requests')
       .update({
         status: 'approved',
         reviewed_at: new Date().toISOString(),
-        access_expires_at: expiresAt.toISOString(),
       })
       .eq('id', accessRequest.id)
 
@@ -78,22 +77,53 @@ export async function GET(request: NextRequest) {
           subscription_status: 'trial',
           subscription_expires_at: expiresAt.toISOString(),
           trial_started_at: new Date().toISOString(),
+          is_active: true,
         })
         .eq('id', orgUser.org_id)
 
       console.log('Trial activated for org:', orgUser.org_id)
     } else {
-      console.error('NO ORG FOUND for user:', userId)
-      console.error('User should have completed onboarding first!')
+      // Создаём организацию для пользователя
+      console.log('Creating organization for user:', userId)
       
-      return new Response(
-        `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">
-          <h2 style="color:red">❌ Error</h2>
-          <p>Organization not found for user. User should complete onboarding first.</p>
-          <p>Email: ${accessRequest.email}</p>
-        </body></html>`,
-        { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
-      )
+      const { data: newOrg, error: orgError } = await supabaseAdmin
+        .from('organizations')
+        .insert({
+          name: accessRequest.business_name || accessRequest.full_name || 'My Business',
+          subscription_status: 'trial',
+          subscription_expires_at: expiresAt.toISOString(),
+          trial_started_at: new Date().toISOString(),
+          is_active: true,
+        })
+        .select()
+        .single()
+
+      if (orgError || !newOrg) {
+        console.error('Error creating organization:', orgError)
+        return new Response(
+          `<html><head><meta charset="utf-8"></head><body style="font-family:sans-serif;text-align:center;padding:50px">
+            <h2 style="color:red">❌ Error</h2>
+            <p>Failed to create organization: ${orgError?.message}</p>
+          </body></html>`,
+          { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+        )
+      }
+
+      // Добавляем пользователя в org_users как owner
+      const { error: ouError } = await supabaseAdmin
+        .from('org_users')
+        .insert({
+          org_id: newOrg.id,
+          user_id: userId,
+          email: accessRequest.email,
+          role: 'owner',
+        })
+
+      if (ouError) {
+        console.error('Error adding user to org:', ouError)
+      }
+
+      console.log('Organization created and user added:', newOrg.id)
     }
 
     console.log('=== APPROVE END ===')

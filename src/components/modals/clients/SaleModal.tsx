@@ -498,14 +498,6 @@ export function SaleModal() {
             <p className="text-3xl font-bold text-green-600">₪{total.toFixed(2)}</p>
           </div>
 
-          {/* Payment URL */}
-          <div>
-            <p className="text-sm text-gray-500 mb-2">{locale === 'he' ? 'קישור לתשלום:' : 'Ссылка на оплату:'}</p>
-            <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-xl break-all text-sm font-mono text-gray-600">
-              {paymentUrl}
-            </div>
-          </div>
-
           {/* Action Buttons */}
           <div className="grid grid-cols-1 gap-3">
             <button
@@ -513,6 +505,13 @@ export function SaleModal() {
               className="flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition"
             >
               📋 {locale === 'he' ? 'העתק קישור' : 'Скопировать ссылку'}
+            </button>
+
+            <button
+              onClick={() => window.open(paymentUrl, '_blank')}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-700 transition"
+            >
+              🔗 {locale === 'he' ? 'פתח קישור' : 'Перейти по ссылке'}
             </button>
             
             {client?.phone && (

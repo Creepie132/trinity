@@ -2,8 +2,6 @@
 
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Copy, ExternalLink, MessageSquare } from 'lucide-react'
 import { toast } from 'sonner'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -119,30 +117,16 @@ export function PaymentLinkResultModal({
             </div>
           )}
 
-          {/* Payment link */}
-          <div>
-            <Label>{language === 'ru' ? 'Ссылка на оплату' : 'קישור לתשלום'}</Label>
-            <div className="flex gap-2 mt-1">
-              <Input
-                value={paymentLink}
-                readOnly
-                className="flex-1 text-sm bg-white dark:bg-gray-800"
-              />
-            </div>
-          </div>
-
           {/* Action buttons */}
           <div className="space-y-2 pt-2">
-            <div className="grid grid-cols-2 gap-2">
-              <Button type="button" onClick={copyLink} variant="outline">
-                <Copy className="w-4 h-4 ml-2" />
-                {language === 'ru' ? 'Скопировать' : 'העתק'}
-              </Button>
-              <Button type="button" onClick={openLink} variant="outline">
-                <ExternalLink className="w-4 h-4 ml-2" />
-                {language === 'ru' ? 'Открыть' : 'פתח'}
-              </Button>
-            </div>
+            <Button type="button" onClick={copyLink} variant="outline" className="w-full">
+              <Copy className="w-4 h-4 ml-2" />
+              {language === 'ru' ? 'Скопировать ссылку' : 'העתק קישור'}
+            </Button>
+            <Button type="button" onClick={openLink} className="w-full bg-violet-600 hover:bg-violet-700 text-white">
+              <ExternalLink className="w-4 h-4 ml-2" />
+              {language === 'ru' ? 'Перейти по ссылке' : 'פתח קישור'}
+            </Button>
 
             {clientPhone && (
               <>

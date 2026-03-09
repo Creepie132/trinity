@@ -28,7 +28,7 @@ interface DiscountState {
   value: number
 }
 
-type Step = 'cart' | 'checkout' | 'proposal'
+type Step = 'cart' | 'checkout' | 'proposal' | 'payment-link'
 
 const paymentMethods = [
   { value: 'credit', label: { he: 'אשראי', ru: 'Карта' }, icon: CreditCard },
@@ -53,6 +53,7 @@ export function SaleModal() {
   const [paymentMethod, setPaymentMethod] = useState('credit')
   const [isProcessing, setIsProcessing] = useState(false)
   const [showProposalPanel, setShowProposalPanel] = useState(false)
+  const [paymentUrl, setPaymentUrl] = useState<string>('')
   
   const { generate: generateProposalPDF, loading: pdfLoading } = useGeneratePDF()
 
@@ -85,6 +86,7 @@ export function SaleModal() {
     setDiscount({ type: 'percent', value: 0 })
     setPaymentMethod('credit')
     setShowProposalPanel(false)
+    setPaymentUrl('')
     closeModal('client-sale')
   }
 
@@ -149,20 +151,78 @@ export function SaleModal() {
     handleClose()
   }
 
+  // Generate Tranzila payment URL
+  const generateTranzilaUrl = () => {
+    const cleanPhone = client?.phone?.replace(/\D/g, '') || ''
+    const params = new URLSearchParams({
+      sum: total.toFixed(2),
+      currency: '1',
+      TranzilaPW: 'ckDffDS',
+      cred_type: '1',
+      tranmode: 'A',
+      success_url: 'https://www.ambersol.co.il/payment-success',
+      fail_url: 'https://www.ambersol.co.il/payment-failed',
+      notify_url: 'https://www.ambersol.co.il/api/webhooks/tranzila',
+      u71: '1',
+      ppnumber: cleanPhone,
+      contact: clientName,
+    })
+    return `https://secure.tranzila.com/ambersolttok/iframenew.php?${params.toString()}`
+  }
+
   // Complete sale
   const handleCompleteSale = async () => {
     if (!orgId || !client?.id || cart.length === 0) return
 
     setIsProcessing(true)
     try {
-      // Create payment
+      const saleItems = cart.map(i => ({
+        product_id: i.product.id,
+        product_name: i.product.name,
+        quantity: i.quantity,
+        price: i.price,
+        total: i.price * i.quantity,
+      }))
+
+      // Credit card payment — create pending payment + show link
+      if (paymentMethod === 'credit') {
+        const url = generateTranzilaUrl()
+        
+        // Create pending payment
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .insert({
+            client_id: client.id,
+            org_id: orgId,
+            amount: total,
+            payment_method: 'credit_card',
+            status: 'pending',
+            type: 'client',
+            description: cart.map(i => `${i.product.name} x${i.quantity}`).join(', '),
+            metadata: {
+              sale_items: saleItems,
+              payment_url: url,
+              discount: discount.value > 0 ? discount : null,
+            },
+          })
+
+        if (paymentError) throw paymentError
+
+        // Show payment link step
+        setPaymentUrl(url)
+        setStep('payment-link')
+        setIsProcessing(false)
+        return
+      }
+
+      // Cash or bank transfer — create completed payment immediately
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
           client_id: client.id,
           org_id: orgId,
           amount: total,
-          payment_method: paymentMethod === 'credit' ? 'credit_card' : paymentMethod === 'bank' ? 'bank_transfer' : 'cash',
+          payment_method: paymentMethod === 'bank' ? 'bank_transfer' : 'cash',
           status: 'completed',
           type: 'client',
           description: cart.map(i => `${i.product.name} x${i.quantity}`).join(', '),
@@ -203,6 +263,28 @@ export function SaleModal() {
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  // Copy payment URL to clipboard
+  const copyPaymentUrl = () => {
+    navigator.clipboard.writeText(paymentUrl)
+    toast.success(locale === 'he' ? 'הקישור הועתק' : 'Ссылка скопирована')
+  }
+
+  // Send payment link via WhatsApp
+  const sendPaymentWhatsApp = () => {
+    if (!client?.phone) return
+    const cleanPhone = client.phone.replace(/\D/g, '')
+    const whatsappPhone = cleanPhone.startsWith('0') ? '972' + cleanPhone.substring(1) : cleanPhone
+    const text = `שלום ${clientName},\n\nלהלן קישור לתשלום בסך ₪${total.toFixed(2)}:\n${paymentUrl}`
+    window.open(`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(text)}`, '_blank')
+  }
+
+  // Send payment link via SMS
+  const sendPaymentSMS = () => {
+    if (!client?.phone) return
+    const text = `קישור לתשלום ₪${total.toFixed(2)}: ${paymentUrl}`
+    window.location.href = `sms:${client.phone}?body=${encodeURIComponent(text)}`
   }
 
   // Generate PDF proposal using html2canvas
@@ -337,6 +419,79 @@ export function SaleModal() {
   const text = t[locale as keyof typeof t] || t.he
 
   if (!isOpen || !client) return null
+
+  // Step 3: Payment Link (for credit card)
+  if (step === 'payment-link') {
+    return (
+      <Modal
+        open={isOpen}
+        onClose={handleClose}
+        title={locale === 'he' ? 'קישור לתשלום' : 'Ссылка на оплату'}
+        subtitle={clientName}
+        width="500px"
+        className="max-w-[95vw]"
+      >
+        <div className="space-y-6">
+          {/* Amount */}
+          <div className="text-center p-6 bg-green-50 dark:bg-green-900/20 rounded-xl">
+            <p className="text-sm text-gray-500 mb-1">{locale === 'he' ? 'סכום לתשלום' : 'Сумма к оплате'}</p>
+            <p className="text-3xl font-bold text-green-600">₪{total.toFixed(2)}</p>
+          </div>
+
+          {/* Payment URL */}
+          <div>
+            <p className="text-sm text-gray-500 mb-2">{locale === 'he' ? 'קישור לתשלום:' : 'Ссылка на оплату:'}</p>
+            <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-xl break-all text-sm font-mono text-gray-600">
+              {paymentUrl}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="grid grid-cols-1 gap-3">
+            <button
+              onClick={copyPaymentUrl}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition"
+            >
+              📋 {locale === 'he' ? 'העתק קישור' : 'Скопировать ссылку'}
+            </button>
+            
+            {client?.phone && (
+              <>
+                <button
+                  onClick={sendPaymentWhatsApp}
+                  className="flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500 text-white font-medium hover:bg-green-600 transition"
+                >
+                  💬 {locale === 'he' ? 'שלח ב-WhatsApp' : 'Отправить WhatsApp'}
+                </button>
+                
+                <button
+                  onClick={sendPaymentSMS}
+                  className="flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition"
+                >
+                  ✉️ SMS
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="text-center text-sm text-gray-500">
+            <p>{locale === 'he' ? 'התשלום יעודכן אוטומטית לאחר השלמת העסקה' : 'Платёж обновится автоматически после оплаты'}</p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 mt-6 pt-4 border-t">
+          <button
+            onClick={handleClose}
+            className="flex-1 py-3 rounded-xl border border-gray-300 font-medium hover:bg-gray-50 transition"
+          >
+            {locale === 'he' ? 'סגור' : 'Закрыть'}
+          </button>
+        </div>
+      </Modal>
+    )
+  }
 
   // Step 2: Checkout
   if (step === 'checkout') {

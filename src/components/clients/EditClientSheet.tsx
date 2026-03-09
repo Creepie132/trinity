@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
 import { Save, Upload } from 'lucide-react'
 import { toast } from 'sonner'
+import Image from 'next/image'
 
 interface EditClientSheetProps {
   client: any
@@ -149,7 +150,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
       <div className="flex flex-col items-center mb-6">
         <label className="relative cursor-pointer group">
           {avatarPreview ? (
-            <img src={avatarPreview} alt="" className="w-20 h-20 rounded-full object-cover" />
+            <Image src={avatarPreview} alt="" width={80} height={80} className="rounded-full object-cover" />
           ) : (
             <div className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl`}>
               {initials}

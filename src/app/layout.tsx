@@ -7,8 +7,16 @@ import { Toaster } from "@/components/ui/sonner";
 import ConditionalChatWidget from "@/components/ConditionalChatWidget";
 import { ModalManager } from "@/components/modals/ModalManager";
 
-const inter = Inter({ subsets: ["latin"] });
-const assistant = Assistant({ subsets: ["hebrew"] });
+const inter = Inter({ 
+  subsets: ["latin", "cyrillic"], 
+  display: 'swap',
+  variable: '--font-inter',
+});
+const assistant = Assistant({ 
+  subsets: ["hebrew", "latin"], 
+  display: 'swap',
+  variable: '--font-assistant',
+});
 
 export const metadata: Metadata = {
   title: "Trinity | Amber Solutions Systems",

@@ -3,6 +3,7 @@
 import { useState, ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import Image from 'next/image'
 
 // ============================================
 // УНИВЕРСАЛЬНЫЙ ШАБЛОН КАРТОЧКИ TRINITY CRM
@@ -129,7 +130,13 @@ export function TrinityCard({
 
       case 'image':
         return (
-          <img src={avatar.src} alt="" className="w-11 h-11 rounded-full object-cover flex-shrink-0" />
+          <Image 
+            src={avatar.src || ''} 
+            alt="" 
+            width={44} 
+            height={44} 
+            className="rounded-full object-cover flex-shrink-0" 
+          />
         )
 
       case 'timeline':

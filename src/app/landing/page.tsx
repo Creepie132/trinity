@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Menu, X, ChevronRight, ChevronUp, Monitor, Bot, Globe, Code, Mail, MessageCircle, Facebook, Gift } from 'lucide-react'
 import { PrismButton } from '@/components/landing/PrismButton'
+import Image from 'next/image'
 
 // Translations type
 interface Translations {
@@ -1224,10 +1225,13 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map((num) => (
               <div key={num} className="group relative overflow-hidden rounded-xl shadow-lg border-2 border-gray-200">
-                <img 
+                <Image 
                   src={`/screenshot-${num}.jpg`}
                   alt={`${t.gallery.screenshot} ${num}`}
+                  width={600}
+                  height={400}
                   className="w-full h-auto transition-transform duration-300 group-hover:scale-105"
+                  loading={num <= 2 ? "eager" : "lazy"}
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
               </div>

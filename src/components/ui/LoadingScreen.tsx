@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 export function LoadingScreen() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-50">
@@ -11,10 +13,13 @@ export function LoadingScreen() {
           
           {/* Logo in center */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <img 
+            <Image 
               src="/logoload.png" 
               alt="Trinity" 
-              className="w-12 h-12 rounded-xl" 
+              width={48}
+              height={48}
+              className="rounded-xl"
+              priority
             />
           </div>
         </div>

@@ -14,13 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import Modal from '@/components/ui/Modal'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/useAuth'
@@ -290,91 +284,99 @@ export default function TemplatesPage() {
         )}
       </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingTemplate ? 'Edit Template' : 'New Template'}
-            </DialogTitle>
-          </DialogHeader>
+      {/* Edit Modal */}
+      <Modal
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        title={editingTemplate ? 'Edit Template' : 'New Template'}
+        width="520px"
+        footer={
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => setDialogOpen(false)}
+              className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap"
+            >
+              Save
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <Label>Name / שם</Label>
+            <Input
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g., Birthday Greeting"
+            />
+          </div>
+          <div>
+            <Label>Category / קטגוריה</Label>
+            <Select
+              value={formData.category}
+              onValueChange={(v) => setFormData({ ...formData, category: v })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Content / תוכן</Label>
+            <Textarea
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              rows={5}
+              dir="rtl"
+              placeholder="שלום {first_name}! ..."
+            />
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-xl">
+            <Label className="text-sm font-semibold">Preview:</Label>
+            <p className="text-sm mt-2 whitespace-pre-wrap" dir="rtl">
+              {renderPreview(formData.content)}
+            </p>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Preview Modal */}
+      <Modal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title="Preview / תצוגה מקדימה"
+        width="480px"
+      >
+        {previewTemplate && (
           <div className="space-y-4">
             <div>
-              <Label>Name / שם</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Birthday Greeting"
-              />
+              <Label>Original:</Label>
+              <p className="text-sm mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl" dir="rtl">
+                {previewTemplate.content}
+              </p>
             </div>
             <div>
-              <Label>Category / קטגוריה</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(v) => setFormData({ ...formData, category: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Content / תוכן</Label>
-              <Textarea
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                rows={5}
-                dir="rtl"
-                placeholder="שלום {first_name}! ..."
-              />
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-              <Label className="text-sm font-semibold">Preview:</Label>
-              <p className="text-sm mt-2 whitespace-pre-wrap" dir="rtl">
-                {renderPreview(formData.content)}
+              <Label>With Example Data:</Label>
+              <p className="text-sm mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl" dir="rtl">
+                {renderPreview(previewTemplate.content)}
               </p>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Preview Dialog */}
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Preview / תצוגה מקדימה</DialogTitle>
-          </DialogHeader>
-          {previewTemplate && (
-            <div className="space-y-4">
-              <div>
-                <Label>Original:</Label>
-                <p className="text-sm mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded" dir="rtl">
-                  {previewTemplate.content}
-                </p>
-              </div>
-              <div>
-                <Label>With Example Data:</Label>
-                <p className="text-sm mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded" dir="rtl">
-                  {renderPreview(previewTemplate.content)}
-                </p>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        )}
+      </Modal>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import Modal from '@/components/ui/Modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -451,8 +451,15 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
   }
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-900 text-gray-100 border-gray-800">
+    <Modal
+      open={open}
+      onClose={() => {}}
+      closeOnBackdrop={false}
+      closeOnEscape={false}
+      showCloseButton={false}
+      width="900px"
+      className="bg-gray-900 text-gray-100 border-gray-800"
+    >
         {/* Progress bar */}
         <div className="mb-6">
           <div className="flex justify-between text-sm text-gray-400 mb-2">
@@ -768,7 +775,6 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
             </Button>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </Modal>
   )
 }

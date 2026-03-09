@@ -89,9 +89,8 @@ export async function POST(request: NextRequest) {
         currency: '1',
         TranzilaPW: tokenPassword,
         pdesc: `Trinity CRM подписка — ${org.name}`,
-        notify_url: `${BASE_URL}/api/webhooks/tranzila`,
-        success_url: `${BASE_URL}/payment/success`,
-        fail_url: `${BASE_URL}/payment/fail`,
+        success_url: `${BASE_URL}/api/payments/tranzila-success`,
+        fail_url: `${BASE_URL}/api/payments/tranzila-failed`,
         // Передаём org_id чтобы webhook знал кому сохранить токен
         custom: org_id,
         // Запрашиваем токенизацию карты

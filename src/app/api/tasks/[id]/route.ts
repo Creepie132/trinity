@@ -1,38 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 // PUT /api/tasks/[id] - обновить задачу
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient()
+  const auth = await getAuthContext()
+  if ('error' in auth) return auth.error
   
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { user, orgId, supabase } = auth
 
   const { id } = await params
   const body = await request.json()
-
-  // Получаем org_id пользователя
-  const { data: orgUser } = await supabase
-    .from('org_users')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!orgUser) {
-    return NextResponse.json({ error: 'No organization' }, { status: 403 })
-  }
 
   // Проверяем существование задачи и права доступа
   const { data: existingTask } = await supabase
     .from('tasks')
     .select('status, assigned_to, title')
     .eq('id', id)
-    .eq('org_id', orgUser.org_id)
+    .eq('org_id', orgId)
     .single()
 
   if (!existingTask) {
@@ -73,7 +60,7 @@ export async function PUT(
     .from('tasks')
     .update(updateData)
     .eq('id', id)
-    .eq('org_id', orgUser.org_id)
+    .eq('org_id', orgId)
     .select(`
       *,
       client:clients(id, name, phone),
@@ -93,7 +80,7 @@ export async function PUT(
     body.assigned_to !== user.id
   ) {
     await supabase.from('notifications').insert({
-      org_id: orgUser.org_id,
+      org_id: orgId,
       user_id: body.assigned_to,
       type: 'task_assigned',
       title: 'Задача назначена вам',
@@ -111,31 +98,18 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient()
+  const auth = await getAuthContext()
+  if ('error' in auth) return auth.error
   
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { orgId, supabase } = auth
 
   const { id } = await params
-
-  // Получаем org_id пользователя
-  const { data: orgUser } = await supabase
-    .from('org_users')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!orgUser) {
-    return NextResponse.json({ error: 'No organization' }, { status: 403 })
-  }
 
   const { error } = await supabase
     .from('tasks')
     .delete()
     .eq('id', id)
-    .eq('org_id', orgUser.org_id)
+    .eq('org_id', orgId)
 
   if (error) {
     console.error('Delete task error:', error)

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 export async function GET(
   request: Request,
@@ -8,54 +7,19 @@ export async function GET(
 ) {
   try {
     const { orgId } = await params
-    console.log('[GET ORG] Loading organization:', orgId)
 
-    // Authenticate user
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    const { data: { user } } = await supabase.auth.getUser()
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
     
-    if (!user) {
-      console.error('[GET ORG] Unauthorized: no user')
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const { orgId: userOrgId, supabase } = auth
 
-    // Check user has access to this org
-    const { data: orgUser, error: orgUserError } = await supabase
-      .from('org_users')
-      .select('role')
-      .eq('org_id', orgId)
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgUserError || !orgUser) {
-      console.error('[GET ORG] Access denied:', orgUserError)
+    // Verify user has access to requested org
+    if (userOrgId !== orgId) {
       return NextResponse.json(
         { error: 'Access denied to this organization' },
         { status: 403 }
       )
     }
-
-    console.log('[GET ORG] User has access, role:', orgUser.role)
 
     // Fetch organization
     const { data: org, error: orgError } = await supabase

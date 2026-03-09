@@ -1,46 +1,19 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import type { CreateServiceDTO } from '@/types/services'
 import { validateBody, createServiceSchema } from '@/lib/validations'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId, supabase } = auth
 
     const { data: services, error } = await supabase
       .from('services')
       .select('*')
-      .eq('org_id', orgUser.org_id)
+      .eq('org_id', orgId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
 
@@ -58,36 +31,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId, supabase } = auth
 
     const body = await request.json()
     
@@ -100,7 +47,7 @@ export async function POST(request: NextRequest) {
     const { data: service, error } = await supabase
       .from('services')
       .insert({
-        org_id: orgUser.org_id,
+        org_id: orgId,
         name: data.name,
         name_ru: data.name_ru,
         price: data.price,

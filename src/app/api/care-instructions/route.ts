@@ -1,6 +1,5 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 /**
  * GET /api/care-instructions
@@ -8,36 +7,10 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId, supabase } = auth
 
     // Get care instructions with joined services
     const { data: instructions, error } = await supabase
@@ -50,7 +23,7 @@ export async function GET(request: NextRequest) {
           name_ru
         )
       `)
-      .eq('org_id', orgUser.org_id)
+      .eq('org_id', orgId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
 
@@ -72,36 +45,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId, supabase } = auth
 
     const body = await request.json()
     const { title, title_ru, content, content_ru, service_id, file_url } = body
@@ -113,7 +60,7 @@ export async function POST(request: NextRequest) {
     const { data: instruction, error } = await supabase
       .from('care_instructions')
       .insert({
-        org_id: orgUser.org_id,
+        org_id: orgId,
         service_id: service_id || null,
         title,
         title_ru: title_ru || title,
@@ -127,8 +74,6 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[API] POST /api/care-instructions error:', error)
-      console.error('[API] POST /api/care-instructions body:', body)
-      console.error('[API] POST /api/care-instructions org_id:', orgUser.org_id)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 

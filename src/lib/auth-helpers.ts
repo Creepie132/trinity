@@ -1,9 +1,117 @@
-import { createClient, Session } from "@supabase/supabase-js"
+import { createClient, Session, User, SupabaseClient } from "@supabase/supabase-js"
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createSupabaseBrowserClient } from './supabase-browser'
+import { NextResponse } from 'next/server'
 
 type Role = "owner" | "moderator" | "user"
+
+// ============================================
+// Auth Context for API Routes
+// Единая точка входа для авторизации в API
+// ============================================
+
+export interface AuthContext {
+  user: User
+  orgId: string
+  orgRole: string | null
+  isAdmin: boolean
+  supabase: SupabaseClient
+}
+
+export interface AuthError {
+  error: NextResponse
+}
+
+/**
+ * Получить контекст авторизации для API route
+ * Читает org_id из JWT claims, fallback на org_users таблицу
+ * 
+ * @returns AuthContext или AuthError с готовым NextResponse
+ * 
+ * Использование:
+ * ```ts
+ * const auth = await getAuthContext()
+ * if ('error' in auth) return auth.error
+ * const { user, orgId, supabase } = auth
+ * ```
+ */
+export async function getAuthContext(): Promise<AuthContext | AuthError> {
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+
+  // Верификация токена на сервере
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { 
+      error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) 
+    }
+  }
+
+  // Читаем из JWT claims (быстро, без запроса к БД)
+  let orgId = user.app_metadata?.org_id as string | undefined
+  const orgRole = user.app_metadata?.org_role as string | null ?? null
+  const isAdmin = user.app_metadata?.is_admin === true
+
+  // Fallback на org_users если JWT пустой (первый логин до refresh токена)
+  if (!orgId) {
+    const { data: orgUser } = await supabase
+      .from('org_users')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!orgUser?.org_id) {
+      return { 
+        error: NextResponse.json({ error: 'No organization' }, { status: 403 }) 
+      }
+    }
+    orgId = orgUser.org_id
+  }
+
+  return { user, orgId, orgRole, isAdmin, supabase: supabase as unknown as SupabaseClient }
+}
+
+/**
+ * Получить контекст авторизации + проверить что пользователь админ
+ */
+export async function getAdminAuthContext(): Promise<AuthContext | AuthError> {
+  const auth = await getAuthContext()
+  if ('error' in auth) return auth
+
+  if (!auth.isAdmin) {
+    // Fallback проверка в admin_users таблице
+    const { data: adminUser } = await supabaseAdmin
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', auth.user.id)
+      .single()
+
+    if (!adminUser) {
+      return { 
+        error: NextResponse.json({ error: 'Admin access required' }, { status: 403 }) 
+      }
+    }
+  }
+
+  return auth
+}
 
 // ============================================
 // JWT Custom Claims Helpers

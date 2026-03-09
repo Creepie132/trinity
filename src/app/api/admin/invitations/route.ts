@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
+import { getAdminAuthContext } from '@/lib/auth-helpers'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,18 +8,11 @@ const supabaseAdmin = createAdmin(
 )
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: admin } = await supabaseAdmin
-    .from('admin_users')
-    .select('id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // Verify admin access via JWT claims
+  const auth = await getAdminAuthContext()
+  if ('error' in auth) return auth.error
+  
+  const { user } = auth
 
   const { email, message } = await request.json()
 
@@ -202,18 +195,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data: admin } = await supabaseAdmin
-    .from('admin_users')
-    .select('id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // Verify admin access via JWT claims
+  const auth = await getAdminAuthContext()
+  if ('error' in auth) return auth.error
 
   // Fetch all invitations (simplified query without JOIN)
   const { data: invitations, error } = await supabaseAdmin

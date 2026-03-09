@@ -1,8 +1,6 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import type { UpdateServiceDTO } from '@/types/services'
-import { requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
+import { getAuthContext, requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
 
 export async function PATCH(
   request: NextRequest,
@@ -12,36 +10,10 @@ export async function PATCH(
     const params = await context.params
     const serviceId = params.id
 
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId, supabase } = auth
 
     const body: UpdateServiceDTO = await request.json()
 
@@ -57,7 +29,7 @@ export async function PATCH(
       .from('services')
       .update(updateData)
       .eq('id', serviceId)
-      .eq('org_id', orgUser.org_id)
+      .eq('org_id', orgId)
       .select()
       .single()
 
@@ -81,40 +53,14 @@ export async function DELETE(
     const params = await context.params
     const serviceId = params.id
 
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId, supabase } = auth
 
     // ✅ Проверка роли (только owner/moderator)
     try {
-      await requireOrgRole(orgUser.org_id, ["owner", "moderator"])
+      await requireOrgRole(orgId, ["owner", "moderator"])
     } catch (e) {
       return authErrorResponse(e)
     }
@@ -123,7 +69,7 @@ export async function DELETE(
       .from('services')
       .update({ is_active: false })
       .eq('id', serviceId)
-      .eq('org_id', orgUser.org_id)
+      .eq('org_id', orgId)
       .select()
       .single()
 

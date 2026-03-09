@@ -1,31 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient()
+  const auth = await getAuthContext()
+  if ('error' in auth) return auth.error
   
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { orgId, supabase } = auth
 
   const { id } = await params
   const body = await request.json()
   const { scheduled_at, service_id, duration_minutes, notes, price } = body
-
-  // Получаем org_id пользователя
-  const { data: orgUser } = await supabase
-    .from('org_users')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!orgUser) {
-    return NextResponse.json({ error: 'No organization' }, { status: 403 })
-  }
 
   const updateData: any = {
     updated_at: new Date().toISOString()
@@ -44,7 +31,7 @@ export async function PUT(
     .from('visits')
     .update(updateData)
     .eq('id', id)
-    .eq('org_id', orgUser.org_id)
+    .eq('org_id', orgId)
     .select()
     .single()
 

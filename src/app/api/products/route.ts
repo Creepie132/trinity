@@ -4,11 +4,10 @@
 // Version: 2.23.0
 // ================================================
 
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import type { CreateProductDTO, Product } from '@/types/inventory'
 import { validateBody, createProductSchema } from '@/lib/validations'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 /**
  * GET /api/products
@@ -17,42 +16,10 @@ import { validateBody, createProductSchema } from '@/lib/validations'
  */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get user's org_id
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
-
-    const { org_id } = orgUser
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId, supabase } = auth
 
     // Parse search query
     const searchParams = request.nextUrl.searchParams
@@ -62,7 +29,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('products')
       .select('*')
-      .eq('org_id', org_id)
+      .eq('org_id', orgId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
 
@@ -91,42 +58,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get user's org_id
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
-
-    const { org_id } = orgUser
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId, supabase } = auth
 
     // Parse request body
     const body = await request.json()
@@ -141,7 +76,7 @@ export async function POST(request: NextRequest) {
     const { data: product, error } = await supabase
       .from('products')
       .insert({
-        org_id,
+        org_id: orgId,
         name: data.name,
         description: data.description,
         barcode: data.barcode,

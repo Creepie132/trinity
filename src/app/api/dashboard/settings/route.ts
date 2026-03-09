@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,29 +9,16 @@ const supabaseAdmin = createAdmin(
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Получаем orgId пользователя
-    const { data: orgUser } = await supabaseAdmin
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!orgUser) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId } = auth
 
     // Читаем настройки через admin (обходит RLS)
     const { data: org, error } = await supabaseAdmin
       .from('organizations')
       .select('features')
-      .eq('id', orgUser.org_id)
+      .eq('id', orgId)
       .single()
 
     if (error) {
@@ -63,43 +50,21 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId } = auth
 
     const body = await request.json()
-
-    console.log('=== SETTINGS SAVE DEBUG ===')
-    console.log('User ID:', user.id)
-    console.log('Body:', body)
-
-    // Получаем orgId пользователя
-    const { data: orgUser } = await supabaseAdmin
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!orgUser) {
-      return NextResponse.json({ error: 'No organization found' }, { status: 404 })
-    }
-
-    console.log('Org ID:', orgUser.org_id)
 
     // Читаем текущие features
     const { data: org } = await supabaseAdmin
       .from('organizations')
       .select('features')
-      .eq('id', orgUser.org_id)
+      .eq('id', orgId)
       .single()
 
     const currentFeatures = org?.features || {}
-
-    console.log('Current features:', currentFeatures)
-    console.log('Dashboard charts to save:', body.dashboard_charts)
 
     // Обновляем dashboard_charts напрямую в features (без wrapper dashboard_settings)
     const updatedFeatures = {
@@ -107,13 +72,11 @@ export async function PUT(request: NextRequest) {
       dashboard_charts: body.dashboard_charts || body,
     }
 
-    console.log('Updated features:', updatedFeatures)
-
     // Сохраняем через admin (обходит RLS)
     const { error } = await supabaseAdmin
       .from('organizations')
       .update({ features: updatedFeatures })
-      .eq('id', orgUser.org_id)
+      .eq('id', orgId)
 
     if (error) {
       console.error('=== SETTINGS SAVE DB ERROR ===')

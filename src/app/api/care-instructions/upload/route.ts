@@ -1,6 +1,5 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 /**
  * POST /api/care-instructions/upload
@@ -8,40 +7,10 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('[API] POST /api/care-instructions/upload - Start')
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
     
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    console.log('[API] User check:', user ? `User: ${user.id}` : 'No user', userError ? `Error: ${userError.message}` : '')
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
+    const { orgId, supabase } = auth
 
     // Parse FormData
     const formData = await request.formData()
@@ -59,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Generate unique filename
     const timestamp = Date.now()
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const fileName = `${orgUser.org_id}/${timestamp}_${sanitizedFileName}`
+    const fileName = `${orgId}/${timestamp}_${sanitizedFileName}`
 
     // Convert File to ArrayBuffer
     const arrayBuffer = await file.arrayBuffer()

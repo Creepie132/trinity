@@ -4,10 +4,9 @@
 // Version: 2.23.0
 // ================================================
 
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import type { CreateInventoryTransactionDTO, InventoryTransaction } from '@/types/inventory'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 /**
  * GET /api/inventory
@@ -16,42 +15,10 @@ import type { CreateInventoryTransactionDTO, InventoryTransaction } from '@/type
  */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get user's org_id
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
-
-    const { org_id } = orgUser
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId, supabase } = auth
 
     // Parse query params
     const searchParams = request.nextUrl.searchParams
@@ -61,7 +28,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('inventory_transactions')
       .select('*, products(*)')
-      .eq('org_id', org_id)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
 
     // Filter by product_id if provided
@@ -94,42 +61,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get user's org_id
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
-
-    const { org_id } = orgUser
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { orgId, supabase } = auth
 
     // Parse request body
     const body: CreateInventoryTransactionDTO = await request.json()
@@ -156,7 +91,7 @@ export async function POST(request: NextRequest) {
       .from('products')
       .select('id, quantity')
       .eq('id', body.product_id)
-      .eq('org_id', org_id)
+      .eq('org_id', orgId)
       .single()
 
     if (productError || !product) {
@@ -199,7 +134,7 @@ export async function POST(request: NextRequest) {
     const { data: transaction, error: transactionError } = await supabase
       .from('inventory_transactions')
       .insert({
-        org_id,
+        org_id: orgId,
         product_id: body.product_id,
         type: body.type,
         quantity: body.quantity,
@@ -222,7 +157,7 @@ export async function POST(request: NextRequest) {
       .from('products')
       .update({ quantity: newQuantity })
       .eq('id', body.product_id)
-      .eq('org_id', org_id)
+      .eq('org_id', orgId)
 
     if (updateError) {
       console.error('[API] POST /api/inventory - update quantity error:', updateError)

@@ -1,26 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { validateBody, createVisitSchema } from '@/lib/validations'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth-helpers'
 import { resend } from '@/lib/resend'
 import { bookingConfirmEmail, newBookingNotifyEmail } from '@/lib/email-templates'
 
 // GET /api/visits - список визитов для текущей организации
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
     
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { data: orgUser } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!orgUser) return NextResponse.json({ error: 'No organization' }, { status: 403 })
+    const { orgId, supabase } = auth
 
     const oneWeekAgo = new Date()
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
@@ -33,7 +23,7 @@ export async function GET(request: NextRequest) {
         services(*),
         visit_services(*)
       `)
-      .eq('org_id', orgUser.org_id)
+      .eq('org_id', orgId)
       .gte('scheduled_at', oneWeekAgo.toISOString())
       .order('scheduled_at', { ascending: false })
       .limit(100)
@@ -47,69 +37,20 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('[API /api/visits POST] Start')
-  
   try {
     const body = await request.json()
     
     // ✅ Zod validation
     const { data, error: validationError } = validateBody(createVisitSchema, body)
     if (validationError || !data) {
-      console.error('[API /api/visits POST] Validation failed:', validationError)
       return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
     }
 
-    console.log('[API /api/visits POST] Request body:', JSON.stringify(data, null, 2))
+    // Auth + org_id from JWT
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
     
-    // Create Supabase client
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      console.error('[API /api/visits POST] Auth error:', authError)
-      return NextResponse.json(
-        { error: 'לא מחובר - נדרשת התחברות מחדש' },
-        { status: 401 }
-      )
-    }
-
-    console.log('[API /api/visits POST] User authenticated:', user.id)
-
-    // Get user's organization
-    const { data: orgUser, error: orgError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgError || !orgUser) {
-      console.error('[API /api/visits POST] Org error:', orgError)
-      return NextResponse.json(
-        { error: 'לא נמצא ארגון למשתמש' },
-        { status: 403 }
-      )
-    }
-
-    const org_id = orgUser.org_id
-    console.log('[API /api/visits POST] Organization ID:', org_id)
+    const { user, orgId: org_id, supabase } = auth
 
     // Check meeting mode
     const { data: orgData } = await supabase

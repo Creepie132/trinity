@@ -1,46 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { getAdminAuthContext } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
 
 // POST: Assign admin/moderator role
 export async function POST(request: NextRequest) {
   try {
-    // Create server client with cookies
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    // Check if current user is admin
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: currentAdmin } = await supabase
-      .from('admin_users')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!currentAdmin) {
-      return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
-    }
+    // Verify admin access
+    const auth = await getAdminAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { supabase } = auth
 
     // Parse request body
     const { email, role } = await request.json()
@@ -142,40 +112,11 @@ export async function POST(request: NextRequest) {
 // DELETE: Remove admin/moderator role
 export async function DELETE(request: NextRequest) {
   try {
-    // Create server client with cookies
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    // Check if current user is admin
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: currentAdmin } = await supabase
-      .from('admin_users')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!currentAdmin) {
-      return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
-    }
+    // Verify admin access
+    const auth = await getAdminAuthContext()
+    if ('error' in auth) return auth.error
+    
+    const { user, supabase } = auth
 
     // Parse request body
     const { email } = await request.json()

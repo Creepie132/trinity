@@ -1,25 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 // GET /api/tasks - список задач с фильтрами
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    console.log('=== GET TASKS ===')
-    console.log('User:', user?.id)
-    console.log('Auth error:', authError?.message)
-    
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { data: orgUser } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!orgUser) return NextResponse.json({ error: 'No organization' }, { status: 403 })
+    const { orgId, supabase } = auth
 
     const url = new URL(request.url)
     const status = url.searchParams.get('status')
@@ -27,15 +15,12 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('tasks')
       .select('*')
-      .eq('org_id', orgUser.org_id)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
 
     if (status) query = query.eq('status', status)
 
     const { data, error } = await query
-
-    console.log('Tasks error:', error?.message)
-    console.log('Tasks count:', data?.length)
 
     if (error) {
       if (error.message.includes('does not exist') || error.code === '42P01') {
@@ -53,12 +38,10 @@ export async function GET(request: NextRequest) {
 
 // POST /api/tasks - создать новую задачу
 export async function POST(request: NextRequest) {
-  const supabase = await createClient()
+  const auth = await getAuthContext()
+  if ('error' in auth) return auth.error
   
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { user, orgId, supabase } = auth
 
   const body = await request.json()
   const {
@@ -79,22 +62,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 })
   }
 
-  // Получаем org_id пользователя
-  const { data: orgUser } = await supabase
-    .from('org_users')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!orgUser) {
-    return NextResponse.json({ error: 'No organization' }, { status: 403 })
-  }
-
   // Создаём задачу
   const { data: task, error } = await supabase
     .from('tasks')
     .insert({
-      org_id: orgUser.org_id,
+      org_id: orgId,
       created_by: user.id,
       assigned_to: assigned_to || null,
       title: title.trim(),
@@ -120,7 +92,7 @@ export async function POST(request: NextRequest) {
   // Если задача назначена другому пользователю, создаём уведомление
   if (assigned_to && assigned_to !== user.id) {
     await supabase.from('notifications').insert({
-      org_id: orgUser.org_id,
+      org_id: orgId,
       user_id: assigned_to,
       type: 'task_assigned',
       title: 'Новая задача',

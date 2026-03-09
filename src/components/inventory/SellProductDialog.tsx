@@ -1,8 +1,7 @@
 'use client'
 
-import { useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
+import Modal from '@/components/ui/Modal'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -18,9 +17,8 @@ import { useClients } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { toast } from 'sonner'
-import { ArrowRight, ArrowLeft } from 'lucide-react'
+import { ShoppingCart, Loader2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import ModalWrapper from '@/components/ModalWrapper'
 import { PaymentLinkResultModal } from '@/components/modals/products/PaymentLinkResultModal'
 import type { Product } from '@/types/inventory'
 import type { ClientSummary } from '@/types/database'
@@ -54,9 +52,6 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
       setClientId('')
       setSelectedClient(null)
       setPaymentMethod('')
-      // Don't reset payment link state here - it needs to persist after closing
-      // setPaymentLink(null)
-      // setShowPaymentLinkModal(false)
       setIsCreatingLink(false)
     }
   }, [product, open])
@@ -88,19 +83,13 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
 
       const data = await response.json()
       setPaymentLink(data.payment_link)
-      // Close current modal before opening payment link modal
       onClose()
-      // Wait for animation to complete
       setTimeout(() => {
         setShowPaymentLinkModal(true)
       }, 150)
     } catch (error) {
       console.error('Payment link creation error:', error)
-      toast.error(
-        language === 'ru'
-          ? 'Ошибка создания ссылки на оплату'
-          : 'שגיאה ביצירת קישור לתשלום'
-      )
+      toast.error(language === 'ru' ? 'Ошибка создания ссылки на оплату' : 'שגיאה ביצירת קישור לתשלום')
     } finally {
       setIsCreatingLink(false)
     }
@@ -126,14 +115,12 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
       return
     }
 
-    // If payment method is credit, create payment link instead
     if (paymentMethod === 'credit') {
       await createPaymentLink()
       return
     }
 
     try {
-      // Create inventory transaction
       await createTransaction.mutateAsync({
         product_id: product.id,
         type: 'sale',
@@ -142,7 +129,6 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
         total_price: total,
       })
 
-      // Create payment record if client is selected
       if (clientId) {
         const { error: paymentError } = await supabase
           .from('payments')
@@ -171,32 +157,52 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
 
   if (!product) return null
 
+  const inputClass = "w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+
   return (
     <>
-      <ModalWrapper isOpen={open} onClose={onClose}>
-        <div className="w-full max-w-md p-6">
-        <div className="relative mb-6">
-          <Button
-            type="button"
-            onClick={onClose}
-            variant="ghost"
-            size="icon"
-            className="absolute top-0 right-0 h-11 w-11 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-            aria-label={t('common.back')}
-          >
-            {language === 'he' ? (
-              <ArrowRight className="h-6 w-6" />
-            ) : (
-              <ArrowLeft className="h-6 w-6" />
-            )}
-          </Button>
-          <h2 className="text-2xl font-bold pr-12">{t('inventory.sellDialog.title')}</h2>
-        </div>
-
+      <Modal
+        open={open}
+        onClose={onClose}
+        title={
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="w-5 h-5" />
+            {t('inventory.sellDialog.title')}
+          </div>
+        }
+        width="480px"
+        footer={
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={createTransaction.isPending || isCreatingLink || !paymentMethod}
+              className="flex-[1.5] py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50"
+            >
+              {(isCreatingLink || createTransaction.isPending) && (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              )}
+              {isCreatingLink
+                ? (language === 'ru' ? 'Создание...' : 'יוצר...')
+                : paymentMethod === 'credit'
+                ? (language === 'ru' ? 'Создать ссылку' : 'צור קישור')
+                : createTransaction.isPending
+                ? t('common.saving')
+                : t('inventory.sellDialog.confirm')}
+            </button>
+          </div>
+        }
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Product Name */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded border border-blue-200 dark:border-blue-800">
-            <p className="font-medium">{product.name}</p>
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-200 dark:border-blue-800">
+            <p className="font-medium text-gray-900 dark:text-gray-100">{product.name}</p>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {t('inventory.quantity')}: {product.quantity} {product.unit}
             </p>
@@ -204,41 +210,41 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
 
           {/* Quantity */}
           <div>
-            <Label htmlFor="quantity">
+            <Label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
               {t('inventory.sellDialog.quantity')} <span className="text-red-500">*</span>
             </Label>
-            <Input
-              id="quantity"
+            <input
               type="number"
               min="1"
               max={product.quantity}
               value={quantity}
               onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
               required
-              className="bg-white dark:bg-gray-800"
+              className={inputClass}
+              dir="ltr"
             />
           </div>
 
           {/* Price per Unit */}
           <div>
-            <Label htmlFor="price">
+            <Label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
               {t('inventory.sellDialog.price')} <span className="text-red-500">*</span>
             </Label>
-            <Input
-              id="price"
+            <input
               type="number"
               step="0.01"
               min="0"
               value={price}
               onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
               required
-              className="bg-white dark:bg-gray-800"
+              className={inputClass}
+              dir="ltr"
             />
           </div>
 
           {/* Client Search */}
           <div>
-            <Label htmlFor="client">
+            <Label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
               {t('inventory.sellDialog.client')}
               {paymentMethod === 'credit' && <span className="text-red-500"> *</span>}
             </Label>
@@ -254,29 +260,23 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
                     </p>
                   )}
                 </div>
-                <Button
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   onClick={() => {
                     setSelectedClient(null)
                     setClientId('')
                   }}
-                  className="h-8 w-8 p-0"
+                  className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   ✕
-                </Button>
+                </button>
               </div>
             ) : (
               <TrinityMobileSearch
                 data={clients?.data || []}
                 searchKeys={['first_name', 'last_name', 'phone']}
                 minChars={2}
-                placeholder={
-                  language === 'ru'
-                    ? 'Поиск клиента...'
-                    : 'חיפוש לקוח...'
-                }
+                placeholder={language === 'ru' ? 'Поиск клиента...' : 'חיפוש לקוח...'}
                 onSelect={(client) => {
                   setSelectedClient(client)
                   setClientId(client.id)
@@ -287,9 +287,7 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
                       {client.first_name} {client.last_name}
                     </p>
                     {client.phone && (
-                      <p className="text-xs text-muted-foreground">
-                        {client.phone}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{client.phone}</p>
                     )}
                   </div>
                 )}
@@ -299,33 +297,31 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
             )}
             {paymentMethod === 'credit' && !clientId && (
               <p className="text-xs text-red-500 mt-1">
-                {language === 'ru'
-                  ? 'Выберите клиента для создания ссылки'
-                  : 'בחר לקוח ליצירת קישור'}
+                {language === 'ru' ? 'Выберите клиента для создания ссылки' : 'בחר לקוח ליצירת קישור'}
               </p>
             )}
           </div>
 
-          {/* Payment Method (Required) */}
+          {/* Payment Method */}
           <div>
-            <Label htmlFor="paymentMethod">
-              אמצעי תשלום <span className="text-red-500">*</span>
+            <Label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+              {language === 'he' ? 'אמצעי תשלום' : 'Способ оплаты'} <span className="text-red-500">*</span>
             </Label>
             <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger className="bg-white dark:bg-gray-800">
-                <SelectValue placeholder="בחר אמצעי תשלום" />
+              <SelectTrigger className={inputClass}>
+                <SelectValue placeholder={language === 'he' ? 'בחר אמצעי תשלום' : 'Выберите способ оплаты'} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="cash">💵 מזומן</SelectItem>
-                <SelectItem value="bit">📱 ביט</SelectItem>
-                <SelectItem value="credit">💳 אשראי</SelectItem>
-                <SelectItem value="bank_transfer">🏦 העברה</SelectItem>
+                <SelectItem value="cash">💵 {language === 'he' ? 'מזומן' : 'Наличные'}</SelectItem>
+                <SelectItem value="bit">📱 {language === 'he' ? 'ביט' : 'Bit'}</SelectItem>
+                <SelectItem value="credit">💳 {language === 'he' ? 'אשראי' : 'Карта'}</SelectItem>
+                <SelectItem value="bank_transfer">🏦 {language === 'he' ? 'העברה' : 'Перевод'}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Total */}
-          <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded border border-green-200 dark:border-green-800">
+          <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-xl border border-green-200 dark:border-green-800">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {t('inventory.sellDialog.total')}
             </p>
@@ -333,50 +329,23 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
               ₪{total.toFixed(2)}
             </p>
           </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="submit"
-              disabled={createTransaction.isPending || isCreatingLink}
-            >
-              {isCreatingLink
-                ? language === 'ru'
-                  ? 'Создание...'
-                  : 'יוצר...'
-                : paymentMethod === 'credit'
-                ? language === 'ru'
-                  ? 'Создать ссылку на оплату'
-                  : 'צור קישור לתשלום'
-                : createTransaction.isPending
-                ? t('common.saving')
-                : t('inventory.sellDialog.confirm')}
-            </Button>
-          </div>
         </form>
-      </div>
-    </ModalWrapper>
+      </Modal>
     
-    <PaymentLinkResultModal
-      open={showPaymentLinkModal}
-      onClose={() => {
-        setShowPaymentLinkModal(false)
-        setPaymentLink(null)
-        setClientId('')
-        setSelectedClient(null)
-        setPaymentMethod('')
-      }}
-      paymentLink={paymentLink || ''}
-      amount={total}
-      clientPhone={selectedClient?.phone}
-      clientName={
-        selectedClient
-          ? `${selectedClient.first_name} ${selectedClient.last_name}`
-          : undefined
-      }
-    />
+      <PaymentLinkResultModal
+        open={showPaymentLinkModal}
+        onClose={() => {
+          setShowPaymentLinkModal(false)
+          setPaymentLink(null)
+          setClientId('')
+          setSelectedClient(null)
+          setPaymentMethod('')
+        }}
+        paymentLink={paymentLink || ''}
+        amount={total}
+        clientPhone={selectedClient?.phone}
+        clientName={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : undefined}
+      />
     </>
   )
 }

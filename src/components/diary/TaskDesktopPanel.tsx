@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Phone, Mail, MapPin, Calendar, Clock, User, AlertCircle, CheckCircle2, Circle, MessageCircle } from 'lucide-react'
-import { TrinityButton } from '@/components/ui/TrinityButton'
+import Modal from '@/components/ui/Modal'
+import { Phone, Mail, MapPin, Calendar, User, AlertCircle, Circle, MessageCircle, MessageSquare } from 'lucide-react'
 import { getClientName } from '@/lib/client-utils'
 
 interface TaskDesktopPanelProps {
@@ -28,11 +28,9 @@ export function TaskDesktopPanel({
   onClientClick,
   onVisitClick,
 }: TaskDesktopPanelProps) {
-  const isRTL = locale === 'he'
   
   const client = clients.find((c: any) => c.id === task?.client_id)
   const clientName = client ? getClientName(client) : null
-  
   const linkedVisit = visits.find((v: any) => v.id === task?.visit_id)
 
   const t = {
@@ -44,14 +42,12 @@ export function TaskDesktopPanel({
       assignedTo: 'מוקצה ל',
       client: 'לקוח',
       phone: 'טלפון',
-      email: 'אימייל',
-      address: 'כתובת',
-      navigate: 'נווט',
-      description: 'תיאור',
-      linkedVisit: 'ביקור מקושר',
       whatsapp: 'WhatsApp',
       sms: 'SMS',
       sendEmail: 'שלח אימייל',
+      navigate: 'נווט',
+      description: 'תיאור',
+      linkedVisit: 'ביקור מקושר',
       priority: {
         low: 'נמוכה',
         medium: 'בינונית',
@@ -70,15 +66,13 @@ export function TaskDesktopPanel({
       deadline: 'Дедлайн',
       assignedTo: 'Назначено',
       client: 'Клиент',
-      phone: 'Телефон',
-      email: 'Email',
-      address: 'Адрес',
-      navigate: 'Навигация',
-      description: 'Описание',
-      linkedVisit: 'Связанный визит',
+      phone: 'Позвонить',
       whatsapp: 'WhatsApp',
       sms: 'SMS',
       sendEmail: 'Отправить email',
+      navigate: 'Навигация',
+      description: 'Описание',
+      linkedVisit: 'Связанный визит',
       priority: {
         low: 'Низкий',
         medium: 'Средний',
@@ -94,286 +88,232 @@ export function TaskDesktopPanel({
 
   const l = t[locale]
 
-  if (!isOpen || !task) return null
+  if (!task) return null
 
   const priorityIcons = {
-    low: <Circle size={20} className="text-blue-500" />,
-    medium: <AlertCircle size={20} className="text-amber-500" />,
-    high: <AlertCircle size={20} className="text-red-500" />,
+    low: <Circle size={16} className="text-blue-500" />,
+    medium: <AlertCircle size={16} className="text-amber-500" />,
+    high: <AlertCircle size={16} className="text-red-500" />,
   }
 
-  const handleAddressClick = () => {
-    if (!client?.address) return
-    const geoUrl = `geo:0,0?q=${encodeURIComponent(client.address)}`
-    window.location.href = geoUrl
-    setTimeout(() => {
-      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.address)}`, '_blank')
-    }, 500)
+  const getFooterButtons = () => {
+    if (task.status === 'completed') return null
+    
+    return (
+      <div className="flex gap-2">
+        {task.status === 'todo' && (
+          <button
+            onClick={() => onStatusChange?.(task.id, 'in_progress')}
+            className="flex-1 py-2.5 rounded-xl border-2 border-amber-400 text-amber-600 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors whitespace-nowrap"
+          >
+            {l.start}
+          </button>
+        )}
+        {task.status === 'in_progress' && (
+          <button
+            onClick={() => onStatusChange?.(task.id, 'completed')}
+            className="flex-1 py-2.5 rounded-xl border-2 border-emerald-400 text-emerald-600 text-sm font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors whitespace-nowrap"
+          >
+            {l.complete}
+          </button>
+        )}
+        <button
+          onClick={() => onStatusChange?.(task.id, 'completed')}
+          className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
+        >
+          {l.cancel}
+        </button>
+      </div>
+    )
   }
-
-  // Scroll Lock: блокируем прокрутку фона, когда модалка открыта
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [isOpen])
-
-  // Escape Handler: закрытие по Esc
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [isOpen, onClose])
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm"
-      onClick={onClose}
-      dir={isRTL ? 'rtl' : 'ltr'}
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title={
+        <div className="flex items-center gap-2">
+          {priorityIcons[task.priority as keyof typeof priorityIcons] || priorityIcons.medium}
+          <span className="truncate">{task.title}</span>
+        </div>
+      }
+      subtitle={
+        task.due_date && (
+          <div className="flex items-center gap-1.5 text-gray-500">
+            <Calendar size={14} />
+            {new Date(task.due_date).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}
+          </div>
+        )
+      }
+      width="520px"
+      footer={getFooterButtons()}
     >
-      {/* Карточка с жесткими лимитами */}
-      <div
-        className="relative w-full max-w-4xl h-full md:h-fit max-h-none md:max-h-[85vh] bg-white rounded-none md:rounded-[32px] shadow-2xl flex flex-col md:grid overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        style={{ gridTemplateColumns: '350px 1fr' }}
-      >
-        {/* === ЛЕВАЯ ПАНЕЛЬ (верхняя на мобиле) === */}
-        <div className="p-6 flex flex-col border-b md:border-b-0 md:border-e border-muted bg-muted/20 overflow-y-auto">
-          {/* Закрыть */}
-          <button
-            onClick={onClose}
-            className="self-end mb-4 text-muted-foreground hover:text-foreground"
+      <div className="space-y-4" dir={locale === 'he' ? 'rtl' : 'ltr'}>
+        {/* Status & Priority */}
+        <div className="flex items-center gap-2">
+          <span
+            className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+              task.status === 'completed'
+                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                : task.status === 'in_progress'
+                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+            }`}
           >
-            <X size={20} />
-          </button>
+            {l.status[task.status as keyof typeof l.status] || task.status}
+          </span>
+          <span className="text-xs text-gray-400">
+            {l.priority[task.priority as keyof typeof l.priority] || task.priority}
+          </span>
+        </div>
 
-          {/* Приоритет + Заголовок */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              {priorityIcons[task.priority as keyof typeof priorityIcons] || priorityIcons.medium}
-              <span className="text-xs text-muted-foreground uppercase">
-                {l.priority[task.priority as keyof typeof l.priority] || task.priority}
-              </span>
+        {/* Assigned To */}
+        {task.assigned_to && (
+          <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+            <User size={16} className="text-gray-400" />
+            <div>
+              <p className="text-xs text-gray-500">{l.assignedTo}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{task.assigned_to}</p>
             </div>
-            <h2 className="text-2xl font-bold mb-2">{task.title}</h2>
           </div>
+        )}
 
-          {/* Статус */}
-          <div className="mb-4">
-            <span
-              className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                task.status === 'completed'
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : task.status === 'in_progress'
-                  ? 'bg-amber-100 text-amber-700'
-                  : 'bg-blue-100 text-blue-700'
-              }`}
+        {/* Client */}
+        {clientName && (
+          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+            <p className="text-xs text-gray-500 mb-1">{l.client}</p>
+            <button
+              onClick={() => client && onClientClick?.(client.id)}
+              className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
             >
-              {l.status[task.status as keyof typeof l.status] || task.status}
-            </span>
+              {clientName}
+            </button>
           </div>
+        )}
 
-          {/* Дедлайн */}
-          {task.due_date && (
-            <div className="mb-4">
-              <p className="text-sm text-muted-foreground mb-1">{l.deadline}</p>
-              <div className="flex items-center gap-2 text-base">
-                <Calendar size={16} />
-                {new Date(task.due_date).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
+        {/* Contact Actions */}
+        {(client?.phone || task.contact_phone) && (
+          <div className="space-y-2">
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
+              <div className="flex items-center gap-2">
+                <Phone size={16} className="text-gray-400" />
+                <span className="text-sm text-gray-900 dark:text-gray-100">{client?.phone || task.contact_phone}</span>
               </div>
             </div>
-          )}
-
-          {/* Назначено */}
-          {task.assigned_to && (
-            <div className="mb-4">
-              <p className="text-sm text-muted-foreground mb-1">{l.assignedTo}</p>
-              <div className="flex items-center gap-2 text-base">
-                <User size={16} />
-                <span>{task.assigned_to}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Клиент */}
-          {clientName && (
-            <div className="mb-4">
-              <p className="text-sm text-muted-foreground mb-1">{l.client}</p>
+            <div className="grid grid-cols-3 gap-2">
               <button
-                onClick={() => client && onClientClick?.(client.id)}
-                className="text-lg font-semibold text-primary hover:underline"
+                onClick={() => (window.location.href = `tel:${client?.phone || task.contact_phone}`)}
+                className="py-2.5 px-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition text-xs font-medium flex items-center justify-center gap-1.5"
               >
-                {clientName}
+                <Phone size={14} />
+                {l.phone}
+              </button>
+              <button
+                onClick={() => {
+                  const cleanPhone = (client?.phone || task.contact_phone)!.replace(/[^0-9]/g, '')
+                  window.open(`https://wa.me/${cleanPhone}`, '_blank')
+                }}
+                className="py-2.5 px-3 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 transition text-xs font-medium flex items-center justify-center gap-1.5"
+              >
+                <MessageCircle size={14} />
+                {l.whatsapp}
+              </button>
+              <button
+                onClick={() => (window.location.href = `sms:${client?.phone || task.contact_phone}`)}
+                className="py-2.5 px-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition text-xs font-medium flex items-center justify-center gap-1.5"
+              >
+                <MessageSquare size={14} />
+                {l.sms}
               </button>
             </div>
-          )}
-
-          {/* Контакты */}
-          {((client && (client.phone || client.email || client.address)) || (task.contact_phone || task.contact_email || task.contact_address)) && (
-            <div className="space-y-2 mb-6">
-              {(client?.phone || task.contact_phone) && (
-                <div>
-                  <div className="w-full flex items-center gap-2 py-2 px-3 rounded-lg bg-blue-50 text-blue-600">
-                    <Phone size={16} />
-                    <span className="text-sm flex-1">{client?.phone || task.contact_phone}</span>
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => (window.location.href = `tel:${client?.phone || task.contact_phone}`)}
-                      className="flex-1 py-2 px-3 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition text-sm font-medium"
-                    >
-                      {l.phone}
-                    </button>
-                    <button
-                      onClick={() => {
-                        const cleanPhone = (client?.phone || task.contact_phone)!.replace(/[^0-9]/g, '')
-                        window.open(`https://wa.me/${cleanPhone}`, '_blank')
-                      }}
-                      className="flex-1 py-2 px-3 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition text-sm font-medium"
-                    >
-                      {l.whatsapp}
-                    </button>
-                    <button
-                      onClick={() => (window.location.href = `sms:${client?.phone || task.contact_phone}`)}
-                      className="flex-1 py-2 px-3 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition text-sm font-medium"
-                    >
-                      {l.sms}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {(client?.email || task.contact_email) && (
-                <div>
-                  <div className="w-full flex items-center gap-2 py-2 px-3 rounded-lg bg-red-50 text-red-600">
-                    <Mail size={16} />
-                    <span className="text-sm flex-1 truncate">{client?.email || task.contact_email}</span>
-                  </div>
-                  <button
-                    onClick={() => (window.location.href = `mailto:${client?.email || task.contact_email}`)}
-                    className="w-full mt-2 py-2 px-3 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition text-sm font-medium"
-                  >
-                    {l.sendEmail}
-                  </button>
-                </div>
-              )}
-              {(client?.address || task.contact_address) && (
-                <button
-                  onClick={() => {
-                    const address = client?.address || task.contact_address
-                    const geoUrl = `geo:0,0?q=${encodeURIComponent(address!)}`
-                    window.location.href = geoUrl
-                    setTimeout(() => {
-                      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address!)}`, '_blank')
-                    }, 500)
-                  }}
-                  className="w-full flex items-center gap-3 py-2 px-3 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-                >
-                  <MapPin size={16} />
-                  <span className="text-sm flex-1 text-start truncate">{client?.address || task.contact_address}</span>
-                  <span className="text-xs opacity-75">{l.navigate}</span>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Действия */}
-          <div className="space-y-2 mt-auto">
-            {task.status === 'todo' && (
-              <TrinityButton
-                variant="outline"
-                fullWidth
-                onClick={() => onStatusChange?.(task.id, 'in_progress')}
-                className="border-2 border-amber-400 text-amber-600 hover:bg-amber-50"
-              >
-                {l.start}
-              </TrinityButton>
-            )}
-            {task.status === 'in_progress' && (
-              <TrinityButton
-                variant="outline"
-                fullWidth
-                onClick={() => onStatusChange?.(task.id, 'completed')}
-                className="border-2 border-emerald-400 text-emerald-600 hover:bg-emerald-50"
-              >
-                {l.complete}
-              </TrinityButton>
-            )}
-            {task.status !== 'completed' && (
-              <TrinityButton
-                variant="outline"
-                fullWidth
-                onClick={() => onStatusChange?.(task.id, 'completed')}
-                className="border border-muted text-muted-foreground hover:bg-muted"
-              >
-                {l.cancel}
-              </TrinityButton>
-            )}
           </div>
-        </div>
+        )}
 
-        {/* === ПРАВАЯ ПАНЕЛЬ === */}
-        <div className="p-6 bg-gray-50 overflow-y-auto">
-            <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase">
-              {l.description}
-            </h3>
-            {task.description ? (
-              <p className="text-sm whitespace-pre-wrap leading-relaxed">{task.description}</p>
-            ) : (
-              <p className="text-center py-12 text-muted-foreground text-sm">—</p>
-            )}
+        {/* Email */}
+        {(client?.email || task.contact_email) && (
+          <button
+            onClick={() => (window.location.href = `mailto:${client?.email || task.contact_email}`)}
+            className="w-full p-3 rounded-xl bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition flex items-center gap-2"
+          >
+            <Mail size={16} className="text-red-600 dark:text-red-400" />
+            <span className="text-sm text-red-900 dark:text-red-100 truncate flex-1 text-start">
+              {client?.email || task.contact_email}
+            </span>
+            <span className="text-xs text-red-600 dark:text-red-400">{l.sendEmail}</span>
+          </button>
+        )}
 
-            {/* Привязанный визит */}
-            {linkedVisit && (
-              <div className="mt-8 pt-6 border-t border-muted">
-                <h3 className="text-sm font-semibold mb-3 text-muted-foreground uppercase">
-                  {l.linkedVisit}
-                </h3>
-                <button
-                  onClick={() => onVisitClick?.(linkedVisit.id)}
-                  className="w-full p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition text-start"
+        {/* Address */}
+        {(client?.address || task.contact_address) && (
+          <button
+            onClick={() => {
+              const address = client?.address || task.contact_address
+              const geoUrl = `geo:0,0?q=${encodeURIComponent(address!)}`
+              window.location.href = geoUrl
+              setTimeout(() => {
+                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address!)}`, '_blank')
+              }, 500)
+            }}
+            className="w-full p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition flex items-center gap-2"
+          >
+            <MapPin size={16} className="text-blue-600 dark:text-blue-400" />
+            <span className="text-sm text-blue-900 dark:text-blue-100 truncate flex-1 text-start">
+              {client?.address || task.contact_address}
+            </span>
+            <span className="text-xs text-blue-600 dark:text-blue-400">{l.navigate}</span>
+          </button>
+        )}
+
+        {/* Description */}
+        {task.description && (
+          <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">{l.description}</h4>
+            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+              {task.description}
+            </p>
+          </div>
+        )}
+
+        {/* Linked Visit */}
+        {linkedVisit && (
+          <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+            <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">{l.linkedVisit}</h4>
+            <button
+              onClick={() => onVisitClick?.(linkedVisit.id)}
+              className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-start"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{clientName}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(linkedVisit.scheduled_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+                <span
+                  className={`text-xs px-2 py-1 rounded-full ${
+                    linkedVisit.status === 'completed'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : linkedVisit.status === 'in_progress'
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-blue-100 text-blue-700'
+                  }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{clientName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(linkedVisit.scheduled_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        linkedVisit.status === 'completed'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : linkedVisit.status === 'in_progress'
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {linkedVisit.status}
-                    </span>
-                  </div>
-                </button>
+                  {linkedVisit.status}
+                </span>
               </div>
-            )}
-        </div>
+            </button>
+          </div>
+        )}
       </div>
-    </div>
+    </Modal>
   )
 }

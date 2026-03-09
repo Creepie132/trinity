@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
       console.error('Failed to update billing info:', updateError)
     }
 
-    // Генерируем ссылку на оплату Tranzila
-    const paymentUrl = `https://direct.tranzila.com/ambersolt/iframenew.php?` + 
+    // Генерируем ссылку на оплату Tranzila (ambersolttok — терминал для токенизации)
+    const paymentUrl = `https://direct.tranzila.com/ambersolttok/iframenew.php?` + 
       new URLSearchParams({
         sum: amount.toString(),
         currency: '1',

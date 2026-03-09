@@ -53,7 +53,8 @@ export async function GET(request: NextRequest) {
         name, 
         tranzila_card_token, 
         tranzila_card_expiry,
-        tranzila_terminal, 
+        tranzila_terminal,
+        tranzila_token_terminal,
         tranzila_password, 
         billing_amount,
         billing_due_date,
@@ -98,12 +99,12 @@ export async function GET(request: NextRequest) {
 
         console.log(`[CRON Billing] Processing ${org.name} (${org.id}), amount: ${org.billing_amount}₪`)
 
-        // Списываем через Tranzila
+        // Списываем через Tranzila (используем token terminal для рекуррентных платежей)
         const chargeResult = await chargeByToken({
           token: org.tranzila_card_token!,
           amount: org.billing_amount,
           description: `Trinity CRM подписка — ${org.name}`,
-          terminal: org.tranzila_terminal || process.env.TRANZILA_TERMINAL,
+          terminal: org.tranzila_token_terminal || 'ambersolttok',
           password: org.tranzila_password || process.env.TRANZILA_PASSWORD,
           expdate: org.tranzila_card_expiry,
         })

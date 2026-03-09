@@ -100,12 +100,13 @@ interface ChargeResult {
 /**
  * Списание по сохранённому токену карты (TranzilaTK)
  * Используется для рекуррентных платежей подписок
+ * Для токенов используется отдельный терминал ambersolttok
  */
 export async function chargeByToken({
   token,
   amount,
   description,
-  terminal = process.env.TRANZILA_TERMINAL!,
+  terminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok',
   password = process.env.TRANZILA_PASSWORD!,
   expdate,
 }: ChargeByTokenParams): Promise<ChargeResult> {
@@ -184,7 +185,7 @@ export async function chargeByToken({
  */
 export async function validateToken({
   token,
-  terminal = process.env.TRANZILA_TERMINAL!,
+  terminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok',
   password = process.env.TRANZILA_PASSWORD!,
   expdate,
 }: {

@@ -13,7 +13,6 @@ interface ModalProps {
   footer?: ReactNode
   width?: string // e.g., '480px', '520px', '400px'
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
-  accentColor?: string
   showCloseButton?: boolean
   closeOnBackdrop?: boolean
   closeOnEscape?: boolean
@@ -38,7 +37,6 @@ export function Modal({
   footer,
   width,
   size = 'md',
-  accentColor = '#4F46E5', // indigo-600
   showCloseButton = true,
   closeOnBackdrop = true,
   closeOnEscape = true,
@@ -92,12 +90,6 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
       >
-        {/* Accent line */}
-        <div
-          className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
-          style={{ backgroundColor: accentColor }}
-        />
-
         {/* Header */}
         {(title || showCloseButton) && (
           <div className="flex items-start justify-between p-5 pb-0">

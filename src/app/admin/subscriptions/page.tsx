@@ -978,34 +978,37 @@ export default function AdminSubscriptionsPage() {
             </div>
 
             {/* Action buttons */}
-            <div className={`flex gap-2.5 mt-6 ${isDesktop ? 'flex-row' : 'flex-col'}`}>
+            <div className={`flex gap-2 mt-6 ${isDesktop ? 'flex-row' : 'flex-col'}`}>
+              {/* Продлить — primary, занимает больше места */}
               <button
                 onClick={() => {
                   handleExtend(selectedOrgSheet)
                   setSelectedOrgSheet(null)
                 }}
-                className={`py-3 rounded-xl bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors shadow-sm ${isDesktop ? 'flex-1' : 'w-full'}`}
+                className={`py-2.5 px-3 rounded-xl bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors whitespace-nowrap ${isDesktop ? 'flex-[1.4]' : 'w-full'}`}
               >
                 {language === 'he' ? 'הארכת מנוי' : 'Продлить подписку'}
               </button>
 
+              {/* Редактировать — secondary */}
               <button
                 onClick={() => {
                   handleEditOrg(selectedOrgSheet)
                   setSelectedOrgSheet(null)
                 }}
-                className={`py-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-600 flex items-center justify-center gap-2 ${isDesktop ? 'flex-1' : 'w-full'}`}
+                className={`py-2.5 px-3 rounded-xl border border-gray-200 text-gray-600 font-medium text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0 ${isDesktop ? 'flex-1' : 'w-full'}`}
               >
-                <Pencil className="w-4 h-4" />
-                {language === 'he' ? 'עריכה' : 'Редактировать'}
+                <Pencil className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{language === 'he' ? 'עריכה' : 'Редактировать'}</span>
               </button>
 
+              {/* Деактивировать — destructive */}
               <button
                 onClick={() => {
                   handleDeactivate(selectedOrgSheet.id)
                   setSelectedOrgSheet(null)
                 }}
-                className={`py-3 rounded-xl bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 font-medium text-sm hover:bg-red-100 dark:hover:bg-red-900 transition-colors border border-red-100 dark:border-red-800 ${isDesktop ? 'flex-1' : 'w-full'}`}
+                className={`py-2.5 px-3 rounded-xl bg-red-50 text-red-500 font-medium text-sm hover:bg-red-100 transition-colors border border-red-100 whitespace-nowrap min-w-0 ${isDesktop ? 'flex-1' : 'w-full'}`}
               >
                 {language === 'he' ? 'השבתה' : 'Деактивировать'}
               </button>
@@ -1296,7 +1299,6 @@ export default function AdminSubscriptionsPage() {
         title={t.plansTitle}
         subtitle={language === 'he' ? 'ניהול תוכניות מנוי' : 'Управление тарифными планами'}
         width="900px"
-        accentColor="#D97706"
       >
         <div className="flex items-center justify-end mb-4">
           <Button onClick={addNewPlan} size="sm">

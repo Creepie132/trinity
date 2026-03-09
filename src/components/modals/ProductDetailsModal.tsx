@@ -60,7 +60,6 @@ export function ProductDetailsModal() {
       onClose={() => closeModal('product-details')}
       title={text.productDetails}
       width="420px"
-      accentColor="#3B82F6"
       footer={
         <div className="space-y-2">
           <button

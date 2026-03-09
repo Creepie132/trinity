@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { resend } from '@/lib/resend'
+import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -119,6 +119,8 @@ export async function POST(request: NextRequest) {
         from: 'Trinity CRM <notifications@ambersol.co.il>',
         to: 'crepie1357@gmail.com',
         subject: '🔔 בקשת גישה חדשה | Trinity CRM',
+        headers: getEmailHeaders(),
+        tags: getEmailTags('transactional'),
         html: `
           <div dir="rtl" style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #6366f1;">🔔 בקשת גישה חדשה | Trinity CRM</h2>

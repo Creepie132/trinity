@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Resend } from 'resend'
+import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 import { ratelimitPublic, getClientIp } from '@/lib/ratelimit'
 import { validateBody, contactFormSchema } from '@/lib/validations'
 
@@ -26,14 +26,13 @@ export async function POST(request: NextRequest) {
 
     const { name, phone, email, message } = data
 
-    // Initialize Resend
-    const resend = new Resend(process.env.RESEND_API_KEY)
-
     // Send email
     await resend.emails.send({
-      from: 'Trinity CRM <onboarding@resend.dev>',
+      from: 'Trinity CRM <notifications@ambersol.co.il>',
       to: 'ambersolutions.systems@gmail.com',
       subject: `פנייה חדשה מ-${name}`,
+      headers: getEmailHeaders(),
+      tags: getEmailTags('transactional'),
       html: `
         <h2>פנייה חדשה מהאתר</h2>
         <p><strong>שם:</strong> ${name}</p>

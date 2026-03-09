@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateBody, createVisitSchema } from '@/lib/validations'
 import { getAuthContext } from '@/lib/auth-helpers'
-import { resend } from '@/lib/resend'
+import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 import { bookingConfirmEmail, newBookingNotifyEmail } from '@/lib/email-templates'
 
 // GET /api/visits - список визитов для текущей организации
@@ -249,6 +249,8 @@ export async function POST(request: NextRequest) {
           from: 'Trinity CRM <notifications@ambersol.co.il>',
           to: clientData.email,
           subject: `✓ התור שלך אושר | Ваша запись подтверждена - ${businessName}`,
+          headers: getEmailHeaders(),
+          tags: getEmailTags('transactional'),
           html: bookingConfirmEmail(
             clientData.name,
             visitDate,
@@ -266,6 +268,8 @@ export async function POST(request: NextRequest) {
           from: 'Trinity CRM <notifications@ambersol.co.il>',
           to: businessEmail,
           subject: `🔔 תור חדש | Новая запись - ${clientData?.name || 'Клиент'}`,
+          headers: getEmailHeaders(),
+          tags: getEmailTags('transactional'),
           html: newBookingNotifyEmail(
             clientData?.name || 'Клиент | לקוח',
             clientData?.phone || '',

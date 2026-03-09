@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import crypto from 'crypto'
 
 // Ленивая инициализация Resend (создаём только при вызове)
 function getResendClient() {
@@ -7,6 +8,20 @@ function getResendClient() {
     return null
   }
   return new Resend(process.env.RESEND_API_KEY)
+}
+
+// Стандартные заголовки для улучшения deliverability
+export function getEmailHeaders() {
+  return {
+    'X-Entity-Ref-ID': crypto.randomUUID(),
+  }
+}
+
+// Стандартные теги
+export function getEmailTags(category: string = 'transactional') {
+  return [
+    { name: 'category', value: category }
+  ]
 }
 
 export async function sendWelcomeEmail(userEmail: string, orgName: string): Promise<boolean> {
@@ -18,9 +33,11 @@ export async function sendWelcomeEmail(userEmail: string, orgName: string): Prom
     }
 
     await resend.emails.send({
-      from: 'Trinity CRM <onboarding@resend.dev>',
+      from: 'Trinity CRM <notifications@ambersol.co.il>',
       to: userEmail,
       subject: 'ברוכים הבאים ל-Trinity CRM!',
+      headers: getEmailHeaders(),
+      tags: getEmailTags('transactional'),
       html: `
         <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; max-width: 600px; margin: 0 auto;">
           <div style="background: #F59E0B; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">

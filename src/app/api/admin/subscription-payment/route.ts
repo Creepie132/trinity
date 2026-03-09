@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAdminAuthContext } from '@/lib/auth-helpers'
-import { resend } from '@/lib/resend'
+import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://www.ambersol.co.il'
 
@@ -99,6 +99,8 @@ export async function POST(request: NextRequest) {
       from: 'Trinity CRM <notifications@ambersol.co.il>',
       to: ownerEmail,
       subject: 'Оплата подписки Trinity CRM',
+      headers: getEmailHeaders(),
+      tags: getEmailTags('transactional'),
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 32px; border-radius: 16px 16px 0 0;">

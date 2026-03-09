@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { resend } from '@/lib/resend'
+import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 import { receiptEmail } from '@/lib/email-templates'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -71,6 +71,8 @@ export async function GET(request: NextRequest) {
             from: 'Trinity CRM <notifications@ambersol.co.il>',
             to: clientEmail,
             subject: `קבלה | Квитанция ₪${payment.amount}`,
+            headers: getEmailHeaders(),
+            tags: getEmailTags('transactional'),
             html: receiptEmail(
               clientName,
               payment.amount,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logAudit } from '@/lib/audit'
-import { resend } from '@/lib/resend'
+import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 import { reminderEmail } from '@/lib/email-templates'
 
 export const dynamic = 'force-dynamic'
@@ -129,6 +129,8 @@ export async function GET(request: NextRequest) {
             from: 'Trinity CRM <notifications@ambersol.co.il>',
             to: client.email,
             subject: `⏰ תזכורת לתור מחר | Напоминание о записи - ${org.name}`,
+            headers: getEmailHeaders(),
+            tags: getEmailTags('transactional'),
             html: reminderEmail(
               client.name || client.first_name,
               date,

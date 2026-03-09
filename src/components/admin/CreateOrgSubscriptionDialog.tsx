@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import Modal from '@/components/ui/Modal'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -40,16 +39,9 @@ export function CreateOrgSubscriptionDialog({ open, onOpenChange }: CreateOrgSub
 
   const selectedOrg = organizations?.find((o) => o.id === selectedOrgId)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!selectedOrgId) {
+  const handleSubmit = async () => {
+    if (!selectedOrgId || !selectedOrg) {
       toast.error(language === 'he' ? 'בחר ארגון' : 'Выберите организацию')
-      return
-    }
-
-    if (!selectedOrg) {
-      toast.error('Organization not found')
       return
     }
 
@@ -73,7 +65,6 @@ export function CreateOrgSubscriptionDialog({ open, onOpenChange }: CreateOrgSub
       const data = await response.json()
 
       if (data.url) {
-        // Open Stripe Checkout in new window
         window.open(data.url, '_blank')
         toast.success(language === 'he' ? 'מעבר לתשלום...' : 'Переход к оплате...')
         handleClose()
@@ -81,7 +72,6 @@ export function CreateOrgSubscriptionDialog({ open, onOpenChange }: CreateOrgSub
         toast.error(language === 'he' ? 'שגיאה ביצירת מנוי' : 'Ошибка создания подписки')
       }
     } catch (error) {
-      console.error('Org subscription error:', error)
       toast.error(language === 'he' ? 'שגיאה ביצירת מנוי' : 'Ошибка создания подписки')
     } finally {
       setLoading(false)
@@ -101,70 +91,65 @@ export function CreateOrgSubscriptionDialog({ open, onOpenChange }: CreateOrgSub
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {language === 'he' ? 'הוסף מנוי לארגון' : 'Оформить подписку организации'}
-          </DialogTitle>
-        </DialogHeader>
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title={language === 'he' ? 'הוסף מנוי לארגון' : 'Оформить подписку организации'}
+      width="440px"
+      footer={
+        <div className="flex gap-2 justify-end">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
+          >
+            {language === 'he' ? 'ביטול' : 'Отмена'}
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="px-5 py-2.5 rounded-xl bg-green-600 text-white text-sm font-medium hover:bg-green-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
+          >
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {loading 
+              ? (language === 'he' ? 'יוצר...' : 'Создание...')
+              : (language === 'he' ? 'הוסף מנוי' : 'Оформить')
+            }
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="organization">{language === 'he' ? 'בחר ארגון' : 'Выберите организацию'} *</Label>
+          <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
+            <SelectTrigger>
+              <SelectValue placeholder={language === 'he' ? 'בחר ארגון' : 'Выберите организацию'} />
+            </SelectTrigger>
+            <SelectContent>
+              {organizations?.map((org) => (
+                <SelectItem key={org.id} value={org.id}>
+                  {org.name} ({org.email || 'No email'})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="organization">
-              {language === 'he' ? 'בחר ארגון' : 'Выберите организацию'} *
-            </Label>
-            <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
-              <SelectTrigger>
-                <SelectValue placeholder={language === 'he' ? 'בחר ארגון' : 'Выберите организацию'} />
-              </SelectTrigger>
-              <SelectContent>
-                {organizations?.map((org) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    {org.name} ({org.email || 'No email'})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="plan">
-              {language === 'he' ? 'בחר תוכנית' : 'Выберите план'} *
-            </Label>
-            <Select value={selectedPlan} onValueChange={(value) => setSelectedPlan(value as Plan)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="basic">{getPlanLabel('basic')}</SelectItem>
-                <SelectItem value="pro">{getPlanLabel('pro')}</SelectItem>
-                <SelectItem value="enterprise">{getPlanLabel('enterprise')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex gap-3 justify-end pt-4">
-            <Button type="button" variant="outline" onClick={handleClose}>
-              {language === 'he' ? 'ביטול' : 'Отмена'}
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 ml-2 animate-spin" />
-                  {language === 'he' ? 'יוצר...' : 'Создание...'}
-                </>
-              ) : (
-                language === 'he' ? 'הוסף מנוי' : 'Оформить'
-              )}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        <div>
+          <Label htmlFor="plan">{language === 'he' ? 'בחר תוכנית' : 'Выберите план'} *</Label>
+          <Select value={selectedPlan} onValueChange={(value) => setSelectedPlan(value as Plan)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="basic">{getPlanLabel('basic')}</SelectItem>
+              <SelectItem value="pro">{getPlanLabel('pro')}</SelectItem>
+              <SelectItem value="enterprise">{getPlanLabel('enterprise')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </Modal>
   )
 }

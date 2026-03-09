@@ -8,6 +8,8 @@ export async function createTranzilaPaymentLink({
   failUrl,
   terminal,
   password,
+  saveCard,
+  customField2,
 }: {
   amount: number
   description: string
@@ -16,6 +18,8 @@ export async function createTranzilaPaymentLink({
   failUrl: string
   terminal?: string
   password?: string
+  saveCard?: boolean // Запросить токенизацию карты (TranzilaTK)
+  customField2?: string // Доп. поле для передачи типа платежа
 }) {
   const terminalId = terminal || process.env.TRANZILA_TERMINAL_ID
   const terminalPassword = password || process.env.TRANZILA_TERMINAL_PASSWORD
@@ -33,6 +37,16 @@ export async function createTranzilaPaymentLink({
     cField1: paymentId,
     lang: 'il',
   })
+
+  // Запрос токенизации карты для рекуррентных платежей
+  if (saveCard) {
+    params.append('tranzilaTK', '1') // Tranzila вернёт токен карты
+  }
+
+  // Доп. поле для идентификации типа платежа
+  if (customField2) {
+    params.append('cField2', customField2)
+  }
 
   const paymentLink = `https://direct.tranzila.com/${terminalId}/iframenew.php?${params.toString()}`
 

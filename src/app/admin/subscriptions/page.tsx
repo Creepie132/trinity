@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
-import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Package, Plus, Trash2, Save, Settings, Mail, Send, Loader2, ChevronRight, X, Pencil } from 'lucide-react'
+import { Shield, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Package, Plus, Trash2, Save, Settings, Mail, Send, Loader2, ChevronRight, X, Pencil, CreditCard, Copy, ExternalLink } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { PLANS, getPlan, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
@@ -111,6 +111,13 @@ export default function AdminSubscriptionsPage() {
 
   // Bottom sheet for org details
   const [selectedOrgSheet, setSelectedOrgSheet] = useState<Organization | null>(null)
+
+  // Autopayment modal
+  const [autopayModalOpen, setAutopayModalOpen] = useState(false)
+  const [autopayOrg, setAutopayOrg] = useState<Organization | null>(null)
+  const [autopayAmount, setAutopayAmount] = useState<number>(199)
+  const [autopayLoading, setAutopayLoading] = useState(false)
+  const [autopayUrl, setAutopayUrl] = useState<string | null>(null)
 
   // Responsive: desktop uses Modal, mobile uses bottom sheet
   const isDesktop = useMediaQuery('(min-width: 768px)')
@@ -705,6 +712,57 @@ export default function AdminSubscriptionsPage() {
     }
   }
 
+  const handleOpenAutopay = (org: Organization) => {
+    setAutopayOrg(org)
+    // Получаем цену из плана
+    const dbPlan = dbPlans.find((p) => p.key === org.plan)
+    const defaultPrice = dbPlan?.price_monthly || 199
+    setAutopayAmount(org.billing_amount || defaultPrice)
+    setAutopayUrl(null)
+    setAutopayModalOpen(true)
+  }
+
+  const handleCreateAutopayLink = async () => {
+    if (!autopayOrg) return
+    
+    setAutopayLoading(true)
+    try {
+      const dbPlan = dbPlans.find((p) => p.key === autopayOrg.plan)
+      const planName = dbPlan 
+        ? (language === 'he' ? dbPlan.name_he : dbPlan.name_ru)
+        : autopayOrg.plan || 'Subscription'
+
+      const response = await fetch('/api/admin/subscription-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          org_id: autopayOrg.id,
+          amount: autopayAmount,
+          plan_name: planName,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create payment link')
+      }
+
+      const data = await response.json()
+      setAutopayUrl(data.payment_url)
+      toast.success(language === 'he' ? 'קישור נוצר' : 'Ссылка создана')
+    } catch (error: any) {
+      console.error('Error creating autopay link:', error)
+      toast.error(error.message || 'Failed to create payment link')
+    } finally {
+      setAutopayLoading(false)
+    }
+  }
+
+  const copyToClipboard = async (text: string) => {
+    await navigator.clipboard.writeText(text)
+    toast.success(language === 'he' ? 'הועתק' : 'Скопировано')
+  }
+
   // Plans management functions
   const updatePlan = (id: string, field: string, value: any) => {
     setPlans((prev) =>
@@ -1022,14 +1080,28 @@ export default function AdminSubscriptionsPage() {
             </div>
 
             {/* Action buttons */}
-            <div className={`flex gap-2 mt-6 ${isDesktop ? 'flex-row' : 'flex-col'}`}>
-              {/* Продлить — primary, занимает больше места */}
+            <div className={`flex gap-2 mt-6 ${isDesktop ? 'flex-row flex-wrap' : 'flex-col'}`}>
+              {/* Автоплатёж — если нет токена, показываем кнопку подключения */}
+              {!selectedOrgSheet.tranzila_card_token && (
+                <button
+                  onClick={() => {
+                    handleOpenAutopay(selectedOrgSheet)
+                    setSelectedOrgSheet(null)
+                  }}
+                  className={`py-2.5 px-3 rounded-xl bg-emerald-600 text-white font-medium text-sm hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0 ${isDesktop ? 'flex-[1.5]' : 'w-full'}`}
+                >
+                  <CreditCard className="w-4 h-4 flex-shrink-0" />
+                  <span>{language === 'he' ? 'חיבור תשלום אוטומטי' : 'Автоплатёж'}</span>
+                </button>
+              )}
+
+              {/* Продлить — primary */}
               <button
                 onClick={() => {
                   handleExtend(selectedOrgSheet)
                   setSelectedOrgSheet(null)
                 }}
-                className={`py-2.5 px-2 rounded-xl bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors whitespace-nowrap min-w-0 ${isDesktop ? 'flex-[1.5]' : 'w-full'}`}
+                className={`py-2.5 px-2 rounded-xl bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors whitespace-nowrap min-w-0 ${isDesktop ? 'flex-1' : 'w-full'}`}
               >
                 {language === 'he' ? 'הארכה' : 'Продлить'}
               </button>
@@ -1515,6 +1587,128 @@ export default function AdminSubscriptionsPage() {
         organization={orgToEdit}
         onSaved={loadData}
       />
+
+      {/* Autopayment Modal */}
+      <Modal
+        open={autopayModalOpen}
+        onClose={() => {
+          setAutopayModalOpen(false)
+          setAutopayOrg(null)
+          setAutopayUrl(null)
+        }}
+        title={language === 'he' ? 'חיבור תשלום אוטומטי' : 'Подключить автоплатёж'}
+        subtitle={autopayOrg?.name}
+        width="440px"
+        footer={
+          autopayUrl ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setAutopayModalOpen(false)
+                  setAutopayOrg(null)
+                  setAutopayUrl(null)
+                }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm hover:bg-gray-50 transition-colors whitespace-nowrap"
+              >
+                {language === 'he' ? 'סגור' : 'Закрыть'}
+              </button>
+              <button
+                onClick={() => window.open(autopayUrl, '_blank')}
+                className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
+              >
+                <ExternalLink className="w-4 h-4" />
+                {language === 'he' ? 'פתח' : 'Открыть'}
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setAutopayModalOpen(false)
+                  setAutopayOrg(null)
+                }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm hover:bg-gray-50 transition-colors whitespace-nowrap"
+              >
+                {language === 'he' ? 'ביטול' : 'Отмена'}
+              </button>
+              <button
+                onClick={handleCreateAutopayLink}
+                disabled={autopayLoading}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap"
+              >
+                {autopayLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CreditCard className="w-4 h-4" />
+                )}
+                {language === 'he' ? 'צור קישור' : 'Создать ссылку'}
+              </button>
+            </div>
+          )
+        }
+      >
+        {autopayUrl ? (
+          <div className="space-y-4">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+              <p className="text-sm text-emerald-700 dark:text-emerald-300 mb-3">
+                {language === 'he' 
+                  ? 'קישור התשלום נוצר! שלח אותו ללקוח או פתח בעצמך.'
+                  : 'Ссылка на оплату создана! Отправь клиенту или открой сам.'}
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={autopayUrl}
+                  readOnly
+                  className="flex-1 px-3 py-2 text-xs bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-700 rounded-lg text-gray-600 dark:text-gray-300"
+                />
+                <button
+                  onClick={() => copyToClipboard(autopayUrl)}
+                  className="px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {language === 'he'
+                ? 'לאחר התשלום, הכרטיס יישמר אוטומטית לחיובים עתידיים.'
+                : 'После оплаты карта автоматически сохранится для будущих списаний.'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {language === 'he'
+                ? 'צור קישור לתשלום הראשון. לאחר התשלום, כרטיס הלקוח יישמר לחיובים אוטומטיים.'
+                : 'Создай ссылку на первый платёж. После оплаты карта клиента сохранится для автоматических списаний.'}
+            </p>
+            
+            <div>
+              <Label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
+                {language === 'he' ? 'סכום חודשי' : 'Сумма в месяц'}
+              </Label>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">₪</span>
+                <Input
+                  type="number"
+                  value={autopayAmount}
+                  onChange={(e) => setAutopayAmount(parseFloat(e.target.value) || 0)}
+                  className="text-lg font-semibold"
+                />
+              </div>
+            </div>
+
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                💡 {language === 'he' 
+                  ? 'הקישור יפתח דף תשלום של Tranzila. לאחר תשלום מוצלח, הכרטיס יישמר ותאריך החיוב הבא יוגדר אוטומטית.'
+                  : 'Ссылка откроет страницу оплаты Tranzila. После успешной оплаты карта сохранится и дата следующего списания установится автоматически.'}
+              </p>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* FAB Button */}
       <SubscriptionsFab

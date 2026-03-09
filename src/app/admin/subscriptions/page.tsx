@@ -116,8 +116,9 @@ export default function AdminSubscriptionsPage() {
   const [autopayModalOpen, setAutopayModalOpen] = useState(false)
   const [autopayOrg, setAutopayOrg] = useState<Organization | null>(null)
   const [autopayAmount, setAutopayAmount] = useState<number>(199)
+  const [autopayBillingDate, setAutopayBillingDate] = useState<string>('')
   const [autopayLoading, setAutopayLoading] = useState(false)
-  const [autopayUrl, setAutopayUrl] = useState<string | null>(null)
+  const [autopaySuccess, setAutopaySuccess] = useState<{ email: string } | null>(null)
 
   // Responsive: desktop uses Modal, mobile uses bottom sheet
   const isDesktop = useMediaQuery('(min-width: 768px)')
@@ -718,41 +719,44 @@ export default function AdminSubscriptionsPage() {
     const dbPlan = dbPlans.find((p) => p.key === org.plan)
     const defaultPrice = dbPlan?.price_monthly || 199
     setAutopayAmount(org.billing_amount || defaultPrice)
-    setAutopayUrl(null)
+    
+    // Дата первого списания — сегодня по умолчанию
+    const today = new Date().toISOString().split('T')[0]
+    setAutopayBillingDate(org.billing_due_date || today)
+    
+    setAutopaySuccess(null)
     setAutopayModalOpen(true)
   }
 
-  const handleCreateAutopayLink = async () => {
+  const handleSendAutopayLink = async () => {
     if (!autopayOrg) return
     
     setAutopayLoading(true)
     try {
-      const dbPlan = dbPlans.find((p) => p.key === autopayOrg.plan)
-      const planName = dbPlan 
-        ? (language === 'he' ? dbPlan.name_he : dbPlan.name_ru)
-        : autopayOrg.plan || 'Subscription'
-
       const response = await fetch('/api/admin/subscription-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           org_id: autopayOrg.id,
           amount: autopayAmount,
-          plan_name: planName,
+          billing_due_date: autopayBillingDate,
         }),
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to create payment link')
+        throw new Error(error.error || 'Failed to send payment link')
       }
 
       const data = await response.json()
-      setAutopayUrl(data.payment_url)
-      toast.success(language === 'he' ? 'קישור נוצר' : 'Ссылка создана')
+      setAutopaySuccess({ email: data.email_sent_to })
+      toast.success(language === 'he' ? 'הקישור נשלח' : 'Ссылка отправлена')
+      
+      // Обновляем данные
+      loadData()
     } catch (error: any) {
-      console.error('Error creating autopay link:', error)
-      toast.error(error.message || 'Failed to create payment link')
+      console.error('Error sending autopay link:', error)
+      toast.error(error.message || 'Failed to send payment link')
     } finally {
       setAutopayLoading(false)
     }
@@ -1594,32 +1598,23 @@ export default function AdminSubscriptionsPage() {
         onClose={() => {
           setAutopayModalOpen(false)
           setAutopayOrg(null)
-          setAutopayUrl(null)
+          setAutopaySuccess(null)
         }}
         title={language === 'he' ? 'חיבור תשלום אוטומטי' : 'Подключить автоплатёж'}
         subtitle={autopayOrg?.name}
         width="440px"
         footer={
-          autopayUrl ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setAutopayModalOpen(false)
-                  setAutopayOrg(null)
-                  setAutopayUrl(null)
-                }}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm hover:bg-gray-50 transition-colors whitespace-nowrap"
-              >
-                {language === 'he' ? 'סגור' : 'Закрыть'}
-              </button>
-              <button
-                onClick={() => window.open(autopayUrl, '_blank')}
-                className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
-              >
-                <ExternalLink className="w-4 h-4" />
-                {language === 'he' ? 'פתח' : 'Открыть'}
-              </button>
-            </div>
+          autopaySuccess ? (
+            <button
+              onClick={() => {
+                setAutopayModalOpen(false)
+                setAutopayOrg(null)
+                setAutopaySuccess(null)
+              }}
+              className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition-colors whitespace-nowrap"
+            >
+              {language === 'he' ? 'סגור' : 'Закрыть'}
+            </button>
           ) : (
             <div className="flex gap-2">
               <button
@@ -1632,45 +1627,35 @@ export default function AdminSubscriptionsPage() {
                 {language === 'he' ? 'ביטול' : 'Отмена'}
               </button>
               <button
-                onClick={handleCreateAutopayLink}
+                onClick={handleSendAutopayLink}
                 disabled={autopayLoading}
-                className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap"
+                className="flex-[1.5] py-2.5 rounded-xl bg-indigo-600 text-white text-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap"
               >
                 {autopayLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <CreditCard className="w-4 h-4" />
+                  <Send className="w-4 h-4" />
                 )}
-                {language === 'he' ? 'צור קישור' : 'Создать ссылку'}
+                {language === 'he' ? 'שלח קישור ללקוח' : 'Отправить ссылку клиенту'}
               </button>
             </div>
           )
         }
       >
-        {autopayUrl ? (
+        {autopaySuccess ? (
           <div className="space-y-4">
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
-              <p className="text-sm text-emerald-700 dark:text-emerald-300 mb-3">
-                {language === 'he' 
-                  ? 'קישור התשלום נוצר! שלח אותו ללקוח או פתח בעצמך.'
-                  : 'Ссылка на оплату создана! Отправь клиенту или открой сам.'}
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={autopayUrl}
-                  readOnly
-                  className="flex-1 px-3 py-2 text-xs bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-700 rounded-lg text-gray-600 dark:text-gray-300"
-                />
-                <button
-                  onClick={() => copyToClipboard(autopayUrl)}
-                  className="px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800 text-center">
+              <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                <CheckCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
               </div>
+              <p className="text-lg font-semibold text-emerald-700 dark:text-emerald-300 mb-1">
+                {language === 'he' ? 'הקישור נשלח!' : 'Ссылка отправлена!'}
+              </p>
+              <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                {autopaySuccess.email}
+              </p>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
               {language === 'he'
                 ? 'לאחר התשלום, הכרטיס יישמר אוטומטית לחיובים עתידיים.'
                 : 'После оплаты карта автоматически сохранится для будущих списаний.'}
@@ -1678,18 +1663,13 @@ export default function AdminSubscriptionsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {language === 'he'
-                ? 'צור קישור לתשלום הראשון. לאחר התשלום, כרטיס הלקוח יישמר לחיובים אוטומטיים.'
-                : 'Создай ссылку на первый платёж. После оплаты карта клиента сохранится для автоматических списаний.'}
-            </p>
-            
+            {/* Сумма подписки */}
             <div>
-              <Label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
-                {language === 'he' ? 'סכום חודשי' : 'Сумма в месяц'}
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                {language === 'he' ? 'סכום מנוי (₪/חודש)' : 'Сумма подписки (₪/мес)'}
               </Label>
               <div className="flex items-center gap-2">
-                <span className="text-gray-400">₪</span>
+                <span className="text-gray-400 text-lg">₪</span>
                 <Input
                   type="number"
                   value={autopayAmount}
@@ -1699,11 +1679,23 @@ export default function AdminSubscriptionsPage() {
               </div>
             </div>
 
+            {/* Дата первого списания */}
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                {language === 'he' ? 'תאריך חיוב ראשון' : 'Дата первого списания'}
+              </Label>
+              <Input
+                type="date"
+                value={autopayBillingDate}
+                onChange={(e) => setAutopayBillingDate(e.target.value)}
+              />
+            </div>
+
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
               <p className="text-xs text-blue-700 dark:text-blue-300">
                 💡 {language === 'he' 
-                  ? 'הקישור יפתח דף תשלום של Tranzila. לאחר תשלום מוצלח, הכרטיס יישמר ותאריך החיוב הבא יוגדר אוטומטית.'
-                  : 'Ссылка откроет страницу оплаты Tranzila. После успешной оплаты карта сохранится и дата следующего списания установится автоматически.'}
+                  ? 'הקישור יישלח לאימייל הבעלים של הארגון. לאחר תשלום מוצלח, הכרטיס יישמר לחיובים אוטומטיים.'
+                  : 'Ссылка будет отправлена на email владельца организации. После оплаты карта сохранится для автоматических списаний.'}
               </p>
             </div>
           </div>

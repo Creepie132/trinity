@@ -365,6 +365,7 @@ export function SaleModal() {
         title={text.title}
         subtitle={clientName}
         width="600px"
+        className="max-w-[95vw]"
       >
         <div className="space-y-6">
           {/* Client Info */}
@@ -455,6 +456,7 @@ export function SaleModal() {
       title={text.title}
       subtitle={clientName}
       width="800px"
+      className="max-w-[95vw]"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Column - Product Search & Cart */}
@@ -657,31 +659,31 @@ export function SaleModal() {
       </div>
 
       {/* Footer Buttons */}
-      <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-6 pt-4 border-t">
         <button
           onClick={() => setStep('checkout')}
           disabled={cart.length === 0}
-          className="flex-1 min-w-[120px] py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          className="py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm"
         >
           {text.checkout}
         </button>
         <button
           onClick={handleSaveDraft}
           disabled={cart.length === 0}
-          className="flex-1 min-w-[120px] py-3 rounded-xl border border-gray-300 font-medium hover:bg-gray-50 disabled:opacity-50 transition"
+          className="py-3 rounded-xl border border-gray-300 font-medium hover:bg-gray-50 disabled:opacity-50 transition text-sm"
         >
           {text.save}
         </button>
         <button
           onClick={() => setShowProposalPanel(!showProposalPanel)}
           disabled={cart.length === 0}
-          className="flex-1 min-w-[120px] py-3 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 disabled:opacity-50 transition"
+          className="py-3 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 disabled:opacity-50 transition text-sm"
         >
           {text.proposal}
         </button>
         <button
           onClick={handleClose}
-          className="flex-1 min-w-[120px] py-3 rounded-xl border border-gray-300 font-medium hover:bg-gray-50 transition"
+          className="py-3 rounded-xl border border-gray-300 font-medium hover:bg-gray-50 transition text-sm"
         >
           {text.cancel}
         </button>

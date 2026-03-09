@@ -1,6 +1,7 @@
 'use client'
 
-import { Calendar, Clock, ChevronRight } from 'lucide-react'
+import { Calendar, Clock, ChevronRight, ShoppingCart } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useModalStore } from '@/store/useModalStore'
 
@@ -33,6 +34,12 @@ export function ClientCard({
   onSelect,
 }: ClientCardProps) {
   const { openModal } = useModalStore()
+  const [hasDraft, setHasDraft] = useState(false)
+
+  useEffect(() => {
+    const draftKey = `draft_sale_${client.id}`
+    setHasDraft(!!localStorage.getItem(draftKey))
+  }, [client.id])
 
   const clientName = getClientName(client)
   const initials = getClientInitials(client)
@@ -84,7 +91,12 @@ export function ClientCard({
         </div>
 
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-base truncate">{clientName}</h4>
+          <div className="flex items-center gap-2">
+            <h4 className="font-semibold text-base truncate">{clientName}</h4>
+            {hasDraft && (
+              <ShoppingCart className="w-4 h-4 text-amber-500 flex-shrink-0" />
+            )}
+          </div>
           {client.phone && (
             <p className="text-sm text-muted-foreground truncate">{client.phone}</p>
           )}

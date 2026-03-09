@@ -11,11 +11,13 @@ import { getClientName } from '@/lib/client-utils'
 import { 
   Search, Plus, Minus, X, Percent, ShoppingCart, 
   FileText, Download, Send, MessageCircle, Mail,
-  CreditCard, Banknote, Building2, ChevronLeft, Check
+  CreditCard, Banknote, Building2, ChevronLeft, Check, LayoutGrid
 } from 'lucide-react'
 import type { Product } from '@/types/inventory'
 import { useGeneratePDF } from '@/lib/pdf/use-generate-pdf'
 import type { ProposalData } from '@/lib/pdf/proposal-types'
+import { sendProposalEmail } from '@/app/actions/send-proposal-email'
+import ProductCatalogModal from '@/components/sales/ProductCatalogModal'
 
 interface CartItem {
   product: Product
@@ -54,8 +56,9 @@ export function SaleModal() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [showProposalPanel, setShowProposalPanel] = useState(false)
   const [paymentUrl, setPaymentUrl] = useState<string>('')
+  const [catalogOpen, setCatalogOpen] = useState(false)
   
-  const { generate: generateProposalPDF, loading: pdfLoading } = useGeneratePDF()
+  const { download, uploadAndGetLink, loading: pdfLoading } = useGeneratePDF()
 
   const client = data?.client
   const locale = data?.locale || 'he'
@@ -287,83 +290,137 @@ export function SaleModal() {
     window.location.href = `sms:${client.phone}?body=${encodeURIComponent(text)}`
   }
 
-  // Generate PDF proposal using html2canvas
-  const generatePDF = async () => {
-    const proposalData: ProposalData = {
-      docNumber: `${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-      issueDate: new Date().toLocaleDateString('he-IL').replace(/\./g, '/'),
-      validDays: 30,
-      seller: {
-        name: 'Amber Solutions',
-        email: 'ambersolutions.systems@gmail.com',
-        phone: '+972-54-485-8586',
-        website: 'ambersol.co.il',
-        logo: '/logo-amber.png',
-      },
-      buyer: {
-        name: clientName,
-        phone: client?.phone || '',
-        email: client?.email || '',
-        address: client?.address || '',
-      },
-      items: cart.map(item => ({
-        name: item.product.name,
-        volume: item.product.unit || '',
-        desc: item.product.description || '',
-        qty: item.quantity,
-        price: item.price,
-      })),
-      discount: discount.value > 0 ? discount : undefined,
-      vat: 0,
-      notes: 'הצעת מחיר זו בתוקף למשך 30 יום ממועד הוצאתה.\nתנאי תשלום: 100% בעת מסירה.',
-    }
+  // Build ProposalData object
+  const buildProposalData = (): ProposalData => ({
+    docNumber: `${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+    issueDate: new Date().toLocaleDateString('he-IL').replace(/\./g, '/'),
+    validDays: 30,
+    seller: {
+      name: 'Amber Solutions',
+      email: 'ambersolutions.systems@gmail.com',
+      phone: '+972-54-485-8586',
+      website: 'ambersol.co.il',
+      logo: '/logo-amber.png',
+    },
+    buyer: {
+      name: clientName,
+      phone: client?.phone || '',
+      email: client?.email || '',
+      address: client?.address || '',
+    },
+    items: cart.map(item => ({
+      name: item.product.name,
+      volume: item.product.unit || '',
+      desc: item.product.description || '',
+      qty: item.quantity,
+      price: item.price,
+    })),
+    discount: discount.value > 0 ? discount : undefined,
+    vat: 0,
+    notes: 'הצעת מחיר זו בתוקף למשך 30 יום ממועד הוצאתה.\nתנאי תשלום: 100% בעת מסירה.',
+  })
 
-    await generateProposalPDF(proposalData)
+  // Download PDF locally
+  const generatePDF = async () => {
+    const proposalData = buildProposalData()
+    await download(proposalData)
     toast.success(locale === 'he' ? 'PDF הורד בהצלחה' : 'PDF скачан')
   }
 
-  // Send via WhatsApp
-  const sendWhatsApp = () => {
-    if (!client?.phone) return
+  // Send via WhatsApp with PDF link
+  const sendWhatsApp = async () => {
+    if (!client?.phone) {
+      toast.error(locale === 'he' ? 'אין טלפון ללקוח' : 'Нет телефона клиента')
+      return
+    }
+    
     const cleanPhone = client.phone.replace(/\D/g, '')
     const whatsappPhone = cleanPhone.startsWith('0') ? '972' + cleanPhone.substring(1) : cleanPhone
     
-    const items = cart.map(i => `• ${i.product.name} x${i.quantity} = ₪${(i.price * i.quantity).toFixed(2)}`).join('\n')
-    const text = `הצעת מחיר / Коммерческое предложение\n\n${items}\n\n${discountAmount > 0 ? `הנחה: -₪${discountAmount.toFixed(2)}\n` : ''}סה"כ: ₪${total.toFixed(2)}`
+    // Upload PDF to Storage and get signed URL
+    let pdfLink = ''
+    try {
+      const proposalData = buildProposalData()
+      pdfLink = await uploadAndGetLink(proposalData)
+    } catch {
+      toast.error(locale === 'he' ? 'שגיאה ביצירת קישור ל-PDF' : 'Ошибка создания PDF')
+      return
+    }
     
-    window.open(`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(text)}`, '_blank')
+    const lines = cart.map(item => 
+      `• ${item.product.name} ×${item.quantity} — ₪${(item.quantity * item.price).toFixed(2)}`
+    ).join('\n')
+    
+    const discountLine = discountAmount > 0 ? `🏷️ הנחה: −₪${discountAmount.toFixed(2)}\n` : ''
+    
+    const msg = [
+      `*הצעת מחיר #${buildProposalData().docNumber}*`,
+      `מאת: *Amber Solutions*`,
+      `ללקוח: ${clientName}`,
+      `תאריך: ${new Date().toLocaleDateString('he-IL')}`,
+      ``,
+      `*פירוט הזמנה:*`,
+      lines,
+      ``,
+      discountLine + `*💰 לתשלום: ₪${total.toFixed(2)}*`,
+      ``,
+      `📄 להורדת הצעת המחיר (PDF):`,
+      pdfLink,
+      `⏳ _הקישור בתוקף ל-3 ימים בלבד_`,
+      ``,
+      `_מופק ע"י Trinity CRM_`,
+    ].filter(Boolean).join('\n')
+    
+    window.open(`https://wa.me/${whatsappPhone}?text=${encodeURIComponent(msg)}`, '_blank')
     setShowProposalPanel(false)
   }
 
-  // Send via Email
+  // Send via Email with PDF link
   const sendEmail = async () => {
     if (!client?.email) {
       toast.error(locale === 'he' ? 'אין אימייל ללקוח' : 'Нет email клиента')
       return
     }
     
+    // Upload PDF to Storage (optional - email works without it)
+    let pdfLink = ''
     try {
-      await fetch('/api/emails/proposal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: client.email,
-          clientName,
-          items: cart.map(i => ({
-            name: i.product.name,
-            quantity: i.quantity,
-            price: i.price,
-            total: i.price * i.quantity
-          })),
-          discount: discountAmount,
-          total,
-        })
-      })
-      toast.success(locale === 'he' ? 'הצעת המחיר נשלחה' : 'Предложение отправлено')
-      setShowProposalPanel(false)
-    } catch (e) {
-      toast.error('Error sending email')
+      const proposalData = buildProposalData()
+      pdfLink = await uploadAndGetLink(proposalData)
+    } catch {
+      // PDF link not critical, continue without it
     }
+    
+    const itemsList = cart.map(item => `
+      <tr style="border-bottom:1px solid #eee">
+        <td style="padding:8px 10px;color:#333">${item.product.name}</td>
+        <td style="padding:8px 10px;text-align:center;color:#333">${item.quantity}</td>
+        <td style="padding:8px 10px;color:#1B2A4A;font-weight:600">₪${(item.quantity * item.price).toFixed(2)}</td>
+      </tr>
+    `).join('')
+    
+    try {
+      await sendProposalEmail({
+        toEmail: client.email,
+        toName: clientName,
+        orgName: 'Amber Solutions',
+        proposalNumber: buildProposalData().docNumber,
+        totalAmount: `₪${total.toFixed(2)}`,
+        itemsList,
+        pdfLink,
+        notes: 'הצעת מחיר זו בתוקף למשך 30 יום.',
+      })
+      toast.success(locale === 'he' ? 'הצעת המחיר נשלחה בהצלחה ✓' : 'Предложение отправлено ✓')
+      setShowProposalPanel(false)
+    } catch {
+      toast.error(locale === 'he' ? 'שגיאה בשליחת האימייל' : 'Ошибка отправки email')
+    }
+  }
+
+  // Add product from catalog
+  const addProductFromCatalog = (product: Product) => {
+    addToCart(product)
+    setCatalogOpen(false)
   }
 
   const t = {
@@ -587,6 +644,7 @@ export function SaleModal() {
 
   // Step 1: Cart
   return (
+    <>
     <Modal
       open={isOpen}
       onClose={handleClose}
@@ -598,16 +656,25 @@ export function SaleModal() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Column - Product Search & Cart */}
         <div className="space-y-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={text.searchProducts}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
+          {/* Search + Catalog Button */}
+          <div className="flex gap-2 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={text.searchProducts}
+                className="w-full pr-10 pl-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+            <button
+              onClick={() => setCatalogOpen(true)}
+              className="w-12 h-12 flex-shrink-0 flex items-center justify-center border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-indigo-400 transition-colors"
+              title={locale === 'he' ? 'כל המוצרים' : 'Каталог'}
+            >
+              <LayoutGrid className="w-5 h-5 text-gray-500" />
+            </button>
           </div>
 
           {/* Product suggestions */}
@@ -826,6 +893,15 @@ export function SaleModal() {
         </button>
       </div>
     </Modal>
+
+    {/* Product Catalog Modal */}
+    <ProductCatalogModal
+      isOpen={catalogOpen}
+      onClose={() => setCatalogOpen(false)}
+      products={products || []}
+      onAddProduct={addProductFromCatalog}
+    />
+    </>
   )
 }
 

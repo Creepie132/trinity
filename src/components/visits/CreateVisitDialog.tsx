@@ -1,21 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useQueryClient } from '@tanstack/react-query'
 import { useServices } from '@/hooks/useServices'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import Modal from '@/components/ui/Modal'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -27,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { ArrowRight, ArrowLeft } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { ClientSearch } from '@/components/ui/ClientSearch'
 
 // Get default time (rounded to next 30 min)
@@ -83,12 +74,9 @@ const durations = [
 export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, preselectedDate, onVisitCreated }: CreateVisitDialogProps) {
   const { t, language } = useLanguage()
   const { orgId } = useAuth()
-  const router = useRouter()
-  const supabase = createSupabaseBrowserClient()
   const queryClient = useQueryClient()
   const meetingMode = useMeetingMode()
 
-  // Load custom services from database
   const { data: customServices } = useServices()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -96,17 +84,16 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
   const [formData, setFormData] = useState({
     clientId: preselectedClientId || '',
     serviceId: '',
-    service: '', // Legacy field for backward compatibility
+    service: '',
     date: preselectedDate ? preselectedDate.toISOString().split('T')[0] : getDefaultDate(),
     time: getDefaultTime(),
     duration: 60,
     price: '',
     notes: '',
-    city: '', // For meeting mode
-    address: '', // For meeting mode
+    city: '',
+    address: '',
   })
 
-  // Use custom services if available, otherwise fallback to default
   const services = (customServices && customServices.length > 0) 
     ? customServices 
     : defaultServices.map(s => ({ 
@@ -117,14 +104,13 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
         price: undefined 
       }))
 
-  // Handle service selection (auto-fill price and duration if available)
   const handleServiceChange = (serviceId: string) => {
     const selectedService = services.find((s: any) => s.id === serviceId)
     if (selectedService) {
       setFormData({
         ...formData,
         serviceId: serviceId,
-        service: selectedService.id, // Legacy compatibility
+        service: selectedService.id,
         price: selectedService.price?.toString() || '',
         duration: selectedService.duration_minutes || 60,
       })
@@ -137,14 +123,12 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     if (!orgId) {
       toast.error(t('clients.noOrgFound'))
       return
     }
 
-    // Validation depends on meeting mode
     if (meetingMode.isMeetingMode) {
       if (!formData.clientId || !formData.serviceId || !formData.date || !formData.time) {
         toast.error(t('common.required'))
@@ -160,54 +144,36 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
     setIsSubmitting(true)
 
     try {
-      // In meeting mode, format notes with city and address
       let notesData = formData.notes
       if (meetingMode.isMeetingMode && (formData.city || formData.address)) {
         const meetingInfo = []
-        if (formData.city) {
-          meetingInfo.push(`${language === 'he' ? 'עיר' : 'Город'}: ${formData.city}`)
-        }
-        if (formData.address) {
-          meetingInfo.push(`${language === 'he' ? 'כתובת' : 'Адрес'}: ${formData.address}`)
-        }
-        if (formData.notes) {
-          meetingInfo.push(formData.notes)
-        }
+        if (formData.city) meetingInfo.push(`${language === 'he' ? 'עיר' : 'Город'}: ${formData.city}`)
+        if (formData.address) meetingInfo.push(`${language === 'he' ? 'כתובת' : 'Адрес'}: ${formData.address}`)
+        if (formData.notes) meetingInfo.push(formData.notes)
         notesData = meetingInfo.join('\n')
       }
 
-      // Call API route instead of direct insert
       const response = await fetch('/api/visits', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId: formData.clientId,
-          serviceId: formData.serviceId, // New field
-          service: formData.service, // Legacy field for compatibility
+          serviceId: formData.serviceId,
+          service: formData.service,
           date: formData.date,
           time: formData.time,
-          duration: meetingMode.isMeetingMode ? null : formData.duration, // null for meetings
-          price: meetingMode.isMeetingMode ? '0' : formData.price, // 0 for meetings
+          duration: meetingMode.isMeetingMode ? null : formData.duration,
+          price: meetingMode.isMeetingMode ? '0' : formData.price,
           notes: notesData,
         }),
       })
 
       const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create visit')
-      }
+      if (!response.ok) throw new Error(data.error || 'Failed to create visit')
 
       toast.success(t('common.success'))
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'visits' })
       
-      // Invalidate queries to refresh data (all visits-related queries)
-      queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === 'visits' 
-      })
-      
-      // Notify parent about visit creation
       if (onVisitCreated && selectedClient) {
         onVisitCreated({
           clientName: `${selectedClient.first_name} ${selectedClient.last_name}`.trim(),
@@ -218,8 +184,6 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
       }
       
       onOpenChange(false)
-      
-      // Reset form
       setFormData({
         clientId: '',
         serviceId: '',
@@ -233,7 +197,6 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
         address: '',
       })
     } catch (error: any) {
-      console.error('Error creating visit:', error)
       toast.error(error.message || t('common.error'))
     } finally {
       setIsSubmitting(false)
@@ -241,175 +204,137 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] md:max-h-[90vh] h-full md:h-auto overflow-y-auto bg-white dark:bg-gray-800 p-0 md:p-6">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 z-10 p-4 md:p-0 border-b md:border-b-0 border-gray-200 dark:border-gray-700">
-          <DialogHeader className="relative">
-            <Button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              variant="ghost"
-              size="icon"
-              className="absolute top-0 right-0 h-11 w-11 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label={t('common.back')}
-            >
-              {language === 'he' ? (
-                <ArrowRight className="h-6 w-6" />
-              ) : (
-                <ArrowLeft className="h-6 w-6" />
-              )}
-            </Button>
-            <DialogTitle className="text-xl md:text-2xl text-gray-900 dark:text-gray-100 pr-12">{meetingMode.t.createVisit}</DialogTitle>
-            <DialogDescription className="text-sm md:text-base text-gray-600 dark:text-gray-400">
-              {t('visits.subtitle')}
-            </DialogDescription>
-          </DialogHeader>
+    <Modal
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={meetingMode.t.createVisit}
+      subtitle={t('visits.subtitle')}
+      width="520px"
+      footer={
+        <div className="flex gap-2 justify-end">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap disabled:opacity-50"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
+          >
+            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSubmitting ? t('visits.creating') : t('common.add')}
+          </button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="flex flex-col h-full md:h-auto">
-          <div className="flex-1 overflow-y-auto p-4 md:p-0 space-y-4">
-          {/* Client selection */}
+      }
+    >
+      <div className="space-y-4">
+        {/* Client selection */}
+        <div className="space-y-2">
+          <Label htmlFor="client">{t('visits.client')} *</Label>
+          <ClientSearch
+            orgId={orgId || ''}
+            onSelect={(client) => {
+              setSelectedClient(client)
+              setFormData({ ...formData, clientId: client?.id || '' })
+            }}
+            placeholder={t('visits.selectClient')}
+            locale={language as 'he' | 'ru' | 'en'}
+            value={selectedClient}
+          />
+        </div>
+
+        {/* Service selection */}
+        <div className="space-y-2">
+          <Label htmlFor="service">{t('visits.service')} *</Label>
+          <Select value={formData.serviceId} onValueChange={handleServiceChange}>
+            <SelectTrigger>
+              <SelectValue placeholder={t('visits.selectService')} />
+            </SelectTrigger>
+            <SelectContent>
+              {services.map((service: any) => {
+                const serviceName = language === 'he' ? service.name : (service.name_ru || service.name)
+                return (
+                  <SelectItem key={service.id} value={service.id}>
+                    {serviceName}
+                    {service.price && ` - ₪${service.price}`}
+                  </SelectItem>
+                )
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Date and Time */}
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="client" className="text-gray-900 dark:text-gray-100">
-              {t('visits.client')} *
-            </Label>
-            <ClientSearch
-              orgId={orgId || ''}
-              onSelect={(client) => {
-                setSelectedClient(client)
-                setFormData({ ...formData, clientId: client?.id || '' })
-              }}
-              placeholder={t('visits.selectClient')}
-              locale={language as 'he' | 'ru' | 'en'}
-              value={selectedClient}
+            <Label htmlFor="date">{t('visits.date')} *</Label>
+            <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
             />
           </div>
-
-          {/* Service selection */}
           <div className="space-y-2">
-            <Label htmlFor="service" className="text-gray-900 dark:text-gray-100">
-              {t('visits.service')} *
-            </Label>
-            <Select
-              value={formData.serviceId}
-              onValueChange={handleServiceChange}
-            >
-              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
-                <SelectValue placeholder={t('visits.selectService')} />
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                {services.map((service: any) => {
-                  const serviceName = language === 'he' ? service.name : (service.name_ru || service.name)
-                  return (
-                    <SelectItem 
-                      key={service.id} 
-                      value={service.id}
-                      className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-                    >
-                      {serviceName}
-                      {service.price && ` - ₪${service.price}`}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="time">{t('visits.time')} *</Label>
+            <Input
+              id="time"
+              type="time"
+              value={formData.time}
+              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+            />
           </div>
+        </div>
 
-          {/* Date and Time */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date" className="text-gray-900 dark:text-gray-100">
-                {t('visits.date')} *
-              </Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="time" className="text-gray-900 dark:text-gray-100">
-                {t('visits.time')} *
-              </Label>
-              <Input
-                id="time"
-                type="time"
-                value={formData.time}
-                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-              />
-            </div>
-          </div>
-
-          {/* Duration and Price (or City and Address in meeting mode) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {meetingMode.isMeetingMode ? (
-              // Meeting Mode: City field
+        {/* Duration/Price or City/Address */}
+        <div className="grid grid-cols-2 gap-4">
+          {meetingMode.isMeetingMode ? (
+            <>
               <div className="space-y-2">
-                <Label htmlFor="city" className="text-gray-900 dark:text-gray-100">
-                  {language === 'he' ? 'עיר' : 'Город'}
-                </Label>
+                <Label htmlFor="city">{language === 'he' ? 'עיר' : 'Город'}</Label>
                 <Input
                   id="city"
-                  type="text"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                   placeholder={language === 'he' ? 'הזן עיר' : 'Введите город'}
                 />
               </div>
-            ) : (
-              // Visit Mode: Duration field
               <div className="space-y-2">
-                <Label htmlFor="duration" className="text-gray-900 dark:text-gray-100">
-                  {t('visits.duration')} *
-                </Label>
+                <Label htmlFor="address">{language === 'he' ? 'כתובת' : 'Адрес'}</Label>
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder={language === 'he' ? 'הזן כתובת' : 'Введите адрес'}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="duration">{t('visits.duration')} *</Label>
                 <Select
                   value={formData.duration.toString()}
                   onValueChange={(value) => setFormData({ ...formData, duration: parseInt(value) })}
                 >
-                  <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+                  <SelectContent>
                     {durations.map((duration) => (
-                      <SelectItem 
-                        key={duration.value} 
-                        value={duration.value.toString()}
-                        className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-600"
-                      >
+                      <SelectItem key={duration.value} value={duration.value.toString()}>
                         {t(duration.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
-
-            {meetingMode.isMeetingMode ? (
-              // Meeting Mode: Address field
               <div className="space-y-2">
-                <Label htmlFor="address" className="text-gray-900 dark:text-gray-100">
-                  {language === 'he' ? 'כתובת' : 'Адрес'}
-                </Label>
-                <Input
-                  id="address"
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-                  placeholder={language === 'he' ? 'הזן כתובת' : 'Введите адрес'}
-                />
-              </div>
-            ) : (
-              // Visit Mode: Price field
-              <div className="space-y-2">
-                <Label htmlFor="price" className="text-gray-900 dark:text-gray-100">
-                  {t('visits.price')} *
-                </Label>
+                <Label htmlFor="price">{t('visits.price')} *</Label>
                 <Input
                   id="price"
                   type="number"
@@ -418,50 +343,24 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   placeholder="100.00"
-                  className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
                 />
               </div>
-            )}
-          </div>
+            </>
+          )}
+        </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes" className="text-gray-900 dark:text-gray-100">
-              {t('visits.notes')}
-            </Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder={t('visits.notes')}
-              rows={3}
-              className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-            />
-          </div>
-
-          </div>
-
-          {/* Actions - Fixed at bottom on mobile */}
-          <div className="sticky md:static bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-4 md:p-0 border-t border-gray-200 dark:border-gray-700 mt-4 md:pt-4 flex flex-col md:flex-row md:justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-              className="w-full md:w-auto h-11 md:h-10 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full md:w-auto h-11 md:h-10 bg-theme-primary text-white hover:opacity-90"
-            >
-              {isSubmitting ? t('visits.creating') : t('common.add')}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+        {/* Notes */}
+        <div className="space-y-2">
+          <Label htmlFor="notes">{t('visits.notes')}</Label>
+          <Textarea
+            id="notes"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            placeholder={t('visits.notes')}
+            rows={3}
+          />
+        </div>
+      </div>
+    </Modal>
   )
 }

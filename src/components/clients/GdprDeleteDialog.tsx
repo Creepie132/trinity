@@ -1,18 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import Modal from '@/components/ui/Modal'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { AlertTriangle, Trash2 } from 'lucide-react'
+import { AlertTriangle, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
@@ -87,15 +79,10 @@ export function GdprDeleteDialog({
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/clients/${clientId}/gdpr-delete`, {
-        method: 'DELETE',
-      })
-
+      const response = await fetch(`/api/clients/${clientId}/gdpr-delete`, { method: 'DELETE' })
       const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete client')
-      }
+      if (!response.ok) throw new Error(data.error || 'Failed to delete client')
 
       const successMsg = text.deleteSuccess
         .replace('{visits}', data.deleted.visits)
@@ -103,12 +90,10 @@ export function GdprDeleteDialog({
         .replace('{sms}', data.deleted.sms_messages)
 
       toast.success(successMsg)
-
       onOpenChange(false)
       router.push('/clients')
       router.refresh()
     } catch (error: any) {
-      console.error('Delete error:', error)
       toast.error(error.message || text.deleteError)
     } finally {
       setLoading(false)
@@ -116,72 +101,75 @@ export function GdprDeleteDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-            <AlertTriangle className="w-5 h-5" />
-            {text.title}
-          </DialogTitle>
-          <DialogDescription className="space-y-3 pt-4">
-            <p className="font-semibold text-gray-900 dark:text-gray-100">
-              {text.areYouSure}
-            </p>
-            <p>{text.willDelete}</p>
-            <ul className="list-disc list-inside space-y-1 text-sm" dir={locale === 'he' ? 'rtl' : 'ltr'}>
-              <li>{text.allVisits}</li>
-              <li>{text.allPayments}</li>
-              <li>{text.smsHistory}</li>
-              <li>{text.personalInfo}</li>
-            </ul>
-            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-              <p className="text-sm text-red-800 dark:text-red-200">
-                <strong>{text.client}:</strong> {clientName}
-              </p>
-            </div>
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="confirm" className="text-sm font-medium">
-              {text.confirmInstructions} <span className="font-bold">{text.confirmWord}</span>
-            </Label>
-            <Input
-              id="confirm"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder={text.placeholder}
-              className="font-mono"
-              disabled={loading}
-              autoComplete="off"
-              dir={locale === 'he' ? 'rtl' : 'ltr'}
-            />
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
+    <Modal
+      open={open}
+      onClose={() => {
+        setConfirmText('')
+        onOpenChange(false)
+      }}
+      title={text.title}
+      width="480px"
+      footer={
+        <div className="flex gap-2 justify-end">
+          <button
             onClick={() => {
               setConfirmText('')
               onOpenChange(false)
             }}
             disabled={loading}
+            className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap disabled:opacity-50"
           >
             {text.cancel}
-          </Button>
-          <Button
-            variant="destructive"
+          </button>
+          <button
             onClick={handleDelete}
             disabled={!isConfirmed || loading}
-            className="gap-2"
+            className="px-5 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
           >
-            <Trash2 className="w-4 h-4" />
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             {loading ? text.deleting : text.deleteForever}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {/* Warning Icon */}
+        <div className="flex items-center gap-2 text-red-600">
+          <AlertTriangle className="w-5 h-5" />
+          <span className="font-semibold">{text.areYouSure}</span>
+        </div>
+
+        <p className="text-sm text-gray-600">{text.willDelete}</p>
+        
+        <ul className="list-disc list-inside space-y-1 text-sm text-gray-600" dir={locale === 'he' ? 'rtl' : 'ltr'}>
+          <li>{text.allVisits}</li>
+          <li>{text.allPayments}</li>
+          <li>{text.smsHistory}</li>
+          <li>{text.personalInfo}</li>
+        </ul>
+
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+          <p className="text-sm text-red-800 dark:text-red-200">
+            <strong>{text.client}:</strong> {clientName}
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="confirm" className="text-sm font-medium">
+            {text.confirmInstructions} <span className="font-bold">{text.confirmWord}</span>
+          </Label>
+          <Input
+            id="confirm"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={text.placeholder}
+            className="font-mono"
+            disabled={loading}
+            autoComplete="off"
+            dir={locale === 'he' ? 'rtl' : 'ltr'}
+          />
+        </div>
+      </div>
+    </Modal>
   )
 }

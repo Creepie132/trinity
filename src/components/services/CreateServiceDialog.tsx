@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import Modal from '@/components/ui/Modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,16 +16,8 @@ interface CreateServiceDialogProps {
 }
 
 const DEFAULT_COLORS = [
-  '#f59e0b', // Amber
-  '#3b82f6', // Blue
-  '#10b981', // Green
-  '#ef4444', // Red
-  '#8b5cf6', // Purple
-  '#ec4899', // Pink
-  '#06b6d4', // Cyan
-  '#f97316', // Orange
-  '#84cc16', // Lime
-  '#6366f1', // Indigo
+  '#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1',
 ];
 
 export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogProps) {
@@ -41,9 +32,7 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
     color: DEFAULT_COLORS[0],
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     if (!formData.name.trim() || !(formData.name_ru || '').trim()) {
       toast.error(t('services.errors.nameRequired'));
       return;
@@ -62,7 +51,6 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
       return;
     }
 
-    // Prepare data for API
     const serviceData: CreateServiceDTO = {
       name: formData.name,
       name_ru: formData.name_ru,
@@ -73,20 +61,10 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
 
     try {
       await createService.mutateAsync(serviceData);
-
       toast.success(t('services.created'));
       onOpenChange(false);
-      
-      // Reset form
-      setFormData({
-        name: '',
-        name_ru: '',
-        price: '',
-        duration_minutes: '',
-        color: DEFAULT_COLORS[0],
-      });
+      setFormData({ name: '', name_ru: '', price: '', duration_minutes: '', color: DEFAULT_COLORS[0] });
     } catch (error) {
-      console.error('Error creating service:', error);
       toast.error(t('errors.somethingWentWrong'));
     }
   };
@@ -96,118 +74,115 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t('services.newService')}</DialogTitle>
-        </DialogHeader>
+    <Modal
+      open={open}
+      onClose={() => onOpenChange(false)}
+      title={t('services.newService')}
+      width="480px"
+      footer={
+        <div className="flex gap-2 justify-end">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            disabled={createService.isPending}
+            className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap disabled:opacity-50"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={createService.isPending}
+            className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
+          >
+            {createService.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+            {createService.isPending ? t('common.saving') : t('common.create')}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        {/* Service Name (Hebrew) */}
+        <div className="space-y-2">
+          <Label htmlFor="name">{t('services.name')} (עברית)</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => handleChange('name', e.target.value)}
+            placeholder={t('services.namePlaceholder')}
+            required
+          />
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Service Name (Hebrew) */}
+        {/* Service Name (Russian) */}
+        <div className="space-y-2">
+          <Label htmlFor="name_ru">{t('services.nameRu')} (Русский)</Label>
+          <Input
+            id="name_ru"
+            value={formData.name_ru}
+            onChange={(e) => handleChange('name_ru', e.target.value)}
+            placeholder={t('services.nameRuPlaceholder')}
+            required
+          />
+        </div>
+
+        {/* Price & Duration */}
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="name">{t('services.name')} (עברית)</Label>
+            <Label htmlFor="price">{t('services.price')} (₪)</Label>
             <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder={t('services.namePlaceholder')}
+              id="price"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.price}
+              onChange={(e) => handleChange('price', e.target.value)}
+              placeholder="0"
               required
             />
           </div>
 
-          {/* Service Name (Russian) */}
           <div className="space-y-2">
-            <Label htmlFor="name_ru">{t('services.nameRu')} (Русский)</Label>
+            <Label htmlFor="duration">{t('services.duration')} ({t('common.minutes')})</Label>
             <Input
-              id="name_ru"
-              value={formData.name_ru}
-              onChange={(e) => handleChange('name_ru', e.target.value)}
-              placeholder={t('services.nameRuPlaceholder')}
+              id="duration"
+              type="number"
+              min="1"
+              step="1"
+              value={formData.duration_minutes}
+              onChange={(e) => handleChange('duration_minutes', e.target.value)}
+              placeholder="60"
               required
             />
           </div>
+        </div>
 
-          {/* Price & Duration */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="price">{t('services.price')} (₪)</Label>
-              <Input
-                id="price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.price}
-                onChange={(e) => handleChange('price', e.target.value)}
-                placeholder="0"
-                required
+        {/* Color Picker */}
+        <div className="space-y-2">
+          <Label>{t('services.color')}</Label>
+          <div className="flex flex-wrap gap-2">
+            {DEFAULT_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={() => handleChange('color', color)}
+                className={`w-10 h-10 rounded-full border-2 transition-transform ${
+                  formData.color === color
+                    ? 'border-gray-900 dark:border-white scale-110'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
+                style={{ backgroundColor: color }}
+                aria-label={color}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="duration">{t('services.duration')} ({t('common.minutes')})</Label>
-              <Input
-                id="duration"
-                type="number"
-                min="1"
-                step="1"
-                value={formData.duration_minutes}
-                onChange={(e) => handleChange('duration_minutes', e.target.value)}
-                placeholder="60"
-                required
-              />
-            </div>
+            ))}
           </div>
-
-          {/* Color Picker */}
-          <div className="space-y-2">
-            <Label>{t('services.color')}</Label>
-            <div className="flex flex-wrap gap-2">
-              {DEFAULT_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => handleChange('color', color)}
-                  className={`w-10 h-10 rounded-full border-2 transition-transform ${
-                    formData.color === color
-                      ? 'border-gray-900 dark:border-white scale-110'
-                      : 'border-gray-300 dark:border-gray-600'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  aria-label={color}
-                />
-              ))}
-            </div>
-            <Input
-              type="color"
-              value={formData.color}
-              onChange={(e) => handleChange('color', e.target.value)}
-              className="w-full h-10 mt-2"
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={createService.isPending}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button type="submit" disabled={createService.isPending}>
-              {createService.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('common.saving')}
-                </>
-              ) : (
-                t('common.create')
-              )}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+          <Input
+            type="color"
+            value={formData.color}
+            onChange={(e) => handleChange('color', e.target.value)}
+            className="w-full h-10 mt-2"
+          />
+        </div>
+      </div>
+    </Modal>
   );
 }

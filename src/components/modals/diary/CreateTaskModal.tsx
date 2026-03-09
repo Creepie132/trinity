@@ -43,7 +43,9 @@ const t = {
     email: 'אימייל',
     description: 'תיאור',
     newTask: 'משימה חדשה',
+    editTask: 'עריכת משימה',
     save: 'צור משימה',
+    saveEdit: 'שמור שינויים',
     cancel: 'ביטול',
     searchClient: 'חיפוש לקוח...',
     searchUser: 'חיפוש עובד...',
@@ -64,7 +66,9 @@ const t = {
     email: 'Email',
     description: 'Описание',
     newTask: 'Новая задача',
+    editTask: 'Редактирование задачи',
     save: 'Создать задачу',
+    saveEdit: 'Сохранить изменения',
     cancel: 'Отмена',
     searchClient: 'Поиск клиента...',
     searchUser: 'Поиск сотрудника...',
@@ -79,6 +83,8 @@ export function CreateTaskModal() {
   const isOpen = isModalOpen('task-create')
   const data = getModalData('task-create')
   const prefill = data?.prefill
+  const editTask = data?.editTask  // режим редактирования
+  const isEditMode = !!editTask
   const onCreated = data?.onCreated || (() => {})
   
   const locale = language as 'he' | 'ru'
@@ -111,15 +117,33 @@ export function CreateTaskModal() {
       loadOrgUsers()
       loadClients()
       
-      // Apply prefill
-      if (prefill) {
+      // Apply editTask (режим редактирования)
+      if (editTask) {
+        setTitle(editTask.title || '')
+        setDescription(editTask.description || '')
+        setPriority(editTask.priority || 'normal')
+        setClientId(editTask.client_id || null)
+        setContactPhone(editTask.contact_phone || '')
+        setContactEmail(editTask.contact_email || '')
+        setAssignedTo(editTask.assigned_to || null)
+        if (editTask.due_date) {
+          const dt = new Date(editTask.due_date)
+          setDueDate(dt.toISOString().split('T')[0])
+          setDueTime(dt.toTimeString().slice(0, 5))
+        }
+        if (editTask.client) {
+          setSelectedClientName(getClientName(editTask.client))
+        }
+      }
+      // Apply prefill (режим создания с предзаполнением)
+      else if (prefill) {
         setTitle(prefill.title || '')
         setDescription(prefill.description || '')
         setClientId(prefill.client_id || null)
         setContactPhone(prefill.contact_phone || '')
       }
     }
-  }, [isOpen, prefill])
+  }, [isOpen, prefill, editTask])
 
   async function loadOrgUsers() {
     try {
@@ -199,8 +223,11 @@ export function CreateTaskModal() {
         contact_email: contactEmail || null,
       }
 
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
+      const url = isEditMode ? `/api/tasks/${editTask.id}` : '/api/tasks'
+      const method = isEditMode ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
@@ -214,8 +241,8 @@ export function CreateTaskModal() {
       onCreated()
       handleClose()
     } catch (error) {
-      console.error('Create task error:', error)
-      alert(locale === 'he' ? 'שגיאה ביצירת משימה' : 'Ошибка создания задачи')
+      console.error(isEditMode ? 'Update task error:' : 'Create task error:', error)
+      alert(locale === 'he' ? 'שגיאה' : 'Ошибка')
     } finally {
       setSaving(false)
     }
@@ -236,7 +263,7 @@ export function CreateTaskModal() {
     <Modal
       open={isOpen}
       onClose={handleClose}
-      title={labels.newTask}
+      title={isEditMode ? labels.editTask : labels.newTask}
       width="580px"
       footer={
         <div className="flex gap-2">
@@ -258,8 +285,8 @@ export function CreateTaskModal() {
               </>
             ) : (
               <>
-                <Plus className="w-4 h-4" />
-                {labels.save}
+                {!isEditMode && <Plus className="w-4 h-4" />}
+                {isEditMode ? labels.saveEdit : labels.save}
               </>
             )}
           </button>

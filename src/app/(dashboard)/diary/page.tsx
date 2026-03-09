@@ -589,6 +589,33 @@ export default function DiaryPage() {
     }
   }
 
+  const handleTaskEdit = (task: Task) => {
+    setDesktopPanelTask(null)
+    openModal('task-create', { 
+      editTask: task,
+      onCreated: loadTasks 
+    })
+  }
+
+  const handleTaskDelete = async (taskId: string) => {
+    try {
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        console.error('Delete task error:', data.error)
+        return
+      }
+
+      loadTasks()
+      setDesktopPanelTask(null)
+    } catch (error) {
+      console.error('Error deleting task:', error)
+    }
+  }
+
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Заголовок */}
@@ -882,6 +909,8 @@ export default function DiaryPage() {
         clients={clients}
         visits={visits}
         onStatusChange={handleTaskStatusChange}
+        onEdit={handleTaskEdit}
+        onDelete={handleTaskDelete}
         onClientClick={(clientId) => {
           const client = clients.find((c: any) => c.id === clientId)
           if (client) openModal('client-details', { client, locale: language === 'he' ? 'he' : 'ru' })

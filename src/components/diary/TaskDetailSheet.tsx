@@ -36,6 +36,8 @@ interface TaskDetailSheetProps {
   onClose: () => void
   onStatusChange?: (taskId: string, status: Task['status']) => void
   onClientClick?: (clientId: string) => void
+  onEdit?: (task: Task) => void
+  onDelete?: (taskId: string) => void
   locale: 'he' | 'ru'
 }
 
@@ -45,10 +47,13 @@ export function TaskDetailSheet({
   onClose, 
   onStatusChange,
   onClientClick,
+  onEdit,
+  onDelete,
   locale 
 }: TaskDetailSheetProps) {
   const router = useRouter()
   const dateLocale = locale === 'he' ? he : ru
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   if (!task) return null
 
@@ -80,6 +85,12 @@ export function TaskDetailSheet({
       call: 'חייג',
       sms: 'SMS',
       sendEmail: 'שלח אימייל',
+      complete: 'הושלם',
+      edit: 'עריכה',
+      delete: 'מחק',
+      deleteConfirm: 'למחוק את המשימה',
+      yesDelete: 'כן, מחק',
+      cancelAction: 'ביטול',
     },
     ru: {
       description: 'Описание',
@@ -108,6 +119,12 @@ export function TaskDetailSheet({
       call: 'Позвонить',
       sms: 'SMS',
       sendEmail: 'Отправить email',
+      complete: 'Завершить',
+      edit: 'Редактировать',
+      delete: 'Удалить',
+      deleteConfirm: 'Удалить задачу',
+      yesDelete: 'Да, удалить',
+      cancelAction: 'Отмена',
     },
   }
 
@@ -170,6 +187,28 @@ export function TaskDetailSheet({
     if (task && task.visit_id) {
       onClose()
       router.push(`/visits?highlight=${task.visit_id}`)
+    }
+  }
+
+  function handleComplete() {
+    if (task && onStatusChange) {
+      onStatusChange(task.id, 'done')
+      onClose()
+    }
+  }
+
+  function handleEdit() {
+    if (task && onEdit) {
+      onClose()
+      onEdit(task)
+    }
+  }
+
+  function handleDelete() {
+    if (task && onDelete) {
+      onDelete(task.id)
+      setShowDeleteConfirm(false)
+      onClose()
     }
   }
 
@@ -334,6 +373,67 @@ export function TaskDetailSheet({
           </div>
         )}
 
+        {/* Быстрые действия: Завершить / Редактировать / Удалить */}
+        {task.status !== 'done' && task.status !== 'cancelled' && (
+          <>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {/* Завершить */}
+              <button
+                onClick={handleComplete}
+                className="flex flex-col items-center gap-1 py-2 px-3 rounded-xl bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 transition-colors text-xs font-medium"
+              >
+                <span className="text-lg">✅</span>
+                {labels.complete}
+              </button>
+
+              {/* Редактировать */}
+              {onEdit && (
+                <button
+                  onClick={handleEdit}
+                  className="flex flex-col items-center gap-1 py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 transition-colors text-xs font-medium"
+                >
+                  <span className="text-lg">✏️</span>
+                  {labels.edit}
+                </button>
+              )}
+
+              {/* Удалить — с подтверждением */}
+              {onDelete && (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex flex-col items-center gap-1 py-2 px-3 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 transition-colors text-xs font-medium"
+                >
+                  <span className="text-lg">🗑️</span>
+                  {labels.delete}
+                </button>
+              )}
+            </div>
+
+            {/* Диалог подтверждения удаления */}
+            {showDeleteConfirm && (
+              <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                <p className="text-sm text-red-700 dark:text-red-300 text-center mb-3">
+                  {labels.deleteConfirm} «{task.title}»?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDelete}
+                    className="flex-1 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600"
+                  >
+                    {labels.yesDelete}
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 py-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    {labels.cancelAction}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         {/* Кнопки действий */}
         {task.status !== 'done' && task.status !== 'cancelled' && onStatusChange && (
           <div className="flex gap-3 pt-4 border-t">
@@ -348,15 +448,6 @@ export function TaskDetailSheet({
                 {labels.startWork}
               </TrinityButton>
             )}
-            <TrinityButton
-              variant="primary"
-              size="md"
-              icon={<CheckCircle className="w-4 h-4" />}
-              onClick={() => onStatusChange(task.id, 'done')}
-              fullWidth
-            >
-              {labels.markDone}
-            </TrinityButton>
             <TrinityButton
               variant="secondary"
               size="md"

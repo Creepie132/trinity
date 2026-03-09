@@ -15,6 +15,8 @@ interface TaskDesktopPanelProps {
   onStatusChange?: (taskId: string, newStatus: string) => void
   onClientClick?: (clientId: string) => void
   onVisitClick?: (visitId: string) => void
+  onEdit?: (task: any) => void
+  onDelete?: (taskId: string) => void
 }
 
 export function TaskDesktopPanel({
@@ -27,7 +29,10 @@ export function TaskDesktopPanel({
   onStatusChange,
   onClientClick,
   onVisitClick,
+  onEdit,
+  onDelete,
 }: TaskDesktopPanelProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   
   const client = clients.find((c: any) => c.id === task?.client_id)
   const clientName = client ? getClientName(client) : null
@@ -58,6 +63,11 @@ export function TaskDesktopPanel({
         in_progress: 'בתהליך',
         completed: 'הושלם',
       },
+      edit: 'עריכה',
+      delete: 'מחק',
+      deleteConfirm: 'למחוק את המשימה',
+      yesDelete: 'כן, מחק',
+      cancelAction: 'ביטול',
     },
     ru: {
       start: 'Начать',
@@ -83,6 +93,11 @@ export function TaskDesktopPanel({
         in_progress: 'В процессе',
         completed: 'Завершено',
       },
+      edit: 'Редактировать',
+      delete: 'Удалить',
+      deleteConfirm: 'Удалить задачу',
+      yesDelete: 'Да, удалить',
+      cancelAction: 'Отмена',
     },
   }
 
@@ -266,6 +281,77 @@ export function TaskDesktopPanel({
             </span>
             <span className="text-xs text-blue-600 dark:text-blue-400">{l.navigate}</span>
           </button>
+        )}
+
+        {/* Быстрые действия: Завершить / Редактировать / Удалить */}
+        {task.status !== 'completed' && (
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              {/* Завершить */}
+              <button
+                onClick={() => {
+                  onStatusChange?.(task.id, 'completed')
+                  onClose()
+                }}
+                className="flex flex-col items-center gap-1 py-2 px-3 rounded-xl bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 transition-colors text-xs font-medium"
+              >
+                <span className="text-lg">✅</span>
+                {l.complete}
+              </button>
+
+              {/* Редактировать */}
+              {onEdit && (
+                <button
+                  onClick={() => {
+                    onClose()
+                    onEdit(task)
+                  }}
+                  className="flex flex-col items-center gap-1 py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 transition-colors text-xs font-medium"
+                >
+                  <span className="text-lg">✏️</span>
+                  {l.edit}
+                </button>
+              )}
+
+              {/* Удалить — с подтверждением */}
+              {onDelete && (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex flex-col items-center gap-1 py-2 px-3 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 transition-colors text-xs font-medium"
+                >
+                  <span className="text-lg">🗑️</span>
+                  {l.delete}
+                </button>
+              )}
+            </div>
+
+            {/* Диалог подтверждения удаления */}
+            {showDeleteConfirm && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                <p className="text-sm text-red-700 dark:text-red-300 text-center mb-3">
+                  {l.deleteConfirm} «{task.title}»?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      onDelete?.(task.id)
+                      setShowDeleteConfirm(false)
+                      onClose()
+                    }}
+                    className="flex-1 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600"
+                  >
+                    {l.yesDelete}
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 py-2 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    {l.cancelAction}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Description */}

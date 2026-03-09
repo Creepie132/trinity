@@ -64,7 +64,7 @@ export async function POST(
     // Find organization
     const { data: org, error: orgError } = await supabaseAdmin
       .from('organizations')
-      .select('id, name, booking_settings, telegram_chat_id, telegram_notifications')
+      .select('id, name, telegram_chat_id, telegram_notifications')
       .eq('slug', slug)
       .maybeSingle()
 
@@ -79,7 +79,15 @@ export async function POST(
     }
 
     console.log('Found organization:', org.name, 'ID:', org.id)
-    const settings = org.booking_settings || {}
+    
+    // Get booking settings from dedicated table
+    const { data: bookingSettingsData } = await supabaseAdmin
+      .from('booking_settings')
+      .select('*')
+      .eq('org_id', org.id)
+      .single()
+    
+    const settings = bookingSettingsData || {}
 
     // Check if booking is enabled
     if (!settings.enabled) {

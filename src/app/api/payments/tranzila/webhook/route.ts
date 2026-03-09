@@ -174,30 +174,22 @@ const handleWebhook = async (req: NextRequest) => {
         .eq('id', payment.org_id)
     }
 
-    // 3. Активировать подписку (upsert)
+    // 3. Активировать подписку в organizations
     const now = new Date()
     const nextMonth = new Date(now)
     nextMonth.setMonth(nextMonth.getMonth() + 1)
 
     await supabaseAdmin
-      .from('org_subscriptions')
-      .upsert({
-        org_id: payment.org_id,
-        plan,
-        status: 'active',
-        current_period_start: now.toISOString(),
-        current_period_end: nextMonth.toISOString(),
-        monthly_amount: monthlyFee,
-        setup_fee_paid: setupFee > 0,
-        payment_id: paymentId,
-        updated_at: now.toISOString(),
-      }, { onConflict: 'org_id' })
-
-    // 4. Активировать модули организации
-    await supabaseAdmin
       .from('organizations')
       .update({
-        features: PLAN_FEATURES[plan] ?? PLAN_FEATURES.basic,
+        subscription_status: 'active',
+        subscription_expires_at: nextMonth.toISOString(),
+        subscription_plan: plan,
+        features: {
+          ...(PLAN_FEATURES[plan] ?? PLAN_FEATURES.basic),
+          modules: PLAN_FEATURES[plan] ?? PLAN_FEATURES.basic,
+        },
+        updated_at: now.toISOString(),
       })
       .eq('id', payment.org_id)
 

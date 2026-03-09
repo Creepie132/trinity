@@ -24,7 +24,7 @@ export async function GET(
     // Find organization
     const { data: org, error: orgError } = await supabase
       .from('organizations')
-      .select('id, booking_settings')
+      .select('id')
       .eq('slug', slug)
       .maybeSingle()
 
@@ -32,7 +32,14 @@ export async function GET(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
-    const settings = org.booking_settings || {}
+    // Get booking settings from dedicated table
+    const { data: bookingSettingsData } = await supabase
+      .from('booking_settings')
+      .select('*')
+      .eq('org_id', org.id)
+      .single()
+
+    const settings = bookingSettingsData || {}
     
     // Get service duration if service_id provided
     let serviceDuration = settings.slot_duration || 30

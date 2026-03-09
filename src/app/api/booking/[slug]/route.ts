@@ -18,7 +18,7 @@ export async function GET(
     // Find organization by slug
     const { data: org, error: orgError } = await supabase
       .from('organizations')
-      .select('id, name, booking_settings')
+      .select('id, name')
       .eq('slug', slug)
       .maybeSingle()
 
@@ -29,8 +29,15 @@ export async function GET(
       )
     }
 
+    // Get booking settings from dedicated table
+    const { data: bookingSettings } = await supabase
+      .from('booking_settings')
+      .select('*')
+      .eq('org_id', org.id)
+      .single()
+
     // Check if booking is enabled
-    if (!org.booking_settings?.enabled) {
+    if (!bookingSettings?.enabled) {
       return NextResponse.json(
         { error: 'Booking is not enabled for this organization' },
         { status: 403 }
@@ -52,7 +59,7 @@ export async function GET(
     return NextResponse.json({
       id: org.id,
       name: org.name,
-      booking_settings: org.booking_settings,
+      booking_settings: bookingSettings,
       services: services || [],
     })
   } catch (error: any) {

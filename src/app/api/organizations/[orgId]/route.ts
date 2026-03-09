@@ -66,26 +66,18 @@ export async function GET(
 
     if (orgError) {
       console.error('[GET ORG] Fetch error:', orgError)
-      
-      // Check if error is about missing columns
-      if (orgError.message && (
-        orgError.message.includes('column "booking_settings"') ||
-        orgError.message.includes('column "slug"')
-      )) {
-        return NextResponse.json(
-          { 
-            error: 'Database migration required. Please run SQL migration from supabase/APPLY-BOOKING-MIGRATION.md',
-            details: orgError.message
-          },
-          { status: 500 }
-        )
-      }
-      
       throw orgError
     }
 
-    // Convert working_hours from numeric format (0-6) back to day names for UI
-    if (org.booking_settings?.working_hours) {
+    // Fetch booking settings from dedicated table
+    const { data: bookingSettingsData } = await supabase
+      .from('booking_settings')
+      .select('*')
+      .eq('org_id', orgId)
+      .single()
+
+    // Attach booking_settings to org object for backward compatibility
+    if (bookingSettingsData) {
       const numToDay: Record<number, string> = {
         0: 'sunday',
         1: 'monday',
@@ -96,21 +88,26 @@ export async function GET(
         6: 'saturday'
       }
 
-      const working_hours_named: Record<string, any> = {}
-      Object.entries(numToDay).forEach(([num, dayName]) => {
-        const hours = org.booking_settings.working_hours[Number(num)]
-        working_hours_named[dayName] = hours 
-          ? { enabled: true, start: hours.start, end: hours.end }
-          : { enabled: false, start: '09:00', end: '17:00' }
-      })
+      // Convert working_hours from numeric format (0-6) back to day names for UI
+      if (bookingSettingsData.working_hours) {
+        const working_hours_named: Record<string, any> = {}
+        Object.entries(numToDay).forEach(([num, dayName]) => {
+          const hours = bookingSettingsData.working_hours[Number(num)]
+          working_hours_named[dayName] = hours 
+            ? { enabled: true, start: hours.start, end: hours.end }
+            : { enabled: false, start: '09:00', end: '17:00' }
+        })
+        bookingSettingsData.working_hours = working_hours_named
+      }
 
-      org.booking_settings.working_hours = working_hours_named
-      org.booking_settings.max_days_ahead = org.booking_settings.advance_days || 30
-      org.booking_settings.break_times = org.booking_settings.break_time 
-        ? [org.booking_settings.break_time]
+      bookingSettingsData.max_days_ahead = bookingSettingsData.advance_days || 30
+      bookingSettingsData.break_times = bookingSettingsData.break_time 
+        ? [bookingSettingsData.break_time]
         : []
-      org.booking_settings.confirm_message_he = org.booking_settings.confirmation_message_he || ''
-      org.booking_settings.confirm_message_ru = org.booking_settings.confirmation_message_ru || ''
+      bookingSettingsData.confirm_message_he = bookingSettingsData.confirmation_message_he || ''
+      bookingSettingsData.confirm_message_ru = bookingSettingsData.confirmation_message_ru || ''
+
+      ;(org as any).booking_settings = bookingSettingsData
     }
 
     console.log('[GET ORG] Success! Loaded org:', org.name)

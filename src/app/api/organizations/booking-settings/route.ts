@@ -121,34 +121,30 @@ export async function PATCH(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Update organization with booking settings and slug
-    const { data, error} = await supabaseAdmin
+    // Update organization slug
+    const { error: orgError } = await supabaseAdmin
       .from('organizations')
-      .update({
-        booking_settings: dbSettings,
-        slug: booking_settings.slug,
-      })
+      .update({ slug: booking_settings.slug })
       .eq('id', orgId)
+
+    if (orgError) {
+      console.error('[BOOKING SETTINGS] Update org slug error:', orgError)
+      throw orgError
+    }
+
+    // Upsert booking settings to dedicated table
+    const { data, error } = await supabaseAdmin
+      .from('booking_settings')
+      .upsert({
+        org_id: orgId,
+        ...dbSettings,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'org_id' })
       .select()
       .single()
 
     if (error) {
-      console.error('[BOOKING SETTINGS] Update error:', error)
-      
-      // Check if error is about missing column
-      if (error.message && (
-        error.message.includes('column "booking_settings"') ||
-        error.message.includes('column "slug"')
-      )) {
-        return NextResponse.json(
-          { 
-            error: 'Database migration required. Please run: supabase/APPLY-BOOKING-MIGRATION.md',
-            details: error.message
-          },
-          { status: 500 }
-        )
-      }
-      
+      console.error('[BOOKING SETTINGS] Upsert error:', error)
       throw error
     }
 

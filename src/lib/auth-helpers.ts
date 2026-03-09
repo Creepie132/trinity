@@ -1,8 +1,58 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient, Session } from "@supabase/supabase-js"
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { createSupabaseBrowserClient } from './supabase-browser'
 
 type Role = "owner" | "moderator" | "user"
+
+// ============================================
+// JWT Custom Claims Helpers
+// Читают данные из JWT токена без запроса в БД
+// ============================================
+
+/**
+ * Получить org_id из сессии (JWT claims → fallback на таблицу)
+ */
+export async function getOrgIdFromSession(): Promise<string | null> {
+  const supabase = createSupabaseBrowserClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session) return null
+  
+  // Сначала пробуем JWT claims (быстро, без запроса к БД)
+  const orgId = session.user.app_metadata?.org_id
+  if (orgId) return orgId
+  
+  // Fallback: старый способ через таблицу
+  const { data } = await supabase
+    .from('org_users')
+    .select('org_id')
+    .eq('user_id', session.user.id)
+    .single()
+    
+  return data?.org_id ?? null
+}
+
+/**
+ * Проверить админ ли пользователь из сессии
+ */
+export function isAdminFromSession(session: Session | null): boolean {
+  return session?.user?.app_metadata?.is_admin === true
+}
+
+/**
+ * Получить роль пользователя в организации из сессии
+ */
+export function getOrgRoleFromSession(session: Session | null): string | null {
+  return session?.user?.app_metadata?.org_role ?? null
+}
+
+/**
+ * Получить org_id напрямую из JWT (синхронно, для уже полученной сессии)
+ */
+export function getOrgIdFromJwt(session: Session | null): string | null {
+  return session?.user?.app_metadata?.org_id ?? null
+}
 
 interface AuthResult {
   userId: string
@@ -98,7 +148,12 @@ export async function requireAdmin(): Promise<{ userId: string; email: string }>
     throw new Error("Unauthorized")
   }
 
-  // Use service role to check admin_users (bypass RLS)
+  // First check JWT claims (fast, no DB query)
+  if (user.app_metadata?.is_admin === true) {
+    return { userId: user.id, email: user.email || '' }
+  }
+
+  // Fallback: Use service role to check admin_users (bypass RLS)
   const { data: adminUser } = await supabaseAdmin
     .from("admin_users")
     .select("email")

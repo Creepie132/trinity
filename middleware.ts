@@ -129,23 +129,45 @@ export async function middleware(req: NextRequest) {
   // Skip for admin routes and static paths
   if (!pathname.startsWith('/admin') && !pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
     try {
-      // Check if user is admin
-      const { data: adminUser } = await supabase
-        .from('admin_users')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .maybeSingle()
-
-      // Admins always have access
-      if (!adminUser) {
-        // Check organization subscription status and features
-        const { data: orgUser } = await supabase
-          .from('org_users')
-          .select('org_id, organizations(subscription_status, subscription_expires_at, features)')
+      // Check if user is admin from JWT claims (no DB query!)
+      const isAdmin = session.user.app_metadata?.is_admin === true
+      
+      // Fallback: check admin_users table if not in JWT
+      let adminUser = null
+      if (!isAdmin) {
+        const { data } = await supabase
+          .from('admin_users')
+          .select('id')
           .eq('user_id', session.user.id)
           .maybeSingle()
+        adminUser = data
+      }
 
-        const org: any = orgUser?.organizations
+      // Admins always have access
+      if (!isAdmin && !adminUser) {
+        // Try to get org data from JWT claims first
+        const jwtOrgId = session.user.app_metadata?.org_id
+        
+        let org: any = null
+        
+        if (jwtOrgId) {
+          // Fast path: org_id from JWT, fetch only org data (no join needed)
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('subscription_status, subscription_expires_at, features')
+            .eq('id', jwtOrgId)
+            .single()
+          org = orgData
+        } else {
+          // Fallback: old way via org_users join
+          const { data: orgUser } = await supabase
+            .from('org_users')
+            .select('org_id, organizations(subscription_status, subscription_expires_at, features)')
+            .eq('user_id', session.user.id)
+            .maybeSingle()
+          org = orgUser?.organizations
+        }
+
         const now = new Date()
 
         // Check if subscription is expired

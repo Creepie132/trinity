@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { getAdminAuthContext } from '@/lib/auth-helpers'
 import { resend } from '@/lib/resend'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://www.ambersol.co.il'
+
+// Service role client for admin operations
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 /**
  * POST /api/admin/subscription-payment
@@ -11,9 +18,9 @@ const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE
  * Body: { org_id, amount, billing_due_date }
  */
 export async function POST(request: NextRequest) {
+  // Проверяем что пользователь — админ
   const auth = await getAdminAuthContext()
-  if (auth instanceof NextResponse) return auth
-  const { supabase } = auth
+  if ('error' in auth) return auth.error
 
   try {
     const { org_id, amount, billing_due_date } = await request.json()

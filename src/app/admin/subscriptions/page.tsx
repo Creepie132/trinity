@@ -32,6 +32,12 @@ interface Organization {
   phone: string
   display_name: string
   features?: any
+  // Billing fields
+  billing_amount?: number
+  billing_due_date?: string
+  billing_status?: string
+  tranzila_card_token?: string
+  tranzila_card_last4?: string
 }
 
 interface AccessRequest {
@@ -321,6 +327,11 @@ export default function AdminSubscriptionsPage() {
           features,
           subscription_status,
           subscription_expires_at,
+          billing_amount,
+          billing_due_date,
+          billing_status,
+          tranzila_card_token,
+          tranzila_card_last4,
           org_users (
             role,
             user_id,
@@ -344,6 +355,12 @@ export default function AdminSubscriptionsPage() {
           owner_email: owner?.email || businessInfo.email || '—',
           phone: businessInfo.mobile || '—',
           features: org.features,
+          // Billing fields
+          billing_amount: org.billing_amount,
+          billing_due_date: org.billing_due_date,
+          billing_status: org.billing_status,
+          tranzila_card_token: org.tranzila_card_token,
+          tranzila_card_last4: org.tranzila_card_last4,
         }
       }) || []
 
@@ -966,6 +983,34 @@ export default function AdminSubscriptionsPage() {
                   label: language === 'he' ? 'תוקף' : 'Истекает', 
                   value: selectedOrgSheet.subscription_expires_at 
                     ? new Date(selectedOrgSheet.subscription_expires_at).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU')
+                    : '—'
+                },
+                // Billing info
+                { 
+                  label: language === 'he' ? 'סכום מנוי' : 'Сумма подписки', 
+                  value: selectedOrgSheet.billing_amount 
+                    ? `₪${selectedOrgSheet.billing_amount}/${language === 'he' ? 'חודש' : 'мес'}`
+                    : '—'
+                },
+                { 
+                  label: language === 'he' ? 'כרטיס' : 'Карта', 
+                  value: selectedOrgSheet.tranzila_card_token 
+                    ? (
+                      <span className="inline-flex items-center gap-1.5 text-emerald-600">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        {`**** ${selectedOrgSheet.tranzila_card_last4 || '****'}`} ✅
+                      </span>
+                    )
+                    : (
+                      <span className="text-gray-400">
+                        {language === 'he' ? 'לא מחובר' : 'Не подключена'}
+                      </span>
+                    )
+                },
+                { 
+                  label: language === 'he' ? 'חיוב הבא' : 'Следующее списание', 
+                  value: selectedOrgSheet.billing_due_date 
+                    ? new Date(selectedOrgSheet.billing_due_date).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU')
                     : '—'
                 },
               ].map(({ label, value }) => (

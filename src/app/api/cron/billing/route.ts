@@ -181,13 +181,25 @@ export async function GET(request: NextRequest) {
         await supabaseAdmin
           .from('organizations')
           .update({
-            billing_status: 'failed',
+            billing_status: 'overdue',
             billing_error: chargeError.message,
             billing_retry_count: (org as any).billing_retry_count 
               ? (org as any).billing_retry_count + 1 
               : 1,
           })
           .eq('id', org.id)
+
+        // Создаём задачу в дневнике для Влада
+        await supabaseAdmin.from('tasks').insert({
+          org_id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', // Amber Solutions
+          created_by: '90fdcf3b-1047-4423-9304-28aa93412ef3', // Влад
+          title: `⚠️ Ошибка списания: ${org.name}`,
+          description: `Не удалось списать ${org.billing_amount}₪.\n\nОшибка: ${chargeError.message}\n\nОрганизация: ${org.id}`,
+          priority: 'high',
+          status: 'open',
+          is_auto: true,
+          auto_type: 'billing_failed',
+        })
 
         // Отправляем уведомление админу о неудачном списании
         await notifyBillingFailure(org, chargeError.message)

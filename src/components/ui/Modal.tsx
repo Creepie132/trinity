@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils'
 interface ModalProps {
   open: boolean
   onClose: () => void
-  title?: string
-  subtitle?: string
+  title?: ReactNode
+  subtitle?: ReactNode
   children: ReactNode
   footer?: ReactNode
   width?: string // e.g., '480px', '520px', '400px'

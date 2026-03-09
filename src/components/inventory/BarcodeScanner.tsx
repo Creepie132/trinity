@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import Modal from '@/components/ui/Modal'
 import { Input } from '@/components/ui/input'
 import { Camera, SwitchCamera, Keyboard } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -24,7 +23,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0)
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
 
-  // Reset state when dialog opens
   useEffect(() => {
     if (open) {
       setManualEntry(false)
@@ -40,18 +38,12 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     let timeout: NodeJS.Timeout
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
       if (e.target instanceof HTMLInputElement) return
 
-      // Clear buffer after 100ms of inactivity
       clearTimeout(timeout)
-      timeout = setTimeout(() => {
-        buffer = ''
-      }, 100)
+      timeout = setTimeout(() => { buffer = '' }, 100)
 
-      // Collect characters
       if (e.key === 'Enter' && buffer.length >= 8) {
-        // USB scanner detected
         onScan(buffer)
         onClose()
         buffer = ''
@@ -72,7 +64,6 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     if (!open || manualEntry) return
 
     const initScanner = async () => {
-      // Check camera permission status first
       try {
         const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName })
         if (permissionStatus.state === 'denied') {
@@ -80,22 +71,14 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           setManualEntry(true)
           return
         }
-      } catch {
-        // permissions.query not supported, continue anyway
-      }
+      } catch {}
 
       try {
-        // First, request camera permission explicitly
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: { ideal: 'environment' } 
-          } 
+          video: { facingMode: { ideal: 'environment' } } 
         })
-
-        // Stop the permission stream immediately (we'll use ZXing's stream)
         stream.getTracks().forEach(track => track.stop())
 
-        // Get available video devices after permission is granted
         const videoDevices = await navigator.mediaDevices.enumerateDevices()
         const cameras = videoDevices.filter((device) => device.kind === 'videoinput')
         setDevices(cameras)
@@ -106,20 +89,17 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           return
         }
 
-        // Initialize code reader
         const codeReader = new BrowserMultiFormatReader()
         codeReaderRef.current = codeReader
 
         const selectedDevice = cameras[currentDeviceIndex] || cameras[0]
 
-        // Start scanning
         await codeReader.decodeFromVideoDevice(
           selectedDevice.deviceId,
           videoRef.current!,
           (result, error) => {
             if (result) {
-              const barcode = result.getText()
-              onScan(barcode)
+              onScan(result.getText())
               onClose()
             }
             if (error && !(error instanceof NotFoundException)) {
@@ -128,21 +108,14 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
           }
         )
       } catch (err: any) {
-        console.error('Camera access error:', err)
-        
-        // Provide specific error messages based on error type
         let errorMessage = t('inventory.scanner.cameraError')
         
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          errorMessage = t('inventory.scanner.permissionDenied') || 'אישור גישה למצלמה נדרש. אנא אשר גישה בהגדרות הדפדפן.'
-        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-          errorMessage = t('inventory.scanner.noCameraFound') || 'לא נמצאה מצלמה במכשיר זה.'
-        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-          errorMessage = t('inventory.scanner.cameraInUse') || 'המצלמה בשימוש על ידי אפליקציה אחרת.'
-        } else if (err.name === 'OverconstrainedError') {
-          errorMessage = t('inventory.scanner.unsupportedConstraints') || 'המצלמה אינה תומכת בהגדרות הנדרשות.'
-        } else if (err.name === 'TypeError') {
-          errorMessage = t('inventory.scanner.notSupported') || 'הדפדפן אינו תומך בגישה למצלמה. אנא השתמש בדפדפן מעודכן.'
+          errorMessage = 'אישור גישה למצלמה נדרש. אנא אשר גישה בהגדרות הדפדפן.'
+        } else if (err.name === 'NotFoundError') {
+          errorMessage = 'לא נמצאה מצלמה במכשיר זה.'
+        } else if (err.name === 'NotReadableError') {
+          errorMessage = 'המצלמה בשימוש על ידי אפליקציה אחרת.'
         }
         
         setError(errorMessage)
@@ -151,18 +124,11 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
     }
 
     initScanner()
-
-    return () => {
-      if (codeReaderRef.current) {
-        codeReaderRef.current.reset()
-      }
-    }
+    return () => { codeReaderRef.current?.reset() }
   }, [open, manualEntry, currentDeviceIndex, onScan, onClose, t])
 
   const handleSwitchCamera = () => {
-    if (devices.length > 1) {
-      setCurrentDeviceIndex((prev) => (prev + 1) % devices.length)
-    }
+    if (devices.length > 1) setCurrentDeviceIndex((prev) => (prev + 1) % devices.length)
   }
 
   const handleManualSubmit = () => {
@@ -174,92 +140,76 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Camera className="w-5 h-5" />
-            {t('inventory.scanner.title')}
-          </DialogTitle>
-        </DialogHeader>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={t('inventory.scanner.title')}
+      width="440px"
+    >
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 text-sm text-red-600 dark:text-red-400 mb-4">
+          {error}
+        </div>
+      )}
 
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 text-sm text-red-600 dark:text-red-400">
-            {error}
+      {!manualEntry ? (
+        <div className="space-y-4">
+          <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
+            <video ref={videoRef} className="w-full h-full object-cover" playsInline />
           </div>
-        )}
 
-        {!manualEntry ? (
-          <div className="space-y-4">
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-              <video
-                ref={videoRef}
-                className="w-full h-full object-cover"
-                playsInline
-              />
-            </div>
-
-            <div className="flex gap-2">
-              {devices.length > 1 && (
-                <Button
-                  variant="outline"
-                  onClick={handleSwitchCamera}
-                  className="flex-1"
-                >
-                  <SwitchCamera className="w-4 h-4 mr-2" />
-                  {t('inventory.scanner.switchCamera')}
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                onClick={() => setManualEntry(true)}
-                className="flex-1"
+          <div className="flex gap-2">
+            {devices.length > 1 && (
+              <button
+                onClick={handleSwitchCamera}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 flex items-center justify-center gap-2"
               >
-                <Keyboard className="w-4 h-4 mr-2" />
-                {t('inventory.scanner.manualEntry')}
-              </Button>
-            </div>
-
-            <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-              {t('inventory.scanner.placeBarcode') || 'Поместите штрих-код в рамку камеры'}
-            </p>
+                <SwitchCamera className="w-4 h-4" />
+                {t('inventory.scanner.switchCamera')}
+              </button>
+            )}
+            <button
+              onClick={() => setManualEntry(true)}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 flex items-center justify-center gap-2"
+            >
+              <Keyboard className="w-4 h-4" />
+              {t('inventory.scanner.manualEntry')}
+            </button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <Input
-                placeholder={t('inventory.barcode')}
-                value={manualBarcode}
-                onChange={(e) => setManualBarcode(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleManualSubmit()
-                }}
-                autoFocus
-                className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700"
-              />
-            </div>
 
-            <div className="flex gap-2">
-              <Button onClick={handleManualSubmit} className="flex-1">
-                {t('common.save')}
-              </Button>
-              {devices.length > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setManualEntry(false)
-                    setError('')
-                  }}
-                  className="flex-1"
-                >
-                  <Camera className="w-4 h-4 mr-2" />
-                  {t('inventory.scanner.title')}
-                </Button>
-              )}
-            </div>
+          <p className="text-xs text-center text-gray-500">
+            {t('inventory.scanner.placeBarcode') || 'Поместите штрих-код в рамку камеры'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <Input
+            placeholder={t('inventory.barcode')}
+            value={manualBarcode}
+            onChange={(e) => setManualBarcode(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleManualSubmit() }}
+            autoFocus
+          />
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleManualSubmit}
+              className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+            >
+              {t('common.save')}
+            </button>
+            {devices.length > 0 && (
+              <button
+                onClick={() => { setManualEntry(false); setError('') }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 flex items-center justify-center gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                {t('inventory.scanner.title')}
+              </button>
+            )}
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </div>
+      )}
+    </Modal>
   )
 }

@@ -80,10 +80,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Генерируем ссылку на оплату Tranzila (ambersolttok — терминал для токенизации)
-    const paymentUrl = `https://direct.tranzila.com/ambersolttok/iframenew.php?` + 
+    const tokenTerminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok'
+    const tokenPassword = process.env.TRANZILA_TOKEN_PASSWORD!
+    
+    const paymentUrl = `https://direct.tranzila.com/${tokenTerminal}/iframenew.php?` + 
       new URLSearchParams({
         sum: amount.toString(),
         currency: '1',
+        TranzilaPW: tokenPassword,
         pdesc: `Trinity CRM подписка — ${org.name}`,
         notify_url: `${BASE_URL}/api/webhooks/tranzila`,
         success_url: `${BASE_URL}/payment/success`,

@@ -8,6 +8,47 @@ import {
 } from '@/types/inventory'
 import { supabase } from '@/lib/supabase'
 
+export const useCreateTransaction = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (transaction: CreateInventoryTransactionDTO) => {
+      // Start a Supabase transaction
+      const { data: { user } } = await supabase.auth.getUser()
+      const org_id = user?.user_metadata?.org_id
+
+      // 1. Create the transaction record
+      const { data: transactionData, error: transactionError } = await supabase
+        .from('inventory_transactions')
+        .insert({
+          ...transaction,
+          org_id
+        })
+        .select()
+        .single()
+
+      if (transactionError) throw transactionError
+
+      // 2. Update product quantity
+      const quantityDelta = (['sale', 'write_off'].includes(transaction.type) ? -1 : 1) * 
+                           (transaction.type === 'adjustment' ? 0 : transaction.quantity)
+      
+      const { error: productError } = await supabase.rpc('update_product_quantity', {
+        p_product_id: transaction.product_id,
+        p_quantity_delta: quantityDelta
+      })
+
+      if (productError) throw productError
+
+      return transactionData
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory_transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+    }
+  })
+}
+
 export const useInventory = () => {
   const queryClient = useQueryClient()
 
@@ -100,44 +141,6 @@ export const useInventory = () => {
     }
   })
 
-  // Transaction mutations
-  const createTransaction = useMutation({
-    mutationFn: async (transaction: CreateInventoryTransactionDTO) => {
-      // Start a Supabase transaction
-      const { data: { user } } = await supabase.auth.getUser()
-      const org_id = user?.user_metadata?.org_id
-
-      // 1. Create the transaction record
-      const { data: transactionData, error: transactionError } = await supabase
-        .from('inventory_transactions')
-        .insert({
-          ...transaction,
-          org_id
-        })
-        .select()
-        .single()
-
-      if (transactionError) throw transactionError
-
-      // 2. Update product quantity
-      const quantityDelta = (['sale', 'write_off'].includes(transaction.type) ? -1 : 1) * 
-                           (transaction.type === 'adjustment' ? 0 : transaction.quantity)
-      
-      const { error: productError } = await supabase.rpc('update_product_quantity', {
-        p_product_id: transaction.product_id,
-        p_quantity_delta: quantityDelta
-      })
-
-      if (productError) throw productError
-
-      return transactionData
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inventory_transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['products'] })
-    }
-  })
-
   return {
     // Products
     products: products.data ?? [],
@@ -153,12 +156,11 @@ export const useInventory = () => {
     isLoadingTransactions: transactions.isLoading,
     isErrorTransactions: transactions.isError,
     errorTransactions: transactions.error,
-    createTransaction: createTransaction.mutate,
+    createTransaction: useCreateTransaction().mutate,
 
     // Combined loading states
     isPending: createProduct.isPending || 
               updateProduct.isPending || 
-              deleteProduct.isPending || 
-              createTransaction.isPending
+              deleteProduct.isPending
   }
 }

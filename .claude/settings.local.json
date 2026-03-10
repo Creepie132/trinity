@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"F:/Amber_solutions_Kira/Trinity\" && npm run build 2>&1)",
+      "Bash(cd \"F:/Amber_solutions_Kira/Trinity\" && npx next build 2>&1)",
+      "Bash(cat > \"F:/Amber_solutions_Kira/Trinity/CLAUDE_new.md\" << 'HEADER'\n# 🧠 CLAUDE.md - Trinity Project Memory\n\n**Файл-память проекта для AI-ассистентов**  \n**Powered by Amber Solutions Systems**\n\n---\n\n## ⚠️ Правила работы с этим проектом\n\n1. **Не добавляй `Co-Authored-By` в коммиты** — делай простые коммиты без подписей\n2. **Всегда запускай `npm run build` перед `git push`** — сборка обязательна\n3. **Никогда не пуши если build упал с ошибками** — сначала исправь, потом пушь\n4. **Отвечай на русском языке** — это основной язык общения в проекте\n\n---\n\nHEADER\necho \"Header written\")",
+      "Bash(tail -n +4515 \"F:/Amber_solutions_Kira/Trinity/CLAUDE.md\" >> \"F:/Amber_solutions_Kira/Trinity/CLAUDE_new.md\"\necho \"Done. Lines in new file:\"\nwc -l \"F:/Amber_solutions_Kira/Trinity/CLAUDE_new.md\")",
+      "Bash(head -n 411 \"F:/Amber_solutions_Kira/Trinity/CLAUDE.md\" > \"F:/Amber_solutions_Kira/Trinity/CLAUDE_clean.md\"\ntail -n +2374 \"F:/Amber_solutions_Kira/Trinity/CLAUDE.md\" >> \"F:/Amber_solutions_Kira/Trinity/CLAUDE_clean.md\"\necho \"Done. Lines in clean file:\"\nwc -l \"F:/Amber_solutions_Kira/Trinity/CLAUDE_clean.md\")",
+      "Bash(git -C \"F:/Amber_solutions_Kira/Trinity\" log --oneline -5)",
+      "Bash(git -C \"F:/Amber_solutions_Kira/Trinity\" status --short)",
+      "Bash(git -C \"F:/Amber_solutions_Kira/Trinity\" add CLAUDE.md && git -C \"F:/Amber_solutions_Kira/Trinity\" commit -m \"docs: rewrite CLAUDE.md - remove changelogs, add rules section\")",
+      "Bash(git -C \"F:/Amber_solutions_Kira/Trinity\" push origin main)",
+      "Bash(git -C \"F:/Amber_solutions_Kira/Trinity\" pull --rebase origin main)",
+      "Bash(git -C \"F:/Amber_solutions_Kira/Trinity\" log --oneline origin/main -5)",
+      "Bash(git -C \"F:/Amber_solutions_Kira/Trinity\" diff --name-only HEAD origin/main 2>/dev/null || git -C \"F:/Amber_solutions_Kira/Trinity\" show --stat origin/main | head -20)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | tail -30)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|failed|Failed\" | head -20)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | tail -40)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"^.*\\(error|Error|failed|Failed|✗\\)\" | grep -v \"tranzila-failed\\\\|payment-failed\" | head -20)"
+    ]
+  }
+}

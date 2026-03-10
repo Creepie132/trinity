@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { useInventory } from '@/hooks/useInventory'
 import { Button } from '@/components/ui/button'

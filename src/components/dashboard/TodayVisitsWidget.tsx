@@ -32,7 +32,7 @@ export function TodayVisitsWidget({ visits, locale }: TodayVisitsWidgetProps) {
             {current.map((v: any) => (
               <div 
                 key={v.id} 
-                onClick={() => openModal('visit-edit', { visit: v, locale })}
+                onClick={() => openModal('edit-visit', { visit: v, locale })}
                 className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition"
               >
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${

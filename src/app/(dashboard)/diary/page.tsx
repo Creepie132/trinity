@@ -42,8 +42,10 @@ interface Task {
   updated_at: string
   client?: {
     id: string
-    full_name: string
-    phone: string
+    name?: string
+    first_name?: string
+    last_name?: string
+    phone?: string
   } | null
   assigned_user?: {
     user_id: string

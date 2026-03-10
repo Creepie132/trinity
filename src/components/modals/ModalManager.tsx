@@ -1,5 +1,8 @@
 'use client'
 
+import { BaseModal } from './BaseModal'
+import { useModalStore } from '@/store/useModalStore'
+
 // Clients
 import { ClientDetailsModal } from './ClientDetailsModal'
 import { AddClientModal } from './clients/AddClientModal'
@@ -49,24 +52,59 @@ import { CampaignDetailsModal } from './sms/CampaignDetailsModal'
 import { CareInstructionModal } from './other/CareInstructionModal'
 import { OrgSubscriptionModal } from './other/OrgSubscriptionModal'
 
+// Примесь для общего поведения модалок
+const withBaseModal = (ModalContent: React.ComponentType<any>, modalType: string) => {
+  return function WrappedModal() {
+    const { isModalOpen, closeModal, getModalData } = useModalStore()
+    const isOpen = isModalOpen(modalType)
+    const data = getModalData(modalType)
+
+    if (!isOpen) return null
+
+    return (
+      <BaseModal 
+        open={isOpen} 
+        onClose={() => closeModal(modalType)}
+      >
+        <ModalContent data={data} onClose={() => closeModal(modalType)} />
+      </BaseModal>
+    )
+  }
+}
+
+// Оборачиваем все модалки в BaseModal
+const EnhancedClientDetailsModal = withBaseModal(ClientDetailsModal, 'client-details')
+const EnhancedAddClientModal = withBaseModal(AddClientModal, 'client-add')
+const EnhancedEditClientModal = withBaseModal(EditClientModal, 'client-edit')
+const EnhancedDeleteClientModal = withBaseModal(DeleteClientModal, 'client-delete')
+const EnhancedSaleModal = withBaseModal(SaleModal, 'client-sale')
+
+const EnhancedCreateVisitModal = withBaseModal(CreateVisitModal, 'visit-create')
+const EnhancedEditVisitModal = withBaseModal(EditVisitModal, 'edit-visit')
+const EnhancedCompleteVisitPaymentModal = withBaseModal(CompleteVisitPaymentModal, 'visit-complete-payment')
+const EnhancedAddProductModal = withBaseModal(AddProductModal, 'visit-add-product')
+const EnhancedAddServiceModal = withBaseModal(AddServiceModal, 'visit-add-service')
+const EnhancedAddServiceDirectModal = withBaseModal(AddServiceDirectModal, 'add-service')
+const EnhancedAddToVisitModal = withBaseModal(AddToVisitModal, 'add-to-visit')
+
 export function ModalManager() {
   return (
     <>
       {/* Clients */}
-      <ClientDetailsModal />
-      <AddClientModal />
-      <EditClientModal />
-      <DeleteClientModal />
-      <SaleModal />
+      <EnhancedClientDetailsModal />
+      <EnhancedAddClientModal />
+      <EnhancedEditClientModal />
+      <EnhancedDeleteClientModal />
+      <EnhancedSaleModal />
       
       {/* Visits */}
-      <CreateVisitModal />
-      <EditVisitModal />
-      <CompleteVisitPaymentModal />
-      <AddProductModal />
-      <AddServiceModal />
-      <AddServiceDirectModal />
-      <AddToVisitModal />
+      <EnhancedCreateVisitModal />
+      <EnhancedEditVisitModal />
+      <EnhancedCompleteVisitPaymentModal />
+      <EnhancedAddProductModal />
+      <EnhancedAddServiceModal />
+      <EnhancedAddServiceDirectModal />
+      <EnhancedAddToVisitModal />
       
       {/* Products */}
       <ProductDetailsModal />

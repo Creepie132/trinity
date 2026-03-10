@@ -1,77 +1,164 @@
-// ================================================
-// TRINITY CRM - Inventory Transactions Hooks
-// React Query hooks for inventory transaction history
-// Version: 2.23.0
-// ================================================
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { 
+  Product,
+  CreateProductDTO,
+  UpdateProductDTO,
+  InventoryTransaction,
+  CreateInventoryTransactionDTO 
+} from '@/types/inventory'
+import { supabase } from '@/lib/supabase'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { InventoryTransaction, CreateInventoryTransactionDTO } from '@/types/inventory'
-
-/**
- * useInventoryTransactions - Fetch transaction history (optional product filter)
- */
-export function useInventoryTransactions(productId?: string) {
-  return useQuery({
-    queryKey: ['inventory-transactions', productId],
-    queryFn: async () => {
-      const url = productId
-        ? `/api/inventory?product_id=${productId}`
-        : '/api/inventory'
-
-      const response = await fetch(url)
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to fetch inventory transactions')
-      }
-
-      const data = await response.json()
-      return data.transactions as InventoryTransaction[]
-    },
-  })
-}
-
-/**
- * useCreateTransaction - Create new inventory transaction
- * Automatically updates product quantity based on transaction type
- */
-export function useCreateTransaction() {
+export const useInventory = () => {
   const queryClient = useQueryClient()
 
-  return useMutation({
+  // Products queries
+  const getProducts = async (): Promise<Product[]> => {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('name')
+
+    if (error) throw error
+    return data
+  }
+
+  const products = useQuery({
+    queryKey: ['products'],
+    queryFn: getProducts
+  })
+
+  // Transactions queries
+  const getTransactions = async (): Promise<InventoryTransaction[]> => {
+    const { data, error } = await supabase
+      .from('inventory_transactions')
+      .select(`
+        *,
+        products (*)
+      `)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data
+  }
+
+  const transactions = useQuery({
+    queryKey: ['inventory_transactions'],
+    queryFn: getTransactions
+  })
+
+  // Product mutations
+  const createProduct = useMutation({
+    mutationFn: async (product: CreateProductDTO) => {
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          ...product,
+          quantity: product.quantity ?? 0,
+          min_quantity: product.min_quantity ?? 0,
+          unit: product.unit ?? 'шт.'
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+    }
+  })
+
+  const updateProduct = useMutation({
+    mutationFn: async ({ id, ...product }: UpdateProductDTO & { id: string }) => {
+      const { data, error } = await supabase
+        .from('products')
+        .update(product)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+    }
+  })
+
+  const deleteProduct = useMutation({
+    mutationFn: async (id: string) => {
+      // Soft delete by setting is_active to false
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: false })
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+    }
+  })
+
+  // Transaction mutations
+  const createTransaction = useMutation({
     mutationFn: async (transaction: CreateInventoryTransactionDTO) => {
-      const response = await fetch('/api/inventory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transaction),
+      // Start a Supabase transaction
+      const { data: { user } } = await supabase.auth.getUser()
+      const org_id = user?.user_metadata?.org_id
+
+      // 1. Create the transaction record
+      const { data: transactionData, error: transactionError } = await supabase
+        .from('inventory_transactions')
+        .insert({
+          ...transaction,
+          org_id
+        })
+        .select()
+        .single()
+
+      if (transactionError) throw transactionError
+
+      // 2. Update product quantity
+      const quantityDelta = (['sale', 'write_off'].includes(transaction.type) ? -1 : 1) * 
+                           (transaction.type === 'adjustment' ? 0 : transaction.quantity)
+      
+      const { error: productError } = await supabase.rpc('update_product_quantity', {
+        p_product_id: transaction.product_id,
+        p_quantity_delta: quantityDelta
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create transaction')
-      }
+      if (productError) throw productError
 
-      const data = await response.json()
-      return {
-        transaction: data.transaction as InventoryTransaction,
-        newQuantity: data.newQuantity as number,
-      }
+      return transactionData
     },
-    onSuccess: (data) => {
-      // Invalidate transaction history
-      queryClient.invalidateQueries({ queryKey: ['inventory-transactions'] })
-
-      // Invalidate products list (quantity changed)
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory_transactions'] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
-
-      // Invalidate specific product (if tracking it)
-      if (data.transaction.product_id) {
-        queryClient.invalidateQueries({
-          queryKey: ['products', data.transaction.product_id],
-        })
-      }
-
-      // Invalidate low-stock query (quantity may have crossed threshold)
-      queryClient.invalidateQueries({ queryKey: ['products', 'low-stock'] })
-    },
+    }
   })
+
+  return {
+    // Products
+    products: products.data ?? [],
+    isLoadingProducts: products.isLoading,
+    isErrorProducts: products.isError,
+    errorProducts: products.error,
+    createProduct: createProduct.mutate,
+    updateProduct: updateProduct.mutate,
+    deleteProduct: deleteProduct.mutate,
+    
+    // Transactions
+    transactions: transactions.data ?? [],
+    isLoadingTransactions: transactions.isLoading,
+    isErrorTransactions: transactions.isError,
+    errorTransactions: transactions.error,
+    createTransaction: createTransaction.mutate,
+
+    // Combined loading states
+    isPending: createProduct.isPending || 
+              updateProduct.isPending || 
+              deleteProduct.isPending || 
+              createTransaction.isPending
+  }
 }

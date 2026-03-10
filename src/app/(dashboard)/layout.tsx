@@ -1,73 +1,46 @@
-'use client'
+import { redirect } from 'next/navigation'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import MainNav from '@/components/layout/MainNav'
+import UserNav from '@/components/layout/UserNav'
+import { QueryProvider } from '@/components/providers/QueryProvider'
+import { ThemeProvider } from '@/components/providers/ThemeProvider'
+import { Toaster } from '@/components/ui/toaster'
+import { ModalProvider } from '@/components/providers/ModalProvider'
 
-import { useState, useEffect } from 'react'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { MobileHeader } from '@/components/layout/MobileHeader'
-import { AuthProvider } from '@/contexts/AuthContext'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { GlobalSearch } from '@/components/GlobalSearch'
-
-/**
- * DashboardLayout — основной макет.
- * Учитывая использование RTL (иврит), Sidebar должен идти ПЕРВЫМ в DOM,
- * чтобы отображаться в ПРАВОЙ части экрана на десктопе.
- * 
- * Middleware уже проверяет сессию — layout не дублирует эту логику.
- * Каждая страница сама управляет своей загрузкой.
- */
-export default function DashboardLayout({
-  children,
+export default async function DashboardLayout({
+  children
 }: {
   children: React.ReactNode
 }) {
-  const [searchOpen, setSearchOpen] = useState(false)
+  const supabase = createServerComponentClient({ cookies })
+  const { data: { session } } = await supabase.auth.getSession()
 
-  // Ctrl+K / Cmd+K hotkey
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setSearchOpen(true)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  if (!session) {
+    redirect('/auth/login')
+  }
 
   return (
-    <AuthProvider>
-      
-        <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 flex flex-col">
-          {/* Мобильный header */}
-          <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
-
-          <div className="flex-1 lg:flex lg:h-screen overflow-hidden">
-            
-            {/* 1. Sidebar — ФИКСИРОВАННЫЙ ПРИ СКРОЛЛЕ
-              sticky top-0 h-screen делает его зафиксированным
-            */}
-            <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
-              <Sidebar onSearchOpen={() => setSearchOpen(true)} />
-            </aside>
-
-            {/* 2. Main Content — СКРОЛЛИТСЯ ОТДЕЛЬНО
-              overflow-y-auto позволяет контенту скроллиться независимо от sidebar
-            */}
-            <main className="flex-1 overflow-y-auto lg:h-screen pt-4 lg:pt-6">
-              <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
-                <ErrorBoundary>
-                  {children}
-                </ErrorBoundary>
+    <QueryProvider>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ModalProvider>
+          <div className="flex flex-col min-h-screen">
+            {/* Header */}
+            <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <div className="container flex h-14 items-center justify-between">
+                <MainNav />
+                <UserNav user={session.user} />
               </div>
+            </header>
+
+            {/* Main content */}
+            <main className="flex-1">
+              {children}
             </main>
-
           </div>
-        </div>
-
-        {/* Global Search */}
-        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-      
-    </AuthProvider>
+          <Toaster />
+        </ModalProvider>
+      </ThemeProvider>
+    </QueryProvider>
   )
 }

@@ -47,7 +47,7 @@ export function TaskDetailsModal() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       })
-      
+
       if (response.ok) {
         closeModal('task-details')
         // Reload page to reflect changes
@@ -55,6 +55,29 @@ export function TaskDetailsModal() {
       }
     } catch (error) {
       console.error('Failed to update task status:', error)
+    }
+  }
+
+  function handleEdit(task: any) {
+    const { openModal } = useModalStore.getState()
+    closeModal('task-details')
+    openModal('task-create', {
+      editTask: task,
+      onCreated: () => window.location.reload(),
+    })
+  }
+
+  async function handleDelete(taskId: string) {
+    try {
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        closeModal('task-details')
+        window.location.reload()
+      }
+    } catch (error) {
+      console.error('Failed to delete task:', error)
     }
   }
 
@@ -89,6 +112,8 @@ export function TaskDetailsModal() {
       onStatusChange={handleStatusChange}
       onClientClick={handleClientClick}
       onVisitClick={handleVisitClick}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
     />
   )
 }

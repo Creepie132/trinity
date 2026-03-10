@@ -154,6 +154,7 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
 
         const todayTasksFiltered = tasksArr.filter((t: any) => {
           if (!t.due_date) return false
+          if (t.status === 'completed') return false
           const taskDate = new Date(t.due_date)
           return taskDate >= todayStart && taskDate < todayEnd
         })

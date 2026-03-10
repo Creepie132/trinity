@@ -63,7 +63,7 @@ export async function PUT(
     .eq('org_id', orgId)
     .select(`
       *,
-      client:clients(id, name, phone)
+      client:clients(id, full_name, phone)
     `)
     .single()
 

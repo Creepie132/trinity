@@ -1,7 +1,7 @@
 'use client'
 
 import { BaseModal } from './BaseModal'
-import { useModalStore } from '@/store/useModalStore'
+import { useModalStore, ModalType } from '@/store/useModalStore'
 
 // Clients
 import { ClientDetailsModal } from './ClientDetailsModal'
@@ -53,7 +53,7 @@ import { CareInstructionModal } from './other/CareInstructionModal'
 import { OrgSubscriptionModal } from './other/OrgSubscriptionModal'
 
 // Примесь для общего поведения модалок
-const withBaseModal = (ModalContent: React.ComponentType<any>, modalType: string) => {
+const withBaseModal = (ModalContent: React.ComponentType<any>, modalType: ModalType) => {
   return function WrappedModal() {
     const { isModalOpen, closeModal, getModalData } = useModalStore()
     const isOpen = isModalOpen(modalType)
@@ -87,6 +87,32 @@ const EnhancedAddServiceModal = withBaseModal(AddServiceModal, 'visit-add-servic
 const EnhancedAddServiceDirectModal = withBaseModal(AddServiceDirectModal, 'add-service')
 const EnhancedAddToVisitModal = withBaseModal(AddToVisitModal, 'add-to-visit')
 
+const EnhancedProductDetailsModal = withBaseModal(ProductDetailsModal, 'product-details')
+const EnhancedSellProductModal = withBaseModal(SellProductModal, 'product-sell')
+const EnhancedAddStockModal = withBaseModal(AddStockModal, 'product-add-stock')
+const EnhancedEditProductModal = withBaseModal(EditProductModal, 'product-edit')
+
+const EnhancedCreatePaymentModal = withBaseModal(CreatePaymentModal, 'payment-create')
+const EnhancedCreatePaymentLinkModal = withBaseModal(CreatePaymentLinkModal, 'payment-create-link')
+const EnhancedCreateCashPaymentModal = withBaseModal(CreateCashPaymentModal, 'payment-create-cash')
+const EnhancedCreateStripePaymentModal = withBaseModal(CreateStripePaymentModal, 'payment-create-stripe')
+const EnhancedCreateSubscriptionModal = withBaseModal(CreateSubscriptionModal, 'payment-create-subscription')
+const EnhancedPaymentDetailsModal = withBaseModal(PaymentDetailsModal, 'payment-details')
+
+const EnhancedCreateServiceModal = withBaseModal(CreateServiceModal, 'service-create')
+const EnhancedServiceDetailsModal = withBaseModal(ServiceDetailsModal, 'service-details')
+
+const EnhancedCreateTaskModal = withBaseModal(CreateTaskModal, 'task-create')
+const EnhancedTaskDetailsModal = withBaseModal(TaskDetailsModal, 'task-details')
+
+const EnhancedAdminProfileModal = withBaseModal(AdminProfileModal, 'admin-profile')
+const EnhancedUserProfileModal = withBaseModal(UserProfileModal, 'user-profile')
+
+const EnhancedCampaignDetailsModal = withBaseModal(CampaignDetailsModal, 'sms-campaign-details')
+
+const EnhancedCareInstructionModal = withBaseModal(CareInstructionModal, 'care-instruction-create')
+const EnhancedOrgSubscriptionModal = withBaseModal(OrgSubscriptionModal, 'org-subscription-create')
+
 export function ModalManager() {
   return (
     <>
@@ -107,37 +133,37 @@ export function ModalManager() {
       <EnhancedAddToVisitModal />
       
       {/* Products */}
-      <ProductDetailsModal />
-      <SellProductModal />
-      <AddStockModal />
-      <EditProductModal />
+      <EnhancedProductDetailsModal />
+      <EnhancedSellProductModal />
+      <EnhancedAddStockModal />
+      <EnhancedEditProductModal />
       
       {/* Payments */}
-      <CreatePaymentModal />
-      <CreatePaymentLinkModal />
-      <CreateCashPaymentModal />
-      <CreateStripePaymentModal />
-      <CreateSubscriptionModal />
-      <PaymentDetailsModal />
+      <EnhancedCreatePaymentModal />
+      <EnhancedCreatePaymentLinkModal />
+      <EnhancedCreateCashPaymentModal />
+      <EnhancedCreateStripePaymentModal />
+      <EnhancedCreateSubscriptionModal />
+      <EnhancedPaymentDetailsModal />
       
       {/* Services */}
-      <CreateServiceModal />
-      <ServiceDetailsModal />
+      <EnhancedCreateServiceModal />
+      <EnhancedServiceDetailsModal />
       
       {/* Diary */}
-      <CreateTaskModal />
-      <TaskDetailsModal />
+      <EnhancedCreateTaskModal />
+      <EnhancedTaskDetailsModal />
       
       {/* Admin */}
-      <AdminProfileModal />
-      <UserProfileModal />
+      <EnhancedAdminProfileModal />
+      <EnhancedUserProfileModal />
       
       {/* SMS */}
-      <CampaignDetailsModal />
+      <EnhancedCampaignDetailsModal />
       
       {/* Other */}
-      <CareInstructionModal />
-      <OrgSubscriptionModal />
+      <EnhancedCareInstructionModal />
+      <EnhancedOrgSubscriptionModal />
     </>
   )
 }

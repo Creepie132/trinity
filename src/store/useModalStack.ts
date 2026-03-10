@@ -17,19 +17,16 @@ export const useModalStack = create<ModalStackState>((set, get) => ({
 
   pushModal: (modalType) => {
     set((state) => {
-      // Не добавляем в стек модалки визитов и дневника
+      // Добавляем в стек только определенные типы модалок
       if (
-        modalType.startsWith('visit-') || 
-        modalType === 'edit-visit' ||
-        modalType.startsWith('task-')
+        modalType.startsWith('client-') || 
+        modalType.startsWith('product-') ||
+        modalType.startsWith('payment-')
       ) {
-        return state
+        const newStack = [...state.stack, modalType]
+        return { stack: newStack }
       }
-      
-      const newStack = [...state.stack, modalType]
-      // Добавляем в историю браузера только для клиентов, склада и платежей
-      window.history.pushState({ modalStack: [...newStack] }, '')
-      return { stack: newStack }
+      return state
     })
   },
 

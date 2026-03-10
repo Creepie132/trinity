@@ -19,34 +19,64 @@ export function BaseModal({ open, onClose, children, className = '', modalType }
   const isMobile = useMediaQuery('(max-width: 768px)')
   const { pushModal, popModal } = useModalStack()
   
+  // Обработка монтирования модалки и добавление в историю
   useEffect(() => {
     if (open) {
-      pushModal(modalType)
+      // Задержка добавления в историю для корректной анимации
+      const timer = setTimeout(() => {
+        if (
+          modalType.startsWith('client-') ||
+          modalType.startsWith('product-') ||
+          modalType.startsWith('payment-')
+        ) {
+          pushModal(modalType)
+        }
+      }, 50)
+      return () => clearTimeout(timer)
     }
   }, [open, modalType, pushModal])
 
+  // Обработка кнопки "Назад"
   useEffect(() => {
-    // Обработка кнопки "Назад" только для определенных модалок
-    const handlePopState = (event: PopStateEvent) => {
-      const currentModalType = modalType
-      if (
-        currentModalType.startsWith('client-') ||
-        currentModalType.startsWith('product-') ||
-        currentModalType.startsWith('payment-')
-      ) {
-        const poppedModal = popModal()
-        if (poppedModal === currentModalType) {
-          onClose()
+    const handlePopState = () => {
+      if (open) {
+        const shouldHandle = 
+          modalType.startsWith('client-') ||
+          modalType.startsWith('product-') ||
+          modalType.startsWith('payment-')
+
+        if (shouldHandle) {
+          const poppedModal = popModal()
+          if (poppedModal === modalType) {
+            onClose()
+          }
         }
       }
     }
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [modalType, onClose, popModal])
+  }, [open, modalType, onClose, popModal])
 
-  const dialogClassName = `${className} animate-in fade-in-0 zoom-in-95 duration-200`
-  const sheetClassName = `${className} animate-in slide-in-from-bottom-full duration-300`
+  // CSS классы для анимации
+  const dialogClassName = `
+    ${className}
+    animate-in
+    data-[state=open]:fade-in-0
+    data-[state=open]:zoom-in-95
+    data-[state=open]:slide-in-from-bottom-2
+    duration-200
+    ease-out
+  `
+
+  const sheetClassName = `
+    ${className}
+    animate-in
+    data-[state=open]:fade-in-0
+    data-[state=open]:slide-in-from-bottom-full
+    duration-300
+    ease-out
+  `
 
   if (isMobile) {
     return (

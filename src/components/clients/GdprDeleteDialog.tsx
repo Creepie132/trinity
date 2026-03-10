@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { AlertTriangle, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface GdprDeleteDialogProps {
   open: boolean
@@ -24,6 +25,7 @@ export function GdprDeleteDialog({
   locale = 'ru',
 }: GdprDeleteDialogProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [confirmText, setConfirmText] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -90,9 +92,9 @@ export function GdprDeleteDialog({
         .replace('{sms}', data.deleted.sms_messages)
 
       toast.success(successMsg)
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
       onOpenChange(false)
       router.push('/clients')
-      router.refresh()
     } catch (error: any) {
       toast.error(error.message || text.deleteError)
     } finally {
@@ -140,7 +142,7 @@ export function GdprDeleteDialog({
         </div>
 
         <p className="text-sm text-gray-600">{text.willDelete}</p>
-        
+
         <ul className="list-disc list-inside space-y-1 text-sm text-gray-600" dir={locale === 'he' ? 'rtl' : 'ltr'}>
           <li>{text.allVisits}</li>
           <li>{text.allPayments}</li>

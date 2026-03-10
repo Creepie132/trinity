@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
+import { useQueryClient } from '@tanstack/react-query'
 import { Save, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
@@ -15,6 +16,7 @@ interface EditClientSheetProps {
 }
 
 export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: EditClientSheetProps) {
+  const queryClient = useQueryClient()
   const [form, setForm] = useState({
     first_name: client?.first_name || '',
     last_name: client?.last_name || '',
@@ -23,7 +25,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     address: client?.address || '',
     notes: client?.notes || '',
   })
-  
+
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(client?.avatar_url || null)
   const [saving, setSaving] = useState(false)
@@ -74,12 +76,12 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
         const formData = new FormData()
         formData.append('file', avatarFile)
         formData.append('client_id', client.id)
-        
+
         const uploadRes = await fetch('/api/clients/avatar', {
           method: 'POST',
           body: formData
         })
-        
+
         if (uploadRes.ok) {
           const data = await uploadRes.json()
           avatar_url = data.url
@@ -100,6 +102,8 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
 
       if (res.ok) {
         toast.success(locale === 'he' ? 'נשמר בהצלחה' : 'Сохранено')
+        queryClient.invalidateQueries({ queryKey: ['clients'] })
+        queryClient.invalidateQueries({ queryKey: ['client'] })
         onSaved(data)
         onClose()
       } else {

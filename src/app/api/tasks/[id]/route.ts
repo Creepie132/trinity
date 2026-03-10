@@ -63,8 +63,7 @@ export async function PUT(
     .eq('org_id', orgId)
     .select(`
       *,
-      client:clients(id, name, phone),
-      assigned_user:org_users!tasks_assigned_to_fkey(user_id, full_name)
+      client:clients(id, name, phone)
     `)
     .single()
 

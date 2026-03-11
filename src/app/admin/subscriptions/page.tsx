@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -293,10 +294,25 @@ export default function AdminSubscriptionsPage() {
   }
 
   const t = translations[language]
+  const searchParams = useSearchParams()
+  const autopayHandled = useRef(false)
 
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    if (autopayHandled.current) return
+    const autopay = searchParams.get('autopay')
+    if (autopay === 'success') {
+      autopayHandled.current = true
+      toast.success(language === 'he' ? 'תשלום אוטומטי הופעל בהצלחה!' : 'Автоплатёж успешно подключён!')
+      loadData()
+    } else if (autopay === 'failed') {
+      autopayHandled.current = true
+      toast.error(language === 'he' ? 'תשלום נכשל' : 'Ошибка подключения автоплатежа')
+    }
+  }, [searchParams])
 
   const loadData = async () => {
     try {

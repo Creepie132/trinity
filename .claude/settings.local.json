@@ -44,7 +44,26 @@
       "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && node -e \"\nconst fs = require\\('fs'\\);\nconst files = [\n  'src/app/\\(dashboard\\)/settings/service-colors/page.tsx',\n  'src/app/\\(dashboard\\)/settings/templates/page.tsx',\n  'src/app/\\(dashboard\\)/settings/dashboard/page.tsx',\n];\nfiles.forEach\\(f => {\n  let content = fs.readFileSync\\(f, 'utf8'\\);\n  const updated = content.replace\\(/<h1 className=\\\\\"text-3xl font-bold/g, '<h1 className=\\\\\"text-2xl md:text-3xl font-bold'\\);\n  if \\(updated !== content\\) { fs.writeFileSync\\(f, updated\\); console.log\\('Fixed:', f\\); }\n  else { console.log\\('No change:', f\\); }\n}\\);\n\")",
       "Bash(find \"F:\\\\Amber_solutions_Kira\\\\Trinity\" -name \"[id]\" -type d 2>/dev/null | head -5)",
       "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|✓|✗|Failed|warn\" | head -40)",
-      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | tail -5)"
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | tail -5)",
+      "Bash(find F:/Amber_solutions_Kira/Trinity -name \"*.sql\" -type f | xargs grep -l \"branches\" 2>/dev/null | head -10)",
+      "Bash(ls -ltr F:/Amber_solutions_Kira/Trinity/supabase/*.sql | tail -15)",
+      "Bash(ls -ltr F:/Amber_solutions_Kira/Trinity/*.sql 2>/dev/null | tail -15)",
+      "Bash(grep -r \"notifications\" F:/Amber_solutions_Kira/Trinity/supabase/*.sql 2>/dev/null | head -50)",
+      "Bash(ls -la F:/Amber_solutions_Kira/Trinity/supabase/*.sql | wc -l)",
+      "Bash(cd F:/Amber_solutions_Kira/Trinity && find . -name \"*.sql\" -type f | xargs grep -l \"CREATE TABLE.*notifications\" 2>/dev/null | head -10)",
+      "Bash(find F:/Amber_solutions_Kira/Trinity/src -name \"*.tsx\" -o -name \"*.ts\" | xargs grep -l \"notifications.*POST\\\\|sendNotification\\\\|create.*notification\" 2>/dev/null | head -10)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|✓|Failed|success|Build\" | head -20)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error TS|Error \" | head -20)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -A3 \"Failed\")",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error TS|Failed to compile|✓ Compiled\" | head -10)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -A5 \"Failed to compile\")",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error TS|Failed to compile|✓ Compiled\" | head -5)",
+      "Bash(find \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\app\\\\\\(dashboard\\)\\\\settings\" -name \"*.tsx\" -type f)",
+      "Bash(ls \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\app\\\\api\\\\admin\\\\\" 2>/dev/null && echo \"---\" && ls \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\app\\\\api\\\\admin\\\\plans\" 2>/dev/null && ls \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\app\\\\api\\\\admin\\\\module-pricing\" 2>/dev/null)",
+      "Bash(ls \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\lib\\\\supabase\\\\\" 2>/dev/null; echo \"---\"; ls \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\lib\\\\\" 2>/dev/null | grep -i supabase)",
+      "Bash(ls \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\supabase\\\\migrations\\\\\" 2>/dev/null || echo \"no migrations dir\")",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|warning|Warning\" | grep -v \"node_modules\\\\|DeprecationWarning\" | head -30)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error TS|Error:|failed\" | grep -v node_modules | head -20)"
     ]
   }
 }

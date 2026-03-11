@@ -110,7 +110,22 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Trigger will auto-update visit price and duration
+    // Add service price to existing visit price (do not replace)
+    const { data: currentVisit } = await supabase
+      .from('visits')
+      .select('price, duration_minutes')
+      .eq('id', visitId)
+      .single()
+
+    if (currentVisit) {
+      await supabase
+        .from('visits')
+        .update({
+          price: (currentVisit.price || 0) + (body.price || 0),
+          duration_minutes: (currentVisit.duration_minutes || 0) + (body.duration_minutes || 0),
+        })
+        .eq('id', visitId)
+    }
 
     return NextResponse.json({ service: visitService }, { status: 201 })
   } catch (error) {

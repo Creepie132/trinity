@@ -34,6 +34,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id: visitId } = await params
+
+    // Fetch service price before deleting
+    const { data: serviceData } = await supabase
+      .from('visit_services')
+      .select('price, duration_minutes, visit_id')
+      .eq('id', serviceId)
+      .single()
+
     const { error } = await supabase
       .from('visit_services')
       .delete()
@@ -44,7 +53,25 @@ export async function DELETE(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Trigger will auto-update visit price and duration
+    // Subtract service price from visit
+    if (serviceData) {
+      const targetVisitId = serviceData.visit_id || visitId
+      const { data: currentVisit } = await supabase
+        .from('visits')
+        .select('price, duration_minutes')
+        .eq('id', targetVisitId)
+        .single()
+
+      if (currentVisit) {
+        await supabase
+          .from('visits')
+          .update({
+            price: Math.max(0, (currentVisit.price || 0) - (serviceData.price || 0)),
+            duration_minutes: Math.max(0, (currentVisit.duration_minutes || 0) - (serviceData.duration_minutes || 0)),
+          })
+          .eq('id', targetVisitId)
+      }
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

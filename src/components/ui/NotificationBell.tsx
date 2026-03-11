@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Bell, CheckCheck } from 'lucide-react'
+import { Bell, CheckCheck, Phone, MessageCircle, Check, X } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { TrinityNotificationIcon } from './TrinityNotificationIcon'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
@@ -12,6 +12,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
+interface NotificationMetadata {
+  invited_user_email?: string
+  invited_user_id?: string
+  org_id?: string
+  org_name?: string
+  invited_by_email?: string
+  invited_by_phone?: string
+}
+
 interface Notification {
   id: string
   user_id: string
@@ -21,6 +30,7 @@ interface Notification {
   link?: string
   is_read: boolean
   created_at: string
+  metadata?: NotificationMetadata
 }
 
 interface NotificationBellProps {
@@ -132,6 +142,41 @@ export function NotificationBell({ locale }: NotificationBellProps) {
     })
   }, [])
 
+  async function rejectInvitation(notifId: string, userId: string, orgId: string) {
+    try {
+      await fetch('/api/org/team', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userId, orgId }),
+      })
+      await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [notifId] }),
+      })
+      setNotifications(prev => prev.filter(n => n.id !== notifId))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  async function approveInvitation(notifId: string) {
+    try {
+      await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [notifId] }),
+      })
+      setNotifications(prev =>
+        prev.map(n => n.id === notifId ? { ...n, is_read: true } : n)
+      )
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   function handleOpen() {
     setIsOpen(true)
     if (unreadCount > 0) markAllRead()
@@ -144,31 +189,74 @@ export function NotificationBell({ locale }: NotificationBellProps) {
       ) : (
         <div className="space-y-1 p-1">
           {notifications.map((n) => (
-            <a
+            <div
               key={n.id}
-              href={n.link || '#'}
-              className={`block px-3 py-3 rounded-xl transition ${
+              className={`px-3 py-3 rounded-xl transition ${
                 !n.is_read ? 'bg-primary/5' : 'hover:bg-muted/50'
               }`}
             >
-              <div className="flex items-start gap-3">
-                {!n.is_read && (
-                  <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                )}
-                <div className={`flex-1 min-w-0 ${n.is_read ? 'ms-5' : ''}`}>
-                  <p className={`text-sm ${!n.is_read ? 'font-semibold' : ''}`}>{n.title}</p>
-                  {n.body && (
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.body}</p>
+              <a href={n.type === 'access_invitation' ? '#' : (n.link || '#')}>
+                <div className="flex items-start gap-3">
+                  {!n.is_read && (
+                    <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
                   )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(n.created_at).toLocaleString(
-                      locale === 'he' ? 'he-IL' : 'ru-RU',
-                      { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
+                  <div className={`flex-1 min-w-0 ${n.is_read ? 'ms-5' : ''}`}>
+                    <p className={`text-sm ${!n.is_read ? 'font-semibold' : ''}`}>{n.title}</p>
+                    {n.body && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-3">{n.body}</p>
                     )}
-                  </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(n.created_at).toLocaleString(
+                        locale === 'he' ? 'he-IL' : 'ru-RU',
+                        { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
+                      )}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </a>
+              </a>
+
+              {/* Action buttons for access_invitation type */}
+              {n.type === 'access_invitation' && n.metadata && (
+                <div className="mt-2 ms-5 flex flex-wrap gap-1.5">
+                  {n.metadata.invited_by_phone && (
+                    <>
+                      <a
+                        href={`tel:${n.metadata.invited_by_phone}`}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 transition-colors"
+                      >
+                        <Phone className="w-3 h-3" />
+                        {locale === 'he' ? 'התקשר' : 'Позвонить'}
+                      </a>
+                      <a
+                        href={`https://wa.me/${n.metadata.invited_by_phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-medium hover:bg-green-100 transition-colors"
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        WhatsApp
+                      </a>
+                    </>
+                  )}
+                  <button
+                    onClick={() => approveInvitation(n.id)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-100 transition-colors"
+                  >
+                    <Check className="w-3 h-3" />
+                    {locale === 'he' ? 'אשר' : 'Одобрить'}
+                  </button>
+                  {n.metadata.invited_user_email && n.metadata.org_id && (
+                    <button
+                      onClick={() => rejectInvitation(n.id, n.metadata!.invited_user_email!, n.metadata!.org_id!)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                      {locale === 'he' ? 'דחה' : 'Отклонить'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}

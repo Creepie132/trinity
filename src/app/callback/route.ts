@@ -43,11 +43,19 @@ export async function GET(request: NextRequest) {
   // Auto-link user_id for invited users
   if (user?.id && user?.email) {
     try {
-      await supabase
+      const { data: linkedRows } = await supabase
         .from('org_users')
         .update({ user_id: user.id })
         .eq('email', user.email)
         .is('user_id', null)
+        .select('org_id, role')
+
+      // Notify all system admins when an invited user first logs in
+      if (linkedRows && linkedRows.length > 0) {
+        notifyAdminsOfInvitedUser(user, linkedRows).catch((e) =>
+          console.error('[Callback] Admin notification error:', e)
+        )
+      }
     } catch (e) {
       console.error('Auto-link error:', e)
     }
@@ -165,5 +173,55 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[Callback] Auto-create organization error:', error)
     return NextResponse.redirect(`${origin}/onboarding/business-info`)
+  }
+}
+
+// Non-blocking: notify all system admins when an invited user joins an org
+async function notifyAdminsOfInvitedUser(
+  user: { id: string; email?: string | null },
+  linkedRows: { org_id: string; role: string }[]
+) {
+  const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+  const adminClient = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  for (const row of linkedRows) {
+    const [{ data: org }, { data: adminUsers }, { data: ownerRow }] = await Promise.all([
+      adminClient.from('organizations').select('name, phone').eq('id', row.org_id).single(),
+      adminClient.from('admin_users').select('user_id'),
+      adminClient
+        .from('org_users')
+        .select('email')
+        .eq('org_id', row.org_id)
+        .eq('role', 'owner')
+        .maybeSingle(),
+    ])
+
+    if (!adminUsers || adminUsers.length === 0) continue
+
+    const orgName = org?.name || 'Unknown'
+    const orgPhone = org?.phone || ''
+    const inviterEmail = ownerRow?.email || ''
+    const notifDate = new Date().toLocaleDateString('ru-RU')
+
+    await adminClient.from('notifications').insert(
+      adminUsers.map((admin) => ({
+        org_id: row.org_id,
+        user_id: admin.user_id,
+        type: 'access_invitation',
+        title: 'Новый запрос доступа',
+        body: `${user.email} хочет присоединиться к ${orgName}. Пригласил: ${inviterEmail}. Дата: ${notifDate}`,
+        metadata: {
+          invited_user_email: user.email,
+          invited_user_id: user.id,
+          org_id: row.org_id,
+          org_name: orgName,
+          invited_by_email: inviterEmail,
+          invited_by_phone: orgPhone,
+        },
+      }))
+    )
   }
 }

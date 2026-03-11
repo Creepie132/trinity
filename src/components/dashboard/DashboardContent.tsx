@@ -13,6 +13,7 @@ import { QuickActionsPanel } from './QuickActionsPanel'
 import FABMenu from './FABMenu'
 import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
 import { useModalStore } from '@/store/useModalStore'
+import { WorkShiftWidget } from './WorkShiftWidget'
 
 interface DashboardContentProps {
   orgId: string
@@ -246,6 +247,9 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_280px] gap-6">
           <div className="lg:col-span-2 space-y-6">
+            {/* Work Shift Widget — shown for all users */}
+            <WorkShiftWidget />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <TodayVisitsWidget visits={todayVisits} locale={locale} onVisitClick={setSelectedVisit} />
               <TodayTasksWidget tasks={todayTasks} locale={locale} />

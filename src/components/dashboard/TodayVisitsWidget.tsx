@@ -2,20 +2,19 @@
 
 import { useState } from 'react'
 import { WidgetCard } from '@/components/ui/WidgetCard'
-import { useModalStore } from '@/store/useModalStore'
 
 interface TodayVisitsWidgetProps {
   visits: any[]
   locale: string
+  onVisitClick?: (visit: any) => void
 }
 
-export function TodayVisitsWidget({ visits, locale }: TodayVisitsWidgetProps) {
+export function TodayVisitsWidget({ visits, locale, onVisitClick }: TodayVisitsWidgetProps) {
   const l = locale === 'he'
   const [page, setPage] = useState(0)
   const perPage = 5
   const totalPages = Math.ceil(visits.length / perPage)
   const current = visits.slice(page * perPage, (page + 1) * perPage)
-  const { openModal } = useModalStore()
 
   return (
     <WidgetCard className="p-4">
@@ -32,7 +31,7 @@ export function TodayVisitsWidget({ visits, locale }: TodayVisitsWidgetProps) {
             {current.map((v: any) => (
               <div 
                 key={v.id} 
-                onClick={() => openModal('edit-visit', { visit: v, locale })}
+                onClick={() => onVisitClick?.(v)}
                 className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer transition"
               >
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${

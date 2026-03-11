@@ -11,6 +11,8 @@ import { RevenueChartWidget } from './RevenueChartWidget'
 import { IncomeExpensesWidget } from './IncomeExpensesWidget'
 import { QuickActionsPanel } from './QuickActionsPanel'
 import FABMenu from './FABMenu'
+import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
+import { useModalStore } from '@/store/useModalStore'
 
 interface DashboardContentProps {
   orgId: string
@@ -62,7 +64,10 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
   const { language } = useLanguage()
   const locale = language
   const router = useRouter()
-  
+  const { openModal } = useModalStore()
+
+  const [selectedVisit, setSelectedVisit] = useState<any>(null)
+
   const [stats, setStats] = useState<StatsData>({
     clients: 0,
     visits: 0,
@@ -153,8 +158,8 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
         setTodayVisits(todayVisitsArr)
 
         const todayTasksFiltered = tasksArr.filter((t: any) => {
-          if (!t.due_date) return false
-          if (t.status === 'completed') return false
+          if (t.status === 'completed' || t.status === 'cancelled') return false
+          if (!t.due_date) return true
           const taskDate = new Date(t.due_date)
           return taskDate >= todayStart && taskDate < todayEnd
         })
@@ -186,6 +191,16 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
 
     loadStats()
   }, [orgId, locale])
+
+  async function updateVisitStatus(visitId: string, status: string) {
+    await fetch(`/api/visits/${visitId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+    setSelectedVisit(null)
+    setTodayVisits(prev => prev.map(v => v.id === visitId ? { ...v, status } : v))
+  }
 
   if (loading) {
     return (
@@ -232,7 +247,7 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_280px] gap-6">
           <div className="lg:col-span-2 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <TodayVisitsWidget visits={todayVisits} locale={locale} />
+              <TodayVisitsWidget visits={todayVisits} locale={locale} onVisitClick={setSelectedVisit} />
               <TodayTasksWidget tasks={todayTasks} locale={locale} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -249,6 +264,28 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
       <div className="lg:hidden">
         <FABMenu />
       </div>
+
+      {selectedVisit && (
+        <VisitDetailModal
+          visit={selectedVisit}
+          isOpen={!!selectedVisit}
+          onClose={() => setSelectedVisit(null)}
+          locale={locale === 'he' ? 'he' : 'ru'}
+          clientName={
+            selectedVisit.clients
+              ? `${selectedVisit.clients.first_name || ''} ${selectedVisit.clients.last_name || ''}`.trim()
+              : selectedVisit.clientName || ''
+          }
+          clientPhone={selectedVisit.clients?.phone || ''}
+          onStart={() => updateVisitStatus(selectedVisit.id, 'in_progress')}
+          onComplete={() => updateVisitStatus(selectedVisit.id, 'completed')}
+          onCancel={() => updateVisitStatus(selectedVisit.id, 'cancelled')}
+          onEdit={() => {
+            openModal('edit-visit', { visitId: selectedVisit.id, visit: selectedVisit })
+            setSelectedVisit(null)
+          }}
+        />
+      )}
     </>
   )
 }

@@ -54,8 +54,6 @@ export default function VisitsPage() {
   const pageSize = 20
   const [allClients, setAllClients] = useState<any[]>([])
   const [newVisitNotify, setNewVisitNotify] = useState<any>(null)
-  const [paymentVisit, setPaymentVisit] = useState<any>(null)
-  const [paymentMethod, setPaymentMethod] = useState<string>('')
   const [receiptVisit, setReceiptVisit] = useState<any>(null)
   const [createVisitPrefill, setCreateVisitPrefill] = useState<any>(null)
   
@@ -329,8 +327,24 @@ export default function VisitsPage() {
   }
 
   const handleCompleteVisit = (visit: Visit) => {
-    setPaymentVisit(visit)
-    setPaymentMethod('') // Reset payment method
+    const clientData = allClients?.find((c: any) => c.id === visit.client_id)
+    const preloadedItems = ((visit as any).visit_services || []).map((vs: any) => ({
+      id: vs.id,
+      name: language === 'he' ? (vs.service_name || vs.service_name_ru) : (vs.service_name_ru || vs.service_name),
+      price: vs.price || 0,
+    }))
+    openModal('client-sale', {
+      client: clientData || {
+        id: visit.client_id,
+        first_name: getClientName(visit),
+        last_name: '',
+        phone: getClientPhone(visit),
+        email: getClientEmail(visit),
+      },
+      locale: language === 'he' ? 'he' : 'ru',
+      visitId: visit.id,
+      preloadedItems,
+    })
   }
 
   const handleCancelVisit = async (visitId: string) => {
@@ -823,73 +837,6 @@ export default function VisitsPage() {
               className="w-full py-3 rounded-2xl bg-slate-100 text-slate-500 text-sm font-medium"
             >
               {language === 'he' ? 'דלג' : 'Пропустить'}
-            </button>
-          </div>
-        </TrinityBottomDrawer>
-      )}
-
-      {/* Payment flow after visit completion */}
-      {paymentVisit && (
-        <TrinityBottomDrawer
-          isOpen={!!paymentVisit}
-          onClose={() => setPaymentVisit(null)}
-          title={language === 'he' ? 'תשלום' : 'Оплата'}
-        >
-          <div className="space-y-4">
-            {/* Сумма */}
-            <div className="text-center py-4">
-              <p className="text-sm text-slate-400">{language === 'he' ? 'סכום לתשלום' : 'К оплате'}</p>
-              <p className="text-4xl font-bold mt-1">₪{paymentVisit.price || 0}</p>
-            </div>
-
-            {/* Способы оплаты */}
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { key: 'cash', label: language === 'he' ? 'מזומן' : 'Наличные', emoji: '💵' },
-                { key: 'card', label: language === 'he' ? 'כרטיס' : 'Карта', emoji: '💳' },
-                { key: 'transfer', label: language === 'he' ? 'העברה' : 'Перевод', emoji: '🏦' },
-                { key: 'bit', label: 'Bit', emoji: '📱' },
-              ].map(m => (
-                <button
-                  key={m.key}
-                  onClick={() => setPaymentMethod(m.key)}
-                  className={`py-3 rounded-2xl text-sm font-medium transition ${
-                    paymentMethod === m.key
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {m.emoji} {m.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Кнопки */}
-            <button
-              onClick={async () => {
-                await updateVisitStatus(paymentVisit.id, 'completed')
-                // TODO: создать запись платежа
-                
-                // Открыть окно квитанции
-                const clientData = allClients?.find((c: any) => c.id === paymentVisit.client_id)
-                setReceiptVisit({
-                  ...paymentVisit,
-                  client_phone: clientData?.phone,
-                  clientName: clientData ? `${clientData.first_name} ${clientData.last_name}`.trim() : '',
-                })
-                setPaymentVisit(null)
-              }}
-              disabled={!paymentMethod}
-              className="w-full py-3.5 rounded-2xl bg-emerald-500 text-white text-sm font-semibold disabled:opacity-50"
-            >
-              {language === 'he' ? 'אשר תשלום' : 'Подтвердить оплату'}
-            </button>
-
-            <button
-              onClick={() => setPaymentVisit(null)}
-              className="w-full py-3 rounded-2xl bg-slate-100 text-slate-500 text-sm font-medium"
-            >
-              {language === 'he' ? 'צא' : 'Выйти'}
             </button>
           </div>
         </TrinityBottomDrawer>

@@ -10,8 +10,8 @@ import { Package, Edit, Trash2, ShoppingCart, Plus, Clock, Loader2 } from 'lucid
 import { useLanguage } from '@/contexts/LanguageContext'
 import { format } from 'date-fns'
 import type { Product } from '@/types/inventory'
-import { SellProductDialog } from './SellProductDialog'
 import { AddStockDialog } from './AddStockDialog'
+import { useModalStore } from '@/store/useModalStore'
 
 interface ProductDetailSheetProps {
   open: boolean
@@ -29,8 +29,8 @@ export function ProductDetailSheet({
   const { t, language } = useLanguage()
   const { data: transactions } = useInventoryTransactions(product?.id)
   const deleteProduct = useDeleteProduct()
+  const { openModal } = useModalStore()
 
-  const [sellDialogOpen, setSellDialogOpen] = useState(false)
   const [addStockDialogOpen, setAddStockDialogOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
@@ -142,7 +142,13 @@ export function ProductDetailSheet({
         footer={
           <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => setSellDialogOpen(true)}
+              onClick={() => {
+                onClose()
+                openModal('client-sale', {
+                  preloadedProduct: product,
+                  locale: language === 'he' ? 'he' : 'ru',
+                })
+              }}
               disabled={product.quantity === 0}
               className="py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50"
             >
@@ -318,12 +324,6 @@ export function ProductDetailSheet({
           </div>
         </div>
       </Modal>
-
-      <SellProductDialog
-        open={sellDialogOpen}
-        onClose={() => setSellDialogOpen(false)}
-        product={product}
-      />
 
       <AddStockDialog
         open={addStockDialogOpen}

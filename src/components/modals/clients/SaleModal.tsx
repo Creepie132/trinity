@@ -7,12 +7,14 @@ import { useProducts } from '@/hooks/useProducts'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/hooks/useOrganization'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getClientName } from '@/lib/client-utils'
-import { 
-  Search, Plus, Minus, X, Percent, ShoppingCart, 
-  FileText, Download, Send, MessageCircle, Mail,
-  CreditCard, Banknote, Building2, ChevronLeft, Check, LayoutGrid
+import {
+  Search, Plus, Minus, X, Percent, ShoppingCart,
+  FileText, Download, MessageCircle, Mail,
+  CreditCard, Banknote, Building2, ChevronLeft, Check, LayoutGrid,
+  Smartphone, Scissors
 } from 'lucide-react'
 import type { Product } from '@/types/inventory'
 import { useGeneratePDF } from '@/lib/pdf/use-generate-pdf'
@@ -31,11 +33,19 @@ interface DiscountState {
   value: number
 }
 
+// Preloaded items (e.g. visit services) shown as read-only rows
+interface PreloadedItem {
+  id: string
+  name: string
+  price: number
+}
+
 type Step = 'cart' | 'checkout' | 'proposal' | 'payment-link'
 
 const paymentMethods = [
   { value: 'credit', label: { he: 'אשראי', ru: 'Карта' }, icon: CreditCard },
   { value: 'cash', label: { he: 'מזומן', ru: 'Наличные' }, icon: Banknote },
+  { value: 'bit', label: { he: 'Bit', ru: 'Bit' }, icon: Smartphone },
   { value: 'bank', label: { he: 'העברה בנקאית', ru: 'Перевод' }, icon: Building2 },
 ]
 
@@ -44,30 +54,54 @@ export function SaleModal() {
   const { orgId } = useAuth()
   const { data: org } = useOrganization()
   const supabase = createSupabaseBrowserClient()
+  const queryClient = useQueryClient()
   const { data: products } = useProducts()
 
   const isOpen = isModalOpen('client-sale')
   const data = getModalData('client-sale')
 
-  const [step, setStep] = useState<Step>('cart')
+  // Preloaded items from visit services (read-only)
+  const preloadedItems: PreloadedItem[] = data?.preloadedItems || []
+  // Visit ID — when provided, mark visit completed on payment
+  const visitId: string | undefined = data?.visitId
+  // Product for inventory sell — pre-populate cart
+  const preloadedProduct: Product | undefined = data?.preloadedProduct
+
+  // For inventory: localClient when no client passed
+  const [localClient, setLocalClient] = useState<any>(null)
+  const [clientSearch, setClientSearch] = useState('')
+  const [clientResults, setClientResults] = useState<any[]>([])
+  const [clientSearching, setClientSearching] = useState(false)
+
+  const initialStep: Step = preloadedItems.length > 0 ? 'checkout' : 'cart'
+
+  const [step, setStep] = useState<Step>(initialStep)
   const [cart, setCart] = useState<CartItem[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [showDiscount, setShowDiscount] = useState(false)
   const [discount, setDiscount] = useState<DiscountState>({ type: 'percent', value: 0 })
-  const [paymentMethod, setPaymentMethod] = useState('credit')
+  const [paymentMethod, setPaymentMethod] = useState('cash')
   const [isProcessing, setIsProcessing] = useState(false)
   const [showProposalPanel, setShowProposalPanel] = useState(false)
   const [paymentUrl, setPaymentUrl] = useState<string>('')
   const [catalogOpen, setCatalogOpen] = useState(false)
-  
+
   const { download, uploadAndGetLink, loading: pdfLoading } = useGeneratePDF()
 
-  const client = data?.client
+  const client = data?.client || localClient
   const locale = data?.locale || 'he'
 
-  // Load draft on open
+  // Load draft on open / pre-populate cart from preloaded product
   useEffect(() => {
-    if (isOpen && client?.id) {
+    if (!isOpen) return
+    // Pre-populate cart with inventory product
+    if (preloadedProduct) {
+      setCart([{ product: preloadedProduct, quantity: 1, price: preloadedProduct.sell_price }])
+      setStep('cart')
+      return
+    }
+    // Load draft for client sale
+    if (client?.id) {
       const draftKey = `draft_sale_${client.id}`
       const savedDraft = localStorage.getItem(draftKey)
       if (savedDraft) {
@@ -80,7 +114,30 @@ export function SaleModal() {
         }
       }
     }
-  }, [isOpen, client?.id])
+    // Set initial step based on context
+    setStep(preloadedItems.length > 0 ? 'checkout' : 'cart')
+  }, [isOpen])
+
+  // Client search for inventory mode (no pre-selected client)
+  useEffect(() => {
+    if (!isOpen || data?.client || clientSearch.length < 2) {
+      setClientResults([])
+      return
+    }
+    setClientSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/clients?search=${encodeURIComponent(clientSearch)}`)
+        const json = await res.json()
+        setClientResults((json.clients || json || []).slice(0, 8))
+      } catch {
+        setClientResults([])
+      } finally {
+        setClientSearching(false)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [clientSearch, isOpen, data?.client])
 
   // Reset on close
   const handleClose = () => {
@@ -89,9 +146,12 @@ export function SaleModal() {
     setSearchQuery('')
     setShowDiscount(false)
     setDiscount({ type: 'percent', value: 0 })
-    setPaymentMethod('credit')
+    setPaymentMethod('cash')
     setShowProposalPanel(false)
     setPaymentUrl('')
+    setLocalClient(null)
+    setClientSearch('')
+    setClientResults([])
     closeModal('client-sale')
   }
 
@@ -110,9 +170,11 @@ export function SaleModal() {
     )
   }, [products, searchQuery])
 
-  // Cart calculations
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const discountAmount = discount.type === 'percent' 
+  // Cart calculations (include preloaded items in subtotal)
+  const preloadedSubtotal = preloadedItems.reduce((sum, i) => sum + i.price, 0)
+  const cartSubtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const subtotal = preloadedSubtotal + cartSubtotal
+  const discountAmount = discount.type === 'percent'
     ? subtotal * (discount.value / 100)
     : discount.value
   const total = Math.max(0, subtotal - discountAmount)
@@ -177,23 +239,32 @@ export function SaleModal() {
 
   // Complete sale
   const handleCompleteSale = async () => {
-    if (!orgId || !client?.id || cart.length === 0) return
+    if (!orgId || !client?.id || total <= 0) return
 
     setIsProcessing(true)
     try {
-      const saleItems = cart.map(i => ({
-        product_id: i.product.id,
-        product_name: i.product.name,
-        quantity: i.quantity,
-        price: i.price,
-        total: i.price * i.quantity,
-      }))
+      const saleItems = [
+        ...preloadedItems.map(i => ({
+          product_name: i.name,
+          quantity: 1,
+          price: i.price,
+          total: i.price,
+        })),
+        ...cart.map(i => ({
+          product_id: i.product.id,
+          product_name: i.product.name,
+          quantity: i.quantity,
+          price: i.price,
+          total: i.price * i.quantity,
+        })),
+      ]
+
+      const description = saleItems.map(i => `${i.product_name} x${i.quantity}`).join(', ')
 
       // Credit card payment — create pending payment + show link
       if (paymentMethod === 'credit') {
         const url = generateTranzilaUrl()
-        
-        // Create pending payment
+
         const { error: paymentError } = await supabase
           .from('payments')
           .insert({
@@ -203,7 +274,8 @@ export function SaleModal() {
             payment_method: 'credit_card',
             status: 'pending',
             type: 'client',
-            description: cart.map(i => `${i.product.name} x${i.quantity}`).join(', '),
+            description,
+            ...(visitId ? { visit_id: visitId } : {}),
             metadata: {
               sale_items: saleItems,
               payment_url: url,
@@ -213,24 +285,31 @@ export function SaleModal() {
 
         if (paymentError) throw paymentError
 
-        // Show payment link step
         setPaymentUrl(url)
         setStep('payment-link')
         setIsProcessing(false)
         return
       }
 
-      // Cash or bank transfer — create completed payment immediately
+      // Cash / Bit / bank transfer — create completed payment immediately
+      const methodMap: Record<string, string> = {
+        cash: 'cash',
+        bit: 'bit',
+        bank: 'bank_transfer',
+        credit: 'credit_card',
+      }
+
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
           client_id: client.id,
           org_id: orgId,
           amount: total,
-          payment_method: paymentMethod === 'bank' ? 'bank_transfer' : 'cash',
+          payment_method: methodMap[paymentMethod] || paymentMethod,
           status: 'completed',
           type: 'client',
-          description: cart.map(i => `${i.product.name} x${i.quantity}`).join(', '),
+          description,
+          ...(visitId ? { visit_id: visitId } : {}),
           paid_at: new Date().toISOString(),
         })
         .select()
@@ -238,7 +317,7 @@ export function SaleModal() {
 
       if (paymentError) throw paymentError
 
-      // Create inventory transactions
+      // Inventory transactions only for cart products (not preloaded services)
       for (const item of cart) {
         await supabase.from('inventory_transactions').insert({
           org_id: orgId,
@@ -249,12 +328,20 @@ export function SaleModal() {
           total_price: item.price * item.quantity,
           related_payment_id: payment.id,
         })
-
-        // Update product quantity
         await supabase
           .from('products')
           .update({ quantity: item.product.quantity - item.quantity })
           .eq('id', item.product.id)
+      }
+
+      // Mark visit as completed if visitId provided
+      if (visitId) {
+        await fetch(`/api/visits/${visitId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'completed' }),
+        })
+        queryClient.invalidateQueries({ queryKey: ['visits'] })
       }
 
       // Clear draft
@@ -311,13 +398,16 @@ export function SaleModal() {
       email: client?.email || '',
       address: client?.address || '',
     },
-    items: cart.map(item => ({
-      name: item.product.name,
-      volume: item.product.unit || '',
-      desc: item.product.description || '',
-      qty: item.quantity,
-      price: item.price,
-    })),
+    items: [
+      ...preloadedItems.map(i => ({ name: i.name, volume: '', desc: '', qty: 1, price: i.price })),
+      ...cart.map(item => ({
+        name: item.product.name,
+        volume: item.product.unit || '',
+        desc: item.product.description || '',
+        qty: item.quantity,
+        price: item.price,
+      })),
+    ],
     discount: discount.value > 0 ? discount : undefined,
     vat: 0,
     notes: 'הצעת מחיר זו בתוקף למשך 30 יום ממועד הוצאתה.\nתנאי תשלום: 100% בעת מסירה.',
@@ -478,7 +568,7 @@ export function SaleModal() {
   }
   const text = t[locale as keyof typeof t] || t.he
 
-  if (!isOpen || !client) return null
+  if (!isOpen) return null
 
   // Step 3: Payment Link (for credit card)
   if (step === 'payment-link') {
@@ -579,6 +669,17 @@ export function SaleModal() {
           <div>
             <h3 className="text-sm font-semibold text-gray-500 mb-3">{text.orderSummary}</h3>
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-xl space-y-2">
+              {/* Preloaded services (read-only) */}
+              {preloadedItems.map(item => (
+                <div key={item.id} className="flex justify-between text-sm">
+                  <span className="flex items-center gap-1.5">
+                    <Scissors className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                    {item.name}
+                  </span>
+                  <span>₪{item.price.toFixed(2)}</span>
+                </div>
+              ))}
+              {/* Cart products */}
               {cart.map(item => (
                 <div key={item.product.id} className="flex justify-between text-sm">
                   <span>{item.product.name} x{item.quantity}</span>
@@ -625,21 +726,49 @@ export function SaleModal() {
 
         {/* Footer */}
         <div className="flex gap-3 mt-6 pt-4 border-t">
-          <button
-            onClick={() => setStep('cart')}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-300 hover:bg-gray-50 transition"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            {text.back}
-          </button>
+          {/* Back: if preloaded items, just close; otherwise back to cart */}
+          {preloadedItems.length > 0 ? (
+            <button
+              onClick={() => setShowProposalPanel(!showProposalPanel)}
+              className="flex-1 py-3 rounded-xl border-2 border-amber-400 text-amber-600 font-medium hover:bg-amber-50 transition text-sm"
+            >
+              📋 {text.proposal}
+            </button>
+          ) : (
+            <button
+              onClick={() => setStep('cart')}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-300 hover:bg-gray-50 transition"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              {text.back}
+            </button>
+          )}
           <button
             onClick={handleCompleteSale}
-            disabled={isProcessing}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+            disabled={isProcessing || total <= 0 || !client?.id}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50 font-semibold"
           >
-            {isProcessing ? text.processing : text.pay}
+            {isProcessing ? text.processing : `✓ ${text.pay}`}
           </button>
         </div>
+
+        {/* Proposal panel in checkout */}
+        {showProposalPanel && (
+          <div className="mt-3 p-4 border border-gray-200 rounded-xl space-y-2">
+            <button onClick={sendWhatsApp} disabled={!client?.phone}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-green-500 text-white hover:bg-green-600 disabled:opacity-50">
+              <MessageCircle className="w-4 h-4" /> {text.whatsapp}
+            </button>
+            <button onClick={sendEmail} disabled={!client?.email}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50">
+              <Mail className="w-4 h-4" /> {text.email}
+            </button>
+            <button onClick={generatePDF}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gray-600 text-white hover:bg-gray-700">
+              <Download className="w-4 h-4" /> {text.downloadPdf}
+            </button>
+          </div>
+        )}
       </Modal>
     )
   }
@@ -651,10 +780,52 @@ export function SaleModal() {
       open={isOpen}
       onClose={handleClose}
       title={text.title}
-      subtitle={clientName}
+      subtitle={client ? clientName : (locale === 'he' ? 'בחר לקוח' : 'Выберите клиента')}
       width="800px"
       className="max-w-[95vw]"
     >
+      {/* Client search (for inventory mode — no pre-selected client) */}
+      {!data?.client && (
+        <div className="mb-4 relative">
+          <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-700">
+            <Search className="w-4 h-4 text-blue-500 flex-shrink-0" />
+            {localClient ? (
+              <div className="flex-1 flex items-center justify-between">
+                <span className="font-medium text-sm">
+                  {getClientName(localClient)} · {localClient.phone}
+                </span>
+                <button onClick={() => { setLocalClient(null); setClientSearch('') }}
+                  className="text-gray-400 hover:text-red-500 transition">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={clientSearch}
+                onChange={e => setClientSearch(e.target.value)}
+                placeholder={locale === 'he' ? 'חיפוש לקוח...' : 'Поиск клиента...'}
+                className="flex-1 bg-transparent outline-none text-sm"
+                autoFocus
+              />
+            )}
+          </div>
+          {clientResults.length > 0 && !localClient && (
+            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+              {clientResults.map((c: any) => (
+                <button key={c.id} onClick={() => { setLocalClient(c); setClientSearch(''); setClientResults([]) }}
+                  className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b last:border-b-0">
+                  <div>
+                    <p className="font-medium text-sm">{getClientName(c)}</p>
+                    <p className="text-xs text-gray-500">{c.phone}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Column - Product Search & Cart */}
         <div className="space-y-4">
@@ -868,7 +1039,7 @@ export function SaleModal() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-6 pt-4 border-t">
         <button
           onClick={() => setStep('checkout')}
-          disabled={cart.length === 0}
+          disabled={cart.length === 0 || !client?.id}
           className="py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm"
         >
           {text.checkout}

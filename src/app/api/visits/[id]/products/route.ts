@@ -64,6 +64,21 @@ export async function POST(
       console.error('[API] POST /api/visits/[id]/products qty error:', qtyError)
     }
 
+    // Insert into visit_services for display in the services list
+    // (duration_minutes=0, service_id=null marks this as a product entry)
+    const { data: visitServiceEntry } = await supabase
+      .from('visit_services')
+      .insert({
+        visit_id: visitId,
+        service_id: null,
+        service_name: product.name,
+        service_name_ru: product.name,
+        price: product.sell_price || 0,
+        duration_minutes: 0,
+      })
+      .select()
+      .single()
+
     // Add sell_price to visit price
     const { data: currentVisit } = await supabase
       .from('visits')
@@ -84,6 +99,7 @@ export async function POST(
         id: product.id,
         name: product.name,
         price: product.sell_price,
+        visitServiceId: visitServiceEntry?.id,
       }
     }, { status: 201 })
   } catch (error) {

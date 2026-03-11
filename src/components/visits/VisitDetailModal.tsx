@@ -96,6 +96,15 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const [productsList, setProductsList] = useState<ProductItem[]>([])
   const [addingItem, setAddingItem] = useState<string | null>(null)
 
+  // Search state
+  const [serviceSearch, setServiceSearch] = useState('')
+  const [productSearch, setProductSearch] = useState('')
+
+  // Pagination state
+  const PAGE_SIZE = 10
+  const [servicePage, setServicePage] = useState(1)
+  const [productPage, setProductPage] = useState(1)
+
   // Fetch instructions when modal opens
   useEffect(() => {
     if (isOpen && viewMode === 'instructions' && instructions.length === 0) {
@@ -109,6 +118,10 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       setViewMode('main')
       setSelectedInstruction(null)
       setPriceOffset(0)
+      setServiceSearch('')
+      setProductSearch('')
+      setServicePage(1)
+      setProductPage(1)
     }
   }, [isOpen])
 
@@ -676,13 +689,17 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             <div className="space-y-2">
               {visitServices.map((vs) => {
                 const name = locale === 'ru' ? (vs.service_name_ru || vs.service_name) : vs.service_name
+                const isProduct = !vs.service_id && vs.duration_minutes === 0
                 return (
                   <div
                     key={vs.id}
                     className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition"
                   >
-                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <Scissors size={15} className="text-blue-600" />
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${isProduct ? 'bg-amber-100' : 'bg-blue-100'}`}>
+                      {isProduct
+                        ? <Package size={15} className="text-amber-600" />
+                        : <Scissors size={15} className="text-blue-600" />
+                      }
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-800 truncate">{name}</p>
@@ -721,14 +738,14 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           {/* Action buttons */}
           <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => { setViewMode('add-service'); if (servicesList.length === 0) fetchServices() }}
+              onClick={() => { setServiceSearch(''); setServicePage(1); setViewMode('add-service'); if (servicesList.length === 0) fetchServices() }}
               className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-50 text-blue-600 text-sm font-semibold hover:bg-blue-100 active:scale-95 transition"
             >
               <Plus size={16} />
               {locale === 'ru' ? 'Услуга' : 'שירות'}
             </button>
             <button
-              onClick={() => { setViewMode('add-product'); if (productsList.length === 0) fetchProducts() }}
+              onClick={() => { setProductSearch(''); setProductPage(1); setViewMode('add-product'); if (productsList.length === 0) fetchProducts() }}
               className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-amber-50 text-amber-600 text-sm font-semibold hover:bg-amber-100 active:scale-95 transition"
             >
               <Plus size={16} />
@@ -775,98 +792,191 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   )
 
   // Render service selection
-  const renderAddService = () => (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center gap-3">
-        <button onClick={() => setViewMode('services')} className="text-slate-400 hover:text-slate-600 transition">
-          <ArrowLeft size={20} />
-        </button>
-        <h2 className="text-xl font-bold">{labels.addService}</h2>
-      </div>
-      {loading ? (
-        <div className="py-8 flex justify-center"><Loader2 size={24} className="animate-spin text-slate-400" /></div>
-      ) : servicesList.length === 0 ? (
-        <p className="py-8 text-center text-slate-400">{labels.noServices}</p>
-      ) : (
-        <div className="space-y-2 max-h-[55vh] overflow-y-auto">
-          {servicesList.map((service) => {
-            const name = locale === 'ru' ? (service.name_ru || service.name) : service.name
-            const isAdding = addingItem === service.id
-            return (
-              <button
-                key={service.id}
-                onClick={() => handleAddService(service)}
-                disabled={!!addingItem}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 transition disabled:opacity-60"
-              >
-                <div className="text-start">
-                  <p className="font-semibold text-sm text-slate-900">{name}</p>
-                  {service.duration_minutes ? (
-                    <p className="text-xs text-slate-400 mt-0.5">{formatDuration(service.duration_minutes)}</p>
-                  ) : null}
-                </div>
-                <div className="flex items-center gap-2">
-                  {(service.price || 0) > 0 && (
-                    <span className="text-sm font-bold text-slate-700">₪{service.price}</span>
-                  )}
-                  {isAdding ? <Loader2 size={16} className="animate-spin text-blue-500" /> : <Plus size={16} className="text-blue-500" />}
-                </div>
-              </button>
-            )
-          })}
+  const renderAddService = () => {
+    const filtered = servicesList.filter(s => {
+      if (serviceSearch.length < 2) return true
+      const q = serviceSearch.toLowerCase()
+      return s.name.toLowerCase().includes(q) || (s.name_ru || '').toLowerCase().includes(q)
+    })
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+    const paged = filtered.slice((servicePage - 1) * PAGE_SIZE, servicePage * PAGE_SIZE)
+
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+          <button onClick={() => setViewMode('services')} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center flex-shrink-0 transition">
+            <ArrowLeft size={18} className="text-slate-600" />
+          </button>
+          <h2 className="text-lg font-bold flex-1">{labels.addService}</h2>
         </div>
-      )}
-    </div>
-  )
+
+        {/* Search */}
+        <div className="px-5 pt-3 pb-1">
+          <input
+            type="text"
+            value={serviceSearch}
+            onChange={e => { setServiceSearch(e.target.value); setServicePage(1) }}
+            placeholder={locale === 'ru' ? 'Поиск...' : 'חיפוש...'}
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          />
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto px-5 py-2">
+          {loading ? (
+            <div className="py-8 flex justify-center"><Loader2 size={24} className="animate-spin text-slate-400" /></div>
+          ) : paged.length === 0 ? (
+            <p className="py-8 text-center text-slate-400 text-sm">{labels.noServices}</p>
+          ) : (
+            <div className="space-y-2">
+              {paged.map((service) => {
+                const name = locale === 'ru' ? (service.name_ru || service.name) : service.name
+                const isAdding = addingItem === service.id
+                return (
+                  <button
+                    key={service.id}
+                    onClick={() => handleAddService(service)}
+                    disabled={!!addingItem}
+                    className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 transition disabled:opacity-60"
+                  >
+                    <div className="text-start">
+                      <p className="font-semibold text-sm text-slate-900">{name}</p>
+                      {service.duration_minutes ? (
+                        <p className="text-xs text-slate-400 mt-0.5">{formatDuration(service.duration_minutes)}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {(service.price || 0) > 0 && (
+                        <span className="text-sm font-bold text-slate-700">₪{service.price}</span>
+                      )}
+                      {isAdding ? <Loader2 size={16} className="animate-spin text-blue-500" /> : <Plus size={16} className="text-blue-500" />}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-slate-500">
+            <button
+              onClick={() => setServicePage(p => Math.max(1, p - 1))}
+              disabled={servicePage === 1}
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center disabled:opacity-30 transition"
+            >
+              <ArrowLeft size={14} />
+            </button>
+            <span>{(servicePage - 1) * PAGE_SIZE + 1}–{Math.min(servicePage * PAGE_SIZE, filtered.length)} {locale === 'ru' ? 'из' : 'מתוך'} {filtered.length}</span>
+            <button
+              onClick={() => setServicePage(p => Math.min(totalPages, p + 1))}
+              disabled={servicePage === totalPages}
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center disabled:opacity-30 transition"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   // Render product selection
-  const renderAddProduct = () => (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center gap-3">
-        <button onClick={() => setViewMode('services')} className="text-slate-400 hover:text-slate-600 transition">
-          <ArrowLeft size={20} />
-        </button>
-        <h2 className="text-xl font-bold">{labels.addProduct}</h2>
-      </div>
-      {loading ? (
-        <div className="py-8 flex justify-center"><Loader2 size={24} className="animate-spin text-slate-400" /></div>
-      ) : productsList.length === 0 ? (
-        <p className="py-8 text-center text-slate-400">{labels.noProducts}</p>
-      ) : (
-        <div className="space-y-2 max-h-[55vh] overflow-y-auto">
-          {productsList.map((product) => {
-            const isAdding = addingItem === product.id
-            return (
-              <button
-                key={product.id}
-                onClick={() => handleAddProduct(product)}
-                disabled={!!addingItem}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 transition disabled:opacity-60"
-              >
-                <div className="flex items-center gap-3 text-start min-w-0">
-                  {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-9 h-9 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
-                      <Package size={16} className="text-slate-400" />
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm text-slate-900 truncate">{product.name}</p>
-                    {product.category && <p className="text-xs text-slate-400">{product.category}</p>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-sm font-bold text-slate-700">₪{product.sell_price}</span>
-                  {isAdding ? <Loader2 size={16} className="animate-spin text-amber-500" /> : <Plus size={16} className="text-amber-500" />}
-                </div>
-              </button>
-            )
-          })}
+  const renderAddProduct = () => {
+    const filtered = productsList.filter(p => {
+      if (productSearch.length < 2) return true
+      return p.name.toLowerCase().includes(productSearch.toLowerCase())
+    })
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+    const paged = filtered.slice((productPage - 1) * PAGE_SIZE, productPage * PAGE_SIZE)
+
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+          <button onClick={() => setViewMode('services')} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center flex-shrink-0 transition">
+            <ArrowLeft size={18} className="text-slate-600" />
+          </button>
+          <h2 className="text-lg font-bold flex-1">{labels.addProduct}</h2>
         </div>
-      )}
-    </div>
-  )
+
+        {/* Search */}
+        <div className="px-5 pt-3 pb-1">
+          <input
+            type="text"
+            value={productSearch}
+            onChange={e => { setProductSearch(e.target.value); setProductPage(1) }}
+            placeholder={locale === 'ru' ? 'Поиск...' : 'חיפוש...'}
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-200"
+          />
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto px-5 py-2">
+          {loading ? (
+            <div className="py-8 flex justify-center"><Loader2 size={24} className="animate-spin text-slate-400" /></div>
+          ) : paged.length === 0 ? (
+            <p className="py-8 text-center text-slate-400 text-sm">{labels.noProducts}</p>
+          ) : (
+            <div className="space-y-2">
+              {paged.map((product) => {
+                const isAdding = addingItem === product.id
+                return (
+                  <button
+                    key={product.id}
+                    onClick={() => handleAddProduct(product)}
+                    disabled={!!addingItem}
+                    className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 transition disabled:opacity-60"
+                  >
+                    <div className="flex items-center gap-3 text-start min-w-0">
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={product.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                          <Package size={16} className="text-amber-500" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-slate-900 truncate">{product.name}</p>
+                        {product.category && <p className="text-xs text-slate-400">{product.category}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-sm font-bold text-slate-700">₪{product.sell_price}</span>
+                      {isAdding ? <Loader2 size={16} className="animate-spin text-amber-500" /> : <Plus size={16} className="text-amber-500" />}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-xs text-slate-500">
+            <button
+              onClick={() => setProductPage(p => Math.max(1, p - 1))}
+              disabled={productPage === 1}
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center disabled:opacity-30 transition"
+            >
+              <ArrowLeft size={14} />
+            </button>
+            <span>{(productPage - 1) * PAGE_SIZE + 1}–{Math.min(productPage * PAGE_SIZE, filtered.length)} {locale === 'ru' ? 'из' : 'מתוך'} {filtered.length}</span>
+            <button
+              onClick={() => setProductPage(p => Math.min(totalPages, p + 1))}
+              disabled={productPage === totalPages}
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center disabled:opacity-30 transition"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   // Render main visit detail view
   const renderMainView = () => (
@@ -1184,13 +1294,15 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
         className="relative bg-white rounded-[32px] shadow-xl w-[480px] max-h-[90vh] overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 text-slate-400 hover:text-slate-600 transition"
-        >
-          <X size={20} />
-        </button>
+        {/* Close button — only on main view; other views have their own headers */}
+        {viewMode === 'main' && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-10 text-slate-400 hover:text-slate-600 transition"
+          >
+            <X size={20} />
+          </button>
+        )}
 
         {/* Render different views based on viewMode */}
         {viewMode === 'main' && renderMainView()}

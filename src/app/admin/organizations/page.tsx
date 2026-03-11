@@ -717,6 +717,60 @@ export default function OrganizationsPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Payment Toggles */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">תשלומים</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* תשלומים רגילים */}
+                  <div className="flex items-center justify-between py-1">
+                    <div>
+                      <p className="text-sm font-medium">תשלומים רגילים</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">תשלום חד פעמי דרך Tranzila</p>
+                    </div>
+                    <Switch
+                      checked={selectedOrg.payments_enabled ?? true}
+                      onCheckedChange={(checked) => {
+                        fetch('/api/admin/organizations/features', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ org_id: selectedOrg.id, payments_enabled: checked }),
+                        }).then(() => {
+                          queryClient.invalidateQueries({ queryKey: ['admin', 'org', selectedOrg.id] })
+                          queryClient.invalidateQueries({ queryKey: ['admin', 'all-orgs'] })
+                          toast.success(checked ? 'תשלומים רגילים הופעלו' : 'תשלומים רגילים כובו')
+                        })
+                      }}
+                    />
+                  </div>
+
+                  <div className="border-t border-gray-100 dark:border-gray-800" />
+
+                  {/* תשלומים חוזרים */}
+                  <div className="flex items-center justify-between py-1">
+                    <div>
+                      <p className="text-sm font-medium">תשלומים חוזרים</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">חיוב אוטומטי חודשי (Autopay)</p>
+                    </div>
+                    <Switch
+                      checked={selectedOrg.recurring_enabled ?? false}
+                      onCheckedChange={(checked) => {
+                        fetch('/api/admin/organizations/features', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ org_id: selectedOrg.id, recurring_enabled: checked }),
+                        }).then(() => {
+                          queryClient.invalidateQueries({ queryKey: ['admin', 'org', selectedOrg.id] })
+                          queryClient.invalidateQueries({ queryKey: ['admin', 'all-orgs'] })
+                          toast.success(checked ? 'תשלומים חוזרים הופעלו' : 'תשלומים חוזרים כובו')
+                        })
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
               </TabsContent>
 
               {/* Users Tab */}

@@ -95,6 +95,8 @@ export interface Organization {
   }
   billing_status: 'trial' | 'paid' | 'overdue' | 'cancelled'
   billing_due_date: string | null
+  payments_enabled: boolean
+  recurring_enabled: boolean
   created_at: string
 }
 

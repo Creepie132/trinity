@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest) {
 
     // Get request body
     const body = await request.json()
-    const { org_id, features, plan, subscription_update, owner_email } = body
+    const { org_id, features, plan, subscription_update, owner_email, payments_enabled, recurring_enabled } = body
 
     console.log('=== UPDATE ORGANIZATION ===')
     console.log('org_id:', org_id)
@@ -210,6 +210,14 @@ export async function PUT(request: NextRequest) {
     
     if (owner_email !== undefined) {
       updateData.owner_email = owner_email
+    }
+
+    if (payments_enabled !== undefined) {
+      updateData.payments_enabled = payments_enabled
+    }
+
+    if (recurring_enabled !== undefined) {
+      updateData.recurring_enabled = recurring_enabled
     }
     
     if (subscription_update) {

@@ -38,6 +38,8 @@ interface Organization {
   billing_status?: string
   tranzila_card_token?: string
   tranzila_card_last4?: string
+  payments_enabled?: boolean
+  recurring_enabled?: boolean
 }
 
 interface AccessRequest {
@@ -340,6 +342,8 @@ export default function AdminSubscriptionsPage() {
           billing_status,
           tranzila_card_token,
           tranzila_card_last4,
+          payments_enabled,
+          recurring_enabled,
           org_users (
             role,
             user_id,
@@ -369,6 +373,8 @@ export default function AdminSubscriptionsPage() {
           billing_status: org.billing_status,
           tranzila_card_token: org.tranzila_card_token,
           tranzila_card_last4: org.tranzila_card_last4,
+          payments_enabled: org.payments_enabled ?? true,
+          recurring_enabled: org.recurring_enabled ?? false,
         }
       }) || []
 
@@ -1054,27 +1060,29 @@ export default function AdminSubscriptionsPage() {
                     ? `₪${selectedOrgSheet.billing_amount}/${language === 'he' ? 'חודש' : 'мес'}`
                     : '—'
                 },
-                { 
-                  label: language === 'he' ? 'כרטיס' : 'Карта', 
-                  value: selectedOrgSheet.tranzila_card_token 
-                    ? (
-                      <span className="inline-flex items-center gap-1.5 text-emerald-600">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                        {`**** ${selectedOrgSheet.tranzila_card_last4 || '****'}`} ✅
-                      </span>
-                    )
-                    : (
-                      <span className="text-gray-400">
-                        {language === 'he' ? 'לא מחובר' : 'Не подключена'}
-                      </span>
-                    )
-                },
-                { 
-                  label: language === 'he' ? 'חיוב הבא' : 'Следующее списание', 
-                  value: selectedOrgSheet.billing_due_date 
-                    ? new Date(selectedOrgSheet.billing_due_date).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU')
-                    : '—'
-                },
+                ...(selectedOrgSheet.recurring_enabled ? [
+                  {
+                    label: language === 'he' ? 'כרטיס' : 'Карта',
+                    value: selectedOrgSheet.tranzila_card_token
+                      ? (
+                        <span className="inline-flex items-center gap-1.5 text-emerald-600">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          {`**** ${selectedOrgSheet.tranzila_card_last4 || '****'}`} ✅
+                        </span>
+                      )
+                      : (
+                        <span className="text-gray-400">
+                          {language === 'he' ? 'לא מחובר' : 'Не подключена'}
+                        </span>
+                      )
+                  },
+                  {
+                    label: language === 'he' ? 'חיוב הבא' : 'Следующее списание',
+                    value: selectedOrgSheet.billing_due_date
+                      ? new Date(selectedOrgSheet.billing_due_date).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU')
+                      : '—'
+                  },
+                ] : []),
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-center justify-between py-3">
                   <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
@@ -1085,8 +1093,8 @@ export default function AdminSubscriptionsPage() {
 
             {/* Action buttons */}
             <div className={`flex gap-2 mt-6 ${isDesktop ? 'flex-row flex-wrap' : 'flex-col'}`}>
-              {/* Автоплатёж — если нет токена, показываем кнопку подключения */}
-              {!selectedOrgSheet.tranzila_card_token && (
+              {/* Автоплатёж — показываем только если recurring_enabled = true */}
+              {(selectedOrgSheet.recurring_enabled ?? false) && !selectedOrgSheet.tranzila_card_token && (
                 <button
                   onClick={() => {
                     handleOpenAutopay(selectedOrgSheet)

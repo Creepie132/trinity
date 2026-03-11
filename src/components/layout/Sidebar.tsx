@@ -6,13 +6,11 @@ import { cn } from '@/lib/utils'
 import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Calendar, Settings, BookOpen, Package } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
-import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { BranchSwitcher } from '@/components/BranchSwitcher'
-import { useState, useEffect } from 'react'
 
 const baseNavigation = [
   { name_he: 'דשבורד', name_ru: 'Дашборд', href: '/dashboard', icon: Home, requireFeature: null },
@@ -45,22 +43,13 @@ interface SidebarProps {
 export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, signOut } = useAuth()
+  const { signOut } = useAuth()
   const { data: isAdmin } = useIsAdmin()
-  const { adminProfile } = useAdminProfile()
   const features = useFeatures()
   const { language } = useLanguage()
-  
+
   const t = translations[language]
   const locale = language === 'he' ? 'he' : 'ru'
-
-  // Display name from user metadata (adminProfile.full_name now comes from user_metadata)
-  const displayName = adminProfile?.full_name ||
-    (user?.user_metadata?.full_name as string) ||
-    (user?.user_metadata?.name as string) ||
-    null
-  
-  const displayEmail = user?.email || ''
 
   const onLogout = async () => {
     await signOut()
@@ -171,28 +160,15 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
         )}
       </nav>
 
-      {/* User Profile + Logout */}
-      <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800/50">
-        <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800">
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg text-lg">
-            {(displayName?.[0] || displayEmail?.[0])?.toUpperCase() || '?'}
-          </div>
-          <div className="flex-1 min-w-0">
-            {displayName ? (
-              <>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayName}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{displayEmail}</p>
-              </>
-            ) : (
-              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{displayEmail}</p>
-            )}
-          </div>
-        </div>
+      {/* Logout */}
+      <div className="p-4 border-t border-gray-200 dark:border-slate-700">
         <button
           onClick={onLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 active:scale-[0.98] transition-all duration-200 border border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-[0.98] transition-all duration-200"
         >
-          <LogOut className="w-4 h-4" />
+          <div className="p-1.5 rounded-lg bg-red-100 dark:bg-red-900/30">
+            <LogOut className="w-5 h-5 text-red-600 dark:text-red-400" />
+          </div>
           {t.logout}
         </button>
       </div>

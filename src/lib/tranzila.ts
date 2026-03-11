@@ -47,8 +47,13 @@ export async function createTranzilaPaymentLink({
   saveCard?: boolean // Запросить токенизацию карты (TranzilaTK)
   customField2?: string // Доп. поле для передачи типа платежа
 }) {
-  const terminalId = terminal || process.env.TRANZILA_TERMINAL_ID
-  const terminalPassword = password || process.env.TRANZILA_TERMINAL_PASSWORD
+  // For tokenization (saveCard), use the token terminal and its dedicated password
+  const terminalId = terminal || (saveCard
+    ? (process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok')
+    : (process.env.TRANZILA_TERMINAL || process.env.TRANZILA_TERMINAL_ID || 'ambersolt'))
+  const terminalPassword = password || (saveCard
+    ? (process.env.TRANZILA_TOKEN_PASSWORD || '')
+    : (process.env.TRANZILA_PASSWORD || process.env.TRANZILA_TERMINAL_PASSWORD || ''))
 
   const params = new URLSearchParams({
     supplier: terminalId!,

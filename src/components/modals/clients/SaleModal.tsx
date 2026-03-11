@@ -221,10 +221,12 @@ export function SaleModal() {
   // Generate Tranzila payment URL
   const generateTranzilaUrl = () => {
     const cleanPhone = client?.phone?.replace(/\D/g, '') || ''
+    const terminal = process.env.NEXT_PUBLIC_TRANZILA_TOKEN_TERMINAL || 'ambersolttok'
+    const password = process.env.NEXT_PUBLIC_TRANZILA_TOKEN_PASSWORD || 'ckDffDS'
     const params = new URLSearchParams({
       sum: total.toFixed(2),
       currency: '1',
-      TranzilaPW: 'ckDffDS',
+      TranzilaPW: password,
       cred_type: '1',
       tranmode: 'A',
       success_url: 'https://www.ambersol.co.il/payment-success',
@@ -234,7 +236,7 @@ export function SaleModal() {
       ppnumber: cleanPhone,
       contact: clientName,
     })
-    return `https://secure.tranzila.com/ambersolttok/iframenew.php?${params.toString()}`
+    return `https://direct.tranzila.com/${terminal}/iframenew.php?${params.toString()}`
   }
 
   // Complete sale

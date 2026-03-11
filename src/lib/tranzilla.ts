@@ -95,15 +95,17 @@ export function parseTranzillaWebhook(data: TranzillaWebhookData) {
  * SECURITY: TranzilaPW is NOT included in public iframe URLs
  */
 export function generateTranzillaTokenLink(params: TranzillaPaymentParams): string {
-  const tokenTerminal = process.env.TRANZILLA_TOKEN_TERMINAL || 'ambersoltok'
-  
+  const tokenTerminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok'
+  const tokenPassword = process.env.TRANZILA_TOKEN_PASSWORD || ''
+
   const queryParams = new URLSearchParams({
     sum: params.amount.toFixed(2),
     currency: params.currency || '1', // 1 = ILS
     cred_type: '1', // Credit card
     lang: 'il', // Hebrew language
     contact: params.orderId,
-    create_token: '1', // Request token creation
+    TranzilaPW: tokenPassword,
+    tranzilaTK: '1', // Request token creation
   })
 
   // Add callback URLs if provided

@@ -19,6 +19,11 @@ interface NotificationMetadata {
   org_name?: string
   invited_by_email?: string
   invited_by_phone?: string
+  // access_request
+  staff_email?: string
+  staff_user_id?: string
+  staff_name?: string
+  staff_phone?: string
   // transfer_request
   transfer_request_id?: string
   from_org_id?: string
@@ -210,6 +215,39 @@ export function NotificationBell({ locale }: NotificationBellProps) {
     }
   }
 
+  async function approveAccessRequest(notifId: string) {
+    try {
+      await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [notifId] }),
+      })
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  async function rejectAccessRequest(notifId: string, staffEmail: string, orgId: string) {
+    try {
+      await fetch('/api/org/team', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: staffEmail, orgId }),
+      })
+      await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [notifId] }),
+      })
+      setNotifications(prev => prev.filter(n => n.id !== notifId))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   function handleOpen() {
     setIsOpen(true)
     if (unreadCount > 0) markAllRead()
@@ -265,6 +303,48 @@ export function NotificationBell({ locale }: NotificationBellProps) {
                     <X className="w-3 h-3" />
                     {locale === 'he' ? 'דחה' : 'Отклонить'}
                   </button>
+                </div>
+              )}
+
+              {/* Action buttons for access_request type (owner receives when staff joins) */}
+              {n.type === 'access_request' && n.metadata && (
+                <div className="mt-2 ms-5 flex flex-wrap gap-1.5">
+                  {n.metadata.staff_phone && (
+                    <>
+                      <a
+                        href={`tel:${n.metadata.staff_phone}`}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 transition-colors"
+                      >
+                        <Phone className="w-3 h-3" />
+                        {locale === 'he' ? '📞 התקשר' : '📞 Позвонить'}
+                      </a>
+                      <a
+                        href={`https://wa.me/${n.metadata.staff_phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-medium hover:bg-green-100 transition-colors"
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        💬 WhatsApp
+                      </a>
+                    </>
+                  )}
+                  <button
+                    onClick={() => approveAccessRequest(n.id)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-100 transition-colors"
+                  >
+                    <Check className="w-3 h-3" />
+                    {locale === 'he' ? '✅ אשר' : '✅ Одобрить'}
+                  </button>
+                  {n.metadata.staff_email && n.metadata.org_id && (
+                    <button
+                      onClick={() => rejectAccessRequest(n.id, n.metadata!.staff_email!, n.metadata!.org_id!)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                      {locale === 'he' ? '❌ דחה' : '❌ Отклонить'}
+                    </button>
+                  )}
                 </div>
               )}
 

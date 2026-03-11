@@ -99,7 +99,61 @@ export async function POST() {
       organizations: updated?.map(u => u.org_id),
     })
 
-    // Step 5: Return success with org info
+    // Step 5: Notify org owners for non-owner roles
+    const staffPhone = user.user_metadata?.phone || user.user_metadata?.mobile || null
+    const staffName = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0]
+
+    for (const entry of (updated || [])) {
+      if (entry.role === 'owner') continue
+
+      try {
+        // Get org name
+        const { data: org } = await svc
+          .from('organizations')
+          .select('name')
+          .eq('id', entry.org_id)
+          .single()
+
+        const orgName = org?.name || ''
+
+        // Find all owners of this org
+        const { data: owners } = await svc
+          .from('org_users')
+          .select('user_id')
+          .eq('org_id', entry.org_id)
+          .eq('role', 'owner')
+          .not('user_id', 'is', null)
+
+        if (!owners || owners.length === 0) continue
+
+        const now = new Date()
+        const dateStr = now.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' })
+
+        const notifications = owners.map((owner: any) => ({
+          org_id: entry.org_id,
+          user_id: owner.user_id,
+          type: 'access_request',
+          title: 'בקשת גישה חדשה',
+          body: `${staffName} (${email}) ביקש גישה לארגון "${orgName}" — ${dateStr}`,
+          is_read: false,
+          metadata: {
+            staff_email: email,
+            staff_user_id: user.id,
+            staff_name: staffName,
+            staff_phone: staffPhone,
+            org_id: entry.org_id,
+            org_name: orgName,
+          },
+        }))
+
+        await svc.from('notifications').insert(notifications)
+        console.log('[link-user] 📨 Notifications sent to', owners.length, 'owner(s) for org', entry.org_id)
+      } catch (notifErr) {
+        console.error('[link-user] Failed to send owner notification:', notifErr)
+      }
+    }
+
+    // Step 6: Return success with org info
     return NextResponse.json({
       ok: true,
       linked: true,

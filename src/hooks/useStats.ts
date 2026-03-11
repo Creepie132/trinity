@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useAuth } from './useAuth'
+import { useBranch } from '@/contexts/BranchContext'
 const supabase = createSupabaseBrowserClient()
 
 export function useDashboardStats() {
-  const { orgId } = useAuth()
+  const { orgId: authOrgId } = useAuth()
+  const { activeOrgId } = useBranch()
+  const orgId = activeOrgId || authOrgId
 
   return useQuery({
     queryKey: ['dashboard-stats', orgId],
@@ -97,7 +100,9 @@ export function useDashboardStats() {
 }
 
 export function useRevenueByMonth() {
-  const { orgId } = useAuth()
+  const { orgId: authOrgId } = useAuth()
+  const { activeOrgId } = useBranch()
+  const orgId = activeOrgId || authOrgId
 
   return useQuery({
     queryKey: ['revenue-by-month', orgId],
@@ -139,7 +144,9 @@ export function useRevenueByMonth() {
 }
 
 export function useVisitsByMonth() {
-  const { orgId } = useAuth()
+  const { orgId: authOrgId } = useAuth()
+  const { activeOrgId } = useBranch()
+  const orgId = activeOrgId || authOrgId
 
   return useQuery({
     queryKey: ['visits-by-month', orgId],
@@ -178,7 +185,9 @@ export function useVisitsByMonth() {
 }
 
 export function useTopClients() {
-  const { orgId } = useAuth()
+  const { orgId: authOrgId } = useAuth()
+  const { activeOrgId } = useBranch()
+  const orgId = activeOrgId || authOrgId
 
   return useQuery({
     queryKey: ['top-clients', orgId],

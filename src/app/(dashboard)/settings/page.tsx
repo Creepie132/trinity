@@ -4,13 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
-import { Globe, ArrowLeft, Package, FileText, Calendar } from 'lucide-react'
+import { useBranches } from '@/hooks/useBranches'
+import { Globe, ArrowLeft, Package, FileText, Calendar, Building2 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const permissions = usePermissions()
   const features = useFeatures()
+  const { data: branches = [] } = useBranches()
 
   const settingsCategories = [
     // { id: 'dashboard', href: '/settings/dashboard', icon: LayoutDashboard, title: t('dashboard.settings'), description: t('dashboard.settingsSubtitle') },
@@ -46,6 +48,15 @@ export default function SettingsPage() {
       icon: FileText,
       title: t('careInstructions.title'),
       description: t('careInstructions.noInstructions'),
+    },
+    {
+      id: 'branches',
+      href: '/settings/branches',
+      icon: Building2,
+      title: language === 'he' ? 'ניהול סניפים' : 'Управление филиалами',
+      description: language === 'he'
+        ? `${branches.length > 0 ? `${branches.length} סניפים` : 'אין סניפים'}`
+        : `${branches.length > 0 ? `${branches.length} филиалов` : 'Нет филиалов'}`,
     },
     // { id: 'users', href: '/settings/users', icon: Users, title: t('settings.users'), description: t('settings.users.desc') },
     // { id: 'service-colors', href: '/settings/service-colors', icon: Palette, title: t('settings.serviceColors'), description: t('settings.serviceColors.desc') },

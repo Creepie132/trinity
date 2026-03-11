@@ -11,6 +11,7 @@ import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
 import { NotificationBell } from '@/components/ui/NotificationBell'
+import { BranchSwitcher } from '@/components/BranchSwitcher'
 import { useState, useEffect } from 'react'
 
 const baseNavigation = [
@@ -114,6 +115,9 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
           <NotificationBell locale={locale} />
         </div>
       </div>
+
+      {/* Branch Switcher — shown only when branches exist */}
+      <BranchSwitcher />
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">

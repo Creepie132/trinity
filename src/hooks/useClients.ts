@@ -3,16 +3,19 @@ import { supabase } from '@/lib/supabase'
 import { Client, ClientSummary } from '@/types/database'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
+import { useBranch } from '@/contexts/BranchContext'
 
 export function useClients(searchQuery?: string, page: number = 1, pageSize: number = 25) {
-  const { orgId } = useAuth()
+  const { orgId: authOrgId } = useAuth()
+  const { activeOrgId } = useBranch()
+  const orgId = activeOrgId || authOrgId
 
   return useQuery({
     queryKey: ['clients', orgId, searchQuery, page, pageSize],
     enabled: !!orgId,
     queryFn: async () => {
       console.log('Loading clients for org_id:', orgId)
-      
+
       const from = (page - 1) * pageSize
       const to = page * pageSize - 1
 
@@ -81,7 +84,9 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
 }
 
 export function useClient(id?: string) {
-  const { orgId } = useAuth()
+  const { orgId: authOrgId } = useAuth()
+  const { activeOrgId } = useBranch()
+  const orgId = activeOrgId || authOrgId
 
   return useQuery({
     queryKey: ['client', orgId, id],
@@ -164,7 +169,9 @@ export function useAddClient() {
 
 export function useUpdateClient() {
   const queryClient = useQueryClient()
-  const { orgId } = useAuth()
+  const { orgId: authOrgId } = useAuth()
+  const { activeOrgId } = useBranch()
+  const orgId = activeOrgId || authOrgId
 
   return useMutation({
     mutationFn: async ({ id, ...client }: Partial<Client> & { id: string }) => {

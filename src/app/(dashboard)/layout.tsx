@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileHeader } from '@/components/layout/MobileHeader'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { BranchProvider } from '@/contexts/BranchContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GlobalSearch } from '@/components/GlobalSearch'
 
@@ -37,7 +38,7 @@ export default function DashboardLayout({
 
   return (
     <AuthProvider>
-      
+      <BranchProvider>
         <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 flex flex-col">
           {/* Мобильный header */}
           <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
@@ -67,7 +68,7 @@ export default function DashboardLayout({
 
         {/* Global Search */}
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-      
+      </BranchProvider>
     </AuthProvider>
   )
 }

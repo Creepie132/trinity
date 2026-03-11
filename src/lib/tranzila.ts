@@ -1,5 +1,31 @@
 import crypto from 'crypto'
 
+// ============================================
+// АУТЕНТИФИКАЦИЯ — заголовки для Tranzila API
+// ============================================
+
+/**
+ * Создаёт заголовки для Tranzila REST API
+ * Формула: HMAC_SHA256(message=publicKey, key=privateKey+timestamp+nonce)
+ */
+export function createTranzilaHeaders(publicKey: string, privateKey: string) {
+  const timestamp = Math.round(Date.now() / 1000) // Unix timestamp в секундах
+  const nonce = crypto.randomBytes(40).toString('hex') // 80 символов hex
+
+  const accessToken = crypto
+    .createHmac('sha256', privateKey + timestamp + nonce)
+    .update(publicKey)
+    .digest('hex')
+
+  return {
+    'X-tranzila-api-app-key': publicKey,
+    'X-tranzila-api-request-time': timestamp.toString(),
+    'X-tranzila-api-nonce': nonce,
+    'X-tranzila-api-access-token': accessToken,
+    'Content-Type': 'application/json',
+  }
+}
+
 export async function createTranzilaPaymentLink({
   amount,
   description,
@@ -56,25 +82,11 @@ export async function createTranzilaPaymentLink({
   }
 }
 
-// Генерация заголовков для Tranzila Billing API
+// Генерация заголовков для Tranzila Billing API (legacy — использует env vars)
 export function generateTranzilaHeaders() {
-  const appKey = process.env.TRANZILA_BILLING_APP_KEY!
-  const secret = process.env.TRANZILA_BILLING_SECRET!
-  const requestTime = Date.now()
-  const nonce = crypto.randomBytes(40).toString('hex')
-
-  const accessToken = crypto
-    .createHmac('sha256', secret)
-    .update(appKey + requestTime + nonce)
-    .digest('hex')
-
-  return {
-    'X-tranzila-api-app-key': appKey,
-    'X-tranzila-api-request-time': requestTime.toString(),
-    'X-tranzila-api-nonce': nonce,
-    'X-tranzila-api-access-token': accessToken,
-    'Content-Type': 'application/json',
-  }
+  const publicKey = process.env.TRANZILA_PUBLIC_KEY || process.env.TRANZILA_BILLING_APP_KEY!
+  const privateKey = process.env.TRANZILA_PRIVATE_KEY || process.env.TRANZILA_BILLING_SECRET!
+  return createTranzilaHeaders(publicKey, privateKey)
 }
 
 // ============================================
@@ -106,8 +118,8 @@ export async function chargeByToken({
   token,
   amount,
   description,
-  terminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok',
-  password = process.env.TRANZILA_PASSWORD!,
+  terminal = process.env.TRANZILA_TOKEN_TERMINAL || process.env.TRANZILA_TERMINAL_ID || 'ambersolttok',
+  password = process.env.TRANZILA_PRIVATE_KEY || process.env.TRANZILA_PASSWORD!,
   expdate,
 }: ChargeByTokenParams): Promise<ChargeResult> {
   const apiUrl = process.env.TRANZILA_API_URL || 'https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi'
@@ -116,6 +128,7 @@ export async function chargeByToken({
     supplier: terminal,
     TranzilaPW: password,
     TranzilaTK: token,
+    tranmode: 'V', // Verified charge
     sum: amount.toFixed(2),
     currency: '1', // ILS
     pdesc: description,

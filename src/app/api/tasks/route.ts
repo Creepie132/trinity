@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
       org_id: orgId,
       created_by: user.id,
       assigned_to: assigned_to || null,
+      assigned_by: assigned_to ? user.id : null,
       title: title.trim(),
       description: description || null,
       priority,
@@ -109,8 +110,8 @@ export async function POST(request: NextRequest) {
       org_id: orgId,
       user_id: assigned_to,
       type: 'task_assigned',
-      title: 'Вам назначена задача',
-      body: `${title.trim()}${creatorName ? ` — от ${creatorName}` : ''}`,
+      title: 'הוקצתה לך משימה',
+      body: `${title.trim()}${creatorName ? ` — הוקצה על ידי ${creatorName}` : ''}`,
       link: `/diary?task=${task.id}`,
       reference_id: task.id,
     })

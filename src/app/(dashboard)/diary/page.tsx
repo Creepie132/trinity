@@ -84,6 +84,7 @@ export default function DiaryPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [clients, setClients] = useState<any[]>([])
   const [visits, setVisits] = useState<any[]>([])
+  const [orgUsers, setOrgUsers] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -104,6 +105,14 @@ export default function DiaryPage() {
     loadClients()
     loadVisits()
   }, [filter])
+
+  // Загружаем пользователей организации один раз
+  useEffect(() => {
+    fetch('/api/org-users')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setOrgUsers(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [])
 
   async function loadTasks() {
     try {
@@ -195,6 +204,13 @@ export default function DiaryPage() {
     const client = clients.find((c: any) => c.id === task.client_id)
     if (!client) return ''
     return `${client.first_name || ''} ${client.last_name || ''}`.trim()
+  }
+
+  // ===== Получить имя назначенного пользователя =====
+  function getAssignedUserName(userId: string | null): string {
+    if (!userId) return ''
+    const u = orgUsers.find((o: any) => o.user_id === userId)
+    return u?.full_name || ''
   }
 
   // ===== Рендер иконки по приоритету =====
@@ -387,6 +403,10 @@ export default function DiaryPage() {
             icon: <Circle size={13} />,
             text: clientName,
           }] : []),
+          ...(task.assigned_to ? [{
+            icon: <User size={13} />,
+            text: getAssignedUserName(task.assigned_to) || (language === 'he' ? 'מוקצה' : 'Назначено'),
+          }] : []),
         ]}
         quickActions={quickActions.length > 0 ? quickActions : undefined}
         drawerTitle={task.title}
@@ -426,6 +446,15 @@ export default function DiaryPage() {
               <div className="flex items-center gap-2 py-2 border-b border-muted">
                 <Clock size={14} className="text-muted-foreground" />
                 <span className="text-sm">{new Date(task.due_date).toLocaleString(language === 'he' ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            )}
+
+            {/* Назначено */}
+            {task.assigned_to && getAssignedUserName(task.assigned_to) && (
+              <div className="flex items-center gap-2 py-2 border-b border-muted">
+                <User size={14} className="text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">{language === 'he' ? 'הוקצה ל:' : 'Назначено:'}</span>
+                <span className="text-sm font-medium">{getAssignedUserName(task.assigned_to)}</span>
               </div>
             )}
 
@@ -914,6 +943,7 @@ export default function DiaryPage() {
         locale={language === 'he' ? 'he' : 'ru'}
         clients={clients}
         visits={visits}
+        orgUsers={orgUsers}
         onStatusChange={handleTaskStatusChange}
         onEdit={handleTaskEdit}
         onDelete={handleTaskDelete}

@@ -499,10 +499,15 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
               minChars={1}
               placeholder={labels.searchUser}
               onSelect={handleUserSelect}
-              renderItem={(user) => (
-                <div>
-                  <p className="font-medium">{user.full_name}</p>
-                  <p className="text-xs text-muted-foreground">{user.role}</p>
+              renderItem={(u) => (
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                    {u.full_name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                  <div>
+                    <p className="font-medium">{u.full_name}</p>
+                    <p className="text-xs text-muted-foreground">{u.role}</p>
+                  </div>
                 </div>
               )}
               locale={locale}

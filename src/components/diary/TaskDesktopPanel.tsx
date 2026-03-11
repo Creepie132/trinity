@@ -12,6 +12,7 @@ interface TaskDesktopPanelProps {
   locale: 'he' | 'ru'
   clients: any[]
   visits?: any[]
+  orgUsers?: any[]
   onStatusChange?: (taskId: string, newStatus: string) => void
   onClientClick?: (clientId: string) => void
   onVisitClick?: (visitId: string) => void
@@ -26,6 +27,7 @@ export function TaskDesktopPanel({
   locale,
   clients,
   visits = [],
+  orgUsers = [],
   onStatusChange,
   onClientClick,
   onVisitClick,
@@ -33,10 +35,12 @@ export function TaskDesktopPanel({
   onDelete,
 }: TaskDesktopPanelProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  
+
   const client = clients.find((c: any) => c.id === task?.client_id)
   const clientName = client ? getClientName(client) : null
   const linkedVisit = visits.find((v: any) => v.id === task?.visit_id)
+  const assignedUser = orgUsers.find((u: any) => u.user_id === task?.assigned_to)
+  const assignedUserName = assignedUser?.full_name || null
 
   const t = {
     he: {
@@ -187,12 +191,14 @@ export function TaskDesktopPanel({
         </div>
 
         {/* Assigned To */}
-        {task.assigned_to && (
+        {assignedUserName && (
           <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-            <User size={16} className="text-gray-400" />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+              {assignedUserName[0]?.toUpperCase()}
+            </div>
             <div>
               <p className="text-xs text-gray-500">{l.assignedTo}</p>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{task.assigned_to}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{assignedUserName}</p>
             </div>
           </div>
         )}

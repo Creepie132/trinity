@@ -37,7 +37,10 @@ export async function PUT(
   if (body.status !== undefined) updateData.status = body.status
   if (body.priority !== undefined) updateData.priority = body.priority
   if (body.due_date !== undefined) updateData.due_date = body.due_date
-  if (body.assigned_to !== undefined) updateData.assigned_to = body.assigned_to
+  if (body.assigned_to !== undefined) {
+    updateData.assigned_to = body.assigned_to
+    if (body.assigned_to) updateData.assigned_by = user.id
+  }
   if (body.client_id !== undefined) updateData.client_id = body.client_id
   if (body.visit_id !== undefined) updateData.visit_id = body.visit_id
   if (body.payment_id !== undefined) updateData.payment_id = body.payment_id
@@ -53,6 +56,7 @@ export async function PUT(
 
   if (isCompletingNow) {
     updateData.completed_at = new Date().toISOString()
+    updateData.completed_by = user.id
   }
 
   // Если статус меняется с 'completed'/'done' на что-то другое, очищаем completed_at
@@ -102,8 +106,8 @@ export async function PUT(
       org_id: orgId,
       user_id: body.assigned_to,
       type: 'task_assigned',
-      title: 'Вам назначена задача',
-      body: `${taskTitle}${currentUserName ? ` — от ${currentUserName}` : ''}`,
+      title: 'הוקצתה לך משימה',
+      body: `${taskTitle}${currentUserName ? ` — הוקצה על ידי ${currentUserName}` : ''}`,
       link: `/diary?task=${id}`,
       reference_id: id,
     })
@@ -115,8 +119,8 @@ export async function PUT(
       org_id: orgId,
       user_id: existingTask.created_by,
       type: 'task_completed',
-      title: 'Задача выполнена',
-      body: `${taskTitle}${currentUserName ? ` — выполнил ${currentUserName}` : ''}`,
+      title: 'משימה הושלמה',
+      body: `${taskTitle}${currentUserName ? ` — הושלמה על ידי ${currentUserName}` : ''}`,
       link: `/diary?task=${id}`,
       reference_id: id,
     })

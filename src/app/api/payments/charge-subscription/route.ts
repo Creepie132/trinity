@@ -16,9 +16,15 @@ const supabaseAdmin = createClient(
  * Защита: CRON_SECRET или внутренний вызов
  */
 export async function POST(request: NextRequest) {
-  // Авторизация — только от cron или внутренних вызовов
+  // Авторизация: принимаем INTERNAL_API_SECRET (Edge Function) ИЛИ CRON_SECRET
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const internalSecret = process.env.INTERNAL_API_SECRET
+  const cronSecret = process.env.CRON_SECRET
+
+  const isInternalCall = internalSecret && authHeader === `Bearer ${internalSecret}`
+  const isCronCall = cronSecret && authHeader === `Bearer ${cronSecret}`
+
+  if (!isInternalCall && !isCronCall) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

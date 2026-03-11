@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -76,10 +74,8 @@ const SUBSCRIPTION_STATUSES = [
 ]
 
 export default function AdminSubscriptionsPage() {
-  const router = useRouter()
   const { language } = useLanguage()
-  const supabase = createSupabaseBrowserClient()
-  
+
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -327,70 +323,18 @@ export default function AdminSubscriptionsPage() {
         console.warn('Failed to load module pricing')
       }
 
-      // Load organizations with subscription info
-      const { data: orgs } = await supabase
-        .from('organizations')
-        .select(`
-          id,
-          name,
-          plan,
-          features,
-          subscription_status,
-          subscription_expires_at,
-          billing_amount,
-          billing_due_date,
-          billing_status,
-          tranzila_card_token,
-          tranzila_card_last4,
-          payments_enabled,
-          recurring_enabled,
-          org_users (
-            role,
-            user_id,
-            email
-          )
-        `)
-
-      const formattedOrgs = orgs?.map((org: any) => {
-        const businessInfo = org.features?.business_info || {}
-        // Find owner from org_users
-        const owner = org.org_users?.find((u: any) => u.role === 'owner')
-        
-        return {
-          id: org.id,
-          name: org.name,
-          plan: org.plan || 'demo',
-          display_name: businessInfo.display_name || org.name,
-          subscription_status: org.subscription_status || 'none',
-          subscription_expires_at: org.subscription_expires_at,
-          owner_name: businessInfo.owner_name || '—',
-          owner_email: owner?.email || businessInfo.email || '—',
-          phone: businessInfo.mobile || '—',
-          features: org.features,
-          // Billing fields
-          billing_amount: org.billing_amount,
-          billing_due_date: org.billing_due_date,
-          billing_status: org.billing_status,
-          tranzila_card_token: org.tranzila_card_token,
-          tranzila_card_last4: org.tranzila_card_last4,
-          payments_enabled: org.payments_enabled ?? true,
-          recurring_enabled: org.recurring_enabled ?? false,
-        }
-      }) || []
-
-      setOrganizations(formattedOrgs)
-
-      // Load pending access requests
-      const { data: requests } = await supabase
-        .from('access_requests')
-        .select('*')
-        .eq('status', 'pending')
-        .order('requested_at', { ascending: false })
-
-      setAccessRequests(requests || [])
+      // Load organizations + access requests via API (service role, bypasses RLS)
+      const res = await fetch('/api/admin/subscriptions-list')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || `HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      setOrganizations(data.organizations || [])
+      setAccessRequests(data.accessRequests || [])
     } catch (error) {
       console.error('Error loading data:', error)
-      toast.error('Failed to load data')
+      toast.error('Ошибка загрузки данных')
     } finally {
       setLoading(false)
     }
@@ -1091,21 +1035,100 @@ export default function AdminSubscriptionsPage() {
               ))}
             </div>
 
+            {/* Payment toggles */}
+            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
+              {/* payments_enabled */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {language === 'he' ? 'תשלומים רגילים' : 'Обычные платежи'}
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {language === 'he' ? 'אפשרות לקבל תשלומים' : 'Возможность принимать платежи'}
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    const newVal = !(selectedOrgSheet.payments_enabled ?? true)
+                    try {
+                      const res = await fetch('/api/admin/organizations/features', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ org_id: selectedOrgSheet.id, payments_enabled: newVal }),
+                      })
+                      if (!res.ok) throw new Error('Failed')
+                      setSelectedOrgSheet({ ...selectedOrgSheet, payments_enabled: newVal })
+                      setOrganizations((prev) =>
+                        prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, payments_enabled: newVal } : o)
+                      )
+                      toast.success(language === 'he' ? 'עודכן' : 'Сохранено')
+                    } catch {
+                      toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
+                    }
+                  }}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+                    (selectedOrgSheet.payments_enabled ?? true) ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                    (selectedOrgSheet.payments_enabled ?? true) ? 'translate-x-5' : 'translate-x-0.5'
+                  }`} />
+                </button>
+              </div>
+
+              {/* recurring_enabled */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {language === 'he' ? 'תשלומים חוזרים' : 'Рекуррентные платежи'}
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {language === 'he' ? 'חיוב אוטומטי חודשי' : 'Автоматическое ежемесячное списание'}
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    const newVal = !(selectedOrgSheet.recurring_enabled ?? false)
+                    try {
+                      const res = await fetch('/api/admin/organizations/features', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ org_id: selectedOrgSheet.id, recurring_enabled: newVal }),
+                      })
+                      if (!res.ok) throw new Error('Failed')
+                      setSelectedOrgSheet({ ...selectedOrgSheet, recurring_enabled: newVal })
+                      setOrganizations((prev) =>
+                        prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, recurring_enabled: newVal } : o)
+                      )
+                      toast.success(language === 'he' ? 'עודכן' : 'Сохранено')
+                    } catch {
+                      toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
+                    }
+                  }}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+                    (selectedOrgSheet.recurring_enabled ?? false) ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                    (selectedOrgSheet.recurring_enabled ?? false) ? 'translate-x-5' : 'translate-x-0.5'
+                  }`} />
+                </button>
+              </div>
+            </div>
+
             {/* Action buttons */}
             <div className={`flex gap-2 mt-6 ${isDesktop ? 'flex-row flex-wrap' : 'flex-col'}`}>
-              {/* Автоплатёж — показываем только если recurring_enabled = true */}
-              {(selectedOrgSheet.recurring_enabled ?? false) && !selectedOrgSheet.tranzila_card_token && (
-                <button
-                  onClick={() => {
-                    handleOpenAutopay(selectedOrgSheet)
-                    setSelectedOrgSheet(null)
-                  }}
-                  className={`py-2.5 px-3 rounded-xl bg-emerald-600 text-white font-medium text-sm hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0 ${isDesktop ? 'flex-[1.5]' : 'w-full'}`}
-                >
-                  <CreditCard className="w-4 h-4 flex-shrink-0" />
-                  <span>{language === 'he' ? 'חיבור תשלום אוטומטי' : 'Автоплатёж'}</span>
-                </button>
-              )}
+              {/* Автоплатёж — всегда видна */}
+              <button
+                onClick={() => {
+                  handleOpenAutopay(selectedOrgSheet)
+                  setSelectedOrgSheet(null)
+                }}
+                className={`py-2.5 px-3 rounded-xl bg-emerald-600 text-white font-medium text-sm hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0 ${isDesktop ? 'flex-[1.5]' : 'w-full'}`}
+              >
+                <CreditCard className="w-4 h-4 flex-shrink-0" />
+                <span>{language === 'he' ? 'חיבור תשלום אוטומטי' : 'Автоплатёж'}</span>
+              </button>
 
               {/* Продлить — primary */}
               <button

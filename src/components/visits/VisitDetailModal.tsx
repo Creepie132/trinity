@@ -1,8 +1,7 @@
 'use client'
 
-import { Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock, Calendar, User, Scissors, FileText, History, ArrowLeft, Download } from 'lucide-react'
+import { Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock, Calendar, Scissors, FileText, History, ArrowLeft, Download, Package, ChevronRight, Loader2 } from 'lucide-react'
 import { useVisitServices } from '@/hooks/useVisitServices'
-import { useModalStore } from '@/store/useModalStore'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
 
@@ -39,7 +38,24 @@ interface CareInstruction {
   }
 }
 
-type ViewMode = 'main' | 'instructions' | 'send-instruction'
+type ViewMode = 'main' | 'instructions' | 'send-instruction' | 'add-menu' | 'add-service' | 'add-product'
+
+interface ServiceItem {
+  id: string
+  name: string
+  name_ru?: string
+  price?: number
+  duration_minutes?: number
+}
+
+interface ProductItem {
+  id: string
+  name: string
+  sell_price: number
+  quantity: number
+  image_url?: string
+  category?: string
+}
 
 export function VisitDetailModal(props: VisitDetailModalProps) {
   const {
@@ -62,13 +78,19 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
 
   // Fetch visit services
   const { data: visitServices = [] } = useVisitServices(visit?.id || '')
-  const { openModal } = useModalStore()
 
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('main')
   const [instructions, setInstructions] = useState<CareInstruction[]>([])
   const [selectedInstruction, setSelectedInstruction] = useState<CareInstruction | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Add service/product state
+  const [servicesList, setServicesList] = useState<ServiceItem[]>([])
+  const [productsList, setProductsList] = useState<ProductItem[]>([])
+  const [addingItem, setAddingItem] = useState<string | null>(null)
+  // Local added items for itemized list (supplement to visitServices from hook)
+  const [addedItems, setAddedItems] = useState<{ id: string; name: string; price: number; type: 'service' | 'product' }[]>([])
 
   // Fetch instructions when modal opens
   useEffect(() => {
@@ -82,6 +104,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
     if (!isOpen) {
       setViewMode('main')
       setSelectedInstruction(null)
+      setAddedItems([])
     }
   }, [isOpen])
 
@@ -98,6 +121,79 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       toast.error(locale === 'ru' ? 'Ошибка загрузки инструкций' : 'שגיאה בטעינת הוראות')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchServices = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch('/api/services')
+      const data = await res.json()
+      setServicesList(data.services || [])
+    } catch {
+      toast.error(locale === 'ru' ? 'Ошибка загрузки услуг' : 'שגיאה בטעינת שירותים')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch('/api/products')
+      const data = await res.json()
+      setProductsList((data.products || []).filter((p: ProductItem) => p.quantity > 0))
+    } catch {
+      toast.error(locale === 'ru' ? 'Ошибка загрузки товаров' : 'שגיאה בטעינת מוצרים')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddService = async (service: ServiceItem) => {
+    if (addingItem) return
+    setAddingItem(service.id)
+    try {
+      const res = await fetch(`/api/visits/${visit.id}/services`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_id: service.id,
+          service_name: service.name,
+          service_name_ru: service.name_ru || service.name,
+          price: service.price || 0,
+          duration_minutes: service.duration_minutes || 0,
+        }),
+      })
+      if (!res.ok) throw new Error('Failed')
+      const displayName = locale === 'ru' ? (service.name_ru || service.name) : service.name
+      setAddedItems(prev => [...prev, { id: service.id + Date.now(), name: displayName, price: service.price || 0, type: 'service' }])
+      toast.success(locale === 'ru' ? `Услуга добавлена: ${displayName}` : `שירות נוסף: ${displayName}`)
+      setViewMode('main')
+    } catch {
+      toast.error(locale === 'ru' ? 'Ошибка добавления услуги' : 'שגיאה בהוספת שירות')
+    } finally {
+      setAddingItem(null)
+    }
+  }
+
+  const handleAddProduct = async (product: ProductItem) => {
+    if (addingItem) return
+    setAddingItem(product.id)
+    try {
+      const res = await fetch(`/api/visits/${visit.id}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: product.id }),
+      })
+      if (!res.ok) throw new Error('Failed')
+      setAddedItems(prev => [...prev, { id: product.id + Date.now(), name: product.name, price: product.sell_price, type: 'product' }])
+      toast.success(locale === 'ru' ? `Товар добавлен: ${product.name}` : `מוצר נוסף: ${product.name}`)
+      setViewMode('main')
+    } catch {
+      toast.error(locale === 'ru' ? 'Ошибка добавления товара' : 'שגיאה בהוספת מוצר')
+    } finally {
+      setAddingItem(null)
     }
   }
 
@@ -154,7 +250,15 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       download: 'הורד',
       loadingInstructions: 'טוען הוראות...',
       noInstructions: 'אין הוראות זמינות',
-      generalInstruction: 'הוראה כללית'
+      generalInstruction: 'הוראה כללית',
+      addToVisit: 'הוסף לביקור',
+      addService: 'הוסף שירות',
+      addProduct: 'הוסף מוצר',
+      total: 'סה״כ',
+      noServices: 'אין שירותים זמינים',
+      noProducts: 'אין מוצרים זמינים',
+      hours: 'שע',
+      min: 'ד׳',
     },
     ru: {
       date: 'Дата',
@@ -189,7 +293,15 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       download: 'Скачать',
       loadingInstructions: 'Загрузка инструкций...',
       noInstructions: 'Нет доступных инструкций',
-      generalInstruction: 'Общая инструкция'
+      generalInstruction: 'Общая инструкция',
+      addToVisit: 'Добавить к визиту',
+      addService: 'Услуга',
+      addProduct: 'Товар',
+      total: 'Итого',
+      noServices: 'Нет доступных услуг',
+      noProducts: 'Нет доступных товаров',
+      hours: 'ч',
+      min: 'мин',
     },
     en: {
       date: 'Date',
@@ -224,7 +336,15 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       download: 'Download',
       loadingInstructions: 'Loading instructions...',
       noInstructions: 'No instructions available',
-      generalInstruction: 'General instruction'
+      generalInstruction: 'General instruction',
+      addToVisit: 'Add to visit',
+      addService: 'Service',
+      addProduct: 'Product',
+      total: 'Total',
+      noServices: 'No services available',
+      noProducts: 'No products available',
+      hours: 'h',
+      min: 'min',
     }
   }
 
@@ -499,6 +619,145 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
     )
   }
 
+  // Format duration: show hours if >= 60 min
+  const formatDuration = (minutes: number) => {
+    if (!minutes) return ''
+    if (minutes >= 60) {
+      const h = Math.floor(minutes / 60)
+      const m = minutes % 60
+      return m > 0 ? `${h}${labels.hours} ${m}${labels.min}` : `${h}${labels.hours}`
+    }
+    return `${minutes}${labels.min}`
+  }
+
+  // Render add menu (choose service or product)
+  const renderAddMenu = () => (
+    <div className="p-6 space-y-4">
+      <div className="flex items-center gap-3">
+        <button onClick={() => setViewMode('main')} className="text-slate-400 hover:text-slate-600 transition">
+          <ArrowLeft size={20} />
+        </button>
+        <h2 className="text-xl font-bold">{labels.addToVisit}</h2>
+      </div>
+      <div className="space-y-2 pt-2">
+        <button
+          onClick={() => { setViewMode('add-service'); if (servicesList.length === 0) fetchServices() }}
+          className="w-full flex items-center justify-between p-4 rounded-2xl bg-blue-50 hover:bg-blue-100 transition"
+        >
+          <div className="flex items-center gap-3">
+            <Scissors size={20} className="text-blue-600" />
+            <span className="font-semibold text-blue-700">{labels.addService}</span>
+          </div>
+          <ChevronRight size={18} className="text-blue-400" />
+        </button>
+        <button
+          onClick={() => { setViewMode('add-product'); if (productsList.length === 0) fetchProducts() }}
+          className="w-full flex items-center justify-between p-4 rounded-2xl bg-amber-50 hover:bg-amber-100 transition"
+        >
+          <div className="flex items-center gap-3">
+            <Package size={20} className="text-amber-600" />
+            <span className="font-semibold text-amber-700">{labels.addProduct}</span>
+          </div>
+          <ChevronRight size={18} className="text-amber-400" />
+        </button>
+      </div>
+    </div>
+  )
+
+  // Render service selection
+  const renderAddService = () => (
+    <div className="p-6 space-y-4">
+      <div className="flex items-center gap-3">
+        <button onClick={() => setViewMode('add-menu')} className="text-slate-400 hover:text-slate-600 transition">
+          <ArrowLeft size={20} />
+        </button>
+        <h2 className="text-xl font-bold">{labels.addService}</h2>
+      </div>
+      {loading ? (
+        <div className="py-8 flex justify-center"><Loader2 size={24} className="animate-spin text-slate-400" /></div>
+      ) : servicesList.length === 0 ? (
+        <p className="py-8 text-center text-slate-400">{labels.noServices}</p>
+      ) : (
+        <div className="space-y-2 max-h-[55vh] overflow-y-auto">
+          {servicesList.map((service) => {
+            const name = locale === 'ru' ? (service.name_ru || service.name) : service.name
+            const isAdding = addingItem === service.id
+            return (
+              <button
+                key={service.id}
+                onClick={() => handleAddService(service)}
+                disabled={!!addingItem}
+                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 transition disabled:opacity-60"
+              >
+                <div className="text-start">
+                  <p className="font-semibold text-sm text-slate-900">{name}</p>
+                  {service.duration_minutes ? (
+                    <p className="text-xs text-slate-400 mt-0.5">{formatDuration(service.duration_minutes)}</p>
+                  ) : null}
+                </div>
+                <div className="flex items-center gap-2">
+                  {(service.price || 0) > 0 && (
+                    <span className="text-sm font-bold text-slate-700">₪{service.price}</span>
+                  )}
+                  {isAdding ? <Loader2 size={16} className="animate-spin text-blue-500" /> : <Plus size={16} className="text-blue-500" />}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+
+  // Render product selection
+  const renderAddProduct = () => (
+    <div className="p-6 space-y-4">
+      <div className="flex items-center gap-3">
+        <button onClick={() => setViewMode('add-menu')} className="text-slate-400 hover:text-slate-600 transition">
+          <ArrowLeft size={20} />
+        </button>
+        <h2 className="text-xl font-bold">{labels.addProduct}</h2>
+      </div>
+      {loading ? (
+        <div className="py-8 flex justify-center"><Loader2 size={24} className="animate-spin text-slate-400" /></div>
+      ) : productsList.length === 0 ? (
+        <p className="py-8 text-center text-slate-400">{labels.noProducts}</p>
+      ) : (
+        <div className="space-y-2 max-h-[55vh] overflow-y-auto">
+          {productsList.map((product) => {
+            const isAdding = addingItem === product.id
+            return (
+              <button
+                key={product.id}
+                onClick={() => handleAddProduct(product)}
+                disabled={!!addingItem}
+                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 transition disabled:opacity-60"
+              >
+                <div className="flex items-center gap-3 text-start min-w-0">
+                  {product.image_url ? (
+                    <img src={product.image_url} alt={product.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
+                      <Package size={16} className="text-slate-400" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-slate-900 truncate">{product.name}</p>
+                    {product.category && <p className="text-xs text-slate-400">{product.category}</p>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-sm font-bold text-slate-700">₪{product.sell_price}</span>
+                  {isAdding ? <Loader2 size={16} className="animate-spin text-amber-500" /> : <Plus size={16} className="text-amber-500" />}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+
   // Render main visit detail view
   const renderMainView = () => (
     <div className="p-6 space-y-4">
@@ -550,60 +809,79 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           value={displayServiceName || '—'}
         />
         
-        {/* Display additional services from visit.visit_services */}
-        {visit.visit_services && visit.visit_services.length > 0 && (
-          <div className="space-y-1 mt-2 px-1">
-            {visit.visit_services.map((vs: any) => (
-              <div key={vs.id} className="flex justify-between text-sm py-1 px-2 rounded bg-slate-50">
-                <span className="font-medium">
-                  {locale === 'he' ? vs.service_name : (vs.service_name_ru || vs.service_name)}
-                </span>
-                {vs.price && <span className="font-medium">₪{vs.price}</span>}
-              </div>
-            ))}
-          </div>
-        )}
-        
-        {/* Display products from visit.visit_products */}
-        {visit.visit_products && visit.visit_products.length > 0 && (
-          <div className="space-y-1 mt-2 px-1">
-            <p className="text-xs text-slate-400">{labels.products}</p>
-            {visit.visit_products.map((vp: any) => (
-              <div key={vp.id} className="flex justify-between text-sm py-1 px-2 rounded bg-slate-50">
-                <span className="font-medium">{vp.product_name || vp.name}</span>
-                {vp.price && <span className="font-medium">₪{vp.price}</span>}
-              </div>
-            ))}
-          </div>
-        )}
-        
-        {/* Display additional services from visitServices hook (legacy) */}
-        {visitServices.length > 0 && (
-          <div className="px-1">
-            <div className="flex items-start gap-3">
-              <span className="text-slate-400 mt-0.5">
-                <Plus size={16} />
-              </span>
-              <div className="flex-1">
-                <p className="text-xs text-slate-400 mb-1">{labels.additionalServices}</p>
-                <div className="space-y-1">
-                  {visitServices.map((service) => (
-                    <div key={service.id} className="flex justify-between items-center text-sm py-1 px-2 rounded bg-slate-50">
-                      <span className="font-medium">
-                        {locale === 'ru' ? (service.service_name_ru || service.service_name) : service.service_name}
-                      </span>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <span>{service.duration_minutes} {labels.minutes}</span>
-                        {service.price > 0 && <span className="font-medium text-foreground">₪{service.price}</span>}
-                      </div>
-                    </div>
-                  ))}
+        {/* Itemized list: visit_services (from hook) + visit_services (from join) + added this session + products */}
+        {(() => {
+          // Collect all items from different sources
+          const allItems: { id: string; name: string; price: number; duration?: number; type: 'service' | 'product' }[] = []
+
+          // From visitServices hook (DB)
+          visitServices.forEach(vs => {
+            allItems.push({
+              id: vs.id,
+              name: locale === 'ru' ? (vs.service_name_ru || vs.service_name) : vs.service_name,
+              price: vs.price,
+              duration: vs.duration_minutes,
+              type: 'service',
+            })
+          })
+
+          // From visit.visit_services join (if any and not already in hook)
+          if (visit.visit_services && visitServices.length === 0) {
+            visit.visit_services.forEach((vs: any) => {
+              allItems.push({
+                id: vs.id,
+                name: locale === 'he' ? vs.service_name : (vs.service_name_ru || vs.service_name),
+                price: vs.price || 0,
+                type: 'service',
+              })
+            })
+          }
+
+          // From visit.visit_products join
+          if (visit.visit_products) {
+            visit.visit_products.forEach((vp: any) => {
+              allItems.push({
+                id: vp.id,
+                name: vp.product_name || vp.name,
+                price: vp.price || 0,
+                type: 'product',
+              })
+            })
+          }
+
+          if (allItems.length === 0 && addedItems.length === 0) return null
+
+          const allDisplay = [...allItems, ...addedItems]
+          const total = allDisplay.reduce((s, i) => s + i.price, 0)
+
+          return (
+            <div className="px-1 space-y-1">
+              <p className="text-xs text-slate-400 mb-1">{labels.additionalServices}</p>
+              {allDisplay.map((item) => (
+                <div key={item.id} className="flex justify-between items-center text-sm py-1.5 px-2 rounded-lg bg-slate-50">
+                  <div className="flex items-center gap-1.5">
+                    {item.type === 'product'
+                      ? <Package size={12} className="text-amber-500 flex-shrink-0" />
+                      : <Scissors size={12} className="text-blue-500 flex-shrink-0" />
+                    }
+                    <span className="font-medium text-slate-800">{item.name}</span>
+                    {'duration' in item && typeof item.duration === 'number' && item.duration > 0 ? (
+                      <span className="text-xs text-slate-400">{formatDuration(item.duration)}</span>
+                    ) : null}
+                  </div>
+                  {item.price > 0 && <span className="font-semibold text-slate-700">₪{item.price}</span>}
                 </div>
-              </div>
+              ))}
+              {allDisplay.length > 1 && (
+                <div className="flex justify-between items-center text-sm pt-1 border-t border-slate-200 mt-1 px-2">
+                  <span className="font-bold text-slate-700">{labels.total}</span>
+                  <span className="font-bold text-emerald-600">₪{total}</span>
+                </div>
+              )}
             </div>
-          </div>
-        )}
-        
+          )
+        })()}
+
         <InfoRow
           icon={<FileText size={16} />}
           label={labels.price}
@@ -711,10 +989,11 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             </button>
             
             <button
-              onClick={() => openModal('add-to-visit', { visitId: visit.id })}
+              onClick={() => setViewMode('add-menu')}
               className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition"
+              title={labels.addToVisit}
             >
-              <span style={{fontSize: '24px', color: 'white'}}>+</span>
+              <Plus size={22} />
             </button>
           </div>
 
@@ -834,6 +1113,9 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
         {viewMode === 'main' && renderMainView()}
         {viewMode === 'instructions' && renderInstructionsList()}
         {viewMode === 'send-instruction' && renderSendInstruction()}
+        {viewMode === 'add-menu' && renderAddMenu()}
+        {viewMode === 'add-service' && renderAddService()}
+        {viewMode === 'add-product' && renderAddProduct()}
       </div>
     </div>
   )

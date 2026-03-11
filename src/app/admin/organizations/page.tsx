@@ -58,6 +58,11 @@ export default function OrganizationsPage() {
   const [loadingClients, setLoadingClients] = useState(false)
   const [seedingOrgId, setSeedingOrgId] = useState<string | null>(null)
 
+  // Token terminal form state
+  const [tokenTerminal, setTokenTerminal] = useState('')
+  const [tokenPassword, setTokenPassword] = useState('')
+  const [savingTokenTerminal, setSavingTokenTerminal] = useState(false)
+
   // TASK 1: State for creating org with client assignment
   const [allClients, setAllClients] = useState<Array<{id: string, first_name: string, last_name: string, email: string | null, org_id: string | null}>>([])
   const [loadingAllClients, setLoadingAllClients] = useState(false)
@@ -91,6 +96,14 @@ export default function OrganizationsPage() {
   const removeUser = useRemoveOrgUser()
 
   // TASK 1 & 2: Load all clients when add dialog opens
+  // Sync token terminal form with selected org
+  useEffect(() => {
+    if (selectedOrg) {
+      setTokenTerminal((selectedOrg as any).tranzila_token_terminal || '')
+      setTokenPassword((selectedOrg as any).tranzila_token_password || '')
+    }
+  }, [selectedOrg?.id])
+
   useEffect(() => {
     if (addDialogOpen) {
       setLoadingAllClients(true)
@@ -769,6 +782,66 @@ export default function OrganizationsPage() {
                       }}
                     />
                   </div>
+
+                  {/* Token terminal credentials — visible when recurring_enabled */}
+                  {(selectedOrg.recurring_enabled ?? false) && (
+                    <>
+                      <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-3">
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                          מסוף טוקן — Tranzila
+                        </p>
+                        <div>
+                          <Label className="text-xs mb-1 block">מסוף טוקן (tranzila_token_terminal)</Label>
+                          <Input
+                            value={tokenTerminal}
+                            onChange={(e) => setTokenTerminal(e.target.value)}
+                            placeholder="ambersolttok"
+                            dir="ltr"
+                            className="text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs mb-1 block">סיסמת מסוף טוקן (tranzila_token_password)</Label>
+                          <Input
+                            value={tokenPassword}
+                            onChange={(e) => setTokenPassword(e.target.value)}
+                            placeholder="••••••••"
+                            type="password"
+                            dir="ltr"
+                            className="text-sm"
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={savingTokenTerminal}
+                          onClick={async () => {
+                            setSavingTokenTerminal(true)
+                            try {
+                              const res = await fetch('/api/admin/organizations/features', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  org_id: selectedOrg.id,
+                                  tranzila_token_terminal: tokenTerminal.trim() || null,
+                                  tranzila_token_password: tokenPassword.trim() || null,
+                                }),
+                              })
+                              if (!res.ok) throw new Error('Failed')
+                              queryClient.invalidateQueries({ queryKey: ['admin', 'org', selectedOrg.id] })
+                              toast.success('נשמר בהצלחה')
+                            } catch {
+                              toast.error('שגיאה בשמירה')
+                            } finally {
+                              setSavingTokenTerminal(false)
+                            }
+                          }}
+                          className="w-full"
+                        >
+                          {savingTokenTerminal ? '...' : 'שמור'}
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               </TabsContent>

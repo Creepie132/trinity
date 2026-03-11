@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest) {
 
     // Get request body
     const body = await request.json()
-    const { org_id, features, plan, subscription_update, owner_email, payments_enabled, recurring_enabled } = body
+    const { org_id, features, plan, subscription_update, owner_email, payments_enabled, recurring_enabled, tranzila_token_terminal, tranzila_token_password } = body
 
     console.log('=== UPDATE ORGANIZATION ===')
     console.log('org_id:', org_id)
@@ -218,6 +218,14 @@ export async function PUT(request: NextRequest) {
 
     if (recurring_enabled !== undefined) {
       updateData.recurring_enabled = recurring_enabled
+    }
+
+    if (tranzila_token_terminal !== undefined) {
+      updateData.tranzila_token_terminal = tranzila_token_terminal
+    }
+
+    if (tranzila_token_password !== undefined) {
+      updateData.tranzila_token_password = tranzila_token_password
     }
     
     if (subscription_update) {

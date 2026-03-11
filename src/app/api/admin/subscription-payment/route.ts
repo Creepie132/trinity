@@ -32,13 +32,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Получаем организацию с email владельца
+    // Получаем организацию с email владельца и токен-терминальными данными
     const { data: org, error: orgError } = await supabase
       .from('organizations')
       .select(`
-        id, 
-        name, 
+        id,
+        name,
         features,
+        tranzila_card_token,
+        tranzila_token_terminal,
+        tranzila_token_password,
         org_users!inner (
           email,
           role
@@ -79,23 +82,52 @@ export async function POST(request: NextRequest) {
       console.error('Failed to update billing info:', updateError)
     }
 
-    // Генерируем ссылку на оплату Tranzila (ambersolttok — терминал для токенизации)
-    const tokenTerminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok'
-    const tokenPassword = process.env.TRANZILA_TOKEN_PASSWORD!
-    
-    const paymentUrl = `https://direct.tranzila.com/${tokenTerminal}/iframenew.php?` + 
-      new URLSearchParams({
-        sum: amount.toString(),
-        currency: '1',
-        TranzilaPW: tokenPassword,
-        pdesc: `Trinity CRM подписка — ${org.name}`,
-        success_url: `${BASE_URL}/api/payments/tranzila-success`,
-        fail_url: `${BASE_URL}/api/payments/tranzila-failed`,
-        // Передаём org_id чтобы webhook знал кому сохранить токен
-        custom: org_id,
-        // Запрашиваем токенизацию карты
-        tranzilaTK: '1',
-      }).toString()
+    // Выбор терминала:
+    // Если у орг нет сохранённого токена карты — первый платёж через обычный терминал с tranzilaTK=1
+    // Если токен уже есть — используем токен-терминал для рекуррентного списания
+    const hasToken = !!(org as any).tranzila_card_token
+
+    let paymentUrl: string
+
+    if (hasToken) {
+      // Токен уже сохранён — используем токен-терминал
+      const tokenTerminal = (org as any).tranzila_token_terminal
+        || process.env.TRANZILA_TOKEN_TERMINAL
+        || 'ambersolttok'
+      const tokenPassword = (org as any).tranzila_token_password
+        || process.env.TRANZILA_TOKEN_PASSWORD
+        || ''
+
+      paymentUrl = `https://direct.tranzila.com/${tokenTerminal}/iframenew.php?` +
+        new URLSearchParams({
+          sum: amount.toString(),
+          currency: '1',
+          TranzilaPW: tokenPassword,
+          pdesc: `Trinity CRM подписка — ${org.name}`,
+          success_url: `${BASE_URL}/api/payments/tranzila-success`,
+          fail_url: `${BASE_URL}/api/payments/tranzila-failed`,
+          custom: org_id,
+          // Передаём сохранённый токен карты
+          TranzilaTK: (org as any).tranzila_card_token,
+          tranmode: 'VK', // Charge by token
+        }).toString()
+    } else {
+      // Первый платёж — обычный терминал с tranzilaTK=1 чтобы сохранить карту
+      const terminal = process.env.TRANZILA_TERMINAL_ID || 'ambersolt'
+      const password = process.env.TRANZILA_TERMINAL_PASSWORD || ''
+
+      paymentUrl = `https://direct.tranzila.com/${terminal}/iframenew.php?` +
+        new URLSearchParams({
+          sum: amount.toString(),
+          currency: '1',
+          TranzilaPW: password,
+          pdesc: `Trinity CRM подписка — ${org.name}`,
+          success_url: `${BASE_URL}/api/payments/tranzila-success`,
+          fail_url: `${BASE_URL}/api/payments/tranzila-failed`,
+          custom: org_id,
+          tranzilaTK: '1', // Сохранить токен карты для будущих списаний
+        }).toString()
+    }
 
     // Отправляем email через Resend
     const { error: emailError } = await resend.emails.send({

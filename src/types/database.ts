@@ -97,6 +97,8 @@ export interface Organization {
   billing_due_date: string | null
   payments_enabled: boolean
   recurring_enabled: boolean
+  tranzila_token_terminal: string | null
+  tranzila_token_password: string | null
   created_at: string
 }
 

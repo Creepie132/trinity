@@ -1036,10 +1036,10 @@ export default function AdminSubscriptionsPage() {
             </div>
 
             {/* Payment toggles */}
-            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
+            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-4">
               {/* payments_enabled */}
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
                     {language === 'he' ? 'תשלומים רגילים' : 'Обычные платежи'}
                   </p>
@@ -1047,38 +1047,31 @@ export default function AdminSubscriptionsPage() {
                     {language === 'he' ? 'אפשרות לקבל תשלומים' : 'Возможность принимать платежи'}
                   </p>
                 </div>
-                <button
-                  onClick={async () => {
-                    const newVal = !(selectedOrgSheet.payments_enabled ?? true)
+                <Switch
+                  checked={selectedOrgSheet.payments_enabled ?? true}
+                  onCheckedChange={async (checked) => {
                     try {
                       const res = await fetch('/api/admin/organizations/features', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ org_id: selectedOrgSheet.id, payments_enabled: newVal }),
+                        body: JSON.stringify({ org_id: selectedOrgSheet.id, payments_enabled: checked }),
                       })
                       if (!res.ok) throw new Error('Failed')
-                      setSelectedOrgSheet({ ...selectedOrgSheet, payments_enabled: newVal })
+                      setSelectedOrgSheet({ ...selectedOrgSheet, payments_enabled: checked })
                       setOrganizations((prev) =>
-                        prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, payments_enabled: newVal } : o)
+                        prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, payments_enabled: checked } : o)
                       )
                       toast.success(language === 'he' ? 'עודכן' : 'Сохранено')
                     } catch {
                       toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
                     }
                   }}
-                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
-                    (selectedOrgSheet.payments_enabled ?? true) ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                >
-                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
-                    (selectedOrgSheet.payments_enabled ?? true) ? 'translate-x-5' : 'translate-x-0.5'
-                  }`} />
-                </button>
+                />
               </div>
 
               {/* recurring_enabled */}
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
                     {language === 'he' ? 'תשלומים חוזרים' : 'Рекуррентные платежи'}
                   </p>
@@ -1086,33 +1079,26 @@ export default function AdminSubscriptionsPage() {
                     {language === 'he' ? 'חיוב אוטומטי חודשי' : 'Автоматическое ежемесячное списание'}
                   </p>
                 </div>
-                <button
-                  onClick={async () => {
-                    const newVal = !(selectedOrgSheet.recurring_enabled ?? false)
+                <Switch
+                  checked={selectedOrgSheet.recurring_enabled ?? false}
+                  onCheckedChange={async (checked) => {
                     try {
                       const res = await fetch('/api/admin/organizations/features', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ org_id: selectedOrgSheet.id, recurring_enabled: newVal }),
+                        body: JSON.stringify({ org_id: selectedOrgSheet.id, recurring_enabled: checked }),
                       })
                       if (!res.ok) throw new Error('Failed')
-                      setSelectedOrgSheet({ ...selectedOrgSheet, recurring_enabled: newVal })
+                      setSelectedOrgSheet({ ...selectedOrgSheet, recurring_enabled: checked })
                       setOrganizations((prev) =>
-                        prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, recurring_enabled: newVal } : o)
+                        prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, recurring_enabled: checked } : o)
                       )
                       toast.success(language === 'he' ? 'עודכן' : 'Сохранено')
                     } catch {
                       toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
                     }
                   }}
-                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
-                    (selectedOrgSheet.recurring_enabled ?? false) ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                >
-                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
-                    (selectedOrgSheet.recurring_enabled ?? false) ? 'translate-x-5' : 'translate-x-0.5'
-                  }`} />
-                </button>
+                />
               </div>
             </div>
 

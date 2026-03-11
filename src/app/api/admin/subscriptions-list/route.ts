@@ -39,6 +39,8 @@ export async function GET(request: NextRequest) {
         tranzila_card_last4,
         payments_enabled,
         recurring_enabled,
+        tranzila_token_terminal,
+        tranzila_token_password,
         org_users (
           role,
           user_id,
@@ -119,6 +121,8 @@ export async function GET(request: NextRequest) {
         tranzila_card_last4: org.tranzila_card_last4 ?? null,
         payments_enabled: org.payments_enabled ?? true,
         recurring_enabled: org.recurring_enabled ?? false,
+        tranzila_token_terminal: org.tranzila_token_terminal ?? null,
+        tranzila_token_password: org.tranzila_token_password ?? null,
       }
     })
 

@@ -7,18 +7,43 @@ const supabaseAdmin = createAdmin(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Return all org_ids in the same branch family as the given orgId
+async function getRelatedOrgIds(orgId: string): Promise<string[]> {
+  // Is current org a branch child?
+  const { data: parentRows } = await supabaseAdmin
+    .from('branches')
+    .select('parent_org_id')
+    .eq('child_org_id', orgId)
+
+  const rootOrgId: string = parentRows?.[0]?.parent_org_id ?? orgId
+
+  // All children of the root org
+  const { data: childRows } = await supabaseAdmin
+    .from('branches')
+    .select('child_org_id')
+    .eq('parent_org_id', rootOrgId)
+    .eq('is_active', true)
+
+  const ids = new Set<string>([orgId, rootOrgId])
+  childRows?.forEach((r) => ids.add(r.child_org_id))
+  return Array.from(ids)
+}
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await getAuthContext()
     if ('error' in auth) return auth.error
-    
+
     const { orgId } = auth
 
-    // Get clients for this organization (using admin to bypass RLS)
+    // Resolve all org IDs in the branch family for shared client access
+    const relatedOrgIds = await getRelatedOrgIds(orgId)
+
+    // Get clients for this organization family (using admin to bypass RLS)
     const { data: clients, error: clientsError } = await supabaseAdmin
       .from('clients')
       .select('*')
-      .eq('org_id', orgId)
+      .in('org_id', relatedOrgIds)
       .order('created_at', { ascending: false })
 
     if (clientsError) {

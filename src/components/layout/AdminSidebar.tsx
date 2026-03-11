@@ -1,31 +1,24 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, CreditCard, Megaphone, Settings, Home, ChevronRight, Shield, Mail, Package } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, Home, Shield, LogOut } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { useAdminProfile } from '@/hooks/useAdminProfile'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
-import { AdminProfileSheet } from '@/components/admin/AdminProfileSheet'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { supabase } from '@/lib/supabase'
-
-// Helper function to convert null to undefined for Avatar component
-const toAvatarSrc = (url: string | null): string | undefined => {
-  if (url === null) return undefined
-  return url
-}
 
 export function AdminSidebar() {
   const pathname = usePathname()
-  const { user } = useAuth()
-  const { adminProfile, isLoading } = useAdminProfile()
+  const router = useRouter()
+  const { signOut } = useAuth()
   const { t } = useLanguage()
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
+  const onLogout = async () => {
+    await signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   const navigation = [
     {
@@ -49,28 +42,6 @@ export function AdminSidebar() {
       icon: Settings,
     },
   ]
-
-  // Load avatar URL
-  useEffect(() => {
-    if (user) {
-      supabase
-        .from('org_users')
-        .select('avatar_url')
-        .eq('user_id', user.id)
-        .single()
-        .then(({ data, error }) => {
-          if (data && !error) {
-            setAvatarUrl(data.avatar_url)
-          }
-        })
-    }
-  }, [user])
-
-  const displayName = adminProfile?.full_name || user?.email?.split('@')[0] || 'Admin'
-  const displayEmail = adminProfile?.email || user?.email || ''
-  
-  // Convert avatar URL from null to undefined for Avatar component compatibility
-  const avatarSrc: string | undefined = avatarUrl === null ? undefined : avatarUrl
 
   return (
     <div className="w-64 h-full flex flex-col bg-gradient-to-b from-slate-800 to-slate-900 text-white shadow-lg">
@@ -140,37 +111,18 @@ export function AdminSidebar() {
         </Link>
       </nav>
 
-      {/* User Profile - Clickable */}
-      <div className="p-4 border-t border-slate-700 bg-slate-800/50">
+      {/* Logout */}
+      <div className="p-4 border-t border-slate-700">
         <button
-          onClick={() => setProfileOpen(true)}
-          className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-700/50 border border-slate-600 hover:bg-slate-700 hover:border-blue-500/50 transition-all duration-200 group active:scale-[0.98]"
+          onClick={onLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/20 active:scale-[0.98] transition-all duration-200"
         >
-          <Avatar className="w-11 h-11 shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all">
-            <AvatarImage src={avatarSrc} alt={displayName ?? undefined} />
-            <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-600 text-white font-bold text-lg">
-              {displayName[0]?.toUpperCase() || 'A'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0 text-right">
-            {isLoading ? (
-              <p className="text-sm text-slate-400">{t('common.loading')}</p>
-            ) : (
-              <>
-                <p className="text-sm font-semibold text-white truncate group-hover:text-blue-300 transition-colors">{displayName}</p>
-                <p className="text-xs text-slate-400 truncate mt-0.5">{t('nav.myProfile')}</p>
-              </>
-            )}
+          <div className="p-1.5 rounded-lg bg-red-900/30">
+            <LogOut className="w-5 h-5 text-red-400" />
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition-colors flex-shrink-0" />
+          {t('nav.logout')}
         </button>
       </div>
-
-      {/* Profile Sheet */}
-      <AdminProfileSheet 
-        open={profileOpen} 
-        onOpenChange={setProfileOpen} 
-      />
     </div>
   )
 }

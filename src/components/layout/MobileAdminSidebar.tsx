@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, CreditCard, Megaphone, Settings, ArrowLeft, Home, Shield, Mail, Package } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, ArrowLeft, Home, Shield, LogOut } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import {
@@ -23,7 +22,14 @@ interface MobileAdminSidebarProps {
 export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user } = useAuth()
+  const { signOut } = useAuth()
+
+  const onLogout = async () => {
+    await signOut()
+    onClose()
+    router.push('/login')
+    router.refresh()
+  }
   const { t } = useLanguage()
 
   const navigation = [
@@ -48,11 +54,6 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
       icon: Settings,
     },
   ]
-
-  const displayName =
-    (user?.user_metadata?.full_name as string) ||
-    (user?.user_metadata?.name as string) ||
-    (user?.email ?? 'Admin')
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -130,20 +131,17 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
             </Link>
           </nav>
 
-          {/* User Profile */}
-          <div className="p-4 border-t border-slate-700 bg-slate-800/50">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50 border border-slate-600">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold shadow-lg text-lg">
-                {displayName[0]?.toUpperCase() || 'A'}
+          {/* Logout */}
+          <div className="p-4 border-t border-slate-700">
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/20 active:scale-[0.98] transition-all duration-200"
+            >
+              <div className="p-1.5 rounded-lg bg-red-900/30">
+                <LogOut className="w-5 h-5 text-red-400" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{displayName}</p>
-                <p className="text-xs text-purple-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
-                  מנהל מערכת
-                </p>
-              </div>
-            </div>
+              {t('nav.logout')}
+            </button>
           </div>
         </div>
       </SheetContent>

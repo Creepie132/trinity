@@ -50,10 +50,10 @@ export async function createTranzilaPaymentLink({
   // For tokenization (saveCard), use the token terminal and its dedicated password
   const terminalId = terminal || (saveCard
     ? (process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok')
-    : (process.env.TRANZILA_TERMINAL || process.env.TRANZILA_TERMINAL_ID || 'ambersolt'))
+    : (process.env.TRANZILA_TERMINAL_ID || 'ambersolt'))
   const terminalPassword = password || (saveCard
     ? (process.env.TRANZILA_TOKEN_PASSWORD || '')
-    : (process.env.TRANZILA_PASSWORD || process.env.TRANZILA_TERMINAL_PASSWORD || ''))
+    : (process.env.TRANZILA_TERMINAL_PASSWORD || ''))
 
   const params = new URLSearchParams({
     supplier: terminalId!,
@@ -123,8 +123,8 @@ export async function chargeByToken({
   token,
   amount,
   description,
-  terminal = process.env.TRANZILA_TOKEN_TERMINAL || process.env.TRANZILA_TERMINAL_ID || 'ambersolttok',
-  password = process.env.TRANZILA_PRIVATE_KEY || process.env.TRANZILA_PASSWORD!,
+  terminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok',
+  password = process.env.TRANZILA_TOKEN_PASSWORD || '',
   expdate,
 }: ChargeByTokenParams): Promise<ChargeResult> {
   const apiUrl = process.env.TRANZILA_API_URL || 'https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi'
@@ -204,7 +204,7 @@ export async function chargeByToken({
 export async function validateToken({
   token,
   terminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok',
-  password = process.env.TRANZILA_PASSWORD!,
+  password = process.env.TRANZILA_TOKEN_PASSWORD || '',
   expdate,
 }: {
   token: string

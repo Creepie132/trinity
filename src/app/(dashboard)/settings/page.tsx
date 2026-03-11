@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useBranches } from '@/hooks/useBranches'
-import { Globe, ArrowLeft, Package, FileText, Calendar, Building2 } from 'lucide-react'
+import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -58,7 +58,13 @@ export default function SettingsPage() {
         ? `${branches.length > 0 ? `${branches.length} סניפים` : 'אין סניפים'}`
         : `${branches.length > 0 ? `${branches.length} филиалов` : 'Нет филиалов'}`,
     },
-    // { id: 'users', href: '/settings/users', icon: Users, title: t('settings.users'), description: t('settings.users.desc') },
+    {
+      id: 'users',
+      href: '/settings/users',
+      icon: Users,
+      title: language === 'he' ? 'ניהול צוות' : 'Управление командой',
+      description: language === 'he' ? 'הזמן עובדים ונהל הרשאות' : 'Приглашайте сотрудников и управляйте правами',
+    },
     // { id: 'service-colors', href: '/settings/service-colors', icon: Palette, title: t('settings.serviceColors'), description: t('settings.serviceColors.desc') },
   ]
 
@@ -71,6 +77,7 @@ export default function SettingsPage() {
     if (category.id === 'services' && !permissions.canManageServices) return false
     if (category.id === 'care-instructions' && !permissions.canManageCareInstructions) return false
     if (category.id === 'booking' && !permissions.canManageBookingSettings) return false
+    if (category.id === 'users' && !permissions.canManageUsers) return false
     
     return true
   })

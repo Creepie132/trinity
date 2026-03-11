@@ -39,6 +39,7 @@ interface Organization {
   tranzila_card_last4?: string
   payments_enabled?: boolean
   recurring_enabled?: boolean
+  branches_enabled?: boolean
 }
 
 interface AccessRequest {
@@ -1108,6 +1109,38 @@ export default function AdminSubscriptionsPage() {
                       setSelectedOrgSheet({ ...selectedOrgSheet, recurring_enabled: checked })
                       setOrganizations((prev) =>
                         prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, recurring_enabled: checked } : o)
+                      )
+                      toast.success(language === 'he' ? 'עודכן' : 'Сохранено')
+                    } catch {
+                      toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
+                    }
+                  }}
+                />
+              </div>
+
+              {/* branches_enabled */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {language === 'he' ? 'סניפים' : 'Филиалы'}
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {language === 'he' ? 'ניהול סניפים מרובים' : 'Управление несколькими филиалами'}
+                  </p>
+                </div>
+                <Switch
+                  checked={selectedOrgSheet.branches_enabled ?? false}
+                  onCheckedChange={async (checked) => {
+                    try {
+                      const res = await fetch('/api/admin/organizations/features', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ org_id: selectedOrgSheet.id, branches_enabled: checked }),
+                      })
+                      if (!res.ok) throw new Error('Failed')
+                      setSelectedOrgSheet({ ...selectedOrgSheet, branches_enabled: checked })
+                      setOrganizations((prev) =>
+                        prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, branches_enabled: checked } : o)
                       )
                       toast.success(language === 'he' ? 'עודכן' : 'Сохранено')
                     } catch {

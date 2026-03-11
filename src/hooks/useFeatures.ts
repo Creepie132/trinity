@@ -18,6 +18,9 @@ export interface Features {
   hasLoyalty: boolean
   hasBirthday: boolean
   hasDiary: boolean
+  hasBranches: boolean
+  paymentsEnabled: boolean
+  recurringEnabled: boolean
   isActive: boolean
   category: string
   isLoading: boolean
@@ -43,6 +46,9 @@ export function useFeatures(): Features {
       hasLoyalty: false,
       hasBirthday: false,
       hasDiary: false,
+      hasBranches: false,
+      paymentsEnabled: true,
+      recurringEnabled: false,
       isActive: false,
       category: 'other',
       isLoading: true,
@@ -66,6 +72,9 @@ export function useFeatures(): Features {
       hasLoyalty: true,
       hasBirthday: true,
       hasDiary: true,
+      hasBranches: true,
+      paymentsEnabled: true,
+      recurringEnabled: true,
       isActive: true,
       category: organization?.category ?? 'other',
       isLoading: false,
@@ -88,6 +97,9 @@ export function useFeatures(): Features {
       hasLoyalty: false,
       hasBirthday: false,
       hasDiary: false,
+      hasBranches: false,
+      paymentsEnabled: true,
+      recurringEnabled: false,
       isActive: false,
       category: 'other',
       isLoading: false,
@@ -115,6 +127,9 @@ export function useFeatures(): Features {
       hasTelegram: modules.telegram ?? false,
       hasLoyalty: modules.loyalty ?? false,
       hasBirthday: modules.birthday ?? false,
+      hasBranches: organization.branches_enabled ?? false,
+      paymentsEnabled: organization.payments_enabled ?? true,
+      recurringEnabled: organization.recurring_enabled ?? false,
       isActive: organization.is_active ?? false,
       category: organization.category ?? 'other',
       isLoading: false,
@@ -137,6 +152,9 @@ export function useFeatures(): Features {
     hasLoyalty: false,
     hasBirthday: false,
     hasDiary: (organization.features as any)?.diary ?? true,
+    hasBranches: organization.branches_enabled ?? false,
+    paymentsEnabled: organization.payments_enabled ?? true,
+    recurringEnabled: organization.recurring_enabled ?? false,
     isActive: organization.is_active ?? false,
     category: organization.category ?? 'other',
     isLoading: false,

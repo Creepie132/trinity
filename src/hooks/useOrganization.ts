@@ -26,6 +26,9 @@ export interface Organization {
   billing_status: string
   billing_due_date: string | null
   created_at: string
+  payments_enabled?: boolean
+  recurring_enabled?: boolean
+  branches_enabled?: boolean
 }
 
 async function fetchCurrentOrganization(): Promise<Organization | null> {

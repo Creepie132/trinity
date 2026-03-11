@@ -6,6 +6,7 @@ import { useBranches, useCreateBranch, useUpdateBranch } from '@/hooks/useBranch
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useBranch } from '@/contexts/BranchContext'
 import { useOrganization } from '@/hooks/useOrganization'
+import { useFeatures } from '@/hooks/useFeatures'
 import Link from 'next/link'
 
 const translations = {
@@ -71,6 +72,7 @@ export default function BranchesPage() {
 
   const { data: branches = [], isLoading } = useBranches()
   const { data: mainOrg } = useOrganization()
+  const features = useFeatures()
   const createBranch = useCreateBranch()
   const updateBranch = useUpdateBranch()
   const { activeOrgId, mainOrgId, switchBranch } = useBranch()
@@ -379,7 +381,7 @@ export default function BranchesPage() {
       )}
 
       {/* Add button */}
-      {!showForm && !editId && (
+      {!showForm && !editId && features.hasBranches && (
         <button
           onClick={() => setShowForm(true)}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-sm font-medium"

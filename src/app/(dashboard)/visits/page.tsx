@@ -327,6 +327,11 @@ export default function VisitsPage() {
   }
 
   const handleCompleteVisit = (visit: Visit) => {
+    // If payments are disabled — just mark as completed without opening payment dialog
+    if (!features.paymentsEnabled) {
+      updateVisitStatus(visit.id, 'completed')
+      return
+    }
     const clientData = allClients?.find((c: any) => c.id === visit.client_id)
     const preloadedItems = ((visit as any).visit_services || []).map((vs: any) => ({
       id: vs.id,

@@ -67,7 +67,15 @@
       "Bash(find /F/Amber_solutions_Kira/Trinity/src -name \"*Invite*\" -o -name \"*invite*\" | grep -E \"\\\\.\\(ts|tsx\\)$\")",
       "Bash(cd /F/Amber_solutions_Kira/Trinity && find src -type f -name \"*.ts\" -o -name \"*.tsx\" | xargs grep -l \"notifications\\\\|NotificationBell\\\\|access_request\\\\|transfer_request\\\\|work_shift\" | head -20)",
       "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|warning|✓|✗|Failed\" | head -30)",
-      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error TS|Error:|error:|✓|✗|Failed\" | head -30)"
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error TS|Error:|error:|✓|✗|Failed\" | head -30)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | tail -50)",
+      "Bash(cat \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\app\\\\api\\\\org-users\\\\route.ts\" 2>/dev/null || find \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\app\\\\api\" -name \"route.ts\" | xargs grep -l \"org_users\\\\|org-users\" 2>/dev/null | head -5)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|warning|Warning|✓|Failed\" | head -40)",
+      "Bash(ls \"F:/Amber_solutions_Kira/Trinity/src/app/api/\" && ls \"F:/Amber_solutions_Kira/Trinity/src/app/\\(dashboard\\)/settings/\")",
+      "Bash(cd \"F:/Amber_solutions_Kira/Trinity\" && npm run build 2>&1 | grep -E \"error TS|Error:|error:|✓ Compiled|Failed|Cannot find\" | head -30)",
+      "Bash(find \"F:\\\\Amber_solutions_Kira\\\\Trinity\" -path \"*/app/api/admin/*\" -name \"*.ts\" 2>/dev/null | head -20)",
+      "Bash(dir \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\app\\\\api\\\\admin\\\\\" /B)",
+      "Bash(grep -rn \"payment\\\\|Payment\\\\|תשלום\" \"F:/Amber_solutions_Kira/Trinity/src/components/visits\" --include=\"*.tsx\" -l 2>/dev/null | head -5)"
     ]
   }
 }

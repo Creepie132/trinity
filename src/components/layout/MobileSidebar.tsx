@@ -113,10 +113,12 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             </div>
           </SheetHeader>
 
-          {/* Branch Switcher — shown only when branches exist */}
-          <div className="px-2 pt-3">
-            <BranchSwitcher />
-          </div>
+          {/* Branch Switcher — shown only when branches feature is enabled */}
+          {features.hasBranches && (
+            <div className="px-2 pt-3">
+              <BranchSwitcher />
+            </div>
+          )}
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">

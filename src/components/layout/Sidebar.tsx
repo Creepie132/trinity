@@ -105,8 +105,8 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
         </div>
       </div>
 
-      {/* Branch Switcher — shown only when branches exist */}
-      <BranchSwitcher />
+      {/* Branch Switcher — shown only when branches feature is enabled */}
+      {features.hasBranches && <BranchSwitcher />}
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">

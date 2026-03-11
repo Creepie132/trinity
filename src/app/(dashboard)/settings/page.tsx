@@ -79,6 +79,7 @@ export default function SettingsPage() {
   const filteredCategories = settingsCategories.filter((category) => {
     // Check module access first (if module is disabled, hide the setting)
     if (category.id === 'booking' && features.hasBooking === false) return false
+    if (category.id === 'branches' && !features.hasBranches) return false
     
     // Owner-only settings (check permissions)
     if (category.id === 'services' && !permissions.canManageServices) return false

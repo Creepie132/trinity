@@ -41,25 +41,10 @@ const translations = {
 }
 
 function playNotificationSound() {
-  try {
-    const audio = new Audio('/sounds/Notification.mp3')
-    audio.volume = 0.5
-    audio.play().catch(() => {
-      // Fallback: Web Audio API beep
-      const ctx = new AudioContext()
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.frequency.value = 880
-      gain.gain.setValueAtTime(0.3, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
-      osc.start(ctx.currentTime)
-      osc.stop(ctx.currentTime + 0.3)
-    })
-  } catch {
-    // Browser blocked audio — ignore silently
-  }
+  if (document.visibilityState !== 'visible') return
+  const audio = new Audio('/sounds/notification.mp3')
+  audio.volume = 0.5
+  audio.play().catch(() => {})
 }
 
 export function NotificationBell({ locale }: NotificationBellProps) {
@@ -136,10 +121,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
             setNotifications(prev => [newNotif, ...prev])
             setUnreadCount(prev => prev + 1)
 
-            // Звук только если страница активна
-            if (document.visibilityState === 'visible') {
-              playNotificationSound()
-            }
+            playNotificationSound()
           }
         )
         .subscribe()

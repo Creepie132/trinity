@@ -102,6 +102,7 @@ export function CreateTaskModal() {
   const [contactEmail, setContactEmail] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
+  const [reminder, setReminder] = useState(false)
 
   // Data for dropdowns
   const [orgUsers, setOrgUsers] = useState<OrgUser[]>([])
@@ -195,12 +196,18 @@ export function CreateTaskModal() {
     setDescription('')
     setSelectedClientName('')
     setSelectedUserName('')
+    setReminder(false)
     closeModal('task-create')
   }
 
   async function handleSubmit() {
     if (!title.trim()) {
       alert(locale === 'he' ? 'נא למלא כותרת' : 'Заполните заголовок')
+      return
+    }
+
+    if (reminder && (!dueDate || !dueTime)) {
+      alert(locale === 'he' ? 'לתזכורת חובה לבחור תאריך ושעה' : 'Для напоминания необходимо указать дату и время')
       return
     }
 
@@ -221,6 +228,7 @@ export function CreateTaskModal() {
         client_id: clientId,
         contact_phone: contactPhone || null,
         contact_email: contactEmail || null,
+        reminder,
       }
 
       const url = isEditMode ? `/api/tasks/${editTask.id}` : '/api/tasks'
@@ -348,10 +356,25 @@ export function CreateTaskModal() {
               type="time"
               value={dueTime}
               onChange={(e) => setDueTime(e.target.value)}
-              className={inputClass}
+              disabled={!dueDate}
+              className={`${inputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
               dir="ltr"
             />
           </div>
+        </div>
+
+        {/* Напоминание */}
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="task-reminder"
+            checked={reminder}
+            onChange={(e) => setReminder(e.target.checked)}
+            className="w-4 h-4 accent-indigo-600 cursor-pointer"
+          />
+          <label htmlFor="task-reminder" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+            {locale === 'he' ? '🔔 תזכורת (2 שעות לפני)' : '🔔 Напоминание (за 2 часа до)'}
+          </label>
         </div>
 
         {/* Assignee */}

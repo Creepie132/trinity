@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Calendar, Clock, User, Filter, CheckCircle, CheckCircle2, Circle, AlertCircle, Phone, MessageSquare, Search, X, Mail, MapPin, ChevronRight, PlayCircle, XCircle, AlertTriangle } from 'lucide-react'
+import { Plus, Calendar, Clock, User, Filter, CheckCircle, CheckCircle2, Circle, AlertCircle, Phone, MessageSquare, Search, X, Mail, MapPin, ChevronRight, PlayCircle, XCircle, AlertTriangle, Trash2 } from 'lucide-react'
 import { TrinityCard } from '@/components/ui/TrinityCard'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
@@ -541,14 +541,6 @@ export default function DiaryPage() {
                   ✓ {language === 'he' ? 'סיים' : 'Завершить'}
                 </button>
               )}
-              {task.status !== 'completed' && task.status !== 'cancelled' && (
-                <button
-                  onClick={() => updateTaskStatus(task.id, 'cancelled')}
-                  className="w-full py-3 rounded-xl border border-slate-300 text-slate-500 text-sm font-medium hover:bg-slate-50 transition"
-                >
-                  ✕ {language === 'he' ? 'בטל' : 'Отменить'}
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -825,6 +817,18 @@ export default function DiaryPage() {
                               <CheckCircle size={14} />
                             </button>
                           )}
+
+                          {/* Удалить */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleTaskDelete(task.id)
+                            }}
+                            className="w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition"
+                            title={language === 'he' ? 'מחק' : 'Удалить'}
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>

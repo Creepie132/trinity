@@ -19,7 +19,8 @@
       "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"^.*\\(error|Error|failed|Failed|✗\\)\" | grep -v \"tranzila-failed\\\\|payment-failed\" | head -20)",
       "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error TS|Error:|Failed|✗|^src\" | grep -v \"tranzila-failed\\\\|payment-failed\" | head -30)",
       "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | tail -15)",
-      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | tail -10)"
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | tail -10)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error TS|Error:|Failed to compile|✗\" | grep -v \"tranzila-failed\\\\|payment-failed\" | head -20)"
     ]
   }
 }

@@ -89,6 +89,28 @@ export async function PUT(
     })
   }
 
+  // Создаём напоминание за 2 часа до due_date
+  if (body.reminder && (updateData.due_date || body.due_date)) {
+    const dueDateStr = updateData.due_date || body.due_date
+    const reminderAt = new Date(new Date(dueDateStr).getTime() - 2 * 60 * 60 * 1000).toISOString()
+    const dueDateFormatted = new Date(dueDateStr).toLocaleString('ru-RU', {
+      day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+    })
+    const taskTitle = updateData.title || existingTask.title
+    await supabase.from('notifications').insert({
+      org_id: orgId,
+      user_id: user.id,
+      type: 'task_reminder',
+      title: `🔔 ${taskTitle}`,
+      body: dueDateFormatted,
+      link: `/diary`,
+      reference_id: id,
+      scheduled_at: reminderAt,
+    }).then(({ error }) => {
+      if (error) console.error('Reminder notification error:', error.message)
+    })
+  }
+
   return NextResponse.json(task)
 }
 

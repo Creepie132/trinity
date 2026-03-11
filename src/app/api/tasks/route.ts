@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
     contact_phone,
     contact_email,
     contact_address,
+    reminder,
   } = body
 
   if (!title?.trim()) {
@@ -99,6 +100,26 @@ export async function POST(request: NextRequest) {
       body: title.trim(),
       link: `/diary?task=${task.id}`,
       reference_id: task.id,
+    })
+  }
+
+  // Создаём напоминание за 2 часа до due_date
+  if (reminder && due_date) {
+    const reminderAt = new Date(new Date(due_date).getTime() - 2 * 60 * 60 * 1000).toISOString()
+    const dueDateFormatted = new Date(due_date).toLocaleString('ru-RU', {
+      day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+    })
+    await supabase.from('notifications').insert({
+      org_id: orgId,
+      user_id: user.id,
+      type: 'task_reminder',
+      title: `🔔 ${title.trim()}`,
+      body: dueDateFormatted,
+      link: `/diary`,
+      reference_id: task.id,
+      scheduled_at: reminderAt,
+    }).then(({ error }) => {
+      if (error) console.error('Reminder notification error:', error.message)
     })
   }
 

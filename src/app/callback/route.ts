@@ -40,18 +40,31 @@ export async function GET(request: NextRequest) {
 
   const user = data.user
 
-  // Auto-link user_id for invited users
-  if (user?.id && user?.email) {
+  if (!user.id) {
+    return NextResponse.redirect(`${origin}/access-pending`)
+  }
+
+  // Create admin client (bypasses RLS — needed for auto-link and org checks)
+  const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Auto-link invited users: find org_users rows with this email and user_id=null
+  // Must use admin client — anon client cannot update rows where user_id IS NULL (RLS)
+  let wasLinked = false
+  if (user.email) {
     try {
-      const { data: linkedRows } = await supabase
+      const { data: linkedRows } = await supabaseAdmin
         .from('org_users')
         .update({ user_id: user.id })
-        .eq('email', user.email)
+        .eq('email', user.email.toLowerCase())
         .is('user_id', null)
         .select('org_id, role')
 
-      // Notify all system admins when an invited user first logs in
       if (linkedRows && linkedRows.length > 0) {
+        wasLinked = true
         notifyAdminsOfInvitedUser(user, linkedRows).catch((e) =>
           console.error('[Callback] Admin notification error:', e)
         )
@@ -59,10 +72,6 @@ export async function GET(request: NextRequest) {
     } catch (e) {
       console.error('Auto-link error:', e)
     }
-  }
-
-  if (!user.id) {
-    return NextResponse.redirect(`${origin}/access-pending`)
   }
 
   // 1) Check if admin
@@ -77,29 +86,23 @@ export async function GET(request: NextRequest) {
   }
 
   // 2) Check if user is a member of any organization (owner or invited staff)
-  const { data: anyOrg } = await supabase
+  // Use admin client to bypass RLS and see the just-linked row
+  const { data: anyOrg } = await supabaseAdmin
     .from('org_users')
     .select('org_id, role')
     .eq('user_id', user.id)
     .limit(1)
     .maybeSingle()
 
-  if (anyOrg) {
-    // User belongs to an org (owner, moderator, or invited user) → redirect to dashboard
+  if (anyOrg || wasLinked) {
+    // User belongs to an org (owner, moderator, or invited staff) → go to dashboard
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 
-  // 3) User has no org → create new organization (brand new signup)
-  console.log('[Callback] User has no owner organization, creating new org...')
-  
-  try {
-    // Create admin client for organization creation
-    const { createClient: createAdminClient } = await import('@supabase/supabase-js')
-    const supabaseAdmin = createAdminClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+  // 3) Truly new user (no pending invitations, no existing org) → create new organization
+  console.log('[Callback] New user with no org, creating organization...')
 
+  try {
     // Generate unique org name
     const suffix = Math.random().toString(36).substring(2, 6)
     const orgName = `${user.email?.split('@')[0] || 'user'}_${suffix}`

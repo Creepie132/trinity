@@ -237,7 +237,7 @@ export default function AdminInvitationsPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Mail className="w-8 h-8 text-amber-600" />
-        <h1 className="text-3xl font-bold">{t.title}</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">{t.title}</h1>
       </div>
 
       {/* Send Invitation Form */}

@@ -365,17 +365,16 @@ export default function OrganizationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('admin.orgs.title')}</h1>
-          <p className="text-gray-600 mt-1">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 truncate">{t('admin.orgs.title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-0.5 text-sm">
             {t('admin.orgs.total')}: {organizations?.length || 0} {t('admin.orgs.organizations')}
           </p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <Plus className="w-4 h-4 ml-2" />
+        <Button onClick={() => setAddDialogOpen(true)} className="flex-shrink-0 min-h-[44px]">
+          <Plus className="w-4 h-4 md:ml-2" />
           <span className="hidden sm:inline">{t('admin.orgs.addNew')}</span>
-          <span className="sm:hidden">{t('admin.orgs.addNewShort')}</span>
         </Button>
       </div>
 
@@ -398,93 +397,93 @@ export default function OrganizationsPage() {
             {t('admin.orgs.all')}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">
           {isLoading ? (
             <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
+          ) : (!organizations || organizations.length === 0) ? (
+            <div className="text-center py-12 text-gray-500">{t('admin.orgs.noOrgs')}</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-right">{t('admin.orgs.name')}</TableHead>
-                  <TableHead className="text-right">{t('admin.orgs.category')}</TableHead>
-                  <TableHead className="text-right">{t('admin.orgs.plan')}</TableHead>
-                  <TableHead className="text-right">{t('admin.orgs.status')}</TableHead>
-                  <TableHead className="text-right">{t('admin.orgs.created')}</TableHead>
-                  <TableHead className="text-right">{t('clients.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {organizations?.map((org: Organization) => (
-                  <TableRow key={org.id}>
-                    <TableCell>
-                      <div 
-                        className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        onClick={() => handleViewOrg(org.id)}
+            <>
+              {/* Mobile card list — hidden on md+ */}
+              <div className="md:hidden divide-y divide-gray-100 dark:divide-slate-700">
+                {organizations.map((org: Organization) => (
+                  <div key={org.id} className="p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
+                      {org.name[0]?.toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0" onClick={() => handleViewOrg(org.id)}>
+                      <p className="font-semibold text-gray-900 dark:text-white truncate">{org.name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <Badge variant="outline" className="text-xs py-0">{getCategoryLabel(org.category)}</Badge>
+                        <Badge className="text-xs py-0">{getPlanLabel(org.plan)}</Badge>
+                        <Badge variant={org.is_active ? 'default' : 'destructive'} className="text-xs py-0">
+                          {org.is_active ? t('admin.orgs.active') : t('admin.orgs.inactive')}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5">{format(new Date(org.created_at), 'dd/MM/yyyy')}</p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button variant="ghost" size="sm" className="h-10 w-10 p-0" onClick={() => handleViewOrg(org.id)}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="sm" className="h-10 w-10 p-0 bg-yellow-50 text-yellow-700"
+                        onClick={() => handleSeedTestData(org.id, org.name)}
+                        disabled={seedingOrgId === org.id}
                       >
-                        <p className="font-medium">{org.name}</p>
-                        <p className="text-sm text-gray-500">{org.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{getCategoryLabel(org.category)}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge>{getPlanLabel(org.plan)}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={org.is_active ? 'default' : 'destructive'} className="flex items-center gap-1 w-fit">
-                        {org.is_active ? (
-                          <>
-                            <CheckCircle2 className="w-3 h-3" />
-                            {t('admin.orgs.active')}
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="w-3 h-3" />
-                            {t('admin.orgs.inactive')}
-                          </>
-                        )}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(org.created_at), 'dd/MM/yyyy')}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleViewOrg(org.id)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleSeedTestData(org.id, org.name)}
-                          disabled={seedingOrgId === org.id}
-                          className="bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200"
-                          title="מלא נתוני בדיקה"
-                        >
-                          {seedingOrgId === org.id ? (
-                            <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <Gift className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                        {seedingOrgId === org.id
+                          ? <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
+                          : <Gift className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-                {(!organizations || organizations.length === 0) && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-gray-500">
-                      {t('admin.orgs.noOrgs')}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+              </div>
+
+              {/* Desktop table — hidden on mobile */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-right">{t('admin.orgs.name')}</TableHead>
+                      <TableHead className="text-right">{t('admin.orgs.category')}</TableHead>
+                      <TableHead className="text-right">{t('admin.orgs.plan')}</TableHead>
+                      <TableHead className="text-right">{t('admin.orgs.status')}</TableHead>
+                      <TableHead className="text-right">{t('admin.orgs.created')}</TableHead>
+                      <TableHead className="text-right">{t('clients.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {organizations.map((org: Organization) => (
+                      <TableRow key={org.id}>
+                        <TableCell>
+                          <div className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors" onClick={() => handleViewOrg(org.id)}>
+                            <p className="font-medium">{org.name}</p>
+                            <p className="text-sm text-gray-500">{org.email}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell><Badge variant="outline">{getCategoryLabel(org.category)}</Badge></TableCell>
+                        <TableCell><Badge>{getPlanLabel(org.plan)}</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant={org.is_active ? 'default' : 'destructive'} className="flex items-center gap-1 w-fit">
+                            {org.is_active ? <><CheckCircle2 className="w-3 h-3" />{t('admin.orgs.active')}</> : <><XCircle className="w-3 h-3" />{t('admin.orgs.inactive')}</>}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{format(new Date(org.created_at), 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleViewOrg(org.id)}><Eye className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleSeedTestData(org.id, org.name)} disabled={seedingOrgId === org.id} className="bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200" title="מלא נתוני בדיקה">
+                              {seedingOrgId === org.id ? <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" /> : <Gift className="w-4 h-4" />}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -733,9 +732,9 @@ export default function OrganizationsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 overflow-x-auto">
+                  <div className="space-y-2">
                     {orgUsers?.map((user) => (
-                      <div key={user.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-2 min-w-[280px]">
+                      <div key={user.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg gap-2">
                         <div className="flex-1 w-full">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-medium break-all">{user.email}</p>

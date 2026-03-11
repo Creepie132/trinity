@@ -50,7 +50,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">{t('admin.welcome')}</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('admin.welcome')}</h1>
         <p className="text-gray-600 mt-1">{t('admin.subtitle')}</p>
       </div>
 

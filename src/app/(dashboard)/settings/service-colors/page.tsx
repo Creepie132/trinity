@@ -125,7 +125,7 @@ export default function ServiceColorsPage() {
             {language === 'he' ? <ChevronRight className="w-4 h-4 ml-2" /> : <ChevronLeft className="w-4 h-4 mr-2" />}
             {t('display.back')}
           </Button>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('settings.serviceColors')}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('settings.serviceColors')}</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">{t('settings.serviceColors.desc')}</p>
         </div>
 
@@ -161,7 +161,7 @@ export default function ServiceColorsPage() {
           {language === 'he' ? <ChevronRight className="w-4 h-4 ml-2" /> : <ChevronLeft className="w-4 h-4 mr-2" />}
           {t('display.back')}
         </Button>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('settings.serviceColors')}</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('settings.serviceColors')}</h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">{t('settings.serviceColors.desc')}</p>
       </div>
 

@@ -17,7 +17,7 @@ export default function CustomizePage() {
             <ChevronRight className="w-4 h-4 mx-2" />
             <span>התאמה מתקדמת</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">התאמה מתקדמת</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">התאמה מתקדמת</h1>
           <p className="text-gray-600 mt-1">בקרוב...</p>
         </div>
       </div>

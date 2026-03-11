@@ -884,7 +884,7 @@ export default function AdminSubscriptionsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Shield className="w-8 h-8 text-amber-600" />
-          <h1 className="text-3xl font-bold">{t.title}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">{t.title}</h1>
         </div>
       </div>
 

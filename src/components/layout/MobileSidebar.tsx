@@ -144,7 +144,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent side={sidebarSide} className="w-80 p-0 bg-gradient-to-b from-white to-gray-50 dark:from-slate-800 dark:to-slate-900">
+        <SheetContent side={sidebarSide} className="w-full max-w-[320px] sm:w-80 p-0 bg-gradient-to-b from-white to-gray-50 dark:from-slate-800 dark:to-slate-900">
           <div className="flex flex-col h-full">
             {/* Header */}
             <SheetHeader className="p-6 pb-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">

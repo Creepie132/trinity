@@ -251,7 +251,7 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('admin.ads.title')}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('admin.ads.title')}</h1>
           <p className="text-gray-600 mt-1">{t('admin.ads.subtitle')}</p>
         </div>
         <Button onClick={() => setAddDialogOpen(true)}>
@@ -267,7 +267,7 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">{t('admin.ads.activeCampaigns')}</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">
+                <p className="text-2xl md:text-3xl font-bold text-green-600 mt-1">
                   {stats?.activeCampaigns || 0}
                 </p>
               </div>
@@ -283,7 +283,7 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">{t('admin.ads.totalClicks')}</p>
-                <p className="text-3xl font-bold text-blue-600 mt-1">
+                <p className="text-2xl md:text-3xl font-bold text-blue-600 mt-1">
                   {stats?.monthClicks || 0}
                 </p>
               </div>
@@ -299,7 +299,7 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">{t('admin.ads.ctr')}</p>
-                <p className="text-3xl font-bold text-purple-600 mt-1">
+                <p className="text-2xl md:text-3xl font-bold text-purple-600 mt-1">
                   {stats?.avgCtr || '0.00'}%
                 </p>
               </div>
@@ -323,6 +323,45 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
           {campaignsLoading ? (
             <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
           ) : (
+            <>
+            {/* Mobile cards */}
+            <div className="md:hidden divide-y">
+              {campaigns?.map((campaign: AdCampaign) => {
+                const status = getCampaignStatus(campaign)
+                const StatusIcon = status.icon
+                return (
+                  <div key={campaign.id} className="py-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <img src={campaign.banner_url} alt={campaign.advertiser_name} className="w-16 h-10 object-cover rounded border flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{campaign.advertiser_name}</p>
+                        <p className="text-xs text-gray-500 truncate">{campaign.link_url}</p>
+                      </div>
+                      <Badge variant={status.variant} className="flex items-center gap-1 flex-shrink-0">
+                        <StatusIcon className="w-3 h-3" />
+                        {status.label}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                      <span className="flex items-center gap-1"><MousePointerClick className="w-3 h-3" />{campaign.clicks}</span>
+                      <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{campaign.impressions}</span>
+                      <span className="font-medium text-purple-600">{calculateCTR(campaign.clicks, campaign.impressions)}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={campaign.is_active} onCheckedChange={(checked) => handleToggleActive(campaign.id, checked)} />
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(campaign.id, campaign.advertiser_name)} className="min-h-[44px]">
+                        <Trash className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+              {(!campaigns || campaigns.length === 0) && (
+                <div className="text-center py-12 text-gray-500">אין קמפיינים פעילים</div>
+              )}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -433,6 +472,8 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
                 )}
               </TableBody>
             </Table>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>

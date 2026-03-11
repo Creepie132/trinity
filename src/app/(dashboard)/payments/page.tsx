@@ -261,7 +261,7 @@ export default function PaymentsPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         {/* Title - centered on mobile, left on desktop */}
         <div className="text-center md:text-right">
-          <h1 className="text-3xl font-bold text-gray-900">{t('payments.title')}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{t('payments.title')}</h1>
           <p className="text-gray-600 mt-1">
             {t('common.total')}: {payments?.length || 0} {t('payments.title')}
           </p>

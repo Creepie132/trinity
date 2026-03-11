@@ -130,7 +130,7 @@ export default function BillingPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('admin.billing.title')}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('admin.billing.title')}</h1>
           <p className="text-gray-600 mt-1">{t('admin.billing.subtitle')}</p>
         </div>
         <Button 
@@ -154,7 +154,7 @@ export default function BillingPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">{t('admin.billing.paid')}</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">
+                <p className="text-2xl md:text-3xl font-bold text-green-600 mt-1">
                   {stats?.paid || 0}
                 </p>
               </div>
@@ -170,7 +170,7 @@ export default function BillingPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">{t('admin.billing.trial')}</p>
-                <p className="text-3xl font-bold text-yellow-600 mt-1">
+                <p className="text-2xl md:text-3xl font-bold text-yellow-600 mt-1">
                   {stats?.trial || 0}
                 </p>
               </div>
@@ -186,7 +186,7 @@ export default function BillingPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">{t('admin.billing.overdue')}</p>
-                <p className="text-3xl font-bold text-red-600 mt-1">
+                <p className="text-2xl md:text-3xl font-bold text-red-600 mt-1">
                   {stats?.overdue || 0}
                 </p>
               </div>
@@ -224,6 +224,65 @@ export default function BillingPage() {
           {orgsLoading ? (
             <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
           ) : (
+            <>
+            {/* Mobile cards */}
+            <div className="md:hidden divide-y">
+              {organizations?.map((org: Organization) => (
+                <div key={org.id} className={`py-4 space-y-3 ${isOverdue(org) ? 'bg-red-50' : ''}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{org.name}</p>
+                      <p className="text-sm text-gray-500">{org.email}</p>
+                    </div>
+                    <Badge variant={org.is_active ? 'default' : 'secondary'}>
+                      {org.is_active ? t('admin.orgs.active') : t('admin.orgs.inactive')}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {getBillingStatusBadge(org.billing_status)}
+                    <Select value={org.plan} onValueChange={(value) => handleUpdatePlan(org.id, value)}>
+                      <SelectTrigger className="w-[110px] h-8 text-xs">
+                        <SelectValue>{getPlanLabel(org.plan)}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="basic">{t('admin.orgs.basic')}</SelectItem>
+                        <SelectItem value="pro">{t('admin.orgs.pro')}</SelectItem>
+                        <SelectItem value="enterprise">{t('admin.orgs.enterprise')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {org.billing_due_date && (
+                      <span className={`text-xs ${isOverdue(org) ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+                        {format(new Date(org.billing_due_date), 'dd/MM/yyyy')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {org.billing_status !== 'paid' && (
+                      <Button size="sm" variant="default" onClick={() => handleMarkAsPaid(org.id)} disabled={markAsPaid.isPending} className="min-h-[44px]">
+                        <CheckCircle2 className="w-4 h-4 ml-1" />
+                        {t('admin.billing.markPaid')}
+                      </Button>
+                    )}
+                    {org.is_active ? (
+                      <Button size="sm" variant="destructive" onClick={() => handleToggleActive(org.id, false)} disabled={toggleActive.isPending} className="min-h-[44px]">
+                        <Lock className="w-4 h-4 ml-1" />
+                        {t('admin.billing.block')}
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="default" onClick={() => handleToggleActive(org.id, true)} disabled={toggleActive.isPending} className="min-h-[44px]">
+                        <Unlock className="w-4 h-4 ml-1" />
+                        {t('admin.billing.activate')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {(!organizations || organizations.length === 0) && (
+                <div className="text-center py-12 text-gray-500">{t('admin.billing.noOrgs')}</div>
+              )}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -332,6 +391,8 @@ export default function BillingPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>

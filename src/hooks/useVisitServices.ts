@@ -11,7 +11,8 @@ export function useVisitServices(visitId: string) {
         throw new Error(error.error || 'Failed to fetch visit services')
       }
       const data = await response.json()
-      return data.services as VisitService[]
+      // API returns array directly (not { services: [] })
+      return (Array.isArray(data) ? data : data.services ?? []) as VisitService[]
     },
     enabled: !!visitId,
   })

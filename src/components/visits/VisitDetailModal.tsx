@@ -200,7 +200,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       queryClient.invalidateQueries({ queryKey: ['visit-services', visit.id] })
       setPriceOffset(prev => prev + product.sell_price)
       toast.success(locale === 'ru' ? `Товар добавлен: ${product.name}` : `מוצר נוסף: ${product.name}`)
-      setViewMode('main')
+      setViewMode('services')
     } catch (e: any) {
       toast.error(locale === 'ru' ? `Ошибка: ${e.message}` : `שגיאה: ${e.message}`)
     } finally {
@@ -646,54 +646,48 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
     const total = visitServices.reduce((s, vs) => s + (vs.price || 0), 0)
     return (
       <div className="flex flex-col h-full">
-        <div className="p-6 pb-3">
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-4">
-            <button onClick={() => setViewMode('main')} className="text-slate-400 hover:text-slate-600 transition">
-              <ArrowLeft size={20} />
-            </button>
-            <h2 className="text-xl font-bold flex-1">
-              {locale === 'ru' ? 'Услуги и товары' : 'שירותים ומוצרים'}
-            </h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setViewMode('add-service'); if (servicesList.length === 0) fetchServices() }}
-                className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 text-xs font-semibold hover:bg-blue-100 transition flex items-center gap-1"
-              >
-                <Plus size={12} />
-                {locale === 'ru' ? 'Услуга' : 'שירות'}
-              </button>
-              <button
-                onClick={() => { setViewMode('add-product'); if (productsList.length === 0) fetchProducts() }}
-                className="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-600 text-xs font-semibold hover:bg-amber-100 transition flex items-center gap-1"
-              >
-                <Plus size={12} />
-                {locale === 'ru' ? 'Товар' : 'מוצר'}
-              </button>
-            </div>
-          </div>
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+          <button
+            onClick={() => setViewMode('main')}
+            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center flex-shrink-0 transition"
+          >
+            <ArrowLeft size={18} className="text-slate-600" />
+          </button>
+          <h2 className="text-lg font-bold flex-1 text-slate-900">
+            {locale === 'ru' ? 'Услуги и товары' : 'שירותים ומוצרים'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center flex-shrink-0 transition"
+          >
+            <X size={18} className="text-slate-600" />
+          </button>
+        </div>
 
-          {/* List */}
+        {/* Scrollable list */}
+        <div className="flex-1 overflow-y-auto px-5 py-3">
           {visitServices.length === 0 ? (
-            <div className="py-10 text-center text-slate-400 text-sm">
-              {locale === 'ru' ? 'Услуги не добавлены' : 'לא נוספו שירותים'}
+            <div className="flex flex-col items-center justify-center py-14 text-slate-400">
+              <Scissors size={36} className="mb-3 opacity-30" />
+              <p className="text-sm">{locale === 'ru' ? 'Услуги ещё не добавлены' : 'לא נוספו שירותים עדיין'}</p>
             </div>
           ) : (
-            <div className="rounded-2xl border border-slate-100 overflow-hidden">
-              {visitServices.map((vs, idx) => {
+            <div className="space-y-2">
+              {visitServices.map((vs) => {
                 const name = locale === 'ru' ? (vs.service_name_ru || vs.service_name) : vs.service_name
                 return (
                   <div
                     key={vs.id}
-                    className={`flex items-center gap-3 px-3 py-3 ${idx > 0 ? 'border-t border-slate-100' : ''}`}
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition"
                   >
-                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <Scissors size={14} className="text-blue-500" />
+                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <Scissors size={15} className="text-blue-600" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-800 truncate">{name}</p>
                       {vs.duration_minutes > 0 && (
-                        <p className="text-xs text-slate-400">{formatDuration(vs.duration_minutes)}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{formatDuration(vs.duration_minutes)}</p>
                       )}
                     </div>
                     {vs.price > 0 && (
@@ -702,7 +696,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
                     <button
                       onClick={() => {
                         removeVisitService.mutate(vs.id)
-                        setPriceOffset(prev => prev - vs.price)
+                        setPriceOffset(prev => prev - (vs.price || 0))
                       }}
                       className="w-7 h-7 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition"
                     >
@@ -711,16 +705,36 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
                   </div>
                 )
               })}
-
-              {/* Total row */}
-              {visitServices.length > 0 && (
-                <div className="flex justify-between items-center px-4 py-3 bg-slate-50 border-t border-slate-200">
-                  <span className="text-sm font-bold text-slate-600">{labels.total}</span>
-                  <span className="text-base font-bold text-emerald-600">₪{total}</span>
-                </div>
-              )}
             </div>
           )}
+        </div>
+
+        {/* Bottom actions + total */}
+        <div className="px-5 pb-5 pt-3 space-y-3 border-t border-slate-100">
+          {/* Total */}
+          {visitServices.length > 0 && (
+            <div className="flex justify-between items-center px-1">
+              <span className="text-sm font-bold text-slate-600">{labels.total}</span>
+              <span className="text-lg font-bold text-emerald-600">₪{total}</span>
+            </div>
+          )}
+          {/* Action buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => { setViewMode('add-service'); if (servicesList.length === 0) fetchServices() }}
+              className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-50 text-blue-600 text-sm font-semibold hover:bg-blue-100 active:scale-95 transition"
+            >
+              <Plus size={16} />
+              {locale === 'ru' ? 'Услуга' : 'שירות'}
+            </button>
+            <button
+              onClick={() => { setViewMode('add-product'); if (productsList.length === 0) fetchProducts() }}
+              className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-amber-50 text-amber-600 text-sm font-semibold hover:bg-amber-100 active:scale-95 transition"
+            >
+              <Plus size={16} />
+              {locale === 'ru' ? 'Товар' : 'מוצר'}
+            </button>
+          </div>
         </div>
       </div>
     )

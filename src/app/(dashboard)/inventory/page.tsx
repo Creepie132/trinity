@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useProducts, useLowStockProducts } from '@/hooks/useProducts'
 import { useFeatures } from '@/hooks/useFeatures'
-import { Package, Plus, Camera, Search } from 'lucide-react'
+import { Package, Plus, Camera, Search, Trash2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { CreateProductDialog } from '@/components/inventory/CreateProductDialog'
@@ -20,6 +20,7 @@ export default function InventoryPage() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [stockFilter, setStockFilter] = useState<'all' | 'out_of_stock' | 'in_stock'>('all')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
 
@@ -55,8 +56,22 @@ export default function InventoryPage() {
       result = result.filter((product) => product.category === categoryFilter)
     }
 
+    // Stock filter
+    if (stockFilter === 'out_of_stock') {
+      result = result.filter((product) => (product.quantity || 0) === 0)
+    } else if (stockFilter === 'in_stock') {
+      result = result.filter((product) => (product.quantity || 0) > 0)
+    }
+
     return result
-  }, [products, searchQuery, categoryFilter])
+  }, [products, searchQuery, categoryFilter, stockFilter])
+
+  async function handleDeleteProduct(e: React.MouseEvent, productId: string) {
+    e.stopPropagation()
+    if (!confirm(locale === 'he' ? 'למחוק את המוצר?' : 'Удалить товар?')) return
+    await fetch(`/api/products/${productId}`, { method: 'DELETE' })
+    refetch()
+  }
 
   // Categories
   const categories = Array.from(
@@ -120,16 +135,21 @@ export default function InventoryPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-2xl shadow-card border border-card p-4">
+        <button
+          onClick={() => { setStockFilter('all'); setCategoryFilter('all') }}
+          className="bg-white rounded-2xl shadow-card border border-card p-4 text-start hover:shadow-card-hover transition-shadow"
+        >
           <p className="text-xs text-slate-400">
             {locale === 'he' ? 'שווי מלאי' : 'Стоимость склада'}
           </p>
           <p className="text-2xl font-bold mt-1">₪{totalValue.toLocaleString()}</p>
-        </div>
+        </button>
 
         <button
-          onClick={() => setCategoryFilter('all')}
-          className="bg-white rounded-2xl shadow-card border border-card p-4 text-start hover:shadow-card-hover transition-shadow"
+          onClick={() => setStockFilter(stockFilter === 'out_of_stock' ? 'all' : 'out_of_stock')}
+          className={`rounded-2xl shadow-card border p-4 text-start hover:shadow-card-hover transition-shadow ${
+            stockFilter === 'out_of_stock' ? 'bg-red-50 border-red-200' : 'bg-white border-card'
+          }`}
         >
           <p className="text-xs text-slate-400">
             {locale === 'he' ? 'אזל מהמלאי' : 'Нет в наличии'}
@@ -137,12 +157,17 @@ export default function InventoryPage() {
           <p className="text-2xl font-bold mt-1 text-red-500">{outOfStockCount}</p>
         </button>
 
-        <div className="bg-white rounded-2xl shadow-card border border-card p-4">
+        <button
+          onClick={() => setStockFilter(stockFilter === 'in_stock' ? 'all' : 'in_stock')}
+          className={`rounded-2xl shadow-card border p-4 text-start hover:shadow-card-hover transition-shadow ${
+            stockFilter === 'in_stock' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-card'
+          }`}
+        >
           <p className="text-xs text-slate-400">
             {locale === 'he' ? 'פריטים פעילים' : 'Активных товаров'}
           </p>
           <p className="text-2xl font-bold mt-1">{activeCount}</p>
-        </div>
+        </button>
       </div>
 
       {/* Low Stock Alert */}
@@ -283,7 +308,7 @@ export default function InventoryPage() {
                 </div>
 
                 {/* Количество */}
-                <div className="w-full text-center">
+                <div className="w-full text-center mb-3">
                   <p
                     className={`text-sm font-semibold ${
                       product.quantity === 0 ? 'text-red-500' : 'text-slate-600'
@@ -292,6 +317,15 @@ export default function InventoryPage() {
                     {locale === 'he' ? 'במלאי' : 'В наличии'}: {product.quantity}
                   </p>
                 </div>
+
+                {/* Кнопка удалить */}
+                <button
+                  onClick={(e) => handleDeleteProduct(e, product.id)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-500 text-xs font-medium transition"
+                >
+                  <Trash2 size={13} />
+                  {locale === 'he' ? 'מחק' : 'Удалить'}
+                </button>
               </div>
             )
           })

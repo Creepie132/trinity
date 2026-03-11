@@ -13,6 +13,7 @@ import { useMeetingMode } from '@/hooks/useMeetingMode'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { MODULES } from '@/lib/modules-config'
+import { BranchSwitcher } from '@/components/BranchSwitcher'
 import {
   Sheet,
   SheetContent,
@@ -111,6 +112,11 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
               </div>
             </div>
           </SheetHeader>
+
+          {/* Branch Switcher — shown only when branches exist */}
+          <div className="px-2 pt-3">
+            <BranchSwitcher />
+          </div>
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">

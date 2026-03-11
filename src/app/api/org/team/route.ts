@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Only owners can invite users' }, { status: 403 })
   }
 
-  const { email, role } = await request.json()
+  const { email, role, targetOrgId } = await request.json()
 
   if (!email || !role) {
     return NextResponse.json({ error: 'email and role required' }, { status: 400 })
@@ -135,11 +135,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
   }
 
+  // Resolve actual org to add user to (main org or a branch)
+  let actualOrgId = orgId
+  if (targetOrgId && targetOrgId !== orgId) {
+    const { data: branch } = await supabaseAdmin
+      .from('branches')
+      .select('child_org_id')
+      .eq('parent_org_id', orgId)
+      .eq('child_org_id', targetOrgId)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (!branch) {
+      return NextResponse.json({ error: 'Invalid branch' }, { status: 400 })
+    }
+    actualOrgId = targetOrgId
+  }
+
   // Check not already in org
   const { data: existing } = await supabaseAdmin
     .from('org_users')
     .select('email')
-    .eq('org_id', orgId)
+    .eq('org_id', actualOrgId)
     .eq('email', normalizedEmail)
     .maybeSingle()
 
@@ -151,28 +167,28 @@ export async function POST(request: NextRequest) {
   const { data: org } = await supabaseAdmin
     .from('organizations')
     .select('name')
-    .eq('id', orgId)
+    .eq('id', actualOrgId)
     .single()
 
   // Insert org_users record (user_id null = pending until first login)
   const { error: insertError } = await supabaseAdmin
     .from('org_users')
-    .insert({ org_id: orgId, email: normalizedEmail, role, user_id: null })
+    .insert({ org_id: actualOrgId, email: normalizedEmail, role, user_id: null })
 
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 500 })
   }
 
-  // Update billing_amount
+  // Update billing_amount for target org
   const { count } = await supabaseAdmin
     .from('org_users')
     .select('*', { count: 'exact', head: true })
-    .eq('org_id', orgId)
+    .eq('org_id', actualOrgId)
 
   await supabaseAdmin
     .from('organizations')
     .update({ billing_amount: calcBilling(count || 1) })
-    .eq('id', orgId)
+    .eq('id', actualOrgId)
 
   // Send invitation email (non-blocking)
   const { sendInvitationEmail } = await import('@/lib/emails')

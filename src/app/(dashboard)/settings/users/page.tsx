@@ -17,9 +17,11 @@ import {
   Mail,
   Clock,
   ChevronDown,
+  Building2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { useBranches } from '@/hooks/useBranches'
 
 const BASE_PRICE = 249
 const PER_USER = 99
@@ -49,6 +51,8 @@ const tr = {
     removed: 'המשתמש הוסר',
     roleChanged: 'התפקיד שונה',
     joined: 'הצטרף',
+    branchLabel: 'לאיזה סניף?',
+    mainBranch: 'ראשי (כל הסניפים)',
   },
   ru: {
     title: 'Управление командой',
@@ -74,6 +78,8 @@ const tr = {
     removed: 'Пользователь удалён',
     roleChanged: 'Роль изменена',
     joined: 'Добавлен',
+    branchLabel: 'В какой филиал?',
+    mainBranch: 'Главный (все филиалы)',
   },
 }
 
@@ -117,8 +123,11 @@ export default function UsersSettingsPage() {
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'owner' | 'moderator' | 'user'>('user')
+  const [inviteTargetOrgId, setInviteTargetOrgId] = useState<string>('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [roleDropdown, setRoleDropdown] = useState<string | null>(null)
+
+  const { data: branches = [] } = useBranches()
 
   // Fetch team members
   const { data, isLoading } = useQuery({
@@ -133,11 +142,11 @@ export default function UsersSettingsPage() {
 
   // Invite mutation
   const invite = useMutation({
-    mutationFn: async ({ email, role }: { email: string; role: string }) => {
+    mutationFn: async ({ email, role, targetOrgId }: { email: string; role: string; targetOrgId?: string }) => {
       const res = await fetch('/api/org/team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, role }),
+        body: JSON.stringify({ email, role, targetOrgId: targetOrgId || undefined }),
       })
       if (!res.ok) {
         const e = await res.json()
@@ -149,6 +158,7 @@ export default function UsersSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['org-team'] })
       toast.success(t.emailSent)
       setInviteEmail('')
+      setInviteTargetOrgId('')
       setShowInviteForm(false)
     },
     onError: (e: any) => toast.error(e.message),
@@ -201,7 +211,7 @@ export default function UsersSettingsPage() {
       toast.error(t.emailRequired)
       return
     }
-    invite.mutate({ email: inviteEmail.trim(), role: inviteRole })
+    invite.mutate({ email: inviteEmail.trim(), role: inviteRole, targetOrgId: inviteTargetOrgId || undefined })
   }
 
   const members = data?.users || []
@@ -414,6 +424,32 @@ export default function UsersSettingsPage() {
             </div>
           </div>
 
+          {/* Branch selector — only shown when branches exist */}
+          {branches.length > 0 && (
+            <div>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 block">
+                {t.branchLabel}
+              </label>
+              <div className="relative">
+                <Building2 className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <select
+                  value={inviteTargetOrgId}
+                  onChange={(e) => setInviteTargetOrgId(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-slate-600 rounded-lg ps-9 pe-3 py-2 text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                >
+                  <option value="">{t.mainBranch}</option>
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.child_org_id}>
+                      {branch.name}
+                      {branch.address ? ` — ${branch.address}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute end-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+          )}
+
           {/* Billing preview */}
           <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-slate-700/50 rounded-lg px-3 py-2">
             {locale === 'he'
@@ -430,7 +466,7 @@ export default function UsersSettingsPage() {
               {invite.isPending ? '...' : t.send}
             </button>
             <button
-              onClick={() => { setShowInviteForm(false); setInviteEmail('') }}
+              onClick={() => { setShowInviteForm(false); setInviteEmail(''); setInviteTargetOrgId('') }}
               className="px-5 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
             >
               {t.cancel}

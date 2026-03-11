@@ -1,16 +1,25 @@
 import crypto from 'crypto'
 
-// ============================================
-// АУТЕНТИФИКАЦИЯ — заголовки для Tranzila API
-// ============================================
+// ============================================================
+// КОНСТАНТЫ
+// ============================================================
 
-/**
- * Создаёт заголовки для Tranzila REST API
- * Формула: HMAC_SHA256(message=publicKey, key=privateKey+timestamp+nonce)
- */
+const TRANZILA_CGI_URL =
+  process.env.TRANZILA_API_URL ||
+  'https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi'
+
+// ============================================================
+// HMAC АУТЕНТИФИКАЦИЯ — заголовки для Tranzila Billing REST API
+//
+// Формула:
+//   msg  = PUBLIC KEY  (длинный)
+//   key  = PRIVATE KEY (короткий) + timestamp + nonce
+//   accessToken = HMAC_SHA256(key, msg).hex
+// ============================================================
+
 export function createTranzilaHeaders(publicKey: string, privateKey: string) {
-  const timestamp = Math.round(Date.now() / 1000) // Unix timestamp в секундах
-  const nonce = crypto.randomBytes(40).toString('hex') // 80 символов hex
+  const timestamp = Math.round(Date.now() / 1000).toString()
+  const nonce = crypto.randomBytes(40).toString('hex') // 80-символьный hex
 
   const accessToken = crypto
     .createHmac('sha256', privateKey + timestamp + nonce)
@@ -19,12 +28,27 @@ export function createTranzilaHeaders(publicKey: string, privateKey: string) {
 
   return {
     'X-tranzila-api-app-key': publicKey,
-    'X-tranzila-api-request-time': timestamp.toString(),
+    'X-tranzila-api-request-time': timestamp,
     'X-tranzila-api-nonce': nonce,
     'X-tranzila-api-access-token': accessToken,
     'Content-Type': 'application/json',
   }
 }
+
+/** Генерирует заголовки из переменных окружения */
+export function generateTranzilaHeaders() {
+  const publicKey = process.env.TRANZILA_PUBLIC_KEY!
+  const privateKey = process.env.TRANZILA_PRIVATE_KEY!
+  return createTranzilaHeaders(publicKey, privateKey)
+}
+
+// ============================================================
+// ШАГ 1 — ПЕРВЫЙ ПЛАТЁЖ через терминал ambersolt
+//
+// После оплаты Tranzila возвращает TranzilaTK (токен карты).
+// Токен сохраняется в organizations.tranzila_card_token
+// и используется для всех следующих рекуррентных платежей.
+// ============================================================
 
 export async function createTranzilaPaymentLink({
   amount,
@@ -32,35 +56,31 @@ export async function createTranzilaPaymentLink({
   paymentId,
   successUrl,
   failUrl,
-  terminal,
-  password,
-  saveCard,
+  saveCard = true,
   customField2,
+  terminal: terminalOverride,
+  password: passwordOverride,
 }: {
   amount: number
   description: string
   paymentId: string
   successUrl: string
   failUrl: string
+  saveCard?: boolean
+  customField2?: string
+  // Опциональные переопределения (по умолчанию — из переменных окружения)
   terminal?: string
   password?: string
-  saveCard?: boolean // Запросить токенизацию карты (TranzilaTK)
-  customField2?: string // Доп. поле для передачи типа платежа
 }) {
-  // For tokenization (saveCard), use the token terminal and its dedicated password
-  const terminalId = terminal || (saveCard
-    ? (process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok')
-    : (process.env.TRANZILA_TERMINAL || 'ambersolt'))
-  const terminalPassword = password || (saveCard
-    ? (process.env.TRANZILA_TOKEN_PASSWORD || '')
-    : (process.env.TRANZILA_PASSWORD || ''))
+  const terminalId = terminalOverride || process.env.TRANZILA_TERMINAL_ID || 'ambersolt'
+  const terminalPassword = passwordOverride || process.env.TRANZILA_TERMINAL_PASSWORD || ''
 
   const params = new URLSearchParams({
-    supplier: terminalId!,
-    TranzilaPW: terminalPassword!,
+    supplier: terminalId,
+    TranzilaPW: terminalPassword,
     sum: amount.toString(),
     currency: '1', // ILS
-    description: description,
+    description,
     tranmode: 'A',
     success_url: successUrl,
     fail_url: failUrl,
@@ -69,42 +89,35 @@ export async function createTranzilaPaymentLink({
     lang: 'il',
   })
 
-  // Запрос токенизации карты для рекуррентных платежей
+  // Запросить токенизацию карты — Tranzila вернёт TranzilaTK
   if (saveCard) {
-    params.append('tranzilaTK', '1') // Tranzila вернёт токен карты
+    params.append('tranzilaTK', '1')
   }
 
-  // Доп. поле для идентификации типа платежа
   if (customField2) {
     params.append('cField2', customField2)
   }
 
-  const paymentLink = `https://direct.tranzila.com/${terminalId}/iframenew.php?${params.toString()}`
+  const url = `https://direct.tranzila.com/${terminalId}/iframenew.php?${params.toString()}`
 
-  return {
-    url: paymentLink,
-    transactionId: null,
-  }
+  return { url, transactionId: null }
 }
 
-// Генерация заголовков для Tranzila Billing API (legacy — использует env vars)
-export function generateTranzilaHeaders() {
-  const publicKey = process.env.TRANZILA_PUBLIC_KEY || process.env.TRANZILA_BILLING_APP_KEY!
-  const privateKey = process.env.TRANZILA_PRIVATE_KEY || process.env.TRANZILA_BILLING_SECRET!
-  return createTranzilaHeaders(publicKey, privateKey)
-}
-
-// ============================================
-// РЕКУРРЕНТНЫЕ ПЛАТЕЖИ — списание по токену карты
-// ============================================
+// ============================================================
+// ШАГ 2 — РЕКУРРЕНТНЫЙ ПЛАТЁЖ по сохранённому токену
+//
+// Используется терминал ambersolttok / пароль LEwWn4N3.
+// Токен был получен на Шаге 1 и хранится в organizations.
+// ============================================================
 
 interface ChargeByTokenParams {
   token: string
   amount: number
   description: string
+  expdate?: string // MMYY — требуется для некоторых транзакций
+  // Опциональные переопределения (по умолчанию — из переменных окружения)
   terminal?: string
   password?: string
-  expdate?: string // MMYY format
 }
 
 interface ChargeResult {
@@ -114,64 +127,55 @@ interface ChargeResult {
   response: string
 }
 
-/**
- * Списание по сохранённому токену карты (TranzilaTK)
- * Используется для рекуррентных платежей подписок
- * Для токенов используется отдельный терминал ambersolttok
- */
 export async function chargeByToken({
   token,
   amount,
   description,
-  terminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok',
-  password = process.env.TRANZILA_TOKEN_PASSWORD || '',
   expdate,
+  terminal: terminalOverride,
+  password: passwordOverride,
 }: ChargeByTokenParams): Promise<ChargeResult> {
-  const apiUrl = process.env.TRANZILA_API_URL || 'https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi'
+  const terminal = terminalOverride || process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok'
+  const password = passwordOverride || process.env.TRANZILA_TOKEN_PASSWORD || ''
 
   const params = new URLSearchParams({
     supplier: terminal,
     TranzilaPW: password,
     TranzilaTK: token,
-    tranmode: 'V', // Verified charge
+    tranmode: 'V',
     sum: amount.toFixed(2),
-    currency: '1', // ILS
+    currency: '1',
     pdesc: description,
     response_return_format: 'json',
   })
 
-  // Добавляем expdate если есть (требуется для некоторых транзакций)
   if (expdate) {
     params.append('expdate', expdate)
   }
 
-  console.log('[Tranzila] Charging token:', {
+  console.log('[Tranzila] chargeByToken:', {
     terminal,
     amount,
     description,
     tokenLast4: token.slice(-4),
   })
 
-  const res = await fetch(apiUrl, {
+  const res = await fetch(TRANZILA_CGI_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params.toString(),
   })
 
   const text = await res.text()
-  console.log('[Tranzila] Raw response:', text)
+  console.log('[Tranzila] raw response:', text)
 
   let data: any
   try {
     data = JSON.parse(text)
   } catch {
-    // Tranzila иногда возвращает не JSON
     throw new Error(`Tranzila invalid response: ${text}`)
   }
 
-  // Tranzila возвращает Response=000 при успехе
   if (data.Response !== '000') {
     const errorMessages: Record<string, string> = {
       '001': 'Blocked card',
@@ -185,34 +189,31 @@ export async function chargeByToken({
       '039': 'Incorrect card number',
       '157': 'Card not permitted for this transaction',
     }
-    const errorMsg = errorMessages[data.Response] || data.error || 'Unknown error'
-    throw new Error(`Tranzila error ${data.Response}: ${errorMsg}`)
+    const msg = errorMessages[data.Response] || data.error || 'Unknown error'
+    throw new Error(`Tranzila error ${data.Response}: ${msg}`)
   }
 
   return {
-    transactionId: data.ConfirmationCode || data.index,
+    transactionId: data.ConfirmationCode || data.index || '',
     last4: data.cardnum || '',
     approvalNumber: data.ConfirmationCode || '',
     response: data.Response,
   }
 }
 
-/**
- * Проверка валидности токена (без списания)
- * sum=1 с tranmode=V делает проверку без реального списания
- */
+// ============================================================
+// ВСПОМОГАТЕЛЬНАЯ — проверка валидности токена без списания
+// ============================================================
+
 export async function validateToken({
   token,
-  terminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok',
-  password = process.env.TRANZILA_TOKEN_PASSWORD || '',
   expdate,
 }: {
   token: string
-  terminal?: string
-  password?: string
   expdate?: string
 }): Promise<boolean> {
-  const apiUrl = process.env.TRANZILA_API_URL || 'https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi'
+  const terminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok'
+  const password = process.env.TRANZILA_TOKEN_PASSWORD || ''
 
   const params = new URLSearchParams({
     supplier: terminal,
@@ -220,7 +221,7 @@ export async function validateToken({
     TranzilaTK: token,
     sum: '1',
     currency: '1',
-    tranmode: 'V', // Verification only
+    tranmode: 'V',
     response_return_format: 'json',
   })
 
@@ -229,14 +230,11 @@ export async function validateToken({
   }
 
   try {
-    const res = await fetch(apiUrl, {
+    const res = await fetch(TRANZILA_CGI_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString(),
     })
-
     const data = await res.json()
     return data.Response === '000'
   } catch {

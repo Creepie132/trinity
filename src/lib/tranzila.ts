@@ -50,10 +50,10 @@ export async function createTranzilaPaymentLink({
   // For tokenization (saveCard), use the token terminal and its dedicated password
   const terminalId = terminal || (saveCard
     ? (process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok')
-    : (process.env.TRANZILA_TERMINAL_ID || 'ambersolt'))
+    : (process.env.TRANZILA_TERMINAL || 'ambersolt'))
   const terminalPassword = password || (saveCard
     ? (process.env.TRANZILA_TOKEN_PASSWORD || '')
-    : (process.env.TRANZILA_TERMINAL_PASSWORD || ''))
+    : (process.env.TRANZILA_PASSWORD || ''))
 
   const params = new URLSearchParams({
     supplier: terminalId!,

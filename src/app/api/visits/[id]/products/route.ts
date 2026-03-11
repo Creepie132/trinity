@@ -1,6 +1,5 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 /**
  * POST /api/visits/[id]/products
@@ -13,26 +12,9 @@ export async function POST(
   try {
     const { id: visitId } = await params
 
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    const { orgId, supabase } = auth
 
     const { product_id } = await request.json()
     if (!product_id) {
@@ -58,6 +40,7 @@ export async function POST(
     const { error: txError } = await supabase
       .from('inventory_transactions')
       .insert({
+        org_id: orgId,
         product_id,
         type: 'sale',
         quantity: -1,

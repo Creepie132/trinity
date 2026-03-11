@@ -1,7 +1,8 @@
 'use client'
 
 import { Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock, Calendar, Scissors, FileText, History, ArrowLeft, Download, Package, ChevronRight, Loader2 } from 'lucide-react'
-import { useVisitServices } from '@/hooks/useVisitServices'
+import { useVisitServices, useRemoveVisitService } from '@/hooks/useVisitServices'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
 
@@ -78,6 +79,11 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
 
   // Fetch visit services
   const { data: visitServices = [] } = useVisitServices(visit?.id || '')
+  const removeVisitService = useRemoveVisitService(visit?.id || '')
+  const queryClient = useQueryClient()
+
+  // Track local price delta (until parent refetches)
+  const [priceOffset, setPriceOffset] = useState(0)
 
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('main')
@@ -89,8 +95,6 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const [servicesList, setServicesList] = useState<ServiceItem[]>([])
   const [productsList, setProductsList] = useState<ProductItem[]>([])
   const [addingItem, setAddingItem] = useState<string | null>(null)
-  // Local added items for itemized list (supplement to visitServices from hook)
-  const [addedItems, setAddedItems] = useState<{ id: string; name: string; price: number; type: 'service' | 'product' }[]>([])
 
   // Fetch instructions when modal opens
   useEffect(() => {
@@ -104,7 +108,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
     if (!isOpen) {
       setViewMode('main')
       setSelectedInstruction(null)
-      setAddedItems([])
+      setPriceOffset(0)
     }
   }, [isOpen])
 
@@ -166,8 +170,10 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
         }),
       })
       if (!res.ok) throw new Error('Failed')
+      queryClient.invalidateQueries({ queryKey: ['visit-services', visit.id] })
+      queryClient.invalidateQueries({ queryKey: ['visits'] })
+      setPriceOffset(prev => prev + (service.price || 0))
       const displayName = locale === 'ru' ? (service.name_ru || service.name) : service.name
-      setAddedItems(prev => [...prev, { id: service.id + Date.now(), name: displayName, price: service.price || 0, type: 'service' }])
       toast.success(locale === 'ru' ? `Услуга добавлена: ${displayName}` : `שירות נוסף: ${displayName}`)
       setViewMode('main')
     } catch {
@@ -186,12 +192,17 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_id: product.id }),
       })
-      if (!res.ok) throw new Error('Failed')
-      setAddedItems(prev => [...prev, { id: product.id + Date.now(), name: product.name, price: product.sell_price, type: 'product' }])
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed')
+      }
+      queryClient.invalidateQueries({ queryKey: ['visits'] })
+      queryClient.invalidateQueries({ queryKey: ['visit-services', visit.id] })
+      setPriceOffset(prev => prev + product.sell_price)
       toast.success(locale === 'ru' ? `Товар добавлен: ${product.name}` : `מוצר נוסף: ${product.name}`)
       setViewMode('main')
-    } catch {
-      toast.error(locale === 'ru' ? 'Ошибка добавления товара' : 'שגיאה בהוספת מוצר')
+    } catch (e: any) {
+      toast.error(locale === 'ru' ? `Ошибка: ${e.message}` : `שגיאה: ${e.message}`)
     } finally {
       setAddingItem(null)
     }
@@ -809,83 +820,56 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           value={displayServiceName || '—'}
         />
         
-        {/* Itemized list: visit_services (from hook) + visit_services (from join) + added this session + products */}
-        {(() => {
-          // Collect all items from different sources
-          const allItems: { id: string; name: string; price: number; duration?: number; type: 'service' | 'product' }[] = []
-
-          // From visitServices hook (DB)
-          visitServices.forEach(vs => {
-            allItems.push({
-              id: vs.id,
-              name: locale === 'ru' ? (vs.service_name_ru || vs.service_name) : vs.service_name,
-              price: vs.price,
-              duration: vs.duration_minutes,
-              type: 'service',
-            })
-          })
-
-          // From visit.visit_services join (if any and not already in hook)
-          if (visit.visit_services && visitServices.length === 0) {
-            visit.visit_services.forEach((vs: any) => {
-              allItems.push({
-                id: vs.id,
-                name: locale === 'he' ? vs.service_name : (vs.service_name_ru || vs.service_name),
-                price: vs.price || 0,
-                type: 'service',
-              })
-            })
-          }
-
-          // From visit.visit_products join
-          if (visit.visit_products) {
-            visit.visit_products.forEach((vp: any) => {
-              allItems.push({
-                id: vp.id,
-                name: vp.product_name || vp.name,
-                price: vp.price || 0,
-                type: 'product',
-              })
-            })
-          }
-
-          if (allItems.length === 0 && addedItems.length === 0) return null
-
-          const allDisplay = [...allItems, ...addedItems]
-          const total = allDisplay.reduce((s, i) => s + i.price, 0)
-
-          return (
-            <div className="px-1 space-y-1">
-              <p className="text-xs text-slate-400 mb-1">{labels.additionalServices}</p>
-              {allDisplay.map((item) => (
-                <div key={item.id} className="flex justify-between items-center text-sm py-1.5 px-2 rounded-lg bg-slate-50">
-                  <div className="flex items-center gap-1.5">
-                    {item.type === 'product'
-                      ? <Package size={12} className="text-amber-500 flex-shrink-0" />
-                      : <Scissors size={12} className="text-blue-500 flex-shrink-0" />
-                    }
-                    <span className="font-medium text-slate-800">{item.name}</span>
-                    {'duration' in item && typeof item.duration === 'number' && item.duration > 0 ? (
-                      <span className="text-xs text-slate-400">{formatDuration(item.duration)}</span>
-                    ) : null}
+        {/* Itemized services list */}
+        {visitServices.length > 0 && (
+          <div className="rounded-2xl border border-slate-100 overflow-hidden">
+            {visitServices.map((vs, idx) => {
+              const name = locale === 'ru' ? (vs.service_name_ru || vs.service_name) : vs.service_name
+              return (
+                <div
+                  key={vs.id}
+                  className={`flex items-center gap-2 px-3 py-2.5 ${idx > 0 ? 'border-t border-slate-100' : ''}`}
+                >
+                  <div className="w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <Scissors size={12} className="text-blue-500" />
                   </div>
-                  {item.price > 0 && <span className="font-semibold text-slate-700">₪{item.price}</span>}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{name}</p>
+                    {vs.duration_minutes > 0 && (
+                      <p className="text-xs text-slate-400">{formatDuration(vs.duration_minutes)}</p>
+                    )}
+                  </div>
+                  {vs.price > 0 && (
+                    <span className="text-sm font-semibold text-slate-700 flex-shrink-0">₪{vs.price}</span>
+                  )}
+                  <button
+                    onClick={() => {
+                      removeVisitService.mutate(vs.id)
+                      setPriceOffset(prev => prev - vs.price)
+                    }}
+                    className="w-6 h-6 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center flex-shrink-0 transition"
+                    title={locale === 'ru' ? 'Удалить' : 'מחק'}
+                  >
+                    <X size={12} className="text-red-400" />
+                  </button>
                 </div>
-              ))}
-              {allDisplay.length > 1 && (
-                <div className="flex justify-between items-center text-sm pt-1 border-t border-slate-200 mt-1 px-2">
-                  <span className="font-bold text-slate-700">{labels.total}</span>
-                  <span className="font-bold text-emerald-600">₪{total}</span>
-                </div>
-              )}
-            </div>
-          )
-        })()}
+              )
+            })}
+            {visitServices.length > 1 && (
+              <div className="flex justify-between items-center px-3 py-2 bg-slate-50 border-t border-slate-100">
+                <span className="text-sm font-bold text-slate-600">{labels.total}</span>
+                <span className="text-sm font-bold text-emerald-600">
+                  ₪{visitServices.reduce((s, vs) => s + (vs.price || 0), 0)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         <InfoRow
           icon={<FileText size={16} />}
           label={labels.price}
-          value={`₪${visit.price || 0}`}
+          value={`₪${(visit.price || 0) + priceOffset}`}
           bold
         />
         

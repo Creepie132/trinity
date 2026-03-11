@@ -174,9 +174,10 @@ export async function POST(request: NextRequest) {
     .update({ billing_amount: calcBilling(count || 1) })
     .eq('id', orgId)
 
-  // Send welcome email (non-blocking)
-  const { sendWelcomeEmail } = await import('@/lib/emails')
-  sendWelcomeEmail(normalizedEmail, org?.name || 'Trinity CRM').catch(console.error)
+  // Send invitation email (non-blocking)
+  const { sendInvitationEmail } = await import('@/lib/emails')
+  const ownerName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Владелец'
+  sendInvitationEmail(normalizedEmail, ownerName, org?.name || 'Trinity CRM').catch(console.error)
 
   return NextResponse.json({ success: true })
 }

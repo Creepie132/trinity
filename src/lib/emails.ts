@@ -24,6 +24,52 @@ export function getEmailTags(category: string = 'transactional') {
   ]
 }
 
+export async function sendInvitationEmail(
+  userEmail: string,
+  ownerName: string,
+  orgName: string,
+  loginUrl: string = 'https://app.ambersol.co.il/login'
+): Promise<boolean> {
+  try {
+    const resend = getResendClient()
+    if (!resend) {
+      console.warn('[Email] Skipping invitation email send - Resend not configured')
+      return false
+    }
+
+    await resend.emails.send({
+      from: 'Trinity CRM <notifications@ambersol.co.il>',
+      to: userEmail,
+      subject: `${ownerName} из ${orgName} приглашает тебя в Trinity`,
+      headers: getEmailHeaders(),
+      tags: getEmailTags('transactional'),
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #F59E0B; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0;">Trinity CRM</h1>
+          </div>
+          <div style="background: #fff; padding: 30px; border: 1px solid #eee; border-radius: 0 0 12px 12px;">
+            <h2>Привет!</h2>
+            <p><strong>${ownerName}</strong> из <strong>${orgName}</strong> приглашает тебя присоединиться к Trinity CRM.</p>
+            <p>Нажми на кнопку ниже чтобы принять приглашение.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${loginUrl}" style="background: #F59E0B; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 18px; font-weight: bold;">Принять приглашение</a>
+            </div>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+            <p style="color: #666; font-size: 14px;">Amber Solutions Systems | ambersol.co.il</p>
+          </div>
+        </div>
+      `,
+    })
+
+    console.log('[Email] ✅ Invitation email sent to:', userEmail)
+    return true
+  } catch (error: any) {
+    console.error('[Email] ❌ Failed to send invitation email:', error.message)
+    return false
+  }
+}
+
 export async function sendWelcomeEmail(userEmail: string, orgName: string): Promise<boolean> {
   try {
     const resend = getResendClient()

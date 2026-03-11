@@ -68,20 +68,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 
-  // 2) Check if user is owner of any organization
-  const { data: ownerOrg } = await supabase
+  // 2) Check if user is a member of any organization (owner or invited staff)
+  const { data: anyOrg } = await supabase
     .from('org_users')
     .select('org_id, role')
     .eq('user_id', user.id)
-    .eq('role', 'owner')
+    .limit(1)
     .maybeSingle()
 
-  if (ownerOrg) {
-    // User is owner → redirect to dashboard
+  if (anyOrg) {
+    // User belongs to an org (owner, moderator, or invited user) → redirect to dashboard
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 
-  // 3) User is not owner → create new organization
+  // 3) User has no org → create new organization (brand new signup)
   console.log('[Callback] User has no owner organization, creating new org...')
   
   try {

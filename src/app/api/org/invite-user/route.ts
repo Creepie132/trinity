@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { sendWelcomeEmail } from '@/lib/emails'
+import { sendInvitationEmail } from '@/lib/emails'
 import { requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
@@ -144,8 +144,9 @@ export async function POST(request: Request) {
 
     console.log('[Invite User] ✅ User invited successfully:', newUser)
 
-    // Send welcome email (don't block on failure)
-    sendWelcomeEmail(normalizedEmail, orgName).catch(err => {
+    // Send invitation email (don't block on failure)
+    const ownerName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Владелец'
+    sendInvitationEmail(normalizedEmail, ownerName, orgName).catch(err => {
       console.error('[Invite User] Email failed but user was created:', err)
     })
 

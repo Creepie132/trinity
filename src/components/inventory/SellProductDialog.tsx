@@ -176,14 +176,14 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
+              className="flex-1 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
             >
               {t('common.cancel')}
             </button>
             <button
               onClick={handleSubmit}
               disabled={createTransaction.isPending || isCreatingLink || !paymentMethod}
-              className="flex-[1.5] py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50"
+              className="flex-[1.5] min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50"
             >
               {(isCreatingLink || createTransaction.isPending) && (
                 <Loader2 className="w-4 h-4 animate-spin" />

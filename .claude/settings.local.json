@@ -63,7 +63,11 @@
       "Bash(ls \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\lib\\\\supabase\\\\\" 2>/dev/null; echo \"---\"; ls \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\lib\\\\\" 2>/dev/null | grep -i supabase)",
       "Bash(ls \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\supabase\\\\migrations\\\\\" 2>/dev/null || echo \"no migrations dir\")",
       "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|warning|Warning\" | grep -v \"node_modules\\\\|DeprecationWarning\" | head -30)",
-      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error TS|Error:|failed\" | grep -v node_modules | head -20)"
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error TS|Error:|failed\" | grep -v node_modules | head -20)",
+      "Bash(find /F/Amber_solutions_Kira/Trinity/src -name \"*Invite*\" -o -name \"*invite*\" | grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(cd /F/Amber_solutions_Kira/Trinity && find src -type f -name \"*.ts\" -o -name \"*.tsx\" | xargs grep -l \"notifications\\\\|NotificationBell\\\\|access_request\\\\|transfer_request\\\\|work_shift\" | head -20)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|warning|✓|✗|Failed\" | head -30)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error TS|Error:|error:|✓|✗|Failed\" | head -30)"
     ]
   }
 }

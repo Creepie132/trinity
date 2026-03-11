@@ -131,9 +131,9 @@ export function Modal({
           {children}
         </div>
 
-        {/* Footer */}
+        {/* Footer — sticky so buttons never scroll out of view on mobile */}
         {footer && (
-          <div className="p-5 pt-2 border-t border-gray-100 dark:border-gray-800">
+          <div className="sticky bottom-0 p-5 pt-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-b-2xl">
             {footer}
           </div>
         )}

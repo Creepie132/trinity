@@ -216,14 +216,14 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
             type="button"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap disabled:opacity-50"
+            className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap disabled:opacity-50"
           >
             {t('common.cancel')}
           </button>
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
+            className="px-5 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
           >
             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
             {isSubmitting ? t('visits.creating') : t('common.add')}
@@ -358,6 +358,7 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             placeholder={t('visits.notes')}
             rows={3}
+            className="max-h-[120px] overflow-y-auto resize-none"
           />
         </div>
       </div>

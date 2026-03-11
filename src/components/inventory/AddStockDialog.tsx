@@ -72,14 +72,14 @@ export function AddStockDialog({ open, onClose, product }: AddStockDialogProps) 
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
+            className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
           >
             {t('common.cancel')}
           </button>
           <button
             onClick={handleSubmit}
             disabled={createTransaction.isPending}
-            className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
+            className="px-5 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
           >
             {createTransaction.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
             {createTransaction.isPending ? t('common.saving') : t('inventory.addStockDialog.confirm')}

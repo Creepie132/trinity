@@ -156,7 +156,7 @@ export function CareInstructionSendModal({
                 <button
                   onClick={() => sendInstruction('sms')}
                   disabled={sending}
-                  className="w-full py-2.5 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full min-h-[44px] rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" /> SMS
                 </button>
@@ -167,7 +167,7 @@ export function CareInstructionSendModal({
               <button
                 onClick={() => sendInstruction('email')}
                 disabled={sending}
-                className="w-full py-2.5 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full min-h-[44px] rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Mail className="w-4 h-4" /> Email
               </button>

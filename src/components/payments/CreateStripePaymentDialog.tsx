@@ -89,7 +89,7 @@ export function CreateStripePaymentDialog({ open, onOpenChange }: CreateStripePa
           <button
             type="button"
             onClick={handleClose}
-            className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
+            className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
           >
             {t('common.cancel')}
           </button>

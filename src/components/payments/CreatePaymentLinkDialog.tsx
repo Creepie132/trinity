@@ -100,14 +100,14 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, onSuccess }: Creat
           <div className="flex gap-2 justify-end">
             <button
               onClick={handleClose}
-              className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
+              className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
             >
               {t('common.cancel')}
             </button>
             <button
               onClick={handleSubmit}
               disabled={createPayment.isPending}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
+              className="px-5 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
             >
               {createPayment.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
               {createPayment.isPending ? t('payments.creating') : t('payments.createLink')}
@@ -117,13 +117,13 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, onSuccess }: Creat
           <div className="flex gap-2 justify-end">
             <button
               onClick={handleClose}
-              className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
+              className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
             >
               {t('common.close')}
             </button>
             <button
               onClick={openLink}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap flex items-center gap-2"
+              className="px-5 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap flex items-center gap-2"
             >
               <ExternalLink className="w-4 h-4" />
               {t('payments.openLink')}

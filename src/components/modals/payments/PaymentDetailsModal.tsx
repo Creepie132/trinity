@@ -211,7 +211,7 @@ export function PaymentDetailsModal() {
             </button>
             <button
               onClick={copyLink}
-              className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
+              className="flex-1 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
             >
               <Copy className="w-4 h-4" />
               {text.copy}
@@ -234,7 +234,7 @@ export function PaymentDetailsModal() {
                   queryClient.invalidateQueries({ queryKey: ['payments'] })
                 }
               }}
-              className="flex-1 py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium border border-red-100 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors whitespace-nowrap"
+              className="flex-1 min-h-[44px] rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium border border-red-100 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors whitespace-nowrap"
             >
               {text.cancel}
             </button>
@@ -255,7 +255,7 @@ export function PaymentDetailsModal() {
               queryClient.invalidateQueries({ queryKey: ['payments'] })
             }
           }}
-          className="w-full py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium border border-red-100 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors whitespace-nowrap"
+          className="w-full min-h-[44px] rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium border border-red-100 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors whitespace-nowrap"
         >
           {text.cancel}
         </button>

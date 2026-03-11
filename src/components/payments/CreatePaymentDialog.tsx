@@ -73,14 +73,14 @@ export function CreatePaymentDialog({ clientId, clientName, open, onOpenChange }
             <button
               type="button"
               onClick={handleClose}
-              className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
+              className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
             >
               ביטול
             </button>
             <button
               onClick={handleSubmit}
               disabled={createPayment.isPending}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
+              className="px-5 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
             >
               {createPayment.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
               {createPayment.isPending ? 'יוצר...' : 'צור קישור'}
@@ -88,10 +88,10 @@ export function CreatePaymentDialog({ clientId, clientName, open, onOpenChange }
           </div>
         ) : (
           <div className="flex gap-2 justify-end">
-            <button onClick={handleClose} className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap">
+            <button onClick={handleClose} className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap">
               סגור
             </button>
-            <button onClick={openLink} className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap flex items-center gap-2">
+            <button onClick={openLink} className="px-5 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap flex items-center gap-2">
               <ExternalLink className="w-4 h-4" />
               פתח קישור
             </button>

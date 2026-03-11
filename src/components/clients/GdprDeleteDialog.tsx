@@ -119,14 +119,14 @@ export function GdprDeleteDialog({
               onOpenChange(false)
             }}
             disabled={loading}
-            className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap disabled:opacity-50"
+            className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap disabled:opacity-50"
           >
             {text.cancel}
           </button>
           <button
             onClick={handleDelete}
             disabled={!isConfirmed || loading}
-            className="px-5 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
+            className="px-5 min-h-[44px] rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             {loading ? text.deleting : text.deleteForever}

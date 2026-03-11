@@ -19,6 +19,15 @@ interface NotificationMetadata {
   org_name?: string
   invited_by_email?: string
   invited_by_phone?: string
+  // transfer_request
+  transfer_request_id?: string
+  from_org_id?: string
+  to_org_id?: string
+  from_org_name?: string
+  to_org_name?: string
+  items_count?: number
+  // transfer_result
+  status?: string
 }
 
 interface Notification {
@@ -177,6 +186,30 @@ export function NotificationBell({ locale }: NotificationBellProps) {
     }
   }
 
+  async function handleTransferAction(notifId: string, transferId: string, action: 'approved' | 'rejected') {
+    try {
+      const res = await fetch('/api/transfer-requests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: transferId, status: action }),
+      })
+      if (!res.ok) {
+        const e = await res.json()
+        console.error(e.error)
+        return
+      }
+      await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [notifId] }),
+      })
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   function handleOpen() {
     setIsOpen(true)
     if (unreadCount > 0) markAllRead()
@@ -214,6 +247,26 @@ export function NotificationBell({ locale }: NotificationBellProps) {
                   </div>
                 </div>
               </a>
+
+              {/* Action buttons for transfer_request type */}
+              {n.type === 'transfer_request' && n.metadata?.transfer_request_id && (
+                <div className="mt-2 ms-5 flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => handleTransferAction(n.id, n.metadata!.transfer_request_id!, 'approved')}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-100 transition-colors"
+                  >
+                    <Check className="w-3 h-3" />
+                    {locale === 'he' ? 'אשר' : 'Одобрить'}
+                  </button>
+                  <button
+                    onClick={() => handleTransferAction(n.id, n.metadata!.transfer_request_id!, 'rejected')}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                    {locale === 'he' ? 'דחה' : 'Отклонить'}
+                  </button>
+                </div>
+              )}
 
               {/* Action buttons for access_invitation type */}
               {n.type === 'access_invitation' && n.metadata && (

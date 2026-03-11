@@ -5,12 +5,14 @@ import Modal from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/badge'
 import { useInventoryTransactions } from '@/hooks/useInventory'
 import { useDeleteProduct } from '@/hooks/useProducts'
+import { useBranches } from '@/hooks/useBranches'
 import { toast } from 'sonner'
-import { Package, Edit, Trash2, ShoppingCart, Plus, Clock, Loader2 } from 'lucide-react'
+import { Package, Edit, Trash2, ShoppingCart, Plus, Clock, Loader2, ArrowRightLeft } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { format } from 'date-fns'
 import type { Product } from '@/types/inventory'
 import { AddStockDialog } from './AddStockDialog'
+import { TransferRequestDialog } from './TransferRequestDialog'
 import { useModalStore } from '@/store/useModalStore'
 
 interface ProductDetailSheetProps {
@@ -31,8 +33,12 @@ export function ProductDetailSheet({
   const deleteProduct = useDeleteProduct()
   const { openModal } = useModalStore()
 
+  const { data: branches = [] } = useBranches()
+  const hasActiveBranches = branches.some((b) => b.is_active)
+
   const [addStockDialogOpen, setAddStockDialogOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false)
 
   if (!product) return null
 
@@ -162,6 +168,15 @@ export function ProductDetailSheet({
               <Plus className="w-4 h-4" />
               {t('inventory.addStock')}
             </button>
+            {hasActiveBranches && (
+              <button
+                onClick={() => setTransferDialogOpen(true)}
+                className="py-2.5 rounded-xl border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+              >
+                <ArrowRightLeft className="w-4 h-4" />
+                {language === 'he' ? 'העברה' : 'Перевод'}
+              </button>
+            )}
             {onEdit && (
               <button
                 onClick={() => {
@@ -329,6 +344,12 @@ export function ProductDetailSheet({
         open={addStockDialogOpen}
         onClose={() => setAddStockDialogOpen(false)}
         product={product}
+      />
+
+      <TransferRequestDialog
+        open={transferDialogOpen}
+        onClose={() => setTransferDialogOpen(false)}
+        preloadedProduct={product}
       />
     </>
   )

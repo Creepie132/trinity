@@ -8,7 +8,7 @@ export async function PUT(
 ) {
   const auth = await getAuthContext()
   if ('error' in auth) return auth.error
-  
+
   const { user, orgId, supabase } = auth
 
   const { id } = await params
@@ -17,7 +17,7 @@ export async function PUT(
   // Проверяем существование задачи и права доступа
   const { data: existingTask } = await supabase
     .from('tasks')
-    .select('status, assigned_to, title')
+    .select('status, assigned_to, title, created_by')
     .eq('id', id)
     .eq('org_id', orgId)
     .single()
@@ -45,13 +45,23 @@ export async function PUT(
   if (body.contact_email !== undefined) updateData.contact_email = body.contact_email
   if (body.contact_address !== undefined) updateData.contact_address = body.contact_address
 
-  // Если статус меняется на 'done', устанавливаем completed_at
-  if (body.status === 'done' && existingTask.status !== 'done') {
+  // Если статус меняется на 'completed', устанавливаем completed_at
+  const isCompletingNow =
+    (body.status === 'completed' || body.status === 'done') &&
+    existingTask.status !== 'completed' &&
+    existingTask.status !== 'done'
+
+  if (isCompletingNow) {
     updateData.completed_at = new Date().toISOString()
   }
 
-  // Если статус меняется с 'done' на что-то другое, очищаем completed_at
-  if (body.status && body.status !== 'done' && existingTask.status === 'done') {
+  // Если статус меняется с 'completed'/'done' на что-то другое, очищаем completed_at
+  if (
+    body.status &&
+    body.status !== 'completed' &&
+    body.status !== 'done' &&
+    (existingTask.status === 'completed' || existingTask.status === 'done')
+  ) {
     updateData.completed_at = null
   }
 
@@ -72,18 +82,41 @@ export async function PUT(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Если задача переназначена другому пользователю, создаём уведомление
+  const taskTitle = updateData.title || existingTask.title
+
+  // Имя текущего пользователя для уведомлений
+  const currentUserName =
+    (user.user_metadata?.full_name as string) ||
+    (user.user_metadata?.name as string) ||
+    user.email?.split('@')[0] ||
+    ''
+
+  // Если задача переназначена другому пользователю — уведомление назначенному
   if (
     body.assigned_to !== undefined &&
     body.assigned_to !== existingTask.assigned_to &&
+    body.assigned_to &&
     body.assigned_to !== user.id
   ) {
     await supabase.from('notifications').insert({
       org_id: orgId,
       user_id: body.assigned_to,
       type: 'task_assigned',
-      title: 'Задача назначена вам',
-      body: updateData.title || existingTask.title,
+      title: 'Вам назначена задача',
+      body: `${taskTitle}${currentUserName ? ` — от ${currentUserName}` : ''}`,
+      link: `/diary?task=${id}`,
+      reference_id: id,
+    })
+  }
+
+  // Если задача завершена — уведомление создателю (если создатель ≠ исполнитель)
+  if (isCompletingNow && existingTask.created_by && existingTask.created_by !== user.id) {
+    await supabase.from('notifications').insert({
+      org_id: orgId,
+      user_id: existingTask.created_by,
+      type: 'task_completed',
+      title: 'Задача выполнена',
+      body: `${taskTitle}${currentUserName ? ` — выполнил ${currentUserName}` : ''}`,
       link: `/diary?task=${id}`,
       reference_id: id,
     })
@@ -96,7 +129,6 @@ export async function PUT(
     const dueDateFormatted = new Date(dueDateStr).toLocaleString('ru-RU', {
       day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
     })
-    const taskTitle = updateData.title || existingTask.title
     await supabase.from('notifications').insert({
       org_id: orgId,
       user_id: user.id,
@@ -121,7 +153,7 @@ export async function DELETE(
 ) {
   const auth = await getAuthContext()
   if ('error' in auth) return auth.error
-  
+
   const { orgId, supabase } = auth
 
   const { id } = await params

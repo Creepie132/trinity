@@ -1,15 +1,27 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Bell, X, CheckCheck } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Bell, CheckCheck } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { TrinityNotificationIcon } from './TrinityNotificationIcon'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+
+interface Notification {
+  id: string
+  user_id: string
+  type: string
+  title: string
+  body?: string
+  link?: string
+  is_read: boolean
+  created_at: string
+}
 
 interface NotificationBellProps {
   locale: 'he' | 'ru'
@@ -28,13 +40,37 @@ const translations = {
   },
 }
 
+function playNotificationSound() {
+  try {
+    const audio = new Audio('/sounds/Notification.mp3')
+    audio.volume = 0.5
+    audio.play().catch(() => {
+      // Fallback: Web Audio API beep
+      const ctx = new AudioContext()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = 880
+      gain.gain.setValueAtTime(0.3, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.3)
+    })
+  } catch {
+    // Browser blocked audio — ignore silently
+  }
+}
+
 export function NotificationBell({ locale }: NotificationBellProps) {
-  const [notifications, setNotifications] = useState<any[]>([])
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const prevCountRef = useRef(0)
 
   const l = translations[locale]
+  const supabase = createSupabaseBrowserClient()
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024)
@@ -43,18 +79,18 @@ export function NotificationBell({ locale }: NotificationBellProps) {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  async function fetchNotifications() {
+  const fetchNotifications = useCallback(async () => {
     try {
       const res = await fetch('/api/notifications?unread_only=false')
       if (res.ok) {
-        const data = await res.json()
+        const data: Notification[] = await res.json()
         setNotifications(data)
-        setUnreadCount(data.filter((n: any) => !n.is_read).length)
+        setUnreadCount(data.filter(n => !n.is_read).length)
       }
     } catch (e) {
       console.error(e)
     }
-  }
+  }, [])
 
   async function markAllRead() {
     try {
@@ -70,10 +106,48 @@ export function NotificationBell({ locale }: NotificationBellProps) {
     }
   }
 
+  // Начальная загрузка + polling каждые 30 сек
   useEffect(() => {
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 30000)
     return () => clearInterval(interval)
+  }, [fetchNotifications])
+
+  // Realtime subscription — мгновенные уведомления
+  useEffect(() => {
+    let userId: string | null = null
+
+    supabase.auth.getUser().then(({ data }) => {
+      userId = data?.user?.id ?? null
+      if (!userId) return
+
+      const channel = supabase
+        .channel(`notifications:${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            const newNotif = payload.new as Notification
+            setNotifications(prev => [newNotif, ...prev])
+            setUnreadCount(prev => prev + 1)
+
+            // Звук только если страница активна
+            if (document.visibilityState === 'visible') {
+              playNotificationSound()
+            }
+          }
+        )
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(channel)
+      }
+    })
   }, [])
 
   function handleOpen() {
@@ -82,7 +156,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   }
 
   const notificationList = (
-    <div className="flex-1 overflow-y-auto">
+    <>
       {notifications.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">{l.empty}</div>
       ) : (
@@ -96,17 +170,19 @@ export function NotificationBell({ locale }: NotificationBellProps) {
               }`}
             >
               <div className="flex items-start gap-3">
-                {!n.is_read && <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />}
-                <div className={`flex-1 min-w-0 ${n.is_read ? 'mr-5' : ''}`}>
+                {!n.is_read && (
+                  <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                )}
+                <div className={`flex-1 min-w-0 ${n.is_read ? 'ms-5' : ''}`}>
                   <p className={`text-sm ${!n.is_read ? 'font-semibold' : ''}`}>{n.title}</p>
-                  {n.body && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.body}</p>}
+                  {n.body && (
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.body}</p>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(n.created_at).toLocaleString(locale === 'he' ? 'he-IL' : 'ru-RU', {
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {new Date(n.created_at).toLocaleString(
+                      locale === 'he' ? 'he-IL' : 'ru-RU',
+                      { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
+                    )}
                   </p>
                 </div>
               </div>
@@ -114,7 +190,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
           ))}
         </div>
       )}
-    </div>
+    </>
   )
 
   return (
@@ -129,7 +205,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
       {/* Mobile — bottom sheet */}
       {isMobile && (
         <TrinityBottomDrawer isOpen={isOpen} onClose={() => setIsOpen(false)} title={l.title}>
-          {notifications.length > 0 && unreadCount === 0 && (
+          {notifications.length > 0 && (
             <div className="flex justify-end px-1 pb-2">
               <button
                 onClick={markAllRead}

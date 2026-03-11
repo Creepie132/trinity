@@ -13,6 +13,7 @@ interface OrgUser {
   user_id: string
   full_name: string
   role: string
+  email?: string
 }
 
 interface Client {
@@ -380,23 +381,33 @@ export function CreateTaskModal() {
         {/* Assignee */}
         <div>
           <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{labels.assignee}</label>
-          {orgUsers.length <= 1 ? (
+          {orgUsers.length === 0 ? (
             <div className="px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-400 text-sm">
               {labels.noColleagues}
             </div>
           ) : (
             <TrinitySearchDropdown
               data={orgUsers}
-              searchKeys={['full_name']}
-              minChars={1}
+              searchKeys={['full_name', 'email']}
+              minChars={0}
               placeholder={labels.searchUser}
               onSelect={handleUserSelect}
-              renderItem={(user) => (
-                <div>
-                  <p className="font-medium text-sm">{user.full_name}</p>
-                  <p className="text-xs text-gray-500">{user.role}</p>
-                </div>
-              )}
+              renderItem={(u) => {
+                const initials = (u.full_name || u.email || '?')[0].toUpperCase()
+                const colors = ['bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500']
+                const color = colors[(u.full_name || '').charCodeAt(0) % colors.length]
+                return (
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded-full ${color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+                      {initials}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{u.full_name || u.email}</p>
+                      <p className="text-xs text-gray-500 capitalize">{u.role}</p>
+                    </div>
+                  </div>
+                )
+              }}
               locale={locale}
             />
           )}

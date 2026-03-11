@@ -6,8 +6,8 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthContext()
     if ('error' in auth) return auth.error
-    
-    const { orgId, supabase } = auth
+
+    const { user, orgId, orgRole, supabase } = auth
 
     const url = new URL(request.url)
     const status = url.searchParams.get('status')
@@ -19,6 +19,12 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (status) query = query.eq('status', status)
+
+    // Владелец видит все задачи. Остальные — только свои (назначенные или созданные)
+    const isOwner = orgRole === 'owner'
+    if (!isOwner) {
+      query = query.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`)
+    }
 
     const { data, error } = await query
 
@@ -40,7 +46,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await getAuthContext()
   if ('error' in auth) return auth.error
-  
+
   const { user, orgId, supabase } = auth
 
   const body = await request.json()
@@ -90,14 +96,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Получаем имя создателя для уведомления
+  const creatorName =
+    (user.user_metadata?.full_name as string) ||
+    (user.user_metadata?.name as string) ||
+    user.email?.split('@')[0] ||
+    ''
+
   // Если задача назначена другому пользователю, создаём уведомление
   if (assigned_to && assigned_to !== user.id) {
     await supabase.from('notifications').insert({
       org_id: orgId,
       user_id: assigned_to,
       type: 'task_assigned',
-      title: 'Новая задача',
-      body: title.trim(),
+      title: 'Вам назначена задача',
+      body: `${title.trim()}${creatorName ? ` — от ${creatorName}` : ''}`,
       link: `/diary?task=${task.id}`,
       reference_id: task.id,
     })

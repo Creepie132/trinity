@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createTranzilaPaymentLink } from '@/lib/tranzila'
 import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
-import { rateLimit, PAYMENT_RATE_LIMIT } from '@/lib/rate-limit'
+import { ratelimitStrict } from '@/lib/ratelimit'
 import { validateBody, createPaymentSchema } from '@/lib/validations'
 import { logAudit } from '@/lib/audit'
 import { getClientIp } from '@/lib/ratelimit'
@@ -16,25 +16,14 @@ export async function POST(request: NextRequest) {
       return (authResult as { success: false; response: NextResponse }).response
     }
 
-    // ✅ Rate limiting
-    const rateLimitResult = rateLimit(
-      `payment:${authResult.data.email}`,
-      PAYMENT_RATE_LIMIT
+    // ✅ Rate limiting (Upstash Redis)
+    const { success: rateLimitOk } = await ratelimitStrict.limit(
+      `payment:${authResult.data.email}`
     )
-    if (!rateLimitResult.success) {
+    if (!rateLimitOk) {
       return NextResponse.json(
-        { 
-          error: 'Too many requests. Please try again later.',
-          retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
-        },
-        { 
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-            'X-RateLimit-Reset': new Date(rateLimitResult.resetAt).toISOString(),
-          }
-        }
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
       )
     }
 

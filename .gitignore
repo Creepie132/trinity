@@ -1,5 +1,9 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# internal trash — never commit (contains legacy/dangerous files)
+src/lib/_trash/
+src/app/api/_trash/
+
 # dependencies
 /node_modules
 .next

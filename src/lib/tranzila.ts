@@ -161,12 +161,7 @@ export async function chargeByToken({
     params.append('expdate', expdate)
   }
 
-  console.log('[Tranzila] chargeByToken:', {
-    terminal,
-    amount,
-    description,
-    tokenLast4: token.slice(-4),
-  })
+
 
   const res = await fetch(TRANZILA_CGI_URL, {
     method: 'POST',
@@ -174,8 +169,7 @@ export async function chargeByToken({
     body: params.toString(),
   })
 
-  const text = await res.text()
-  console.log('[Tranzila] raw response:', text)
+
 
   let data: any
   try {

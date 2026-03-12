@@ -8,7 +8,6 @@ export function useIsAdmin() {
         credentials: 'include', // Include cookies
       })
       const data = await response.json()
-      console.log('[useIsAdmin] Response:', data)
       return data.isAdmin || false
     },
     retry: false,

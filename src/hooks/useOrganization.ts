@@ -31,42 +31,51 @@ export interface Organization {
   branches_enabled?: boolean
 }
 
+/** Читает activeOrgId из cookie (синхронно, без запроса) */
+function getActiveOrgIdFromCookie(): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith('trinity_active_branch='))
+  return match ? match.split('=')[1] : null
+}
+
 async function fetchCurrentOrganization(): Promise<Organization | null> {
   try {
-    // Get current user
     const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      return null
+    if (!user) return null
+
+    // Читаем activeOrgId из cookie — источник истины на клиенте
+    const activeOrgId = getActiveOrgIdFromCookie()
+
+    // Если есть activeOrgId в cookie — грузим эту org напрямую
+    if (activeOrgId) {
+      const { data: organization, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', activeOrgId)
+        .single()
+      if (!error && organization) return organization as Organization
     }
 
-    // Get user's organization through org_users
+    // Fallback: грузим mainOrg через org_users
     const { data: orgUser, error: orgUserError } = await supabase
       .from('org_users')
       .select('org_id')
       .eq('user_id', user.id)
       .single()
 
-    if (orgUserError || !orgUser) {
-      console.error('Error fetching org_user:', orgUserError)
-      return null
-    }
+    if (orgUserError || !orgUser) return null
 
-    // Get organization details
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .select('*')
       .eq('id', orgUser.org_id)
       .single()
 
-    if (orgError || !organization) {
-      console.error('Error fetching organization:', orgError)
-      return null
-    }
-
+    if (orgError || !organization) return null
     return organization as Organization
   } catch (error) {
-    console.error('Error in fetchCurrentOrganization:', error)
     return null
   }
 }
@@ -76,7 +85,7 @@ export function useOrganization() {
   const router = useRouter()
   
   const query = useQuery({
-    queryKey: ['organization'],
+    queryKey: ['organization', getActiveOrgIdFromCookie()],
     queryFn: fetchCurrentOrganization,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,

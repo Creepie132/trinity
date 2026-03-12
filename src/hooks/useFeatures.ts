@@ -108,14 +108,12 @@ export function useFeatures(): Features {
 
   // Check if using new modular system
   const modules = (organization.features as any)?.modules
-  
+
   if (modules) {
     return {
-      // Always visible modules (clients, visits, diary)
       hasClients: modules.clients ?? true,
       hasVisits: modules.visits ?? true,
       hasDiary: modules.diary ?? true,
-      // Optional modules (default to false unless explicitly enabled)
       hasSms: modules.sms ?? false,
       hasPayments: modules.payments ?? false,
       hasAnalytics: (modules.statistics || modules.reports) ?? false,
@@ -136,22 +134,22 @@ export function useFeatures(): Features {
     }
   }
 
-  // Fallback to old feature system
+  // Fallback: старая система фич (legacy orgs без modules)
   return {
-    hasClients: (organization.features as any)?.clients ?? true,
-    hasSms: organization.features?.sms ?? true,
-    hasPayments: organization.features?.payments ?? true,
-    hasAnalytics: organization.features?.analytics ?? true,
-    hasStatistics: organization.features?.analytics ?? true,
-    hasReports: organization.features?.analytics ?? true,
+    hasClients: true,
+    hasVisits: (organization.features as any)?.visits ?? true,
+    hasDiary: (organization.features as any)?.diary ?? true,
+    hasSms: organization.features?.sms ?? false,
+    hasPayments: organization.features?.payments ?? false,
+    hasAnalytics: organization.features?.analytics ?? false,
+    hasStatistics: organization.features?.analytics ?? false,
+    hasReports: organization.features?.analytics ?? false,
     hasSubscriptions: organization.features?.subscriptions ?? false,
-    hasVisits: organization.features?.visits ?? true,
     hasInventory: organization.features?.inventory ?? false,
     hasBooking: (organization.features as any)?.booking ?? false,
     hasTelegram: false,
     hasLoyalty: false,
     hasBirthday: false,
-    hasDiary: (organization.features as any)?.diary ?? true,
     hasBranches: organization.branches_enabled ?? false,
     paymentsEnabled: organization.payments_enabled ?? true,
     recurringEnabled: organization.recurring_enabled === true,

@@ -14,7 +14,8 @@ type Role = "owner" | "moderator" | "user"
 
 export interface AuthContext {
   user: User
-  orgId: string
+  orgId: string        // activeOrgId — активный филиал (используется для всех запросов данных)
+  mainOrgId: string    // основная org пользователя из JWT (для проверок прав)
   orgRole: string | null
   isAdmin: boolean
   supabase: SupabaseClient
@@ -88,9 +89,11 @@ export async function getAuthContext(request?: NextRequest): Promise<AuthContext
 
   // Branch: читаем активный филиал из user_active_branch (источник истины — БД)
   // Сервер не доверяет заголовкам или localStorage от клиента
-  orgId = await getActiveOrgId(user.id, orgId)
+  const mainOrgId = orgId
+  const activeOrgId = await getActiveOrgId(user.id, orgId)
 
-  return { user, orgId, orgRole, isAdmin, supabase: supabase as unknown as SupabaseClient }
+  // orgId = activeOrgId чтобы все существующие роуты работали без изменений
+  return { user, orgId: activeOrgId, mainOrgId, orgRole, isAdmin, supabase: supabase as unknown as SupabaseClient }
 }
 
 /**

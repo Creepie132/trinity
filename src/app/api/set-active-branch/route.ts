@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   const auth = await getAuthContext(request)
   if ('error' in auth) return auth.error
 
-  const { orgId: mainOrgId } = auth
+  const { orgId: activeOrgId, mainOrgId } = auth
   const userId = auth.user.id
 
   const body = await request.json()

@@ -463,35 +463,35 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
       className="bg-gray-900 text-gray-100 border-gray-800"
     >
         {/* Progress bar */}
-        <div className="mb-6">
-          <div className="flex justify-between text-sm text-gray-400 mb-2">
+        <div className="mb-4">
+          <div className="flex justify-between text-xs text-gray-400 mb-1">
             <span>Шаг {step} из 4</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <Progress value={progress} className="h-2 bg-gray-800" />
+          <Progress value={progress} className="h-1.5 bg-gray-800" />
         </div>
 
         {/* Step 1: Business Info */}
         {step === 1 && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-6">
+          <div className="space-y-3">
+            <div className="flex items-center gap-4 mb-2">
               <div className="shrink-0">
-                <KiraOrb size={100} isThinking={false} />
+                <KiraOrb size={72} isThinking={false} />
               </div>
               <div>
-                <h2 className="text-2xl font-bold mb-2">Привет! Я Кира 👋</h2>
-                <p className="text-gray-400">Помогу настроить систему под ваш бизнес. Это займёт пару минут.</p>
+                <h2 className="text-xl font-bold mb-1">Привет! Я Кира 👋</h2>
+                <p className="text-sm text-gray-400">Помогу настроить систему под ваш бизнес. Это займёт пару минут.</p>
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div>
                 <Label htmlFor="business-name">Название бизнеса</Label>
                 <Input
                   id="business-name"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
-                  className="mt-2 bg-gray-800 border-gray-700 text-white"
+                  className="mt-1 bg-gray-800 border-gray-700 text-white"
                   placeholder="Моя компания"
                 />
               </div>
@@ -504,7 +504,7 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
                   id="company-number"
                   value={companyNumber}
                   onChange={(e) => setCompanyNumber(e.target.value)}
-                  className="mt-2 bg-gray-800 border-gray-700 text-white"
+                  className="mt-1 bg-gray-800 border-gray-700 text-white"
                   placeholder={locale === 'he' ? 'מספר חברה או עוסק' : 'Номер регистрации'}
                 />
               </div>
@@ -517,7 +517,7 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
                   id="owner-name"
                   value={ownerName}
                   onChange={(e) => setOwnerName(e.target.value)}
-                  className="mt-2 bg-gray-800 border-gray-700 text-white"
+                  className="mt-1 bg-gray-800 border-gray-700 text-white"
                   placeholder={locale === 'he' ? 'שם מלא' : 'Полное имя'}
                 />
               </div>
@@ -531,7 +531,7 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="050-1234567"
-                  className="mt-2 bg-gray-800 border-gray-700 text-white"
+                  className="mt-1 bg-gray-800 border-gray-700 text-white"
                 />
               </div>
 
@@ -557,7 +557,7 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
                     id="address"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="mt-2 bg-gray-800 border-gray-700 text-white"
+                    className="mt-1 bg-gray-800 border-gray-700 text-white"
                     placeholder={locale === 'he' ? 'רחוב ומספר' : 'Улица и номер'}
                   />
                 </div>
@@ -570,7 +570,7 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
                     id="city"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    className="mt-2 bg-gray-800 border-gray-700 text-white"
+                    className="mt-1 bg-gray-800 border-gray-700 text-white"
                     placeholder={locale === 'he' ? 'עיר' : 'Город'}
                   />
                 </div>
@@ -579,7 +579,7 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
               <div>
                 <Label htmlFor="category">Категория</Label>
                 <Select value={category} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="mt-2 bg-gray-800 border-gray-700 text-white">
+                  <SelectTrigger className="mt-1 bg-gray-800 border-gray-700 text-white">
                     <SelectValue placeholder="Выберите категорию" />
                   </SelectTrigger>
                   <SelectContent className="bg-gray-800 border-gray-700 text-white">

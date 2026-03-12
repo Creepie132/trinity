@@ -79,8 +79,8 @@ export function BranchProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orgId: newOrgId }),
       }).catch(() => {})
-      // Invalidate all data queries so they refetch with new org
-      queryClient.invalidateQueries()
+      // Удаляем кэш полностью — чтобы не было flash старых данных
+      queryClient.removeQueries()
     },
     [queryClient]
   )

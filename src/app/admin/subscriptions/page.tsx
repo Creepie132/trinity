@@ -1052,103 +1052,69 @@ export default function AdminSubscriptionsPage() {
               ))}
             </div>
 
-            {/* Payment toggles */}
+            {/* Feature toggles */}
             <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-4">
-              {/* payments_enabled */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                    {language === 'he' ? 'תשלומים רגילים' : 'Обычные платежи'}
-                  </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {language === 'he' ? 'אפשרות לקבל תשלומים' : 'Возможность принимать платежи'}
-                  </p>
+              {[
+                {
+                  key: 'payments_enabled' as const,
+                  labelHe: 'תשלומים רגילים',
+                  labelRu: 'Обычные платежи',
+                  descHe: 'אפשרות לקבל תשלומים',
+                  descRu: 'Возможность принимать платежи',
+                  value: selectedOrgSheet.payments_enabled ?? true,
+                },
+                {
+                  key: 'recurring_enabled' as const,
+                  labelHe: 'תשלומים חוזרים',
+                  labelRu: 'Рекуррентные платежи',
+                  descHe: 'חיוב אוטומטי חודשי',
+                  descRu: 'Автоматическое ежемесячное списание',
+                  value: selectedOrgSheet.recurring_enabled ?? false,
+                },
+                {
+                  key: 'branches_enabled' as const,
+                  labelHe: 'סניפים',
+                  labelRu: 'Филиалы',
+                  descHe: 'ניהול סניפים מרובים',
+                  descRu: 'Управление несколькими филиалами',
+                  value: selectedOrgSheet.branches_enabled ?? false,
+                },
+              ].map(({ key, labelHe, labelRu, descHe, descRu, value }) => (
+                <div key={key} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                      {language === 'he' ? labelHe : labelRu}
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      {language === 'he' ? descHe : descRu}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const checked = !value
+                      try {
+                        const res = await fetch('/api/admin/organizations/features', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ org_id: selectedOrgSheet.id, [key]: checked }),
+                        })
+                        if (!res.ok) throw new Error('Failed')
+                        setSelectedOrgSheet({ ...selectedOrgSheet, [key]: checked })
+                        setOrganizations((prev) =>
+                          prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, [key]: checked } : o)
+                        )
+                        toast.success(language === 'he' ? 'עודכן' : 'Сохранено')
+                      } catch {
+                        toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
+                      }
+                    }}
+                    className={`flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 flex items-center ${value ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ${value ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  </button>
                 </div>
-                <Switch
-                  checked={selectedOrgSheet.payments_enabled ?? true}
-                  onCheckedChange={async (checked) => {
-                    try {
-                      const res = await fetch('/api/admin/organizations/features', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ org_id: selectedOrgSheet.id, payments_enabled: checked }),
-                      })
-                      if (!res.ok) throw new Error('Failed')
-                      setSelectedOrgSheet({ ...selectedOrgSheet, payments_enabled: checked })
-                      setOrganizations((prev) =>
-                        prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, payments_enabled: checked } : o)
-                      )
-                      toast.success(language === 'he' ? 'עודכן' : 'Сохранено')
-                    } catch {
-                      toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
-                    }
-                  }}
-                />
-              </div>
-
-              {/* recurring_enabled */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                    {language === 'he' ? 'תשלומים חוזרים' : 'Рекуррентные платежи'}
-                  </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {language === 'he' ? 'חיוב אוטומטי חודשי' : 'Автоматическое ежемесячное списание'}
-                  </p>
-                </div>
-                <Switch
-                  checked={selectedOrgSheet.recurring_enabled ?? false}
-                  onCheckedChange={async (checked) => {
-                    try {
-                      const res = await fetch('/api/admin/organizations/features', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ org_id: selectedOrgSheet.id, recurring_enabled: checked }),
-                      })
-                      if (!res.ok) throw new Error('Failed')
-                      setSelectedOrgSheet({ ...selectedOrgSheet, recurring_enabled: checked })
-                      setOrganizations((prev) =>
-                        prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, recurring_enabled: checked } : o)
-                      )
-                      toast.success(language === 'he' ? 'עודכן' : 'Сохранено')
-                    } catch {
-                      toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
-                    }
-                  }}
-                />
-              </div>
-
-              {/* branches_enabled */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                    {language === 'he' ? 'סניפים' : 'Филиалы'}
-                  </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {language === 'he' ? 'ניהול סניפים מרובים' : 'Управление несколькими филиалами'}
-                  </p>
-                </div>
-                <Switch
-                  checked={selectedOrgSheet.branches_enabled ?? false}
-                  onCheckedChange={async (checked) => {
-                    try {
-                      const res = await fetch('/api/admin/organizations/features', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ org_id: selectedOrgSheet.id, branches_enabled: checked }),
-                      })
-                      if (!res.ok) throw new Error('Failed')
-                      setSelectedOrgSheet({ ...selectedOrgSheet, branches_enabled: checked })
-                      setOrganizations((prev) =>
-                        prev.map((o) => o.id === selectedOrgSheet.id ? { ...o, branches_enabled: checked } : o)
-                      )
-                      toast.success(language === 'he' ? 'עודכן' : 'Сохранено')
-                    } catch {
-                      toast.error(language === 'he' ? 'שגיאה' : 'Ошибка')
-                    }
-                  }}
-                />
-              </div>
+              ))}
             </div>
 
             {/* Action buttons */}

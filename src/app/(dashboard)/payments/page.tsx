@@ -288,6 +288,16 @@ export default function PaymentsPage() {
         </div>
       </div>
 
+      {/* Recurring payments unavailable notice */}
+      {!features.recurringEnabled && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+          <span className="text-gray-400 text-xl">🔒</span>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {language === 'he' ? 'תשלומים חוזרים אינם זמינים בתוכנית שלך' : 'Рекуррентные платежи недоступны в вашем тарифе'}
+          </p>
+        </div>
+      )}
+
       {/* Stats */}
       {stats && (
         <div className="space-y-3 md:space-y-0">

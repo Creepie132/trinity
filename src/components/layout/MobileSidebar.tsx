@@ -75,7 +75,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     const featureMap: Record<string, boolean> = {
       'clients': features.hasClients,
       'visits': features.hasVisits,
-      'payments': features.hasPayments,
+      'payments': features.hasPayments && features.paymentsEnabled,
       'inventory': features.hasInventory,
       'diary': features.hasDiary,
       'sms': features.hasSms,

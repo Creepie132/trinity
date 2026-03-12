@@ -83,7 +83,12 @@
       "Bash(.next \")",
       "Bash(cd \"F:/Amber_solutions_Kira/Trinity\" && npm run build 2>&1 | grep -E \"error|Error|✓ Compiled|✓ Generating\" | head -15)",
       "Bash(cd \"F:/Amber_solutions_Kira/Trinity\" && npm run build 2>&1 | grep -E \"error|Error|✓ Compiled|✓ Generating|Failed\" | head -15)",
-      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|warning|✓|✗|Failed\" | head -40)"
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|warning|✓|✗|Failed\" | head -40)",
+      "Bash(find \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\app\\\\\\(dashboard\\)\\\\settings\" -name \"*.tsx\" | head -20)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && ls src/app/\\\\\\(dashboard\\\\\\)/settings/)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"Error|error TS|Failed|✓ Compiled\" | head -30)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -A5 \"Failed to compile\\\\|error TS\\\\|Type error\" | head -40)",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"Error|error TS|Failed|✓|successfully\" | head -20)"
     ]
   }
 }

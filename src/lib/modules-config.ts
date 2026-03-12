@@ -62,10 +62,10 @@ export const MODULES: Module[] = [
   },
   {
     key: 'subscriptions',
-    name_he: 'מנויים',
-    name_ru: 'Подписки',
-    desc_he: 'ניהול מנויים חוזרים',
-    desc_ru: 'Управление подписками'
+    name_he: 'חיוב חוזר',
+    name_ru: 'Рекуррентные платежи',
+    desc_he: 'חיוב אוטומטי תקופתי ללקוחות',
+    desc_ru: 'Автоматическое периодическое списание с карт клиентов'
   },
   {
     key: 'statistics',

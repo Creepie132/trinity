@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useBranches } from '@/hooks/useBranches'
-import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield } from 'lucide-react'
+import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -72,6 +72,13 @@ export default function SettingsPage() {
       title: language === 'he' ? 'הרשאות' : 'Разрешения',
       description: language === 'he' ? 'קבע מה כל עובד יכול לעשות' : 'Управляйте доступом сотрудников',
     },
+    {
+      id: 'recurring',
+      href: '/settings/recurring',
+      icon: RefreshCw,
+      title: language === 'he' ? 'חיוב חוזר' : 'Рекуррентные платежи',
+      description: language === 'he' ? 'נהל תוכניות חיוב אוטומטי' : 'Управляйте планами автоматического списания',
+    },
     // { id: 'service-colors', href: '/settings/service-colors', icon: Palette, title: t('settings.serviceColors'), description: t('settings.serviceColors.desc') },
   ]
 
@@ -80,6 +87,7 @@ export default function SettingsPage() {
     // Check module access first (if module is disabled, hide the setting)
     if (category.id === 'booking' && features.hasBooking === false) return false
     if (category.id === 'branches' && !features.hasBranches) return false
+    if (category.id === 'recurring' && !features.recurringEnabled) return false
     
     // Owner-only settings (check permissions)
     if (category.id === 'services' && !permissions.canManageServices) return false

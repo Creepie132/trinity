@@ -18,12 +18,7 @@ let cachedOrgId: string | null = null
 let cachedIsAdmin: boolean | null = null
 let cachedRole: string | null = null
 let cachedOrganizations: Array<{ org_id: string; org_name: string; role: string }> | null = null
-
-// localStorage org_id не читаем при инициализации —
-// он будет проверен после загрузки реальных org пользователя
-if (typeof window !== 'undefined') {
-  cachedOrgId = null
-}
+let cachedUserId: string | null = null
 
 export function useAuth(): UseAuthResult {
   const [user, setUser] = useState<any | null>(null)
@@ -56,6 +51,15 @@ export function useAuth(): UseAuthResult {
 
       setUser(user)
 
+      // Если сменился пользователь — сбрасываем кэш
+      if (cachedUserId && cachedUserId !== user.id) {
+        cachedOrgId = null
+        cachedIsAdmin = null
+        cachedRole = null
+        cachedOrganizations = null
+      }
+      cachedUserId = user.id
+
       // проверка admin по USER_ID
       const { data: adminRow } = await supabase
         .from('admin_users')
@@ -86,14 +90,15 @@ export function useAuth(): UseAuthResult {
       cachedIsAdmin = isAdminUser
       cachedOrganizations = userOrganizations
 
-      // Если есть сохранённая организация - используем её
-      // Если нет - берём первую
+      // Если есть кэшированная организация - проверяем что она принадлежит этому пользователю
+      // Если нет или не принадлежит - берём первую
       let selectedOrgId = cachedOrgId
-      if (!selectedOrgId && userOrganizations.length > 0) {
-        selectedOrgId = userOrganizations[0].org_id
-        if (selectedOrgId) {
-          localStorage.setItem('current_org_id', selectedOrgId)
-        }
+      const orgIds = userOrganizations.map((o: any) => o.org_id)
+      if (!selectedOrgId || !orgIds.includes(selectedOrgId)) {
+        selectedOrgId = userOrganizations.length > 0 ? userOrganizations[0].org_id : null
+      }
+      if (selectedOrgId) {
+        localStorage.setItem('current_org_id', selectedOrgId)
       }
 
       cachedOrgId = selectedOrgId
@@ -122,6 +127,7 @@ export function useAuth(): UseAuthResult {
     cachedIsAdmin = null
     cachedRole = null
     cachedOrganizations = null
+    cachedUserId = null
     localStorage.removeItem('current_org_id')
     await supabase.auth.signOut()
     window.location.href = '/login'

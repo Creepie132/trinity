@@ -1203,184 +1203,152 @@ export default function AdminSubscriptionsPage() {
       })()}
 
       {/* Extend Dialog — Modern Bottom Sheet */}
-      {extendDialogOpen && selectedOrg && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60]"
-            onClick={() => setExtendDialogOpen(false)}
-          />
+      {/* Extend Dialog — Standard Modal */}
+      <Modal
+        open={extendDialogOpen && !!selectedOrg}
+        onClose={() => setExtendDialogOpen(false)}
+        title={language === 'he' ? 'הארכת גישה' : 'Продление доступа'}
+        subtitle={selectedOrg?.name}
+        size="md"
+        footer={
+          <div className="flex gap-3">
+            <button
+              onClick={() => setExtendDialogOpen(false)}
+              className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              {language === 'he' ? 'ביטול' : 'Отмена'}
+            </button>
+            <button
+              onClick={handleSaveExtension}
+              className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              {language === 'he' ? 'שמור' : 'Сохранить'}
+            </button>
+          </div>
+        }
+      >
+        {/* Plan Selection */}
+        <div className="mb-5">
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
+            {language === 'he' ? 'תוכנית' : 'Тарифный план'}
+          </label>
+          <select
+            value={selectedPlan}
+            onChange={(e) => handlePlanChange(e.target.value as PlanKey)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+            {/* Always use PLANS constants to guarantee correct key values */}
+            {PLANS.map((plan) => (
+              <option key={plan.key} value={plan.key}>
+                {language === 'he' ? plan.name_he : plan.name_ru}
+                {plan.price_monthly !== null && plan.price_monthly > 0 && ` — ₪${plan.price_monthly}/мес`}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          {/* Sheet */}
-          <div className="fixed bottom-0 left-0 right-0 z-[60] bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl max-h-[90vh] overflow-y-auto animate-slide-up">
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
-            </div>
-
-            <div className="px-5 pb-8 pt-3">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {language === 'he' ? 'הארכת גישה' : 'Продление доступа'}
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                    {selectedOrg.name}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setExtendDialogOpen(false)}
-                  className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  <X className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
-
-              {/* Plan Selection */}
-              <div className="mb-5">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
-                  {language === 'he' ? 'תוכנית' : 'Тарифный план'}
-                </label>
-                <select
-                  value={selectedPlan}
-                  onChange={(e) => handlePlanChange(e.target.value as PlanKey)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  {(dbPlans.length > 0 ? dbPlans : PLANS).map((plan) => (
-                    <option key={plan.key} value={plan.key}>
-                      {language === 'he' ? plan.name_he : plan.name_ru}
-                      {plan.price_monthly !== null && ` — ₪${plan.price_monthly}/мес`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Modules — Compact cards */}
-              <div className="mb-6">
-                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 block">
-                  {language === 'he' ? 'מודולים' : 'Модули'}
-                </label>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {(modulePricing.length > 0 ? modulePricing : MODULES.map(m => ({ module_key: m.key, name_he: m.name_he, name_ru: m.name_ru, price_monthly: 0 }))).map((mod) => {
-                    const moduleKey = mod.module_key || (mod as any).key
-                    const isEnabled = customModules[moduleKey] || false
-                    const currentPrice = customModulePrices[moduleKey] !== undefined
-                      ? customModulePrices[moduleKey]
-                      : parseFloat(mod.price_monthly || 0)
-
-                    return (
-                      <div
-                        key={moduleKey}
-                        className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
-                      >
-                        <div className="flex items-center gap-3">
-                          {/* Toggle */}
-                          <button
-                            onClick={() => setCustomModules((prev) => ({ ...prev, [moduleKey]: !isEnabled }))}
-                            className={`relative w-10 h-6 rounded-full transition-colors ${isEnabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
-                          >
-                            <span
-                              className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isEnabled ? 'left-5' : 'left-1'}`}
-                            />
-                          </button>
-                          <span className={`text-sm font-medium ${isEnabled ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}`}>
-                            {language === 'he' ? mod.name_he : mod.name_ru}
-                          </span>
-                        </div>
-
-                        {/* Price */}
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-gray-400">₪</span>
-                          <input
-                            type="number"
-                            value={currentPrice}
-                            onChange={(e) => setCustomModulePrices((prev) => ({ ...prev, [moduleKey]: parseFloat(e.target.value) || 0 }))}
-                            disabled={!isEnabled}
-                            className="w-14 text-right text-sm font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b border-gray-200 dark:border-gray-600 focus:outline-none focus:border-indigo-400 disabled:text-gray-300 dark:disabled:text-gray-600"
-                          />
-                          <span className="text-xs text-gray-400">/мес</span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Total */}
-              {(() => {
-                const totalPrice = (modulePricing.length > 0 ? modulePricing : MODULES.map(m => ({ module_key: m.key, price_monthly: 0 }))).reduce((sum, mod) => {
-                  const moduleKey = mod.module_key || (mod as any).key
-                  if (customModules[moduleKey]) {
-                    const customPrice = customModulePrices[moduleKey]
-                    const price = customPrice !== undefined ? customPrice : parseFloat(mod.price_monthly || 0)
-                    return sum + price
-                  }
-                  return sum
-                }, 0)
+        {/* Modules — only shown for custom plan */}
+        {selectedPlan === 'custom' && (
+          <div className="mb-6">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 block">
+              {language === 'he' ? 'מודולים' : 'Модули'}
+            </label>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {(modulePricing.length > 0 ? modulePricing : MODULES.map(m => ({ module_key: m.key, name_he: m.name_he, name_ru: m.name_ru, price_monthly: 0 }))).map((mod) => {
+                const moduleKey = mod.module_key || (mod as any).key
+                const isEnabled = customModules[moduleKey] || false
+                const currentPrice = customModulePrices[moduleKey] !== undefined
+                  ? customModulePrices[moduleKey]
+                  : parseFloat(mod.price_monthly || 0)
 
                 return (
-                  <div className="flex items-center justify-between py-4 border-t border-gray-100 dark:border-gray-800 mb-5">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {language === 'he' ? 'סה"כ לחודש' : 'Итого в месяц'}
-                    </span>
-                    <span className="text-xl font-bold text-indigo-600">
-                      ₪{totalPrice.toFixed(0)}
-                    </span>
+                  <div
+                    key={moduleKey}
+                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
+                  >
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setCustomModules((prev) => ({ ...prev, [moduleKey]: !isEnabled }))}
+                        className={`relative w-10 h-6 rounded-full transition-colors ${isEnabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                      >
+                        <span
+                          className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isEnabled ? 'left-5' : 'left-1'}`}
+                        />
+                      </button>
+                      <span className={`text-sm font-medium ${isEnabled ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                        {language === 'he' ? mod.name_he : mod.name_ru}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-400">₪</span>
+                      <input
+                        type="number"
+                        value={currentPrice}
+                        onChange={(e) => setCustomModulePrices((prev) => ({ ...prev, [moduleKey]: parseFloat(e.target.value) || 0 }))}
+                        disabled={!isEnabled}
+                        className="w-14 text-right text-sm font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b border-gray-200 dark:border-gray-600 focus:outline-none focus:border-indigo-400 disabled:text-gray-300 dark:disabled:text-gray-600"
+                      />
+                      <span className="text-xs text-gray-400">/мес</span>
+                    </div>
                   </div>
                 )
-              })()}
-
-              {/* Status & Expiry — Compact */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
-                    {language === 'he' ? 'סטטוס' : 'Статус'}
-                  </label>
-                  <select
-                    value={newStatus}
-                    onChange={(e) => setNewStatus(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {SUBSCRIPTION_STATUSES.map((status) => (
-                      <option key={status.value} value={status.value}>
-                        {language === 'he' ? status.label_he : status.label_ru}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
-                    {language === 'he' ? 'תאריך תפוגה' : 'Дата окончания'}
-                  </label>
-                  <input
-                    type="date"
-                    value={newExpiryDate}
-                    onChange={(e) => setNewExpiryDate(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              {/* Buttons — Row */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setExtendDialogOpen(false)}
-                  className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  {language === 'he' ? 'ביטול' : 'Отмена'}
-                </button>
-                <button
-                  onClick={handleSaveExtension}
-                  className="flex-1 py-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm"
-                >
-                  {language === 'he' ? 'שמור' : 'Сохранить'}
-                </button>
-              </div>
+              })}
             </div>
+
+            {/* Total */}
+            {(() => {
+              const totalPrice = (modulePricing.length > 0 ? modulePricing : MODULES.map(m => ({ module_key: m.key, price_monthly: 0 }))).reduce((sum, mod) => {
+                const moduleKey = mod.module_key || (mod as any).key
+                if (customModules[moduleKey]) {
+                  const customPrice = customModulePrices[moduleKey]
+                  const price = customPrice !== undefined ? customPrice : parseFloat(mod.price_monthly || 0)
+                  return sum + price
+                }
+                return sum
+              }, 0)
+              return (
+                <div className="flex items-center justify-between py-4 border-t border-gray-100 dark:border-gray-800 mt-3">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {language === 'he' ? 'סה"כ לחודש' : 'Итого в месяц'}
+                  </span>
+                  <span className="text-xl font-bold text-indigo-600">₪{totalPrice.toFixed(0)}</span>
+                </div>
+              )
+            })()}
           </div>
-        </>
-      )}
+        )}
+
+        {/* Status & Expiry */}
+        <div className="grid grid-cols-2 gap-3 mb-2">
+          <div>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
+              {language === 'he' ? 'סטטוס' : 'Статус'}
+            </label>
+            <select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              {SUBSCRIPTION_STATUSES.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {language === 'he' ? status.label_he : status.label_ru}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
+              {language === 'he' ? 'תאריך תפוגה' : 'Дата окончания'}
+            </label>
+            <input
+              type="date"
+              value={newExpiryDate}
+              onChange={(e) => setNewExpiryDate(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Invitation Modal */}
       <Modal

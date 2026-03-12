@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import type { UpdateProductDTO } from '@/types/inventory'
-import { getAuthContext, requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
+import { getAuthContext, authErrorResponse } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 /**
@@ -95,13 +95,6 @@ export async function DELETE(
     
     const { orgId } = auth
     const serviceSupabase = createSupabaseServiceClient()
-
-    // ✅ Проверка роли (только owner/moderator)
-    try {
-      await requireOrgRole(orgId, ["owner", "moderator"])
-    } catch (e) {
-      return authErrorResponse(e)
-    }
 
     // Soft delete: set is_active = false
     const { data: product, error } = await serviceSupabase

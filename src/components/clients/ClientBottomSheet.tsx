@@ -7,6 +7,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EditClientSheet } from './EditClientSheet'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 
 type Tab = 'main' | 'visits' | 'payments' | 'sms' | 'gdpr' | 'recurring'
@@ -52,6 +53,7 @@ export function ClientBottomSheet({
   const [editOpen, setEditOpen] = useState(false)
 
   // Recurring state
+  const { orgId } = useAuth()
   const supabase = createSupabaseBrowserClient()
   const [subscription, setSubscription] = useState<any>(null)
   const [recurringPlans, setRecurringPlans] = useState<any[]>([])
@@ -104,8 +106,8 @@ export function ClientBottomSheet({
     setRecurringLoading(true)
     try {
       const [subRes, plansRes, chargesRes] = await Promise.all([
-        supabase.from('client_subscriptions').select('*').eq('client_id', client.id).eq('status', 'active').maybeSingle(),
-        supabase.from('recurring_plans').select('*').eq('is_active', true).order('created_at'),
+        supabase.from('client_subscriptions').select('*').eq('client_id', client.id).in('status', ['active', 'paused']).maybeSingle(),
+        supabase.from('recurring_plans').select('*').eq('org_id', orgId!).eq('is_active', true).order('created_at'),
         supabase.from('subscription_charges').select('*').eq('client_id', client.id).order('created_at', { ascending: false }).limit(5),
       ])
       setSubscription(subRes.data)

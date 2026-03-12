@@ -59,12 +59,11 @@ export async function POST(request: NextRequest) {
       TranzilaTK: card_token,
       sum: amount.toString(),
       currency: '1', // ILS
-      tranmode: 'V', // token charge
-      response_return_format: 'json',
+      tranmode: 'A', // token charge
     })
 
     const tranzilaRes = await fetch(
-      `https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi`,
+      `https://direct.tranzila.com/${terminal}/iframe.php`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { X, Phone, MessageCircle, Mail, Pencil, Calendar, CreditCard, MessageSquare, FileText, ChevronRight, RefreshCw, PauseCircle, PlayCircle, AlertCircle, Plus } from 'lucide-react'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useAuth } from '@/hooks/useAuth'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { toast } from 'sonner'
 
@@ -22,6 +23,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
   const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const features = useFeatures()
+  const { orgId } = useAuth()
   const supabase = createSupabaseBrowserClient()
 
   // Recurring state
@@ -99,8 +101,8 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
     setRecurringLoading(true)
     try {
       const [subRes, plansRes, chargesRes] = await Promise.all([
-        supabase.from('client_subscriptions').select('*').eq('client_id', client.id).eq('status', 'active').maybeSingle(),
-        supabase.from('recurring_plans').select('*').eq('is_active', true).order('created_at'),
+        supabase.from('client_subscriptions').select('*').eq('client_id', client.id).in('status', ['active', 'paused']).maybeSingle(),
+        supabase.from('recurring_plans').select('*').eq('org_id', orgId!).eq('is_active', true).order('created_at'),
         supabase.from('subscription_charges').select('*').eq('client_id', client.id).order('created_at', { ascending: false }).limit(5),
       ])
       setSubscription(subRes.data)

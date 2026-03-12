@@ -1,9 +1,7 @@
 // src/lib/supabase-browser.ts
-import { createBrowserClient } from '@supabase/ssr'
+// Unified: always returns the same singleton instance from supabase.ts
+import { supabase } from '@/lib/supabase'
 
 export function createSupabaseBrowserClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  return supabase
 }

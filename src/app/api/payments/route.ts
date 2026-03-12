@@ -9,12 +9,15 @@ export async function GET(request: NextRequest) {
     
     const { orgId, supabase } = auth
 
-    // Получаем платежи через JOIN с clients для фильтрации по org_id
-    // NOTE: payments table doesn't have org_id, need to join through clients
     const { data: payments, error } = await supabase
       .from('payments')
-      .select('*, clients!inner(org_id)')
-      .eq('clients.org_id', orgId)
+      .select(`
+        *,
+        clients (
+          id, first_name, last_name, phone, email, org_id
+        )
+      `)
+      .eq('org_id', orgId)
       .order('created_at', { ascending: false })
       .limit(1000)
 

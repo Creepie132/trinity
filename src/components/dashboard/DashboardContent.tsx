@@ -14,6 +14,8 @@ import FABMenu from './FABMenu'
 import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
 import { useModalStore } from '@/store/useModalStore'
 import { WorkShiftWidget } from './WorkShiftWidget'
+import { useBranch } from '@/contexts/BranchContext'
+import { useAuth } from '@/hooks/useAuth'
 
 interface DashboardContentProps {
   orgId: string
@@ -61,11 +63,16 @@ const parseArray = (data: any): any[] => {
   return []
 }
 
-export function DashboardContent({ orgId }: DashboardContentProps) {
+export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   const { language } = useLanguage()
   const locale = language
   const router = useRouter()
   const { openModal } = useModalStore()
+  
+  // Always use activeOrgId from BranchContext so switching branch works
+  const { activeOrgId } = useBranch()
+  const { orgId: authOrgId } = useAuth()
+  const orgId = activeOrgId || authOrgId || _orgIdProp
 
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
 
@@ -92,12 +99,15 @@ export function DashboardContent({ orgId }: DashboardContentProps) {
 
         console.log('=== DASHBOARD DEBUG ===')
         
+        const branchHeaders: Record<string, string> = {}
+        if (orgId) branchHeaders['X-Branch-Org-Id'] = orgId
+
         const [clientsRes, visitsRes, paymentsRes, todayVisitsRes, tasksRes] = await Promise.all([
-          fetch('/api/clients'),
-          fetch('/api/visits'),
-          fetch('/api/payments'),
+          fetch('/api/clients', { headers: branchHeaders }),
+          fetch('/api/visits', { headers: branchHeaders }),
+          fetch('/api/payments', { headers: branchHeaders }),
           fetch(`/api/dashboard/today?org_id=${orgId}`),
-          fetch('/api/tasks'),
+          fetch('/api/tasks', { headers: branchHeaders }),
         ])
 
         const safeParse = async (response: Response, name: string) => {

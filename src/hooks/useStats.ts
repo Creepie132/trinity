@@ -37,20 +37,19 @@ export function useDashboardStats() {
         .select('*', { count: 'exact', head: true })
         .eq('org_id', orgId)
 
-      // Visits this month (filtered by org_id via clients.org_id)
+      // Visits this month (filtered directly by org_id)
       const { count: visitsThisMonth } = await supabase
         .from('visits')
-        .select('*, clients!inner(org_id)', { count: 'exact', head: true })
-        .eq('clients.org_id', orgId)
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', orgId)
         .gte('scheduled_at', firstDay.toISOString())
         .lte('scheduled_at', lastDay.toISOString())
 
-      // Revenue this month (filtered by org_id via clients.org_id)
-      // Use created_at for payments that don't have paid_at
+      // Revenue this month (filtered directly by org_id)
       const { data: paymentsData } = await supabase
         .from('payments')
-        .select('amount, created_at, paid_at, clients!inner(org_id)')
-        .eq('clients.org_id', orgId)
+        .select('amount, created_at, paid_at')
+        .eq('org_id', orgId)
         .eq('status', 'completed')
 
       // Filter by date in JS (use paid_at if exists, otherwise created_at)
@@ -123,8 +122,8 @@ export function useRevenueByMonth() {
 
         const { data } = await supabase
           .from('payments')
-          .select('amount, clients!inner(org_id)')
-          .eq('clients.org_id', orgId)
+          .select('amount')
+          .eq('org_id', orgId)
           .eq('status', 'completed')
           .gte('paid_at', firstDay.toISOString())
           .lte('paid_at', lastDay.toISOString())
@@ -167,8 +166,8 @@ export function useVisitsByMonth() {
 
         const { count } = await supabase
           .from('visits')
-          .select('*, clients!inner(org_id)', { count: 'exact', head: true })
-          .eq('clients.org_id', orgId)
+          .select('*', { count: 'exact', head: true })
+          .eq('org_id', orgId)
           .gte('scheduled_at', firstDay.toISOString())
           .lte('scheduled_at', lastDay.toISOString())
 

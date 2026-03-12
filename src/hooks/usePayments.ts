@@ -53,32 +53,30 @@ export function usePayments(clientId?: string, filters?: PaymentsFilters) {
 }
 
 export function usePaymentsStats() {
+  const { activeOrgId } = useBranch()
+
   return useQuery({
-    queryKey: ['payments-stats'],
+    queryKey: ['payments-stats', activeOrgId],
     queryFn: async () => {
-      // Get current month dates
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
+
+      const res = await fetch('/api/payments', { headers })
+      if (!res.ok) throw new Error('Failed to fetch payments stats')
+      const allPayments: any[] = await res.json()
+
       const now = new Date()
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
 
-      const { data: payments, error } = await supabase
-        .from('payments')
-        .select('amount, status, created_at')
-        .gte('created_at', firstDay.toISOString())
-        .lte('created_at', lastDay.toISOString())
-
-      if (error) throw error
-
-      const completedPayments = payments.filter((p) => p.status === 'completed')
-      const totalAmount = completedPayments.reduce((sum, p) => sum + Number(p.amount), 0)
-      const count = completedPayments.length
+      const monthPayments = allPayments.filter(
+        p => p.status === 'completed' && p.created_at >= firstDay && p.created_at <= lastDay
+      )
+      const totalAmount = monthPayments.reduce((sum, p) => sum + Number(p.amount), 0)
+      const count = monthPayments.length
       const avgAmount = count > 0 ? totalAmount / count : 0
 
-      return {
-        totalAmount,
-        count,
-        avgAmount,
-      }
+      return { totalAmount, count, avgAmount }
     },
   })
 }

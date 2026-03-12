@@ -1,6 +1,12 @@
 ---
 name: trinity-crm
-description: Use this skill for ANY work on Trinity CRM (ambersol.co.il) — a SaaS CRM system for small businesses in Israel. Stack: Next.js App Router, Supabase, TypeScript, Tailwind CSS, Vercel. Triggers on: code changes, database migrations, architecture decisions, API routes, authentication, branch isolation, payments (Tranzila), UI components. Always apply SaaS-grade standards: security, scalability, data isolation per org_id.
+description: >-
+  Use this skill for ANY work on Trinity CRM (ambersol.co.il) — a SaaS CRM
+  system for small businesses in Israel. Stack: Next.js App Router, Supabase,
+  TypeScript, Tailwind CSS, Vercel. Triggers on code changes, database
+  migrations, architecture decisions, API routes, authentication, branch
+  isolation, payments (Tranzila), UI components. Always apply SaaS-grade
+  standards: security, scalability, data isolation per org_id.
 ---
 
 # Trinity CRM — Developer Skill

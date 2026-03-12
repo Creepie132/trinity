@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { CreateProductDTO, Product } from '@/types/inventory'
 import { validateBody, createProductSchema } from '@/lib/validations'
 import { getAuthContext } from '@/lib/auth-helpers'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 /**
  * GET /api/products
@@ -72,8 +73,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
     }
 
+    // Используем service role для обхода RLS (auth уже проверена выше)
+    const serviceSupabase = createSupabaseServiceClient()
+
     // Insert product
-    const { data: product, error } = await supabase
+    const { data: product, error } = await serviceSupabase
       .from('products')
       .insert({
         org_id: orgId,

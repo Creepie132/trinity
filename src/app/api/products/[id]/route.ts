@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { UpdateProductDTO } from '@/types/inventory'
 import { getAuthContext, requireOrgRole, authErrorResponse } from '@/lib/auth-helpers'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 /**
  * PATCH /api/products/[id]
@@ -20,13 +21,14 @@ export async function PATCH(
     const params = await context.params
     const productId = params.id
 
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
     
-    const { orgId, supabase } = auth
+    const { orgId } = auth
+    const serviceSupabase = createSupabaseServiceClient()
 
     // Verify product belongs to user's org
-    const { data: existingProduct, error: checkError } = await supabase
+    const { data: existingProduct, error: checkError } = await serviceSupabase
       .from('products')
       .select('id')
       .eq('id', productId)
@@ -56,7 +58,7 @@ export async function PATCH(
     if (body.is_active !== undefined) updateData.is_active = body.is_active
 
     // Update product
-    const { data: product, error } = await supabase
+    const { data: product, error } = await serviceSupabase
       .from('products')
       .update(updateData)
       .eq('id', productId)
@@ -88,10 +90,11 @@ export async function DELETE(
     const params = await context.params
     const productId = params.id
 
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
     
-    const { orgId, supabase } = auth
+    const { orgId } = auth
+    const serviceSupabase = createSupabaseServiceClient()
 
     // ✅ Проверка роли (только owner/moderator)
     try {
@@ -101,7 +104,7 @@ export async function DELETE(
     }
 
     // Soft delete: set is_active = false
-    const { data: product, error } = await supabase
+    const { data: product, error } = await serviceSupabase
       .from('products')
       .update({ is_active: false })
       .eq('id', productId)

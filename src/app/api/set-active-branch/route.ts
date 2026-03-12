@@ -47,5 +47,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true })
+  // Устанавливаем cookie чтобы избежать flash при следующей загрузке страницы
+  const response = NextResponse.json({ ok: true })
+  response.cookies.set('trinity_active_branch', orgId, {
+    httpOnly: false, // клиент должен читать его синхронно
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 30, // 30 дней
+    path: '/',
+  })
+  return response
 }

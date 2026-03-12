@@ -13,6 +13,19 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useBranches, Branch } from '@/hooks/useBranches'
 
 const STORAGE_KEY = 'trinity_active_branch'
+const COOKIE_KEY = 'trinity_active_branch'
+
+/** Читает активный филиал синхронно — сначала из cookie (быстро), потом из localStorage */
+function getInitialBranch(): string | null {
+  if (typeof window === 'undefined') return null
+  // Cookie устанавливается сервером при смене филиала — самый быстрый источник
+  const cookieMatch = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith(COOKIE_KEY + '='))
+  if (cookieMatch) return cookieMatch.split('=')[1]
+  // Fallback на localStorage
+  return localStorage.getItem(STORAGE_KEY)
+}
 
 interface BranchContextType {
   /** Currently active org ID (main org or branch child_org_id) */
@@ -37,10 +50,7 @@ export function BranchProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const { data: branches = [], isLoading: isLoadingBranches } = useBranches()
 
-  const [activeOrgId, setActiveOrgId] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    return localStorage.getItem(STORAGE_KEY)
-  })
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(() => getInitialBranch())
 
   // При загрузке: восстанавливаем активный филиал из БД
   useEffect(() => {
@@ -61,14 +71,14 @@ export function BranchProvider({ children }: { children: ReactNode }) {
     (newOrgId: string) => {
       setActiveOrgId(newOrgId)
       localStorage.setItem(STORAGE_KEY, newOrgId)
+      // Сразу пишем в cookie — чтобы при следующей загрузке не было flash
+      document.cookie = `${COOKIE_KEY}=${newOrgId}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
       // Сохраняем в БД — источник истины на сервере
       fetch('/api/set-active-branch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orgId: newOrgId }),
-      }).catch(() => {
-        // Ошибка не критична — localStorage уже обновлён
-      })
+      }).catch(() => {})
       // Invalidate all data queries so they refetch with new org
       queryClient.invalidateQueries()
     },

@@ -8,7 +8,6 @@ export const dynamic = 'force-dynamic'
 
 /**
  * Create Tranzilla tokenization link for recurring payments
- * Terminal: ambersoltok
  * Creates token for future charges without entering card details again
  */
 export async function POST(request: NextRequest) {
@@ -145,8 +144,6 @@ export async function POST(request: NextRequest) {
       token_link: tokenLink,
       amount,
       currency: 'ILS',
-      terminal: 'ambersoltok',
-      note: 'This link creates a token for recurring payments',
     })
   } catch (error: any) {
     console.error('[Token] Create token link error:', error)

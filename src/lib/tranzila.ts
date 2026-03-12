@@ -43,7 +43,7 @@ export function generateTranzilaHeaders() {
 }
 
 // ============================================================
-// ШАГ 1 — ПЕРВЫЙ ПЛАТЁЖ через терминал ambersolt
+// ШАГ 1 — ПЕРВЫЙ ПЛАТЁЖ
 //
 // После оплаты Tranzila возвращает TranzilaTK (токен карты).
 // Токен сохраняется в organizations.tranzila_card_token
@@ -72,8 +72,12 @@ export async function createTranzilaPaymentLink({
   terminal?: string
   password?: string
 }) {
-  const terminalId = terminalOverride || process.env.TRANZILA_TERMINAL_ID || 'ambersolt'
+  const terminalId = terminalOverride || process.env.TRANZILA_TERMINAL_ID || ''
   const terminalPassword = passwordOverride || process.env.TRANZILA_TERMINAL_PASSWORD || ''
+
+  if (!terminalId) {
+    throw new Error('Tranzila terminal not configured for this organization')
+  }
 
   const params = new URLSearchParams({
     supplier: terminalId,
@@ -106,8 +110,8 @@ export async function createTranzilaPaymentLink({
 // ============================================================
 // ШАГ 2 — РЕКУРРЕНТНЫЙ ПЛАТЁЖ по сохранённому токену
 //
-// Используется терминал ambersolttok / пароль LEwWn4N3.
 // Токен был получен на Шаге 1 и хранится в organizations.
+// Используется токен-терминал (TRANZILA_TOKEN_TERMINAL из .env).
 // ============================================================
 
 interface ChargeByTokenParams {
@@ -135,8 +139,12 @@ export async function chargeByToken({
   terminal: terminalOverride,
   password: passwordOverride,
 }: ChargeByTokenParams): Promise<ChargeResult> {
-  const terminal = terminalOverride || process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok'
+  const terminal = terminalOverride || process.env.TRANZILA_TOKEN_TERMINAL || ''
   const password = passwordOverride || process.env.TRANZILA_TOKEN_PASSWORD || ''
+
+  if (!terminal) {
+    throw new Error('Tranzila token terminal not configured for this organization')
+  }
 
   const params = new URLSearchParams({
     supplier: terminal,
@@ -212,8 +220,12 @@ export async function validateToken({
   token: string
   expdate?: string
 }): Promise<boolean> {
-  const terminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok'
+  const terminal = process.env.TRANZILA_TOKEN_TERMINAL || ''
   const password = process.env.TRANZILA_TOKEN_PASSWORD || ''
+
+  if (!terminal) {
+    return false
+  }
 
   const params = new URLSearchParams({
     supplier: terminal,

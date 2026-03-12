@@ -99,6 +99,15 @@ export async function POST(request: NextRequest) {
       .eq('id', org_id)
       .single()
 
+    // SECURITY: Validate that organization has its own terminal configured
+    // Never use platform owner credentials as fallback for client org payments
+    if (!org?.tranzila_terminal) {
+      return NextResponse.json(
+        { error: 'Платёжный терминал не настроен для вашей организации. Обратитесь к администратору.' },
+        { status: 400 }
+      )
+    }
+
     // Generate Tranzila payment link
     const origin = request.nextUrl.origin
 
@@ -108,8 +117,8 @@ export async function POST(request: NextRequest) {
       paymentId: payment.id,
       successUrl: `${origin}/api/payments/tranzila-success`,
       failUrl: `${origin}/api/payments/tranzila-failed`,
-      terminal: org?.tranzila_terminal || undefined,
-      password: org?.tranzila_password || undefined,
+      terminal: org.tranzila_terminal,
+      password: org.tranzila_password || undefined,
     })
 
     const paymentLink = tranzilaResult.url

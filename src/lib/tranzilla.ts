@@ -27,15 +27,18 @@ interface TranzillaWebhookData {
   [key: string]: any
 }
 
-// Production iframe URL
-const TRANZILLA_IFRAME_URL = 'https://direct.tranzila.com/ambersol/iframenew.php'
-
 /**
  * Generate payment link for Tranzilla hosted iframe
  * SECURITY: TranzilaPW is NOT included in public iframe URLs
  */
 export function generateTranzillaPaymentLink(params: TranzillaPaymentParams): string {
-  const terminalId = process.env.TRANZILLA_TERMINAL_ID || 'ambersol'
+  const terminalId = process.env.TRANZILLA_TERMINAL_ID || process.env.TRANZILA_TERMINAL_ID || ''
+
+  if (!terminalId) {
+    throw new Error('Tranzila terminal not configured')
+  }
+
+  const TRANZILLA_IFRAME_URL = `https://direct.tranzila.com/${terminalId}/iframenew.php`
   
   const queryParams = new URLSearchParams({
     sum: params.amount.toFixed(2),
@@ -95,8 +98,12 @@ export function parseTranzillaWebhook(data: TranzillaWebhookData) {
  * SECURITY: TranzilaPW is NOT included in public iframe URLs
  */
 export function generateTranzillaTokenLink(params: TranzillaPaymentParams): string {
-  const tokenTerminal = process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok'
+  const tokenTerminal = process.env.TRANZILA_TOKEN_TERMINAL || ''
   const tokenPassword = process.env.TRANZILA_TOKEN_PASSWORD || ''
+
+  if (!tokenTerminal) {
+    throw new Error('Tranzila token terminal not configured')
+  }
 
   const queryParams = new URLSearchParams({
     sum: params.amount.toFixed(2),

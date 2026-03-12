@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       token: org.tranzila_card_token,
       amount: org.billing_amount,
       description: `Trinity CRM подписка — ${org.name}`,
-      terminal: org.tranzila_token_terminal || process.env.TRANZILA_TOKEN_TERMINAL || 'ambersolttok',
+      terminal: org.tranzila_token_terminal || process.env.TRANZILA_TOKEN_TERMINAL,
       password: org.tranzila_password || process.env.TRANZILA_PRIVATE_KEY,
       expdate: org.tranzila_card_expiry,
     })

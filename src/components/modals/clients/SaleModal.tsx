@@ -218,25 +218,27 @@ export function SaleModal() {
     handleClose()
   }
 
-  // Generate Tranzila payment URL
+  // Check if org has terminal configured
+  const orgTerminal = (org as any)?.tranzila_terminal || ''
+  const orgTerminalPassword = (org as any)?.tranzila_password || ''
+
+  // Generate Tranzila payment URL using org's own terminal only
   const generateTranzilaUrl = () => {
+    if (!orgTerminal) {
+      throw new Error('Платёжный терминал не настроен. Обратитесь к администратору.')
+    }
     const cleanPhone = client?.phone?.replace(/\D/g, '') || ''
-    const terminal = process.env.NEXT_PUBLIC_TRANZILA_TOKEN_TERMINAL || 'ambersolttok'
-    const password = process.env.NEXT_PUBLIC_TRANZILA_TOKEN_PASSWORD || 'ckDffDS'
     const params = new URLSearchParams({
       sum: total.toFixed(2),
       currency: '1',
-      TranzilaPW: password,
+      TranzilaPW: orgTerminalPassword,
       cred_type: '1',
       tranmode: 'A',
-      success_url: 'https://www.ambersol.co.il/payment-success',
-      fail_url: 'https://www.ambersol.co.il/payment-failed',
-      notify_url: 'https://www.ambersol.co.il/api/webhooks/tranzila',
       u71: '1',
       ppnumber: cleanPhone,
       contact: clientName,
     })
-    return `https://direct.tranzila.com/${terminal}/iframenew.php?${params.toString()}`
+    return `https://direct.tranzila.com/${orgTerminal}/iframenew.php?${params.toString()}`
   }
 
   // Complete sale
@@ -265,6 +267,13 @@ export function SaleModal() {
 
       // Credit card payment — create pending payment + show link
       if (paymentMethod === 'credit') {
+        if (!orgTerminal) {
+          toast.error(locale === 'he'
+            ? 'טרמינל Tranzila לא מוגדר. פנה למנהל המערכת.'
+            : 'Платёжный терминал не настроен. Обратитесь к администратору.')
+          setIsProcessing(false)
+          return
+        }
         const url = generateTranzilaUrl()
 
         const { error: paymentError } = await supabase
@@ -706,22 +715,35 @@ export function SaleModal() {
           {/* Payment Method */}
           <div>
             <h3 className="text-sm font-semibold text-gray-500 mb-3">{text.paymentMethod}</h3>
+            {!orgTerminal && (
+              <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mb-3">
+                {locale === 'he'
+                  ? 'טרמינל Tranzila לא מוגדר — תשלום באשראי אינו זמין. פנה למנהל המערכת.'
+                  : 'Терминал Tranzila не настроен — оплата картой недоступна. Обратитесь к администратору.'}
+              </p>
+            )}
             <div className="grid grid-cols-3 gap-3">
-              {paymentMethods.map(method => (
-                <button
-                  key={method.value}
-                  onClick={() => setPaymentMethod(method.value)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition ${
-                    paymentMethod === method.value
-                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <method.icon className={`w-6 h-6 ${paymentMethod === method.value ? 'text-indigo-600' : 'text-gray-500'}`} />
-                  <span className="text-sm font-medium">{method.label[locale as 'he' | 'ru']}</span>
-                  {paymentMethod === method.value && <Check className="w-4 h-4 text-indigo-600" />}
-                </button>
-              ))}
+              {paymentMethods.map(method => {
+                const isDisabled = method.value === 'credit' && !orgTerminal
+                return (
+                  <button
+                    key={method.value}
+                    onClick={() => !isDisabled && setPaymentMethod(method.value)}
+                    disabled={isDisabled}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition ${
+                      isDisabled
+                        ? 'border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed'
+                        : paymentMethod === method.value
+                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <method.icon className={`w-6 h-6 ${paymentMethod === method.value && !isDisabled ? 'text-indigo-600' : 'text-gray-500'}`} />
+                    <span className="text-sm font-medium">{method.label[locale as 'he' | 'ru']}</span>
+                    {paymentMethod === method.value && !isDisabled && <Check className="w-4 h-4 text-indigo-600" />}
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>

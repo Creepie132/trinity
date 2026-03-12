@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       const terminal =
         (org as any).tranzila_token_terminal ||
         process.env.TRANZILA_TOKEN_TERMINAL ||
-        'ambersolttok'
+        ''
       const password =
         (org as any).tranzila_token_password ||
         process.env.TRANZILA_TOKEN_PASSWORD ||
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         }).toString()
     } else {
       // Первый платёж — обычный терминал, сохраняем карту
-      const terminal = process.env.TRANZILA_TERMINAL_ID || 'ambersolt'
+      const terminal = process.env.TRANZILA_TERMINAL_ID || ''
       const password = process.env.TRANZILA_TERMINAL_PASSWORD || ''
 
       paymentUrl =

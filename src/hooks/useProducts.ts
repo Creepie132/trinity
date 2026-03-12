@@ -57,12 +57,16 @@ export function useProduct(id: string) {
  */
 export function useCreateProduct() {
   const queryClient = useQueryClient()
+  const { activeOrgId } = useBranch()
 
   return useMutation({
     mutationFn: async (product: CreateProductDTO) => {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
+
       const response = await fetch('/api/products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(product),
       })
 
@@ -142,10 +146,15 @@ export function useDeleteProduct() {
  * useLowStockProducts - Fetch products where quantity <= min_quantity
  */
 export function useLowStockProducts() {
+  const { activeOrgId } = useBranch()
+
   return useQuery({
-    queryKey: ['products', 'low-stock'],
+    queryKey: ['products', 'low-stock', activeOrgId],
     queryFn: async () => {
-      const response = await fetch('/api/products')
+      const headers: Record<string, string> = {}
+      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
+
+      const response = await fetch('/api/products', { headers })
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to fetch products')

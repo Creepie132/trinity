@@ -91,6 +91,17 @@ export function useCreateBranch() {
         .single()
 
       if (branchError) throw branchError
+
+      // 3. Add current user as owner of the new branch org
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase.from('org_users').insert({
+          user_id: user.id,
+          org_id: newOrg.id,
+          role: 'owner',
+        })
+      }
+
       return branch
     },
     onSuccess: () => {

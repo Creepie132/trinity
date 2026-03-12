@@ -1,5 +1,8 @@
 'use client'
 
+// Re-export useAuth from the canonical hook so all components use the same instance
+export { useAuth } from '@/hooks/useAuth'
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 

@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useBranches } from '@/hooks/useBranches'
-import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, RefreshCw, CreditCard } from 'lucide-react'
+import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -73,13 +73,6 @@ export default function SettingsPage() {
       description: language === 'he' ? 'קבע מה כל עובד יכול לעשות' : 'Управляйте доступом сотрудников',
     },
     {
-      id: 'recurring',
-      href: '/settings/recurring',
-      icon: RefreshCw,
-      title: language === 'he' ? 'חיוב חוזר' : 'Рекуррентные платежи',
-      description: language === 'he' ? 'נהל תוכניות חיוב אוטומטי' : 'Управляйте планами автоматического списания',
-    },
-    {
       id: 'payments',
       href: '/settings/payments',
       icon: CreditCard,
@@ -94,7 +87,6 @@ export default function SettingsPage() {
     // Check module access first (if module is disabled, hide the setting)
     if (category.id === 'booking' && features.hasBooking === false) return false
     if (category.id === 'branches' && !features.hasBranches) return false
-    if (category.id === 'recurring' && !features.recurringEnabled) return false
     if (category.id === 'payments' && !features.hasPayments) return false
     
     // Owner-only settings (check permissions)

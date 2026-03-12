@@ -19,12 +19,10 @@ let cachedIsAdmin: boolean | null = null
 let cachedRole: string | null = null
 let cachedOrganizations: Array<{ org_id: string; org_name: string; role: string }> | null = null
 
-// Читаем из localStorage при загрузке
+// localStorage org_id не читаем при инициализации —
+// он будет проверен после загрузки реальных org пользователя
 if (typeof window !== 'undefined') {
-  const savedOrgId = localStorage.getItem('current_org_id')
-  if (savedOrgId) {
-    cachedOrgId = savedOrgId
-  }
+  cachedOrgId = null
 }
 
 export function useAuth(): UseAuthResult {

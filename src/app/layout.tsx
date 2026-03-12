@@ -6,6 +6,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster } from "@/components/ui/sonner";
 import ConditionalChatWidget from "@/components/ConditionalChatWidget";
 import { ModalManager } from "@/components/modals/ModalManager";
+import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 
 const inter = Inter({ 
   subsets: ["latin", "cyrillic"], 
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
   description: "מערכת ניהול לקוחות, תשלומים והודעות SMS",
   icons: {
     icon: '/logo.png',
+    apple: '/icons/icon-192.png',
   },
 };
 
@@ -33,6 +35,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="he" dir="rtl" className="light">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#6366f1" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Trinity" />
+      </head>
       <body className={inter.className}>
         <QueryProvider>
           <LanguageProvider>
@@ -58,6 +67,7 @@ export default function RootLayout({
             />
             <ConditionalChatWidget />
             <ModalManager />
+            <PWAInstallBanner />
           </LanguageProvider>
         </QueryProvider>
       </body>

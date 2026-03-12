@@ -77,7 +77,9 @@
       "Bash(dir \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\app\\\\api\\\\admin\\\\\" /B)",
       "Bash(grep -rn \"payment\\\\|Payment\\\\|תשלום\" \"F:/Amber_solutions_Kira/Trinity/src/components/visits\" --include=\"*.tsx\" -l 2>/dev/null | head -5)",
       "Bash(head -50 \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\src\\\\app\\\\\\(dashboard\\)\\\\payments\\\\page.tsx\")",
-      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|warning.*error\" | head -10)"
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|warning.*error\" | head -10)",
+      "Bash(node \"F:\\\\Amber_solutions_Kira\\\\Trinity\\\\scripts\\\\generate-icons.js\")",
+      "Bash(cd \"F:\\\\Amber_solutions_Kira\\\\Trinity\" && npm run build 2>&1 | grep -E \"error|Error|✓|Failed\" | head -20)"
     ]
   }
 }

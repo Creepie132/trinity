@@ -90,12 +90,16 @@ export function useCreateProduct() {
  */
 export function useUpdateProduct() {
   const queryClient = useQueryClient()
+  const { activeOrgId } = useBranch()
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateProductDTO }) => {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
+
       const response = await fetch(`/api/products/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(data),
       })
 
@@ -120,11 +124,16 @@ export function useUpdateProduct() {
  */
 export function useDeleteProduct() {
   const queryClient = useQueryClient()
+  const { activeOrgId } = useBranch()
 
   return useMutation({
     mutationFn: async (id: string) => {
+      const headers: Record<string, string> = {}
+      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
+
       const response = await fetch(`/api/products/${id}`, {
         method: 'DELETE',
+        headers,
       })
 
       if (!response.ok) {

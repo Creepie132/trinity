@@ -253,7 +253,7 @@ export default function ClientsPage() {
               }}
               locale={language === 'he' ? 'he' : 'ru'}
               isDemo={isDemo}
-              enabledModules={{ appointments: features.hasVisits }}
+              enabledModules={{ appointments: features.hasVisits, recurring: features.recurringEnabled }}
             />
           ))
         ) : (

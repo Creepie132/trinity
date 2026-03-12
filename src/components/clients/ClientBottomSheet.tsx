@@ -354,7 +354,7 @@ export function ClientBottomSheet({
             </button>
 
             {/* Рекуррентные платежи */}
-            {mounted && enabledModules?.recurring !== false && (
+            {enabledModules?.recurring && (
               <button
                 onClick={loadRecurring}
                 disabled={isDemo}

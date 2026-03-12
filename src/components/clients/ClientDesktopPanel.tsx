@@ -36,7 +36,6 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
   const [firstBillingDate, setFirstBillingDate] = useState('')
   const [subscribing, setSubscribing] = useState(false)
   const [charging, setCharging] = useState(false)
-  const [mounted, setMounted] = useState(false)
 
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -58,7 +57,6 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
   const avatarColor = colors[(client?.first_name || '').charCodeAt(0) % colors.length]
 
   useEffect(() => {
-    setMounted(true)
     const d = new Date()
     d.setMonth(d.getMonth() + 1)
     setFirstBillingDate(d.toISOString().split('T')[0])

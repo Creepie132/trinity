@@ -60,48 +60,26 @@ export function useCreateBranch() {
       phone?: string
       category?: string
     }) => {
-      // 1. Create new organization for the branch
-      const { data: newOrg, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: data.orgName,
-          phone: data.phone || null,
-          category: data.category || 'other',
-          plan: 'basic',
-          is_active: true,
-          features: {},
-        })
-        .select()
-        .single()
+      // Use API route with service role to bypass RLS
+      const res = await fetch('/api/branches/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parentOrgId: orgId,
+          branchName: data.branchName,
+          orgName: data.orgName,
+          address: data.address,
+          phone: data.phone,
+          category: data.category,
+        }),
+      })
 
-      if (orgError) throw orgError
-
-      // 2. Create branch record linking parent → child
-      const { data: branch, error: branchError } = await supabase
-        .from('branches')
-        .insert({
-          parent_org_id: orgId,
-          child_org_id: newOrg.id,
-          name: data.branchName,
-          address: data.address || null,
-          phone: data.phone || null,
-          is_active: true,
-        })
-        .select()
-        .single()
-
-      if (branchError) throw branchError
-
-      // 3. Add current user as owner of the new branch org
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        await supabase.from('org_users').insert({
-          user_id: user.id,
-          org_id: newOrg.id,
-          role: 'owner',
-        })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to create branch')
       }
 
+      const { branch } = await res.json()
       return branch
     },
     onSuccess: () => {

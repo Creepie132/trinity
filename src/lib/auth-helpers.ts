@@ -86,20 +86,43 @@ export async function getAuthContext(request?: NextRequest): Promise<AuthContext
   }
 
   // Branch override: если передан X-Branch-Org-Id — используем его
-  // но только если пользователь является member этой организации
+  // Проверка 1: пользователь является прямым member этой org
+  // Проверка 2: пользователь является owner/moderator родительской org (для переключения на филиал)
   const branchOrgId = request?.headers.get('X-Branch-Org-Id')
   if (branchOrgId && branchOrgId !== orgId) {
-    const { data: membership } = await supabase
+    // Проверка 1: прямое членство
+    const { data: directMembership } = await supabase
       .from('org_users')
       .select('org_id')
       .eq('user_id', user.id)
       .eq('org_id', branchOrgId)
       .maybeSingle()
 
-    if (membership?.org_id) {
+    if (directMembership?.org_id) {
       orgId = branchOrgId
+    } else {
+      // Проверка 2: пользователь — owner/moderator родительской org этого филиала
+      const { data: branch } = await supabase
+        .from('branches')
+        .select('parent_org_id')
+        .eq('child_org_id', branchOrgId)
+        .maybeSingle()
+
+      if (branch?.parent_org_id) {
+        const { data: parentMembership } = await supabase
+          .from('org_users')
+          .select('org_id, role')
+          .eq('user_id', user.id)
+          .eq('org_id', branch.parent_org_id)
+          .in('role', ['owner', 'moderator'])
+          .maybeSingle()
+
+        if (parentMembership?.org_id) {
+          orgId = branchOrgId
+        }
+      }
     }
-    // Если membership не найден — тихо игнорируем, используем mainOrgId
+    // Если ни одна проверка не прошла — тихо игнорируем, используем mainOrgId
   }
 
   return { user, orgId, orgRole, isAdmin, supabase: supabase as unknown as SupabaseClient }

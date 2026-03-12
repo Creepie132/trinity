@@ -3,7 +3,7 @@
 // Re-export useAuth from the canonical hook so all components use the same instance
 export { useAuth } from '@/hooks/useAuth'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useEffect, useState, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 
 type AuthContextType = {
@@ -184,20 +184,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    // Don't throw error - return safe defaults to prevent crash
-    console.warn('[useAuth] Called outside AuthProvider - returning defaults')
-    return {
-      user: null,
-      orgId: null,
-      role: null,
-      isAdmin: false,
-      isLoading: false,
-      signOut: async () => {},
-      refetch: async () => {},
-    }
-  }
-  return context
-}
+// useAuth is re-exported from @/hooks/useAuth at the top of this file

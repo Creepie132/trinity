@@ -652,7 +652,7 @@ export default function DiaryPage() {
             variant="primary"
             size="md"
             icon={<Plus className="w-5 h-5" />}
-            onClick={() => openModal('task-create')}
+            onClick={() => openModal('task-create', { onCreated: loadTasks })}
           >
             {language === 'he' ? 'משימה חדשה' : 'Новая задача'}
           </TrinityButton>
@@ -719,7 +719,7 @@ export default function DiaryPage() {
           description={language === 'he' ? 'צור משימה חדשה כדי להתחיל' : 'Создайте первую задачу для начала работы'}
           action={{
             label: language === 'he' ? 'צור משימה' : 'Создать задачу',
-            onClick: () => openModal('task-create'),
+            onClick: () => openModal('task-create', { onCreated: loadTasks }),
           }}
         />
       ) : (
@@ -886,7 +886,7 @@ export default function DiaryPage() {
       {/* FAB мобильный */}
       <div className="md:hidden fixed bottom-20 end-4 z-30">
         <button
-          onClick={() => openModal('task-create')}
+          onClick={() => openModal('task-create', { onCreated: loadTasks })}
           className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 flex items-center justify-center transition"
         >
           <Plus className="w-6 h-6" />

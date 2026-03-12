@@ -296,7 +296,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
     { key: 'payments', label: l.payments, icon: <CreditCard size={16} /> },
     { key: 'messages', label: l.messages, icon: <MessageSquare size={16} /> },
     { key: 'notes', label: l.notes, icon: <FileText size={16} /> },
-    ...(mounted && features.recurringEnabled ? [{ key: 'recurring', label: locale === 'he' ? 'חיוב חוזר' : 'Рекурр.', icon: <RefreshCw size={16} /> }] : []),
+    ...(features.recurringEnabled ? [{ key: 'recurring', label: locale === 'he' ? 'חיוב חוזר' : 'Рекурр.', icon: <RefreshCw size={16} /> }] : []),
   ]
 
   return (

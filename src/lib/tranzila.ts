@@ -169,7 +169,7 @@ export async function chargeByToken({
     body: params.toString(),
   })
 
-
+  const text = await res.text()
 
   let data: any
   try {

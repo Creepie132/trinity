@@ -1,4 +1,5 @@
 import { createClient, Session, User, SupabaseClient } from "@supabase/supabase-js"
+import { getActiveOrgId } from './get-active-org'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createSupabaseBrowserClient } from './supabase-browser'
@@ -85,45 +86,9 @@ export async function getAuthContext(request?: NextRequest): Promise<AuthContext
     orgId = orgUser.org_id
   }
 
-  // Branch override: если передан X-Branch-Org-Id — используем его
-  // Проверка 1: пользователь является прямым member этой org
-  // Проверка 2: пользователь является owner/moderator родительской org (для переключения на филиал)
-  const branchOrgId = request?.headers.get('X-Branch-Org-Id')
-  if (branchOrgId && branchOrgId !== orgId) {
-    // Проверка 1: прямое членство
-    const { data: directMembership } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .eq('org_id', branchOrgId)
-      .maybeSingle()
-
-    if (directMembership?.org_id) {
-      orgId = branchOrgId
-    } else {
-      // Проверка 2: пользователь — owner/moderator родительской org этого филиала
-      const { data: branch } = await supabase
-        .from('branches')
-        .select('parent_org_id')
-        .eq('child_org_id', branchOrgId)
-        .maybeSingle()
-
-      if (branch?.parent_org_id) {
-        const { data: parentMembership } = await supabase
-          .from('org_users')
-          .select('org_id, role')
-          .eq('user_id', user.id)
-          .eq('org_id', branch.parent_org_id)
-          .in('role', ['owner', 'moderator'])
-          .maybeSingle()
-
-        if (parentMembership?.org_id) {
-          orgId = branchOrgId
-        }
-      }
-    }
-    // Если ни одна проверка не прошла — тихо игнорируем, используем mainOrgId
-  }
+  // Branch: читаем активный филиал из user_active_branch (источник истины — БД)
+  // Сервер не доверяет заголовкам или localStorage от клиента
+  orgId = await getActiveOrgId(user.id, orgId)
 
   return { user, orgId, orgRole, isAdmin, supabase: supabase as unknown as SupabaseClient }
 }

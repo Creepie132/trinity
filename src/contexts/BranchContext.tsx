@@ -42,6 +42,20 @@ export function BranchProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem(STORAGE_KEY)
   })
 
+  // При загрузке: восстанавливаем активный филиал из БД
+  useEffect(() => {
+    if (!orgId) return
+    fetch('/api/user/active-branch')
+      .then((r) => r.json())
+      .then(({ activeOrgId: dbOrgId }) => {
+        if (dbOrgId) {
+          setActiveOrgId(dbOrgId)
+          localStorage.setItem(STORAGE_KEY, dbOrgId)
+        }
+      })
+      .catch(() => {})
+  }, [orgId])
+
   // Once auth resolves and branches load, validate the stored branch
   useEffect(() => {
     if (!orgId || isLoadingBranches) return
@@ -73,6 +87,14 @@ export function BranchProvider({ children }: { children: ReactNode }) {
     (newOrgId: string) => {
       setActiveOrgId(newOrgId)
       localStorage.setItem(STORAGE_KEY, newOrgId)
+      // Сохраняем в БД — источник истины на сервере
+      fetch('/api/set-active-branch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId: newOrgId }),
+      }).catch(() => {
+        // Ошибка не критична — localStorage уже обновлён
+      })
       // Invalidate all data queries so they refetch with new org
       queryClient.invalidateQueries()
     },

@@ -85,7 +85,7 @@ export function Modal({
           !width && sizeClasses[size],
           className
         )}
-        style={width ? { maxWidth: width } : undefined}
+        style={width ? { maxWidth: `min(${width}, calc(100vw - 32px))` } : undefined}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}

@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import Modal from '@/components/ui/Modal'
+const KiraOrb = dynamic(() => import('@/components/kira/KiraOrb'), { ssr: false })
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Progress } from '@/components/ui/progress'
-import { Plus, Trash2, Check, Users, Calendar, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, Users, Calendar, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -472,9 +474,14 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
         {/* Step 1: Business Info */}
         {step === 1 && (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Расскажите о вашем бизнесе</h2>
-              <p className="text-gray-400">Это поможет настроить систему под ваши нужды</p>
+            <div className="flex items-center gap-6">
+              <div className="shrink-0">
+                <KiraOrb size={100} isThinking={false} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Привет! Я Кира 👋</h2>
+                <p className="text-gray-400">Помогу настроить систему под ваш бизнес. Это займёт пару минут.</p>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -731,14 +738,16 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
         {step === 4 && (
           <div className="space-y-6 text-center">
             <div className="flex justify-center">
-              <div className="w-20 h-20 bg-purple-600 rounded-full flex items-center justify-center">
-                <Check className="w-10 h-10 text-white" />
-              </div>
+              <KiraOrb size={120} isThinking={loading} />
             </div>
 
             <div>
-              <h2 className="text-3xl font-bold mb-2">Готово! 🎉</h2>
-              <p className="text-gray-400">Ваша система настроена. Вот что можно сделать:</p>
+              <h2 className="text-3xl font-bold mb-2">
+                {loading ? 'Сохраняю настройки...' : 'Готово! 🎉'}
+              </h2>
+              <p className="text-gray-400">
+                {loading ? 'Подождите немного...' : 'Ваша система настроена. Вот что можно сделать:'}
+              </p>
             </div>
 
             <div className="grid grid-cols-3 gap-4 my-8">

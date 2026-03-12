@@ -16,6 +16,10 @@ import { useModalStore } from '@/store/useModalStore'
 import { WorkShiftWidget } from './WorkShiftWidget'
 import { useBranch } from '@/contexts/BranchContext'
 import { useAuth } from '@/hooks/useAuth'
+import { useQuery } from '@tanstack/react-query'
+import dynamic from 'next/dynamic'
+const OnboardingWizard = dynamic(() => import('@/components/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })), { ssr: false })
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 interface DashboardContentProps {
   orgId: string
@@ -73,6 +77,32 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   const { activeOrgId } = useBranch()
   const { orgId: authOrgId } = useAuth()
   const orgId = activeOrgId || authOrgId || _orgIdProp
+
+  const supabase = createSupabaseBrowserClient()
+
+  // Check if onboarding is needed
+  const { data: onboardingData } = useQuery({
+    queryKey: ['onboarding-check', orgId],
+    enabled: !!orgId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('name, features')
+        .eq('id', orgId)
+        .single()
+      const { count } = await supabase
+        .from('services')
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', orgId)
+      const onboardingCompleted = org?.features?.onboarding_completed ?? false
+      const hasServices = (count || 0) > 0
+      return {
+        showOnboarding: !onboardingCompleted || !hasServices,
+        organizationName: org?.name || '',
+      }
+    },
+  })
 
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
 
@@ -298,6 +328,14 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
             openModal('edit-visit', { visitId: selectedVisit.id, visit: selectedVisit })
             setSelectedVisit(null)
           }}
+        />
+      )}
+
+      {/* Onboarding */}
+      {onboardingData?.showOnboarding && orgId && (
+        <OnboardingWizard
+          open={true}
+          organizationName={onboardingData.organizationName}
         />
       )}
     </>

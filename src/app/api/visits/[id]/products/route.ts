@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 /**
  * POST /api/visits/[id]/products
@@ -12,9 +13,10 @@ export async function POST(
   try {
     const { id: visitId } = await params
 
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
-    const { orgId, supabase } = auth
+    const { orgId } = auth
+    const serviceSupabase = createSupabaseServiceClient()
 
     const { product_id } = await request.json()
     if (!product_id) {
@@ -22,7 +24,7 @@ export async function POST(
     }
 
     // Fetch product
-    const { data: product, error: productError } = await supabase
+    const { data: product, error: productError } = await serviceSupabase
       .from('products')
       .select('id, name, sell_price, quantity, is_active')
       .eq('id', product_id)
@@ -37,7 +39,7 @@ export async function POST(
     }
 
     // Create inventory transaction (sale, quantity: -1)
-    const { error: txError } = await supabase
+    const { error: txError } = await serviceSupabase
       .from('inventory_transactions')
       .insert({
         org_id: orgId,
@@ -55,7 +57,7 @@ export async function POST(
     }
 
     // Decrement product quantity
-    const { error: qtyError } = await supabase
+    const { error: qtyError } = await serviceSupabase
       .from('products')
       .update({ quantity: product.quantity - 1 })
       .eq('id', product_id)
@@ -66,7 +68,7 @@ export async function POST(
 
     // Insert into visit_services for display in the services list
     // (duration_minutes=0, service_id=null marks this as a product entry)
-    const { data: visitServiceEntry } = await supabase
+    const { data: visitServiceEntry } = await serviceSupabase
       .from('visit_services')
       .insert({
         visit_id: visitId,
@@ -80,14 +82,14 @@ export async function POST(
       .single()
 
     // Add sell_price to visit price
-    const { data: currentVisit } = await supabase
+    const { data: currentVisit } = await serviceSupabase
       .from('visits')
       .select('price')
       .eq('id', visitId)
       .single()
 
     if (currentVisit) {
-      await supabase
+      await serviceSupabase
         .from('visits')
         .update({ price: (currentVisit.price || 0) + (product.sell_price || 0) })
         .eq('id', visitId)

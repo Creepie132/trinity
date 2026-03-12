@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { CreateInventoryTransactionDTO, InventoryTransaction } from '@/types/inventory'
 import { getAuthContext } from '@/lib/auth-helpers'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 /**
  * GET /api/inventory
@@ -15,17 +16,18 @@ import { getAuthContext } from '@/lib/auth-helpers'
  */
 export async function GET(request: NextRequest) {
   try {
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
     
-    const { orgId, supabase } = auth
+    const { orgId } = auth
+    const serviceSupabase = createSupabaseServiceClient()
 
     // Parse query params
     const searchParams = request.nextUrl.searchParams
     const productId = searchParams.get('product_id')
 
     // Build query
-    let query = supabase
+    let query = serviceSupabase
       .from('inventory_transactions')
       .select('*, products(*)')
       .eq('org_id', orgId)
@@ -61,10 +63,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
     
-    const { orgId, supabase } = auth
+    const { orgId } = auth
+    const serviceSupabase = createSupabaseServiceClient()
 
     // Parse request body
     const body: CreateInventoryTransactionDTO = await request.json()
@@ -87,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get current product to verify ownership and get current quantity
-    const { data: product, error: productError } = await supabase
+    const { data: product, error: productError } = await serviceSupabase
       .from('products')
       .select('id, quantity')
       .eq('id', body.product_id)
@@ -131,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     // Create transaction and update product quantity in a single transaction
     // Step 1: Insert transaction
-    const { data: transaction, error: transactionError } = await supabase
+    const { data: transaction, error: transactionError } = await serviceSupabase
       .from('inventory_transactions')
       .insert({
         org_id: orgId,
@@ -153,7 +156,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 2: Update product quantity
-    const { error: updateError } = await supabase
+    const { error: updateError } = await serviceSupabase
       .from('products')
       .update({ quantity: newQuantity })
       .eq('id', body.product_id)

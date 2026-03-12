@@ -6,6 +6,7 @@ import Modal from '@/components/ui/Modal'
 import { useProducts } from '@/hooks/useProducts'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/hooks/useOrganization'
+import { useBranch } from '@/contexts/BranchContext'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -52,6 +53,7 @@ const paymentMethods = [
 export function SaleModal() {
   const { isModalOpen, closeModal, getModalData } = useModalStore()
   const { orgId } = useAuth()
+  const { activeOrgId } = useBranch()
   const { data: org } = useOrganization()
   const supabase = createSupabaseBrowserClient()
   const queryClient = useQueryClient()
@@ -329,20 +331,23 @@ export function SaleModal() {
       if (paymentError) throw paymentError
 
       // Inventory transactions only for cart products (not preloaded services)
+      // Use /api/inventory (service role) to support branch isolation
       for (const item of cart) {
-        await supabase.from('inventory_transactions').insert({
-          org_id: orgId,
-          product_id: item.product.id,
-          type: 'sale',
-          quantity: item.quantity,
-          price_per_unit: item.price,
-          total_price: item.price * item.quantity,
-          related_payment_id: payment.id,
+        const inventoryHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (activeOrgId) inventoryHeaders['X-Branch-Org-Id'] = activeOrgId
+
+        await fetch('/api/inventory', {
+          method: 'POST',
+          headers: inventoryHeaders,
+          body: JSON.stringify({
+            product_id: item.product.id,
+            type: 'sale',
+            quantity: item.quantity,
+            price_per_unit: item.price,
+            total_price: item.price * item.quantity,
+            related_payment_id: payment.id,
+          }),
         })
-        await supabase
-          .from('products')
-          .update({ quantity: item.product.quantity - item.quantity })
-          .eq('id', item.product.id)
       }
 
       // Mark visit as completed if visitId provided

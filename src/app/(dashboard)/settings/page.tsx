@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useBranches } from '@/hooks/useBranches'
-import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, RefreshCw } from 'lucide-react'
+import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, RefreshCw, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -79,6 +79,13 @@ export default function SettingsPage() {
       title: language === 'he' ? 'חיוב חוזר' : 'Рекуррентные платежи',
       description: language === 'he' ? 'נהל תוכניות חיוב אוטומטי' : 'Управляйте планами автоматического списания',
     },
+    {
+      id: 'payments',
+      href: '/settings/payments',
+      icon: CreditCard,
+      title: language === 'he' ? 'הגדרות תשלום' : 'Настройки платежей',
+      description: language === 'he' ? 'חיבור Tranzila — טרמינל ואישורים' : 'Подключение Tranzila — терминал и учётные данные',
+    },
     // { id: 'service-colors', href: '/settings/service-colors', icon: Palette, title: t('settings.serviceColors'), description: t('settings.serviceColors.desc') },
   ]
 
@@ -88,6 +95,7 @@ export default function SettingsPage() {
     if (category.id === 'booking' && features.hasBooking === false) return false
     if (category.id === 'branches' && !features.hasBranches) return false
     if (category.id === 'recurring' && !features.recurringEnabled) return false
+    if (category.id === 'payments' && !features.hasPayments) return false
     
     // Owner-only settings (check permissions)
     if (category.id === 'services' && !permissions.canManageServices) return false

@@ -220,28 +220,8 @@ export function SaleModal() {
     handleClose()
   }
 
-  // Check if org has terminal configured
+  // Check if org has terminal configured (password never exposed to client)
   const orgTerminal = (org as any)?.tranzila_terminal || ''
-  const orgTerminalPassword = (org as any)?.tranzila_password || ''
-
-  // Generate Tranzila payment URL using org's own terminal only
-  const generateTranzilaUrl = () => {
-    if (!orgTerminal) {
-      throw new Error('Платёжный терминал не настроен. Обратитесь к администратору.')
-    }
-    const cleanPhone = client?.phone?.replace(/\D/g, '') || ''
-    const params = new URLSearchParams({
-      sum: total.toFixed(2),
-      currency: '1',
-      TranzilaPW: orgTerminalPassword,
-      cred_type: '1',
-      tranmode: 'A',
-      u71: '1',
-      ppnumber: cleanPhone,
-      contact: clientName,
-    })
-    return `https://direct.tranzila.com/${orgTerminal}/iframenew.php?${params.toString()}`
-  }
 
   // Complete sale
   const handleCompleteSale = async () => {
@@ -267,7 +247,7 @@ export function SaleModal() {
 
       const description = saleItems.map(i => `${i.product_name} x${i.quantity}`).join(', ')
 
-      // Credit card payment — create pending payment + show link
+      // Credit card payment — create pending payment via server (password never sent to client)
       if (paymentMethod === 'credit') {
         if (!orgTerminal) {
           toast.error(locale === 'he'
@@ -276,29 +256,27 @@ export function SaleModal() {
           setIsProcessing(false)
           return
         }
-        const url = generateTranzilaUrl()
 
-        const { error: paymentError } = await supabase
-          .from('payments')
-          .insert({
+        const res = await fetch('/api/payments/create-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             client_id: client.id,
-            org_id: orgId,
             amount: total,
-            payment_method: 'credit_card',
-            status: 'pending',
-            type: 'client',
             description,
             ...(visitId ? { visit_id: visitId } : {}),
-            metadata: {
-              sale_items: saleItems,
-              payment_url: url,
-              discount: discount.value > 0 ? discount : null,
-            },
-          })
+          }),
+        })
 
-        if (paymentError) throw paymentError
+        const result = await res.json()
 
-        setPaymentUrl(url)
+        if (!res.ok || !result.payment_link) {
+          toast.error(result.error || (locale === 'he' ? 'שגיאה ביצירת קישור תשלום' : 'Ошибка создания платёжной ссылки'))
+          setIsProcessing(false)
+          return
+        }
+
+        setPaymentUrl(result.payment_link)
         setStep('payment-link')
         setIsProcessing(false)
         return

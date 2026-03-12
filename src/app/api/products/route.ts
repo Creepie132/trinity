@@ -16,7 +16,7 @@ import { getAuthContext } from '@/lib/auth-helpers'
  */
 export async function GET(request: NextRequest) {
   try {
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
     
     const { orgId, supabase } = auth
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
     
     const { orgId, supabase } = auth

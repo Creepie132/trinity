@@ -7,8 +7,9 @@ import { useBranch } from '@/contexts/BranchContext'
 
 export function useClients(searchQuery?: string, page: number = 1, pageSize: number = 25) {
   const { orgId: authOrgId } = useAuth()
-  const { activeOrgId } = useBranch()
-  const orgId = activeOrgId || authOrgId
+  const { mainOrgId } = useBranch()
+  // Clients are ALWAYS shared across branches — use mainOrgId
+  const orgId = mainOrgId || authOrgId
 
   return useQuery({
     queryKey: ['clients', orgId, searchQuery, page, pageSize],
@@ -85,8 +86,9 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
 
 export function useClient(id?: string) {
   const { orgId: authOrgId } = useAuth()
-  const { activeOrgId } = useBranch()
-  const orgId = activeOrgId || authOrgId
+  const { mainOrgId } = useBranch()
+  // Clients are always shared — use mainOrgId
+  const orgId = mainOrgId || authOrgId
 
   return useQuery({
     queryKey: ['client', orgId, id],
@@ -170,8 +172,9 @@ export function useAddClient() {
 export function useUpdateClient() {
   const queryClient = useQueryClient()
   const { orgId: authOrgId } = useAuth()
-  const { activeOrgId } = useBranch()
-  const orgId = activeOrgId || authOrgId
+  const { mainOrgId } = useBranch()
+  // Clients are always shared — use mainOrgId
+  const orgId = mainOrgId || authOrgId
 
   return useMutation({
     mutationFn: async ({ id, ...client }: Partial<Client> & { id: string }) => {

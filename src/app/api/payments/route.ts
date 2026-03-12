@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 
 // GET /api/payments - список платежей для текущей организации
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
     
     const { orgId, supabase } = auth

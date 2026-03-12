@@ -2,7 +2,7 @@ import { createClient, Session, User, SupabaseClient } from "@supabase/supabase-
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createSupabaseBrowserClient } from './supabase-browser'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 type Role = "owner" | "moderator" | "user"
 
@@ -36,7 +36,7 @@ export interface AuthError {
  * const { user, orgId, supabase } = auth
  * ```
  */
-export async function getAuthContext(): Promise<AuthContext | AuthError> {
+export async function getAuthContext(request?: NextRequest): Promise<AuthContext | AuthError> {
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -83,6 +83,23 @@ export async function getAuthContext(): Promise<AuthContext | AuthError> {
       }
     }
     orgId = orgUser.org_id
+  }
+
+  // Branch override: если передан X-Branch-Org-Id — используем его
+  // но только если пользователь является member этой организации
+  const branchOrgId = request?.headers.get('X-Branch-Org-Id')
+  if (branchOrgId && branchOrgId !== orgId) {
+    const { data: membership } = await supabase
+      .from('org_users')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .eq('org_id', branchOrgId)
+      .maybeSingle()
+
+    if (membership?.org_id) {
+      orgId = branchOrgId
+    }
+    // Если membership не найден — тихо игнорируем, используем mainOrgId
   }
 
   return { user, orgId, orgRole, isAdmin, supabase: supabase as unknown as SupabaseClient }

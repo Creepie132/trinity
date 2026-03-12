@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Search, CheckCircle, XCircle, Calendar, Clock, List, CalendarDays, Play, X, MessageCircle, MessageSquare, CheckCircle2, Mail, Download, Scissors, Pencil } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { useBranch } from '@/contexts/BranchContext'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
@@ -38,7 +39,9 @@ export default function VisitsPage() {
   const features = useFeatures()
   const { t, language } = useLanguage()
   const meetingMode = useMeetingMode()
-  const { orgId } = useAuth()
+  const { orgId: authOrgId } = useAuth()
+  const { activeOrgId } = useBranch()
+  const orgId = activeOrgId || authOrgId
   const supabase = createSupabaseBrowserClient()
   const queryClient = useQueryClient()
 

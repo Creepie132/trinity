@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Payment } from '@/types/database'
 import { toast } from 'sonner'
+import { useBranch } from '@/contexts/BranchContext'
 const supabase = createSupabaseBrowserClient()
 
 interface CreatePaymentLinkParams {
@@ -21,54 +22,32 @@ interface PaymentsFilters {
 }
 
 export function usePayments(clientId?: string, filters?: PaymentsFilters) {
+  const { activeOrgId } = useBranch()
+
   return useQuery({
-    queryKey: ['payments', clientId, filters],
+    queryKey: ['payments', activeOrgId, clientId, filters],
     queryFn: async () => {
       const page = filters?.page || 0
       const pageSize = 20
 
-      let query = supabase
-        .from('payments')
-        .select(`
-          *,
-          clients:client_id (
-            id,
-            first_name,
-            last_name,
-            phone
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .range(page * pageSize, page * pageSize + pageSize - 1)
+      const headers: Record<string, string> = {}
+      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
 
-      if (clientId) {
-        query = query.eq('client_id', clientId)
-      }
+      const res = await fetch('/api/payments', { headers })
+      if (!res.ok) throw new Error('Failed to fetch payments')
+      const allPayments: any[] = await res.json()
 
-      if (filters?.clientId) {
-        query = query.eq('client_id', filters.clientId)
-      }
+      // Client-side filters
+      let data = allPayments
+      if (clientId) data = data.filter(p => p.client_id === clientId)
+      if (filters?.clientId) data = data.filter(p => p.client_id === filters.clientId)
+      if (filters?.status && filters.status !== 'all') data = data.filter(p => p.status === filters.status)
+      if (filters?.paymentMethod) data = data.filter(p => p.payment_method === filters.paymentMethod)
+      if (filters?.startDate) data = data.filter(p => p.created_at >= filters.startDate!)
+      if (filters?.endDate) data = data.filter(p => p.created_at <= filters.endDate!)
 
-      if (filters?.status && filters.status !== 'all') {
-        query = query.eq('status', filters.status)
-      }
-
-      if (filters?.paymentMethod) {
-        query = query.eq('payment_method', filters.paymentMethod)
-      }
-
-      if (filters?.startDate) {
-        query = query.gte('created_at', filters.startDate)
-      }
-
-      if (filters?.endDate) {
-        query = query.lte('created_at', filters.endDate)
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-      return data as any[]
+      const start = page * pageSize
+      return data.slice(start, start + pageSize)
     },
   })
 }

@@ -6,15 +6,21 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Product, CreateProductDTO, UpdateProductDTO } from '@/types/inventory'
+import { useBranch } from '@/contexts/BranchContext'
 
 /**
  * useProducts - Fetch all products (search is done locally in component)
  */
 export function useProducts(searchQuery?: string) {
+  const { activeOrgId } = useBranch()
+
   return useQuery({
-    queryKey: ['products'],
+    queryKey: ['products', activeOrgId],
     queryFn: async () => {
-      const response = await fetch('/api/products')
+      const headers: Record<string, string> = {}
+      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
+
+      const response = await fetch('/api/products', { headers })
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to fetch products')

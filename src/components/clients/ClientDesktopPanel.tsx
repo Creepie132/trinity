@@ -33,12 +33,11 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
   const [recurringLoading, setRecurringLoading] = useState(false)
   const [showSubscribeModal, setShowSubscribeModal] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState('')
-  const [firstBillingDate, setFirstBillingDate] = useState(() => {
-    const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().split('T')[0]
-  })
+  const [firstBillingDate, setFirstBillingDate] = useState('')
   const [subscribing, setSubscribing] = useState(false)
   const [charging, setCharging] = useState(false)
-  
+  const [mounted, setMounted] = useState(false)
+
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
     first_name: '',
@@ -57,6 +56,13 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
   
   const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-cyan-500']
   const avatarColor = colors[(client?.first_name || '').charCodeAt(0) % colors.length]
+
+  useEffect(() => {
+    setMounted(true)
+    const d = new Date()
+    d.setMonth(d.getMonth() + 1)
+    setFirstBillingDate(d.toISOString().split('T')[0])
+  }, [])
 
   useEffect(() => {
     if (isOpen && client?.id) {
@@ -290,7 +296,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
     { key: 'payments', label: l.payments, icon: <CreditCard size={16} /> },
     { key: 'messages', label: l.messages, icon: <MessageSquare size={16} /> },
     { key: 'notes', label: l.notes, icon: <FileText size={16} /> },
-    ...(features.recurringEnabled ? [{ key: 'recurring', label: locale === 'he' ? 'חיוב חוזר' : 'Рекурр.', icon: <RefreshCw size={16} /> }] : []),
+    ...(mounted && features.recurringEnabled ? [{ key: 'recurring', label: locale === 'he' ? 'חיוב חוזר' : 'Рекурр.', icon: <RefreshCw size={16} /> }] : []),
   ]
 
   return (

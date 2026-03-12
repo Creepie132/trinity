@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Calendar, DollarSign, MessageSquare, Trash2, Phone, MessageCircle, Pencil, ArrowRight, ArrowLeft, RefreshCw, Plus } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -61,11 +61,17 @@ export function ClientBottomSheet({
   const [recurringLoading, setRecurringLoading] = useState(false)
   const [showSubscribeModal, setShowSubscribeModal] = useState(false)
   const [selectedPlanId, setSelectedPlanId] = useState('')
-  const [firstBillingDate, setFirstBillingDate] = useState(() => {
-    const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().split('T')[0]
-  })
+  const [firstBillingDate, setFirstBillingDate] = useState('')
   const [subscribing, setSubscribing] = useState(false)
   const [charging, setCharging] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    const d = new Date()
+    d.setMonth(d.getMonth() + 1)
+    setFirstBillingDate(d.toISOString().split('T')[0])
+  }, [])
 
   const clientName = getClientName(client)
   const initials = getClientInitials(client)
@@ -348,7 +354,7 @@ export function ClientBottomSheet({
             </button>
 
             {/* Рекуррентные платежи */}
-            {enabledModules?.recurring !== false && (
+            {mounted && enabledModules?.recurring !== false && (
               <button
                 onClick={loadRecurring}
                 disabled={isDemo}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateBody, createVisitSchema } from '@/lib/validations'
 import { getAuthContext } from '@/lib/auth-helpers'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 import { bookingConfirmEmail, newBookingNotifyEmail } from '@/lib/email-templates'
 
@@ -10,12 +11,13 @@ export async function GET(request: NextRequest) {
     const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
     
-    const { orgId, supabase } = auth
+    const { orgId } = auth
+    const serviceSupabase = createSupabaseServiceClient()
 
     const oneWeekAgo = new Date()
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
 
-    const { data, error } = await supabase
+    const { data, error } = await serviceSupabase
       .from('visits')
       .select(`
         *,

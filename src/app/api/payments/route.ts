@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 // GET /api/payments - список платежей для текущей организации
 export async function GET(request: NextRequest) {
@@ -7,9 +8,10 @@ export async function GET(request: NextRequest) {
     const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
     
-    const { orgId, supabase } = auth
+    const { orgId } = auth
+    const serviceSupabase = createSupabaseServiceClient()
 
-    const { data: payments, error } = await supabase
+    const { data: payments, error } = await serviceSupabase
       .from('payments')
       .select(`
         *,

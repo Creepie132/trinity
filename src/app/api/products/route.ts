@@ -20,21 +20,19 @@ export async function GET(request: NextRequest) {
     const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
     
-    const { orgId, supabase } = auth
+    const { orgId } = auth
+    const serviceSupabase = createSupabaseServiceClient()
 
-    // Parse search query
     const searchParams = request.nextUrl.searchParams
     const search = searchParams.get('search')
 
-    // Build query
-    let query = supabase
+    let query = serviceSupabase
       .from('products')
       .select('*')
       .eq('org_id', orgId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
 
-    // Apply search filter if provided
     if (search) {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,barcode.ilike.%${search}%,sku.ilike.%${search}%`)
     }

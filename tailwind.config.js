@@ -1,5 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // 'class' mode: dark: utilities only fire when `.dark` is on <html>.
+  // Since we never add .dark, dark mode is permanently disabled regardless of OS setting.
+  darkMode: 'class',
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',

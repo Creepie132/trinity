@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import ConditionalChatWidget from "@/components/ConditionalChatWidget";
 import { ModalManager } from "@/components/modals/ModalManager";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
+import { ForceLightMode } from "@/components/ForceLightMode";
 
 const inter = Inter({ 
   subsets: ["latin", "cyrillic"], 
@@ -68,6 +69,7 @@ export default function RootLayout({
             <ConditionalChatWidget />
             <ModalManager />
             <PWAInstallBanner />
+            <ForceLightMode />
           </LanguageProvider>
         </QueryProvider>
       </body>

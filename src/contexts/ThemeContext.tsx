@@ -136,12 +136,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Load dark mode from localStorage
-    const savedDarkMode = localStorage.getItem('trinity-dark-mode')
-    if (savedDarkMode === 'true') {
-      setDarkModeState(true)
-      applyDarkMode(true)
-    }
+    // Dark mode is permanently disabled — always clear any saved setting
+    localStorage.removeItem('trinity-dark-mode')
+    document.documentElement.classList.remove('dark')
   }, [])
 
   const setTheme = (newTheme: Theme) => {
@@ -201,18 +198,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyCustomization(defaultCustomization)
   }
 
-  const setDarkMode = (enabled: boolean) => {
-    setDarkModeState(enabled)
-    localStorage.setItem('trinity-dark-mode', enabled.toString())
-    applyDarkMode(enabled)
-  }
-
-  const applyDarkMode = (enabled: boolean) => {
-    if (enabled) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
+  // Dark mode permanently disabled — setDarkMode is a no-op
+  const setDarkMode = (_enabled: boolean) => {
+    setDarkModeState(false)
+    localStorage.removeItem('trinity-dark-mode')
+    document.documentElement.classList.remove('dark')
   }
 
   return (

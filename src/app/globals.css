@@ -685,34 +685,7 @@ body::after {
   }
 }
 
-/* Dark mode: более заметная сетка */
-
-.dark body::before {
-  background-image: 
-    radial-gradient(circle at 15% 20%, rgba(255, 191, 0, 0.08) 0px, transparent 120px),
-    radial-gradient(circle at 85% 30%, rgba(255, 107, 53, 0.06) 0px, transparent 100px),
-    radial-gradient(circle at 30% 70%, rgba(255, 191, 0, 0.05) 0px, transparent 90px),
-    radial-gradient(circle at 70% 80%, rgba(255, 107, 53, 0.07) 0px, transparent 110px),
-    radial-gradient(circle at 50% 50%, rgba(255, 191, 0, 0.04) 0px, transparent 150px);
-}
-
-.dark body::after {
-  background: 
-    repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 250px,
-      rgba(255, 191, 0, 0.025) 250px,
-      rgba(255, 191, 0, 0.025) 251px
-    ),
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 280px,
-      rgba(255, 107, 53, 0.02) 280px,
-      rgba(255, 107, 53, 0.02) 281px
-    );
-}
+/* Dark mode removed — light theme only */
 
 /* Убедимся, что контент выше сетки */
 #__next,

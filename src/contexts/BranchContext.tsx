@@ -56,32 +56,6 @@ export function BranchProvider({ children }: { children: ReactNode }) {
       .catch(() => {})
   }, [orgId])
 
-  // Once auth resolves and branches load, validate the stored branch
-  useEffect(() => {
-    if (!orgId || isLoadingBranches) return
-
-    const stored = activeOrgId
-
-    // No stored value → use main org
-    if (!stored) {
-      setActiveOrgId(orgId)
-      localStorage.setItem(STORAGE_KEY, orgId)
-      return
-    }
-
-    // Stored is the main org → OK
-    if (stored === orgId) return
-
-    // Stored is a valid active branch → OK
-    const validBranch = branches.find(
-      (b) => b.child_org_id === stored && b.is_active
-    )
-    if (validBranch) return
-
-    // Stored is no longer valid → reset to main org
-    setActiveOrgId(orgId)
-    localStorage.setItem(STORAGE_KEY, orgId)
-  }, [orgId, branches, isLoadingBranches]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const switchBranch = useCallback(
     (newOrgId: string) => {

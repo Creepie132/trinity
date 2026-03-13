@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
   if (orgId) {
     if (responseCode !== '000' || !cardToken) {
       console.error('[tranzila-success] Subscription failed:', { orgId, responseCode })
-      return NextResponse.redirect(`${ADMIN_URL}/admin/subscriptions?autopay=failed`, { status: 303 })
+      return NextResponse.redirect(`${ADMIN_URL}/subscription-failed`, { status: 303 })
     }
 
     // Следующая дата списания — сегодня + 30 дней
@@ -67,11 +67,11 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('[tranzila-success] Failed to save token for org:', orgId, error)
-      return NextResponse.redirect(`${ADMIN_URL}/admin/subscriptions?autopay=failed`, { status: 303 })
+      return NextResponse.redirect(`${ADMIN_URL}/subscription-failed`, { status: 303 })
     }
 
     console.log('[tranzila-success] ✅ Subscription activated for org:', orgId, '| next billing:', nextBillingStr)
-    return NextResponse.redirect(`${ADMIN_URL}/admin/subscriptions?autopay=success`, { status: 303 })
+    return NextResponse.redirect(`${ADMIN_URL}/subscription-success`, { status: 303 })
   }
 
   // ─── Обычный платёж ─────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
   // ─── Подписка ───────────────────────────────────────────────────────────────
   if (orgId) {
     if (responseCode !== '000' || !cardToken) {
-      return NextResponse.redirect(`${ADMIN_URL}/admin/subscriptions?autopay=failed`, { status: 303 })
+      return NextResponse.redirect(`${ADMIN_URL}/subscription-failed`, { status: 303 })
     }
 
     const nextBilling = new Date()
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', orgId)
 
-    return NextResponse.redirect(`${ADMIN_URL}/admin/subscriptions?autopay=success`, { status: 303 })
+    return NextResponse.redirect(`${ADMIN_URL}/subscription-success`, { status: 303 })
   }
 
   // ─── Обычный платёж ─────────────────────────────────────────────────────────

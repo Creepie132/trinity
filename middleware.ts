@@ -116,9 +116,19 @@ export async function middleware(req: NextRequest) {
 
     if (!isExempt) {
       const origin = req.headers.get("origin")
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ambersol.co.il"
 
-      if (origin && !origin.startsWith(appUrl) && !origin.startsWith("https://www.ambersol.co.il")) {
+      // Allowed origins: all variants of the app domain
+      const allowedOrigins = [
+        "https://ambersol.co.il",
+        "https://www.ambersol.co.il",
+        "http://localhost:3000",
+        "http://localhost:3001",
+      ]
+
+      // Also allow any Vercel preview deployments for this project
+      const isVercelPreview = origin?.includes("vercel.app") && origin?.includes("trinity")
+
+      if (origin && !allowedOrigins.includes(origin) && !isVercelPreview) {
         console.warn('[middleware] CSRF blocked:', { origin, pathname })
         return NextResponse.json({ error: "CSRF: Invalid origin" }, { status: 403 })
       }

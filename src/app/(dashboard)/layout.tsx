@@ -7,6 +7,9 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { BranchProvider } from '@/contexts/BranchContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GlobalSearch } from '@/components/GlobalSearch'
+import dynamic from 'next/dynamic'
+
+const KiraHAL = dynamic(() => import('@/components/kira/KiraHAL'), { ssr: false })
 
 /**
  * DashboardLayout — основной макет.
@@ -68,6 +71,9 @@ export default function DashboardLayout({
 
         {/* Global Search */}
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+
+        {/* HAL 9000 — Kira persistent orb */}
+        <KiraHAL />
       </BranchProvider>
     </AuthProvider>
   )

@@ -17,25 +17,27 @@ export default function KiraHAL() {
   const dragOffset = useRef({ x: 0, y: 0 })
   const posRef = useRef(DEFAULT_POS)
 
-  // Load saved position
+  // Load saved position — clamp to current screen bounds
   useEffect(() => {
+    const safePos = (x: number, y: number) => ({
+      x: Math.max(8, Math.min(window.innerWidth - 80, x)),
+      y: Math.max(8, Math.min(window.innerHeight - 80, y)),
+    })
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved)
-        posRef.current = parsed
-        setPos(parsed)
+        const clamped = safePos(parsed.x, parsed.y)
+        posRef.current = clamped
+        setPos(clamped)
       } else {
-        // Default: bottom-right corner
-        const defaultPos = {
-          x: window.innerWidth - 88,
-          y: window.innerHeight - 88,
-        }
+        const defaultPos = safePos(window.innerWidth - 88, window.innerHeight - 88)
         posRef.current = defaultPos
         setPos(defaultPos)
       }
     } catch {
-      setPos({ x: window.innerWidth - 88, y: window.innerHeight - 88 })
+      const fallback = safePos(window.innerWidth - 88, window.innerHeight - 88)
+      setPos(fallback)
     }
   }, [])
 

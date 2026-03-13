@@ -1,18 +1,19 @@
 'use client'
 
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 export interface PinnedModal {
-  id: string          // уникальный ID (modalType или uuid)
-  title: string       // отображаемое название для индикатора
-  x: number           // смещение от центра
+  id: string
+  title: string
+  x: number
   y: number
   zIndex: number
 }
 
 interface PinnedModalsStore {
   pinned: PinnedModal[]
-  pin: (modal: PinnedModal) => boolean    // возвращает false если лимит достигнут
+  pin: (modal: PinnedModal) => boolean
   unpin: (id: string) => void
   updatePosition: (id: string, x: number, y: number) => void
   isPinned: (id: string) => boolean
@@ -20,37 +21,45 @@ interface PinnedModalsStore {
   maxPinned: number
 }
 
-let baseZ = 100
+let baseZ = 200
 
-export const usePinnedModals = create<PinnedModalsStore>((set, get) => ({
-  pinned: [],
-  maxPinned: 3,
+export const usePinnedModals = create<PinnedModalsStore>()(
+  persist(
+    (set, get) => ({
+      pinned: [],
+      maxPinned: 3,
 
-  pin: (modal) => {
-    const { pinned, maxPinned } = get()
-    if (pinned.length >= maxPinned) return false
-    if (pinned.find(p => p.id === modal.id)) return true // уже закреплён
-    baseZ += 10
-    set({ pinned: [...pinned, { ...modal, zIndex: baseZ }] })
-    return true
-  },
+      pin: (modal) => {
+        const { pinned, maxPinned } = get()
+        if (pinned.length >= maxPinned) return false
+        if (pinned.find(p => p.id === modal.id)) return true
+        baseZ += 10
+        set({ pinned: [...pinned, { ...modal, zIndex: baseZ }] })
+        return true
+      },
 
-  unpin: (id) => {
-    set(s => ({ pinned: s.pinned.filter(p => p.id !== id) }))
-  },
+      unpin: (id) => {
+        set(s => ({ pinned: s.pinned.filter(p => p.id !== id) }))
+      },
 
-  updatePosition: (id, x, y) => {
-    set(s => ({
-      pinned: s.pinned.map(p => p.id === id ? { ...p, x, y } : p)
-    }))
-  },
+      updatePosition: (id, x, y) => {
+        set(s => ({
+          pinned: s.pinned.map(p => p.id === id ? { ...p, x, y } : p)
+        }))
+      },
 
-  isPinned: (id) => !!get().pinned.find(p => p.id === id),
+      isPinned: (id) => !!get().pinned.find(p => p.id === id),
 
-  bringToFront: (id) => {
-    baseZ += 1
-    set(s => ({
-      pinned: s.pinned.map(p => p.id === id ? { ...p, zIndex: baseZ } : p)
-    }))
-  },
-}))
+      bringToFront: (id) => {
+        baseZ += 1
+        set(s => ({
+          pinned: s.pinned.map(p => p.id === id ? { ...p, zIndex: baseZ } : p)
+        }))
+      },
+    }),
+    {
+      name: 'trinity-pinned-modals',
+      storage: createJSONStorage(() => sessionStorage), // sessionStorage: живёт до закрытия вкладки
+    }
+  )
+)

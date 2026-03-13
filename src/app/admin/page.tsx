@@ -136,15 +136,24 @@ function ImpersonateModal({ onClose }: { onClose: () => void }) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
 
-      // Записываем API
-      const res = await fetch('/api/admin/impersonate', {
+      // ШАГ 1: Читаем ТЕКУЩИЙ activeOrgId ДО любых переключений — это admin_org_id для возврата
+      let adminOrgId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' // fallback
+      try {
+        const branchRes = await fetch('/api/user/active-branch')
+        if (branchRes.ok) {
+          const branchData = await branchRes.json()
+          if (branchData.activeOrgId) adminOrgId = branchData.activeOrgId
+        }
+      } catch {}
+
+      // ШАГ 2: Записываем audit log
+      await fetch('/api/admin/impersonate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ orgId }),
       })
-      if (!res.ok) throw new Error('Failed')
 
-      // Переключаем activeOrgId через admin endpoint (без проверки филиалов)
+      // ШАГ 3: Переключаем activeOrgId через admin endpoint (без проверки филиалов)
       const switchRes = await fetch('/api/admin/set-active-org', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
@@ -152,17 +161,10 @@ function ImpersonateModal({ onClose }: { onClose: () => void }) {
       })
       if (!switchRes.ok) throw new Error('Failed to switch org')
 
-      // Читаем текущий activeOrgId ДО переключения — чтобы вернуться обратно
-      let adminOrgId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' // fallback
-      try {
-        const branchRes = await fetch('/api/user/active-branch', {
-          headers: { Authorization: `Bearer ${session?.access_token}` },
-        })
-        if (branchRes.ok) {
-          const branchData = await branchRes.json()
-          if (branchData.activeOrgId) adminOrgId = branchData.activeOrgId
-        }
-      } catch {}
+      // ШАГ 4: Принудительно обновляем cookie на клиенте (чтобы браузер не читал старый)
+      document.cookie = `trinity_active_branch=${orgId}; path=/; max-age=${60 * 60 * 24}; samesite=lax`
+
+      // ШАГ 5: Сохраняем состояние для ImpersonationBanner
       localStorage.setItem('admin_org_id', adminOrgId)
       localStorage.setItem('impersonation_session', JSON.stringify({
         orgId, orgName, adminEmail: session?.user?.email, startedAt: new Date().toISOString()

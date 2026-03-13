@@ -103,7 +103,12 @@ export async function POST(request: NextRequest) {
 
       const cgRes = await fetch('https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          // Tranzila проверяет Referer в режиме "עם Header"
+          'Referer': 'https://www.ambersol.co.il',
+          'Origin': 'https://www.ambersol.co.il',
+        },
         body: cgParams.toString(),
       })
       const cgText = await cgRes.text()

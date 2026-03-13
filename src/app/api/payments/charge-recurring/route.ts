@@ -68,7 +68,11 @@ export async function POST(request: NextRequest) {
       'https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Referer': 'https://www.ambersol.co.il',
+          'Origin': 'https://www.ambersol.co.il',
+        },
         body: params.toString(),
       }
     )

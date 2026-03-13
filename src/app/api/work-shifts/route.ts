@@ -66,7 +66,18 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({ myShift: myShift || null, activeShifts })
+  // Count staff members (non-owners) — used by dashboard to hide widget if no staff
+  let hasStaff = false
+  if (role === 'owner') {
+    const { count } = await supabaseAdmin
+      .from('org_users')
+      .select('*', { count: 'exact', head: true })
+      .eq('org_id', orgId)
+      .neq('role', 'owner')
+    hasStaff = (count ?? 0) > 0
+  }
+
+  return NextResponse.json({ myShift: myShift || null, activeShifts, hasStaff })
 }
 
 // POST /api/work-shifts — start shift

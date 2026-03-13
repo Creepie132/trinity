@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 
-const DISMISSED_KEY = 'pwa_banner_dismissed'
+const DISMISSED_KEY = 'pwa_banner_dismissed_at'
+const DISMISS_TTL_DAYS = 30 // показывать снова через 30 дней
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -15,8 +16,14 @@ export function PWAInstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
-    // Don't show if already dismissed
-    if (localStorage.getItem(DISMISSED_KEY)) return
+    // Don't show if dismissed recently (30 days)
+    const dismissedAt = localStorage.getItem(DISMISSED_KEY)
+    if (dismissedAt) {
+      const daysSince = (Date.now() - Number(dismissedAt)) / (1000 * 60 * 60 * 24)
+      if (daysSince < DISMISS_TTL_DAYS) return
+      // Прошло больше 30 дней — сбрасываем флаг
+      localStorage.removeItem(DISMISSED_KEY)
+    }
 
     // Only on mobile devices
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
@@ -65,7 +72,7 @@ export function PWAInstallBanner() {
   }
 
   const handleDismiss = () => {
-    localStorage.setItem(DISMISSED_KEY, '1')
+    localStorage.setItem(DISMISSED_KEY, String(Date.now()))
     setShow(false)
   }
 

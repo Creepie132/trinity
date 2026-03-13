@@ -11,8 +11,8 @@ export default function KiraHAL() {
   const timeRef = useRef<number>(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Position state — loaded from localStorage
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+  // Position state — сразу ставим дефолт, потом перезаписываем из localStorage
+  const [pos, setPos] = useState<{ x: number; y: number }>({ x: 24, y: 24 })
   const [dragging, setDragging] = useState(false)
   const dragOffset = useRef({ x: 0, y: 0 })
   const posRef = useRef(DEFAULT_POS)
@@ -31,14 +31,15 @@ export default function KiraHAL() {
         posRef.current = clamped
         setPos(clamped)
       } else {
-        const defaultPos = safePos(window.innerWidth - 88, window.innerHeight - 88)
+        // Ставим в правый нижний угол по умолчанию
+        const defaultPos = safePos(window.innerWidth - 96, window.innerHeight - 96)
         posRef.current = defaultPos
         setPos(defaultPos)
-        // Сохраняем дефолтную позицию сразу — чтобы ключ существовал в localStorage
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultPos)) } catch {}
       }
     } catch {
-      const fallback = safePos(window.innerWidth - 88, window.innerHeight - 88)
+      const fallback = safePos(window.innerWidth - 96, window.innerHeight - 96)
+      posRef.current = fallback
       setPos(fallback)
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback)) } catch {}
     }
@@ -210,8 +211,6 @@ export default function KiraHAL() {
     draw()
     return () => { if (animRef.current) cancelAnimationFrame(animRef.current) }
   }, [])
-
-  if (!pos) return null
 
   return (
     <div

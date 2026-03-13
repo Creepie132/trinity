@@ -64,6 +64,12 @@ export function createSubscriptionPaymentUrl({
     throw new Error('Tranzila terminal not configured')
   }
 
+  // DCdisable — уникальный ID для защиты от дублей.
+  // Tranzila блокирует повторный платёж с тем же DCdisable в течение 24 часов.
+  // Формат: org_id (без дефисов) + YYYYMM — уникален на месяц.
+  const yearMonth = new Date().toISOString().slice(0, 7).replace('-', '')
+  const dcDisable = `${orgId.replace(/-/g, '')}${yearMonth}`
+
   const params = new URLSearchParams({
     TranzilaPW: password,
     sum: amount.toFixed(2),
@@ -79,6 +85,9 @@ export function createSubscriptionPaymentUrl({
     notify_url_address: notifyUrl,
     // org_id передаём через cField1 — придёт в callback
     cField1: orgId,
+    // Защита от дублей: Tranzila блокирует повторный платёж с тем же DCdisable
+    // Требует настройки поля 20 в my.tranzila → Настройки → שדות נוספים לעסקה
+    DCdisable: dcDisable,
   })
 
   // DirectNG — новый актуальный URL (не direct.tranzila.com!)

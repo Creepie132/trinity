@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, X, ArrowLeft } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 interface ImpersonationData {
   orgId: string
@@ -24,19 +25,25 @@ export function ImpersonationBanner() {
   }, [])
 
   const handleExit = async () => {
-    localStorage.removeItem('impersonation_session')
-    // Вернуть activeOrgId обратно к admin org
     const adminOrgId = localStorage.getItem('admin_org_id')
+    localStorage.removeItem('impersonation_session')
+    localStorage.removeItem('admin_org_id')
+
     if (adminOrgId) {
       try {
-        await fetch('/api/set-active-branch', {
+        const { data: { session } } = await supabase.auth.getSession()
+        // Возвращаем свой org через admin endpoint
+        await fetch('/api/admin/set-active-org', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`,
+          },
           body: JSON.stringify({ orgId: adminOrgId }),
         })
       } catch {}
-      localStorage.removeItem('admin_org_id')
     }
+
     setData(null)
     router.push('/admin')
     router.refresh()

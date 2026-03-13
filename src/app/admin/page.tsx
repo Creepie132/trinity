@@ -144,16 +144,26 @@ function ImpersonateModal({ onClose }: { onClose: () => void }) {
       })
       if (!res.ok) throw new Error('Failed')
 
-      // Переключаем activeOrgId на целевую org
-      await fetch('/api/set-active-branch', {
+      // Переключаем activeOrgId через admin endpoint (без проверки филиалов)
+      const switchRes = await fetch('/api/admin/set-active-org', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ orgId }),
       })
+      if (!switchRes.ok) throw new Error('Failed to switch org')
 
-      // Сохраняем сессию импersonation + admin_org_id для возврата
-      const adminOrg = orgs.find(o => o.email === 'creepie1357@gmail.com' || o.email === 'ambersolutions.systems@gmail.com')
-      localStorage.setItem('admin_org_id', adminOrg?.id || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')
+      // Читаем текущий activeOrgId ДО переключения — чтобы вернуться обратно
+      let adminOrgId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11' // fallback
+      try {
+        const branchRes = await fetch('/api/user/active-branch', {
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+        })
+        if (branchRes.ok) {
+          const branchData = await branchRes.json()
+          if (branchData.activeOrgId) adminOrgId = branchData.activeOrgId
+        }
+      } catch {}
+      localStorage.setItem('admin_org_id', adminOrgId)
       localStorage.setItem('impersonation_session', JSON.stringify({
         orgId, orgName, adminEmail: session?.user?.email, startedAt: new Date().toISOString()
       }))

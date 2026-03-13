@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -29,15 +29,24 @@ export default function ClientsPage() {
   const { isDemo, clientLimit } = useDemoMode()
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
-  
+  const isFirstLoad = useRef(true)
+
   const { openModal } = useModalStore()
 
   const pageSize = 25
 
-  // Server-side search: pass searchQuery directly to hook, reset to page 1 on search
-  const activeSearch = searchQuery.length >= 2 ? searchQuery : ''
-  const { data: clientsData, isLoading } = useClients(activeSearch, page, pageSize)
+  // Debounce search — 300ms, не мигаем интерфейсом при каждом символе
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery.length >= 2 ? searchQuery : '')
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const activeSearch = debouncedSearch
+  const { data: clientsData, isLoading, isFetching } = useClients(activeSearch, page, pageSize)
   const clients = clientsData?.data || []
 
   // No client-side filtering needed — server does it
@@ -53,7 +62,7 @@ export default function ClientsPage() {
   // Reset to page 1 when search changes
   useEffect(() => {
     setPage(1)
-  }, [searchQuery])
+  }, [debouncedSearch])
 
   // Check organization status and feature access
   useEffect(() => {
@@ -76,9 +85,12 @@ export default function ClientsPage() {
     })
   }
 
-  // Show loading screen while fetching data
-  if (isLoading) {
+  // Show LoadingScreen ONLY on first load (no data yet), not during search/pagination
+  if (isLoading && !clientsData) {
     return <LoadingScreen />
+  }
+  if (isFirstLoad.current && clientsData) {
+    isFirstLoad.current = false
   }
 
   return (
@@ -136,10 +148,16 @@ export default function ClientsPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pr-10 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
         />
+        {/* Spinner — показывается во время поиска, не прячет интерфейс */}
+        {isFetching && (
+          <div className="absolute left-3 top-1/2 -translate-y-1/2">
+            <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          </div>
+        )}
       </div>
 
       {/* Desktop - Table */}
-      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[400px]">
+      <div className={`hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[400px] transition-opacity duration-150 ${isFetching ? 'opacity-60' : 'opacity-100'}`}>
         {paginatedClients && paginatedClients.length > 0 ? (
           <Table>
             <TableHeader>
@@ -220,8 +238,8 @@ export default function ClientsPage() {
         )}
       </div>
 
-      {/* Desktop pagination — server-side (no search) */}
-      {!searchQuery && totalPages > 1 && (
+      {/* Desktop pagination — server-side */}
+      {totalPages > 1 && (
         <div className="hidden md:flex items-center justify-center gap-2 mt-2 pb-2">
           <Button
             variant="outline"

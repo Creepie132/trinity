@@ -24,6 +24,7 @@ import { ProductDetailsModal } from './ProductDetailsModal'
 import { SellProductModal } from './products/SellProductModal'
 import { AddStockModal } from './products/AddStockModal'
 import { EditProductModal } from './products/EditProductModal'
+import { TransferProductModal } from './products/TransferProductModal'
 
 // Payments
 import { CreatePaymentModal } from './payments/CreatePaymentModal'
@@ -91,6 +92,7 @@ const EnhancedProductDetailsModal = withBaseModal(ProductDetailsModal, 'product-
 const EnhancedSellProductModal = withBaseModal(SellProductModal, 'product-sell')
 const EnhancedAddStockModal = withBaseModal(AddStockModal, 'product-add-stock')
 const EnhancedEditProductModal = withBaseModal(EditProductModal, 'product-edit')
+const EnhancedTransferProductModal = withBaseModal(TransferProductModal, 'product-transfer')
 
 const EnhancedCreatePaymentModal = withBaseModal(CreatePaymentModal, 'payment-create')
 const EnhancedCreatePaymentLinkModal = withBaseModal(CreatePaymentLinkModal, 'payment-create-link')
@@ -137,6 +139,7 @@ export function ModalManager() {
       <EnhancedSellProductModal />
       <EnhancedAddStockModal />
       <EnhancedEditProductModal />
+      <EnhancedTransferProductModal />
       
       {/* Payments */}
       <EnhancedCreatePaymentModal />

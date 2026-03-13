@@ -2,13 +2,18 @@
 
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
-import { Package, DollarSign, Hash, Tag, Edit, ShoppingCart } from 'lucide-react'
+import { Package, DollarSign, Hash, Tag, Edit, ShoppingCart, ArrowRightLeft } from 'lucide-react'
+import { useBranches } from '@/hooks/useBranches'
 
 export function ProductDetailsModal() {
   const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
   
   const isOpen = isModalOpen('product-details')
   const data = getModalData('product-details')
+  
+  // Check if org has active branches
+  const { data: branches = [] } = useBranches()
+  const hasActiveBranches = branches.some(b => b.is_active)
   
   if (!data?.product) return null
 
@@ -24,6 +29,7 @@ export function ProductDetailsModal() {
       edit: 'ערוך',
       sell: 'מכור',
       addStock: 'הוסף מלאי',
+      transfer: 'העברה',
     },
     ru: {
       productDetails: 'Детали товара',
@@ -34,6 +40,7 @@ export function ProductDetailsModal() {
       edit: 'Редактировать',
       sell: 'Продать',
       addStock: 'Добавить',
+      transfer: 'Перевод',
     },
   }
 
@@ -52,6 +59,11 @@ export function ProductDetailsModal() {
   const handleAddStockClick = () => {
     closeModal('product-details')
     openModal('product-add-stock', { product })
+  }
+
+  const handleTransferClick = () => {
+    closeModal('product-details')
+    openModal('product-transfer', { product, locale })
   }
 
   return (
@@ -87,6 +99,17 @@ export function ProductDetailsModal() {
               {text.edit}
             </button>
           </div>
+
+          {hasActiveBranches && (
+            <button
+              onClick={handleTransferClick}
+              disabled={product.quantity === 0}
+              className="w-full flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 border border-indigo-200 py-2.5 rounded-xl font-medium hover:bg-indigo-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ArrowRightLeft size={18} />
+              {text.transfer}
+            </button>
+          )}
         </div>
       }
     >

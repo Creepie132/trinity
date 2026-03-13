@@ -39,36 +39,103 @@ export async function POST(request: NextRequest) {
   if (!orgUser) return NextResponse.json({ error: 'No org' }, { status: 403 })
 
   const body = await request.json()
-  const { from_org_id, to_org_id, items, note } = body
+  const { from_org_id, to_org_id, items, note, type } = body
 
   if (!from_org_id || !to_org_id || !items?.length) {
     return NextResponse.json({ error: 'from_org_id, to_org_id and items are required' }, { status: 400 })
   }
 
-  // Create transfer request
+  // Security: verify caller belongs to from_org_id
+  if (orgUser.org_id !== from_org_id) {
+    return NextResponse.json({ error: 'Forbidden: you can only transfer from your own org' }, { status: 403 })
+  }
+
+  const isDirect = type === 'direct'
+
+  // Create transfer request record
   const { data: req, error } = await supabaseAdmin
     .from('transfer_requests')
-    .insert({ from_org_id, to_org_id, items, note: note || null, created_by: user.id, status: 'pending' })
+    .insert({
+      from_org_id,
+      to_org_id,
+      items,
+      note: note || null,
+      type: isDirect ? 'direct' : 'request',
+      created_by: user.id,
+      status: isDirect ? 'approved' : 'pending',
+      ...(isDirect ? { reviewed_by: user.id, reviewed_at: new Date().toISOString() } : {}),
+    })
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Notify owners of the TO org
-  const [{ data: toOrg }, { data: owners }] = await Promise.all([
+  const [{ data: fromOrg }, { data: toOrg }] = await Promise.all([
+    supabaseAdmin.from('organizations').select('name').eq('id', from_org_id).single(),
     supabaseAdmin.from('organizations').select('name').eq('id', to_org_id).single(),
-    supabaseAdmin.from('org_users').select('user_id').eq('org_id', to_org_id).eq('role', 'owner'),
   ])
-  const { data: fromOrg } = await supabaseAdmin.from('organizations').select('name').eq('id', from_org_id).single()
+
+  // Direct transfer (owner): apply inventory immediately
+  if (isDirect) {
+    for (const item of items as { product_id: string; product_name: string; quantity: number }[]) {
+      // Reduce source
+      const { data: srcProduct } = await supabaseAdmin
+        .from('products').select('id, quantity')
+        .eq('id', item.product_id).eq('org_id', from_org_id).maybeSingle()
+
+      if (srcProduct && srcProduct.quantity >= item.quantity) {
+        await supabaseAdmin.from('products')
+          .update({ quantity: srcProduct.quantity - item.quantity }).eq('id', srcProduct.id)
+        await supabaseAdmin.from('inventory_transactions').insert({
+          org_id: from_org_id, product_id: srcProduct.id, type: 'write_off',
+          quantity: item.quantity, notes: `העברה ל-${toOrg?.name || to_org_id} (${req.id})`,
+        })
+      }
+
+      // Increase destination (match by name or create)
+      const { data: dstProduct } = await supabaseAdmin
+        .from('products').select('id, quantity')
+        .eq('org_id', to_org_id).eq('name', item.product_name).maybeSingle()
+
+      if (dstProduct) {
+        await supabaseAdmin.from('products')
+          .update({ quantity: dstProduct.quantity + item.quantity }).eq('id', dstProduct.id)
+        await supabaseAdmin.from('inventory_transactions').insert({
+          org_id: to_org_id, product_id: dstProduct.id, type: 'purchase',
+          quantity: item.quantity, notes: `העברה מ-${fromOrg?.name || from_org_id} (${req.id})`,
+        })
+      } else if (srcProduct) {
+        const { data: fullSrc } = await supabaseAdmin
+          .from('products').select('name, sell_price, unit, category, min_quantity')
+          .eq('id', srcProduct.id).single()
+        const { data: newProd } = await supabaseAdmin.from('products').insert({
+          org_id: to_org_id, name: item.product_name, quantity: item.quantity,
+          sell_price: fullSrc?.sell_price, unit: fullSrc?.unit,
+          category: fullSrc?.category, min_quantity: fullSrc?.min_quantity,
+        }).select('id').single()
+        if (newProd) {
+          await supabaseAdmin.from('inventory_transactions').insert({
+            org_id: to_org_id, product_id: newProd.id, type: 'purchase',
+            quantity: item.quantity, notes: `העברה מ-${fromOrg?.name || from_org_id} (${req.id})`,
+          })
+        }
+      }
+    }
+    return NextResponse.json(req, { status: 201 })
+  }
+
+  // Staff request: notify owners of FROM org (they approve releasing stock)
+  const { data: owners } = await supabaseAdmin
+    .from('org_users').select('user_id').eq('org_id', from_org_id).eq('role', 'owner')
 
   if (owners && owners.length > 0) {
     await supabaseAdmin.from('notifications').insert(
       owners.map((o) => ({
-        org_id: to_org_id,
+        org_id: from_org_id,
         user_id: o.user_id,
         type: 'transfer_request',
-        title: 'Новый запрос на перевод товаров',
-        body: `${fromOrg?.name || from_org_id} хочет перевести ${items.length} поз. товаров в ${toOrg?.name || to_org_id}. Заметка: ${note || '—'}`,
+        title: `בקשת העברת מלאי`,
+        body: `בקשה להעברת ${items.length} פריט/ים מ-${fromOrg?.name || from_org_id} אל ${toOrg?.name || to_org_id}${note ? ` — ${note}` : ''}`,
         metadata: {
           transfer_request_id: req.id,
           from_org_id,

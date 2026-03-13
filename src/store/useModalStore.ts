@@ -23,6 +23,7 @@ export type ModalType =
   | 'product-sell'
   | 'product-add-stock'
   | 'product-return'
+  | 'product-transfer'
   | 'quick-sale'
   // Payments
   | 'payment-create'

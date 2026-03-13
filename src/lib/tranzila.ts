@@ -84,19 +84,16 @@ export async function createTranzilaPaymentLink({
     TranzilaPW: terminalPassword,
     sum: amount.toString(),
     currency: '1', // ILS
-    description,
-    tranmode: 'A',
-    success_url: successUrl,
-    fail_url: failUrl,
-    notify_url: failUrl,
+    pdesc: description,
+    // AK = провести обычную транзакцию (A) + сохранить токен карты (K)
+    // Tranzila вернёт TranzilaTK в success_url_address для дальнейших авто-списаний
+    tranmode: saveCard ? 'AK' : 'A',
+    success_url_address: successUrl,
+    fail_url_address: failUrl,
+    notify_url_address: failUrl,
     cField1: paymentId,
     lang: 'il',
   })
-
-  // Запросить токенизацию карты — Tranzila вернёт TranzilaTK
-  if (saveCard) {
-    params.append('tranzilaTK', '1')
-  }
 
   if (customField2) {
     params.append('cField2', customField2)
@@ -150,7 +147,8 @@ export async function chargeByToken({
     supplier: terminal,
     TranzilaPW: password,
     TranzilaTK: token,
-    tranmode: 'V',
+    // tranmode=A — реальное списание (не верификация J5)
+    tranmode: 'A',
     sum: amount.toFixed(2),
     currency: '1',
     pdesc: description,

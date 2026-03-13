@@ -52,18 +52,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Charge via Tranzila token
+    // Charge via Tranzila token (server-to-server CGI, не iframe)
     const params = new URLSearchParams({
       supplier: terminal,
       TranzilaPW: password,
       TranzilaTK: card_token,
       sum: amount.toString(),
       currency: '1', // ILS
-      tranmode: 'A', // token charge
+      // tranmode=A — обычное списание по токену (не J5/верификация)
+      tranmode: 'A',
+      response_return_format: 'json',
     })
 
     const tranzilaRes = await fetch(
-      `https://direct.tranzila.com/${terminal}/iframe.php`,
+      'https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

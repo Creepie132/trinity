@@ -12,13 +12,15 @@ const supabase = createClient(
 
 /**
  * POST /api/admin/subscription-payment
- * Создаёт ссылку на оплату подписки Tranzila и отправляет email клиенту.
+ * Управляет оплатой подписки через Tranzila.
  *
- * Логика терминала:
- * - Нет токена → ambersolt + tranzilaTK=1 (первый платёж, сохраняет карту)
- * - Есть токен → ambersolttok + TranzilaTK (рекуррентное списание)
+ * Логика:
+ * - Нет токена → генерирует URL на iframe ambersolt с tranmode=AK
+ *   (платёж + сохранение токена карты), отправляет email клиенту.
+ *   Tranzila вернёт TranzilaTK в success_url_address → /api/payments/tranzila-success?org_id=...
  *
- * success_url содержит ?org_id=ORG_ID чтобы обработчик знал куда сохранить токен.
+ * - Есть токен → server-to-server CGI списание через ambersolttok (tranmode=A).
+ *   Клиент не нужен. Обновляет billing прямо здесь.
  */
 export async function POST(request: NextRequest) {
   const auth = await getAdminAuthContext()
@@ -77,7 +79,8 @@ export async function POST(request: NextRequest) {
     let paymentUrl: string
 
     if (hasToken) {
-      // Токен уже есть — рекуррентное списание через токен-терминал
+      // Токен уже есть — рекуррентное server-to-server списание через CGI
+      // НЕ через iframe (клиент не нужен)
       const terminal =
         (org as any).tranzila_token_terminal ||
         process.env.TRANZILA_TOKEN_TERMINAL ||
@@ -87,20 +90,56 @@ export async function POST(request: NextRequest) {
         process.env.TRANZILA_TOKEN_PASSWORD ||
         ''
 
-      paymentUrl =
-        `https://direct.tranzila.com/${terminal}/iframenew.php?` +
-        new URLSearchParams({
-          sum: String(amount),
-          currency: '1',
-          TranzilaPW: password,
-          pdesc: `Trinity CRM подписка — ${org.name}`,
-          success_url: successUrl,
-          fail_url: failUrl,
-          TranzilaTK: (org as any).tranzila_card_token,
-          tranmode: 'VK',
-        }).toString()
+      const cgParams = new URLSearchParams({
+        supplier: terminal,
+        TranzilaPW: password,
+        TranzilaTK: (org as any).tranzila_card_token,
+        sum: String(amount),
+        currency: '1',
+        tranmode: 'A', // реальное списание, не верификация
+        pdesc: `Trinity CRM подписка — ${org.name}`,
+        response_return_format: 'json',
+      })
+
+      const cgRes = await fetch('https://secure5.tranzila.com/cgi-bin/tranzila71u.cgi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: cgParams.toString(),
+      })
+      const cgText = await cgRes.text()
+      let cgData: any = {}
+      try { cgData = JSON.parse(cgText) } catch { cgData = Object.fromEntries(new URLSearchParams(cgText)) }
+
+      if (cgData.Response !== '000') {
+        console.error('[subscription-payment] Token charge failed:', cgData)
+        return NextResponse.json(
+          { error: `Tranzila error ${cgData.Response}: ${cgData.error || cgData.error_msg || 'Payment failed'}` },
+          { status: 422 }
+        )
+      }
+
+      // Обновляем billing
+      const nextBilling = new Date()
+      nextBilling.setDate(nextBilling.getDate() + 30)
+      const nextBillingStr = nextBilling.toISOString().split('T')[0]
+      await supabase.from('organizations').update({
+        billing_status: 'paid',
+        billing_due_date: nextBillingStr,
+        subscription_status: 'active',
+        last_billing_date: new Date().toISOString().split('T')[0],
+      }).eq('id', org_id)
+
+      return NextResponse.json({
+        success: true,
+        charged: true,
+        amount,
+        transaction_id: cgData.ConfirmationCode || cgData.index,
+        next_billing_date: nextBillingStr,
+      })
+
     } else {
-      // Первый платёж — обычный терминал, сохраняем карту
+      // Первый платёж — обычный терминал ambersolt + tranmode=AK (платёж + сохранить карту)
+      // success_url_address — правильный параметр Tranzila (не success_url!)
       const terminal = process.env.TRANZILA_TERMINAL_ID || ''
       const password = process.env.TRANZILA_TERMINAL_PASSWORD || ''
 
@@ -110,10 +149,13 @@ export async function POST(request: NextRequest) {
           sum: String(amount),
           currency: '1',
           TranzilaPW: password,
-          tranzilaTK: '1',
+          // AK = проводит платёж И сохраняет токен карты
+          tranmode: 'AK',
           pdesc: `Trinity CRM подписка — ${org.name}`,
-          success_url: successUrl,
-          fail_url: failUrl,
+          // Правильные имена параметров success/fail URL в Tranzila
+          success_url_address: successUrl,
+          fail_url_address: failUrl,
+          lang: 'il',
         }).toString()
     }
 

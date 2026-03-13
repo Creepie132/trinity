@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Megaphone, Settings, Home, Shield, LogOut, Building2, Package, CreditCard, BarChart3, HeadphonesIcon } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, Home, Shield, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
@@ -31,11 +31,6 @@ export function AdminSidebar() {
       name: language === 'he' ? 'ארגונים' : 'Организации',
       href: '/admin/organizations',
       icon: Building2,
-    },
-    {
-      name: language === 'he' ? 'תוכניות' : 'Тарифные планы',
-      href: '/admin/plans',
-      icon: Package,
     },
     {
       name: language === 'he' ? 'אנליטיקה' : 'Аналитика',

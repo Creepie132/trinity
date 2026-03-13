@@ -416,6 +416,29 @@ export function useRemoveOrgUser() {
   })
 }
 
+// Audit Log
+export function useAuditLog(limit = 5) {
+  return useQuery({
+    queryKey: ['admin', 'audit-log', limit],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/audit-log')
+      if (!res.ok) throw new Error('Failed to fetch audit log')
+      const { data } = await res.json()
+      return (data || []).slice(0, limit) as Array<{
+        id: string
+        action: string
+        entity_type: string
+        user_email: string
+        org_id: string
+        metadata: any
+        created_at: string
+        organizations?: { name: string }
+      }>
+    },
+    refetchInterval: 30000,
+  })
+}
+
 // =============================================
 // BILLING HOOKS
 // =============================================

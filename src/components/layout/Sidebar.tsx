@@ -22,6 +22,7 @@ const baseNavigation = [
   // { name_he: 'הודעות SMS', name_ru: 'SMS-сообщения', href: '/sms', icon: MessageSquare, requireFeature: 'sms' },
   // { name_he: 'סטטיסטיקה', name_ru: 'Статистика', href: '/stats', icon: BarChart3, requireFeature: 'statistics' },
   // { name_he: 'הצעות שותפים', name_ru: 'Предложения партнёров', href: '/partners', icon: Gift, requireFeature: null },
+  { name_he: 'אנליטיקה', name_ru: 'Аналитика', href: '/analytics', icon: BarChart3, requireFeature: null },
   { name_he: 'הגדרות', name_ru: 'Настройки', href: '/settings', icon: Settings, requireFeature: null },
 ]
 

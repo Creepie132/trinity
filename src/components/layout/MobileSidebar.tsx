@@ -54,6 +54,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     { name: getModuleName('diary'), href: '/diary', icon: BookOpen, requireFeature: 'diary' },
     { name: getModuleName('inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
     { name: getModuleName('payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
+    { name: language === 'he' ? 'אנליטיקה' : 'Аналитика', href: '/analytics', icon: BarChart3, requireFeature: null },
     { name: t('nav.settings'), href: '/settings', icon: Settings, requireFeature: null },
   ]
 

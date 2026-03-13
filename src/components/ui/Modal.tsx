@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useCallback, ReactNode, useState, useRef } from 'react'
+import { useEffect, useCallback, ReactNode, useRef } from 'react'
 import { X, GripHorizontal, Pin, PinOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDraggableDialog } from '@/hooks/useDraggableDialog'
+import { usePinnedModals } from '@/store/usePinnedModals'
 
 interface ModalProps {
   open: boolean
@@ -20,6 +21,8 @@ interface ModalProps {
   className?: string
   contentClassName?: string
   dir?: 'rtl' | 'ltr'
+  modalId?: string   // уникальный ID для pin store (по умолчанию — случайный)
+  pinTitle?: string  // название для индикатора закреплённых
 }
 
 const sizeClasses = {
@@ -29,6 +32,9 @@ const sizeClasses = {
   xl: 'max-w-xl',
   full: 'max-w-4xl',
 }
+
+// Генерируем стабильный ID один раз на mount
+let idCounter = 0
 
 export function Modal({
   open,
@@ -45,73 +51,105 @@ export function Modal({
   className,
   contentClassName,
   dir = 'rtl',
+  modalId: modalIdProp,
+  pinTitle,
 }: ModalProps) {
-  const [pinned, setPinned] = useState(false)
+  const idRef = useRef<string>(modalIdProp || `modal-${++idCounter}`)
+  const modalId = idRef.current
+
+  const { pin, unpin, isPinned, bringToFront, pinned, maxPinned } = usePinnedModals()
+  const pinned_ = isPinned(modalId)
   const { containerRef, handleRef, resetPosition } = useDraggableDialog()
 
+  // Восстанавливаем позицию если уже закреплена
+  const pinnedData = pinned.find(p => p.id === modalId)
+  useEffect(() => {
+    if (pinnedData && containerRef.current) {
+      containerRef.current.style.transform =
+        `translate(calc(-50% + ${pinnedData.x}px), calc(-50% + ${pinnedData.y}px))`
+    }
+  }, [pinned_])
+
+  const handlePin = useCallback(() => {
+    if (pinned_) {
+      unpin(modalId)
+    } else {
+      const ds = (containerRef.current as any)?._dragState
+      const canPin = pin({
+        id: modalId,
+        title: (typeof pinTitle === 'string' ? pinTitle : typeof title === 'string' ? title : 'Окно'),
+        x: 0, y: 0,
+        zIndex: 100,
+      })
+      if (!canPin && containerRef.current) {
+        containerRef.current.classList.add('animate-shake')
+        setTimeout(() => containerRef.current?.classList.remove('animate-shake'), 500)
+      }
+    }
+  }, [pinned_, pin, unpin, modalId, title, pinTitle])
+
   const handleEscape = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && closeOnEscape && !pinned) onClose()
-    },
-    [closeOnEscape, onClose, pinned]
+    (e: KeyboardEvent) => { if (e.key === 'Escape' && closeOnEscape && !pinned_) onClose() },
+    [closeOnEscape, onClose, pinned_]
   )
 
   useEffect(() => {
     if (open) {
       document.addEventListener('keydown', handleEscape)
-      if (!pinned) document.body.style.overflow = 'hidden'
+      if (!pinned_) document.body.style.overflow = 'hidden'
     }
     return () => {
       document.removeEventListener('keydown', handleEscape)
       document.body.style.overflow = ''
     }
-  }, [open, handleEscape, pinned])
+  }, [open, handleEscape, pinned_])
 
-  // При закрытии сбрасываем pin и позицию
   useEffect(() => {
-    if (!open) {
-      setPinned(false)
-      resetPosition()
-    }
-  }, [open, resetPosition])
+    if (!open && !pinned_) resetPosition()
+  }, [open])
 
-  if (!open) return null
+  if (!open && !pinned_) return null
+
+  const zStyle = pinnedData ? { zIndex: pinnedData.zIndex } : { zIndex: 50 }
 
   return (
-    // Когда закреплено: весь wrapper пропускает клики (нет backdrop),
-    // но сам modal остаётся кликабельным через pointer-events-auto
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-      {/* Backdrop — появляется только когда не закреплено, сам перехватывает клики */}
-      {!pinned && (
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
+      style={zStyle}
+    >
+      {/* Backdrop */}
+      {!pinned_ && (
         <div
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200 pointer-events-auto"
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
           onClick={closeOnBackdrop ? onClose : undefined}
           aria-hidden="true"
         />
       )}
-      {/* Modal — всегда кликабельный, даже при pinned */}
+
+      {/* Modal */}
       <div
         ref={containerRef}
+        onMouseDown={() => pinned_ && bringToFront(modalId)}
         className={cn(
           'relative w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl pointer-events-auto',
           'animate-in fade-in-0 zoom-in-95 duration-200',
           'max-h-[90vh] flex flex-col',
           !width && sizeClasses[size],
-          pinned && 'ring-2 ring-orange-400/60 shadow-orange-200/40',
+          pinned_ && 'ring-2 ring-orange-400/60',
           className
         )}
         style={width ? { maxWidth: `min(${width}, calc(100vw - 32px))` } : undefined}
         role="dialog"
-        aria-modal="true"
+        aria-modal={!pinned_}
         aria-labelledby={title ? 'modal-title' : undefined}
         dir={dir}
       >
-        {/* Drag handle — только на десктопе */}
+        {/* Drag handle */}
         <div
           ref={handleRef}
-          className="hidden md:flex items-center justify-center h-5 rounded-t-2xl cursor-grab active:cursor-grabbing select-none group bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+          className="hidden md:flex items-center justify-center h-5 rounded-t-2xl cursor-grab active:cursor-grabbing select-none group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
         >
-          <GripHorizontal className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors" />
+          <GripHorizontal className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors" />
         </div>
 
         {/* Header */}
@@ -119,43 +157,27 @@ export function Modal({
           <div className="flex items-start justify-between px-5 pb-0 pt-1">
             <div className="flex-1 min-w-0 pt-1">
               {title && (
-                <h2
-                  id="modal-title"
-                  className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight"
-                >
+                <h2 id="modal-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight">
                   {title}
                 </h2>
               )}
-              {subtitle && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
-              )}
+              {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>}
             </div>
-
             <div className="flex items-center gap-1 -mt-1 -mr-1">
-              {/* Pin button — только на десктопе */}
               <button
-                onClick={() => setPinned(p => !p)}
+                onClick={handlePin}
+                title={pinned_ ? 'Открепить' : (pinned.length >= maxPinned ? 'Максимум 3 окна' : 'Закрепить')}
                 className={cn(
                   'hidden md:flex p-1.5 rounded-full transition-colors',
-                  pinned
+                  pinned_
                     ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-500 hover:bg-orange-200'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-300 dark:text-gray-600 hover:text-gray-500'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-300 hover:text-gray-500'
                 )}
-                title={pinned ? 'Открепить' : 'Закрепить на экране'}
               >
-                {pinned
-                  ? <PinOff className="w-4 h-4" />
-                  : <Pin className="w-4 h-4" />
-                }
+                {pinned_ ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
               </button>
-
-              {/* Close button */}
               {showCloseButton && (
-                <button
-                  onClick={onClose}
-                  className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  aria-label="Close"
-                >
+                <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Close">
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
               )}
@@ -164,13 +186,7 @@ export function Modal({
         )}
 
         {/* Content */}
-        <div
-          className={cn(
-            'flex-1 overflow-y-auto p-5',
-            footer && 'pb-3',
-            contentClassName
-          )}
-        >
+        <div className={cn('flex-1 overflow-y-auto p-5', footer && 'pb-3', contentClassName)}>
           {children}
         </div>
 

@@ -9,6 +9,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GlobalSearch } from '@/components/GlobalSearch'
 import dynamic from 'next/dynamic'
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner'
+import { PinnedModalsTray } from '@/components/ui/PinnedModalsTray'
 
 const KiraHAL = dynamic(() => import('@/components/kira/KiraHAL'), { ssr: false })
 
@@ -78,6 +79,9 @@ export default function DashboardLayout({
 
         {/* Impersonation banner — показывается когда admin смотрит от имени org */}
         <ImpersonationBanner />
+
+        {/* Tray закреплённых окон — справа снизу */}
+        <PinnedModalsTray />
       </BranchProvider>
     </AuthProvider>
   )

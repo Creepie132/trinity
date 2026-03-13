@@ -46,6 +46,7 @@ export function createSubscriptionPaymentUrl({
   amount,
   orgId,
   orgName,
+  ownerEmail,
   notifyUrl,
   successUrl,
   failUrl,
@@ -53,6 +54,7 @@ export function createSubscriptionPaymentUrl({
   amount: number
   orgId: string
   orgName: string
+  ownerEmail?: string
   notifyUrl: string
   successUrl: string
   failUrl: string
@@ -88,6 +90,8 @@ export function createSubscriptionPaymentUrl({
     // Защита от дублей: Tranzila блокирует повторный платёж с тем же DCdisable
     // Требует настройки поля 20 в my.tranzila → Настройки → שדות נוספים לעסקה
     DCdisable: dcDisable,
+    // Email клиента — Tranzila отправит квитанцию автоматически после оплаты
+    ...(ownerEmail ? { contact_email: ownerEmail } : {}),
   })
 
   // DirectNG — новый актуальный URL (не direct.tranzila.com!)

@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
       amount,
       orgId: org_id,
       orgName: (org as any).name || '',
+      ownerEmail,
       notifyUrl,
       successUrl,
       failUrl,

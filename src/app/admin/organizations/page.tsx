@@ -13,7 +13,7 @@ import {
   CheckCircle, XCircle, AlertCircle, Loader2, X,
   Shield, Pencil, CreditCard, Eye,
   Clock, TrendingUp, Users, Calendar, BarChart3,
-  Wifi, WifiOff, AlertTriangle, Trash2, EyeOff,
+  Wifi, WifiOff, AlertTriangle, Trash2, EyeOff, Edit3, Check,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/switch'
@@ -90,6 +90,120 @@ const HEALTH_DOT: Record<string, string> = {
   gray:   'bg-gray-400',
 }
 
+
+// ─── BillingAmountRow Component ──────────────────────────────────────────────
+
+function BillingAmountRow({
+  org, lang, onSaved
+}: {
+  org: Organization; lang: 'he' | 'ru'
+  onSaved: (amount: number | null) => void
+}) {
+  const l = lang === 'he'
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(org.billing_amount?.toString() ?? '')
+  const [saving, setSaving] = useState(false)
+  const isFree = org.billing_amount == null
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const newAmount = value.trim() === '' ? null : Number(value)
+      if (newAmount !== null && isNaN(newAmount)) {
+        toast.error(l ? 'ערך לא תקין' : 'Неверное значение')
+        return
+      }
+      const res = await fetch('/api/admin/organizations/features', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_id: org.id, billing_amount: newAmount }),
+      })
+      if (!res.ok) throw new Error()
+      onSaved(newAmount)
+      setEditing(false)
+      toast.success(newAmount === null
+        ? (l ? 'ללא עלות ∞' : 'Установлено ∞ (бесплатно)')
+        : (l ? `עודכן: ₪${newAmount}` : `Обновлено: ₪${newAmount}`)
+      )
+    } catch {
+      toast.error(l ? 'שגיאה' : 'Ошибка')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSetFree = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/organizations/features', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_id: org.id, billing_amount: null }),
+      })
+      if (!res.ok) throw new Error()
+      setValue('')
+      onSaved(null)
+      setEditing(false)
+      toast.success(l ? 'ללא עלות ∞' : 'Установлено ∞ (бесплатно)')
+    } catch {
+      toast.error(l ? 'שגיאה' : 'Ошибка')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between text-sm py-1.5">
+      <span className="text-gray-500">{l ? 'תעריף' : 'Тарифная ставка'}</span>
+      {editing ? (
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400 text-xs">₪</span>
+            <input
+              type="number"
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false) }}
+              placeholder="0"
+              autoFocus
+              className="w-20 px-2 py-1 text-sm border border-indigo-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400 dark:bg-gray-800 dark:border-indigo-600"
+            />
+          </div>
+          {/* ∞ кнопка */}
+          <button
+            onClick={handleSetFree}
+            disabled={saving}
+            title={l ? 'ללא תשלום' : 'Бесплатно (∞)'}
+            className="px-2 py-1 text-sm font-bold text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors border border-indigo-200"
+          >∞</button>
+          {/* Save */}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-7 h-7 flex items-center justify-center bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+          </button>
+          {/* Cancel */}
+          <button onClick={() => setEditing(false)} className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            <X className="w-3.5 h-3.5 text-gray-400" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => { setValue(org.billing_amount?.toString() ?? ''); setEditing(true) }}
+          className="group flex items-center gap-1.5 hover:bg-indigo-50 px-2 py-1 rounded-lg transition-colors"
+        >
+          <span className={`font-bold ${isFree ? 'text-emerald-600 text-lg' : 'text-gray-900 dark:text-gray-100'}`}>
+            {isFree ? '∞' : `₪${org.billing_amount} / ${l ? 'חודש' : 'мес'}`}
+          </span>
+          <Edit3 className="w-3 h-3 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── OrgCard Component ────────────────────────────────────────────────────────
 
 function OrgCard({
@@ -162,8 +276,10 @@ function OrgCard({
         <div className="flex items-center gap-2 mb-3 flex-wrap">
           {getStatusBadge(org.subscription_status)}
           <span className="text-xs text-gray-400">{getPlanName(org.plan)}</span>
-          {org.billing_amount && (
+          {org.billing_amount != null ? (
             <span className="ml-auto text-xs font-mono text-gray-500">₪{org.billing_amount}</span>
+          ) : (
+            <span className="ml-auto text-sm font-bold text-emerald-600 leading-none">∞</span>
           )}
         </div>
 
@@ -621,16 +737,27 @@ export default function AdminOrganizationsPage() {
         {/* Billing */}
         <div className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 space-y-2">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{l ? 'פרטי תשלום' : 'Биллинг'}</p>
-          {[
-            [l ? 'בעלים' : 'Владелец', org.owner_name],
-            [l ? 'תעריף' : 'Тарифная ставка', org.billing_amount ? `₪${org.billing_amount} / ${l ? 'חודש' : 'мес'}` : getPlanName(org.plan)],
-            [l ? 'חיוב הבא' : 'Следующее списание', org.subscription_expires_at ? new Date(org.subscription_expires_at).toLocaleDateString(l ? 'he-IL' : 'ru-RU') : '—'],
-          ].map(([label, value]) => (
-            <div key={label as string} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 dark:border-gray-800 last:border-0">
-              <span className="text-gray-500">{label}</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">{value}</span>
-            </div>
-          ))}
+          {/* Владелец */}
+          <div className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 dark:border-gray-800">
+            <span className="text-gray-500">{l ? 'בעלים' : 'Владелец'}</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">{org.owner_name}</span>
+          </div>
+          {/* Следующее списание */}
+          <div className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 dark:border-gray-800">
+            <span className="text-gray-500">{l ? 'חיוב הבא' : 'Следующее списание'}</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">
+              {org.subscription_expires_at ? new Date(org.subscription_expires_at).toLocaleDateString(l ? 'he-IL' : 'ru-RU') : '—'}
+            </span>
+          </div>
+          {/* Тарифная ставка — inline редактор */}
+          <BillingAmountRow
+            org={org} lang={language}
+            onSaved={(newAmount) => {
+              const updated = { ...org, billing_amount: newAmount ?? undefined }
+              setSelectedOrg(updated)
+              setOrgs(prev => prev.map(o => o.id === org.id ? updated : o))
+            }}
+          />
           <div className="flex items-center justify-between text-sm py-1.5">
             <span className="text-gray-500">{l ? 'טוקן Tranzila' : 'Токен Tranzila'}</span>
             {hasToken ? (

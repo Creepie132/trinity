@@ -45,6 +45,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${ADMIN_URL}/subscription-failed`, { status: 303 })
     }
 
+    // Защита от повторной оплаты по той же ссылке
+    const { data: existingOrg } = await supabase
+      .from('organizations')
+      .select('subscription_status, billing_due_date')
+      .eq('id', orgId)
+      .single()
+
+    if (existingOrg?.subscription_status === 'active' && existingOrg?.billing_due_date) {
+      console.log('[tranzila-success] Already active, skipping:', orgId)
+      return NextResponse.redirect(`${ADMIN_URL}/subscription-success?already=1`, { status: 303 })
+    }
+
     // Следующая дата списания — сегодня + 30 дней
     const nextBilling = new Date()
     nextBilling.setDate(nextBilling.getDate() + 30)
@@ -156,6 +168,18 @@ export async function POST(request: NextRequest) {
   if (orgId) {
     if (responseCode !== '000' || !cardToken) {
       return NextResponse.redirect(`${ADMIN_URL}/subscription-failed`, { status: 303 })
+    }
+
+    // Защита от повторной оплаты по той же ссылке
+    const { data: existingOrg } = await supabase
+      .from('organizations')
+      .select('subscription_status, billing_due_date')
+      .eq('id', orgId)
+      .single()
+
+    if (existingOrg?.subscription_status === 'active' && existingOrg?.billing_due_date) {
+      console.log('[tranzila-success] POST: Already active, skipping:', orgId)
+      return NextResponse.redirect(`${ADMIN_URL}/subscription-success?already=1`, { status: 303 })
     }
 
     const nextBilling = new Date()

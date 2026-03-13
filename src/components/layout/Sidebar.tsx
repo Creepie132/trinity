@@ -111,7 +111,19 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {navigation.map((item, index) => {
+        {/* Скелетон во время загрузки — предотвращает flash пунктов */}
+        {features.isLoading && Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 px-4 py-3.5 rounded-xl animate-pulse"
+          >
+            <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-700">
+              <div className="w-5 h-5 bg-gray-200 dark:bg-slate-600 rounded" />
+            </div>
+            <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded flex-1" style={{ width: `${60 + i * 8}%` }} />
+          </div>
+        ))}
+        {!features.isLoading && navigation.map((item, index) => {
           const isActive = pathname === item.href
           const Icon = item.icon
 

@@ -31,25 +31,26 @@ export function useFeatures(): Features {
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin()
 
   if (orgLoading || adminLoading) {
-    // Пока данные грузятся — показываем все базовые разделы.
-    // ModuleGuard на страницах всё равно проверит доступ при переходе.
+    // Пока данные грузятся — НЕ показываем ни одного модуля.
+    // Sidebar покажет скелетон. Это предотвращает flash когда пункты
+    // сначала появляются частично, а потом дополняются.
     return {
-      hasClients: true,
+      hasClients: false,
       hasSms: false,
-      hasPayments: true,
+      hasPayments: false,
       hasAnalytics: false,
       hasStatistics: false,
       hasReports: false,
       hasSubscriptions: false,
-      hasVisits: true,
-      hasInventory: true,
+      hasVisits: false,
+      hasInventory: false,
       hasBooking: false,
       hasTelegram: false,
       hasLoyalty: false,
       hasBirthday: false,
-      hasDiary: true,
+      hasDiary: false,
       hasBranches: false,
-      paymentsEnabled: true,
+      paymentsEnabled: false,
       recurringEnabled: false,
       isActive: true,
       category: 'other',

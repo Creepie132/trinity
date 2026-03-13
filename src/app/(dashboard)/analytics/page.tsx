@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useBranch } from '@/contexts/BranchContext'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -90,7 +90,7 @@ const Widget = ({ title, children, className = '' }: { title: string; children: 
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AnalyticsPage() {
-  const { orgId } = useAuth()
+  const { activeOrgId: orgId } = useBranch()
   const { language } = useLanguage()
   const locale = language === 'he' ? 'he' : 'ru'
   const isHe = locale === 'he'

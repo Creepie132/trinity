@@ -40,11 +40,21 @@ export function useDraggableDialog() {
     const dx = e.clientX - s.startX
     const dy = e.clientY - s.startY
 
-    const rect = containerRef.current.getBoundingClientRect()
-    const maxX = window.innerWidth - rect.width / 2
-    const minX = -(rect.width / 2)
-    const maxY = window.innerHeight - 40
-    const minY = -(rect.height / 2) + 40
+    // Используем offsetWidth/Height — они не меняются в процессе drag (в отличие от getBoundingClientRect)
+    const W = containerRef.current.offsetWidth
+    const H = containerRef.current.offsetHeight
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+
+    // Центр окна в px от центра viewport: translate(calc(-50% + X), calc(-50% + Y))
+    // Центр viewport = vw/2, vh/2. Левый край окна = vw/2 + dx - W/2.
+    // Ограничиваем: левый край >= 8px, правый край <= vw - 8px, верх >= 8px, низ <= vh - 8px
+    const halfW = W / 2
+    const halfH = H / 2
+    const minX = -(vw / 2 - halfW - 8)  // левый край = vw/2 + minX - halfW = 8 → minX = halfW + 8 - vw/2
+    const maxX = vw / 2 - halfW - 8     // правый край = vw/2 + maxX + halfW = vw - 8 → maxX = vw/2 - halfW - 8
+    const minY = -(vh / 2 - halfH - 8)
+    const maxY = vh / 2 - halfH - 8
 
     s.currentX = Math.min(maxX, Math.max(minX, dx))
     s.currentY = Math.min(maxY, Math.max(minY, dy))

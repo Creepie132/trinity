@@ -7,9 +7,13 @@ import { useBranch } from '@/contexts/BranchContext'
 
 export function useClients(searchQuery?: string, page: number = 1, pageSize: number = 25) {
   const { orgId: authOrgId } = useAuth()
-  const { mainOrgId } = useBranch()
-  // Clients are ALWAYS shared across branches — use mainOrgId
-  const orgId = mainOrgId || authOrgId
+  const { activeOrgId, mainOrgId } = useBranch()
+  // При impersonation: activeOrgId = impersonated org (из user_active_branch в DB)
+  // mainOrgId = всегда твой собственный org (из AuthContext → org_users)
+  // Clients shared across branches — берём mainOrgId, но если mainOrgId === authOrgId
+  // и activeOrgId отличается (impersonation) — тогда activeOrgId IS the impersonated mainOrgId
+  // Используем activeOrgId как основу: сервер сам разрешит всё семейство филиалов
+  const orgId = activeOrgId || mainOrgId || authOrgId
 
   return useQuery({
     queryKey: ['clients', orgId, searchQuery, page, pageSize],

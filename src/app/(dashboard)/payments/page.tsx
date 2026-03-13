@@ -535,6 +535,11 @@ export default function PaymentsPage() {
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
+
+                        {/* 🗑 Admin Delete - only for admin */}
+                        {isAdmin && (
+                          <AdminDeletePaymentButton paymentId={payment.id} />
+                        )}
                         
                         {/* 💬 WhatsApp and 📱 SMS - always show if phone exists */}
                         {(payment.clients?.phone || payment.client_phone) && payment.status === 'pending' && payment.payment_method === 'credit_card' && (

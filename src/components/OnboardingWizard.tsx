@@ -107,6 +107,23 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
+  // Guard: double-check flag on mount before showing wizard
+  const [verified, setVerified] = useState(false)
+  const [shouldShow, setShouldShow] = useState(false)
+
+  useEffect(() => {
+    if (!open || !orgId) return
+    supabase
+      .from('organizations')
+      .select('features')
+      .eq('id', orgId)
+      .single()
+      .then(({ data }) => {
+        const completed = data?.features?.onboarding_completed === true
+        setShouldShow(!completed)
+        setVerified(true)
+      })
+  }, [open, orgId])
 
   // Locale state - 'ru' by default, detect Hebrew after mount (avoids hydration mismatch)
   const [locale, setLocale] = useState<'he' | 'ru'>('ru')
@@ -451,6 +468,9 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
       setLoading(false)
     }
   }
+
+  // Don't render until DB check is done, and only if flag is not set
+  if (!verified || !shouldShow) return null
 
   return (
     <Modal

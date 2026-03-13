@@ -84,14 +84,17 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   const { data: onboardingData } = useQuery({
     queryKey: ['onboarding-check', orgId],
     enabled: !!orgId,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000, // 5 min — не перечитывать часто
+    retry: false,           // не повторять при ошибке — лучше не показывать онбординг
     queryFn: async () => {
-      const { data: org } = await supabase
+      const { data: org, error } = await supabase
         .from('organizations')
         .select('name, features')
         .eq('id', orgId)
         .single()
-      const onboardingCompleted = org?.features?.onboarding_completed ?? false
+      // При любой ошибке — НЕ показывать онбординг
+      if (error || !org) return { showOnboarding: false, organizationName: '' }
+      const onboardingCompleted = org?.features?.onboarding_completed === true
       return {
         showOnboarding: !onboardingCompleted,
         organizationName: org?.name || '',

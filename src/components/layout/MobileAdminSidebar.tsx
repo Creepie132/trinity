@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Megaphone, Settings, ArrowLeft, Home, Shield, LogOut } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, ArrowLeft, Home, LogOut, Building2, Package, CreditCard, Puzzle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import {
@@ -23,6 +23,7 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
   const pathname = usePathname()
   const router = useRouter()
   const { signOut } = useAuth()
+  const { t, language } = useLanguage()
 
   const onLogout = async () => {
     await signOut()
@@ -30,18 +31,33 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
     router.push('/login')
     router.refresh()
   }
-  const { t } = useLanguage()
 
   const navigation = [
     {
       name: t('admin.dashboard'),
       href: '/admin',
       icon: LayoutDashboard,
+      exact: true,
     },
     {
-      name: t('admin.subscriptions') || 'Подписки и доступ',
-      href: '/admin/subscriptions',
-      icon: Shield,
+      name: language === 'he' ? 'ארגונים' : 'Организации',
+      href: '/admin/organizations',
+      icon: Building2,
+    },
+    {
+      name: language === 'he' ? 'תוכניות' : 'Тарифные планы',
+      href: '/admin/plans',
+      icon: Package,
+    },
+    {
+      name: language === 'he' ? 'מודולים' : 'Модули',
+      href: '/admin/modules',
+      icon: Puzzle,
+    },
+    {
+      name: language === 'he' ? 'חיובים' : 'Биллинг',
+      href: '/admin/billing',
+      icon: CreditCard,
     },
     {
       name: t('admin.ads'),
@@ -81,7 +97,7 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             {navigation.map((item, index) => {
-              const isActive = pathname === item.href
+              const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
               const Icon = item.icon
 
               return (
@@ -95,9 +111,7 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]'
                       : 'text-slate-300 hover:bg-slate-700 hover:text-white active:scale-[0.98]'
                   )}
-                  style={{
-                    animationDelay: `${index * 50}ms`,
-                  }}
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className={cn(
                     'p-1.5 rounded-lg transition-colors',
@@ -116,12 +130,12 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
               )
             })}
 
-            {/* Кנопка возврата в систему */}
+            {/* Кнопка возврата в систему */}
             <Separator className="my-4 bg-slate-700" />
             <Link
               href="/dashboard"
               onClick={onClose}
-              className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-2 border-green-500/30 hover:border-green-500/50 hover:bg-gradient-to-r hover:from-green-600/30 hover:to-emerald-600/30 active:scale-[0.98]"
+              className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-2 border-green-500/30 hover:border-green-500/50 active:scale-[0.98]"
             >
               <div className="p-1.5 rounded-lg bg-green-600/30">
                 <Home className="w-5 h-5 flex-shrink-0 text-green-400" />

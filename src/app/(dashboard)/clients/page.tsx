@@ -101,7 +101,7 @@ export default function ClientsPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('clients.title')}</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {t('common.total')}: {clients?.length || 0} {t('clients.title')}
+            {t('common.total')}: {totalCount || 0} {t('clients.title')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -233,6 +233,48 @@ export default function ClientsPage() {
         )}
       </div>
 
+      {/* Desktop pagination — server-side (no search) */}
+      {!searchQuery && totalPages > 1 && (
+        <div className="hidden md:flex items-center justify-center gap-2 mt-2 pb-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            {language === 'he' ? 'הקודם' : '← Назад'}
+          </Button>
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let pageNum: number
+            if (totalPages <= 5) pageNum = i + 1
+            else if (page <= 3) pageNum = i + 1
+            else if (page >= totalPages - 2) pageNum = totalPages - 4 + i
+            else pageNum = page - 2 + i
+            return (
+              <Button
+                key={pageNum}
+                variant={page === pageNum ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setPage(pageNum)}
+              >
+                {pageNum}
+              </Button>
+            )
+          })}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            {language === 'he' ? 'הבא' : 'Вперёд →'}
+          </Button>
+          <span className="text-sm text-gray-500 mr-2">
+            {from}–{to} {language === 'he' ? 'מתוך' : 'из'} {totalCount}
+          </span>
+        </div>
+      )}
+
       {/* Mobile - ClientCard */}
       <div className="md:hidden space-y-2">
         {paginatedClients && paginatedClients.length > 0 ? (
@@ -323,81 +365,30 @@ export default function ClientsPage() {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Pagination — mobile server-side (no search) */}
         {!searchQuery && clients.length > 0 && totalPages > 1 && (
-          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4 px-4">
-            {/* Stats */}
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              {t('common.showing')} {from}-{to} {t('common.outOf')} {totalCount}
-            </div>
-
-            {/* Desktop Pagination */}
-            <div className="hidden sm:flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                {t('common.previous')}
-              </Button>
-
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum: number
-                if (totalPages <= 5) {
-                  pageNum = i + 1
-                } else if (page <= 3) {
-                  pageNum = i + 1
-                } else if (page >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i
-                } else {
-                  pageNum = page - 2 + i
-                }
-
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={page === pageNum ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setPage(pageNum)}
-                  >
-                    {pageNum}
-                  </Button>
-                )
-              })}
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-              >
-                {t('common.next')}
-              </Button>
-            </div>
-
-            {/* Mobile Pagination */}
-            <div className="flex sm:hidden items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                «
-              </Button>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {page} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-              >
-                »
-              </Button>
-            </div>
+          <div className="mt-4 flex items-center justify-center gap-3 pb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="w-10 h-10 p-0 text-lg"
+            >
+              {language === 'he' ? '›' : '‹'}
+            </Button>
+            <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="w-10 h-10 p-0 text-lg"
+            >
+              {language === 'he' ? '‹' : '›'}
+            </Button>
           </div>
         )}
 

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Megaphone, Settings, Home, Shield, LogOut } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, Home, Shield, LogOut, Building2, Package, CreditCard, Puzzle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
@@ -12,7 +12,7 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { signOut } = useAuth()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   const onLogout = async () => {
     await signOut()
@@ -25,11 +25,27 @@ export function AdminSidebar() {
       name: t('admin.dashboard'),
       href: '/admin',
       icon: LayoutDashboard,
+      exact: true,
     },
     {
-      name: t('admin.subscriptions') || 'Подписки и доступ',
-      href: '/admin/subscriptions',
-      icon: Shield,
+      name: language === 'he' ? 'ארגונים' : 'Организации',
+      href: '/admin/organizations',
+      icon: Building2,
+    },
+    {
+      name: language === 'he' ? 'תוכניות' : 'Тарифные планы',
+      href: '/admin/plans',
+      icon: Package,
+    },
+    {
+      name: language === 'he' ? 'מודולים' : 'Модули',
+      href: '/admin/modules',
+      icon: Puzzle,
+    },
+    {
+      name: language === 'he' ? 'חיובים' : 'Биллинг',
+      href: '/admin/billing',
+      icon: CreditCard,
     },
     {
       name: t('admin.ads'),
@@ -67,7 +83,7 @@ export function AdminSidebar() {
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navigation.map((item, index) => {
-          const isActive = pathname === item.href
+          const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
           const Icon = item.icon
 
           return (

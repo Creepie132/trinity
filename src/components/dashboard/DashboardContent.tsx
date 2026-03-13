@@ -134,7 +134,7 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
           fetch('/api/clients', { headers: branchHeaders }),
           fetch('/api/visits', { headers: branchHeaders }),
           fetch('/api/payments', { headers: branchHeaders }),
-          fetch(`/api/dashboard/today?org_id=${orgId}`),
+          fetch('/api/dashboard/today'),
           fetch('/api/tasks', { headers: branchHeaders }),
         ])
 

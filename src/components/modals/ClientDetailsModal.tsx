@@ -128,6 +128,7 @@ export function ClientDetailsModal() {
         onClose={() => closeModal('client-details')}
         showCloseButton={true}
         width="480px"
+        dir={locale === 'he' ? 'rtl' : 'ltr'}
         footer={
           <div className="space-y-2">
             {/* Ряд 1: Редактировать + Продажа + Удалить */}

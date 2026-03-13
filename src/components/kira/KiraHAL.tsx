@@ -34,10 +34,13 @@ export default function KiraHAL() {
         const defaultPos = safePos(window.innerWidth - 88, window.innerHeight - 88)
         posRef.current = defaultPos
         setPos(defaultPos)
+        // Сохраняем дефолтную позицию сразу — чтобы ключ существовал в localStorage
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultPos)) } catch {}
       }
     } catch {
       const fallback = safePos(window.innerWidth - 88, window.innerHeight - 88)
       setPos(fallback)
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback)) } catch {}
     }
   }, [])
 

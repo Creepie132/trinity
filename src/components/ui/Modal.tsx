@@ -18,6 +18,7 @@ interface ModalProps {
   closeOnEscape?: boolean
   className?: string
   contentClassName?: string
+  dir?: 'rtl' | 'ltr'
 }
 
 const sizeClasses = {
@@ -42,6 +43,7 @@ export function Modal({
   closeOnEscape = true,
   className,
   contentClassName,
+  dir = 'rtl',
 }: ModalProps) {
   // Handle escape key
   const handleEscape = useCallback(
@@ -89,7 +91,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
-        dir="rtl"
+        dir={dir}
       >
         {/* Header */}
         {(title || showCloseButton) && (

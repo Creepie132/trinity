@@ -68,6 +68,7 @@ export function WorkShiftWidget() {
   const [hasStaff, setHasStaff] = useState<boolean | null>(null)
   const [elapsed, setElapsed] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [initialLoaded, setInitialLoaded] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   const load = useCallback(async () => {
@@ -78,7 +79,9 @@ export function WorkShiftWidget() {
       setMyShift(data.myShift)
       setActiveShifts(data.activeShifts || [])
       if (typeof data.hasStaff === 'boolean') setHasStaff(data.hasStaff)
-    } catch {}
+    } catch {} finally {
+      setInitialLoaded(true)
+    }
   }, [])
 
   useEffect(() => {
@@ -189,6 +192,16 @@ export function WorkShiftWidget() {
   }
 
   // Staff view: shift button + timer
+  // Show skeleton while initial data is loading to prevent flash
+  if (!initialLoaded) {
+    return (
+      <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+        <div className="h-4 w-32 bg-gray-100 dark:bg-slate-700 rounded animate-pulse mb-3" />
+        <div className="h-12 w-full bg-gray-100 dark:bg-slate-700 rounded-xl animate-pulse" />
+      </div>
+    )
+  }
+
   return (
     <div className={`rounded-2xl border p-4 transition-all ${
       myShift

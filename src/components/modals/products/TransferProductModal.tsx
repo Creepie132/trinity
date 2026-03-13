@@ -109,7 +109,7 @@ export function TransferProductModal({ data, onClose }: TransferProductModalProp
         body: JSON.stringify({
           from_org_id: orgId,
           to_org_id: selectedBranchOrgId,
-          type: isOwner ? 'direct' : 'request',
+          type: isOwner ? 'transfer' : 'request',
           items: [{ product_id: product.id, product_name: product.name, quantity }],
           note: note.trim() || null,
         }),

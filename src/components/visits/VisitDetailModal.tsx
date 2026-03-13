@@ -1075,13 +1075,6 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           </div>
         )}
 
-        <InfoRow
-          icon={<FileText size={16} />}
-          label={labels.price}
-          value={`₪${(visit.price || 0) + priceOffset}`}
-          bold
-        />
-        
         {visit.notes && (
           <InfoRow
             icon={<FileText size={16} />}
@@ -1139,11 +1132,10 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       {/* Action buttons - Scheduled */}
       {visit.status === 'scheduled' && (
         <div className="space-y-2">
+          {/* Главная кнопка — ПЕРВАЯ */}
           <button
-            onClick={() => {
-              onStart()
-            }}
-            className="w-full py-3.5 rounded-2xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition"
+            onClick={() => { onStart() }}
+            className="w-full py-3.5 rounded-2xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition"
           >
             ▶ {labels.start}
           </button>
@@ -1158,10 +1150,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             </button>
 
             <button
-              onClick={() => {
-                onCancel()
-                onClose()
-              }}
+              onClick={() => { onCancel(); onClose() }}
               className="flex-1 py-3 rounded-2xl bg-slate-100 text-red-500 text-sm font-medium hover:bg-slate-200 transition"
             >
               ✕ {labels.cancel}
@@ -1173,32 +1162,31 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       {/* Action buttons - In Progress */}
       {visit.status === 'in_progress' && (
         <div className="space-y-2">
+          {/* Главная кнопка — Завершить ПЕРВАЯ, полная ширина */}
+          <button
+            onClick={onComplete}
+            className="w-full py-3.5 rounded-2xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition"
+          >
+            ✓ {labels.complete}
+          </button>
+
           <div className="flex gap-2">
             <button
-              onClick={onComplete}
-              className="flex-1 py-3.5 rounded-2xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 transition"
-            >
-              ✓ {labels.complete}
-            </button>
-            
-            <button
               onClick={() => setViewMode('services')}
-              className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-50 text-blue-600 text-sm font-medium hover:bg-blue-100 transition"
               title={labels.addToVisit}
             >
-              <Plus size={22} />
+              <Plus size={16} />
+              {locale === 'ru' ? 'Добавить' : 'הוסף'}
+            </button>
+
+            <button
+              onClick={() => { onCancel(); onClose() }}
+              className="flex-1 py-3 rounded-2xl bg-slate-100 text-red-500 text-sm font-medium hover:bg-slate-200 transition"
+            >
+              ✕ {labels.cancel}
             </button>
           </div>
-
-          <button
-            onClick={() => {
-              onCancel()
-              onClose()
-            }}
-            className="w-full py-3 rounded-2xl bg-slate-100 text-red-500 text-sm font-medium hover:bg-slate-200 transition"
-          >
-            ✕ {labels.cancel}
-          </button>
         </div>
       )}
 
@@ -1291,7 +1279,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
       dir={l ? 'rtl' : 'ltr'}
     >
       <div
-        className="relative bg-white rounded-[32px] shadow-xl w-[480px] max-h-[90vh] overflow-auto"
+        className="relative bg-white rounded-[32px] shadow-xl w-full max-w-[480px] mx-4 max-h-[88vh] overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button — only on main view; other views have their own headers */}

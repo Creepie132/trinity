@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden: you can only transfer from your own org' }, { status: 403 })
   }
 
-  const isDirect = type === 'direct'
+  const isDirect = type === 'transfer'
 
   // Create transfer request record
   const { data: req, error } = await supabaseAdmin
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       to_org_id,
       items,
       note: note || null,
-      type: isDirect ? 'direct' : 'request',
+      type: isDirect ? 'transfer' : 'request',
       created_by: user.id,
       status: isDirect ? 'approved' : 'pending',
       ...(isDirect ? { reviewed_by: user.id, reviewed_at: new Date().toISOString() } : {}),

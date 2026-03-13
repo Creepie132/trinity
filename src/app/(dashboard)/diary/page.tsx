@@ -86,7 +86,7 @@ export default function DiaryPage() {
   const [visits, setVisits] = useState<any[]>([])
   const [orgUsers, setOrgUsers] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [filter, setFilter] = useState<FilterType>('all')
+  const [filter, setFilter] = useState<FilterType>('open')
   const [searchQuery, setSearchQuery] = useState('')
   const { openModal } = useModalStore()
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
@@ -181,7 +181,6 @@ export default function DiaryPage() {
         groups[4].tasks.push(task)
       } else {
         const dueDate = parseISO(task.due_date)
-        const now = new Date()
 
         if (isPast(dueDate) && !isToday(dueDate) && task.status !== 'completed') {
           groups[0].tasks.push(task)
@@ -193,6 +192,11 @@ export default function DiaryPage() {
           groups[3].tasks.push(task)
         }
       }
+    })
+
+    // Sort each group: newest (created_at desc) first
+    groups.forEach(g => {
+      g.tasks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     })
 
     return groups.filter((group) => group.tasks.length > 0)
@@ -871,9 +875,19 @@ export default function DiaryPage() {
           <div className="md:hidden space-y-6">
             {groupedTasks.map((group) => (
               <div key={group.key}>
-                <h2 className={`text-sm font-semibold text-muted-foreground mb-3 ${group.color ? `border-l-4 ${group.color} pl-3` : ''}`}>
-                  {group.label} ({group.tasks.length})
-                </h2>
+                <div className={`flex items-center gap-2 mb-3 ${group.color ? `border-l-4 ${group.color} pl-3` : 'pl-1'}`}>
+                  <h2 className="text-sm font-bold text-foreground">
+                    {group.label}
+                  </h2>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                    group.key === 'overdue' ? 'bg-red-100 text-red-700' :
+                    group.key === 'today' ? 'bg-blue-100 text-blue-700' :
+                    group.key === 'tomorrow' ? 'bg-green-100 text-green-700' :
+                    'bg-muted text-muted-foreground'
+                  }`}>
+                    {group.tasks.length}
+                  </span>
+                </div>
                 <div className="space-y-3">
                   {group.tasks.map((task) => renderTaskCard(task))}
                 </div>

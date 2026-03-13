@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = request.nextUrl
-    const org_id = searchParams.get('org_id')
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
 
-    if (!org_id) {
-      return NextResponse.json({ error: 'Missing org_id' }, { status: 400 })
-    }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const { orgId, supabase } = auth
 
     // Get today's date range (00:00 to 23:59)
     const today = new Date()
@@ -55,7 +48,7 @@ export async function GET(request: NextRequest) {
           price
         )
       `)
-      .eq('org_id', org_id)
+      .eq('org_id', orgId)
       .gte('scheduled_at', todayStart.toISOString())
       .lte('scheduled_at', todayEnd.toISOString())
       .in('status', ['scheduled', 'in_progress'])

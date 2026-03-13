@@ -122,7 +122,13 @@ export function PaymentReportModal({ open, onClose, locale = 'he' }: Props) {
       reportData.logoDataUri = logoDataUri
 
       const html = buildPaymentReportHTML(reportData)
-      await downloadRaw(html, `payment-report-${docNumber}.pdf`)
+      const contacts = [org?.email, (org as any)?.phone].filter(Boolean).join(' · ')
+      await downloadRaw(html, `payment-report-${docNumber}.pdf`, {
+        orgName: reportData.orgName,
+        contacts,
+        docNumber,
+        label: 'סיכום תשלומים',
+      })
 
       toast.success(locale === 'he' ? 'הדוח הורד בהצלחה ✓' : 'Отчёт скачан ✓')
       onClose()

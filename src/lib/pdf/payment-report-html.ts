@@ -158,19 +158,7 @@ export function buildPaymentReportHTML(d: PaymentReportData): string {
   </div>
 
   <!-- SPACER -->
-  <div style="flex:1"></div>
-
-  <!-- FOOTER — как в Предложении -->
-  <div style="background:#1B2A4A;padding:14px 36px;display:flex;justify-content:space-between;align-items:center;direction:ltr">
-    <div style="font-size:10px;color:rgba(255,255,255,.5);line-height:1.8">
-      <div style="color:#D4AA50;font-weight:700;font-size:11px">${d.orgName}</div>
-      ${footerContacts}
-    </div>
-    <div style="font-size:10px;color:rgba(255,255,255,.4);text-align:right;direction:rtl">
-      מופק ע"י <span style="color:rgba(255,255,255,.7)">Trinity CRM</span><br>
-      סיכום תשלומים #${d.docNumber}
-    </div>
-  </div>
+  <div style="flex:1;min-height:20px"></div>
 
 </div>
 </body>

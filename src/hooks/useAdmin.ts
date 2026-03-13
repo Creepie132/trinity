@@ -7,44 +7,71 @@ export function useAdminStats() {
   return useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: async () => {
-      // Total organizations
+      const now = new Date()
+
+      // Total / active organizations
       const { count: totalOrgs } = await supabase
         .from('organizations')
         .select('*', { count: 'exact', head: true })
 
-      // Active organizations
       const { count: activeOrgs } = await supabase
         .from('organizations')
         .select('*', { count: 'exact', head: true })
         .eq('is_active', true)
 
-      // Total completed transactions
-      const { count: totalTransactions } = await supabase
-        .from('payments')
+      // MRR — sum of billing_amount for active subscriptions
+      const { data: mrrOrgs } = await supabase
+        .from('organizations')
+        .select('billing_amount')
+        .eq('is_active', true)
+        .eq('subscription_status', 'active')
+        .not('billing_amount', 'is', null)
+
+      const mrr = mrrOrgs?.reduce((sum, o) => sum + Number(o.billing_amount || 0), 0) || 0
+
+      // Expiring subscriptions — next 7 days
+      const in7Days = new Date()
+      in7Days.setDate(now.getDate() + 7)
+
+      const { data: expiringOrgs } = await supabase
+        .from('organizations')
+        .select('id, name, email, subscription_expires_at, billing_amount')
+        .eq('is_active', true)
+        .gte('subscription_expires_at', now.toISOString())
+        .lte('subscription_expires_at', in7Days.toISOString())
+        .order('subscription_expires_at', { ascending: true })
+
+      // New registrations — last 7 days
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(now.getDate() - 7)
+
+      const { count: newOrgs7d } = await supabase
+        .from('organizations')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed')
+        .gte('created_at', sevenDaysAgo.toISOString())
 
-      // Monthly revenue (current month)
-      const startOfMonth = new Date()
-      startOfMonth.setDate(1)
-      startOfMonth.setHours(0, 0, 0, 0)
+      // Failed payment attempts (last 30 days)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(now.getDate() - 30)
 
-      const { data: monthlyPayments } = await supabase
-        .from('payments')
-        .select('amount')
-        .eq('status', 'completed')
-        .gte('paid_at', startOfMonth.toISOString())
-
-      const monthlyRevenue = monthlyPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
+      const { data: failedAttempts } = await supabase
+        .from('payment_attempts')
+        .select('id, org_id, amount, attempt_number, max_attempts, error_message, attempted_at, organizations(name, email)')
+        .eq('status', 'failed')
+        .gte('attempted_at', thirtyDaysAgo.toISOString())
+        .order('attempted_at', { ascending: false })
+        .limit(10)
 
       return {
         totalOrgs: totalOrgs || 0,
         activeOrgs: activeOrgs || 0,
-        totalTransactions: totalTransactions || 0,
-        monthlyRevenue,
+        mrr,
+        newOrgs7d: newOrgs7d || 0,
+        expiringOrgs: expiringOrgs || [],
+        failedAttempts: failedAttempts || [],
       }
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 60000,
   })
 }
 

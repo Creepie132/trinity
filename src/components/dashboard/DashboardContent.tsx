@@ -91,14 +91,9 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
         .select('name, features')
         .eq('id', orgId)
         .single()
-      const { count } = await supabase
-        .from('services')
-        .select('*', { count: 'exact', head: true })
-        .eq('org_id', orgId)
       const onboardingCompleted = org?.features?.onboarding_completed ?? false
-      const hasServices = (count || 0) > 0
       return {
-        showOnboarding: !onboardingCompleted || !hasServices,
+        showOnboarding: !onboardingCompleted,
         organizationName: org?.name || '',
       }
     },

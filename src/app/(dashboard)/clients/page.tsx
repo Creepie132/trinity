@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -16,7 +16,6 @@ import Link from 'next/link'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
-import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { ExportButton } from '@/components/ExportButton'
 import { ClientCard } from '@/components/clients/ClientCard'
 import { DraftSaleIndicator } from '@/components/clients/DraftSaleIndicator'
@@ -31,7 +30,6 @@ export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
-  const isFirstLoad = useRef(true)
 
   const { openModal } = useModalStore()
 
@@ -85,13 +83,8 @@ export default function ClientsPage() {
     })
   }
 
-  // Show LoadingScreen ONLY on first load (no data yet), not during search/pagination
-  if (isLoading && !clientsData) {
-    return <LoadingScreen />
-  }
-  if (isFirstLoad.current && clientsData) {
-    isFirstLoad.current = false
-  }
+  // Never show full-screen loader — use inline skeleton instead
+  // features redirect
 
   return (
     <div className="space-y-6 min-h-screen">
@@ -157,8 +150,36 @@ export default function ClientsPage() {
       </div>
 
       {/* Desktop - Table */}
-      <div className={`hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[400px] transition-opacity duration-150 ${isFetching ? 'opacity-60' : 'opacity-100'}`}>
-        {paginatedClients && paginatedClients.length > 0 ? (
+      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[400px]">
+        {isFetching && clients.length === 0 ? (
+          /* Skeleton rows — показываем структуру таблицы пока грузятся данные */
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.name')}</TableHead>
+                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.phone')}</TableHead>
+                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.lastVisit')}</TableHead>
+                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.visits')}</TableHead>
+                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.totalSpent')}</TableHead>
+                <TableHead className="text-left text-gray-700 dark:text-gray-300">{t('clients.actions')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(8)].map((_, i) => (
+                <TableRow key={i} className="border-b border-gray-100 dark:border-gray-700">
+                  <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse w-32" /></TableCell>
+                  <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse w-24" /></TableCell>
+                  <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse w-20" /></TableCell>
+                  <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse w-8" /></TableCell>
+                  <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse w-16" /></TableCell>
+                  <TableCell><div className="flex gap-2">
+                    {[...Array(3)].map((_, j) => <div key={j} className="h-7 w-7 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />)}
+                  </div></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : paginatedClients && paginatedClients.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

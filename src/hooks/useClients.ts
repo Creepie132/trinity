@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { Client, ClientSummary } from '@/types/database'
 import { toast } from 'sonner'
@@ -14,6 +14,7 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
   return useQuery({
     queryKey: ['clients', orgId, searchQuery, page, pageSize],
     enabled: !!orgId,
+    placeholderData: keepPreviousData, // держим старые данные пока грузятся новые — нет мигания
     queryFn: async () => {
       console.log('Loading clients for org_id:', orgId)
 

@@ -12,9 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Copy, ExternalLink, Eye, Banknote, CheckCircle, TrendingUp, SlidersHorizontal, Receipt, MessageCircle, MessageSquare, X } from 'lucide-react'
+import { Plus, Copy, ExternalLink, Eye, Banknote, CheckCircle, TrendingUp, SlidersHorizontal, Receipt, MessageCircle, MessageSquare, X, FileText } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
 import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
+import { PaymentReportModal } from '@/components/payments/PaymentReportModal'
 import { CreateSubscriptionDialog } from '@/components/payments/CreateSubscriptionDialog'
 import { CreateCashPaymentDialog } from '@/components/payments/CreateCashPaymentDialog'
 import { CreateBitPaymentDialog } from '@/components/payments/CreateBitPaymentDialog'
@@ -41,6 +42,7 @@ export default function PaymentsPage() {
   const { openModal } = useModalStore()
   
   const [methodModalOpen, setMethodModalOpen] = useState(false)
+  const [reportModalOpen, setReportModalOpen] = useState(false)
   const [cardDialogOpen, setCardDialogOpen] = useState(false)
   const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false)
   const [cashDialogOpen, setCashDialogOpen] = useState(false)
@@ -268,7 +270,16 @@ export default function PaymentsPage() {
         </div>
 
         {/* Desktop single button */}
-        <div className="hidden md:flex">
+        <div className="hidden md:flex gap-3">
+          <Button
+            onClick={() => setReportModalOpen(true)}
+            size="lg"
+            variant="outline"
+            className="border-amber-400 text-amber-600 hover:bg-amber-50"
+          >
+            <FileText className="w-5 h-5 ml-2" />
+            {language === 'he' ? 'סיכום תשלומים' : 'Сводка платежей'}
+          </Button>
           <Button onClick={() => setMethodModalOpen(true)} size="lg" className="bg-primary hover:opacity-90">
             <Plus className="w-5 h-5 ml-2" />
             {language === 'he' ? 'עסקה חדשה' : 'Новая сделка'}
@@ -276,10 +287,19 @@ export default function PaymentsPage() {
         </div>
 
         {/* Mobile single button */}
-        <div className="md:hidden">
-          <Button 
-            onClick={() => setMethodModalOpen(true)} 
-            className="w-full bg-theme-primary dark:bg-gray-700 hover:opacity-90"
+        <div className="md:hidden flex gap-2">
+          <Button
+            onClick={() => setReportModalOpen(true)}
+            variant="outline"
+            className="flex-1 border-amber-400 text-amber-600 hover:bg-amber-50"
+            size="lg"
+          >
+            <FileText className="w-4 h-4 ml-1" />
+            {language === 'he' ? 'סיכום' : 'Сводка'}
+          </Button>
+          <Button
+            onClick={() => setMethodModalOpen(true)}
+            className="flex-1 bg-theme-primary dark:bg-gray-700 hover:opacity-90"
             size="lg"
           >
             <Plus className="w-5 h-5 ml-2" />
@@ -748,6 +768,13 @@ export default function PaymentsPage() {
         open={bitDialogOpen} 
         onOpenChange={setBitDialogOpen}
         onSuccess={handlePaymentSuccess}
+      />
+
+      {/* Payment Report Modal */}
+      <PaymentReportModal
+        open={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        locale={language === 'he' ? 'he' : 'ru'}
       />
 
       {/* Desktop Panel */}

@@ -113,8 +113,58 @@ export function useGeneratePDF() {
     }
   }, [])
 
+  // Скачать PDF из готового HTML-строки (для Payment Report и других шаблонов)
+  const downloadRaw = useCallback(async (html: string, filename: string) => {
+    setLoading(true)
+    try {
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas'),
+      ])
+
+      const iframe = document.createElement('iframe')
+      iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:1123px;border:none;visibility:hidden'
+      document.body.appendChild(iframe)
+
+      const iframeDoc = iframe.contentDocument!
+      iframeDoc.open()
+      iframeDoc.write(html)
+      iframeDoc.close()
+
+      await new Promise(resolve => setTimeout(resolve, 1400))
+
+      const element = iframeDoc.body.firstElementChild as HTMLElement
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 794,
+        windowWidth: 794,
+        logging: false,
+      })
+
+      document.body.removeChild(iframe)
+
+      const pdf = new jsPDF({ unit: 'px', format: 'a4', orientation: 'portrait' })
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfWidth, pdfHeight)
+
+      const blob = pdf.output('blob')
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   // Backward compatibility: generate = download
   const generate = download
 
-  return { generate, download, uploadAndGetLink, loading }
+  return { generate, download, downloadRaw, uploadAndGetLink, loading }
 }

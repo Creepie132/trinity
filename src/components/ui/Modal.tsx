@@ -78,28 +78,26 @@ export function Modal({
   if (!open) return null
 
   return (
-    <div className={cn(
-      'fixed inset-0 z-50 flex items-center justify-center p-4',
-      pinned && 'pointer-events-none' // pinned: клики сквозь backdrop
-    )}>
-      {/* Backdrop — скрыт когда закреплено */}
+    // Когда закреплено: весь wrapper пропускает клики (нет backdrop),
+    // но сам modal остаётся кликабельным через pointer-events-auto
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+      {/* Backdrop — появляется только когда не закреплено, сам перехватывает клики */}
       {!pinned && (
         <div
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200"
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200 pointer-events-auto"
           onClick={closeOnBackdrop ? onClose : undefined}
           aria-hidden="true"
         />
       )}
-
-      {/* Modal */}
+      {/* Modal — всегда кликабельный, даже при pinned */}
       <div
         ref={containerRef}
         className={cn(
-          'relative w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl',
+          'relative w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl pointer-events-auto',
           'animate-in fade-in-0 zoom-in-95 duration-200',
           'max-h-[90vh] flex flex-col',
           !width && sizeClasses[size],
-          pinned && 'pointer-events-auto ring-2 ring-orange-400/60 shadow-orange-200/40',
+          pinned && 'ring-2 ring-orange-400/60 shadow-orange-200/40',
           className
         )}
         style={width ? { maxWidth: `min(${width}, calc(100vw - 32px))` } : undefined}

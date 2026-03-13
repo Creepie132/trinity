@@ -74,7 +74,10 @@ const withBaseModal = (ModalContent: React.ComponentType<any>, modalType: ModalT
   }
 }
 
-const EnhancedClientDetailsModal = withBaseModal(ClientDetailsModal, 'client-details')
+// ClientDetailsModal управляет открытием/закрытием сам через useModalStore
+// и рендерит собственный <Modal> внутри — НЕ оборачиваем в withBaseModal/BaseModal
+// иначе открывается два окна одновременно: пустой Radix Dialog + Modal с контентом
+const StandaloneClientDetailsModal = ClientDetailsModal
 const EnhancedAddClientModal = withBaseModal(AddClientModal, 'client-add')
 const EnhancedEditClientModal = withBaseModal(EditClientModal, 'client-edit')
 const EnhancedDeleteClientModal = withBaseModal(DeleteClientModal, 'client-delete')
@@ -118,8 +121,8 @@ const EnhancedOrgSubscriptionModal = withBaseModal(OrgSubscriptionModal, 'org-su
 export function ModalManager() {
   return (
     <>
-      {/* Clients */}
-      <EnhancedClientDetailsModal />
+      {/* Clients — standalone: управляет собственным Modal, не через BaseModal */}
+      <StandaloneClientDetailsModal />
       <EnhancedAddClientModal />
       <EnhancedEditClientModal />
       <EnhancedDeleteClientModal />

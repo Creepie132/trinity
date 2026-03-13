@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, ReactNode } from 'react'
+import { useEffect, useState, useRef, ReactNode } from 'react'
 import { Users, Calendar, TrendingUp, Receipt } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -21,47 +21,129 @@ import dynamic from 'next/dynamic'
 const OnboardingWizard = dynamic(() => import('@/components/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })), { ssr: false })
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
-interface DashboardContentProps {
-  orgId: string
+interface DashboardContentProps { orgId: string }
+interface StatsData { clients: number; visits: number; revenue: number; avgCheck: number }
+
+// ─── CountUp hook ──────────────────────────────────────────────────────────────
+function useCountUp(target: number, duration = 1200) {
+  const [value, setValue] = useState(0)
+  const prev = useRef(0)
+  useEffect(() => {
+    if (target === prev.current) return
+    const start = prev.current
+    const diff = target - start
+    const startTime = performance.now()
+    const tick = (now: number) => {
+      const elapsed = now - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      // ease-out cubic
+      const ease = 1 - Math.pow(1 - progress, 3)
+      setValue(Math.round(start + diff * ease))
+      if (progress < 1) requestAnimationFrame(tick)
+      else prev.current = target
+    }
+    requestAnimationFrame(tick)
+  }, [target, duration])
+  return value
 }
 
-interface StatsData {
-  clients: number
-  visits: number
-  revenue: number
-  avgCheck: number
-}
-
-function KpiCard({ 
-  title, 
-  value, 
-  icon, 
-  color 
-}: { 
+// ─── KPI Card с градиентом, countup и трендом ─────────────────────────────────
+interface KpiCardProps {
   title: string
-  value: string | number
+  value: number
+  prefix?: string
   icon: ReactNode
-  color: string 
-}) {
+  gradient: string
+  iconBg: string
+  delay?: number
+  trend?: number   // % изменение к пред. месяцу, undefined = не показывать
+}
+
+function KpiCard({ title, value, prefix = '', icon, gradient, iconBg, delay = 0, trend }: KpiCardProps) {
+  const animated = useCountUp(value, 1000)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), delay)
+    return () => clearTimeout(t)
+  }, [delay])
+
   return (
-    <WidgetCard className="p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm text-slate-400">{title}</span>
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
+    <div
+      className={`relative overflow-hidden rounded-2xl p-4 shadow-sm transition-all duration-500
+        ${gradient}
+        ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {/* Декоративный круг */}
+      <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-white/10" />
+      <div className="absolute -right-1 -bottom-6 w-14 h-14 rounded-full bg-white/5" />
+
+      <div className="relative flex items-start justify-between mb-3">
+        <span className="text-xs font-medium text-white/80 uppercase tracking-wide">{title}</span>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconBg}`}>
           {icon}
         </div>
       </div>
-      <p className="text-2xl font-bold">{value}</p>
-    </WidgetCard>
+
+      <p className="relative text-3xl font-bold text-white tracking-tight">
+        {prefix}{animated.toLocaleString()}
+      </p>
+
+      {trend !== undefined && (
+        <div className="relative mt-2 flex items-center gap-1">
+          <span className={`text-xs font-semibold ${trend >= 0 ? 'text-white/90' : 'text-white/60'}`}>
+            {trend >= 0 ? '▲' : '▼'} {Math.abs(trend)}%
+          </span>
+          <span className="text-xs text-white/50">
+            {trend >= 0 ? 'vs прошлый месяц' : 'vs прошлый месяц'}
+          </span>
+        </div>
+      )}
+    </div>
   )
 }
 
-// Moved outside component to avoid function declaration inside blocks
+// ─── Greeting ─────────────────────────────────────────────────────────────────
+function GreetingHeader({ ownerName, todayVisitsCount, locale }: {
+  ownerName: string; todayVisitsCount: number; locale: string
+}) {
+  const l = locale === 'he'
+  const hour = new Date().getHours()
+  const greeting = l
+    ? hour < 12 ? 'בוקר טוב' : hour < 17 ? 'צהריים טובים' : 'ערב טוב'
+    : hour < 12 ? 'Доброе утро' : hour < 17 ? 'Добрый день' : 'Добрый вечер'
+
+  const firstName = ownerName?.split(' ')[0] || ''
+  const today = new Date().toLocaleDateString(l ? 'he-IL' : 'ru-RU', {
+    weekday: 'long', day: 'numeric', month: 'long'
+  })
+
+  return (
+    <div className="mb-5 flex items-start justify-between flex-wrap gap-2">
+      <div>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          {greeting}{firstName ? `, ${firstName}` : ''} 👋
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 capitalize">{today}</p>
+      </div>
+      {todayVisitsCount > 0 && (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+            {l ? `${todayVisitsCount} ביקורים היום` : `${todayVisitsCount} визитов сегодня`}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
 const parseArray = (data: any): any[] => {
   if (Array.isArray(data)) return data
   if (data?.data && Array.isArray(data.data)) return data.data
-  const keys = Object.keys(data || {})
-  for (const key of keys) {
+  for (const key of Object.keys(data || {})) {
     if (Array.isArray(data[key])) return data[key]
   }
   return []
@@ -72,45 +154,35 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   const locale = language
   const router = useRouter()
   const { openModal } = useModalStore()
-  
-  // Always use activeOrgId from BranchContext so switching branch works
   const { activeOrgId } = useBranch()
   const { orgId: authOrgId } = useAuth()
   const orgId = activeOrgId || authOrgId || _orgIdProp
-
   const supabase = createSupabaseBrowserClient()
 
-  // Check if onboarding is needed
+  // Onboarding check
   const { data: onboardingData } = useQuery({
     queryKey: ['onboarding-check', orgId],
     enabled: !!orgId,
-    staleTime: 5 * 60_000, // 5 min — не перечитывать часто
-    retry: false,           // не повторять при ошибке — лучше не показывать онбординг
+    staleTime: 5 * 60_000,
+    retry: false,
     queryFn: async () => {
       const { data: org, error } = await supabase
         .from('organizations')
         .select('name, features')
         .eq('id', orgId)
         .single()
-      // При любой ошибке — НЕ показывать онбординг
-      if (error || !org) return { showOnboarding: false, organizationName: '' }
-      const onboardingCompleted = org?.features?.onboarding_completed === true
+      if (error || !org) return { showOnboarding: false, organizationName: '', ownerName: '' }
       return {
-        showOnboarding: !onboardingCompleted,
-        organizationName: org?.name || '',
+        showOnboarding: !org.features?.onboarding_completed,
+        organizationName: org.name || '',
+        ownerName: (org.features as any)?.business_info?.owner_name || '',
       }
     },
   })
 
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
-
-  const [stats, setStats] = useState<StatsData>({
-    clients: 0,
-    visits: 0,
-    revenue: 0,
-    avgCheck: 0
-  })
-  
+  const [stats, setStats] = useState<StatsData>({ clients: 0, visits: 0, revenue: 0, avgCheck: 0 })
+  const [prevStats, setPrevStats] = useState<StatsData>({ clients: 0, visits: 0, revenue: 0, avgCheck: 0 })
   const [loading, setLoading] = useState(true)
   const [todayVisits, setTodayVisits] = useState<any[]>([])
   const [todayTasks, setTodayTasks] = useState<any[]>([])
@@ -121,12 +193,10 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
       try {
         const now = new Date()
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+        const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        const todayEnd = new Date(todayStart)
-        todayEnd.setDate(todayEnd.getDate() + 1)
+        const todayEnd = new Date(todayStart); todayEnd.setDate(todayEnd.getDate() + 1)
 
-        console.log('=== DASHBOARD DEBUG ===')
-        
         const branchHeaders: Record<string, string> = {}
         if (orgId) branchHeaders['X-Branch-Org-Id'] = orgId
 
@@ -138,156 +208,162 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
           fetch('/api/tasks', { headers: branchHeaders }),
         ])
 
-        const safeParse = async (response: Response, name: string) => {
-          try {
-            console.log(`${name} status:`, response.status)
-            if (!response.ok) {
-              console.error(`Сбой API ${name}: Сервер вернул статус ${response.status}`)
-              return []
-            }
-            const data = await response.json()
-            console.log(`${name} data:`, typeof data, Array.isArray(data), JSON.stringify(data)?.slice(0, 200))
-            return data
-          } catch (error) {
-            console.error(`Критическая ошибка загрузки ${name}:`, error)
-            return []
-          }
+        const safeParse = async (r: Response) => {
+          if (!r.ok) return []
+          try { return await r.json() } catch { return [] }
         }
 
-        const clientsData = await safeParse(clientsRes, 'Clients')
-        const visitsData = await safeParse(visitsRes, 'Visits')
-        const paymentsData = await safeParse(paymentsRes, 'Payments')
-        const todayVisitsData = await safeParse(todayVisitsRes, 'Today visits')
-        const tasksData = await safeParse(tasksRes, 'Tasks')
+        const [clientsData, visitsData, paymentsData, todayVisitsData, tasksData] = await Promise.all([
+          safeParse(clientsRes), safeParse(visitsRes), safeParse(paymentsRes),
+          safeParse(todayVisitsRes), safeParse(tasksRes),
+        ])
 
         const clientsArr = parseArray(clientsData)
         const visitsArr = parseArray(visitsData)
         const paymentsArr = parseArray(paymentsData)
         const todayVisitsArr = Array.isArray(todayVisitsData) ? todayVisitsData : []
         const tasksArr = parseArray(tasksData)
-        
-        console.log('Parsed: clients=', clientsArr.length, 'visits=', visitsArr.length, 'payments=', paymentsArr.length, 'todayVisits=', todayVisitsArr.length, 'tasks=', tasksArr.length)
 
+        // Текущий месяц
         const monthVisits = visitsArr.filter((v: any) => {
-          const visitDate = new Date(v.scheduled_at)
-          return visitDate >= monthStart && v.status !== 'cancelled'
+          const d = new Date(v.scheduled_at)
+          return d >= monthStart && v.status !== 'cancelled'
         })
-
         const monthPayments = paymentsArr.filter((p: any) => {
-          const paymentDate = new Date(p.created_at || p.paid_at)
-          return paymentDate >= monthStart && (p.status === 'completed' || p.status === 'success')
+          const d = new Date(p.created_at || p.paid_at)
+          return d >= monthStart && (p.status === 'completed' || p.status === 'success')
         })
-        
-        const revenue = monthPayments.reduce((sum: number, p: any) => 
-          sum + (p.amount || p.price || 0), 0
-        )
+        const revenue = monthPayments.reduce((s: number, p: any) => s + (p.amount || p.price || 0), 0)
+        const avgCheck = monthPayments.length > 0 ? Math.round(revenue / monthPayments.length) : 0
 
-        const avgCheck = monthPayments.length > 0 
-          ? Math.round(revenue / monthPayments.length) 
-          : 0
+        // Прошлый месяц для тренда
+        const prevPayments = paymentsArr.filter((p: any) => {
+          const d = new Date(p.created_at || p.paid_at)
+          return d >= prevMonthStart && d < monthStart && (p.status === 'completed' || p.status === 'success')
+        })
+        const prevRevenue = prevPayments.reduce((s: number, p: any) => s + (p.amount || p.price || 0), 0)
+        const prevAvg = prevPayments.length > 0 ? Math.round(prevRevenue / prevPayments.length) : 0
 
-        const statsToSet = {
-          clients: clientsArr.length,
-          visits: monthVisits.length,
-          revenue,
-          avgCheck,
-        }
-        
-        setStats(statsToSet)
+        setStats({ clients: clientsArr.length, visits: monthVisits.length, revenue, avgCheck })
+        setPrevStats({ clients: clientsArr.length, visits: monthVisits.length, revenue: prevRevenue, avgCheck: prevAvg })
         setTodayVisits(todayVisitsArr)
 
         const todayTasksFiltered = tasksArr.filter((t: any) => {
           if (t.status === 'completed' || t.status === 'cancelled') return false
           if (!t.due_date) return true
-          const taskDate = new Date(t.due_date)
-          return taskDate >= todayStart && taskDate < todayEnd
+          const d = new Date(t.due_date)
+          return d >= todayStart && d < todayEnd
         })
         setTodayTasks(todayTasksFiltered.slice(0, 5))
 
-        const revenueByDay: { date: string; amount: number }[] = []
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date()
-          d.setDate(d.getDate() - i)
+        // График 7 дней
+        const revenueByDay = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(); d.setDate(d.getDate() - (6 - i))
           const dateStr = d.toISOString().split('T')[0]
-          
           const dayTotal = paymentsArr
-            .filter((p: any) => {
-              const pDate = new Date(p.created_at).toISOString().split('T')[0]
-              return pDate === dateStr && (p.status === 'completed' || p.status === 'success')
-            })
-            .reduce((sum: number, p: any) => sum + (p.amount || p.price || 0), 0)
-          
-          revenueByDay.push({ date: dateStr, amount: dayTotal })
-        }
+            .filter((p: any) => new Date(p.created_at).toISOString().split('T')[0] === dateStr && (p.status === 'completed' || p.status === 'success'))
+            .reduce((s: number, p: any) => s + (p.amount || p.price || 0), 0)
+          return { date: dateStr, amount: dayTotal }
+        })
         setRevenueData(revenueByDay)
         setLoading(false)
-        console.log('=== DASHBOARD DEBUG END ===')
       } catch (error) {
-        console.error('Error loading dashboard stats:', error)
+        console.error('Dashboard load error:', error)
         setLoading(false)
       }
     }
-
     loadStats()
   }, [orgId, locale])
 
   async function updateVisitStatus(visitId: string, status: string) {
     await fetch(`/api/visits/${visitId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     })
     setSelectedVisit(null)
     setTodayVisits(prev => prev.map(v => v.id === visitId ? { ...v, status } : v))
   }
 
+
+  // Тренды в %
+  const revenueTrend = prevStats.revenue > 0
+    ? Math.round(((stats.revenue - prevStats.revenue) / prevStats.revenue) * 100)
+    : undefined
+  const avgTrend = prevStats.avgCheck > 0
+    ? Math.round(((stats.avgCheck - prevStats.avgCheck) / prevStats.avgCheck) * 100)
+    : undefined
+
   if (loading) {
     return (
       <div className="p-4 md:p-6">
+        <div className="mb-5 h-12 w-64 rounded-xl bg-gray-100 animate-pulse" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-2xl shadow-sm p-4 h-24 animate-pulse" />
+          {[1,2,3,4].map(i => (
+            <div key={i} className="rounded-2xl h-28 animate-pulse"
+              style={{ background: `hsl(${220 + i * 30}, 60%, 90%)` }} />
           ))}
         </div>
       </div>
     )
   }
 
+  const l = locale === 'he'
+
   return (
     <>
       <div className="p-4 md:p-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <KpiCard 
-            title={locale === 'he' ? 'לקוחות' : 'Клиенты'} 
+
+        {/* ── Приветствие ── */}
+        <GreetingHeader
+          ownerName={onboardingData?.ownerName || ''}
+          todayVisitsCount={todayVisits.length}
+          locale={locale}
+        />
+
+        {/* ── KPI Cards ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+          <KpiCard
+            title={l ? 'לקוחות' : 'Клиенты'}
             value={stats.clients}
-            icon={<Users size={20} />}
-            color="bg-blue-50 text-blue-600"
+            icon={<Users size={18} className="text-white" />}
+            gradient="bg-gradient-to-br from-blue-500 to-indigo-600"
+            iconBg="bg-white/20"
+            delay={0}
           />
-          <KpiCard 
-            title={locale === 'he' ? 'ביקורים החודש' : 'Визиты за месяц'} 
+          <KpiCard
+            title={l ? 'ביקורים החודש' : 'Визиты за месяц'}
             value={stats.visits}
-            icon={<Calendar size={20} />}
-            color="bg-emerald-50 text-emerald-600"
+            icon={<Calendar size={18} className="text-white" />}
+            gradient="bg-gradient-to-br from-emerald-500 to-teal-600"
+            iconBg="bg-white/20"
+            delay={80}
           />
-          <KpiCard 
-            title={locale === 'he' ? 'הכנסות' : 'Доход'} 
-            value={`₪${stats.revenue.toLocaleString()}`}
-            icon={<TrendingUp size={20} />}
-            color="bg-amber-50 text-amber-600"
+          <KpiCard
+            title={l ? 'הכנסות' : 'Доход'}
+            value={stats.revenue}
+            prefix="₪"
+            icon={<TrendingUp size={18} className="text-white" />}
+            gradient="bg-gradient-to-br from-amber-500 to-orange-500"
+            iconBg="bg-white/20"
+            delay={160}
+            trend={revenueTrend}
           />
-          <KpiCard 
-            title={locale === 'he' ? 'צ׳ק ממוצע' : 'Средний чек'} 
-            value={`₪${stats.avgCheck}`}
-            icon={<Receipt size={20} />}
-            color="bg-purple-50 text-purple-600"
+          <KpiCard
+            title={l ? 'צ׳ק ממוצע' : 'Средний чек'}
+            value={stats.avgCheck}
+            prefix="₪"
+            icon={<Receipt size={18} className="text-white" />}
+            gradient="bg-gradient-to-br from-purple-500 to-violet-600"
+            iconBg="bg-white/20"
+            delay={240}
+            trend={avgTrend}
           />
         </div>
 
+        {/* ── Основная сетка ── */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_280px] gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {/* Work Shift Widget — shown for all users */}
             <WorkShiftWidget />
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <TodayVisitsWidget visits={todayVisits} locale={locale} onVisitClick={setSelectedVisit} />
               <TodayTasksWidget tasks={todayTasks} locale={locale} />
@@ -303,9 +379,7 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
         </div>
       </div>
 
-      <div className="lg:hidden">
-        <FABMenu />
-      </div>
+      <div className="lg:hidden"><FABMenu /></div>
 
       {selectedVisit && (
         <VisitDetailModal
@@ -313,11 +387,9 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
           isOpen={!!selectedVisit}
           onClose={() => setSelectedVisit(null)}
           locale={locale === 'he' ? 'he' : 'ru'}
-          clientName={
-            selectedVisit.clients
-              ? `${selectedVisit.clients.first_name || ''} ${selectedVisit.clients.last_name || ''}`.trim()
-              : selectedVisit.clientName || ''
-          }
+          clientName={selectedVisit.clients
+            ? `${selectedVisit.clients.first_name || ''} ${selectedVisit.clients.last_name || ''}`.trim()
+            : selectedVisit.clientName || ''}
           clientPhone={selectedVisit.clients?.phone || ''}
           onStart={() => updateVisitStatus(selectedVisit.id, 'in_progress')}
           onComplete={() => updateVisitStatus(selectedVisit.id, 'completed')}
@@ -329,12 +401,8 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
         />
       )}
 
-      {/* Onboarding */}
       {onboardingData?.showOnboarding && orgId && (
-        <OnboardingWizard
-          open={true}
-          organizationName={onboardingData.organizationName}
-        />
+        <OnboardingWizard open={true} organizationName={onboardingData.organizationName} />
       )}
     </>
   )

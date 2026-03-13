@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useBranch } from '@/contexts/BranchContext'
 
 export interface Organization {
   id: string
@@ -83,11 +84,14 @@ async function fetchCurrentOrganization(): Promise<Organization | null> {
 export function useOrganization() {
   const queryClient = useQueryClient()
   const router = useRouter()
+  const { activeOrgId } = useBranch()
   
   const query = useQuery({
-    queryKey: ['organization', getActiveOrgIdFromCookie()],
+    // Используем activeOrgId из BranchContext как queryKey —
+    // так query автоматически перезапускается при смене орг
+    queryKey: ['organization', activeOrgId ?? getActiveOrgIdFromCookie()],
     queryFn: fetchCurrentOrganization,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     retry: 1,
   })
 

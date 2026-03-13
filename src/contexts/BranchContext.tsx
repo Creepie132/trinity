@@ -58,12 +58,19 @@ export function BranchProvider({ children }: { children: ReactNode }) {
     fetch('/api/user/active-branch')
       .then((r) => r.json())
       .then(({ activeOrgId: dbOrgId }) => {
-        if (dbOrgId) {
-          setActiveOrgId(dbOrgId)
-          localStorage.setItem(STORAGE_KEY, dbOrgId)
-        }
+        // Берём из БД или fallback на mainOrgId
+        const resolvedId = dbOrgId || orgId
+        setActiveOrgId(resolvedId)
+        localStorage.setItem(STORAGE_KEY, resolvedId)
+        // ВАЖНО: ставим cookie — useOrganization читает её синхронно
+        // Без этой cookie после свежего логина org = null и разделы исчезают
+        document.cookie = `${COOKIE_KEY}=${resolvedId}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
       })
-      .catch(() => {})
+      .catch(() => {
+        // Fallback при ошибке сети — хотя бы поставить mainOrgId
+        document.cookie = `${COOKIE_KEY}=${orgId}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
+        localStorage.setItem(STORAGE_KEY, orgId)
+      })
   }, [orgId])
 
 

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sendSubscriptionWelcomeEmail } from '@/lib/resend'
+import { createTranzilaInvoice, getInvoiceDisplayUrl } from '@/lib/tranzila-invoices'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,6 +10,57 @@ const supabase = createClient(
 
 const ADMIN_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.ambersol.co.il'
 const PUBLIC_SUCCESS_URL = 'https://www.ambersol.co.il/payment-success'
+
+/**
+ * Создаёт инвойс Tranzila и отправляет приветственное письмо.
+ * Вызывается после успешной активации подписки.
+ * Не блокирует основной ответ — ошибки логируются, не пробрасываются.
+ */
+async function sendSubscriptionEmail(orgId: string, cardLast4: string | null, amount: number, nextBillingStr: string) {
+  try {
+    // Получаем email и название организации
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('name, email')
+      .eq('id', orgId)
+      .single()
+
+    if (!org?.email) {
+      console.warn('[tranzila-success] No email for org:', orgId)
+      return
+    }
+
+    // Пробуем создать инвойс через Tranzila Billing API
+    let invoiceUrl: string | undefined
+    try {
+      const invoice = await createTranzilaInvoice({
+        terminalName: process.env.TRANZILA_TERMINAL_ID || 'ambersolt',
+        clientName: org.name,
+        clientEmail: org.email,
+        amount,
+        items: [{ name: 'Trinity CRM — מנוי חודשי', unitPrice: amount }],
+        paymentMethod: 'credit_card',
+        ccLast4: cardLast4 ?? undefined,
+      })
+      if (invoice.document?.retrieval_key) {
+        invoiceUrl = getInvoiceDisplayUrl(invoice.document.retrieval_key)
+      }
+    } catch (invoiceErr) {
+      console.error('[tranzila-success] Invoice creation failed (non-blocking):', invoiceErr)
+    }
+
+    await sendSubscriptionWelcomeEmail({
+      toEmail: org.email,
+      orgName: org.name,
+      amount,
+      nextBillingDate: nextBillingStr,
+      invoiceUrl,
+      cardLast4,
+    })
+  } catch (err) {
+    console.error('[tranzila-success] sendSubscriptionEmail failed (non-blocking):', err)
+  }
+}
 
 /**
  * GET /api/payments/tranzila-success
@@ -29,6 +82,7 @@ export async function GET(request: NextRequest) {
   const cardToken = searchParams.get('TranzilaTK')
   const cardMask = searchParams.get('cardmask') || searchParams.get('last4digits')
   const expdate = searchParams.get('expdate')
+  const sumParam = searchParams.get('sum') || searchParams.get('amount')
 
   console.log('[tranzila-success] GET params:', {
     orgId,
@@ -83,6 +137,11 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('[tranzila-success] ✅ Subscription activated for org:', orgId, '| next billing:', nextBillingStr)
+
+    // Отправляем приветственное письмо с квитанцией (non-blocking)
+    const paidAmount = sumParam ? parseFloat(sumParam) : 99
+    void sendSubscriptionEmail(orgId, cardMask, paidAmount, nextBillingStr)
+
     return NextResponse.redirect(`${ADMIN_URL}/subscription-success`, { status: 303 })
   }
 
@@ -133,6 +192,7 @@ export async function POST(request: NextRequest) {
   let paymentId: string | null = null
   let transactionId: string | null = null
   let paymentType: string | null = null
+  let sumParam: string | null = null
 
   try {
     const contentType = request.headers.get('content-type') || ''
@@ -145,6 +205,7 @@ export async function POST(request: NextRequest) {
       paymentId = body.cField1 || null
       transactionId = body.index || null
       paymentType = body.cField2 || null
+      sumParam = body.sum || body.amount || null
     } else {
       const body = await request.text()
       const params = new URLSearchParams(body)
@@ -155,6 +216,7 @@ export async function POST(request: NextRequest) {
       paymentId = params.get('cField1')
       transactionId = params.get('index')
       paymentType = params.get('cField2')
+      sumParam = params.get('sum') || params.get('amount')
     }
   } catch (e) {
     console.error('[tranzila-success] Failed to parse POST body:', e)
@@ -200,6 +262,10 @@ export async function POST(request: NextRequest) {
         ).toISOString(),
       })
       .eq('id', orgId)
+
+    // Отправляем приветственное письмо с квитанцией (non-blocking)
+    const paidAmountPost = sumParam ? parseFloat(sumParam) : 99
+    void sendSubscriptionEmail(orgId, cardMask, paidAmountPost, nextBillingStr)
 
     return NextResponse.redirect(`${ADMIN_URL}/subscription-success`, { status: 303 })
   }

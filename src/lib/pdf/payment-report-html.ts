@@ -2,8 +2,12 @@
 // Генерирует HTML для "סיכום תשלומים" — сводки платежей по диапазону дат
 
 function fmt(n: number): string {
-  // В RTL ₪ должен быть ПОСЛЕ числа визуально (слева в памяти, справа на экране)
-  return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '\u00a0₪'
+  return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+function fmtIls(n: number): string {
+  // С шекелем для обычных строк
+  return fmt(n) + '\u00a0₪'
 }
 
 export interface PaymentReportItem {
@@ -57,7 +61,7 @@ export function buildPaymentReportHTML(d: PaymentReportData): string {
       <tr>
         <td style="padding:8px 12px;text-align:right">${methodBadge(method)}</td>
         <td style="padding:8px 12px;text-align:center;color:#555;font-size:13px">${data.count}</td>
-        <td style="padding:8px 12px;text-align:right;font-weight:700;color:${color};font-size:13px">${fmt(data.total)}</td>
+        <td style="padding:8px 12px;text-align:right;font-weight:700;color:${color};font-size:13px">${fmtIls(data.total)}</td>
       </tr>`
   }).join('')
 
@@ -68,7 +72,7 @@ export function buildPaymentReportHTML(d: PaymentReportData): string {
       <td style="padding:9px 12px;font-weight:600;color:#1B2A4A;font-size:12px;text-align:right">${p.clientName}</td>
       <td style="padding:9px 12px;text-align:right">${methodBadge(p.method)}</td>
       <td style="padding:9px 12px;color:#555;font-size:11px;text-align:right;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.description || ''}</td>
-      <td style="padding:9px 12px;font-weight:700;color:#1B2A4A;white-space:nowrap;text-align:right">${fmt(p.amount)}</td>
+      <td style="padding:9px 12px;font-weight:700;color:#1B2A4A;white-space:nowrap;text-align:right">${fmtIls(p.amount)}</td>
     </tr>`).join('')
 
   const footerContacts = [d.orgEmail, d.orgPhone, d.orgAddress].filter(Boolean).join(' · ')
@@ -111,7 +115,7 @@ export function buildPaymentReportHTML(d: PaymentReportData): string {
   <div style="background:#f8f9fb;border-bottom:1px solid #e2e6ed;padding:14px 36px;display:flex;gap:36px;direction:rtl">
     <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#8a95a3;margin-bottom:3px">תאריך הפקה</div><div style="font-size:13px;font-weight:600;color:#1B2A4A">${d.issueDate}</div></div>
     <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#8a95a3;margin-bottom:3px">עסק</div><div style="font-size:13px;font-weight:600;color:#1B2A4A">${d.orgName}</div></div>
-    <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#8a95a3;margin-bottom:3px">סה"כ תשלומים</div><div style="font-size:15px;font-weight:700;color:#D4AA50">${fmt(total)}</div></div>
+    <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#8a95a3;margin-bottom:3px">סה"כ תשלומים</div><div style="font-size:15px;font-weight:700;color:#D4AA50">${fmtIls(total)}</div></div>
     <div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#8a95a3;margin-bottom:3px">מספר עסקאות</div><div style="font-size:15px;font-weight:700;color:#1B2A4A">${d.payments.length}</div></div>
   </div>
 

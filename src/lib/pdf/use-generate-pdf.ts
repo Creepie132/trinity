@@ -124,7 +124,7 @@ export function useGeneratePDF() {
 
       // Iframe без фиксированной высоты — контент растягивается сам
       const iframe = document.createElement('iframe')
-      iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:auto;border:none;visibility:hidden'
+      iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:4000px;border:none;visibility:hidden'
       document.body.appendChild(iframe)
 
       const iframeDoc = iframe.contentDocument!
@@ -133,14 +133,12 @@ export function useGeneratePDF() {
       iframeDoc.close()
 
       // Ждём шрифты и изображения
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      await new Promise(resolve => setTimeout(resolve, 1600))
 
       const element = iframeDoc.body.firstElementChild as HTMLElement
-      // Устанавливаем высоту iframe равной высоте контента
       const contentHeight = element.scrollHeight
       iframe.style.height = contentHeight + 'px'
-
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await new Promise(resolve => setTimeout(resolve, 200))
 
       const canvas = await html2canvas(element, {
         scale: 2,
@@ -156,28 +154,27 @@ export function useGeneratePDF() {
 
       document.body.removeChild(iframe)
 
-      // A4 в px при 96dpi: 794 x 1123
-      const pdf = new jsPDF({ unit: 'px', format: 'a4', orientation: 'portrait' })
-      const pageW = pdf.internal.pageSize.getWidth()   // 794
-      const pageH = pdf.internal.pageSize.getHeight()  // 1123
+      // A4 в mm: 210 x 297
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+      const pageW_mm = 210
+      const pageH_mm = 297
+
+      // Переводим canvas в мм: 794px = 210mm → 1px = 210/794 mm
+      const pxToMm = pageW_mm / 794
+      const imgW_mm = pageW_mm
+      const imgH_mm = canvas.height * pxToMm // полная высота изображения в мм
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95)
-      const imgH = (canvas.height * pageW) / canvas.width
 
-      let posY = 0
-      let remaining = imgH
-      let firstPage = true
+      let pageCount = 0
+      let offsetY_mm = 0
 
-      // Постраничный рендер: каждая страница = срез canvas
-      while (remaining > 0) {
-        if (!firstPage) pdf.addPage()
-        firstPage = false
-
-        const sliceH = Math.min(pageH, remaining)
-        pdf.addImage(imgData, 'JPEG', 0, -posY, pageW, imgH)
-
-        posY += pageH
-        remaining -= sliceH
+      while (offsetY_mm < imgH_mm) {
+        if (pageCount > 0) pdf.addPage()
+        // Рисуем весь img со смещением вверх, так что на странице видна нужная часть
+        pdf.addImage(imgData, 'JPEG', 0, -offsetY_mm, imgW_mm, imgH_mm)
+        offsetY_mm += pageH_mm
+        pageCount++
       }
 
       const blob = pdf.output('blob')

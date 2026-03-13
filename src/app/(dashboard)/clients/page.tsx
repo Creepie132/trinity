@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -30,42 +30,29 @@ export default function ClientsPage() {
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
-  const [currentPage, setCurrentPage] = useState(1)
   
   const { openModal } = useModalStore()
 
-  const perPage = 20
-
   const pageSize = 25
-  const { data: clientsData, isLoading } = useClients('', page, pageSize)
-  const clients = clientsData?.data || []
-  
-  // Client-side search filter
-  const filteredClients = useMemo(() => {
-    if (!searchQuery || searchQuery.length < 2) return clients
-    const q = searchQuery.toLowerCase()
-    return clients.filter(c => 
-      `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
-      c.phone?.includes(q) ||
-      c.email?.toLowerCase().includes(q)
-    )
-  }, [clients, searchQuery])
 
-  // Client-side pagination for filtered results
-  const totalFilteredPages = Math.ceil(filteredClients.length / perPage)
-  const paginatedClients = useMemo(() => {
-    return filteredClients.slice((currentPage - 1) * perPage, currentPage * perPage)
-  }, [filteredClients, currentPage, perPage])
-  
+  // Server-side search: pass searchQuery directly to hook, reset to page 1 on search
+  const activeSearch = searchQuery.length >= 2 ? searchQuery : ''
+  const { data: clientsData, isLoading } = useClients(activeSearch, page, pageSize)
+  const clients = clientsData?.data || []
+
+  // No client-side filtering needed — server does it
+  const filteredClients = clients
+  const paginatedClients = clients
+
   const totalCount = clientsData?.count || 0
-  const clientCount = searchQuery ? filteredClients.length : totalCount
+  const clientCount = totalCount
   const totalPages = Math.ceil(totalCount / pageSize)
   const from = (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, totalCount)
 
-  // Reset page when search query changes
+  // Reset to page 1 when search changes
   useEffect(() => {
-    setCurrentPage(1)
+    setPage(1)
   }, [searchQuery])
 
   // Check organization status and feature access
@@ -319,54 +306,8 @@ export default function ClientsPage() {
           </div>
         )}
 
-        {/* Client-side pagination for filtered results */}
-        {searchQuery && totalFilteredPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-6 pb-4">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 rounded-xl text-sm border disabled:opacity-30"
-            >
-              {language === 'he' ? '→' : '←'}
-            </button>
-
-            {Array.from({ length: Math.min(totalFilteredPages, 7) }).map((_, i) => {
-              let pageNum: number
-              if (totalFilteredPages <= 7) {
-                pageNum = i + 1
-              } else if (currentPage <= 4) {
-                pageNum = i + 1
-              } else if (currentPage >= totalFilteredPages - 3) {
-                pageNum = totalFilteredPages - 6 + i
-              } else {
-                pageNum = currentPage - 3 + i
-              }
-
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setCurrentPage(pageNum)}
-                  className={`w-10 h-10 rounded-xl text-sm font-medium transition ${
-                    currentPage === pageNum ? 'bg-blue-600 text-white' : 'border hover:bg-slate-50'
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              )
-            })}
-
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalFilteredPages, p + 1))}
-              disabled={currentPage === totalFilteredPages}
-              className="px-3 py-2 rounded-xl text-sm border disabled:opacity-30"
-            >
-              {language === 'he' ? '←' : '→'}
-            </button>
-          </div>
-        )}
-
-        {/* Pagination — mobile server-side (no search) */}
-        {!searchQuery && clients.length > 0 && totalPages > 1 && (
+        {/* Pagination — server-side */}
+        {clients.length > 0 && totalPages > 1 && (
           <div className="mt-4 flex items-center justify-center gap-3 pb-4">
             <Button
               variant="outline"
@@ -392,51 +333,6 @@ export default function ClientsPage() {
           </div>
         )}
 
-        {/* Desktop pagination for filtered results */}
-        {searchQuery && totalFilteredPages > 1 && (
-          <div className="hidden md:flex items-center justify-center gap-2 mt-6 pb-4">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 rounded-xl text-sm border disabled:opacity-30"
-            >
-              {language === 'he' ? '→' : '←'}
-            </button>
-
-            {Array.from({ length: Math.min(totalFilteredPages, 7) }).map((_, i) => {
-              let pageNum: number
-              if (totalFilteredPages <= 7) {
-                pageNum = i + 1
-              } else if (currentPage <= 4) {
-                pageNum = i + 1
-              } else if (currentPage >= totalFilteredPages - 3) {
-                pageNum = totalFilteredPages - 6 + i
-              } else {
-                pageNum = currentPage - 3 + i
-              }
-
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setCurrentPage(pageNum)}
-                  className={`w-10 h-10 rounded-xl text-sm font-medium transition ${
-                    currentPage === pageNum ? 'bg-blue-600 text-white' : 'border hover:bg-slate-50'
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              )
-            })}
-
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalFilteredPages, p + 1))}
-              disabled={currentPage === totalFilteredPages}
-              className="px-3 py-2 rounded-xl text-sm border disabled:opacity-30"
-            >
-              {language === 'he' ? '←' : '→'}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Mobile FAB (Floating Action Button) */}

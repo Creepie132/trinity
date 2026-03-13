@@ -73,7 +73,7 @@ export default function DashboardLayout({
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
 
         {/* HAL 9000 — Kira persistent orb */}
-        <KiraHAL />
+        {/* <KiraHAL /> */}{/* temporarily hidden */}
       </BranchProvider>
     </AuthProvider>
   )

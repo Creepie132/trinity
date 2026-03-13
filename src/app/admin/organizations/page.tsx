@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,9 @@ import { toast } from 'sonner'
 import {
   Building2, Search, ChevronRight, Plus, Mail, Send,
   CheckCircle, XCircle, AlertCircle, Loader2, X,
-  Shield, Pencil, CreditCard, Settings,
+  Shield, Pencil, CreditCard, Settings, Eye,
+  Clock, TrendingUp, Users, Calendar, Activity,
+  Zap, BarChart3, Wifi, WifiOff, AlertTriangle,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -21,6 +23,7 @@ import { getPlan, PLANS, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
 import { EditOrganizationModal } from '@/components/modals/other/EditOrganizationModal'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { useRouter } from 'next/navigation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,9 +43,12 @@ interface Organization {
   billing_status?: string
   tranzila_card_token?: string
   tranzila_card_last4?: string
+  tranzila_card_expiry?: string
   payments_enabled?: boolean
   recurring_enabled?: boolean
   branches_enabled?: boolean
+  last_seen_at?: string | null
+  created_at?: string
 }
 
 interface AccessRequest {
@@ -52,6 +58,13 @@ interface AccessRequest {
   full_name: string
   requested_at: string
   status: string
+}
+
+interface OrgStats {
+  totalClients: number
+  visitsCount: number
+  paymentsCount: number
+  totalRevenue: number
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -66,11 +79,37 @@ const STATUSES = [
 
 const STATUS_COLORS: Record<string, string> = {
   gray:   'bg-gray-500/10 text-gray-600 border-gray-500/20',
-  yellow: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-  green:  'bg-green-500/10 text-green-600 border-green-500/20',
+  yellow: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20',
+  green:  'bg-emerald-500/10 text-emerald-700 border-emerald-500/20',
   blue:   'bg-blue-500/10 text-blue-600 border-blue-500/20',
   red:    'bg-red-500/10 text-red-600 border-red-500/20',
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatLastSeen(dateStr: string | null | undefined, lang: 'he' | 'ru'): { label: string; urgent: boolean; warn: boolean } {
+  if (!dateStr) return { label: lang === 'he' ? 'לא ידוע' : 'Неизвестно', urgent: false, warn: false }
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (mins < 1) return { label: lang === 'he' ? 'עכשיו' : 'Сейчас', urgent: false, warn: false }
+  if (mins < 60) return { label: lang === 'he' ? `${mins} ד' ago` : `${mins} мин назад`, urgent: false, warn: false }
+  if (hours < 24) return { label: lang === 'he' ? `${hours} ש' ago` : `${hours} ч назад`, urgent: false, warn: false }
+  if (days === 1) return { label: lang === 'he' ? 'אתמול' : 'Вчера', urgent: false, warn: true }
+  if (days <= 3) return { label: lang === 'he' ? `${days} ימים` : `${days} дня`, urgent: false, warn: true }
+  return { label: lang === 'he' ? `${days} ימים` : `${days} дней`, urgent: true, warn: false }
+}
+
+function getHealthDot(org: Organization): 'green' | 'yellow' | 'red' | 'gray' {
+  const paid = ['active', 'trial', 'manual'].includes(org.subscription_status)
+  if (!paid) return 'gray'
+  const { urgent, warn } = formatLastSeen(org.last_seen_at, 'ru')
+  if (urgent) return 'red'
+  if (warn) return 'yellow'
+  return 'green'
+}
+
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -78,6 +117,7 @@ export default function AdminOrganizationsPage() {
   const { language } = useLanguage()
   const l = language === 'he'
   const isDesktop = useMediaQuery('(min-width: 768px)')
+  const router = useRouter()
 
   // Data
   const [orgs, setOrgs] = useState<Organization[]>([])
@@ -87,10 +127,12 @@ export default function AdminOrganizationsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
-  // Org detail panel (bottom sheet on mobile, modal on desktop)
+  // Org detail panel
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null)
+  const [orgStats, setOrgStats] = useState<OrgStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
 
-  // Extend access modal
+  // Modals
   const [extendOpen, setExtendOpen] = useState(false)
   const [extendOrg, setExtendOrg] = useState<Organization | null>(null)
   const [extendStatus, setExtendStatus] = useState('trial')
@@ -100,7 +142,6 @@ export default function AdminOrganizationsPage() {
   const [extendModulePrices, setExtendModulePrices] = useState<Record<string, number>>({})
   const [extendSaving, setExtendSaving] = useState(false)
 
-  // Autopay modal
   const [autopayOpen, setAutopayOpen] = useState(false)
   const [autopayOrg, setAutopayOrg] = useState<Organization | null>(null)
   const [autopayAmount, setAutopayAmount] = useState(199)
@@ -108,18 +149,17 @@ export default function AdminOrganizationsPage() {
   const [autopayLoading, setAutopayLoading] = useState(false)
   const [autopaySuccess, setAutopaySuccess] = useState<{ email: string } | null>(null)
 
-  // Invite modal
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteMsg, setInviteMsg] = useState('')
   const [inviteSending, setInviteSending] = useState(false)
 
-  // Edit org modal
   const [editOpen, setEditOpen] = useState(false)
   const [editOrg, setEditOrg] = useState<Organization | null>(null)
 
+  const [impersonating, setImpersonating] = useState<string | null>(null)
 
-  // ─── Data loading ──────────────────────────────────────────────────────────
+  // ─── Data loading ───────────────────────────────────────────────────────────
 
   useEffect(() => { loadData() }, [])
 
@@ -144,12 +184,65 @@ export default function AdminOrganizationsPage() {
     }
   }
 
-  // ─── Helpers ───────────────────────────────────────────────────────────────
+  const loadOrgStats = useCallback(async (orgId: string) => {
+    setStatsLoading(true)
+    setOrgStats(null)
+    try {
+      const res = await fetch(`/api/admin/organizations/${orgId}/stats?period=month`)
+      if (res.ok) {
+        const data = await res.json()
+        setOrgStats(data.stats)
+      }
+    } catch {}
+    finally { setStatsLoading(false) }
+  }, [])
+
+  const handleSelectOrg = (org: Organization) => {
+    setSelectedOrg(org)
+    loadOrgStats(org.id)
+  }
+
+  // ─── Impersonate ────────────────────────────────────────────────────────────
+
+  const handleImpersonate = async (org: Organization, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setImpersonating(org.id)
+    try {
+      const sessionRes = await fetch('/api/admin/check')
+      const { isAdmin, adminEmail } = await sessionRes.json()
+      if (!isAdmin) { toast.error('Нет доступа'); return }
+
+      const res = await fetch('/api/admin/set-active-org', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId: org.id }),
+      })
+      if (!res.ok) throw new Error()
+
+      document.cookie = `trinity_active_branch=${org.id}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
+      localStorage.setItem('trinity_active_branch', org.id)
+      localStorage.setItem('admin_org_id', org.id)
+      localStorage.setItem('impersonation_session', JSON.stringify({
+        orgId: org.id, orgName: org.display_name || org.name,
+        adminEmail, startedAt: new Date().toISOString()
+      }))
+      toast.success(l ? `נכנס בתור: ${org.name}` : `Вход от имени: ${org.name}`)
+      router.push('/dashboard')
+      router.refresh()
+    } catch {
+      toast.error(l ? 'שגיאה' : 'Ошибка входа')
+    } finally {
+      setImpersonating(null)
+    }
+  }
+
+
+  // ─── Helpers ────────────────────────────────────────────────────────────────
 
   const getStatusBadge = (status: string) => {
     const s = STATUSES.find(x => x.value === status)
     if (!s) return <Badge className="bg-gray-100 text-gray-500">—</Badge>
-    return <Badge className={STATUS_COLORS[s.color]}>{l ? s.label_he : s.label_ru}</Badge>
+    return <Badge className={`${STATUS_COLORS[s.color]} text-xs px-2 py-0.5`}>{l ? s.label_he : s.label_ru}</Badge>
   }
 
   const getPlanName = (key?: string) => {
@@ -166,7 +259,7 @@ export default function AdminOrganizationsPage() {
     o.owner_name?.toLowerCase().includes(search.toLowerCase())
   )
 
-  // ─── Handlers: Access Requests ─────────────────────────────────────────────
+  // ─── Access Requests ─────────────────────────────────────────────────────────
 
   const handleApprove = async (userId: string) => {
     await fetch(`/api/access/review?user_id=${userId}&action=approve&token=admin`)
@@ -181,9 +274,13 @@ export default function AdminOrganizationsPage() {
     loadData()
   }
 
-  // ─── Handlers: Feature Toggles ─────────────────────────────────────────────
+  // ─── Feature Toggles ─────────────────────────────────────────────────────────
 
-  const handleToggleFeature = async (org: Organization, key: 'payments_enabled' | 'recurring_enabled' | 'branches_enabled', value: boolean) => {
+  const handleToggleFeature = async (
+    org: Organization,
+    key: 'payments_enabled' | 'recurring_enabled' | 'branches_enabled',
+    value: boolean
+  ) => {
     try {
       const res = await fetch('/api/admin/organizations/features', {
         method: 'PUT',
@@ -200,7 +297,7 @@ export default function AdminOrganizationsPage() {
     }
   }
 
-  // ─── Handlers: Deactivate ──────────────────────────────────────────────────
+  // ─── Deactivate ──────────────────────────────────────────────────────────────
 
   const handleDeactivate = async (org: Organization) => {
     if (!confirm(l ? 'להשבית ארגון?' : 'Деактивировать организацию?')) return
@@ -219,8 +316,7 @@ export default function AdminOrganizationsPage() {
     }
   }
 
-
-  // ─── Handlers: Extend Access ───────────────────────────────────────────────
+  // ─── Extend Access ────────────────────────────────────────────────────────────
 
   const openExtend = (org: Organization) => {
     setExtendOrg(org)
@@ -287,7 +383,8 @@ export default function AdminOrganizationsPage() {
     }
   }
 
-  // ─── Handlers: Autopay ─────────────────────────────────────────────────────
+
+  // ─── Autopay ──────────────────────────────────────────────────────────────────
 
   const openAutopay = (org: Organization) => {
     setAutopayOrg(org)
@@ -320,7 +417,7 @@ export default function AdminOrganizationsPage() {
     }
   }
 
-  // ─── Handlers: Invite ──────────────────────────────────────────────────────
+  // ─── Invite ───────────────────────────────────────────────────────────────────
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -342,53 +439,155 @@ export default function AdminOrganizationsPage() {
     }
   }
 
-
-  // ─── Org detail panel content ──────────────────────────────────────────────
+  // ─── Org Detail Panel ────────────────────────────────────────────────────────
 
   const renderOrgDetail = (org: Organization) => {
-    const isPaid = ['active','trial','manual'].includes(org.subscription_status)
+    const hasToken = !!org.tranzila_card_token
+    const tokenActive = hasToken && org.subscription_status !== 'expired'
+    const lastSeen = formatLastSeen(org.last_seen_at, language)
     const TOGGLES: { key: 'payments_enabled' | 'recurring_enabled' | 'branches_enabled', labelHe: string, labelRu: string }[] = [
       { key: 'payments_enabled', labelHe: 'תשלומים רגילים', labelRu: 'Обычные платежи' },
       { key: 'recurring_enabled', labelHe: 'תשלומים חוזרים', labelRu: 'Рекуррентные' },
       { key: 'branches_enabled', labelHe: 'סניפים', labelRu: 'Филиалы' },
     ]
+
     return (
-      <>
-        {/* Header */}
-        <div className="flex items-start gap-4 mb-5 pb-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-            {org.name?.charAt(0).toUpperCase()}
+      <div className="space-y-4">
+        {/* ── Header ── */}
+        <div className="flex items-start gap-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+          <div className="relative">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0 shadow-lg">
+              {org.name?.charAt(0).toUpperCase()}
+            </div>
+            {/* Health dot */}
+            <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white
+              ${getHealthDot(org) === 'green' ? 'bg-emerald-500' :
+                getHealthDot(org) === 'yellow' ? 'bg-yellow-500' :
+                getHealthDot(org) === 'red' ? 'bg-red-500' : 'bg-gray-400'}`} />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">
               {org.display_name || org.name}
             </h2>
             <p className="text-xs text-gray-500 mt-0.5 truncate">{org.owner_email}</p>
-            <div className="mt-1.5">{getStatusBadge(org.subscription_status)}</div>
-          </div>
-        </div>
-
-        {/* Info rows */}
-        <div className="space-y-0 divide-y divide-gray-50 dark:divide-gray-800 mb-5">
-          {[
-            [l ? 'בעלים' : 'Владелец', org.owner_name],
-            [l ? 'טלפון' : 'Телефон', org.phone || '—'],
-            [l ? 'תוכנית' : 'План', getPlanName(org.plan)],
-            [l ? 'תוקף' : 'Истекает', org.subscription_expires_at
-              ? new Date(org.subscription_expires_at).toLocaleDateString(l ? 'he-IL' : 'ru-RU')
-              : '—'],
-            [l ? 'סכום מנוי' : 'Сумма', org.billing_amount ? `₪${org.billing_amount}/мес` : '—'],
-            ...(org.tranzila_card_last4 ? [[l ? 'כרטיס' : 'Карта', `**** ${org.tranzila_card_last4} ✅`]] : []),
-          ].map(([label, value]) => (
-            <div key={label} className="flex items-center justify-between py-2.5 text-sm">
-              <span className="text-gray-500">{label}</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">{value}</span>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              {getStatusBadge(org.subscription_status)}
+              {/* Last seen pill */}
+              <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
+                ${lastSeen.urgent ? 'bg-red-100 text-red-600' :
+                  lastSeen.warn ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-gray-100 text-gray-500'}`}>
+                {lastSeen.urgent ? <WifiOff className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
+                {lastSeen.label}
+              </span>
             </div>
-          ))}
+          </div>
+          {/* Impersonate button */}
+          <button
+            onClick={(e) => handleImpersonate(org, e)}
+            disabled={impersonating === org.id}
+            className="flex-shrink-0 w-10 h-10 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+            title={l ? 'כניסה בתור לקוח' : 'Войти от имени'}
+          >
+            {impersonating === org.id
+              ? <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+              : <Eye className="w-4 h-4 text-indigo-600" />
+            }
+          </button>
         </div>
 
-        {/* Feature toggles */}
-        <div className="space-y-3 mb-5 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+        {/* ── Usage Stats ── */}
+        <div>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            {l ? 'סטטיסטיקה (30 יום)' : 'Статистика (30 дней)'}
+          </p>
+          {statsLoading ? (
+            <div className="grid grid-cols-2 gap-2">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : orgStats ? (
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { icon: Users, label: l ? 'לקוחות' : 'Клиенты', value: orgStats.totalClients, color: 'blue' },
+                { icon: Calendar, label: l ? 'ביקורים' : 'Визиты', value: orgStats.visitsCount, color: 'purple' },
+                { icon: BarChart3, label: l ? 'תשלומים' : 'Платежи', value: orgStats.paymentsCount, color: 'emerald' },
+                { icon: TrendingUp, label: l ? 'הכנסות' : 'Выручка', value: `₪${orgStats.totalRevenue.toFixed(0)}`, color: 'amber' },
+              ].map(({ icon: Icon, label, value, color }) => (
+                <div key={label} className={`p-3 rounded-xl bg-${color}-50 dark:bg-${color}-900/20 border border-${color}-100 dark:border-${color}-800`}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Icon className={`w-3.5 h-3.5 text-${color}-600`} />
+                    <span className={`text-xs text-${color}-600 font-medium`}>{label}</span>
+                  </div>
+                  <p className={`text-xl font-bold text-${color}-700 dark:text-${color}-400`}>{value}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-xs text-gray-400 text-center py-3">{l ? 'אין נתונים' : 'Нет данных'}</div>
+          )}
+        </div>
+
+        {/* ── Billing Block ── */}
+        <div className="p-3 rounded-xl border border-gray-100 dark:border-gray-800 space-y-2.5">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            {l ? 'פרטי תשלום' : 'Биллинг'}
+          </p>
+          <div className="space-y-0 divide-y divide-gray-50 dark:divide-gray-800">
+            {[
+              [l ? 'בעלים' : 'Владелец', org.owner_name],
+              [l ? 'תוכנית' : 'Тарифная ставка',
+                org.billing_amount
+                  ? `₪${org.billing_amount} / ${l ? 'חודש' : 'мес'}`
+                  : getPlanName(org.plan)],
+              [l ? 'חיוב הבא' : 'Следующее списание',
+                org.subscription_expires_at
+                  ? new Date(org.subscription_expires_at).toLocaleDateString(l ? 'he-IL' : 'ru-RU')
+                  : '—'],
+            ].map(([label, value]) => (
+              <div key={label as string} className="flex items-center justify-between py-2 text-sm">
+                <span className="text-gray-500">{label}</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">{value}</span>
+              </div>
+            ))}
+            {/* Token status */}
+            <div className="flex items-center justify-between py-2 text-sm">
+              <span className="text-gray-500">{l ? 'טוקן Tranzila' : 'Токен Tranzila'}</span>
+              {hasToken ? (
+                <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
+                  ${tokenActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                  {tokenActive
+                    ? <><CheckCircle className="w-3 h-3" /> {l ? 'פעיל' : 'Активен'} *{org.tranzila_card_last4}</>
+                    : <><AlertTriangle className="w-3 h-3" /> {l ? 'פג תוקף' : 'Истёк'}</>
+                  }
+                </span>
+              ) : (
+                <span className="text-xs text-gray-400">{l ? 'לא מחובר' : 'Не подключён'}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Autopay button — green if active, normal otherwise */}
+          <button
+            onClick={() => openAutopay(org)}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-medium transition-all
+              ${org.recurring_enabled
+                ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-200'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+          >
+            <CreditCard className="w-4 h-4" />
+            {org.recurring_enabled
+              ? (l ? '✓ אוטוחיוב פעיל' : '✓ Автоплатёж активен')
+              : (l ? 'חבר אוטוחיוב' : 'Подключить автоплатёж')}
+          </button>
+        </div>
+
+        {/* ── Feature Toggles ── */}
+        <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl space-y-3">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            {l ? 'מודולים' : 'Модули'}
+          </p>
           {TOGGLES.map(({ key, labelHe, labelRu }) => (
             <div key={key} className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{l ? labelHe : labelRu}</span>
@@ -400,13 +599,8 @@ export default function AdminOrganizationsPage() {
           ))}
         </div>
 
-        {/* Action buttons */}
-        <div className={`grid gap-2 ${isDesktop ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          <button onClick={() => openAutopay(org)}
-            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors col-span-full">
-            <CreditCard className="w-4 h-4" />
-            {l ? 'חיבור תשלום אוטומטי' : 'Автоплатёж'}
-          </button>
+        {/* ── Action Buttons ── */}
+        <div className="grid grid-cols-2 gap-2">
           <button onClick={() => openExtend(org)}
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
             <Shield className="w-4 h-4" />
@@ -418,17 +612,17 @@ export default function AdminOrganizationsPage() {
             {l ? 'ערוך' : 'Редактировать'}
           </button>
           <button onClick={() => handleDeactivate(org)}
-            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-red-50 text-red-500 text-sm font-medium hover:bg-red-100 border border-red-100 transition-colors col-span-full">
+            className="col-span-2 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-red-50 text-red-500 text-sm font-medium hover:bg-red-100 border border-red-100 transition-colors">
             <XCircle className="w-4 h-4" />
             {l ? 'השבת ארגון' : 'Деактивировать'}
           </button>
         </div>
-      </>
+      </div>
     )
   }
 
 
-  // ─── Loading ───────────────────────────────────────────────────────────────
+  // ─── Loading ─────────────────────────────────────────────────────────────────
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -436,7 +630,7 @@ export default function AdminOrganizationsPage() {
     </div>
   )
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-5 pb-24">
@@ -484,27 +678,79 @@ export default function AdminOrganizationsPage() {
         <Input className="pl-10" placeholder={l ? 'חיפוש...' : 'Поиск...'} value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
-      {/* Org list */}
+      {/* ── Org List ── */}
       <Card>
         <CardContent className="p-3 space-y-2">
-          {filtered.map(org => {
-            const paid = ['active','trial','manual'].includes(org.subscription_status)
+          {filtered.map((org, idx) => {
+            const paid = ['active', 'trial', 'manual'].includes(org.subscription_status)
+            const health = getHealthDot(org)
+            const lastSeen = formatLastSeen(org.last_seen_at, language)
+
             return (
-              <button key={org.id} onClick={() => setSelectedOrg(org)}
-                className="w-full flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 hover:border-blue-200 hover:shadow-sm transition-all text-left">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                  {org.name?.charAt(0).toUpperCase()}
+              <button
+                key={org.id}
+                onClick={() => handleSelectOrg(org)}
+                className="w-full flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 hover:border-blue-200 hover:shadow-sm transition-all text-left group"
+                style={{ animationDelay: `${idx * 40}ms` }}
+              >
+                {/* Avatar with health dot */}
+                <div className="relative flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+                    {org.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-800
+                    ${health === 'green' ? 'bg-emerald-500' :
+                      health === 'yellow' ? 'bg-yellow-500 animate-pulse' :
+                      health === 'red' ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
                 </div>
+
+                {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm truncate">{org.display_name || org.name}</span>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-semibold text-sm truncate text-gray-900 dark:text-gray-100">
+                      {org.display_name || org.name}
+                    </span>
                     {getStatusBadge(org.subscription_status)}
                   </div>
-                  <p className="text-xs text-slate-500 truncate mt-0.5">{org.owner_name} · {getPlanName(org.plan)}</p>
+                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <span className="truncate">{org.owner_name}</span>
+                    <span className="hidden sm:inline">·</span>
+                    <span className="hidden sm:inline">{getPlanName(org.plan)}</span>
+                    {/* Last seen */}
+                    {org.last_seen_at && (
+                      <>
+                        <span>·</span>
+                        <span className={`flex items-center gap-1
+                          ${lastSeen.urgent ? 'text-red-500 font-medium' :
+                            lastSeen.warn ? 'text-yellow-600' : 'text-gray-400'}`}>
+                          <Clock className="w-3 h-3 inline" />
+                          {lastSeen.label}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
+
+                {/* Right side: billing + impersonate */}
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className={`w-2 h-2 rounded-full ${paid ? 'bg-emerald-500' : 'bg-red-400'}`} />
-                  <ChevronRight className="w-4 h-4 text-slate-300" />
+                  {org.billing_amount && (
+                    <span className="hidden md:inline text-xs text-gray-400 font-mono">
+                      ₪{org.billing_amount}
+                    </span>
+                  )}
+                  {/* Impersonate quick button */}
+                  <button
+                    onClick={(e) => handleImpersonate(org, e)}
+                    disabled={impersonating === org.id}
+                    className="w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-105 active:scale-95"
+                    title={l ? 'כניסה' : 'Войти'}
+                  >
+                    {impersonating === org.id
+                      ? <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
+                      : <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                    }
+                  </button>
+                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-400 transition-colors" />
                 </div>
               </button>
             )
@@ -525,14 +771,14 @@ export default function AdminOrganizationsPage() {
       {selectedOrg && !isDesktop && (
         <>
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" onClick={() => setSelectedOrg(null)} />
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto">
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl max-h-[88vh] overflow-y-auto">
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full" />
             </div>
             <button onClick={() => setSelectedOrg(null)} className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
               <X className="w-5 h-5 text-gray-400" />
             </button>
-            <div className="px-5 pb-8 pt-2">{renderOrgDetail(selectedOrg)}</div>
+            <div className="px-5 pb-10 pt-2">{renderOrgDetail(selectedOrg)}</div>
           </div>
         </>
       )}
@@ -553,7 +799,6 @@ export default function AdminOrganizationsPage() {
           </div>
         }>
         <div className="space-y-4">
-          {/* Plan */}
           <div>
             <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">{l ? 'תוכנית' : 'Тарифный план'}</label>
             <select value={extendPlan} onChange={e => handleExtendPlanChange(e.target.value as PlanKey)}
@@ -565,7 +810,6 @@ export default function AdminOrganizationsPage() {
               ))}
             </select>
           </div>
-          {/* Custom modules */}
           {extendPlan === 'custom' && (
             <div>
               <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">{l ? 'מודולים' : 'Модули'}</label>
@@ -586,7 +830,6 @@ export default function AdminOrganizationsPage() {
               </div>
             </div>
           )}
-          {/* Status & Expiry */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">{l ? 'סטטוס' : 'Статус'}</label>
@@ -603,7 +846,6 @@ export default function AdminOrganizationsPage() {
           </div>
         </div>
       </Modal>
-
 
       {/* ── Autopay Modal ── */}
       <Modal open={autopayOpen && !!autopayOrg} onClose={() => { setAutopayOpen(false); setAutopayOrg(null); setAutopaySuccess(null) }}
@@ -684,7 +926,7 @@ export default function AdminOrganizationsPage() {
   )
 }
 
-// ─── FAB Component ────────────────────────────────────────────────────────────
+// ─── FAB ──────────────────────────────────────────────────────────────────────
 
 function OrgsFab({ onInvite, language }: { onInvite: () => void; language: 'he' | 'ru' }) {
   const [open, setOpen] = useState(false)

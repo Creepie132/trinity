@@ -8,6 +8,7 @@ import { BranchProvider } from '@/contexts/BranchContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GlobalSearch } from '@/components/GlobalSearch'
 import dynamic from 'next/dynamic'
+import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner'
 
 const KiraHAL = dynamic(() => import('@/components/kira/KiraHAL'), { ssr: false })
 
@@ -74,6 +75,9 @@ export default function DashboardLayout({
 
         {/* HAL 9000 — Kira persistent orb */}
         {/* <KiraHAL /> */}{/* temporarily hidden */}
+
+        {/* Impersonation banner — показывается когда admin смотрит от имени org */}
+        <ImpersonationBanner />
       </BranchProvider>
     </AuthProvider>
   )

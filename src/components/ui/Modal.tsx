@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useCallback, ReactNode } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useCallback, ReactNode, useState, useRef } from 'react'
+import { X, GripHorizontal, Pin, PinOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useDraggableDialog } from '@/hooks/useDraggableDialog'
 
 interface ModalProps {
   open: boolean
@@ -11,7 +12,7 @@ interface ModalProps {
   subtitle?: ReactNode
   children: ReactNode
   footer?: ReactNode
-  width?: string // e.g., '480px', '520px', '400px'
+  width?: string
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
   showCloseButton?: boolean
   closeOnBackdrop?: boolean
@@ -45,46 +46,60 @@ export function Modal({
   contentClassName,
   dir = 'rtl',
 }: ModalProps) {
-  // Handle escape key
+  const [pinned, setPinned] = useState(false)
+  const { containerRef, handleRef, resetPosition } = useDraggableDialog()
+
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && closeOnEscape) {
-        onClose()
-      }
+      if (e.key === 'Escape' && closeOnEscape && !pinned) onClose()
     },
-    [closeOnEscape, onClose]
+    [closeOnEscape, onClose, pinned]
   )
 
   useEffect(() => {
     if (open) {
       document.addEventListener('keydown', handleEscape)
-      document.body.style.overflow = 'hidden'
+      if (!pinned) document.body.style.overflow = 'hidden'
     }
-
     return () => {
       document.removeEventListener('keydown', handleEscape)
       document.body.style.overflow = ''
     }
-  }, [open, handleEscape])
+  }, [open, handleEscape, pinned])
+
+  // При закрытии сбрасываем pin и позицию
+  useEffect(() => {
+    if (!open) {
+      setPinned(false)
+      resetPosition()
+    }
+  }, [open, resetPosition])
 
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200"
-        onClick={closeOnBackdrop ? onClose : undefined}
-        aria-hidden="true"
-      />
+    <div className={cn(
+      'fixed inset-0 z-50 flex items-center justify-center p-4',
+      pinned && 'pointer-events-none' // pinned: клики сквозь backdrop
+    )}>
+      {/* Backdrop — скрыт когда закреплено */}
+      {!pinned && (
+        <div
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200"
+          onClick={closeOnBackdrop ? onClose : undefined}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Modal */}
       <div
+        ref={containerRef}
         className={cn(
           'relative w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl',
           'animate-in fade-in-0 zoom-in-95 duration-200',
           'max-h-[90vh] flex flex-col',
           !width && sizeClasses[size],
+          pinned && 'pointer-events-auto ring-2 ring-orange-400/60 shadow-orange-200/40',
           className
         )}
         style={width ? { maxWidth: `min(${width}, calc(100vw - 32px))` } : undefined}
@@ -93,9 +108,17 @@ export function Modal({
         aria-labelledby={title ? 'modal-title' : undefined}
         dir={dir}
       >
+        {/* Drag handle — только на десктопе */}
+        <div
+          ref={handleRef}
+          className="hidden md:flex items-center justify-center h-5 rounded-t-2xl cursor-grab active:cursor-grabbing select-none group bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        >
+          <GripHorizontal className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors" />
+        </div>
+
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between p-5 pb-0">
+          <div className="flex items-start justify-between px-5 pb-0 pt-1">
             <div className="flex-1 min-w-0 pt-1">
               {title && (
                 <h2
@@ -106,20 +129,39 @@ export function Modal({
                 </h2>
               )}
               {subtitle && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {subtitle}
-                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
               )}
             </div>
-            {showCloseButton && (
+
+            <div className="flex items-center gap-1 -mt-1 -mr-1">
+              {/* Pin button — только на десктопе */}
               <button
-                onClick={onClose}
-                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors -mt-1 -mr-1"
-                aria-label="Close"
+                onClick={() => setPinned(p => !p)}
+                className={cn(
+                  'hidden md:flex p-1.5 rounded-full transition-colors',
+                  pinned
+                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-500 hover:bg-orange-200'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-300 dark:text-gray-600 hover:text-gray-500'
+                )}
+                title={pinned ? 'Открепить' : 'Закрепить на экране'}
               >
-                <X className="w-5 h-5 text-gray-400" />
+                {pinned
+                  ? <PinOff className="w-4 h-4" />
+                  : <Pin className="w-4 h-4" />
+                }
               </button>
-            )}
+
+              {/* Close button */}
+              {showCloseButton && (
+                <button
+                  onClick={onClose}
+                  className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -134,7 +176,7 @@ export function Modal({
           {children}
         </div>
 
-        {/* Footer — sticky so buttons never scroll out of view on mobile */}
+        {/* Footer */}
         {footer && (
           <div className="sticky bottom-0 p-5 pt-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-b-2xl">
             {footer}

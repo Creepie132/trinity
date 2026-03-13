@@ -3,54 +3,58 @@
 import { useRef, useCallback, useEffect } from 'react'
 
 /**
- * useDraggableDialog — drag-to-move для модальных окон на десктопе.
- * Возвращает ref для контейнера и ref для drag-handle (заголовок).
- * На мобильных (touch-only) — не активируется.
+ * useDraggableDialog — drag-to-move для Modal.tsx (кастомный компонент).
+ * Работает через прямые ref на div контейнер и div хэндл.
+ * На мобильных устройствах не активируется (touch-only).
  */
 export function useDraggableDialog() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const handleRef = useRef<HTMLDivElement | null>(null)
-  const dragging = useRef(false)
-  const startX = useRef(0)
-  const startY = useRef(0)
-  const currentX = useRef(0)
-  const currentY = useRef(0)
+
+  const state = useRef({
+    dragging: false,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0,
+  })
 
   const onMouseDown = useCallback((e: MouseEvent) => {
-    // Только левая кнопка мыши, не на кнопках/input внутри хедера
     if (e.button !== 0) return
     const target = e.target as HTMLElement
-    if (target.closest('button') || target.closest('input')) return
+    if (target.closest('button') || target.closest('input') || target.closest('a')) return
 
-    dragging.current = true
-    startX.current = e.clientX - currentX.current
-    startY.current = e.clientY - currentY.current
+    const s = state.current
+    s.dragging = true
+    s.startX = e.clientX - s.currentX
+    s.startY = e.clientY - s.currentY
     document.body.style.userSelect = 'none'
     document.body.style.cursor = 'grabbing'
+    e.preventDefault()
   }, [])
 
   const onMouseMove = useCallback((e: MouseEvent) => {
-    if (!dragging.current || !containerRef.current) return
+    const s = state.current
+    if (!s.dragging || !containerRef.current) return
 
-    const dx = e.clientX - startX.current
-    const dy = e.clientY - startY.current
+    const dx = e.clientX - s.startX
+    const dy = e.clientY - s.startY
 
-    // Ограничиваем чтобы окно не уходило за экран
     const rect = containerRef.current.getBoundingClientRect()
     const maxX = window.innerWidth - rect.width / 2
-    const minX = -rect.width / 2
+    const minX = -(rect.width / 2)
     const maxY = window.innerHeight - 40
     const minY = -(rect.height / 2) + 40
 
-    currentX.current = Math.min(maxX, Math.max(minX, dx))
-    currentY.current = Math.min(maxY, Math.max(minY, dy))
+    s.currentX = Math.min(maxX, Math.max(minX, dx))
+    s.currentY = Math.min(maxY, Math.max(minY, dy))
 
     containerRef.current.style.transform =
-      `translate(calc(-50% + ${currentX.current}px), calc(-50% + ${currentY.current}px))`
+      `translate(calc(-50% + ${s.currentX}px), calc(-50% + ${s.currentY}px))`
   }, [])
 
   const onMouseUp = useCallback(() => {
-    dragging.current = false
+    state.current.dragging = false
     document.body.style.userSelect = ''
     document.body.style.cursor = ''
   }, [])
@@ -70,10 +74,9 @@ export function useDraggableDialog() {
     }
   }, [onMouseDown, onMouseMove, onMouseUp])
 
-  // Сброс позиции при закрытии (вызывается из onOpenChange)
   const resetPosition = useCallback(() => {
-    currentX.current = 0
-    currentY.current = 0
+    state.current.currentX = 0
+    state.current.currentY = 0
     if (containerRef.current) {
       containerRef.current.style.transform = 'translate(-50%, -50%)'
     }

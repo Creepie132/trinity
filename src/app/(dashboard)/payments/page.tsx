@@ -32,6 +32,7 @@ import { PaymentDesktopPanel } from '@/components/payments/PaymentDesktopPanel'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useModalStore } from '@/store/useModalStore'
+import { AdminDeletePaymentButton } from '@/components/payments/AdminDeletePaymentButton'
 
 export default function PaymentsPage() {
   const searchParams = useSearchParams()

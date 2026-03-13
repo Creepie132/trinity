@@ -135,14 +135,29 @@ function ImpersonateModal({ onClose }: { onClose: () => void }) {
     setDoing(orgId)
     try {
       const { data: { session } } = await supabase.auth.getSession()
+
+      // Записываем API
       const res = await fetch('/api/admin/impersonate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ orgId }),
       })
       if (!res.ok) throw new Error('Failed')
-      // Store impersonation flag and redirect
-      sessionStorage.setItem('impersonating_org', JSON.stringify({ id: orgId, name: orgName }))
+
+      // Переключаем activeOrgId на целевую org
+      await fetch('/api/set-active-branch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId }),
+      })
+
+      // Сохраняем сессию импersonation + admin_org_id для возврата
+      const adminOrg = orgs.find(o => o.email === 'creepie1357@gmail.com' || o.email === 'ambersolutions.systems@gmail.com')
+      localStorage.setItem('admin_org_id', adminOrg?.id || 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')
+      localStorage.setItem('impersonation_session', JSON.stringify({
+        orgId, orgName, adminEmail: session?.user?.email, startedAt: new Date().toISOString()
+      }))
+
       window.location.href = '/dashboard'
     } catch {
       alert('שגיאה בכניסה')

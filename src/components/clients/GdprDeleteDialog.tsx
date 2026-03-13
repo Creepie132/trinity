@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AlertTriangle, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import { useModalStore } from '@/store/useModalStore'
 
 interface GdprDeleteDialogProps {
   open: boolean
@@ -24,8 +24,8 @@ export function GdprDeleteDialog({
   clientName,
   locale = 'ru',
 }: GdprDeleteDialogProps) {
-  const router = useRouter()
   const queryClient = useQueryClient()
+  const { closeModal } = useModalStore()
   const [confirmText, setConfirmText] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -93,8 +93,8 @@ export function GdprDeleteDialog({
 
       toast.success(successMsg)
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      closeModal('client-details')
       onOpenChange(false)
-      router.push('/clients')
     } catch (error: any) {
       toast.error(error.message || text.deleteError)
     } finally {

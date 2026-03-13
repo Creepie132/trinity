@@ -65,6 +65,7 @@ export function WorkShiftWidget() {
 
   const [myShift, setMyShift] = useState<WorkShift | null>(null)
   const [activeShifts, setActiveShifts] = useState<WorkShift[]>([])
+  const [hasStaff, setHasStaff] = useState<boolean | null>(null)
   const [elapsed, setElapsed] = useState(0)
   const [loading, setLoading] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -76,6 +77,7 @@ export function WorkShiftWidget() {
       const data = await res.json()
       setMyShift(data.myShift)
       setActiveShifts(data.activeShifts || [])
+      if (typeof data.hasStaff === 'boolean') setHasStaff(data.hasStaff)
     } catch {}
   }, [])
 
@@ -145,6 +147,8 @@ export function WorkShiftWidget() {
 
   // Owner view: who is on shift
   if (isOwner) {
+    // Hide while loading OR if no staff members exist
+    if (hasStaff === null || hasStaff === false) return null
     return (
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4">
         <div className="flex items-center gap-2 mb-3">

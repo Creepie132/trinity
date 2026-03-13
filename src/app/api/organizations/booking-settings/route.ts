@@ -54,7 +54,7 @@ export async function PATCH(request: Request) {
     const dbSettings = {
       ...booking_settings,
       working_hours: working_hours_numeric,
-      advance_days: booking_settings.max_days_ahead || 30,
+      advance_booking_days: booking_settings.max_days_ahead || 30,
       min_advance_hours: booking_settings.min_advance_hours || 24,
       slot_duration: booking_settings.slot_duration || 60,
       break_time: booking_settings.break_times?.[0] || null,
@@ -64,7 +64,7 @@ export async function PATCH(request: Request) {
 
     console.log('[BOOKING SETTINGS] Converted settings:', {
       working_hours: working_hours_numeric,
-      advance_days: dbSettings.advance_days
+      advance_booking_days: dbSettings.advance_booking_days
     })
 
     // Use service role key for update
@@ -84,12 +84,16 @@ export async function PATCH(request: Request) {
       throw orgError
     }
 
-    // Upsert booking settings to dedicated table
+    // Upsert booking settings — only columns that exist in the table
     const { data, error } = await supabaseAdmin
       .from('booking_settings')
       .upsert({
         org_id: orgId,
-        ...dbSettings,
+        is_enabled: booking_settings.enabled ?? false,
+        working_hours: working_hours_numeric,
+        slot_duration_minutes: booking_settings.slot_duration || 60,
+        advance_booking_days: booking_settings.max_days_ahead || 30,
+        slug: booking_settings.slug || '',
         updated_at: new Date().toISOString(),
       }, { onConflict: 'org_id' })
       .select()

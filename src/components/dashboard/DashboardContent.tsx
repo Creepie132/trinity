@@ -10,7 +10,6 @@ import { TodayTasksWidget } from './TodayTasksWidget'
 import { RevenueChartWidget } from './RevenueChartWidget'
 import { IncomeExpensesWidget } from './IncomeExpensesWidget'
 import { QuickActionsPanel } from './QuickActionsPanel'
-import { RightColumn } from './RightColumn'
 import FABMenu from './FABMenu'
 import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
 import { useModalStore } from '@/store/useModalStore'
@@ -361,23 +360,20 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
           />
         </div>
 
-        {/* ── Основная сетка ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
-          {/* Левая + центр */}
-          <div className="space-y-5">
-            <WorkShiftWidget />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <TodayVisitsWidget visits={todayVisits} locale={locale} onVisitClick={setSelectedVisit} />
-              <TodayTasksWidget tasks={todayTasks} locale={locale} />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <RevenueChartWidget data={revenueData} locale={locale} />
-              <IncomeExpensesWidget locale={locale} />
-            </div>
+        {/* ── Основная сетка — без правой колонки, она в layout ── */}
+        <div className="space-y-5">
+          <WorkShiftWidget />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TodayVisitsWidget visits={todayVisits} locale={locale} onVisitClick={setSelectedVisit} />
+            <TodayTasksWidget tasks={todayTasks} locale={locale} />
           </div>
-          {/* Правая колонка */}
-          <div className="hidden lg:block">
-            <RightColumn locale={locale} category="beauty" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <RevenueChartWidget data={revenueData} locale={locale} />
+            <IncomeExpensesWidget locale={locale} />
+          </div>
+          {/* Быстрые действия — на мобиле и средних экранах */}
+          <div className="xl:hidden">
+            <QuickActionsPanel locale={locale} />
           </div>
         </div>
       </div>

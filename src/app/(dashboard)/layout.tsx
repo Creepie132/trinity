@@ -10,17 +10,10 @@ import { GlobalSearch } from '@/components/GlobalSearch'
 import dynamic from 'next/dynamic'
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner'
 import { PinnedModalsTray } from '@/components/ui/PinnedModalsTray'
+import { RightPanel } from '@/components/layout/RightPanel'
 
 const KiraHAL = dynamic(() => import('@/components/kira/KiraHAL'), { ssr: false })
 
-/**
- * DashboardLayout — основной макет.
- * Учитывая использование RTL (иврит), Sidebar должен идти ПЕРВЫМ в DOM,
- * чтобы отображаться в ПРАВОЙ части экрана на десктопе.
- * 
- * Middleware уже проверяет сессию — layout не дублирует эту логику.
- * Каждая страница сама управляет своей загрузкой.
- */
 export default function DashboardLayout({
   children,
 }: {
@@ -28,7 +21,6 @@ export default function DashboardLayout({
 }) {
   const [searchOpen, setSearchOpen] = useState(false)
 
-  // Ctrl+K / Cmd+K hotkey
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -36,7 +28,6 @@ export default function DashboardLayout({
         setSearchOpen(true)
       }
     }
-
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
@@ -45,42 +36,33 @@ export default function DashboardLayout({
     <AuthProvider>
       <BranchProvider>
         <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 flex flex-col">
-          {/* Мобильный header */}
           <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
 
           <div className="flex-1 lg:flex lg:h-screen overflow-hidden">
-            
-            {/* 1. Sidebar — ФИКСИРОВАННЫЙ ПРИ СКРОЛЛЕ
-              sticky top-0 h-screen делает его зафиксированным
-            */}
+
+            {/* Сайдбар — зафиксирован слева */}
             <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
               <Sidebar onSearchOpen={() => setSearchOpen(true)} />
             </aside>
 
-            {/* 2. Main Content — СКРОЛЛИТСЯ ОТДЕЛЬНО
-              overflow-y-auto позволяет контенту скроллиться независимо от sidebar
-            */}
-            <main className="flex-1 overflow-y-auto lg:h-screen pt-4 lg:pt-6">
-              <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
+            {/* Контент — прижат к сайдбару, скроллится */}
+            <main className="flex-1 overflow-y-auto lg:h-screen">
+              <div className="p-4 lg:p-6">
                 <ErrorBoundary>
                   {children}
                 </ErrorBoundary>
               </div>
             </main>
 
+            {/* Правая панель — реклама, Кира, объявления */}
+            <RightPanel />
+
           </div>
         </div>
 
-        {/* Global Search */}
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-
-        {/* HAL 9000 — Kira persistent orb */}
-        {/* <KiraHAL /> */}{/* temporarily hidden */}
-
-        {/* Impersonation banner — показывается когда admin смотрит от имени org */}
+        {/* <KiraHAL /> */}
         <ImpersonationBanner />
-
-        {/* Tray закреплённых окон — справа снизу */}
         <PinnedModalsTray />
       </BranchProvider>
     </AuthProvider>

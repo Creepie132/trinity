@@ -31,25 +31,27 @@ export function useFeatures(): Features {
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin()
 
   if (orgLoading || adminLoading) {
+    // Пока данные грузятся — показываем все базовые разделы.
+    // ModuleGuard на страницах всё равно проверит доступ при переходе.
     return {
-      hasClients: false,
+      hasClients: true,
       hasSms: false,
-      hasPayments: false,
+      hasPayments: true,
       hasAnalytics: false,
       hasStatistics: false,
       hasReports: false,
       hasSubscriptions: false,
-      hasVisits: false,
-      hasInventory: false,
+      hasVisits: true,
+      hasInventory: true,
       hasBooking: false,
       hasTelegram: false,
       hasLoyalty: false,
       hasBirthday: false,
-      hasDiary: false,
+      hasDiary: true,
       hasBranches: false,
       paymentsEnabled: true,
       recurringEnabled: false,
-      isActive: false,
+      isActive: true,
       category: 'other',
       isLoading: true,
     }

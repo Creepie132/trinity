@@ -55,7 +55,7 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
       icon: Puzzle,
     },
     {
-      name: language === 'he' ? 'חיובים' : 'Биллинг',
+      name: language === 'he' ? 'פיננסים' : 'Финансы',
       href: '/admin/billing',
       icon: CreditCard,
     },

@@ -2,7 +2,8 @@
 // Генерирует HTML для "סיכום תשלומים" — сводки платежей по диапазону дат
 
 function fmt(n: number): string {
-  return '₪\u00a0' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  // В RTL ₪ должен быть ПОСЛЕ числа визуально (слева в памяти, справа на экране)
+  return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '\u00a0₪'
 }
 
 export interface PaymentReportItem {
@@ -36,7 +37,7 @@ const methodColors: Record<string, string> = {
 
 function methodBadge(method: string): string {
   const color = methodColors[method] || '#6b7280'
-  return `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;background:${color}18;color:${color};border:1px solid ${color}40">${method}</span>`
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;line-height:1.4;background:${color}18;color:${color};border:1px solid ${color}40;white-space:nowrap">${method}</span>`
 }
 
 export function buildPaymentReportHTML(d: PaymentReportData): string {

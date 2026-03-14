@@ -144,8 +144,10 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const date = new Date(visit.scheduled_at)
   const locStr = isHe ? 'he-IL' : 'ru-RU'
   const displayServiceName = visit.services ? (isHe ? visit.services.name : (visit.services.name_ru || visit.services.name)) : serviceName
-  const totalDuration = visitServices.reduce((s, vs) => s + (vs.duration_minutes || 0), 0)
-  const endTime = totalDuration > 0 ? new Date(date.getTime() + totalDuration * 60000) : visit.duration_minutes ? new Date(date.getTime() + visit.duration_minutes * 60000) : null
+  // Total duration = main service + all additional services
+  const additionalDuration = visitServices.reduce((s, vs) => s + (vs.duration_minutes || 0), 0)
+  const totalDuration = (visit.duration_minutes || 0) + additionalDuration
+  const endTime = totalDuration > 0 ? new Date(date.getTime() + totalDuration * 60000) : null
   const statusCfg = STATUS_CONFIG[visit.status] || STATUS_CONFIG.cancelled
   const statusLabel = isHe ? statusCfg.he : statusCfg.ru
   const avatarGradient = AVATAR_COLORS[visit.status] || AVATAR_COLORS.cancelled
@@ -251,10 +253,10 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
                 </div>
               )
             })}
-            {visitServices.length > 1 && (
+            {visitServices.length > 0 && (
               <div className="flex justify-between items-center px-4 py-2.5 bg-gray-100 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">
                 <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{isHe ? 'סה״כ' : 'Итого'}</span>
-                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">₪{visitServices.reduce((s, vs) => s + (vs.price || 0), 0)}</span>
+                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">₪{(visit.price || 0) + visitServices.reduce((s, vs) => s + (vs.price || 0), 0)}</span>
               </div>
             )}
           </div>
@@ -416,12 +418,26 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   }
 
   const renderServices = () => {
-    const total = visitServices.reduce((s, vs) => s + (vs.price || 0), 0)
+    const total = (visit.price || 0) + visitServices.reduce((s, vs) => s + (vs.price || 0), 0)
     return (
       <div className="flex flex-col" style={{ minHeight: '55vh' }}>
         <SubHeader title={isHe ? 'שירותים ומוצרים' : 'Услуги и товары'} back="main" />
         <div className="flex-1 overflow-y-auto space-y-2 pb-3">
-          {visitServices.length === 0 ? (
+          {/* Main service (always shown) */}
+          {displayServiceName && (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800">
+              <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                <Scissors className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{displayServiceName}</p>
+                {visit.duration_minutes > 0 && <p className="text-xs text-gray-400">{formatDuration(visit.duration_minutes)}</p>}
+              </div>
+              {(visit.price || 0) > 0 && <span className="text-sm font-bold text-gray-700 dark:text-gray-200 flex-shrink-0">₪{visit.price}</span>}
+            </div>
+          )}
+          {/* Additional services */}
+          {visitServices.length === 0 && !displayServiceName ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-300 dark:text-gray-600">
               <Scissors className="w-10 h-10 mb-3" /><p className="text-sm">{isHe ? 'לא נוספו שירותים' : 'Нет добавленных услуг'}</p>
             </div>
@@ -446,7 +462,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             )
           })}
         </div>
-        {visitServices.length > 0 && (
+        {(visitServices.length > 0 || (visit.price || 0) > 0) && (
           <div className="flex justify-between items-center py-2 border-t border-gray-100 dark:border-gray-700 mb-3">
             <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">{isHe ? 'סה״כ' : 'Итого'}</span>
             <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">₪{total}</span>

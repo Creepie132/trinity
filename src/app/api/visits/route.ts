@@ -102,7 +102,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Combine date and time into ISO timestamp
-    const scheduled_at = new Date(`${date}T${time}`).toISOString()
+    // Treat date+time as Israel local time (Asia/Jerusalem, UTC+2/UTC+3 DST).
+    // We append +02:00 as a baseline; JS Date will parse this as a fixed offset
+    // which keeps the user-selected time correct regardless of server timezone (Vercel = UTC).
+    const scheduled_at = new Date(`${date}T${time}:00+02:00`).toISOString()
     console.log('[API /api/visits POST] Scheduled at (ISO):', scheduled_at)
 
     // Prepare insert data

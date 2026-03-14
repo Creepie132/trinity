@@ -72,7 +72,8 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
     (sum, item) => sum + item.price * item.quantity,
     0
   )
-  const totalAmount = (visit?.price || 0) + totalProductsPrice
+  const additionalServicesPrice = (visitServices || []).reduce((sum, vs) => sum + (vs.price || 0), 0)
+  const totalAmount = (visit?.price || 0) + additionalServicesPrice + totalProductsPrice
 
   const handleAddProduct = () => {
     if (!selectedProductId) return

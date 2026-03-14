@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Plus, Calendar, Clock, User, CheckCircle2, Circle, AlertTriangle,
   MessageSquare, Search, X, XCircle, PlayCircle, Trash2, CheckCircle,
-  GripVertical, ChevronDown,
+  GripVertical, CreditCard,
 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useAuth } from '@/hooks/useAuth'
@@ -42,10 +42,11 @@ interface Task {
   client?: { id: string; name?: string; first_name?: string; last_name?: string; phone?: string } | null
 }
 
+interface OrgUser { user_id: string; full_name: string; avatar_url?: string | null }
 type KanbanColumn = { id: Task['status']; label: string; color: string; accent: string; icon: React.ReactNode }
 type PriorityFilter = 'all' | 'urgent' | 'high' | 'normal'
 
-// ===== helpers =====
+// ===== Helpers =====
 function formatPhoneForWhatsApp(phone: string): string {
   const clean = phone.replace(/[^0-9]/g, '')
   if (clean.startsWith('0')) return '972' + clean.slice(1)
@@ -58,7 +59,7 @@ function getClientDisplayName(client: Task['client']): string {
   return `${client.first_name || ''} ${client.last_name || ''}`.trim() || client.name || ''
 }
 
-function formatDeadline(due: string, locale: Locale, lang: string): { text: string; urgent: boolean; overdue: boolean } {
+function formatDeadline(due: string, locale: Locale, lang: string) {
   const d = parseISO(due)
   const overdue = isPast(d) && !isToday(d)
   const urgent = isToday(d) || isTomorrow(d) || overdue
@@ -72,13 +73,22 @@ function formatDeadline(due: string, locale: Locale, lang: string): { text: stri
 
 // ===== Priority dot =====
 function PriorityDot({ priority }: { priority: string }) {
-  const map: Record<string, string> = {
-    urgent: 'bg-red-500',
-    high: 'bg-amber-400',
-    normal: 'bg-blue-400',
-    low: 'bg-slate-300',
-  }
+  const map: Record<string, string> = { urgent: 'bg-red-500', high: 'bg-amber-400', normal: 'bg-blue-400', low: 'bg-slate-300' }
   return <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 mt-1 ${map[priority] ?? map.normal}`} />
+}
+
+// ===== Assignee avatar =====
+function AssigneeAvatar({ user }: { user: OrgUser | undefined }) {
+  if (!user) return null
+  const initials = user.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  return (
+    <div
+      className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[9px] font-bold flex-shrink-0 ring-1 ring-primary/20"
+      title={user.full_name}
+    >
+      {initials}
+    </div>
+  )
 }
 
 // ===== Kanban Card =====
@@ -87,6 +97,7 @@ interface KanbanCardProps {
   language: string
   dateLocale: Locale
   clients: any[]
+  orgUsers: OrgUser[]
   onComplete: (id: string) => void
   onDelete: (id: string) => void
   onDragStart: (e: React.DragEvent, task: Task) => void
@@ -94,95 +105,164 @@ interface KanbanCardProps {
   isDragging: boolean
 }
 
-function KanbanCard({ task, language, dateLocale, clients, onComplete, onDelete, onDragStart, onDragEnd, isDragging }: KanbanCardProps) {
+function KanbanCard({ task, language, dateLocale, clients, orgUsers, onComplete, onDelete, onDragStart, onDragEnd, isDragging }: KanbanCardProps) {
+  const router = useRouter()
   const client = task.client_id ? clients.find((c: any) => c.id === task.client_id) : null
   const clientName = getClientDisplayName(client)
   const deadline = task.due_date ? formatDeadline(task.due_date, dateLocale, language) : null
+  const assignee = task.assigned_to ? orgUsers.find(u => u.user_id === task.assigned_to) : undefined
   const isRTL = language === 'he'
 
-  const priorityBorder: Record<string, string> = {
-    urgent: 'border-l-red-500',
-    high: 'border-l-amber-400',
-    normal: 'border-l-transparent',
-    low: 'border-l-transparent',
+  // ── Priority-based card background ──
+  const cardBg: Record<string, string> = {
+    urgent: 'bg-red-50/70 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 border-l-red-500',
+    high:   'bg-amber-50/60 dark:bg-amber-950/25 border-amber-200 dark:border-amber-900/50 border-l-amber-400',
+    normal: 'bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 border-l-transparent',
+    low:    'bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 border-l-transparent',
+  }
+  const bg = cardBg[task.priority] ?? cardBg.normal
+
+  // ── Mobile swipe-to-complete ──
+  const touchStartX = useRef<number>(0)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [swipeOffset, setSwipeOffset] = useState(0)
+  const [isSwiping, setIsSwiping] = useState(false)
+
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+    setIsSwiping(true)
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    if (!isSwiping) return
+    const dx = e.touches[0].clientX - touchStartX.current
+    if (dx > 0) setSwipeOffset(Math.min(dx, 100))
+  }
+  function onTouchEnd() {
+    if (swipeOffset > 60 && task.status !== 'completed' && task.status !== 'cancelled') {
+      onComplete(task.id)
+    }
+    setSwipeOffset(0)
+    setIsSwiping(false)
   }
 
   return (
-    <div
-      draggable
-      onDragStart={e => onDragStart(e, task)}
-      onDragEnd={onDragEnd}
-      className={[
-        'group relative bg-white dark:bg-slate-800/90 rounded-2xl',
-        'border border-slate-200 dark:border-slate-700 border-l-4',
-        priorityBorder[task.priority] ?? 'border-l-transparent',
-        'shadow-sm hover:shadow-md transition-all duration-200 cursor-grab active:cursor-grabbing',
-        isDragging ? 'opacity-40 scale-95' : 'opacity-100 scale-100',
-        task.status === 'completed' ? 'opacity-60' : '',
-        'animate-card-in',
-      ].join(' ')}
-    >
-      <div className={`absolute top-3 ${isRTL ? 'left-2' : 'right-2'} opacity-0 group-hover:opacity-40 transition-opacity pointer-events-none`}>
-        <GripVertical size={14} className="text-slate-400" />
+    <div className="relative overflow-hidden rounded-2xl">
+      {/* Swipe hint layer (green bg peeks behind on swipe) */}
+      <div
+        className="absolute inset-0 flex items-center ps-4 bg-emerald-500 rounded-2xl transition-opacity"
+        style={{ opacity: swipeOffset > 20 ? Math.min((swipeOffset - 20) / 40, 1) : 0 }}
+      >
+        <CheckCircle size={20} className="text-white" />
+        <span className="text-white text-xs font-bold ms-2">{language === 'he' ? 'סיים' : 'Готово!'}</span>
       </div>
 
-      <div className="p-3.5 space-y-2.5">
-        <div className="flex items-start gap-2">
-          <PriorityDot priority={task.priority} />
-          <p className={`text-sm font-semibold leading-snug text-slate-800 dark:text-slate-100 flex-1 ${task.status === 'completed' ? 'line-through text-slate-400 dark:text-slate-500' : ''}`}>
-            {task.title}
-          </p>
+      <div
+        ref={cardRef}
+        draggable
+        onDragStart={e => onDragStart(e, task)}
+        onDragEnd={onDragEnd}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{ transform: `translateX(${swipeOffset}px)`, transition: isSwiping ? 'none' : 'transform .25s ease' }}
+        className={[
+          'group relative rounded-2xl border border-l-4',
+          bg,
+          'shadow-sm hover:shadow-md transition-all duration-200 cursor-grab active:cursor-grabbing',
+          isDragging ? 'opacity-40 scale-95' : 'opacity-100 scale-100',
+          task.status === 'completed' ? 'opacity-60' : '',
+          'animate-card-in',
+        ].join(' ')}
+      >
+        <div className={`absolute top-3 ${isRTL ? 'left-2' : 'right-2'} opacity-0 group-hover:opacity-30 transition-opacity pointer-events-none`}>
+          <GripVertical size={13} className="text-slate-400" />
         </div>
 
-        {task.description && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2 ps-4">
-            {task.description}
-          </p>
-        )}
-
-        {clientName && (
-          <div className="flex items-center gap-1.5 ps-4">
-            <User size={11} className="text-slate-400 flex-shrink-0" />
-            <span className="text-xs text-slate-500 dark:text-slate-400 truncate">{clientName}</span>
+        <div className="p-3.5 space-y-2">
+          {/* Title row */}
+          <div className="flex items-start gap-2">
+            <PriorityDot priority={task.priority} />
+            <p className={`text-sm font-semibold leading-snug flex-1 ${
+              task.priority === 'urgent' ? 'text-red-800 dark:text-red-200' :
+              task.priority === 'high'   ? 'text-amber-900 dark:text-amber-200' :
+              'text-slate-800 dark:text-slate-100'
+            } ${task.status === 'completed' ? 'line-through opacity-50' : ''}`}>
+              {task.title}
+            </p>
           </div>
-        )}
 
-        {deadline && (
-          <div className="flex items-center gap-1.5 ps-4">
-            <Clock size={11} className={deadline.overdue ? 'text-red-500' : deadline.urgent ? 'text-amber-500' : 'text-slate-400'} />
-            <span className={`text-xs font-medium ${deadline.overdue ? 'text-red-500' : deadline.urgent ? 'text-amber-500' : 'text-slate-500 dark:text-slate-400'}`}>
-              {deadline.text}
-            </span>
+          {/* Description */}
+          {task.description && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2 ps-4">
+              {task.description}
+            </p>
+          )}
+
+          {/* Client + assignee row */}
+          {(clientName || assignee) && (
+            <div className="flex items-center gap-2 ps-4">
+              {clientName && (
+                <div className="flex items-center gap-1 flex-1 min-w-0">
+                  <User size={11} className="text-slate-400 flex-shrink-0" />
+                  <span className="text-xs text-slate-500 dark:text-slate-400 truncate">{clientName}</span>
+                </div>
+              )}
+              {assignee && <AssigneeAvatar user={assignee} />}
+            </div>
+          )}
+
+          {/* Deadline */}
+          {deadline && (
+            <div className="flex items-center gap-1.5 ps-4">
+              <Clock size={11} className={deadline.overdue ? 'text-red-500' : deadline.urgent ? 'text-amber-500' : 'text-slate-400'} />
+              <span className={`text-xs font-medium ${deadline.overdue ? 'text-red-500' : deadline.urgent ? 'text-amber-500' : 'text-slate-500 dark:text-slate-400'}`}>
+                {deadline.text}
+              </span>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-1.5 pt-1.5 border-t border-black/5 dark:border-white/5">
+            {/* WhatsApp */}
+            {task.contact_phone && (
+              <button
+                onClick={e => { e.stopPropagation(); window.open(`https://wa.me/${formatPhoneForWhatsApp(task.contact_phone!)}`, '_blank') }}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 transition text-xs font-medium"
+                title="WhatsApp"
+              >
+                <MessageSquare size={11} /><span>WA</span>
+              </button>
+            )}
+            {/* К оплате — только если есть привязанный клиент */}
+            {task.client_id && task.status !== 'completed' && task.status !== 'cancelled' && (
+              <button
+                onClick={e => { e.stopPropagation(); router.push(`/payments?client=${task.client_id}`) }}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 hover:bg-violet-200 transition text-xs font-medium"
+                title={language === 'he' ? 'לתשלום' : 'К оплате'}
+              >
+                <CreditCard size={11} />
+                <span className="hidden sm:inline">{language === 'he' ? 'תשלום' : 'Оплата'}</span>
+              </button>
+            )}
+            {/* Complete */}
+            {task.status !== 'completed' && task.status !== 'cancelled' && (
+              <button
+                onClick={e => { e.stopPropagation(); onComplete(task.id) }}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/5 dark:bg-white/5 text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-900/30 transition text-xs ms-auto"
+                title={language === 'he' ? 'סיים' : 'Завершить'}
+              >
+                <CheckCircle size={11} />
+              </button>
+            )}
+            {/* Delete */}
+            <button
+              onClick={e => { e.stopPropagation(); onDelete(task.id) }}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/5 dark:bg-white/5 text-slate-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 transition text-xs"
+              title={language === 'he' ? 'מחק' : 'Удалить'}
+            >
+              <Trash2 size={11} />
+            </button>
           </div>
-        )}
-
-        <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-700/60">
-          {task.contact_phone && (
-            <button
-              onClick={e => { e.stopPropagation(); window.open(`https://wa.me/${formatPhoneForWhatsApp(task.contact_phone!)}`, '_blank') }}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 transition text-xs font-medium"
-              title="WhatsApp"
-            >
-              <MessageSquare size={11} />
-              <span>WA</span>
-            </button>
-          )}
-          {task.status !== 'completed' && task.status !== 'cancelled' && (
-            <button
-              onClick={e => { e.stopPropagation(); onComplete(task.id) }}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-900/20 transition text-xs ms-auto"
-              title={language === 'he' ? 'סיים' : 'Завершить'}
-            >
-              <CheckCircle size={11} />
-            </button>
-          )}
-          <button
-            onClick={e => { e.stopPropagation(); onDelete(task.id) }}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 transition text-xs"
-            title={language === 'he' ? 'מחק' : 'Удалить'}
-          >
-            <Trash2 size={11} />
-          </button>
         </div>
       </div>
     </div>
@@ -196,6 +276,7 @@ interface KanbanColProps {
   language: string
   dateLocale: Locale
   clients: any[]
+  orgUsers: OrgUser[]
   onComplete: (id: string) => void
   onDelete: (id: string) => void
   onDrop: (status: Task['status']) => void
@@ -204,7 +285,7 @@ interface KanbanColProps {
   onDragEnd: () => void
 }
 
-function KanbanCol({ col, tasks, language, dateLocale, clients, onComplete, onDelete, onDrop, draggingId, onDragStart, onDragEnd }: KanbanColProps) {
+function KanbanCol({ col, tasks, language, dateLocale, clients, orgUsers, onComplete, onDelete, onDrop, draggingId, onDragStart, onDragEnd }: KanbanColProps) {
   const [isOver, setIsOver] = useState(false)
 
   return (
@@ -217,21 +298,18 @@ function KanbanCol({ col, tasks, language, dateLocale, clients, onComplete, onDe
         isOver ? 'ring-2 ring-primary/40 bg-primary/5 scale-[1.01]' : 'bg-slate-50 dark:bg-slate-900/50',
       ].join(' ')}
     >
-      {/* Header */}
       <div className={`flex items-center gap-2 px-4 py-3 rounded-t-2xl ${col.color}`}>
         {col.icon}
         <span className="text-sm font-bold text-slate-700 dark:text-slate-200 flex-1">{col.label}</span>
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${col.accent}`}>{tasks.length}</span>
       </div>
 
-      {/* Drop hint */}
       {isOver && (
         <div className="mx-3 mt-2 h-12 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 flex items-center justify-center">
           <span className="text-xs text-primary/60">{language === 'he' ? 'שחרר כאן' : 'Отпустите здесь'}</span>
         </div>
       )}
 
-      {/* Cards */}
       <div className="flex flex-col gap-2 p-3 min-h-[120px] flex-1">
         {tasks.length === 0 && !isOver && (
           <div className="flex-1 flex items-center justify-center py-8">
@@ -247,6 +325,7 @@ function KanbanCol({ col, tasks, language, dateLocale, clients, onComplete, onDe
             language={language}
             dateLocale={dateLocale}
             clients={clients}
+            orgUsers={orgUsers}
             onComplete={onComplete}
             onDelete={onDelete}
             onDragStart={onDragStart}
@@ -262,7 +341,6 @@ function KanbanCol({ col, tasks, language, dateLocale, clients, onComplete, onDe
 // ===== Main Page =====
 export default function DiaryPage() {
   const router = useRouter()
-  const { user, orgId } = useAuth()
   const { hasDiary } = useFeatures()
   const { language } = useLanguage()
   const isRTL = language === 'he'
@@ -271,6 +349,7 @@ export default function DiaryPage() {
 
   const [tasks, setTasks] = useState<Task[]>([])
   const [clients, setClients] = useState<any[]>([])
+  const [orgUsers, setOrgUsers] = useState<OrgUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
@@ -278,38 +357,14 @@ export default function DiaryPage() {
   const { openModal } = useModalStore()
 
   const COLUMNS: KanbanColumn[] = [
-    {
-      id: 'open',
-      label: language === 'he' ? 'פתוח' : 'Открытые',
-      color: 'bg-slate-100 dark:bg-slate-800',
-      accent: 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300',
-      icon: <Circle size={14} className="text-slate-500" />,
-    },
-    {
-      id: 'in_progress',
-      label: language === 'he' ? 'בתהליך' : 'В процессе',
-      color: 'bg-amber-50 dark:bg-amber-900/20',
-      accent: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
-      icon: <PlayCircle size={14} className="text-amber-500" />,
-    },
-    {
-      id: 'completed',
-      label: language === 'he' ? 'הושלם' : 'Завершено',
-      color: 'bg-emerald-50 dark:bg-emerald-900/20',
-      accent: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300',
-      icon: <CheckCircle2 size={14} className="text-emerald-500" />,
-    },
-    {
-      id: 'cancelled',
-      label: language === 'he' ? 'בוטל' : 'Отменено',
-      color: 'bg-slate-50 dark:bg-slate-800/40',
-      accent: 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400',
-      icon: <XCircle size={14} className="text-slate-400" />,
-    },
+    { id: 'open',        label: language === 'he' ? 'פתוח'    : 'Открытые',   color: 'bg-slate-100 dark:bg-slate-800',        accent: 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300',               icon: <Circle      size={14} className="text-slate-500"  /> },
+    { id: 'in_progress', label: language === 'he' ? 'בתהליך'  : 'В процессе', color: 'bg-amber-50 dark:bg-amber-900/20',       accent: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',         icon: <PlayCircle  size={14} className="text-amber-500"  /> },
+    { id: 'completed',   label: language === 'he' ? 'הושלם'   : 'Завершено',  color: 'bg-emerald-50 dark:bg-emerald-900/20',   accent: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300', icon: <CheckCircle2 size={14} className="text-emerald-500" /> },
+    { id: 'cancelled',   label: language === 'he' ? 'בוטל'    : 'Отменено',   color: 'bg-slate-50 dark:bg-slate-800/40',       accent: 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400',           icon: <XCircle     size={14} className="text-slate-400"  /> },
   ]
 
   useEffect(() => { if (!hasDiary) router.push('/dashboard') }, [hasDiary, router])
-  useEffect(() => { loadTasks(); loadClients() }, [])
+  useEffect(() => { loadTasks(); loadClients(); loadOrgUsers() }, [])
 
   async function loadTasks() {
     try {
@@ -322,10 +377,13 @@ export default function DiaryPage() {
   }
 
   async function loadClients() {
-    try {
-      const res = await fetch('/api/clients')
-      if (res.ok) setClients(await res.json())
-    } catch (e) { console.error(e) }
+    try { const res = await fetch('/api/clients'); if (res.ok) setClients(await res.json()) }
+    catch (e) { console.error(e) }
+  }
+
+  async function loadOrgUsers() {
+    try { const res = await fetch('/api/org-users'); if (res.ok) setOrgUsers(await res.json()) }
+    catch (e) { console.error(e) }
   }
 
   const filteredTasks = useMemo(() => {
@@ -338,9 +396,7 @@ export default function DiaryPage() {
         getClientDisplayName(t.client).toLowerCase().includes(q)
       )
     }
-    if (priorityFilter !== 'all') {
-      list = list.filter(t => t.priority === priorityFilter)
-    }
+    if (priorityFilter !== 'all') list = list.filter(t => t.priority === priorityFilter)
     return [...list].sort((a, b) => {
       const w = (p: string) => p === 'urgent' ? 0 : p === 'high' ? 1 : 2
       return w(a.priority) - w(b.priority)
@@ -367,7 +423,6 @@ export default function DiaryPage() {
     setDraggingTask(task)
     e.dataTransfer.effectAllowed = 'move'
   }
-
   function handleDragEnd() { setDraggingTask(null) }
 
   async function handleDrop(targetStatus: Task['status']) {
@@ -380,9 +435,9 @@ export default function DiaryPage() {
   }
 
   const PRIORITY_FILTERS: { key: PriorityFilter; label: string; dot?: string }[] = [
-    { key: 'all', label: language === 'he' ? 'הכל' : 'Все' },
+    { key: 'all',    label: language === 'he' ? 'הכל'  : 'Все' },
     { key: 'urgent', label: language === 'he' ? 'דחוף' : 'Срочные', dot: 'bg-red-500' },
-    { key: 'high', label: language === 'he' ? 'גבוה' : 'Высокий', dot: 'bg-amber-400' },
+    { key: 'high',   label: language === 'he' ? 'גבוה' : 'Высокий', dot: 'bg-amber-400' },
     { key: 'normal', label: language === 'he' ? 'רגיל' : 'Обычные', dot: 'bg-blue-400' },
   ]
 
@@ -396,10 +451,10 @@ export default function DiaryPage() {
           <div className="h-10 w-28 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
         </div>
         <div className="flex gap-3 overflow-x-auto">
-          {[1, 2, 3, 4].map(i => (
+          {[1,2,3,4].map(i => (
             <div key={i} className="min-w-[280px]">
               <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-t-2xl animate-pulse mb-2" />
-              {[1, 2, 3].map(j => <div key={j} className="h-24 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse mb-2" />)}
+              {[1,2,3].map(j => <div key={j} className="h-24 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse mb-2" />)}
             </div>
           ))}
         </div>
@@ -417,8 +472,7 @@ export default function DiaryPage() {
           </h1>
           {urgentCount > 0 && (
             <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 animate-pulse">
-              <AlertTriangle size={10} />
-              {urgentCount}
+              <AlertTriangle size={10} />{urgentCount}
             </span>
           )}
         </div>
@@ -439,16 +493,12 @@ export default function DiaryPage() {
           )}
         </div>
 
-        {/* Priority filter pills */}
+        {/* Priority pills */}
         <div className="flex gap-1.5">
           {PRIORITY_FILTERS.map(f => (
-            <button
-              key={f.key}
-              onClick={() => setPriorityFilter(f.key)}
+            <button key={f.key} onClick={() => setPriorityFilter(f.key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                priorityFilter === f.key
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                priorityFilter === f.key ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >
               {f.dot && <span className={`w-1.5 h-1.5 rounded-full ${f.dot}`} />}
@@ -488,6 +538,7 @@ export default function DiaryPage() {
                 language={language}
                 dateLocale={dateLocale}
                 clients={clients}
+                orgUsers={orgUsers}
                 onComplete={handleComplete}
                 onDelete={handleDelete}
                 onDrop={handleDrop}

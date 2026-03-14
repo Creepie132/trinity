@@ -19,7 +19,7 @@ interface StatsData {
   revenue: { value: number; change: number }
   avgCheck: { value: number; change: number }
 }
-interface RevenuePoint { date: string; day: string; amount: number }
+interface RevenuePoint { date: string; day: string; dateLabel: string; amount: number }
 interface VisitPoint { date: string; dateLabel: string; count: number }
 interface ServiceItem { name: string; count: number; fill: string }
 interface StaffItem { email: string; visits_count: number; revenue: number; average_check: number }
@@ -272,7 +272,13 @@ export default function AnalyticsPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <XAxis 
+                dataKey={period <= 7 ? 'day' : 'dateLabel'} 
+                tick={{ fontSize: 11, fill: '#94a3b8' }} 
+                axisLine={false} 
+                tickLine={false}
+                interval={period <= 7 ? 0 : period <= 30 ? 4 : 9}
+              />
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={45}
                 tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
               <Tooltip content={makeTooltip('₪')} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} />

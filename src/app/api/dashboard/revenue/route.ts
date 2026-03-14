@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
         return {
           date: date,
           day: dayNames[d.getDay()],
+          dateLabel: `${d.getDate()}/${d.getMonth() + 1}`,
           amount: rounded,
         }
       })

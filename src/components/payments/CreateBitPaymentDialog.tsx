@@ -78,6 +78,7 @@ export function CreateBitPaymentDialog({ open, onOpenChange, onSuccess }: Create
       onClose={() => onOpenChange(false)}
       title={language === 'he' ? '📱 תשלום BIT' : '📱 BIT платёж'}
       width="440px"
+      dir={language === 'he' ? 'rtl' : 'ltr'}
       footer={
         <div className="flex gap-2 justify-end">
           <button

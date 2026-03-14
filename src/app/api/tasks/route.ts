@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
       .from('tasks')
       .select('*')
       .eq('org_id', orgId)
+      .is('archived_at', null)
       .order('created_at', { ascending: false })
 
     if (status) query = query.eq('status', status)
@@ -69,7 +70,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 })
   }
 
-  // Создаём задачу
   const { data: task, error } = await supabase
     .from('tasks')
     .insert({
@@ -97,14 +97,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Получаем имя создателя для уведомления
   const creatorName =
     (user.user_metadata?.full_name as string) ||
     (user.user_metadata?.name as string) ||
     user.email?.split('@')[0] ||
     ''
 
-  // Если задача назначена другому пользователю, создаём уведомление
   if (assigned_to && assigned_to !== user.id) {
     await supabase.from('notifications').insert({
       org_id: orgId,
@@ -117,7 +115,6 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // Создаём напоминание за 2 часа до due_date
   if (reminder && due_date) {
     const reminderAt = new Date(new Date(due_date).getTime() - 2 * 60 * 60 * 1000).toISOString()
     const dueDateFormatted = new Date(due_date).toLocaleString('ru-RU', {

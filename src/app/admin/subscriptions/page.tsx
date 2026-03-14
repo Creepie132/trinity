@@ -400,23 +400,27 @@ export default function AdminSubscriptionsPage() {
   }
 
   const handleExtend = (org: Organization) => {
-    // Всегда берём свежую версию org из актуального state organizations
-    // (на случай если org — это устаревший snapshot из selectedOrgSheet)
     const freshOrg = organizations.find(o => o.id === org.id) || org
     setSelectedOrg(freshOrg)
     setNewStatus(freshOrg.subscription_status === 'none' ? 'trial' : freshOrg.subscription_status)
     setSelectedPlan((freshOrg.plan || 'demo') as PlanKey)
     
-    // Initialize custom modules from current features
-    const currentModules = freshOrg.features?.modules || {}
-    setCustomModules(currentModules)
+    // Инициализируем customModules из БД, но ДОПОЛНЯЕМ все известные модули значением false
+    // чтобы тумблеры для новых модулей не пропадали при сохранении
+    const savedModules = freshOrg.features?.modules || {}
+    const allModuleKeys = modulePricing.length > 0
+      ? modulePricing.map((m: any) => m.module_key)
+      : ['clients', 'visits', 'diary', 'booking', 'inventory', 'payments', 'sms', 'subscriptions', 'loyalty', 'analytics', 'sales', 'branches']
+    const fullModules: Record<string, boolean> = {}
+    for (const key of allModuleKeys) {
+      fullModules[key] = savedModules[key] ?? false
+    }
+    setCustomModules(fullModules)
     setCustomClientLimit(freshOrg.features?.client_limit || 0)
     
-    // Initialize custom module prices from current features
     const currentModulePrices = freshOrg.features?.custom_module_prices || {}
     setCustomModulePrices(currentModulePrices)
     
-    // Initialize price mode
     setPriceMode(freshOrg.features?.price_mode || 'auto')
     setManualPrice(freshOrg.features?.manual_price || 0)
     
@@ -429,23 +433,31 @@ export default function AdminSubscriptionsPage() {
   const handlePlanChange = (planKey: PlanKey) => {
     setSelectedPlan(planKey)
     
-    // If not custom, load plan's modules
     if (planKey !== 'custom') {
-      // Try database plans first
+      // Берём модули из плана и дополняем полным списком (false для отсутствующих)
+      let planModules: Record<string, boolean> = {}
       const dbPlan = dbPlans.find((p) => p.key === planKey)
       if (dbPlan) {
-        setCustomModules(dbPlan.modules || {})
+        planModules = dbPlan.modules || {}
         setCustomClientLimit(dbPlan.client_limit || 0)
-        return
+      } else {
+        const plan = getPlan(planKey)
+        if (plan) {
+          planModules = plan.modules
+          setCustomClientLimit(plan.client_limit || 0)
+        }
       }
-      
-      // Fallback to hardcoded plans
-      const plan = getPlan(planKey)
-      if (plan) {
-        setCustomModules(plan.modules)
-        setCustomClientLimit(plan.client_limit || 0)
+      // Дополняем все известные модули
+      const allModuleKeys = modulePricing.length > 0
+        ? modulePricing.map((m: any) => m.module_key)
+        : Object.keys(planModules)
+      const fullModules: Record<string, boolean> = {}
+      for (const key of allModuleKeys) {
+        fullModules[key] = planModules[key] ?? false
       }
+      setCustomModules(fullModules)
     }
+    // При переключении обратно на custom — оставляем текущий customModules как есть
   }
 
   const handleEditOrg = (org: Organization) => {

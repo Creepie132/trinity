@@ -181,9 +181,13 @@ export async function middleware(req: NextRequest) {
         const now = new Date()
 
         // Check if subscription is expired
+        // Новые статусы: active, inactive, demo
+        // Legacy: manual → active, trial → demo, expired/none → inactive
         const isExpired = org && (
+          org.subscription_status === 'inactive' ||
           org.subscription_status === 'expired' ||
-          (org.subscription_expires_at && new Date(org.subscription_expires_at) < now)
+          (org.subscription_expires_at && new Date(org.subscription_expires_at) < now &&
+            !['active', 'manual', 'demo'].includes(org.subscription_status))
         )
 
         if (isExpired && pathname !== '/subscription-expired') {
@@ -192,12 +196,11 @@ export async function middleware(req: NextRequest) {
           return NextResponse.redirect(url)
         }
 
-        // Check if user has active access
-        // 'active' and 'manual' always have access (manual = manually managed, no expiry check)
-        // 'trial' requires valid (non-expired) expiry date
+        // active/manual — всегда, demo — до истечения даты
         const hasAccess = org && (
           org.subscription_status === 'active' ||
           org.subscription_status === 'manual' ||
+          org.subscription_status === 'demo' ||
           (org.subscription_status === 'trial' && org.subscription_expires_at && new Date(org.subscription_expires_at) > now)
         )
 

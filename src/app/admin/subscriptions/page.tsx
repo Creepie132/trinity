@@ -68,11 +68,9 @@ interface Plan {
 }
 
 const SUBSCRIPTION_STATUSES = [
-  { value: 'none', label_he: 'ללא גישה', label_ru: 'Нет доступа', color: 'gray' },
-  { value: 'trial', label_he: 'ניסיון', label_ru: 'Пробный период', color: 'yellow' },
-  { value: 'active', label_he: 'פעיל', label_ru: 'Активна', color: 'green' },
-  { value: 'manual', label_he: 'גישה ידנית', label_ru: 'Ручной доступ', color: 'blue' },
-  { value: 'expired', label_he: 'פג תוקף', label_ru: 'Истекла', color: 'red' },
+  { value: 'active', label_he: 'פעיל', label_ru: 'Активный', color: 'green' },
+  { value: 'inactive', label_he: 'לא פעיל', label_ru: 'Неактивный', color: 'red' },
+  { value: 'demo', label_he: 'דמו', label_ru: 'Демо', color: 'yellow' },
 ]
 
 export default function AdminSubscriptionsPage() {
@@ -93,6 +91,12 @@ export default function AdminSubscriptionsPage() {
   const [modulePricing, setModulePricing] = useState<any[]>([])
   const [priceMode, setPriceMode] = useState<'auto' | 'manual'>('auto')
   const [manualPrice, setManualPrice] = useState<number>(0)
+
+  // Modules modal (separate from extend dialog)
+  const [modulesModalOpen, setModulesModalOpen] = useState(false)
+  const [modulesOrg, setModulesOrg] = useState<Organization | null>(null)
+  const [modulesState, setModulesState] = useState<Record<string, boolean>>({})
+  const [savingModules, setSavingModules] = useState(false)
 
   // Plans management modal
   const [plansModalOpen, setPlansModalOpen] = useState(false)
@@ -161,10 +165,12 @@ export default function AdminSubscriptionsPage() {
       cancel: 'ביטול',
       statuses: {
         none: 'אין גישה',
-        trial: 'תקופת ניסיון',
+        trial: 'דמו',
         active: 'פעיל',
-        manual: 'ידני',
-        expired: 'פג תוקף',
+        manual: 'פעיל',
+        expired: 'לא פעיל',
+        inactive: 'לא פעיל',
+        demo: 'דמו',
       },
       // Plans modal
       plansTitle: 'ניהול תוכניות תמחור',
@@ -245,10 +251,12 @@ export default function AdminSubscriptionsPage() {
       cancel: 'Отмена',
       statuses: {
         none: 'Нет доступа',
-        trial: 'Пробный период',
-        active: 'Активна',
-        manual: 'Ручной доступ',
-        expired: 'Истекла',
+        trial: 'Демо',
+        active: 'Активный',
+        manual: 'Активный',
+        expired: 'Неактивный',
+        inactive: 'Неактивный',
+        demo: 'Демо',
       },
       // Plans modal
       plansTitle: 'Управление тарифными планами',
@@ -399,65 +407,57 @@ export default function AdminSubscriptionsPage() {
     )
   }
 
+  const handleOpenModules = (org: Organization) => {
+    const freshOrg = organizations.find(o => o.id === org.id) || org
+    setModulesOrg(freshOrg)
+    // Инициализируем из БД, дополняем все актуальные ключи
+    const savedModules = freshOrg.features?.modules || {}
+    const allKeys = MODULES.map(m => m.key)
+    const full: Record<string, boolean> = {}
+    for (const key of allKeys) {
+      full[key] = savedModules[key] ?? false
+    }
+    setModulesState(full)
+    setModulesModalOpen(true)
+  }
+
+  const handleSaveModules = async () => {
+    if (!modulesOrg) return
+    setSavingModules(true)
+    try {
+      const response = await fetch('/api/admin/organizations/features', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          org_id: modulesOrg.id,
+          features: { modules: modulesState },
+        }),
+      })
+      if (!response.ok) throw new Error('Failed to save modules')
+      toast.success(language === 'he' ? 'מודולים עודכנו' : 'Модули сохранены')
+      setModulesModalOpen(false)
+      await loadData()
+    } catch {
+      toast.error(language === 'he' ? 'שגיאה' : 'Ошибка сохранения')
+    } finally {
+      setSavingModules(false)
+    }
+  }
+
   const handleExtend = (org: Organization) => {
     const freshOrg = organizations.find(o => o.id === org.id) || org
     setSelectedOrg(freshOrg)
-    setNewStatus(freshOrg.subscription_status === 'none' ? 'trial' : freshOrg.subscription_status)
-    setSelectedPlan((freshOrg.plan || 'demo') as PlanKey)
-    
-    // Инициализируем customModules из БД, но ДОПОЛНЯЕМ все известные модули значением false
-    // чтобы тумблеры для новых модулей не пропадали при сохранении
-    const savedModules = freshOrg.features?.modules || {}
-    const allModuleKeys = modulePricing.length > 0
-      ? modulePricing.map((m: any) => m.module_key)
-      : ['clients', 'visits', 'diary', 'booking', 'inventory', 'payments', 'sms', 'subscriptions', 'loyalty', 'analytics', 'sales', 'branches']
-    const fullModules: Record<string, boolean> = {}
-    for (const key of allModuleKeys) {
-      fullModules[key] = savedModules[key] ?? false
-    }
-    setCustomModules(fullModules)
-    setCustomClientLimit(freshOrg.features?.client_limit || 0)
-    
-    const currentModulePrices = freshOrg.features?.custom_module_prices || {}
-    setCustomModulePrices(currentModulePrices)
-    
-    setPriceMode(freshOrg.features?.price_mode || 'auto')
-    setManualPrice(freshOrg.features?.manual_price || 0)
-    
-    const defaultDate = new Date()
-    defaultDate.setDate(defaultDate.getDate() + 14)
-    setNewExpiryDate(defaultDate.toISOString().split('T')[0])
+    const s = freshOrg.subscription_status
+    const mappedStatus = (s === 'active' || s === 'manual') ? 'active'
+      : (s === 'trial' || s === 'demo') ? 'demo'
+      : 'inactive'
+    setNewStatus(mappedStatus)
+    setNewExpiryDate(
+      freshOrg.subscription_expires_at
+        ? new Date(freshOrg.subscription_expires_at).toISOString().split('T')[0]
+        : (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0] })()
+    )
     setExtendDialogOpen(true)
-  }
-
-  const handlePlanChange = (planKey: PlanKey) => {
-    setSelectedPlan(planKey)
-    
-    if (planKey !== 'custom') {
-      // Берём модули из плана и дополняем полным списком (false для отсутствующих)
-      let planModules: Record<string, boolean> = {}
-      const dbPlan = dbPlans.find((p) => p.key === planKey)
-      if (dbPlan) {
-        planModules = dbPlan.modules || {}
-        setCustomClientLimit(dbPlan.client_limit || 0)
-      } else {
-        const plan = getPlan(planKey)
-        if (plan) {
-          planModules = plan.modules
-          setCustomClientLimit(plan.client_limit || 0)
-        }
-      }
-      // Дополняем все известные модули
-      const allModuleKeys = modulePricing.length > 0
-        ? modulePricing.map((m: any) => m.module_key)
-        : Object.keys(planModules)
-      const fullModules: Record<string, boolean> = {}
-      for (const key of allModuleKeys) {
-        fullModules[key] = planModules[key] ?? false
-      }
-      setCustomModules(fullModules)
-    }
-    // При переключении обратно на custom — оставляем текущий customModules как есть
   }
 
   const handleEditOrg = (org: Organization) => {
@@ -475,7 +475,7 @@ export default function AdminSubscriptionsPage() {
         body: JSON.stringify({
           org_id: orgId,
           subscription_update: {
-            subscription_status: 'expired',
+            subscription_status: 'inactive',
           },
         }),
       })
@@ -492,121 +492,31 @@ export default function AdminSubscriptionsPage() {
 
   const handleSaveExtension = async () => {
     if (!selectedOrg || !newExpiryDate) return
-
     try {
       const expiresAt = new Date(newExpiryDate)
       expiresAt.setHours(23, 59, 59, 999)
-
-      // Modules always come from customModules (UI state).
-      // When a non-custom plan is selected, handlePlanChange pre-fills customModules
-      // from the plan template, so customModules is always the source of truth here.
-      const modules = customModules
-
-      let clientLimit: number | null = customClientLimit || null
-      if (selectedPlan !== 'custom') {
-        const dbPlan = dbPlans.find((p) => p.key === selectedPlan)
-        if (dbPlan) {
-          clientLimit = dbPlan.client_limit ?? null
-        } else {
-          const plan = getPlan(selectedPlan)
-          if (plan) clientLimit = plan.client_limit ?? null
-        }
-      }
-
-      // Calculate monthly price
-      const autoPrice = modulePricing.reduce((sum, mod) => {
-        const moduleKey = mod.module_key as string
-        if ((modules as any)[moduleKey]) {
-          // Use custom price if set, otherwise use default price
-          const customPrice = selectedPlan === 'custom' ? customModulePrices[moduleKey] : undefined
-          const price = customPrice !== undefined ? customPrice : parseFloat(mod.price_monthly || 0)
-          return sum + price
-        }
-        return sum
-      }, 0)
-
-      const monthlyPrice = priceMode === 'auto' ? autoPrice : manualPrice
-
-      // Merge with existing features
-      const currentFeatures = selectedOrg.features || {}
-      const updatedFeatures = {
-        ...currentFeatures,
-        modules: modules,
-        client_limit: clientLimit,
-        price_mode: priceMode,
-        manual_price: manualPrice,
-        monthly_price: monthlyPrice,
-        custom_module_prices: selectedPlan === 'custom' ? customModulePrices : {},
-      }
-
-      console.log('=== SAVE EXTENSION ===')
-      console.log('Org ID:', selectedOrg.id)
-      console.log('Plan:', selectedPlan)
-      console.log('Features:', JSON.stringify(updatedFeatures))
-      console.log('Subscription Update:', { subscription_status: newStatus, subscription_expires_at: expiresAt.toISOString() })
-
       const response = await fetch('/api/admin/organizations/features', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           org_id: selectedOrg.id,
-          plan: selectedPlan,
-          features: updatedFeatures,
           subscription_update: {
             subscription_status: newStatus,
             subscription_expires_at: expiresAt.toISOString(),
           },
         }),
       })
-
-      console.log('Response status:', response.status)
-      const data = await response.json()
-      console.log('Response data:', JSON.stringify(data))
-
       if (!response.ok) {
-        // Log detailed error
-        console.error('❌ SAVE EXTENSION FAILED:', {
-          status: response.status,
-          error: data.error,
-          code: data.code,
-          details: data.details,
-          hint: data.hint,
-          org_id: data.org_id,
-        })
-        
-        // Show detailed error to user
-        const errorMessage = data.error || 'Failed to extend'
-        const detailsMessage = data.details ? `\n\nDetails: ${data.details}` : ''
-        const hintMessage = data.hint ? `\n\nHint: ${data.hint}` : ''
-        
-        toast.error(`${errorMessage}${detailsMessage}${hintMessage}`, {
-          duration: 10000, // Show for 10 seconds
-        })
-        
-        throw new Error(errorMessage)
+        const data = await response.json()
+        toast.error(data.error || t.errorExtending, { duration: 8000 })
+        return
       }
-
       toast.success(t.accessExtended)
       setExtendDialogOpen(false)
-      // Обновляем данные и синхронизируем selectedOrg со свежими данными из БД
+      setSelectedOrgSheet(null)
       await loadData()
-      // Обновляем selectedOrgSheet если он открыт — берём свежий объект из обновлённого списка
-      setSelectedOrgSheet(prev => {
-        if (!prev) return null
-        // будет пересинхронизировано после loadData через organizations state
-        return null
-      })
     } catch (error: any) {
-      console.error('❌ Error extending access:', {
-        error,
-        message: error?.message,
-        stack: error?.stack,
-      })
-      
-      // Only show generic error if we haven't already shown a detailed one
-      if (!error?.message?.includes('Database error')) {
-        toast.error(t.errorExtending)
-      }
+      toast.error(t.errorExtending)
     }
   }
 
@@ -1157,6 +1067,18 @@ export default function AdminSubscriptionsPage() {
                 {language === 'he' ? 'הארכה' : 'Продлить'}
               </button>
 
+              {/* Модули */}
+              <button
+                onClick={() => {
+                  handleOpenModules(selectedOrgSheet)
+                  setSelectedOrgSheet(null)
+                }}
+                className={`py-2.5 px-2 rounded-xl bg-violet-600 text-white font-medium text-sm hover:bg-violet-700 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0 ${isDesktop ? 'flex-1' : 'w-full'}`}
+              >
+                <Package className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>{language === 'he' ? 'מודולים' : 'Модули'}</span>
+              </button>
+
               {/* Редактировать — secondary */}
               <button
                 onClick={() => {
@@ -1242,97 +1164,6 @@ export default function AdminSubscriptionsPage() {
           </div>
         }
       >
-        {/* Plan Selection */}
-        <div className="mb-5">
-          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
-            {language === 'he' ? 'תוכנית' : 'Тарифный план'}
-          </label>
-          <select
-            value={selectedPlan}
-            onChange={(e) => handlePlanChange(e.target.value as PlanKey)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          >
-            {/* Always use PLANS constants to guarantee correct key values */}
-            {PLANS.map((plan) => (
-              <option key={plan.key} value={plan.key}>
-                {language === 'he' ? plan.name_he : plan.name_ru}
-                {plan.price_monthly !== null && plan.price_monthly > 0 && ` — ₪${plan.price_monthly}/мес`}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Modules — only shown for custom plan */}
-        {selectedPlan === 'custom' && (
-          <div className="mb-6">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 block">
-              {language === 'he' ? 'מודולים' : 'Модули'}
-            </label>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {(modulePricing.length > 0 ? modulePricing : MODULES.map(m => ({ module_key: m.key, name_he: m.name_he, name_ru: m.name_ru, price_monthly: 0 }))).map((mod) => {
-                const moduleKey = mod.module_key || (mod as any).key
-                const isEnabled = customModules[moduleKey] || false
-                const currentPrice = customModulePrices[moduleKey] !== undefined
-                  ? customModulePrices[moduleKey]
-                  : parseFloat(mod.price_monthly || 0)
-
-                return (
-                  <div
-                    key={moduleKey}
-                    className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700"
-                  >
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setCustomModules((prev) => ({ ...prev, [moduleKey]: !isEnabled }))}
-                        className={`relative w-10 h-6 rounded-full transition-colors ${isEnabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
-                      >
-                        <span
-                          className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isEnabled ? 'left-5' : 'left-1'}`}
-                        />
-                      </button>
-                      <span className={`text-sm font-medium ${isEnabled ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}`}>
-                        {language === 'he' ? mod.name_he : mod.name_ru}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-gray-400">₪</span>
-                      <input
-                        type="number"
-                        value={currentPrice}
-                        onChange={(e) => setCustomModulePrices((prev) => ({ ...prev, [moduleKey]: parseFloat(e.target.value) || 0 }))}
-                        disabled={!isEnabled}
-                        className="w-14 text-right text-sm font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b border-gray-200 dark:border-gray-600 focus:outline-none focus:border-indigo-400 disabled:text-gray-300 dark:disabled:text-gray-600"
-                      />
-                      <span className="text-xs text-gray-400">/мес</span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Total */}
-            {(() => {
-              const totalPrice = (modulePricing.length > 0 ? modulePricing : MODULES.map(m => ({ module_key: m.key, price_monthly: 0 }))).reduce((sum, mod) => {
-                const moduleKey = mod.module_key || (mod as any).key
-                if (customModules[moduleKey]) {
-                  const customPrice = customModulePrices[moduleKey]
-                  const price = customPrice !== undefined ? customPrice : parseFloat(mod.price_monthly || 0)
-                  return sum + price
-                }
-                return sum
-              }, 0)
-              return (
-                <div className="flex items-center justify-between py-4 border-t border-gray-100 dark:border-gray-800 mt-3">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {language === 'he' ? 'סה"כ לחודש' : 'Итого в месяц'}
-                  </span>
-                  <span className="text-xl font-bold text-indigo-600">₪{totalPrice.toFixed(0)}</span>
-                </div>
-              )
-            })()}
-          </div>
-        )}
-
         {/* Status & Expiry */}
         <div className="grid grid-cols-2 gap-3 mb-2">
           <div>
@@ -1362,6 +1193,51 @@ export default function AdminSubscriptionsPage() {
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+        </div>
+      </Modal>
+
+      {/* Modules Modal */}
+      <Modal
+        open={modulesModalOpen && !!modulesOrg}
+        onClose={() => setModulesModalOpen(false)}
+        title={language === 'he' ? 'מודולים' : 'Модули'}
+        subtitle={modulesOrg?.name}
+        size="md"
+        footer={
+          <div className="flex gap-3">
+            <button
+              onClick={() => setModulesModalOpen(false)}
+              className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              {language === 'he' ? 'ביטול' : 'Отмена'}
+            </button>
+            <button
+              onClick={handleSaveModules}
+              disabled={savingModules}
+              className="flex-1 py-3 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition-colors shadow-sm disabled:opacity-50"
+            >
+              {savingModules ? '...' : (language === 'he' ? 'שמור' : 'Сохранить')}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-2">
+          {MODULES.map((mod) => {
+            const isEnabled = modulesState[mod.key] ?? false
+            return (
+              <div key={mod.key} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                <span className={`text-sm font-medium ${isEnabled ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                  {language === 'he' ? mod.name_he : mod.name_ru}
+                </span>
+                <button
+                  onClick={() => setModulesState(prev => ({ ...prev, [mod.key]: !isEnabled }))}
+                  className={`relative w-10 h-6 rounded-full transition-colors ${isEnabled ? 'bg-violet-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                >
+                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isEnabled ? 'left-5' : 'left-1'}`} />
+                </button>
+              </div>
+            )
+          })}
         </div>
       </Modal>
 

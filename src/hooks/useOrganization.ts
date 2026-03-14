@@ -24,6 +24,7 @@ export interface Organization {
     meeting_mode?: boolean
     modules?: Record<string, boolean>
   }
+  subscription_status?: string
   billing_status: string
   billing_due_date: string | null
   created_at: string

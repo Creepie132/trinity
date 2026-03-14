@@ -14,7 +14,7 @@ interface BarcodeScannerProps {
 }
 
 export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const videoRef = useRef<HTMLVideoElement>(null)
   const [error, setError] = useState<string>('')
   const [manualEntry, setManualEntry] = useState(false)
@@ -67,7 +67,7 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       try {
         const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName })
         if (permissionStatus.state === 'denied') {
-          setError('לא ניתן לגשת למצלמה. אנא אפשר גישה בהגדרות הדפדפן.')
+          setError(language === 'he' ? 'לא ניתן לגשת למצלמה. אנא אפשר גישה בהגדרות הדפדפן.' : 'Нет доступа к камере. Разрешите доступ в настройках браузера.')
           setManualEntry(true)
           return
         }
@@ -120,11 +120,11 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
         let errorMessage = t('inventory.scanner.cameraError')
         
         if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          errorMessage = 'אישור גישה למצלמה נדרש. אנא אשר גישה בהגדרות הדפדפן.'
+          errorMessage = language === 'he' ? 'אישור גישה למצלמה נדרש. אנא אשר גישה בהגדרות הדפדפן.' : 'Требуется доступ к камере. Разрешите доступ в настройках.'
         } else if (err.name === 'NotFoundError') {
-          errorMessage = 'לא נמצאה מצלמה במכשיר זה.'
+          errorMessage = language === 'he' ? 'לא נמצאה מצלמה במכשיר זה.' : 'Камера не найдена на этом устройстве.'
         } else if (err.name === 'NotReadableError') {
-          errorMessage = 'המצלמה בשימוש על ידי אפליקציה אחרת.'
+          errorMessage = language === 'he' ? 'המצלמה בשימוש על ידי אפליקציה אחרת.' : 'Камера используется другим приложением.'
         }
         
         setError(errorMessage)

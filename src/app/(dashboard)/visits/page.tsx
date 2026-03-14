@@ -256,10 +256,17 @@ export default function VisitsPage() {
     } catch { toast.error(t('common.error')) }
   }
 
-  const handleCompleteVisit = (visit: Visit) => {
+  const handleCompleteVisit = async (visit: Visit) => {
     if (!features.paymentsEnabled) { updateVisitStatus(visit.id, 'completed'); return }
     const clientData = allClients?.find((c: any) => c.id === visit.client_id)
-    const preloadedItems = ((visit as any).visit_services || []).map((vs: any) => ({
+
+    // Always fetch fresh visit_services to avoid empty cart on first open (race condition)
+    const { data: freshServices } = await supabase
+      .from('visit_services')
+      .select('*')
+      .eq('visit_id', visit.id)
+
+    const preloadedItems = (freshServices || (visit as any).visit_services || []).map((vs: any) => ({
       id: vs.id,
       name: isHe ? (vs.service_name || vs.service_name_ru) : (vs.service_name_ru || vs.service_name),
       price: vs.price || 0,

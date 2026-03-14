@@ -31,6 +31,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
     phone: '',
     email: '',
     address: '',
+    city: '',
     date_of_birth: '',
     notes: '',
   })
@@ -56,6 +57,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
         phone: formData.phone,
         email: formData.email || null,
         address: formData.address || null,
+        city: formData.city || null,
         date_of_birth: formData.date_of_birth || null,
         notes: formData.notes || null,
       })
@@ -69,6 +71,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
         phone: '',
         email: '',
         address: '',
+        city: '',
         date_of_birth: '',
         notes: '',
       })
@@ -199,7 +202,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
           />
         </div>
 
-        {/* Email и Адрес */}
+        {/* Email и Дата рождения */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="email" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
@@ -223,6 +226,34 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
               value={formData.date_of_birth}
               onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
               className="mt-1"
+            />
+          </div>
+        </div>
+
+        {/* Адрес и Город */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="address" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              {language === 'he' ? 'כתובת' : 'Адрес'}
+            </Label>
+            <Input
+              id="address"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              className="mt-1"
+              placeholder={language === 'he' ? 'רחוב, בית' : 'Улица, дом'}
+            />
+          </div>
+          <div>
+            <Label htmlFor="city" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              {language === 'he' ? 'עיר' : 'Город'}
+            </Label>
+            <Input
+              id="city"
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              className="mt-1"
+              placeholder={language === 'he' ? 'תל אביב...' : 'Тель-Авив...'}
             />
           </div>
         </div>

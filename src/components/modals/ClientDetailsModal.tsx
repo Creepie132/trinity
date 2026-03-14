@@ -245,7 +245,9 @@ export function ClientDetailsModal() {
             {client.address && (
               <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 dark:bg-gray-800/60 rounded-xl">
                 <span className="text-xs text-gray-400">{locale === 'he' ? 'כתובת' : 'Адрес'}</span>
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate ml-4">{client.address}</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate ml-4">
+                  {[client.address, client.city].filter(Boolean).join(', ')}
+                </span>
               </div>
             )}
             {client.date_of_birth && (

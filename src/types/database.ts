@@ -5,6 +5,7 @@ export interface Client {
   phone: string
   email: string | null
   address: string | null
+  city: string | null
   date_of_birth: string | null
   notes: string | null
   created_at: string
@@ -62,6 +63,7 @@ export interface ClientSummary {
   email: string | null
   date_of_birth: string | null
   address: string | null
+  city: string | null
   notes: string | null
   created_at: string
   last_visit: string | null

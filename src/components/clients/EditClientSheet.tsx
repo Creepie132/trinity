@@ -15,7 +15,7 @@ interface EditClientSheetProps {
   locale: 'he' | 'ru'
 }
 
-type FieldKey = 'first_name' | 'last_name' | 'phone' | 'email' | 'address' | 'notes'
+type FieldKey = 'first_name' | 'last_name' | 'phone' | 'email' | 'address' | 'city' | 'notes'
 
 const PHONE_RE = /^[\d\s\-+()]{7,20}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -86,6 +86,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     email:      client?.email      || '',
     phone:      client?.phone      || '',
     address:    client?.address    || '',
+    city:       client?.city       || '',
     notes:      client?.notes      || '',
   })
   const [errors, setErrors]   = useState<Record<string, string>>({})
@@ -96,11 +97,11 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
 
   const l = locale === 'he' ? {
     title: 'עריכת לקוח', firstName: 'שם פרטי', lastName: 'שם משפחה',
-    email: 'אימייל', phone: 'טלפון', address: 'כתובת', notes: 'הערות',
+    email: 'אימייל', phone: 'טלפון', address: 'כתובת', city: 'עיר', notes: 'הערות',
     save: 'שמור', saving: 'שומר...', cancel: 'ביטול', photo: 'שנה תמונה',
   } : {
     title: 'Редактирование клиента', firstName: 'Имя', lastName: 'Фамилия',
-    email: 'Email', phone: 'Телефон', address: 'Адрес', notes: 'Заметки',
+    email: 'Email', phone: 'Телефон', address: 'Адрес', city: 'Город', notes: 'Заметки',
     save: 'Сохранить', saving: 'Сохранение...', cancel: 'Отмена', photo: 'Изменить фото',
   }
 
@@ -223,6 +224,8 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
           value={form.email}  error={errors.email}  shaking={shaking.email}  onChange={handleChange} />
         <Field field="address" label={l.address}
           value={form.address} error={errors.address} shaking={shaking.address} onChange={handleChange} />
+        <Field field="city" label={l.city}
+          value={form.city} error={errors.city} shaking={shaking.city} onChange={handleChange} />
         <Field field="notes" label={l.notes} multiline
           value={form.notes}   error={errors.notes}   shaking={shaking.notes}   onChange={handleChange} />
       </div>

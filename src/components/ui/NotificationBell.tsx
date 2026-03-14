@@ -5,7 +5,6 @@ import { Bell, CheckCheck, Phone, MessageCircle, Check, X } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { TrinityNotificationIcon } from './TrinityNotificationIcon'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import Modal from '@/components/ui/Modal'
 
 interface NotificationMetadata {
   invited_user_email?: string
@@ -72,6 +71,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const prevCountRef = useRef(0)
+  const bellRef = useRef<HTMLDivElement | null>(null)
 
   const l = translations[locale]
   const supabase = createSupabaseBrowserClient()
@@ -420,64 +420,102 @@ export function NotificationBell({ locale }: NotificationBellProps) {
 
   return (
     <>
-      <TrinityNotificationIcon
-        hasNotification={unreadCount > 0}
-        unreadCount={unreadCount}
-        onClick={handleOpen}
-        size={22}
-      />
+      <div className="relative" ref={bellRef}>
+        <TrinityNotificationIcon
+          hasNotification={unreadCount > 0}
+          unreadCount={unreadCount}
+          onClick={handleOpen}
+          size={22}
+        />
 
-      {/* Mobile — bottom sheet */}
-      {isMobile && (
-        <TrinityBottomDrawer isOpen={isOpen} onClose={() => setIsOpen(false)} title={l.title}>
-          {notifications.length > 0 && (
-            <div className="flex justify-end px-1 pb-2">
-              <button
-                onClick={markAllRead}
-                className="flex items-center gap-1.5 text-xs text-primary hover:underline"
-              >
-                <CheckCheck className="w-3.5 h-3.5" />
-                {l.markRead}
-              </button>
-            </div>
-          )}
-          {notificationList}
-        </TrinityBottomDrawer>
-      )}
-
-      {/* Desktop — modal */}
-      {!isMobile && (
-        <Modal
-          open={isOpen}
-          onClose={() => setIsOpen(false)}
-          title={
-            <div className="flex items-center gap-2">
-              <Bell className="w-5 h-5 text-indigo-500" />
-              {l.title}
-              {unreadCount > 0 && (
-                <span className="px-2 py-0.5 text-xs font-bold bg-indigo-500 text-white rounded-full">
-                  {unreadCount}
-                </span>
-              )}
-            </div>
-          }
-          width="460px"
-          dir={locale === 'he' ? 'rtl' : 'ltr'}
-          footer={
-            notifications.length > 0 ? (
-              <div className="flex justify-end">
-                <button onClick={markAllRead}
-                  className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+        {/* Mobile — bottom sheet */}
+        {isMobile && (
+          <TrinityBottomDrawer isOpen={isOpen} onClose={() => setIsOpen(false)} title={l.title}>
+            {notifications.length > 0 && (
+              <div className="flex justify-end px-1 pb-2">
+                <button
+                  onClick={markAllRead}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                >
                   <CheckCheck className="w-3.5 h-3.5" />
                   {l.markRead}
                 </button>
               </div>
-            ) : null
-          }
-        >
-          {notificationList}
-        </Modal>
-      )}
+            )}
+            {notificationList}
+          </TrinityBottomDrawer>
+        )}
+
+        {/* Desktop — dropdown popup под иконкой */}
+        {!isMobile && isOpen && (
+          <>
+            {/* Backdrop для закрытия по клику вне */}
+            <div
+              className="fixed inset-0"
+              style={{ zIndex: 9998 }}
+              onClick={() => setIsOpen(false)}
+            />
+            {/* Сам dropdown */}
+            <div
+              className="fixed bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden"
+              style={{
+                zIndex: 9999,
+                width: '420px',
+                maxHeight: '80vh',
+                top: (() => {
+                  if (!bellRef.current) return '70px'
+                  const r = bellRef.current.getBoundingClientRect()
+                  return `${r.bottom + 8}px`
+                })(),
+                left: (() => {
+                  if (!bellRef.current) return '20px'
+                  const r = bellRef.current.getBoundingClientRect()
+                  // Прижимаем к левому краю иконки, но не выходим за экран
+                  const left = Math.min(r.left, window.innerWidth - 428)
+                  return `${Math.max(8, left)}px`
+                })(),
+              }}
+            >
+              {/* Заголовок */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-indigo-500" />
+                  <span className="font-semibold text-gray-900">{l.title}</span>
+                  {unreadCount > 0 && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-indigo-500 text-white rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Список уведомлений — скроллится */}
+              <div className="flex-1 overflow-y-auto p-3">
+                {notificationList}
+              </div>
+
+              {/* Footer */}
+              {notifications.length > 0 && (
+                <div className="px-4 py-3 border-t border-gray-100 flex justify-end">
+                  <button
+                    onClick={markAllRead}
+                    className="flex items-center gap-1.5 text-xs text-indigo-600 hover:underline"
+                  >
+                    <CheckCheck className="w-3.5 h-3.5" />
+                    {l.markRead}
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </>
   )
 }

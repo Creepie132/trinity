@@ -28,7 +28,7 @@ export function BaseModal({
   const pinned_ = isPinned(modalType)
   const containerRef = useRef<HTMLDivElement>(null)
   const handleRef = useRef<HTMLDivElement>(null)
-  const dragState = useRef({ dragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0 })
+  const dragState = useRef({ dragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, modalW: 0, modalH: 0 })
 
   // Восстанавливаем позицию если уже закреплена
   useEffect(() => {
@@ -47,6 +47,12 @@ export function BaseModal({
     const target = e.target as HTMLElement
     if (target.closest('button') || target.closest('input') || target.closest('a')) return
     const s = dragState.current
+    // Кешируем размеры один раз при начале drag — чтобы не вызывать getBoundingClientRect() в mousemove
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      s.modalW = rect.width
+      s.modalH = rect.height
+    }
     s.dragging = true
     s.startX = e.clientX - s.currentX
     s.startY = e.clientY - s.currentY
@@ -55,20 +61,27 @@ export function BaseModal({
     e.preventDefault()
   }, [])
 
+  const rafId = useRef<number | null>(null)
+
   const onMouseMove = useCallback((e: MouseEvent) => {
     const s = dragState.current
     if (!s.dragging || !containerRef.current) return
-    const rect = containerRef.current.getBoundingClientRect()
-    const dx = Math.min(window.innerWidth - rect.width / 2, Math.max(-(rect.width / 2), e.clientX - s.startX))
-    const dy = Math.min(window.innerHeight - 40, Math.max(-(rect.height / 2) + 40, e.clientY - s.startY))
-    s.currentX = dx; s.currentY = dy
-    containerRef.current.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`
+    // Отменяем предыдущий незавершённый кадр
+    if (rafId.current !== null) cancelAnimationFrame(rafId.current)
+    rafId.current = requestAnimationFrame(() => {
+      if (!containerRef.current) return
+      const dx = Math.min(window.innerWidth - s.modalW / 2, Math.max(-(s.modalW / 2), e.clientX - s.startX))
+      const dy = Math.min(window.innerHeight - 40, Math.max(-(s.modalH / 2) + 40, e.clientY - s.startY))
+      s.currentX = dx; s.currentY = dy
+      containerRef.current.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`
+    })
   }, [])
 
   const onMouseUp = useCallback(() => {
     const s = dragState.current
     if (!s.dragging) return
     s.dragging = false
+    if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null }
     document.body.style.userSelect = ''
     document.body.style.cursor = ''
     // Обновляем позицию в store если закреплено
@@ -192,7 +205,7 @@ export function BaseModal({
           pinned_ && 'ring-2 ring-orange-400/60',
           className
         )}
-        style={{ transition: 'box-shadow .2s' }}
+        style={{ transition: 'box-shadow .2s', willChange: 'transform' }}
         role="dialog"
         aria-modal={!pinned_}
       >

@@ -22,7 +22,9 @@ export function PaymentDetailsDrawer({
   isOwner,
   onRefunded,
 }: PaymentDetailsDrawerProps) {
-  const [refunding, setRefunding] = useState(false)
+  const [refunding, setRefunding]       = useState(false)
+  const [sendingReceipt, setSending]    = useState(false)
+  const [downloadingPdf, setDownloading] = useState(false)
 
   if (!isOpen || !payment) return null
 
@@ -32,9 +34,10 @@ export function PaymentDetailsDrawer({
     he: {
       amount: 'סכום', method: 'אמצעי תשלום', status: 'סטטוס', date: 'תאריך',
       tranzilaId: 'מזהה Tranzila', internalId: 'מזהה פנימי', type: 'סוג',
-      sendWhatsapp: 'שלח ב-WhatsApp', downloadPdf: 'הורד קבלה PDF',
+      sendWhatsapp: 'שלח קבלה ב-WhatsApp', downloadPdf: 'הורד קבלה PDF (Tranzila)',
       refund: 'ביצוע החזר', refundConfirm: 'אשר החזר?',
       refundSuccess: 'ההחזר בוצע', refundError: 'שגיאה בהחזר',
+      receiptSent: 'קבלה נשלחה!', receiptError: 'שגיאה בשליחת קבלה',
       paid: 'שולם', pending: 'ממתין', failed: 'נכשל', refunded: 'הוחזר', cancelled: 'בוטל',
       cash: 'מזומן', credit_card: 'כרטיס', bank_transfer: 'העברה', bit: 'ביט',
       service: 'שירות', product: 'מוצר', subscription: 'מנוי',
@@ -43,9 +46,10 @@ export function PaymentDetailsDrawer({
     ru: {
       amount: 'Сумма', method: 'Способ оплаты', status: 'Статус', date: 'Дата',
       tranzilaId: 'Tranzila ID', internalId: 'Внутренний ID', type: 'Тип',
-      sendWhatsapp: 'Отправить в WhatsApp', downloadPdf: 'Скачать PDF чек',
+      sendWhatsapp: 'Отправить квитанцию в WhatsApp', downloadPdf: 'Скачать PDF чек (Tranzila)',
       refund: 'Возврат (Refund)', refundConfirm: 'Подтвердить возврат?',
       refundSuccess: 'Возврат выполнен', refundError: 'Ошибка возврата',
+      receiptSent: 'Квитанция отправлена!', receiptError: 'Ошибка отправки квитанции',
       paid: 'Оплачено', pending: 'Ожидает', failed: 'Ошибка', refunded: 'Возвращено', cancelled: 'Отменён',
       cash: 'Наличные', credit_card: 'Карта', bank_transfer: 'Перевод', bit: 'Bit',
       service: 'Услуга', product: 'Товар', subscription: 'Абонемент',
@@ -86,18 +90,39 @@ export function PaymentDetailsDrawer({
     payment.metadata?.transaction_id ||
     null
 
-  const handleWhatsApp = () => {
+  // Creates receipt via Tranzila Invoices API and sends via WhatsApp (if phone available)
+  const handleWhatsApp = async () => {
     if (!clientPhone) { toast.error(l.noPhone); return }
-    const cleaned = clientPhone.replace(/\D/g, '')
-    const phone = cleaned.startsWith('0') ? cleaned.slice(1) : cleaned.startsWith('972') ? cleaned.slice(3) : cleaned
-    const msg = locale === 'he'
-      ? `שלום ${clientName}, אישור תשלום ₪${Number(payment.amount).toFixed(2)} התקבל. תודה!`
-      : `Здравствуйте, ${clientName}! Оплата ₪${Number(payment.amount).toFixed(2)} получена. Спасибо!`
-    window.open(`https://wa.me/972${phone}?text=${encodeURIComponent(msg)}`, '_blank')
+    setSending(true)
+    try {
+      const res = await fetch(`/api/payments/${payment.id}/send-receipt`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      toast.success(l.receiptSent)
+    } catch (e: any) {
+      toast.error(`${l.receiptError}: ${e.message}`)
+    } finally {
+      setSending(false)
+    }
   }
 
-  const handleDownloadPdf = () => {
-    window.open(`/api/payments/${payment.id}/receipt?locale=${locale}`, '_blank')
+  // Downloads the official Tranzila PDF receipt
+  const handleDownloadPdf = async () => {
+    setDownloading(true)
+    try {
+      // If no tranzila_document_id yet, create receipt first
+      if (!payment.tranzila_document_id) {
+        const res = await fetch(`/api/payments/${payment.id}/send-receipt`, { method: 'POST' })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Failed to create receipt')
+      }
+      // Open PDF in new tab
+      window.open(`/api/payments/${payment.id}/tranzila-pdf`, '_blank')
+    } catch (e: any) {
+      toast.error(`${l.receiptError}: ${e.message}`)
+    } finally {
+      setDownloading(false)
+    }
   }
 
   const handleRefund = async () => {
@@ -118,14 +143,12 @@ export function PaymentDetailsDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
         onClick={onClose}
         style={{ animation: 'pdFadeIn .2s ease-out both' }}
       />
 
-      {/* Modal */}
       <div
         className="relative z-10 bg-white dark:bg-gray-900 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
         style={{ animation: 'pdSlideUp .3s cubic-bezier(.2,.8,.3,1) both' }}
@@ -179,19 +202,34 @@ export function PaymentDetailsDrawer({
 
         {/* Actions */}
         <div className="px-5 py-4 flex flex-col gap-2">
-          {clientPhone && (
-            <button onClick={handleWhatsApp} className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm font-medium hover:bg-green-100 transition-colors active:scale-[.98]">
-              <MessageCircle size={16} />{l.sendWhatsapp}
+          {clientPhone && payment.status === 'completed' && (
+            <button
+              onClick={handleWhatsApp}
+              disabled={sendingReceipt}
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm font-medium hover:bg-green-100 transition-colors active:scale-[.98] disabled:opacity-50"
+            >
+              <MessageCircle size={16} className={sendingReceipt ? 'animate-spin' : ''} />
+              {sendingReceipt ? '...' : l.sendWhatsapp}
             </button>
           )}
           {payment.status === 'completed' && (
-            <button onClick={handleDownloadPdf} className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm font-medium hover:bg-blue-100 transition-colors active:scale-[.98]">
-              <FileText size={16} />{l.downloadPdf}
+            <button
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm font-medium hover:bg-blue-100 transition-colors active:scale-[.98] disabled:opacity-50"
+            >
+              <FileText size={16} className={downloadingPdf ? 'animate-spin' : ''} />
+              {downloadingPdf ? '...' : l.downloadPdf}
             </button>
           )}
           {isOwner && payment.status === 'completed' && (
-            <button onClick={handleRefund} disabled={refunding} className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-100 transition-colors active:scale-[.98] disabled:opacity-50">
-              <RotateCcw size={16} className={refunding ? 'animate-spin' : ''} />{l.refund}
+            <button
+              onClick={handleRefund}
+              disabled={refunding}
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-100 transition-colors active:scale-[.98] disabled:opacity-50"
+            >
+              <RotateCcw size={16} className={refunding ? 'animate-spin' : ''} />
+              {l.refund}
             </button>
           )}
         </div>

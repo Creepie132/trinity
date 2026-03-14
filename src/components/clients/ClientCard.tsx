@@ -38,7 +38,20 @@ export function ClientCard({
 
   useEffect(() => {
     const draftKey = `draft_sale_${client.id}`
+    // Initial check
     setHasDraft(!!localStorage.getItem(draftKey))
+
+    // Re-check when storage changes (e.g. draft saved/cleared in another modal)
+    const handleStorage = () => {
+      setHasDraft(!!localStorage.getItem(draftKey))
+    }
+    window.addEventListener('storage', handleStorage)
+    // Also poll on focus — catches same-tab updates (localStorage doesn't fire 'storage' in same tab)
+    window.addEventListener('focus', handleStorage)
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('focus', handleStorage)
+    }
   }, [client.id])
 
   const clientName = getClientName(client)
@@ -94,7 +107,16 @@ export function ClientCard({
           <div className="flex items-center gap-2">
             <h4 className="font-semibold text-base truncate">{clientName}</h4>
             {hasDraft && (
-              <ShoppingCart className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openModal('client-sale', { client, locale })
+                }}
+                className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 transition flex-shrink-0"
+                title={locale === 'he' ? 'יש עסקה שמורה' : 'Есть сохранённая сделка'}
+              >
+                <ShoppingCart className="w-4 h-4 text-amber-500" />
+              </button>
             )}
           </div>
           {client.phone && (

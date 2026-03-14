@@ -104,6 +104,58 @@ function KpiCard({ title, value, prefix = '', icon, gradient, iconBg, delay = 0,
   )
 }
 
+// ─── Activity Strip — компактная полоска активности за сегодня ───────────────
+function ActivityStrip({ visitsToday, visitsDone, tasksOpen, tasksUrgent, revenueToday, locale }: {
+  visitsToday: number; visitsDone: number; tasksOpen: number
+  tasksUrgent: number; revenueToday: number; locale: string
+}) {
+  const l = locale === 'he'
+  const items = [
+    {
+      icon: '📅',
+      value: visitsToday,
+      label: l ? 'ביקורים היום' : 'визитов сегодня',
+      sub: visitsToday > 0 ? `${visitsDone}/${visitsToday} ${l ? 'הושלמו' : 'завершено'}` : null,
+      color: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800',
+      valueColor: 'text-blue-700 dark:text-blue-300',
+    },
+    {
+      icon: '✅',
+      value: tasksOpen,
+      label: l ? 'משימות פתוחות' : 'задач открыто',
+      sub: tasksUrgent > 0 ? `${tasksUrgent} ${l ? 'דחוף' : 'срочных'}` : null,
+      color: tasksUrgent > 0 ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800' : 'bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-800',
+      valueColor: tasksUrgent > 0 ? 'text-red-700 dark:text-red-300' : 'text-purple-700 dark:text-purple-300',
+    },
+    {
+      icon: '💰',
+      value: revenueToday,
+      label: l ? 'הכנסות היום' : 'доход сегодня',
+      prefix: '₪',
+      sub: null,
+      color: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800',
+      valueColor: 'text-emerald-700 dark:text-emerald-300',
+    },
+  ]
+
+  return (
+    <div className="grid grid-cols-3 gap-3 mb-5">
+      {items.map((item, i) => (
+        <div key={i} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border ${item.color} transition-all`}>
+          <span className="text-lg">{item.icon}</span>
+          <div className="min-w-0">
+            <p className={`text-sm font-bold ${item.valueColor} leading-tight`}>
+              {item.prefix}{item.value.toLocaleString()}
+            </p>
+            <p className="text-xs text-gray-400 truncate">{item.label}</p>
+            {item.sub && <p className="text-xs font-medium text-gray-500">{item.sub}</p>}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Greeting ─────────────────────────────────────────────────────────────────
 function GreetingHeader({ ownerName, todayVisitsCount, locale }: {
   ownerName: string; todayVisitsCount: number; locale: string
@@ -250,9 +302,14 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
 
         const todayTasksFiltered = tasksArr.filter((t: any) => {
           if (t.status === 'completed' || t.status === 'cancelled') return false
-          if (!t.due_date) return true
-          const d = new Date(t.due_date)
-          return d >= todayStart && d < todayEnd
+          // Фильтруем системные/технические задачи без реальных due_date
+          if (!t.due_date && !t.title) return false
+          if (t.due_date) {
+            const d = new Date(t.due_date)
+            return d >= todayStart && d < todayEnd
+          }
+          // Показываем просроченные и без даты только если есть связь с клиентом
+          return !!t.client_id
         })
         setTodayTasks(todayTasksFiltered.slice(0, 5))
 
@@ -317,6 +374,16 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
         <GreetingHeader
           ownerName={onboardingData?.ownerName || ''}
           todayVisitsCount={todayVisits.length}
+          locale={locale}
+        />
+
+        {/* ── Activity Strip — быстрый обзор дня ── */}
+        <ActivityStrip
+          visitsToday={todayVisits.length}
+          visitsDone={todayVisits.filter(v => v.status === 'completed').length}
+          tasksOpen={todayTasks.length}
+          tasksUrgent={todayTasks.filter(t => t.priority === 'urgent').length}
+          revenueToday={revenueData[revenueData.length - 1]?.amount || 0}
           locale={locale}
         />
 

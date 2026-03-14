@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { WidgetCard } from '@/components/ui/WidgetCard'
-import { Calendar, Clock, CheckCircle2, Circle, Play } from 'lucide-react'
+import { Calendar, Clock, CheckCircle2, Circle, Play, ArrowRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 interface TodayVisitsWidgetProps {
   visits: any[]
@@ -19,13 +20,27 @@ const STATUS_CONFIG = {
 
 export function TodayVisitsWidget({ visits, locale, onVisitClick }: TodayVisitsWidgetProps) {
   const l = locale === 'he'
+  const router = useRouter()
   const [page, setPage] = useState(0)
+  const [nextVisit, setNextVisit] = useState<any>(null)
   const perPage = 4
   const totalPages = Math.ceil(visits.length / perPage)
   const current = visits.slice(page * perPage, (page + 1) * perPage)
 
   const activeCount = visits.filter(v => v.status === 'in_progress').length
   const doneCount = visits.filter(v => v.status === 'completed').length
+
+  // Загружаем следующий визит если сегодня пусто
+  useEffect(() => {
+    if (visits.length > 0) return
+    fetch('/api/visits?limit=1&upcoming=true')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const arr = Array.isArray(d) ? d : d?.data
+        if (arr?.length) setNextVisit(arr[0])
+      })
+      .catch(() => {})
+  }, [visits.length])
 
   return (
     <WidgetCard className="p-4">
@@ -60,11 +75,36 @@ export function TodayVisitsWidget({ visits, locale, onVisitClick }: TodayVisitsW
       </div>
 
       {visits.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 gap-2">
-          <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
-            <Calendar className="w-6 h-6 text-gray-300" />
+        <div className="flex flex-col items-center justify-center py-5 gap-2">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+            <Calendar className="w-5 h-5 text-blue-400" />
           </div>
           <p className="text-sm text-gray-400">{l ? 'אין ביקורים היום' : 'Нет визитов сегодня'}</p>
+          {nextVisit && (
+            <div className="w-full mt-1 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+              <p className="text-xs text-gray-400 mb-1">{l ? 'הביקור הבא' : 'Следующий визит'}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    {nextVisit.clients ? `${nextVisit.clients.first_name || ''} ${nextVisit.clients.last_name || ''}`.trim() : '—'}
+                  </p>
+                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                    <Clock className="w-3 h-3" />
+                    {new Date(nextVisit.scheduled_at).toLocaleDateString(l ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
+                    {' · '}
+                    {new Date(nextVisit.scheduled_at).toLocaleTimeString(l ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <ArrowRight className="w-4 h-4 text-gray-300" />
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => router.push('/visits')}
+            className="mt-1 text-xs text-blue-500 hover:text-blue-600 font-medium flex items-center gap-1"
+          >
+            {l ? 'לוח ביקורים' : 'Перейти к визитам'} <ArrowRight className="w-3 h-3" />
+          </button>
         </div>
       ) : (
         <>

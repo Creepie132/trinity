@@ -200,9 +200,9 @@ export function Modal({
           {children}
         </div>
 
-        {/* Footer */}
+        {/* Footer — flex item, всегда внизу модалки */}
         {footer && (
-          <div className="sticky bottom-0 p-5 pt-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-b-2xl">
+          <div className="flex-shrink-0 p-5 pt-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-b-2xl">
             {footer}
           </div>
         )}

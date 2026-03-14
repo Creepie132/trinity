@@ -168,7 +168,7 @@ function KiraBlock() {
 // ─── Главная правая панель ────────────────────────────────────────────────────
 export function RightPanel() {
   return (
-    <aside className="hidden xl:flex xl:flex-col xl:w-72 xl:flex-shrink-0 sticky top-0 h-screen overflow-y-auto border-l border-gray-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+    <aside className="hidden xl:flex xl:flex-col xl:w-72 xl:flex-shrink-0 sticky top-0 h-screen overflow-y-auto border-l border-gray-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80">
       <div className="flex flex-col h-full p-4 gap-4">
 
         {/* Заголовок */}

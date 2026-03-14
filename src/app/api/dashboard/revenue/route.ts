@@ -53,15 +53,18 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Format for chart
+    // Format for chart — нули оставляем как 0 для оси Y, но помечаем для tooltip
     const chartData = Object.entries(revenueByDay)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, amount]) => {
-        const d = new Date(date)
+        const d = new Date(date + 'T12:00:00Z') // T12 чтобы избежать timezone shift
+        const rounded = Math.round(parseFloat(String(amount)))
         return {
           date: date,
           day: dayNames[d.getDay()],
-          amount: Math.round(parseFloat(String(amount))),
+          amount: rounded,
+          // null для нулевых точек — Recharts не показывает tooltip на null
+          amountDisplay: rounded > 0 ? rounded : null,
         }
       })
 

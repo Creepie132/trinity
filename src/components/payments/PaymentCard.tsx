@@ -3,12 +3,22 @@
 import { useModalStore } from '@/store/useModalStore'
 
 // Inline SVG logos — no external dependencies
+// Generic credit card icon — used when exact card brand is unknown
+const CreditCardIcon = () => (
+  <svg width="22" height="16" viewBox="0 0 22 16" fill="none">
+    <rect x="1" y="1" width="20" height="14" rx="2" stroke="#6B7280" strokeWidth="1.5" fill="white"/>
+    <rect x="1" y="4" width="20" height="3" fill="#D1D5DB"/>
+    <rect x="3" y="10" width="5" height="2" rx="0.5" fill="#9CA3AF"/>
+    <rect x="10" y="10" width="3" height="2" rx="0.5" fill="#9CA3AF"/>
+  </svg>
+)
+
 const VisaLogo = () => (
-  <svg width="32" height="10" viewBox="0 0 32 10" fill="none">
-    <path d="M12 1L9.5 9H7.5L4.5 3C4.3 2.5 4.1 2.2 3.3 1.8V1H6.5C6.9 1 7.2 1.3 7.3 1.7L8.5 6.5L12 1Z" fill="#1A1F71"/>
-    <path d="M13.5 1L11.5 9H13.5L15.5 1H13.5Z" fill="#1A1F71"/>
-    <path d="M21 1C20.1 1 19.4 1.4 19 2L16 9H18.2L18.7 7.5H21.5L21.8 9H24L21.5 1H21ZM19.3 6L20.3 3L20.9 6H19.3Z" fill="#1A1F71"/>
-    <path d="M25.5 3.2C26.2 2.9 27 2.6 28 2.6C29.3 2.6 30.1 3.1 30.1 3.1L30.5 1.3C30.5 1.3 29.6 1 28.3 1C25.2 1 23 2.7 23 5C23 6.6 24.3 7.2 25.2 7.7C26 8.1 26.4 8.4 26.4 8.8C26.4 9.4 25.6 9.7 24.7 9.7C23.7 9.7 22.6 9.2 22.2 9L21.8 10.8C21.8 10.8 22.9 11.3 24.4 11.3C27.6 11.3 30 9.5 30 7.2C30 4.9 27.5 4.3 25.5 3.2Z" fill="#1A1F71"/>
+  <svg width="32" height="10" viewBox="0 0 38 12" fill="none">
+    <path d="M14 1L11 11H8.5L5 3.5C4.7 2.8 4.5 2.4 3.5 2V1H7.5C8 1 8.5 1.4 8.6 1.9L10.2 8.5L14 1Z" fill="#1A1F71"/>
+    <path d="M16 1L13.5 11H16L18.5 1H16Z" fill="#1A1F71"/>
+    <path d="M26 1C24.8 1 24 1.5 23.5 2.3L20 11H22.5L23 9.5H26.5L26.8 11H29L26.5 1H26ZM23.6 7.5L24.8 3.8L25.5 7.5H23.6Z" fill="#1A1F71"/>
+    <path d="M30 3.5C30.9 3.1 32 2.8 33.2 2.8C34.8 2.8 35.8 3.4 35.8 3.4L36.2 1.2C36.2 1.2 35.2 0.8 33.6 0.8C30 0.8 27.5 2.8 27.5 5.4C27.5 7.3 29 8 30.1 8.5C31.1 9 31.6 9.3 31.6 9.8C31.6 10.6 30.6 11 29.5 11C28.2 11 26.8 10.4 26.3 10.1L25.8 12.3C25.8 12.3 27.1 13 28.8 13C32.5 13 35.2 11 35.2 8.4C35.2 5.8 32.5 5 30 3.5Z" fill="#1A1F71"/>
   </svg>
 )
 
@@ -33,12 +43,13 @@ const CashIcon = () => (
 
 function getMethodIcon(method: string) {
   switch (method) {
-    case 'credit_card': case 'card': case 'visa': return { icon: <VisaLogo />, bg: 'bg-blue-50 dark:bg-blue-900/20' }
+    case 'visa': return { icon: <VisaLogo />, bg: 'bg-blue-50 dark:bg-blue-900/20' }
     case 'mastercard': return { icon: <MastercardLogo />, bg: 'bg-orange-50 dark:bg-orange-900/20' }
+    case 'credit_card': case 'card': return { icon: <CreditCardIcon />, bg: 'bg-gray-50 dark:bg-gray-800' }
     case 'bit': return { icon: <BitLogo />, bg: 'bg-amber-50 dark:bg-amber-900/20' }
     case 'apple_pay': return { icon: <ApplePayLogo />, bg: 'bg-gray-100 dark:bg-gray-800' }
     case 'cash': return { icon: <CashIcon />, bg: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 font-bold' }
-    default: return { icon: <CashIcon />, bg: 'bg-gray-100 dark:bg-gray-800 text-gray-500' }
+    default: return { icon: <CreditCardIcon />, bg: 'bg-gray-100 dark:bg-gray-800 text-gray-500' }
   }
 }
 

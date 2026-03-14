@@ -28,29 +28,34 @@ export function BaseModal({
   const pinned_ = isPinned(modalType)
   const containerRef = useRef<HTMLDivElement>(null)
   const handleRef = useRef<HTMLDivElement>(null)
-  // left/top — абсолютные пиксели на экране (не смещение от центра)
-  const dragState = useRef({ dragging: false, offX: 0, offY: 0, left: 0, top: 0 })
+  // x/y — текущее смещение translate3d; maxX/maxY — границы, кешируются при mousedown
+  const dragState = useRef({ dragging: false, startMouseX: 0, startMouseY: 0, startX: 0, startY: 0, x: 0, y: 0, maxX: 0, maxY: 0 })
 
-  // Центрируем модалку при открытии и восстанавливаем позицию если уже закреплена
-  useEffect(() => {
+  // Применяем translate3d — единственный способ двигать элемент без layout
+  const applyPos = useCallback((x: number, y: number) => {
     if (!containerRef.current) return
+    containerRef.current.style.transform = `translate3d(${x}px,${y}px,0)`
+    dragState.current.x = x
+    dragState.current.y = y
+  }, [])
+
+  // Центрируем/восстанавливаем позицию при открытии
+  useEffect(() => {
+    if (!open || !containerRef.current) return
     const el = containerRef.current
     const existing = pinned.find(p => p.id === modalType)
     if (existing) {
-      el.style.left = `${existing.x}px`
-      el.style.top  = `${existing.y}px`
-      dragState.current.left = existing.x
-      dragState.current.top  = existing.y
+      applyPos(existing.x, existing.y)
     } else {
-      // Центр экрана
-      const l = Math.round((window.innerWidth  - el.offsetWidth)  / 2)
-      const t = Math.round((window.innerHeight - el.offsetHeight) / 2)
-      el.style.left = `${l}px`
-      el.style.top  = `${t}px`
-      dragState.current.left = l
-      dragState.current.top  = t
+      // Сброс перед чтением размеров
+      el.style.transform = 'translate3d(0,0,0)'
+      const rect = el.getBoundingClientRect()
+      applyPos(
+        Math.round((window.innerWidth  - rect.width)  / 2),
+        Math.round((window.innerHeight - rect.height) / 2)
+      )
     }
-  }, [open, pinned_, modalType])
+  }, [open, pinned_, modalType, applyPos])
 
   // ── Drag ──────────────────────────────────────────────────────────────────
   const rafId = useRef<number | null>(null)
@@ -60,10 +65,17 @@ export function BaseModal({
     const target = e.target as HTMLElement
     if (target.closest('button') || target.closest('input') || target.closest('a')) return
     const s = dragState.current
-    s.dragging = true
-    // Запоминаем смещение курсора относительно левого верхнего угла модалки
-    s.offX = e.clientX - s.left
-    s.offY = e.clientY - s.top
+    // Кешируем всё при mousedown — ни одного чтения DOM в mousemove
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      s.maxX = window.innerWidth  - rect.width
+      s.maxY = window.innerHeight - 40
+    }
+    s.dragging   = true
+    s.startMouseX = e.clientX
+    s.startMouseY = e.clientY
+    s.startX     = s.x
+    s.startY     = s.y
     document.body.style.userSelect = 'none'
     document.body.style.cursor = 'grabbing'
     e.preventDefault()
@@ -71,19 +83,16 @@ export function BaseModal({
 
   const onMouseMove = useCallback((e: MouseEvent) => {
     const s = dragState.current
-    if (!s.dragging || !containerRef.current) return
+    if (!s.dragging) return
     if (rafId.current !== null) cancelAnimationFrame(rafId.current)
     rafId.current = requestAnimationFrame(() => {
-      if (!containerRef.current) return
-      const el = containerRef.current
-      const l = Math.min(window.innerWidth  - el.offsetWidth,  Math.max(0, e.clientX - s.offX))
-      const t = Math.min(window.innerHeight - 40,              Math.max(0, e.clientY - s.offY))
-      s.left = l; s.top = t
-      // Пишем left/top напрямую — никаких transform, никаких calc()
-      el.style.left = `${l}px`
-      el.style.top  = `${t}px`
+      const dx = e.clientX - s.startMouseX
+      const dy = e.clientY - s.startMouseY
+      const x = Math.min(s.maxX, Math.max(0, s.startX + dx))
+      const y = Math.min(s.maxY, Math.max(0, s.startY + dy))
+      applyPos(x, y)
     })
-  }, [])
+  }, [applyPos])
 
   const onMouseUp = useCallback(() => {
     const s = dragState.current
@@ -93,7 +102,7 @@ export function BaseModal({
     document.body.style.userSelect = ''
     document.body.style.cursor = ''
     if (isPinned(modalType)) {
-      usePinnedModals.getState().updatePosition(modalType, s.left, s.top)
+      usePinnedModals.getState().updatePosition(modalType, s.x, s.y)
     }
   }, [isPinned, modalType])
 
@@ -118,8 +127,8 @@ export function BaseModal({
       const canPin = pin({
         id: modalType,
         title: title || modalType,
-        x: dragState.current.left,
-        y: dragState.current.top,
+        x: dragState.current.x,
+        y: dragState.current.y,
         zIndex: 100,
       })
       if (!canPin) {
@@ -198,17 +207,17 @@ export function BaseModal({
         />
       )}
 
-      {/* Modal container — position:fixed с left/top напрямую, без flex-родителя */}
+      {/* Modal container — position:fixed, двигается через translate3d (GPU, без layout) */}
       <div
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalType)}
         className={cn(
-          'fixed w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl pointer-events-auto',
+          'fixed top-0 left-0 w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl pointer-events-auto',
           'max-h-[90vh] flex flex-col',
           pinned_ && 'ring-2 ring-orange-400/60',
           className
         )}
-        style={{ zIndex: zIdx, willChange: 'left, top', transition: 'box-shadow .2s' }}
+        style={{ zIndex: zIdx, willChange: 'transform', transition: 'box-shadow .2s' }}
         role="dialog"
         aria-modal={!pinned_}
       >

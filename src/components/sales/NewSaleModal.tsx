@@ -93,31 +93,44 @@ function ServicePicker({ t, language, onAdd, onBack }: {
     const name = language === 'he' ? s.name : (s.name_ru || s.name)
     return name.toLowerCase().includes(search.toLowerCase())
   })
+  const formatDur = (min: number) => {
+    if (!min) return ''
+    if (min >= 60) { const h = Math.floor(min / 60), m = min % 60; return m > 0 ? `${h}${language === 'he' ? 'ש׳' : 'ч'} ${m}${language === 'he' ? 'ד׳' : 'мин'}` : `${h}${language === 'he' ? 'ש׳' : 'ч'}` }
+    return `${min} ${t.min}`
+  }
   return (
     <div className="flex flex-col h-full">
-      <div className="px-5 pt-3 pb-2 space-y-2">
+      <div className="px-4 pt-3 pb-2 space-y-2">
         <button onClick={onBack} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
           <ChevronLeft size={13} />{t.back}
         </button>
-        <div className="relative">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t.searchService} className="ps-9 text-sm" autoFocus />
-        </div>
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+          placeholder={language === 'he' ? 'חיפוש...' : 'Поиск...'}
+          className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-200 dark:focus:ring-violet-800"
+          autoFocus />
       </div>
-      <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-1.5 mt-2">
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2 mt-1">
         {isLoading ? <p className="py-8 text-center text-sm text-gray-400">{language === 'he' ? 'טוען...' : 'Загрузка...'}</p>
           : filtered.length === 0 ? <p className="py-8 text-center text-sm text-gray-400">{t.noItems}</p>
           : filtered.map(s => {
             const name = language === 'he' ? s.name : (s.name_ru || s.name)
             return (
-              <button key={s.id} onClick={() => onAdd({ product_name: name, quantity: 1, unit_price: s.price || 0, type: 'service' })}
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-700 text-start
-                  hover:bg-violet-50 hover:border-violet-200 dark:hover:bg-violet-900/20 dark:hover:border-violet-800 transition-all group">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-violet-700 dark:group-hover:text-violet-300">{name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">₪{s.price || 0} · {s.duration_minutes} {t.min}</p>
+              <button key={s.id}
+                onClick={() => onAdd({ product_name: name, quantity: 1, unit_price: s.price || 0, type: 'service' })}
+                className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-violet-50 dark:hover:bg-violet-900/20 active:scale-[0.98] transition-all group text-start">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
+                    <Wrench className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-violet-700 dark:group-hover:text-violet-300 truncate">{name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{formatDur(s.duration_minutes)}</p>
+                  </div>
                 </div>
-                <Plus size={15} className="text-gray-300 group-hover:text-violet-500 flex-shrink-0" />
+                <div className="flex items-center gap-2 flex-shrink-0 ms-2">
+                  <span className="text-sm font-bold text-gray-600 dark:text-gray-300">₪{s.price || 0}</span>
+                  <Plus size={16} className="text-violet-400" />
+                </div>
               </button>
             )
           })}
@@ -137,7 +150,7 @@ function ProductPicker({ t, language, onAdd, onBack }: {
     queryFn: async () => {
       const sb = createSupabaseBrowserClient()
       const { data } = await sb.from('products')
-        .select('id,name,sell_price,stock_quantity')
+        .select('id,name,sell_price,stock_quantity,image_url,category')
         .eq('is_active', true).order('name')
       return data ?? []
     },
@@ -145,27 +158,37 @@ function ProductPicker({ t, language, onAdd, onBack }: {
   const filtered = products.filter((p: any) => !search || p.name.toLowerCase().includes(search.toLowerCase()))
   return (
     <div className="flex flex-col h-full">
-      <div className="px-5 pt-3 pb-2 space-y-2">
+      <div className="px-4 pt-3 pb-2 space-y-2">
         <button onClick={onBack} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
           <ChevronLeft size={13} />{t.back}
         </button>
-        <div className="relative">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t.searchProduct} className="ps-9 text-sm" autoFocus />
-        </div>
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+          placeholder={language === 'he' ? 'חיפוש...' : 'Поиск...'}
+          className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-200 dark:focus:ring-amber-800"
+          autoFocus />
       </div>
-      <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-1.5 mt-2">
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2 mt-1">
         {isLoading ? <p className="py-8 text-center text-sm text-gray-400">{language === 'he' ? 'טוען...' : 'Загрузка...'}</p>
           : filtered.length === 0 ? <p className="py-8 text-center text-sm text-gray-400">{t.noItems}</p>
           : filtered.map((p: any) => (
-            <button key={p.id} onClick={() => onAdd({ product_name: p.name, quantity: 1, unit_price: p.sell_price || 0, type: 'product' })}
-              className="w-full flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-700 text-start
-                hover:bg-emerald-50 hover:border-emerald-200 dark:hover:bg-emerald-900/20 dark:hover:border-emerald-800 transition-all group">
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-emerald-700 dark:group-hover:text-emerald-300">{p.name}</p>
-                <p className="text-xs text-gray-400 mt-0.5">₪{p.sell_price || 0} {t.perUnit}</p>
+            <button key={p.id}
+              onClick={() => onAdd({ product_name: p.name, quantity: 1, unit_price: p.sell_price || 0, type: 'product' })}
+              className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 active:scale-[0.98] transition-all group text-start">
+              <div className="flex items-center gap-3 min-w-0">
+                {p.image_url
+                  ? <img src={p.image_url} alt={p.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                  : <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                      <Package className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                    </div>}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 truncate">{p.name}</p>
+                  {p.category && <p className="text-xs text-gray-400">{p.category}</p>}
+                </div>
               </div>
-              <Plus size={15} className="text-gray-300 group-hover:text-emerald-500 flex-shrink-0" />
+              <div className="flex items-center gap-2 flex-shrink-0 ms-2">
+                <span className="text-sm font-bold text-gray-600 dark:text-gray-300">₪{p.sell_price || 0}</span>
+                <Plus size={16} className="text-amber-400" />
+              </div>
             </button>
           ))}
       </div>

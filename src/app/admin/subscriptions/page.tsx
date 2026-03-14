@@ -497,26 +497,19 @@ export default function AdminSubscriptionsPage() {
       const expiresAt = new Date(newExpiryDate)
       expiresAt.setHours(23, 59, 59, 999)
 
-      // Get plan configuration (try database first, then hardcoded)
-      let modules = {}
-      let clientLimit = null
+      // Modules always come from customModules (UI state).
+      // When a non-custom plan is selected, handlePlanChange pre-fills customModules
+      // from the plan template, so customModules is always the source of truth here.
+      const modules = customModules
 
-      if (selectedPlan === 'custom') {
-        modules = customModules
-        clientLimit = customClientLimit || null
-      } else {
-        // Try database plans first
+      let clientLimit: number | null = customClientLimit || null
+      if (selectedPlan !== 'custom') {
         const dbPlan = dbPlans.find((p) => p.key === selectedPlan)
         if (dbPlan) {
-          modules = dbPlan.modules || {}
-          clientLimit = dbPlan.client_limit
+          clientLimit = dbPlan.client_limit ?? null
         } else {
-          // Fallback to hardcoded plans
           const plan = getPlan(selectedPlan)
-          if (plan) {
-            modules = plan.modules
-            clientLimit = plan.client_limit
-          }
+          if (plan) clientLimit = plan.client_limit ?? null
         }
       }
 

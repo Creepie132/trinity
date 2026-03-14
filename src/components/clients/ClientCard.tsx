@@ -94,7 +94,7 @@ export function ClientCard({
   return (
     <div
       onClick={handleCardClick}
-      className="bg-card border rounded-xl p-4 mb-2 active:bg-muted/50 transition cursor-pointer"
+      className={`bg-card border rounded-xl p-4 mb-2 active:bg-muted/50 transition cursor-pointer ${hasDraft ? 'draft-glow' : ''}`}
     >
       <div className="flex items-center gap-3">
         <div

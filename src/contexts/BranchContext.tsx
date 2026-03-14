@@ -41,6 +41,8 @@ interface BranchContextType {
   currentBranchName: string | null
   /** True when activeOrgId === mainOrgId */
   isMainOrg: boolean
+  /** True when activeOrgId is confirmed from DB (not just cookie/localStorage) */
+  isOrgResolved: boolean
 }
 
 const BranchContext = createContext<BranchContextType | undefined>(undefined)
@@ -52,11 +54,20 @@ export function BranchProvider({ children }: { children: ReactNode }) {
 
   // При отсутствии cookie — сразу используем orgId как fallback чтобы не блокировать запросы
   const [activeOrgId, setActiveOrgId] = useState<string | null>(() => getInitialBranch() || null)
+  // isOrgResolved: true когда org подтверждён из auth или из БД (не просто cookie)
+  const [isOrgResolved, setIsOrgResolved] = useState<boolean>(() => {
+    // Если cookie уже есть — считаем что org достаточно известен для первого рендера
+    return typeof window !== 'undefined' && !!getInitialBranch()
+  })
 
   // Как только orgId из auth готов — сразу применяем его если нет cookie
   useEffect(() => {
     if (orgId && !activeOrgId) {
       setActiveOrgId(orgId)
+      setIsOrgResolved(true)
+    } else if (orgId && activeOrgId) {
+      // orgId из auth пришёл, activeOrgId уже был из cookie — всё готово
+      setIsOrgResolved(true)
     }
   }, [orgId, activeOrgId])
 
@@ -69,6 +80,7 @@ export function BranchProvider({ children }: { children: ReactNode }) {
         // Берём из БД или fallback на mainOrgId
         const resolvedId = dbOrgId || orgId
         setActiveOrgId(resolvedId)
+        setIsOrgResolved(true)
         localStorage.setItem(STORAGE_KEY, resolvedId)
         // ВАЖНО: ставим cookie — useOrganization читает её синхронно
         // Без этой cookie после свежего логина org = null и разделы исчезают
@@ -78,6 +90,7 @@ export function BranchProvider({ children }: { children: ReactNode }) {
         // Fallback при ошибке сети — хотя бы поставить mainOrgId
         document.cookie = `${COOKIE_KEY}=${orgId}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
         localStorage.setItem(STORAGE_KEY, orgId)
+        setIsOrgResolved(true)
       })
   }, [orgId])
 
@@ -117,6 +130,7 @@ export function BranchProvider({ children }: { children: ReactNode }) {
         switchBranch,
         currentBranchName,
         isMainOrg,
+        isOrgResolved,
       }}
     >
       {children}
@@ -136,6 +150,7 @@ export function useBranch(): BranchContextType {
       switchBranch: () => {},
       currentBranchName: null,
       isMainOrg: true,
+      isOrgResolved: false,
     }
   }
   return context

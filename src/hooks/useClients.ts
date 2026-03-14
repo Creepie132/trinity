@@ -7,7 +7,7 @@ import { useBranch } from '@/contexts/BranchContext'
 
 export function useClients(searchQuery?: string, page: number = 1, pageSize: number = 25) {
   const { orgId: authOrgId } = useAuth()
-  const { activeOrgId, mainOrgId } = useBranch()
+  const { activeOrgId, mainOrgId, isOrgResolved } = useBranch()
   // При impersonation: activeOrgId = impersonated org (из user_active_branch в DB)
   // mainOrgId = всегда твой собственный org (из AuthContext → org_users)
   // Clients shared across branches — берём mainOrgId, но если mainOrgId === authOrgId
@@ -17,7 +17,8 @@ export function useClients(searchQuery?: string, page: number = 1, pageSize: num
 
   return useQuery({
     queryKey: ['clients', orgId, searchQuery, page, pageSize],
-    enabled: !!orgId,
+    // Ждём пока org подтверждён (auth или DB) — иначе race condition при перезагрузке
+    enabled: !!orgId && isOrgResolved,
     placeholderData: keepPreviousData, // держим старые данные пока грузятся новые — нет мигания
     queryFn: async () => {
       console.log('Loading clients for org_id:', orgId)

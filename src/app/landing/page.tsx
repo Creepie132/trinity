@@ -1619,12 +1619,42 @@ export default function LandingPage() {
             {/* Section 3: Payment Methods (справа для RTL = слева визуально) */}
             <div>
               <h3 className="font-bold text-lg mb-4">{t.footer.payment.title}</h3>
-              <div className="flex flex-wrap gap-3 mb-4">
-                {/* Payment Icons */}
-                <div className="bg-white px-3 py-2 rounded text-xs font-bold text-gray-900">VISA</div>
-                <div className="bg-white px-3 py-2 rounded text-xs font-bold text-gray-900">Mastercard</div>
-                <div className="bg-white px-3 py-2 rounded text-xs font-bold text-gray-900">Diners</div>
-                <div className="bg-gradient-to-r from-blue-500 to-blue-700 px-3 py-2 rounded text-xs font-bold text-white">bit</div>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {/* Visa */}
+                <div className="bg-white px-3 py-2 rounded-md flex items-center justify-center" style={{ minWidth: 52, height: 32 }}>
+                  <svg width="38" height="12" viewBox="0 0 38 12" fill="none">
+                    <path d="M14 1L11 11H8.5L5 3.5C4.7 2.8 4.5 2.4 3.5 2V1H7.5C8 1 8.5 1.4 8.6 1.9L10.2 8.5L14 1Z" fill="#1A1F71"/>
+                    <path d="M16 1L13.5 11H16L18.5 1H16Z" fill="#1A1F71"/>
+                    <path d="M26 1C24.8 1 24 1.5 23.5 2.3L20 11H22.5L23 9.5H26.5L26.8 11H29L26.5 1H26ZM23.6 7.5L24.8 3.8L25.5 7.5H23.6Z" fill="#1A1F71"/>
+                    <path d="M30 3.5C30.9 3.1 32 2.8 33.2 2.8C34.8 2.8 35.8 3.4 35.8 3.4L36.2 1.2C36.2 1.2 35.2 0.8 33.6 0.8C30 0.8 27.5 2.8 27.5 5.4C27.5 7.3 29 8 30.1 8.5C31.1 9 31.6 9.3 31.6 9.8C31.6 10.6 30.6 11 29.5 11C28.2 11 26.8 10.4 26.3 10.1L25.8 12.3C25.8 12.3 27.1 13 28.8 13C32.5 13 35.2 11 35.2 8.4C35.2 5.8 32.5 5 30 3.5Z" fill="#1A1F71"/>
+                  </svg>
+                </div>
+                {/* Mastercard */}
+                <div className="bg-white px-2 py-1.5 rounded-md flex items-center justify-center" style={{ minWidth: 52, height: 32 }}>
+                  <svg width="34" height="22" viewBox="0 0 34 22">
+                    <circle cx="13" cy="11" r="10" fill="#EB001B"/>
+                    <circle cx="21" cy="11" r="10" fill="#F79E1B"/>
+                    <path d="M17 4.8A10 10 0 0 1 21 11a10 10 0 0 1-4 6.2A10 10 0 0 1 13 11a10 10 0 0 1 4-6.2Z" fill="#FF5F00"/>
+                  </svg>
+                </div>
+                {/* Bit */}
+                <div className="flex items-center justify-center px-3 py-1.5 rounded-md" style={{ minWidth: 52, height: 32, background: 'linear-gradient(135deg, #0057FF 0%, #00AAFF 100%)' }}>
+                  <span style={{ fontWeight: 800, fontSize: 13, color: '#fff', letterSpacing: '-0.5px', fontFamily: 'system-ui, sans-serif' }}>bit</span>
+                </div>
+                {/* Apple Pay */}
+                <div className="bg-black flex items-center justify-center px-3 py-1.5 rounded-md" style={{ minWidth: 64, height: 32 }}>
+                  <svg width="46" height="18" viewBox="0 0 46 18" fill="white">
+                    <text x="0" y="13" fontSize="11" fontWeight="500" fontFamily="-apple-system, system-ui, sans-serif">Apple Pay</text>
+                  </svg>
+                </div>
+                {/* Google Pay */}
+                <div className="bg-white border border-gray-200 flex items-center justify-center px-2 py-1.5 rounded-md" style={{ minWidth: 64, height: 32 }}>
+                  <svg width="46" height="18" viewBox="0 0 46 18" fill="none">
+                    <text x="0" y="13" fontSize="11" fontWeight="500" fontFamily="system-ui, sans-serif">
+                      <tspan fill="#4285F4">G</tspan><tspan fill="#EA4335">o</tspan><tspan fill="#FBBC05">o</tspan><tspan fill="#4285F4">g</tspan><tspan fill="#34A853">l</tspan><tspan fill="#EA4335">e</tspan><tspan fill="#5F6368"> Pay</tspan>
+                    </text>
+                  </svg>
+                </div>
               </div>
               <div className="flex items-center gap-2 text-green-400 text-sm">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

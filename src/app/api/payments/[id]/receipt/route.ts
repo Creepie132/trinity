@@ -10,12 +10,7 @@ export async function GET(
     const { id } = await params
     const supabase = await getSupabaseServerClient()
 
-    // Get current user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -39,15 +34,20 @@ export async function GET(
       return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
     }
 
-    // Get organization data for the current user
+    // Get org for current user — use org_users (correct table name)
     const { data: orgUser, error: orgUserError } = await supabase
-      .from('organization_users')
+      .from('org_users')
       .select('org_id')
       .eq('user_id', user.id)
       .single()
 
     if (orgUserError || !orgUser) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+    }
+
+    // Security: payment must belong to user's org
+    if (orgUser.org_id !== payment.org_id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const { data: organization, error: orgError } = await supabase
@@ -60,11 +60,9 @@ export async function GET(
       return NextResponse.json({ error: 'Organization data not found' }, { status: 404 })
     }
 
-    // Get locale from query params (default to 'he')
     const searchParams = request.nextUrl.searchParams
     const locale = (searchParams.get('locale') || 'he') as 'he' | 'ru'
 
-    // Generate HTML receipt
     const html = generateReceipt({
       payment: {
         id: payment.id,
@@ -82,11 +80,8 @@ export async function GET(
       locale,
     })
 
-    // Return HTML (can be printed from browser)
     return new Response(html, {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-      },
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
     })
   } catch (error: any) {
     console.error('Receipt generation error:', error)

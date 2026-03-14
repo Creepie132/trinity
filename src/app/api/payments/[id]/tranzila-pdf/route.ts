@@ -32,7 +32,7 @@ export async function GET(
     }
 
     const { data: orgUser } = await supabase
-      .from('organization_users')
+      .from('org_users')
       .select('org_id')
       .eq('user_id', user.id)
       .single()
@@ -42,9 +42,7 @@ export async function GET(
     }
 
     const pdfBuffer = await getReceiptPdf(payment.tranzila_document_id)
-
-    // Convert Node.js Buffer → Uint8Array so it's compatible with Web API BodyInit
-    const pdfBytes = new Uint8Array(pdfBuffer)
+    const pdfBytes  = new Uint8Array(pdfBuffer)
 
     return new Response(pdfBytes, {
       headers: {

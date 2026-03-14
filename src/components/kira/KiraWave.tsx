@@ -6,13 +6,14 @@ import * as THREE from 'three'
 export type KiraWaveState = 'idle' | 'sale' | 'client' | 'thinking' | 'payment' | 'visit' | 'cancel'
 
 const STATES: Record<KiraWaveState, { speed: number; amp: number; freq: number; color: [number,number,number]; bloom: number }> = {
-  idle:     { speed:0.45, amp:0.30, freq:5,  color:[0.10,0.40,1.00], bloom:1.5 },
-  sale:     { speed:2.50, amp:1.10, freq:12, color:[0.20,1.00,0.40], bloom:3.0 },
-  client:   { speed:1.80, amp:0.90, freq:8,  color:[1.00,0.60,0.10], bloom:2.5 },
-  thinking: { speed:0.60, amp:0.40, freq:3,  color:[0.40,0.60,1.00], bloom:1.8 },
-  payment:  { speed:3.00, amp:1.30, freq:15, color:[0.50,0.10,1.00], bloom:3.5 },
-  visit:    { speed:1.20, amp:0.70, freq:7,  color:[0.10,0.80,0.90], bloom:2.2 },
-  cancel:   { speed:0.30, amp:0.15, freq:2,  color:[0.20,0.30,0.50], bloom:0.8 },
+  // Все цвета подобраны под фон #2a2d35 — тёплые, контрастные, без синего в idle
+  idle:     { speed:0.45, amp:0.55, freq:5,  color:[0.85,0.85,0.95], bloom:1.5 }, // белёсо-серебристый, как hover
+  sale:     { speed:2.50, amp:1.10, freq:12, color:[0.30,1.00,0.55], bloom:3.0 }, // яркий зелёный
+  client:   { speed:1.80, amp:0.90, freq:8,  color:[1.00,0.70,0.20], bloom:2.5 }, // золотой янтарь
+  thinking: { speed:0.60, amp:0.50, freq:3,  color:[0.70,0.75,1.00], bloom:1.8 }, // мягкий лавандовый
+  payment:  { speed:3.00, amp:1.30, freq:15, color:[0.75,0.35,1.00], bloom:3.5 }, // фиолетовый взрыв
+  visit:    { speed:1.20, amp:0.70, freq:7,  color:[0.30,0.95,0.85], bloom:2.2 }, // мятный циан
+  cancel:   { speed:0.25, amp:0.20, freq:2,  color:[0.50,0.50,0.55], bloom:0.6 }, // тускло-серый
 }
 
 interface KiraWaveProps {
@@ -84,7 +85,7 @@ export function KiraWave({ state = 'idle', width = 240, height = 80 }: KiraWaveP
       // Центральная линия
       ctx.beginPath()
       ctx.moveTo(0, H/2); ctx.lineTo(W, H/2)
-      ctx.strokeStyle = `rgba(${Math.round(cr*60)},${Math.round(cg*80)},${Math.round(cb*120)},0.2)`
+      ctx.strokeStyle = `rgba(${Math.round(cr*80)},${Math.round(cg*80)},${Math.round(cb*100)},0.25)`
       ctx.lineWidth = 1; ctx.stroke()
 
       for (let i = 0; i < BAR_COUNT; i++) {

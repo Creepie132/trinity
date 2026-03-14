@@ -107,7 +107,7 @@ export function KiraWave({ state = 'idle', width = 240, height = 80 }: KiraWaveP
         }
 
         const h = Math.max(2, (Math.abs(combined) + hoverBoost) * (H * 0.42))
-        const bright = 0.3 + (h / (H * 0.42)) * 0.7
+        const bright = 0.45 + (h / (H * 0.42)) * 0.55
 
         // Hover glow
         const distMouse = isHovering ? Math.abs(norm - mouseNorm) : 1
@@ -116,7 +116,7 @@ export function KiraWave({ state = 'idle', width = 240, height = 80 }: KiraWaveP
         const r = Math.min(255, Math.round((cr * bright + mouseGlow) * 255))
         const g = Math.min(255, Math.round((cg * bright + mouseGlow * 0.9) * 255))
         const b = Math.min(255, Math.round((cb * bright + mouseGlow * 0.4) * 255))
-        const a = Math.min(1, 0.45 + bright * 0.55 + mouseGlow)
+        const a = Math.min(1, 0.65 + bright * 0.35 + mouseGlow)
 
         // Bloom — размытое свечение
         const grd = ctx.createLinearGradient(x, H/2 - h*1.5, x, H/2 + h*1.5)

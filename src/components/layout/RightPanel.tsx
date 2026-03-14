@@ -120,10 +120,10 @@ function KiraBlock() {
   }, [])
 
   return (
-    <div className="rounded-2xl overflow-hidden shadow-md" style={{ background: '#1e2025' }}>
+    <div className="rounded-2xl overflow-hidden shadow-md" style={{ background: '#2a2d35' }}>
       {/* Волна */}
       <div className="relative flex items-center justify-center px-2 pt-5 pb-3"
-        style={{ background: '#1e2025' }}>
+        style={{ background: '#2a2d35' }}>
         <div className="absolute inset-0 opacity-20" style={{
           background: 'radial-gradient(circle at 50% 80%, rgba(40,80,255,0.3) 0%, transparent 70%)'
         }} />

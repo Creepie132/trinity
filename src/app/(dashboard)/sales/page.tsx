@@ -17,6 +17,7 @@ import { FileText } from 'lucide-react'
 import { format } from 'date-fns'
 import NewSaleModal from '@/components/sales/NewSaleModal'
 import ImportSalesModal from '@/components/sales/ImportSalesModal'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
 const T = {
@@ -65,24 +66,76 @@ interface DraftSale {
 
 function useDraftSales(): DraftSale[] {
   const [drafts, setDrafts] = useState<DraftSale[]>([])
+
   useEffect(() => {
-    const result: DraftSale[] = []
+    // 1. Собираем черновики из localStorage
+    const raw: { clientId: string; clientName: string; total: number; itemCount: number; savedAt?: string; needsFetch: boolean }[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
       if (!key?.startsWith('draft_sale_')) continue
       const clientId = key.replace('draft_sale_', '')
       try {
-        const raw = localStorage.getItem(key)
-        if (!raw) continue
-        const parsed = JSON.parse(raw)
-        const cart: { quantity: number; price: number; product?: { name?: string } }[] = parsed.cart || []
+        const stored = localStorage.getItem(key)
+        if (!stored) continue
+        const parsed = JSON.parse(stored)
+        const cart: { quantity: number; price: number }[] = parsed.cart || []
         const total = cart.reduce((s, item) => s + item.price * item.quantity, 0)
-        const clientLabel = parsed.clientName || clientId
-        result.push({ clientId, clientName: clientLabel, total, itemCount: cart.length, savedAt: parsed.savedAt })
+        const clientName = parsed.clientName || ''
+        raw.push({ clientId, clientName, total, itemCount: cart.length, savedAt: parsed.savedAt, needsFetch: !clientName })
       } catch { /* skip */ }
     }
-    setDrafts(result)
+
+    if (raw.length === 0) { setDrafts([]); return }
+
+    // 2. Для черновиков без имени — подтягиваем из API
+    const toFetch = raw.filter(d => d.needsFetch)
+    if (toFetch.length === 0) {
+      setDrafts(raw.map(({ clientId, clientName, total, itemCount, savedAt }) => ({ clientId, clientName, total, itemCount, savedAt })))
+      return
+    }
+
+    Promise.all(
+      toFetch.map(async d => {
+        try {
+          const { data } = await createSupabaseBrowserClient()
+            .from('clients')
+            .select('id,first_name,last_name')
+            .eq('id', d.clientId)
+            .maybeSingle()
+          return data
+        } catch { return null }
+      })
+    ).then(results => {
+      const nameMap: Record<string, string> = {}
+      toFetch.forEach((d, idx) => {
+        const data = results[idx]
+        if (data) {
+          const first = data.first_name || ''
+          const last = data.last_name || ''
+          nameMap[d.clientId] = `${first} ${last}`.trim() || d.clientId
+          // Обновляем localStorage — чтобы в следующий раз не fetching
+          try {
+            const key = `draft_sale_${d.clientId}`
+            const stored = localStorage.getItem(key)
+            if (stored) {
+              const parsed = JSON.parse(stored)
+              localStorage.setItem(key, JSON.stringify({ ...parsed, clientName: nameMap[d.clientId] }))
+            }
+          } catch { /* skip */ }
+        } else {
+          nameMap[d.clientId] = d.clientId
+        }
+      })
+      setDrafts(raw.map(({ clientId, clientName, total, itemCount, savedAt }) => ({
+        clientId,
+        clientName: nameMap[clientId] || clientName || clientId,
+        total,
+        itemCount,
+        savedAt,
+      })))
+    })
   }, [])
+
   return drafts
 }
 

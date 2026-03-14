@@ -18,40 +18,48 @@ export async function GET(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - days + 1)
-    startDate.setHours(0, 0, 0, 0)
+    // Israel timezone
+    const toIsraelDateKey = (date: Date): string =>
+      date.toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' })
+
+    const todayKey = toIsraelDateKey(new Date())
+    const startMs = new Date(todayKey + 'T00:00:00+03:00').getTime() - (days - 1) * 86400000
+    const startDate = new Date(startMs)
+
+    // Fetch with 3h buffer for timezone safety
+    const fetchFrom = new Date(startDate.getTime() - 3 * 3600000)
 
     // Fetch visits for the period
     const { data: visits } = await supabase
       .from('visits')
       .select('scheduled_at')
       .eq('org_id', org_id)
-      .gte('scheduled_at', startDate.toISOString())
+      .gte('scheduled_at', fetchFrom.toISOString())
       .order('scheduled_at')
 
     // Group by day
     const visitsByDay: Record<string, number> = {}
 
-    // Initialize all days with 0
+    // Initialize all days with 0 using Israel dates
     for (let i = 0; i < days; i++) {
-      const date = new Date(startDate)
-      date.setDate(date.getDate() + i)
-      const dayKey = date.toISOString().split('T')[0]
+      const d = new Date(startDate.getTime() + i * 86400000)
+      const dayKey = toIsraelDateKey(d)
       visitsByDay[dayKey] = 0
     }
 
-    // Count visits by day
+    // Count visits by day — group by Israel local date
     visits?.forEach((visit) => {
-      const dayKey = visit.scheduled_at.split('T')[0]
-      visitsByDay[dayKey] = (visitsByDay[dayKey] || 0) + 1
+      const dayKey = toIsraelDateKey(new Date(visit.scheduled_at))
+      if (visitsByDay[dayKey] !== undefined) {
+        visitsByDay[dayKey] = (visitsByDay[dayKey] || 0) + 1
+      }
     })
 
     // Format for chart
     const chartData = Object.entries(visitsByDay)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, count]) => {
-        const d = new Date(date)
+        const d = new Date(date + 'T12:00:00+03:00')
         return {
           date: date,
           dateLabel: `${d.getDate()}/${d.getMonth() + 1}`,

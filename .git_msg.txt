@@ -1,1 +1,0 @@
-fix: recalculate visit duration from visit_services sum not accumulation

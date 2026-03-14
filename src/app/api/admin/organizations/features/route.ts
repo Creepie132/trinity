@@ -195,10 +195,14 @@ export async function PUT(request: NextRequest) {
     })
 
     // Merge features (preserve existing fields)
+    // modules: deep merge — keep all existing keys, new values override
     const mergedFeatures = {
       ...currentOrg?.features,
       ...features,
-      modules: features?.modules || currentOrg?.features?.modules,
+      modules: {
+        ...(currentOrg?.features?.modules || {}),
+        ...(features?.modules || {}),
+      },
     }
 
     // Build update data

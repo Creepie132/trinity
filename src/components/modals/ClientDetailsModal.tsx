@@ -203,79 +203,79 @@ export function ClientDetailsModal() {
       >
         {/* ШАПКА с аватаром */}
         <div className="flex items-center gap-4 mb-6">
-          {/* Avatar 56px */}
-          <div
-            className={`${avatarColor} w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}
-          >
+          <div className={`${avatarColor} w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0 shadow-lg`}>
             {initials}
           </div>
-
-          {/* Name + Status */}
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold truncate">{clientName}</h2>
-            <div className="inline-flex items-center gap-2 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium mt-1">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+            <h2 className="text-xl font-bold truncate text-gray-900 dark:text-gray-100">{clientName}</h2>
+            {client.phone && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 font-medium">{client.phone}</p>
+            )}
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-medium mt-1.5">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
               {text.active}
             </div>
           </div>
         </div>
 
-        {/* Секция "Информация" */}
-        <div className="mb-4">
-          <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 tracking-wider uppercase">
-            {text.information}
-          </h3>
-          
-          <div className="space-y-2">
-            {/* Email */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Email</span>
-              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                {client.email || '—'}
-              </span>
-            </div>
-
-            {/* Визитов */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-              <span className="text-sm text-gray-600 dark:text-gray-400">{text.visits}</span>
-              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                {visitsCount}
-              </span>
-            </div>
-
-            {/* Всего оплачено */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-              <span className="text-sm text-gray-600 dark:text-gray-400">{text.totalPaid}</span>
-              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                {totalPaid} ₪
-              </span>
-            </div>
+        {/* Статистика — два числа рядом */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl text-center">
+            <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{visitsCount}</p>
+            <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">{text.visits}</p>
+          </div>
+          <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl text-center">
+            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">₪{Number(totalPaid).toLocaleString()}</p>
+            <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-0.5">{text.totalPaid}</p>
           </div>
         </div>
 
-        {/* Секция "Заметки" */}
-        {(client.notes || true) && (
-          <div className="mb-4">
-            <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 tracking-wider uppercase">
+        {/* Секция "Информация" */}
+        <div className="mb-4">
+          <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-2 tracking-widest uppercase">
+            {text.information}
+          </h3>
+          <div className="space-y-1.5">
+            {client.email && (
+              <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 dark:bg-gray-800/60 rounded-xl">
+                <span className="text-xs text-gray-400">Email</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate ml-4">{client.email}</span>
+              </div>
+            )}
+            {client.address && (
+              <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 dark:bg-gray-800/60 rounded-xl">
+                <span className="text-xs text-gray-400">{locale === 'he' ? 'כתובת' : 'Адрес'}</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate ml-4">{client.address}</span>
+              </div>
+            )}
+            {client.date_of_birth && (
+              <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 dark:bg-gray-800/60 rounded-xl">
+                <span className="text-xs text-gray-400">{locale === 'he' ? 'יום הולדת' : 'День рождения'}</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  {new Date(client.date_of_birth).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU')}
+                </span>
+              </div>
+            )}
+            {client.created_at && (
+              <div className="flex items-center justify-between px-3 py-2.5 bg-gray-50 dark:bg-gray-800/60 rounded-xl">
+                <span className="text-xs text-gray-400">{text.createdAt}</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  {new Date(client.created_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU')}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Заметки — только если есть */}
+        {client.notes && (
+          <div>
+            <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-2 tracking-widest uppercase">
               {text.notes}
             </h3>
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-              <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
-                {client.notes || '—'}
-              </p>
+            <div className="px-3 py-2.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-xl">
+              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{client.notes}</p>
             </div>
-          </div>
-        )}
-
-        {/* Дата создания */}
-        {client.created_at && (
-          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
-            <span className="text-sm text-gray-600 dark:text-gray-400">{text.createdAt}</span>
-            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-              {new Date(client.created_at).toLocaleDateString(
-                locale === 'he' ? 'he-IL' : locale === 'ru' ? 'ru-RU' : 'en-US'
-              )}
-            </span>
           </div>
         )}
       </Modal>

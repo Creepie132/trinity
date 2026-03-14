@@ -9,7 +9,7 @@ import { useAddClient, useClients } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
-import { RefreshCw, Loader2 } from 'lucide-react'
+import { RefreshCw, Loader2, User } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
 interface AddClientDialogProps {
@@ -92,8 +92,8 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
     <Modal
       open={open}
       onClose={() => onOpenChange(false)}
-      title={t('clients.addNew')}
-      width="520px"
+      title={language === 'he' ? 'לקוח חדש' : 'Новый клиент'}
+      width="500px"
       footer={
         <div className="flex gap-2 justify-end">
           <button
@@ -141,77 +141,104 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        {/* Аватар с живыми инициалами */}
+        <div className="flex justify-center mb-2">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shadow-lg">
+            {formData.first_name || formData.last_name ? (
+              <span className="text-white font-bold text-xl">
+                {(formData.first_name?.[0] || '').toUpperCase()}{(formData.last_name?.[0] || '').toUpperCase()}
+              </span>
+            ) : (
+              <User className="w-7 h-7 text-white/70" />
+            )}
+          </div>
+        </div>
+
+        {/* Имя и фамилия */}
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="first_name">{t('clients.firstName')} *</Label>
+            <Label htmlFor="first_name" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              {t('clients.firstName')} *
+            </Label>
             <Input
               id="first_name"
               value={formData.first_name}
               onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+              className="mt-1"
               required
+              autoFocus
             />
           </div>
-
           <div>
-            <Label htmlFor="last_name">{t('clients.lastName')} *</Label>
+            <Label htmlFor="last_name" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              {t('clients.lastName')} *
+            </Label>
             <Input
               id="last_name"
               value={formData.last_name}
               onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+              className="mt-1"
               required
             />
           </div>
         </div>
 
+        {/* Телефон — главное поле */}
         <div>
-          <Label htmlFor="phone">{t('clients.phone')} *</Label>
+          <Label htmlFor="phone" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+            {t('clients.phone')} *
+          </Label>
           <Input
             id="phone"
             type="tel"
-            pattern="[0-9+\-() ]*"
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             placeholder="+972-50-1234567"
+            className="mt-1 text-base"
             required
           />
         </div>
 
-        <div>
-          <Label htmlFor="email">{t('clients.email')}</Label>
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          />
+        {/* Email и Адрес */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="email" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              {t('clients.email')}
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="date_of_birth" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              {t('clients.birthDate')}
+            </Label>
+            <Input
+              id="date_of_birth"
+              type="date"
+              value={formData.date_of_birth}
+              onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+              className="mt-1"
+            />
+          </div>
         </div>
 
+        {/* Заметки */}
         <div>
-          <Label htmlFor="address">{t('clients.address')}</Label>
-          <Input
-            id="address"
-            value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="date_of_birth">{t('clients.birthDate')}</Label>
-          <Input
-            id="date_of_birth"
-            type="date"
-            value={formData.date_of_birth}
-            onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="notes">{t('clients.notes')}</Label>
+          <Label htmlFor="notes" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+            {t('clients.notes')}
+          </Label>
           <Textarea
             id="notes"
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            rows={3}
+            rows={2}
+            className="mt-1 resize-none"
+            placeholder={language === 'he' ? 'הערות על הלקוח...' : 'Заметки о клиенте...'}
           />
         </div>
 

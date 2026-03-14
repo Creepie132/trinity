@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Sparkles, Megaphone, Bell, ExternalLink, ChevronRight } from 'lucide-react'
+import { Sparkles, Megaphone, Bell, ExternalLink } from 'lucide-react'
+import dynamic from 'next/dynamic'
+const KiraFace = dynamic(() => import('@/components/kira/KiraFace').then(m => ({ default: m.KiraFace })), { ssr: false })
 
 // ─── Типы ────────────────────────────────────────────────────────────────────
 interface Ad { id: string; title: string; description: string; image_url: string | null; link_url: string | null; button_text: string | null }
@@ -103,40 +105,43 @@ function AdBlock() {
   )
 }
 
-// ─── Слот Киры ────────────────────────────────────────────────────────────────
+// ─── Слот Киры с процедурным лицом ───────────────────────────────────────────
 function KiraBlock() {
-  const [dots, setDots] = useState([0, 0, 0])
+  const [mood, setMood] = useState<'idle' | 'happy' | 'thinking' | 'speaking'>('idle')
+
+  // Случайно меняем настроение
   useEffect(() => {
+    const moods: Array<'idle' | 'happy' | 'thinking'> = ['idle', 'idle', 'happy', 'thinking', 'idle']
+    let i = 0
     const t = setInterval(() => {
-      setDots(() => [Math.random(), Math.random(), Math.random()])
-    }, 1200)
+      i = (i + 1) % moods.length
+      setMood(moods[i])
+    }, 5000)
     return () => clearInterval(t)
   }, [])
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-4 text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/40">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-          <Sparkles className="w-4 h-4" />
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-white/80">AI Ассистент</p>
-          <p className="text-sm font-semibold">Кира</p>
+    <div className="rounded-2xl overflow-hidden border border-indigo-100 dark:border-indigo-900/40 bg-gradient-to-b from-slate-900 to-indigo-950 shadow-lg">
+      {/* Canvas лица */}
+      <div className="relative flex items-center justify-center py-3 bg-gradient-to-b from-slate-900 to-indigo-950/80">
+        <KiraFace size={160} mood={mood} />
+        {/* Статус индикатор */}
+        <div className="absolute bottom-3 right-4 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+          <span className="text-xs text-white/40">
+            {mood === 'thinking' ? 'Думает...' : mood === 'happy' ? 'Рада видеть вас!' : 'Скоро'}
+          </span>
         </div>
       </div>
-      <p className="text-xs text-white/70 leading-relaxed mb-3">
-        Личный ИИ-помощник для вашего бизнеса. Отвечает на вопросы, помогает с клиентами, анализирует данные.
-      </p>
-      <div className="flex gap-1.5 mb-3">
-        {dots.map((v, i) => (
-          <div key={i} className="flex-1 h-1 rounded-full bg-white/30 overflow-hidden">
-            <div className="h-full bg-white/70 rounded-full animate-pulse" style={{ width: `${30 + v * 60}%`, animationDelay: `${i * 300}ms` }} />
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-1 text-xs font-medium text-white/60">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-        Скоро
+      {/* Подпись */}
+      <div className="px-4 py-3 bg-indigo-950/50">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+          <span className="text-xs font-bold text-white/80 uppercase tracking-wide">AI Ассистент Кира</span>
+        </div>
+        <p className="text-xs text-white/40 leading-relaxed">
+          Личный ИИ-помощник для вашего бизнеса
+        </p>
       </div>
     </div>
   )

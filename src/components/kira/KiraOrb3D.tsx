@@ -1,212 +1,185 @@
 'use client'
 
-import { useRef, useMemo, useEffect } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useRef, useEffect } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
-// ── GLSL шейдеры ─────────────────────────────────────────────────────────────
 const vertexShader = `
-  varying vec3 vNormal;
-  varying vec3 vPosition;
-  uniform float uTime;
+  varying vec3 vN; varying vec3 vP;
+  uniform float uTime; uniform int uState; uniform float uBlend;
 
-  vec3 mod289(vec3 x){return x-floor(x*(1./289.))*289.;}
-  vec4 mod289(vec4 x){return x-floor(x*(1./289.))*289.;}
-  vec4 permute(vec4 x){return mod289(((x*34.)+1.)*x);}
-  float snoise(vec3 v){
-    const vec2 C=vec2(1./6.,1./3.);
-    vec3 i=floor(v+dot(v,C.yyy));
-    vec3 x0=v-i+dot(i,C.xxx);
-    vec3 g=step(x0.yzx,x0.xyz);vec3 l=1.-g;
-    vec3 i1=min(g.xyz,l.zxy);vec3 i2=max(g.xyz,l.zxy);
-    vec3 x1=x0-i1+C.xxx;vec3 x2=x0-i2+C.yyy;vec3 x3=x0-.5;
-    i=mod289(i);
-    vec4 p=permute(permute(permute(
-      i.z+vec4(0.,i1.z,i2.z,1.))+
-      i.y+vec4(0.,i1.y,i2.y,1.))+
-      i.x+vec4(0.,i1.x,i2.x,1.));
-    vec3 ns=0.142857142857*p.xyz-vec3(0.,0.,1.);
-    vec4 j=p-49.*floor(p*ns.z*ns.z);
-    vec4 x_=floor(j*ns.z);
-    vec4 x2_=fract(x_*ns.x)-.5;
-    vec4 y2_=fract(floor(j*x_)*ns.x)-.5;
-    vec4 h=.5-abs(x2_)-abs(y2_);
-    vec4 b0=vec4(x2_.xy,y2_.xy);vec4 b1=vec4(x2_.zw,y2_.zw);
-    vec4 s0=floor(b0)*2.+1.;vec4 s1=floor(b1)*2.+1.;vec4 sh=-step(h,vec4(0.));
-    vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
-    vec3 p0=vec3(a0.xy,h.x);vec3 p1=vec3(a0.zw,h.y);
-    vec3 p2=vec3(a1.xy,h.z);vec3 p3=vec3(a1.zw,h.w);
-    vec4 norm=1.79284291400159-.85373472095314*vec4(
-      dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3));
-    p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;
-    vec4 m=max(.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);
-    m=m*m;return 42.*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
-  }
+  float hash(vec3 p){p=fract(p*0.3183099+0.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+  float noise(vec3 p){
+    vec3 i=floor(p);vec3 f=fract(p);vec3 u=f*f*(3.-2.*f);
+    return mix(
+      mix(mix(hash(i),hash(i+vec3(1,0,0)),u.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),u.x),u.y),
+      mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),u.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),u.x),u.y),
+      u.z);}
+  float smoothstep_(float a,float b,float x){float t=clamp((x-a)/(b-a),0.,1.);return t*t*(3.-2.*t);}
 
   void main(){
-    vNormal=normalize(normalMatrix*normal);
-    float noise=snoise(position*1.5+vec3(uTime*0.3));
-    vec3 displaced=position+normal*noise*0.08;
-    vPosition=(modelViewMatrix*vec4(displaced,1.0)).xyz;
-    gl_Position=projectionMatrix*modelViewMatrix*vec4(displaced,1.0);
+    vN=normalize(normalMatrix*normal);
+    vec3 pos=position; float t=uTime; float disp=0.;
+
+    if(uState==0){
+      disp=(sin(pos.y*5.+t*1.4)*.022+sin(pos.x*4.-t*1.1)*.018+noise(pos*2.+t*.3)*.04);
+    } else if(uState==1){
+      float arcDist=abs(length(pos.xy-vec2(0.,.35))-.38);
+      float qArc=exp(-arcDist*arcDist*40.)*.22;
+      float dotD=length(pos.xy-vec2(0.,-.62));
+      float qDot=exp(-dotD*dotD*55.)*.25;
+      float tailD=length(pos.xy-vec2(0.,0.));
+      float qTail=exp(-tailD*tailD*28.)*.18*smoothstep_(.2,-.1,pos.y);
+      float qm=(qArc+qDot+qTail)*uBlend;
+      float bg=noise(pos*2.+t*.3)*.025*(1.-uBlend);
+      disp=qm+bg+sin(t*2.5)*.015;
+    } else if(uState==2){
+      float r=length(pos);
+      float burst=sin(r*14.-t*7.)*exp(-r*.3)*.14;
+      float spin=sin(atan(pos.y,pos.x)*8.+t*5.)*.07;
+      disp=(burst+spin+sin(t*14.)*.025)*uBlend+noise(pos*2.+t*.3)*.02;
+    } else if(uState==3){
+      float mouthD=abs(length(pos.xy-vec2(0.,-.05))-.4);
+      float mouth=exp(-mouthD*mouthD*22.)*smoothstep_(.1,-.5,pos.y)*.18;
+      float eyeL=length(pos.xy-vec2(-.3,.22));
+      float eyeR=length(pos.xy-vec2(.3,.22));
+      float eyes=(exp(-eyeL*eyeL*35.)+exp(-eyeR*eyeR*35.))*.1;
+      float tearOff=(sin(t*1.2)*.5+.5)*.3;
+      float tearL=length(pos.xy-vec2(-.3,-(0.+tearOff)));
+      float tearR=length(pos.xy-vec2(.3,-(0.+tearOff)));
+      float tears=(exp(-tearL*tearL*60.)+exp(-tearR*tearR*60.))*.14;
+      disp=(-mouth-eyes+tears)*uBlend+sin(pos.y*3.+t*.5)*.025*(1.-uBlend*.6);
+    } else {
+      float r=length(pos);
+      float amp=.5+.5*sin(t*9.);
+      disp=(sin(r*12.-t*4.5)*.08+sin(r*7.-t*3.)*.05)*amp+noise(pos*2.5+t*.5)*.02;
+    }
+
+    vec3 displaced=pos+normal*disp;
+    vP=(modelViewMatrix*vec4(displaced,1.)).xyz;
+    gl_Position=projectionMatrix*modelViewMatrix*vec4(displaced,1.);
   }
 `
 
 const fragmentShader = `
-  varying vec3 vNormal;
-  varying vec3 vPosition;
-  uniform float uTime;
-
+  varying vec3 vN; varying vec3 vP;
+  uniform float uTime; uniform int uState; uniform float uBlend;
   void main(){
-    vec3 N=normalize(vNormal);
-    vec3 V=normalize(-vPosition);
-    vec3 L=normalize(vec3(2.,3.,3.)-vPosition);
+    vec3 N=normalize(vN);vec3 V=normalize(-vP);
+    vec3 L=normalize(vec3(2.,3.,3.)-vP);
     float diff=max(dot(N,L),0.);
     float rim=pow(1.-max(dot(V,N),0.),2.5);
-    float sss=pow(max(dot(-L,V),0.),3.)*.6;
-
-    vec3 base=mix(vec3(0.98,0.82,0.65),vec3(0.75,0.45,0.30),1.-diff*.7-.3);
-    vec3 rimC=vec3(1.,.92,.75);
-    vec3 sssC=vec3(1.,.55,.35);
-
-    vec3 col=base+rimC*rim*.6+sssC*sss;
     vec3 H=normalize(L+V);
-    col+=vec3(1.)*pow(max(dot(N,H),0.),48.)*.5;
-    gl_FragColor=vec4(col,1.);
+    float spec=pow(max(dot(N,H),0.),80.)*.5;
+    vec3 col;
+    if(uState==0){
+      col=mix(vec3(0.,.04,.28),vec3(.08,.3,.9),diff*.7+.2);
+      col+=vec3(.2,.5,1.)*rim*.7+vec3(.8,.9,1.)*spec;
+    } else if(uState==1){
+      float p=.5+.5*sin(uTime*2.5);
+      col=mix(vec3(0.,.06,.35),vec3(.15,.5,1.),diff*.6+p*.15);
+      col+=vec3(.4,.75,1.)*rim*(.5+p*.3)+vec3(.8,.9,1.)*spec;
+    } else if(uState==2){
+      float h=uTime*.8;
+      vec3 c1=vec3(.15,.5,1.);vec3 c2=vec3(.6,.1,1.);vec3 c3=vec3(.1,.9,.8);
+      col=mix(c1,c2,sin(h)*.5+.5);col=mix(col,c3,sin(h*1.4+1.)*.5+.5);
+      col=col*(diff*.6+.4)+vec3(1.)*rim*.4+vec3(1.)*spec*.8;
+    } else if(uState==3){
+      col=mix(vec3(.01,.03,.12),vec3(.07,.18,.45),diff*.5+.2);
+      col+=vec3(.1,.25,.55)*rim*.35;
+      float tL=length(vP.xy-vec2(-.28,-.1))-.06;
+      float tR=length(vP.xy-vec2(.28,-.1))-.06;
+      col+=vec3(.2,.5,1.)*(exp(-tL*tL*60.)+exp(-tR*tR*60.))*.4*uBlend;
+    } else {
+      float p=.5+.5*sin(uTime*9.);
+      col=mix(vec3(0.,.06,.3),vec3(.1,.4,1.),diff*.6+p*.25);
+      col+=vec3(.25,.55,1.)*rim*(.5+p*.4)+vec3(.8,.9,1.)*spec;
+    }
+    gl_FragColor=vec4(col,.96);
   }
 `
 
-// ── Орб ──────────────────────────────────────────────────────────────────────
-function OrbMesh() {
-  const meshRef = useRef<THREE.Mesh>(null!)
+// ── Состояния орба ────────────────────────────────────────────────────────────
+export type KiraOrbState = 'idle' | 'thinking' | 'happy' | 'sad' | 'speaking'
+const STATE_MAP: Record<KiraOrbState, number> = { idle:0, thinking:1, happy:2, sad:3, speaking:4 }
+
+// ── Меш с шейдером ────────────────────────────────────────────────────────────
+function OrbMesh({ state }: { state: KiraOrbState }) {
   const matRef = useRef<THREE.ShaderMaterial>(null!)
-  const { mouse } = useThree()
+  const meshRef = useRef<THREE.Mesh>(null!)
+  const targetState = STATE_MAP[state]
 
-  const material = useMemo(() => new THREE.ShaderMaterial({
-    vertexShader,
-    fragmentShader,
-    uniforms: { uTime: { value: 0 } },
-  }), [])
-
-  useFrame(({ clock }) => {
-    material.uniforms.uTime.value = clock.elapsedTime
+  useFrame(({ clock, camera }) => {
+    if (!matRef.current) return
+    matRef.current.uniforms.uTime.value = clock.elapsedTime
+    matRef.current.uniforms.uState.value = targetState
+    const b = matRef.current.uniforms.uBlend.value
+    matRef.current.uniforms.uBlend.value = Math.min(1, b + 0.02)
+    // Лёгкое покачивание
     if (meshRef.current) {
-      meshRef.current.rotation.y += (mouse.x * 0.3 - meshRef.current.rotation.y) * 0.05
-      meshRef.current.rotation.x += (-mouse.y * 0.15 - meshRef.current.rotation.x) * 0.05
+      const t = clock.elapsedTime
+      meshRef.current.rotation.y = Math.sin(t * 0.18) * 0.07
+      meshRef.current.rotation.x = Math.sin(t * 0.14) * 0.04
     }
   })
 
+  // При смене состояния — сбрасываем blend
+  const prevState = useRef(targetState)
+  useEffect(() => {
+    if (prevState.current !== targetState && matRef.current) {
+      matRef.current.uniforms.uBlend.value = 0
+      prevState.current = targetState
+    }
+  }, [targetState])
+
   return (
-    <mesh ref={meshRef} material={material}>
+    <mesh ref={meshRef}>
       <sphereGeometry args={[1, 128, 128]} />
+      <shaderMaterial
+        ref={matRef}
+        vertexShader={vertexShader}
+        fragmentShader={fragmentShader}
+        uniforms={{
+          uTime:  { value: 0 },
+          uState: { value: 0 },
+          uBlend: { value: 1 },
+        }}
+      />
     </mesh>
   )
 }
 
-// ── Глаза ─────────────────────────────────────────────────────────────────────
-function Eyes() {
-  const lRef = useRef<THREE.Mesh>(null!)
-  const rRef = useRef<THREE.Mesh>(null!)
-  const { mouse } = useThree()
-
-  const geo = useMemo(() => new THREE.BoxGeometry(0.10, 0.22, 0.06), [])
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({
-    color: '#2a1505', roughness: 0.3, metalness: 0.1,
-  }), [])
-  const hlMat = useMemo(() => new THREE.MeshBasicMaterial({
-    color: 'white', transparent: true, opacity: 0.85,
-  }), [])
-  const hlGeo = useMemo(() => new THREE.SphereGeometry(0.022, 8, 8), [])
-
-  useFrame(() => {
-    const lx = -0.29 + mouse.x * 0.04
-    const ly =  0.05 + mouse.y * 0.04
-    if (lRef.current) lRef.current.position.set(lx, ly, 0.97)
-    if (rRef.current) rRef.current.position.set(0.29 + mouse.x * 0.04, ly, 0.97)
-  })
-
-  return (
-    <>
-      <mesh ref={lRef} geometry={geo} material={mat} position={[-0.29, 0.05, 0.97]}>
-        <mesh geometry={hlGeo} material={hlMat} position={[-0.02, 0.05, 0.04]} />
-      </mesh>
-      <mesh ref={rRef} geometry={geo} material={mat} position={[0.29, 0.05, 0.97]}>
-        <mesh geometry={hlGeo} material={hlMat} position={[-0.02, 0.05, 0.04]} />
-      </mesh>
-    </>
-  )
-}
-
-// ── Кольца ────────────────────────────────────────────────────────────────────
-function Rings() {
-  const refs = [
-    useRef<THREE.Mesh>(null!),
-    useRef<THREE.Mesh>(null!),
-    useRef<THREE.Mesh>(null!),
-  ]
-
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime
-    refs.forEach((r, i) => {
-      if (r.current) {
-        r.current.rotation.x = t * 0.12 * (i % 2 === 0 ? 1 : -1)
-        r.current.rotation.z = t * 0.08 + i * 0.6
-        r.current.scale.setScalar(1 + Math.sin(t * 0.7 + i) * 0.015)
-      }
-    })
-  })
-
-  const ringData = [
-    { r: 1.32, t: 0.007, op: 0.35 },
-    { r: 1.52, t: 0.005, op: 0.22 },
-    { r: 1.72, t: 0.004, op: 0.12 },
-  ]
-
-  return (
-    <>
-      {ringData.map((d, i) => (
-        <mesh key={i} ref={refs[i]}>
-          <torusGeometry args={[d.r, d.t, 16, 120]} />
-          <meshBasicMaterial color="#f8b87a" transparent opacity={d.op} side={THREE.DoubleSide} />
-        </mesh>
-      ))}
-    </>
-  )
-}
-
 // ── Сцена ─────────────────────────────────────────────────────────────────────
-function Scene() {
+function Scene({ state }: { state: KiraOrbState }) {
   return (
     <>
-      <ambientLight intensity={0.6} />
-      <pointLight position={[-3, 4, 3]} intensity={1.8} color="#ffe4c4" />
-      <pointLight position={[3, -2, 2]} intensity={0.6} color="#ffd0a0" />
-      <OrbMesh />
-      <Eyes />
-      <Rings />
+      <ambientLight intensity={0.4} />
+      <pointLight position={[2, 3, 3]} intensity={1.5} color="#aabbff" />
+      <pointLight position={[-2, -1, 2]} intensity={0.5} color="#4466ff" />
+      <OrbMesh state={state} />
       <EffectComposer>
-        <Bloom intensity={0.7} luminanceThreshold={0.3} luminanceSmoothing={0.9} radius={0.7} />
+        <Bloom intensity={2.0} luminanceThreshold={0.1} luminanceSmoothing={0.9} radius={0.6} />
       </EffectComposer>
     </>
   )
 }
 
-// ── Экспорт ───────────────────────────────────────────────────────────────────
+// ── Публичный компонент ───────────────────────────────────────────────────────
 interface KiraOrb3DProps {
   size?: number
-  mood?: 'idle' | 'happy' | 'thinking' | 'speaking'
+  mood?: KiraOrbState
 }
 
-export function KiraOrb3D({ size = 180 }: KiraOrb3DProps) {
+export function KiraOrb3D({ size = 160, mood = 'idle' }: KiraOrb3DProps) {
   return (
     <div style={{ width: size, height: size }}>
       <Canvas
-        camera={{ position: [0, 0, 3.2], fov: 40 }}
+        camera={{ position: [0, 0, 3.2], fov: 42 }}
         gl={{ antialias: true, alpha: true }}
         style={{ background: 'transparent' }}
       >
-        <Scene />
+        <Scene state={mood} />
       </Canvas>
     </div>
   )

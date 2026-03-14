@@ -45,8 +45,12 @@ export async function GET(request: NextRequest) {
 
     // Sum revenue by day
     payments?.forEach((payment) => {
-      const dayKey = payment.paid_at.split('T')[0]
-      revenueByDay[dayKey] = (revenueByDay[dayKey] || 0) + (payment.amount || 0)
+      if (!payment.paid_at) return
+      // paid_at может быть строкой с timezone — берём только дату
+      const dayKey = new Date(payment.paid_at).toISOString().split('T')[0]
+      if (revenueByDay[dayKey] !== undefined) {
+        revenueByDay[dayKey] = (revenueByDay[dayKey] || 0) + parseFloat(String(payment.amount || 0))
+      }
     })
 
     // Format for chart
@@ -57,7 +61,7 @@ export async function GET(request: NextRequest) {
         return {
           date: date,
           day: dayNames[d.getDay()],
-          amount: Math.round(amount),
+          amount: Math.round(parseFloat(String(amount))),
         }
       })
 

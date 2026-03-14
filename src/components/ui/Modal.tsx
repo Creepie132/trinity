@@ -59,7 +59,7 @@ export function Modal({
 
   const { pin, unpin, isPinned, bringToFront, pinned, maxPinned } = usePinnedModals()
   const pinned_ = isPinned(modalId)
-  const { containerRef, handleRef, resetPosition } = useDraggableDialog()
+  const { containerRef, handleRef, resetPosition, getCurrentPosition } = useDraggableDialog()
 
   // Восстанавливаем позицию если уже закреплена
   const pinnedData = pinned.find(p => p.id === modalId)
@@ -74,11 +74,12 @@ export function Modal({
     if (pinned_) {
       unpin(modalId)
     } else {
-      const ds = (containerRef.current as any)?._dragState
+      // Сохраняем ТЕКУЩУЮ позицию окна при закреплении
+      const pos = getCurrentPosition()
       const canPin = pin({
         id: modalId,
         title: (typeof pinTitle === 'string' ? pinTitle : typeof title === 'string' ? title : 'Окно'),
-        x: 0, y: 0,
+        x: pos.x, y: pos.y,
         zIndex: 100,
       })
       if (!canPin && containerRef.current) {
@@ -86,7 +87,7 @@ export function Modal({
         setTimeout(() => containerRef.current?.classList.remove('animate-shake'), 500)
       }
     }
-  }, [pinned_, pin, unpin, modalId, title, pinTitle])
+  }, [pinned_, pin, unpin, modalId, title, pinTitle, getCurrentPosition])
 
   const handleEscape = useCallback(
     (e: KeyboardEvent) => { if (e.key === 'Escape' && closeOnEscape && !pinned_) onClose() },
@@ -110,7 +111,7 @@ export function Modal({
 
   if (!open && !pinned_) return null
 
-  const zStyle = pinnedData ? { zIndex: pinnedData.zIndex } : { zIndex: 50 }
+  const zStyle = pinnedData ? { zIndex: pinnedData.zIndex } : { zIndex: 9000 }
 
   return (
     <div

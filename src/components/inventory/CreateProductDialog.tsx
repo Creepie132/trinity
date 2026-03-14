@@ -282,7 +282,7 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
                 id="sell_price"
                 type="number"
                 step="0.01"
-                value={formData.sell_price}
+                value={formData.sell_price === 0 ? '' : formData.sell_price}
                 onChange={(e) => setFormData({ ...formData, sell_price: parseFloat(e.target.value) || 0 })}
                 placeholder="0.00"
                 required
@@ -297,7 +297,7 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
               <Input
                 id="quantity"
                 type="number"
-                value={formData.quantity}
+                value={formData.quantity === 0 ? '' : formData.quantity}
                 onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
                 placeholder="0"
                 required
@@ -308,7 +308,7 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
               <Input
                 id="min_quantity"
                 type="number"
-                value={formData.min_quantity}
+                value={formData.min_quantity === 0 ? '' : formData.min_quantity}
                 onChange={(e) => setFormData({ ...formData, min_quantity: parseInt(e.target.value) || 0 })}
                 placeholder="0"
               />

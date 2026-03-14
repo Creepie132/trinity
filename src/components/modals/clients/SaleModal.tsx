@@ -160,7 +160,7 @@ export function SaleModal() {
     setPaymentUrl('')
     setLocalClient(null)
     setClientSearch('')
-    setClientResults([])
+    setClientResults([])  // всегда чистим при закрытии
     closeModal('client-sale')
   }
 
@@ -828,8 +828,8 @@ export function SaleModal() {
               />
             )}
           </div>
-          {/* Результаты поиска — только если введено 2+ символа */}
-          {clientSearch.length >= 2 && !localClient && (clientResults.length > 0 || clientSearching || clientSearch.length >= 2) && (
+          {/* Результаты поиска — только если введено 2+ символа И есть результаты */}
+          {clientSearch.length >= 2 && !localClient && (clientResults.length > 0 || clientSearching) && (
             <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
               {clientResults.map((c: any) => (
                 <button key={c.id} onClick={() => { setLocalClient(c); setClientSearch(''); setClientResults([]) }}

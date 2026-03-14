@@ -140,11 +140,13 @@ export async function GET(request: NextRequest) {
 
     const servicesReport = Array.from(serviceStats.values()).map((s) => ({
       ...s,
+      name: s.service_name, // для PieChart nameKey="name"
       revenue_percent: totalServiceRevenue > 0 ? (s.revenue / totalServiceRevenue) * 100 : 0,
     }))
 
-    // Sort by revenue
-    servicesReport.sort((a, b) => b.revenue - a.revenue)
+    // Sort by count (popularity), limit to top 5
+    servicesReport.sort((a, b) => b.count - a.count)
+    const top5Services = servicesReport.slice(0, 5)
 
     // 3. Client Activity Report
     const { data: clients } = await supabase
@@ -203,7 +205,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       staff: staffReport,
-      services: servicesReport,
+      services: top5Services,
       clients: {
         new_clients: newClients,
         returning_clients: returningClients,

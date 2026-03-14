@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library'
+import { BrowserMultiFormatReader, NotFoundException, DecodeHintType, BarcodeFormat } from '@zxing/library'
 import Modal from '@/components/ui/Modal'
 import { Input } from '@/components/ui/input'
 import { Camera, SwitchCamera, Keyboard } from 'lucide-react'
@@ -94,8 +94,16 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
 
         const selectedDevice = cameras[currentDeviceIndex] || cameras[0]
 
-        await codeReader.decodeFromVideoDevice(
-          selectedDevice.deviceId,
+        // Запрашиваем максимальное разрешение для лучшего распознавания
+        const constraints: MediaTrackConstraints = {
+          deviceId: selectedDevice.deviceId ? { exact: selectedDevice.deviceId } : undefined,
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        }
+
+        await codeReader.decodeFromConstraints(
+          { video: constraints },
           videoRef.current!,
           (result, error) => {
             if (result) {
@@ -103,7 +111,8 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
               onClose()
             }
             if (error && !(error instanceof NotFoundException)) {
-              console.error('Scanner error:', error)
+              // Игнорируем ошибки NotFoundException — они приходят каждый кадр без штрихкода
+              console.debug('Scanner frame error:', error?.message)
             }
           }
         )
@@ -155,7 +164,18 @@ export function BarcodeScanner({ open, onClose, onScan }: BarcodeScannerProps) {
       {!manualEntry ? (
         <div className="space-y-4">
           <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
-            <video ref={videoRef} className="w-full h-full object-cover" playsInline />
+            <video ref={videoRef} className="w-full h-full object-cover" playsInline muted autoPlay />
+            {/* Прицел для штрихкода */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-3/4 h-1/3 border-2 border-white/80 rounded-lg relative">
+                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-indigo-400 rounded-tl" />
+                <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-indigo-400 rounded-tr" />
+                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-indigo-400 rounded-bl" />
+                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-indigo-400 rounded-br" />
+                {/* Сканирующая линия */}
+                <div className="absolute inset-x-0 h-0.5 bg-red-500/70 animate-scan-line" style={{ top: '50%' }} />
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-2">

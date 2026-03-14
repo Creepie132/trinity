@@ -575,13 +575,7 @@ export default function DiaryPage() {
         </>
       )}
 
-      {/* FAB mobile */}
-      <div className="md:hidden fixed bottom-20 end-4 z-30">
-        <button onClick={() => openModal('task-create', { onCreated: loadTasks })}
-          className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 flex items-center justify-center transition-all hover:scale-105 active:scale-95">
-          <Plus className="w-6 h-6" />
-        </button>
-      </div>
+
     </div>
   )
 }

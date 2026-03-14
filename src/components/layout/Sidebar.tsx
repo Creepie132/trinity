@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Calendar, Settings, BookOpen, Package } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Calendar, Settings, BookOpen, Package, UserPlus, CalendarPlus, ShoppingCart } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -11,6 +11,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { BranchSwitcher } from '@/components/BranchSwitcher'
+import { useModalStore } from '@/store/useModalStore'
 
 const baseNavigation = [
   { name_he: 'דשבורד', name_ru: 'Дашборд', href: '/dashboard', icon: Home, requireFeature: null },
@@ -48,6 +49,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const { data: isAdmin } = useIsAdmin()
   const features = useFeatures()
   const { language } = useLanguage()
+  const { openModal } = useModalStore()
 
   const t = translations[language]
   const locale = language === 'he' ? 'he' : 'ru'
@@ -85,14 +87,11 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
     <div className="w-64 h-full flex flex-col bg-gradient-to-b from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 shadow-lg">
       {/* Header */}
       <div className="p-6 pb-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-        <div className="flex items-center justify-between mb-3">
+        {/* Логотип */}
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-              <img
-                src="/logo.png"
-                alt="Amber Solutions"
-                className="w-10 h-10 object-cover rounded-lg"
-              />
+              <img src="/logo.png" alt="Amber Solutions" className="w-10 h-10 object-cover rounded-lg" />
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
@@ -101,12 +100,44 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
               <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Amber Solutions Systems</p>
             </div>
           </div>
-          {/* Колокольчик уведомлений */}
           <NotificationBell locale={locale} />
         </div>
+
+        {/* Быстрые действия — прямо под логотипом */}
+        {!features.isLoading && (
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => openModal('client-add')}
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all active:scale-95"
+            >
+              <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+                {language === 'he' ? 'לקוח' : 'Клиент'}
+              </span>
+            </button>
+            <button
+              onClick={() => openModal('visit-create')}
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all active:scale-95"
+            >
+              <CalendarPlus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+                {language === 'he' ? 'ביקור' : 'Визит'}
+              </span>
+            </button>
+            <button
+              onClick={() => openModal('payment-create')}
+              className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all active:scale-95"
+            >
+              <ShoppingCart className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+                {language === 'he' ? 'מכירה' : 'Продажа'}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Branch Switcher — shown only when branches feature is enabled */}
+      {/* Branch Switcher */}
       {features.hasBranches && <BranchSwitcher />}
 
       {/* Navigation */}
@@ -173,8 +204,11 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
         )}
       </nav>
 
-      {/* Logout */}
+      {/* Подпись + Logout */}
       <div className="p-4 border-t border-gray-200 dark:border-slate-700">
+        <p className="text-xs text-gray-300 dark:text-gray-600 text-center mb-3">
+          Trinity CRM by Amber Solutions
+        </p>
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-[0.98] transition-all duration-200"

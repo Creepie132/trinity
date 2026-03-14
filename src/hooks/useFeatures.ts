@@ -14,9 +14,8 @@ export interface Features {
   hasVisits: boolean
   hasInventory: boolean
   hasBooking: boolean
-  hasTelegram: boolean
   hasLoyalty: boolean
-  hasBirthday: boolean
+  hasSales: boolean
   hasDiary: boolean
   hasBranches: boolean
   paymentsEnabled: boolean
@@ -45,9 +44,8 @@ export function useFeatures(): Features {
       hasVisits: false,
       hasInventory: false,
       hasBooking: false,
-      hasTelegram: false,
       hasLoyalty: false,
-      hasBirthday: false,
+      hasSales: false,
       hasDiary: false,
       hasBranches: false,
       paymentsEnabled: false,
@@ -71,9 +69,8 @@ export function useFeatures(): Features {
       hasVisits: true,
       hasInventory: true,
       hasBooking: true,
-      hasTelegram: true,
       hasLoyalty: true,
-      hasBirthday: true,
+      hasSales: true,
       hasDiary: true,
       hasBranches: true,
       paymentsEnabled: true,
@@ -96,9 +93,8 @@ export function useFeatures(): Features {
       hasVisits: false,
       hasInventory: false,
       hasBooking: false,
-      hasTelegram: false,
       hasLoyalty: false,
-      hasBirthday: false,
+      hasSales: false,
       hasDiary: false,
       hasBranches: false,
       paymentsEnabled: true,
@@ -119,16 +115,17 @@ export function useFeatures(): Features {
       hasDiary: modules.diary ?? true,
       hasSms: modules.sms ?? false,
       hasPayments: modules.payments ?? false,
-      hasAnalytics: (modules.statistics || modules.reports) ?? false,
-      hasStatistics: modules.statistics ?? false,
-      hasReports: modules.reports ?? false,
+      // analytics — новый единый модуль; статистика/отчёты — legacy алиасы
+      hasAnalytics: modules.analytics ?? (modules.statistics || modules.reports) ?? false,
+      hasStatistics: modules.analytics ?? modules.statistics ?? false,
+      hasReports: modules.analytics ?? modules.reports ?? false,
       hasSubscriptions: modules.subscriptions ?? false,
       hasInventory: modules.inventory ?? false,
       hasBooking: modules.booking ?? false,
-      hasTelegram: modules.telegram ?? false,
       hasLoyalty: modules.loyalty ?? false,
-      hasBirthday: modules.birthday ?? false,
-      hasBranches: organization.branches_enabled ?? false,
+      hasSales: modules.sales ?? false,
+      // branches: модуль ИЛИ флаг на организации
+      hasBranches: modules.branches ?? organization.branches_enabled ?? false,
       paymentsEnabled: organization.payments_enabled ?? true,
       recurringEnabled: organization.recurring_enabled === true,
       isActive: organization.is_active ?? false,
@@ -150,9 +147,8 @@ export function useFeatures(): Features {
     hasSubscriptions: organization.features?.subscriptions ?? false,
     hasInventory: organization.features?.inventory ?? false,
     hasBooking: (organization.features as any)?.booking ?? false,
-    hasTelegram: false,
     hasLoyalty: false,
-    hasBirthday: false,
+    hasSales: false,
     hasBranches: organization.branches_enabled ?? false,
     paymentsEnabled: organization.payments_enabled ?? true,
     recurringEnabled: organization.recurring_enabled === true,

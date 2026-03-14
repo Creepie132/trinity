@@ -55,10 +55,10 @@ export const MODULES: Module[] = [
   },
   {
     key: 'sms',
-    name_he: 'קמפיינים SMS',
-    name_ru: 'SMS-кампании',
-    desc_he: 'שליחת הודעות SMS',
-    desc_ru: 'Отправка SMS-сообщений'
+    name_he: 'תפוצות המוניות',
+    name_ru: 'Массовые рассылки',
+    desc_he: 'שליחת הודעות המוניות ללקוחות',
+    desc_ru: 'Массовая отправка сообщений клиентам'
   },
   {
     key: 'subscriptions',
@@ -68,25 +68,18 @@ export const MODULES: Module[] = [
     desc_ru: 'Автоматическое периодическое списание с карт клиентов'
   },
   {
-    key: 'statistics',
-    name_he: 'סטטיסטיקה',
-    name_ru: 'Статистика',
-    desc_he: 'דשבורד וגרפים',
-    desc_ru: 'Дашборд и графики'
+    key: 'analytics',
+    name_he: 'אנליטיקה',
+    name_ru: 'Аналитика',
+    desc_he: 'דשבורד, גרפים ודוחות עסקיים',
+    desc_ru: 'Дашборд, графики и бизнес-отчёты'
   },
   {
-    key: 'reports',
-    name_he: 'דוחות',
-    name_ru: 'Отчёты',
-    desc_he: 'דוחות עסקיים',
-    desc_ru: 'Бизнес-отчёты'
-  },
-  {
-    key: 'telegram',
-    name_he: 'התראות טלגרם',
-    name_ru: 'Telegram-уведомления',
-    desc_he: 'התראות ב-Telegram',
-    desc_ru: 'Уведомления в Telegram'
+    key: 'sales',
+    name_he: 'מכירות',
+    name_ru: 'Продажи',
+    desc_he: 'ניהול מכירות ועסקאות',
+    desc_ru: 'Управление продажами и сделками'
   },
   {
     key: 'loyalty',
@@ -96,10 +89,10 @@ export const MODULES: Module[] = [
     desc_ru: 'Система бонусов и лояльности'
   },
   {
-    key: 'birthday',
-    name_he: 'הודעות יום הולדת',
-    name_ru: 'Поздравления с ДР',
-    desc_he: 'ברכות אוטומטיות',
-    desc_ru: 'Автоматические поздравления'
+    key: 'branches',
+    name_he: 'סניפים',
+    name_ru: 'Филиалы',
+    desc_he: 'ניהול סניפים מרובים',
+    desc_ru: 'Управление несколькими филиалами'
   }
 ]

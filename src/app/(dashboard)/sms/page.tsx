@@ -6,7 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 export default function SmsPage() {
   const { language } = useLanguage()
   
-  const title = language === 'he' ? 'הודעות SMS' : 'SMS-сообщения'
+  const title = language === 'he' ? 'תפוצות המוניות' : 'Массовые рассылки'
   
   return <ComingSoon title={title} />
 }

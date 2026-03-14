@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Settings, Calendar, Package, BookOpen, ShoppingBag } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Settings, Calendar, Package, BookOpen, ShoppingBag, GitBranch } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -44,11 +44,12 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
     { name: getModuleName('clients'), href: '/clients', icon: Users, requireFeature: 'clients' },
     { name: meetingMode.t.visits, href: '/visits', icon: Calendar, requireFeature: 'visits' },
-    { name: language === 'he' ? 'מכירות' : 'Продажи', href: '/sales', icon: ShoppingBag, requireFeature: null },
+    { name: language === 'he' ? 'מכירות' : 'Продажи', href: '/sales', icon: ShoppingBag, requireFeature: 'sales' },
     { name: getModuleName('diary'), href: '/diary', icon: BookOpen, requireFeature: 'diary' },
     { name: getModuleName('inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
     { name: getModuleName('payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
-    { name: language === 'he' ? 'אנליטיקה' : 'Аналитика', href: '/analytics', icon: BarChart3, requireFeature: null },
+    { name: language === 'he' ? 'אנליטיקה' : 'Аналитика', href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
+    { name: language === 'he' ? 'סניפים' : 'Филиалы', href: '/settings?tab=branches', icon: GitBranch, requireFeature: 'branches' },
     { name: t('nav.settings'), href: '/settings', icon: Settings, requireFeature: null },
   ]
 
@@ -71,12 +72,14 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       'inventory': features.hasInventory,
       'diary': features.hasDiary,
       'sms': features.hasSms,
+      'analytics': features.hasAnalytics,
       'statistics': features.hasStatistics,
       'reports': features.hasReports,
       'subscriptions': features.hasSubscriptions,
       'booking': features.hasBooking,
-      'telegram': features.hasTelegram,
       'loyalty': features.hasLoyalty,
+      'sales': features.hasSales,
+      'branches': features.hasBranches,
     }
     return featureMap[item.requireFeature] ?? true
   })

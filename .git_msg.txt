@@ -1,1 +1,1 @@
-fix: visit block height uses visit.duration_minutes over service default
+fix: recalculate visit duration from visit_services sum not accumulation

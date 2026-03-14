@@ -53,24 +53,20 @@ export async function DELETE(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Subtract service price from visit
+    // Recalculate visit totals from remaining visit_services
     if (serviceData) {
       const targetVisitId = serviceData.visit_id || visitId
-      const { data: currentVisit } = await supabase
-        .from('visits')
+      const { data: remaining } = await supabase
+        .from('visit_services')
         .select('price, duration_minutes')
-        .eq('id', targetVisitId)
-        .single()
+        .eq('visit_id', targetVisitId)
 
-      if (currentVisit) {
-        await supabase
-          .from('visits')
-          .update({
-            price: Math.max(0, (currentVisit.price || 0) - (serviceData.price || 0)),
-            duration_minutes: Math.max(0, (currentVisit.duration_minutes || 0) - (serviceData.duration_minutes || 0)),
-          })
-          .eq('id', targetVisitId)
-      }
+      const totalPrice = (remaining || []).reduce((sum, s) => sum + (Number(s.price) || 0), 0)
+      const totalDuration = (remaining || []).reduce((sum, s) => sum + (Number(s.duration_minutes) || 0), 0)
+      await supabase
+        .from('visits')
+        .update({ price: totalPrice, duration_minutes: totalDuration })
+        .eq('id', targetVisitId)
     }
 
     return NextResponse.json({ success: true })

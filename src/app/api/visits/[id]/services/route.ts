@@ -110,20 +110,18 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Add service price to existing visit price (do not replace)
-    const { data: currentVisit } = await supabase
-      .from('visits')
+    // Recalculate visit totals from all visit_services (always recompute, never accumulate)
+    const { data: allServices } = await supabase
+      .from('visit_services')
       .select('price, duration_minutes')
-      .eq('id', visitId)
-      .single()
+      .eq('visit_id', visitId)
 
-    if (currentVisit) {
+    if (allServices) {
+      const totalPrice = allServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0)
+      const totalDuration = allServices.reduce((sum, s) => sum + (Number(s.duration_minutes) || 0), 0)
       await supabase
         .from('visits')
-        .update({
-          price: (currentVisit.price || 0) + (body.price || 0),
-          duration_minutes: (currentVisit.duration_minutes || 0) + (body.duration_minutes || 0),
-        })
+        .update({ price: totalPrice, duration_minutes: totalDuration })
         .eq('id', visitId)
     }
 

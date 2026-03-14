@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Sparkles, Megaphone, Bell, ExternalLink } from 'lucide-react'
 import dynamic from 'next/dynamic'
-const KiraFace = dynamic(() => import('@/components/kira/KiraFace').then(m => ({ default: m.KiraFace })), { ssr: false })
+const KiraFace = dynamic(() => import('@/components/kira/KiraOrb3D').then(m => ({ default: m.KiraOrb3D })), { ssr: false })
 
 // ─── Типы ────────────────────────────────────────────────────────────────────
 interface Ad { id: string; title: string; description: string; image_url: string | null; link_url: string | null; button_text: string | null }

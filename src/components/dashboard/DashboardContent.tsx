@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState, useRef, ReactNode } from 'react'
-import { Users, Calendar, TrendingUp, Receipt } from 'lucide-react'
+import { Users, Calendar, TrendingUp, Receipt, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
+import { useProducts } from '@/hooks/useProducts'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { WidgetCard } from '@/components/ui/WidgetCard'
@@ -45,6 +47,33 @@ function useCountUp(target: number, duration = 1200) {
     requestAnimationFrame(tick)
   }, [target, duration])
   return value
+}
+
+// ─── Low Stock Alert ──────────────────────────────────────────────────────────
+function LowStockAlert({ locale }: { locale: string }) {
+  const { data: products = [] } = useProducts()
+  const l = locale === 'he'
+  const lowStock = products.filter((p: any) => p.quantity > 0 && p.min_quantity > 0 && p.quantity <= p.min_quantity)
+  const outOfStock = products.filter((p: any) => (p.quantity || 0) === 0)
+  const total = lowStock.length + outOfStock.length
+  if (total === 0) return null
+  return (
+    <Link href="/inventory" className="flex items-center gap-3 mb-5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl px-4 py-3 hover:shadow-md hover:border-amber-300 transition-all group">
+      <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+        <AlertTriangle size={16} className="text-amber-600" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-amber-800">
+          {l ? `⚠️ ${total} מוצרים מסתיימים!` : `⚠️ ${total} товаров заканчивается!`}
+        </p>
+        <p className="text-xs text-amber-600 truncate">
+          {lowStock.slice(0, 3).map((p: any) => p.name).join(', ')}
+          {total > 3 ? (l ? ` ועוד ${total - 3}...` : ` и ещё ${total - 3}...`) : ''}
+        </p>
+      </div>
+      <span className="text-xs text-amber-600 font-medium flex-shrink-0">{l ? 'לפרטים →' : 'Подробнее →'}</span>
+    </Link>
+  )
 }
 
 // ─── KPI Card с градиентом, countup и трендом ─────────────────────────────────
@@ -386,6 +415,9 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
           revenueToday={revenueData[revenueData.length - 1]?.amount || 0}
           locale={locale}
         />
+
+        {/* ── Low Stock Alert ── */}
+        <LowStockAlert locale={locale} />
 
         {/* ── KPI Cards ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">

@@ -214,11 +214,22 @@ export default function VisitsPage() {
   // ── stats ─────────────────────────────────────────────────────────────────
 
   const stats = useMemo(() => {
+    const now = new Date()
+    const endOfDay = new Date(); endOfDay.setHours(23, 59, 59, 999)
     const completed = visits.filter(v => v.status === 'completed')
     const revenue = completed.reduce((s, v) => s + (v.price || 0), 0)
     const cancelledCount = visits.filter(v => v.status === 'cancelled' || v.status === 'no_show').length
     const activeCount = visits.filter(v => v.status === 'scheduled' || v.status === 'in_progress').length
-    return { total: visits.length, completed: completed.length, revenue, cancelledCount, activeCount }
+    // Remaining today: scheduled/in_progress visits with scheduled_at >= now AND <= end of today
+    const remainingToday = visits.filter(v => {
+      if (v.status !== 'scheduled' && v.status !== 'in_progress') return false
+      const t = new Date(v.scheduled_at)
+      return t >= now && t <= endOfDay
+    }).length
+    // Completion rate: completed / (completed + cancelled) * 100
+    const total = completed.length + cancelledCount
+    const completionRate = total > 0 ? Math.round((completed.length / total) * 100) : null
+    return { total: visits.length, completed: completed.length, revenue, cancelledCount, activeCount, remainingToday, completionRate }
   }, [visits])
 
   // ── next upcoming visit ───────────────────────────────────────────────────
@@ -365,15 +376,18 @@ export default function VisitsPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               {
-                label: isHe ? 'סה"כ' : 'Всего',
-                value: stats.total,
-                sub: `${stats.activeCount} ${isHe ? 'פעילים' : 'активных'}`,
-                icon: <Calendar className="w-4 h-4" />,
+                label: isHe ? 'נותרו היום' : 'Осталось сегодня',
+                value: stats.remainingToday,
+                sub: `${stats.activeCount} ${isHe ? 'פעילים בסה"כ' : 'активных всего'}`,
+                icon: <Clock className="w-4 h-4" />,
+                highlight: stats.remainingToday > 0,
               },
               {
                 label: isHe ? 'הושלמו' : 'Завершено',
                 value: stats.completed,
-                sub: `${stats.cancelledCount} ${isHe ? 'בוטלו' : 'отменено'}`,
+                sub: stats.completionRate !== null
+                  ? `${stats.completionRate}% ${isHe ? 'מהסיומות' : 'успешных'}`
+                  : (isHe ? 'אין נתונים' : 'нет данных'),
                 icon: <CheckCircle className="w-4 h-4" />,
               },
               {
@@ -383,19 +397,34 @@ export default function VisitsPage() {
                 icon: <TrendingUp className="w-4 h-4" />,
               },
               {
-                label: isHe ? 'ממוצע' : 'Средний чек',
-                value: stats.completed > 0 ? `₪${Math.round(stats.revenue / stats.completed)}` : '—',
-                sub: isHe ? 'לביקור' : 'за визит',
-                icon: <TrendingUp className="w-4 h-4" />,
+                label: isHe ? 'ביטולים' : 'Отменено за неделю',
+                value: stats.cancelledCount,
+                sub: stats.cancelledCount > 3
+                  ? (isHe ? 'גבוה מהרגיל' : 'Выше нормы')
+                  : (isHe ? 'רגיל' : 'В норме'),
+                icon: <X className="w-4 h-4" />,
+                danger: stats.cancelledCount > 3,
               },
-            ].map((s, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-3 md:p-4">
-                <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 mb-1">
+            ].map((s: any, i) => (
+              <div key={i} className={`rounded-xl border p-3 md:p-4 ${
+                s.danger
+                  ? 'bg-red-50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30'
+                  : s.highlight
+                  ? 'bg-blue-50 border-blue-100 dark:bg-blue-900/10 dark:border-blue-900/30'
+                  : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700'
+              }`}>
+                <div className={`flex items-center gap-2 mb-1 ${
+                  s.danger ? 'text-red-400' : s.highlight ? 'text-blue-400' : 'text-gray-400 dark:text-gray-500'
+                }`}>
                   {s.icon}
                   <span className="text-xs">{s.label}</span>
                 </div>
-                <p className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-gray-100">{s.value}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{s.sub}</p>
+                <p className={`text-xl md:text-2xl font-semibold ${
+                  s.danger ? 'text-red-600 dark:text-red-400' : s.highlight ? 'text-blue-600 dark:text-blue-300' : 'text-gray-900 dark:text-gray-100'
+                }`}>{s.value}</p>
+                <p className={`text-xs mt-0.5 ${
+                  s.danger ? 'text-red-400' : 'text-gray-400 dark:text-gray-500'
+                }`}>{s.sub}</p>
               </div>
             ))}
           </div>
@@ -549,6 +578,26 @@ export default function VisitsPage() {
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex gap-1.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                              {/* WhatsApp reminder button — always shown for active visits */}
+                              {(() => {
+                                const phone = getClientPhone(visit)
+                                const name = getClientName(visit)
+                                const svc = getServiceName(visit)
+                                const time = new Date(visit.scheduled_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })
+                                const date = new Date(visit.scheduled_at).toLocaleDateString(loc)
+                                const msg = isHe
+                                  ? `שלום ${name}! רצינו להזכיר לך על התור שלך ל${svc ? svc : 'שירות'} ב-${date} בשעה ${time}. מחכים לך!`
+                                  : `Здравствуйте, ${name}! Напоминаем о вашем визите${svc ? ` (${svc})` : ''} ${date} в ${time}. Ждём вас!`
+                                return phone ? (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank') }}
+                                    className="p-1.5 rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100 transition"
+                                    title={isHe ? 'שלח תזכורת בוואצאפ' : 'Напомнить в WhatsApp'}
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                  </button>
+                                ) : null
+                              })()}
                               {visit.status === 'scheduled' && (
                                 <button
                                   onClick={() => handleStartVisit(visit.id)}
@@ -557,12 +606,14 @@ export default function VisitsPage() {
                                   {isHe ? 'התחל' : 'Начать'}
                                 </button>
                               )}
-                              <button
-                                onClick={() => handleCompleteVisit(visit)}
-                                className="px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 hover:bg-emerald-200 transition"
-                              >
-                                {isHe ? 'סיים' : 'Завершить'}
-                              </button>
+                              {visit.status === 'in_progress' && (
+                                <button
+                                  onClick={() => handleCompleteVisit(visit)}
+                                  className="px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 hover:bg-emerald-200 transition"
+                                >
+                                  {isHe ? 'סיים' : 'Завершить'}
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleCancelVisit(visit.id)}
                                 className="px-2.5 py-1 rounded-md text-xs font-medium bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 transition"

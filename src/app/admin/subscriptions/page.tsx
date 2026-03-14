@@ -319,7 +319,7 @@ export default function AdminSubscriptionsPage() {
     try {
       // Load plans from database
       try {
-        const plansRes = await fetch('/api/admin/plans')
+        const plansRes = await fetch('/api/admin/plans', { cache: 'no-store' })
         if (plansRes.ok) {
           const plansData = await plansRes.json()
           setDbPlans(plansData || [])
@@ -331,7 +331,7 @@ export default function AdminSubscriptionsPage() {
 
       // Load module pricing
       try {
-        const pricingRes = await fetch('/api/admin/module-pricing')
+        const pricingRes = await fetch('/api/admin/module-pricing', { cache: 'no-store' })
         if (pricingRes.ok) {
           const pricingData = await pricingRes.json()
           setModulePricing(pricingData || [])
@@ -341,7 +341,7 @@ export default function AdminSubscriptionsPage() {
       }
 
       // Load organizations + access requests via API (service role, bypasses RLS)
-      const res = await fetch('/api/admin/subscriptions-list')
+      const res = await fetch('/api/admin/subscriptions-list', { cache: 'no-store' })
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
         throw new Error(errData.error || `HTTP ${res.status}`)
@@ -400,22 +400,25 @@ export default function AdminSubscriptionsPage() {
   }
 
   const handleExtend = (org: Organization) => {
-    setSelectedOrg(org)
-    setNewStatus(org.subscription_status === 'none' ? 'trial' : org.subscription_status)
-    setSelectedPlan((org.plan || 'demo') as PlanKey)
+    // Всегда берём свежую версию org из актуального state organizations
+    // (на случай если org — это устаревший snapshot из selectedOrgSheet)
+    const freshOrg = organizations.find(o => o.id === org.id) || org
+    setSelectedOrg(freshOrg)
+    setNewStatus(freshOrg.subscription_status === 'none' ? 'trial' : freshOrg.subscription_status)
+    setSelectedPlan((freshOrg.plan || 'demo') as PlanKey)
     
     // Initialize custom modules from current features
-    const currentModules = org.features?.modules || {}
+    const currentModules = freshOrg.features?.modules || {}
     setCustomModules(currentModules)
-    setCustomClientLimit(org.features?.client_limit || 0)
+    setCustomClientLimit(freshOrg.features?.client_limit || 0)
     
     // Initialize custom module prices from current features
-    const currentModulePrices = org.features?.custom_module_prices || {}
+    const currentModulePrices = freshOrg.features?.custom_module_prices || {}
     setCustomModulePrices(currentModulePrices)
     
     // Initialize price mode
-    setPriceMode(org.features?.price_mode || 'auto')
-    setManualPrice(org.features?.manual_price || 0)
+    setPriceMode(freshOrg.features?.price_mode || 'auto')
+    setManualPrice(freshOrg.features?.manual_price || 0)
     
     const defaultDate = new Date()
     defaultDate.setDate(defaultDate.getDate() + 14)
@@ -580,7 +583,14 @@ export default function AdminSubscriptionsPage() {
 
       toast.success(t.accessExtended)
       setExtendDialogOpen(false)
-      loadData()
+      // Обновляем данные и синхронизируем selectedOrg со свежими данными из БД
+      await loadData()
+      // Обновляем selectedOrgSheet если он открыт — берём свежий объект из обновлённого списка
+      setSelectedOrgSheet(prev => {
+        if (!prev) return null
+        // будет пересинхронизировано после loadData через organizations state
+        return null
+      })
     } catch (error: any) {
       console.error('❌ Error extending access:', {
         error,

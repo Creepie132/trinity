@@ -251,37 +251,61 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   const notificationList = (
     <>
       {notifications.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">{l.empty}</div>
+        <div className="flex flex-col items-center py-12 gap-3 text-gray-400">
+          <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+            <Bell className="w-6 h-6 text-gray-300" />
+          </div>
+          <p className="text-sm">{l.empty}</p>
+        </div>
       ) : (
-        <div className="space-y-2 p-1">
-          {notifications.map((n) => (
-            <div
-              key={n.id}
-              className={`rounded-xl border p-3 transition ${
-                !n.is_read
-                  ? 'bg-primary/5 border-primary/20'
-                  : 'border-gray-100 dark:border-gray-800 hover:bg-muted/30'
-              }`}
-            >
-              <a href={n.type === 'access_invitation' ? '#' : (n.link || '#')}>
-                <div className="flex items-start gap-3">
-                  {!n.is_read && (
-                    <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                  )}
-                  <div className={`flex-1 min-w-0 ${n.is_read ? 'ms-5' : ''}`}>
-                    <p className={`text-sm ${!n.is_read ? 'font-semibold' : ''}`}>{n.title}</p>
-                    {n.body && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-3">{n.body}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(n.created_at).toLocaleString(
-                        locale === 'he' ? 'he-IL' : 'ru-RU',
-                        { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
+        <div className="space-y-1.5 p-1">
+          {notifications.map((n) => {
+            const typeIcon: Record<string, string> = {
+              access_invitation: '👥',
+              access_request: '🔑',
+              transfer_request: '📦',
+              transfer_result: '✅',
+              payment: '💳',
+              visit: '📅',
+              task: '✅',
+              system: 'ℹ️',
+            }
+            const icon = typeIcon[n.type] || '🔔'
+
+            return (
+              <div key={n.id}
+                className={`rounded-xl border p-3 transition-all ${
+                  !n.is_read
+                    ? 'bg-indigo-50/60 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800/30'
+                    : 'border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                }`}
+              >
+                <a href={n.type === 'access_invitation' ? '#' : (n.link || '#')}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${
+                      !n.is_read ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-gray-100 dark:bg-gray-800'
+                    }`}>
+                      {icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm leading-snug ${!n.is_read ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {n.title}
+                      </p>
+                      {n.body && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{n.body}</p>
                       )}
-                    </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(n.created_at).toLocaleString(
+                          locale === 'he' ? 'he-IL' : 'ru-RU',
+                          { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
+                        )}
+                      </p>
+                    </div>
+                    {!n.is_read && (
+                      <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1 flex-shrink-0" />
+                    )}
                   </div>
-                </div>
-              </a>
+                </a>
 
               {/* Action buttons for transfer_request type */}
               {n.type === 'transfer_request' && n.metadata?.transfer_request_id && (
@@ -387,7 +411,8 @@ export function NotificationBell({ locale }: NotificationBellProps) {
                 </div>
               )}
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </>
@@ -427,23 +452,22 @@ export function NotificationBell({ locale }: NotificationBellProps) {
           onClose={() => setIsOpen(false)}
           title={
             <div className="flex items-center gap-2">
-              <Bell className="w-5 h-5 text-primary" />
+              <Bell className="w-5 h-5 text-indigo-500" />
               {l.title}
               {unreadCount > 0 && (
-                <span className="px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full">
+                <span className="px-2 py-0.5 text-xs font-bold bg-indigo-500 text-white rounded-full">
                   {unreadCount}
                 </span>
               )}
             </div>
           }
           width="460px"
+          dir={locale === 'he' ? 'rtl' : 'ltr'}
           footer={
             notifications.length > 0 ? (
               <div className="flex justify-end">
-                <button
-                  onClick={markAllRead}
-                  className="flex items-center gap-1.5 text-xs text-primary hover:underline"
-                >
+                <button onClick={markAllRead}
+                  className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
                   <CheckCheck className="w-3.5 h-3.5" />
                   {l.markRead}
                 </button>

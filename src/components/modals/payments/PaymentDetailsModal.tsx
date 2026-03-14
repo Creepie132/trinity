@@ -272,22 +272,27 @@ export function PaymentDetailsModal() {
       title={clientName}
       subtitle={new Date(payment.created_at).toLocaleString(locale === 'he' ? 'he-IL' : 'ru-RU')}
       width="480px"
+      dir={locale === 'he' ? 'rtl' : 'ltr'}
       footer={getFooter()}
     >
-      <div className="space-y-1">
-        <div className="flex justify-between py-3 border-b border-gray-100 dark:border-gray-800">
-          <span className="text-sm text-gray-500 dark:text-gray-400">{text.amount}</span>
-          <span className="text-xl font-bold text-gray-900 dark:text-gray-100">₪{payment.amount}</span>
-        </div>
-
-        <div className="flex justify-between py-3 border-b border-gray-100 dark:border-gray-800">
-          <span className="text-sm text-gray-500 dark:text-gray-400">{text.method}</span>
-          <span className="text-sm text-gray-900 dark:text-gray-100">{methodLabel}</span>
-        </div>
-
-        <div className="flex justify-between py-3 border-b border-gray-100 dark:border-gray-800">
-          <span className="text-sm text-gray-500 dark:text-gray-400">{text.status}</span>
+      <div dir={locale === 'he' ? 'rtl' : 'ltr'}>
+        {/* Сумма — крупный акцент */}
+        <div className="flex flex-col items-center py-4 mb-2">
+          <p className="text-4xl font-bold text-gray-900 dark:text-gray-100">₪{payment.amount}</p>
           <StatusBadge status={payment.status} label={statusLabel} />
+        </div>
+
+        <div className="space-y-1 border-t border-gray-100 dark:border-gray-800 pt-3">
+          <div className="flex justify-between py-2.5 border-b border-gray-50 dark:border-gray-800/60">
+            <span className="text-sm text-gray-400">{text.method}</span>
+            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{methodLabel}</span>
+          </div>
+          <div className="flex justify-between py-2.5">
+            <span className="text-sm text-gray-400">{text.date}</span>
+            <span className="text-sm font-medium text-gray-800 dark:text-gray-200" dir="ltr">
+              {new Date(payment.created_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU')}
+            </span>
+          </div>
         </div>
       </div>
     </Modal>

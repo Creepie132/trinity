@@ -210,20 +210,21 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
       title={meetingMode.t.createVisit}
       subtitle={t('visits.subtitle')}
       width="520px"
+      dir={language === 'he' ? 'rtl' : 'ltr'}
       footer={
         <div className="flex gap-2 justify-end">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
-            className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap disabled:opacity-50"
+            className="px-5 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap disabled:opacity-50 transition"
           >
             {t('common.cancel')}
           </button>
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-5 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
+            className="px-6 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2 transition"
           >
             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
             {isSubmitting ? t('visits.creating') : t('common.add')}
@@ -231,7 +232,7 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-4" dir={language === 'he' ? 'rtl' : 'ltr'}>
         {/* Client selection */}
         <div className="space-y-2">
           <Label htmlFor="client">{t('visits.client')} *</Label>

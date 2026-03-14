@@ -50,7 +50,15 @@ export function BranchProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const { data: branches = [], isLoading: isLoadingBranches } = useBranches()
 
-  const [activeOrgId, setActiveOrgId] = useState<string | null>(() => getInitialBranch())
+  // При отсутствии cookie — сразу используем orgId как fallback чтобы не блокировать запросы
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(() => getInitialBranch() || null)
+
+  // Как только orgId из auth готов — сразу применяем его если нет cookie
+  useEffect(() => {
+    if (orgId && !activeOrgId) {
+      setActiveOrgId(orgId)
+    }
+  }, [orgId, activeOrgId])
 
   // При загрузке: восстанавливаем активный филиал из БД
   useEffect(() => {

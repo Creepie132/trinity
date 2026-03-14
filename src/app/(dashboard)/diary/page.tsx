@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Calendar, Clock, User, CheckCircle2, Circle, AlertTriangle,
@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useModalStore } from '@/store/useModalStore'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { TaskDetailSheet } from '@/components/diary/TaskDetailSheet'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { format, isToday, isTomorrow, isPast, parseISO, type Locale } from 'date-fns'
 import { he, ru } from 'date-fns/locale'
@@ -394,6 +395,8 @@ export default function DiaryPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
   const [draggingTask, setDraggingTask] = useState<Task | null>(null)
+  const [sheetTask, setSheetTask] = useState<Task | null>(null)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
 
   const COLUMNS: KanbanColumn[] = [
     { id: 'open',        label: language === 'he' ? 'פתוח'   : 'Открытые',   color: 'bg-slate-100 dark:bg-slate-800',       accent: 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300',               icon: <Circle       size={14} className="text-slate-500" /> },
@@ -446,7 +449,26 @@ export default function DiaryPage() {
     await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' })
   }
   function handleCardClick(task: Task) {
-    openModal('task-details', { task, locale: language as 'he' | 'ru' })
+    if (window.innerWidth < 768) {
+      setSheetTask(task)
+      setIsSheetOpen(true)
+    } else {
+      openModal('task-details', { task, locale: language as 'he' | 'ru' })
+    }
+  }
+
+  async function handleSheetStatusChange(taskId: string, rawStatus: string) {
+    // TaskDetailSheet uses 'done', DiaryPage uses 'completed'
+    const status = (rawStatus === 'done' ? 'completed' : rawStatus) as Task['status']
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t))
+    await supabase.from('tasks').update({ status }).eq('id', taskId)
+    setIsSheetOpen(false)
+  }
+
+  async function handleSheetDelete(taskId: string) {
+    setTasks(prev => prev.filter(t => t.id !== taskId))
+    await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' })
+    setIsSheetOpen(false)
   }
   function handleDragStart(e: React.DragEvent, task: Task) { setDraggingTask(task); e.dataTransfer.effectAllowed = 'move' }
   function handleDragEnd() { setDraggingTask(null) }
@@ -575,6 +597,15 @@ export default function DiaryPage() {
         </>
       )}
 
+      {/* Bottom Sheet — mobile task details with swipe */}
+      <TaskDetailSheet
+        task={sheetTask as any}
+        isOpen={isSheetOpen}
+        onClose={() => setIsSheetOpen(false)}
+        onStatusChange={(id, status) => handleSheetStatusChange(id, status)}
+        onDelete={handleSheetDelete}
+        locale={language as 'he' | 'ru'}
+      />
 
     </div>
   )

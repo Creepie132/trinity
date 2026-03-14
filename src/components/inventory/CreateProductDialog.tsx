@@ -148,6 +148,7 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
         onClose={onClose}
         title={t('inventory.newProduct')}
         width="580px"
+        dir={language === 'he' ? 'rtl' : 'ltr'}
         footer={
           <div className="flex gap-2 justify-end">
             <button

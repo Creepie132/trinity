@@ -183,6 +183,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
 
   return (
     <Modal open={isOpen} onClose={onClose} title={l.title} width="480px"
+      dir={locale === 'he' ? 'rtl' : 'ltr'}
       footer={
         <div className="flex gap-2">
           <button onClick={onClose}

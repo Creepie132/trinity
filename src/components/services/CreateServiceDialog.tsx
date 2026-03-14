@@ -21,7 +21,7 @@ const DEFAULT_COLORS = [
 ];
 
 export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const createService = useCreateService();
 
   const [formData, setFormData] = useState({
@@ -79,6 +79,7 @@ export function CreateServiceDialog({ open, onOpenChange }: CreateServiceDialogP
       onClose={() => onOpenChange(false)}
       title={t('services.newService')}
       width="480px"
+      dir={language === 'he' ? 'rtl' : 'ltr'}
       footer={
         <div className="flex gap-2 justify-end">
           <button

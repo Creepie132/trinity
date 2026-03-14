@@ -98,6 +98,7 @@ export function ServiceDetailSheet({ service, open, onOpenChange }: ServiceDetai
         onClose={() => setShowDeleteDialog(false)}
         title={t('services.deleteConfirm')}
         width="400px"
+        dir={language === 'he' ? 'rtl' : 'ltr'}
         footer={
           <div className="flex gap-2">
             <button
@@ -148,6 +149,7 @@ export function ServiceDetailSheet({ service, open, onOpenChange }: ServiceDetai
         </div>
       }
       width="480px"
+      dir={language === 'he' ? 'rtl' : 'ltr'}
       footer={
         !isEditing ? (
           <div className="flex gap-2">

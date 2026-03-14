@@ -91,6 +91,7 @@ export function CreateCareInstructionDialog({ open, onOpenChange }: CreateCareIn
       onClose={() => onOpenChange(false)}
       title={t('careInstructions.newInstruction')}
       width="580px"
+      dir={language === 'he' ? 'rtl' : 'ltr'}
       footer={
         <div className="flex gap-2 justify-end">
           <button

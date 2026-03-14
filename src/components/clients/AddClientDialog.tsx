@@ -97,6 +97,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
       onClose={() => onOpenChange(false)}
       title={language === 'he' ? 'לקוח חדש' : 'Новый клиент'}
       width="500px"
+      dir={language === 'he' ? 'rtl' : 'ltr'}
       footer={
         <div className="flex gap-2 justify-end">
           <button

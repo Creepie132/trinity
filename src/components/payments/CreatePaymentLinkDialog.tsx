@@ -95,6 +95,7 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, onSuccess }: Creat
       onClose={handleClose}
       title={t('payments.createLink')}
       width="440px"
+      dir={language === 'he' ? 'rtl' : 'ltr'}
       footer={
         !paymentLink ? (
           <div className="flex gap-2 justify-end">

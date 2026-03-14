@@ -72,6 +72,7 @@ export function ProductDetailsModal() {
       onClose={() => closeModal('product-details')}
       title={text.productDetails}
       width="420px"
+      dir={locale === 'he' ? 'rtl' : 'ltr'}
       footer={
         <div className="space-y-2">
           <button

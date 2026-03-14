@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 import {
   Building2, Search, Plus, Mail, Send,
   CheckCircle, XCircle, AlertCircle, Loader2, X,
-  Shield, Pencil, CreditCard, Eye,
+  Shield, Pencil, CreditCard, Eye, Package,
   Clock, TrendingUp, Users, Calendar, BarChart3,
   Wifi, WifiOff, AlertTriangle, Trash2, EyeOff, Edit3, Check,
 } from 'lucide-react'
@@ -47,11 +47,9 @@ interface OrgStats {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUSES = [
-  { value: 'none',    label_he: 'ללא גישה',   label_ru: 'Нет доступа',   color: 'gray'   },
-  { value: 'trial',   label_he: 'ניסיון',      label_ru: 'Пробный',       color: 'yellow' },
-  { value: 'active',  label_he: 'פעיל',        label_ru: 'Активна',       color: 'green'  },
-  { value: 'manual',  label_he: 'גישה ידנית',  label_ru: 'Ручной доступ', color: 'blue'   },
-  { value: 'expired', label_he: 'פג תוקף',     label_ru: 'Истекла',       color: 'red'    },
+  { value: 'active',   label_he: 'פעיל',     label_ru: 'Активный',   color: 'green'  },
+  { value: 'inactive', label_he: 'לא פעיל',  label_ru: 'Неактивный', color: 'red'    },
+  { value: 'demo',     label_he: 'דמו',       label_ru: 'Демо',       color: 'yellow' },
 ]
 
 const STATUS_COLORS: Record<string, string> = {
@@ -77,7 +75,7 @@ function formatLastSeen(dateStr: string | null | undefined, lang: 'he' | 'ru') {
 }
 
 function getHealthColor(org: Organization): 'green' | 'yellow' | 'red' | 'gray' {
-  const paid = ['active', 'trial', 'manual'].includes(org.subscription_status)
+  const paid = ['active', 'manual', 'trial', 'demo'].includes(org.subscription_status)
   if (!paid) return 'gray'
   const { urgent, warn } = formatLastSeen(org.last_seen_at, 'ru')
   return urgent ? 'red' : warn ? 'yellow' : 'green'
@@ -496,6 +494,11 @@ export default function AdminOrganizationsPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteOrg, setDeleteOrg] = useState<Organization | null>(null)
 
+  const [modulesOpen, setModulesOpen] = useState(false)
+  const [modulesOrg, setModulesOrg] = useState<Organization | null>(null)
+  const [modulesState, setModulesState] = useState<Record<string, boolean>>({})
+  const [modulesSaving, setModulesSaving] = useState(false)
+
   const [impersonating, setImpersonating] = useState<string | null>(null)
 
   useEffect(() => { loadData() }, [])
@@ -560,7 +563,12 @@ export default function AdminOrganizationsPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    const s = STATUSES.find(x => x.value === status)
+    // Normalize legacy statuses
+    const normalized = (status === 'manual') ? 'active'
+      : (status === 'trial') ? 'demo'
+      : (status === 'expired' || status === 'none') ? 'inactive'
+      : status
+    const s = STATUSES.find(x => x.value === normalized)
     if (!s) return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">—</span>
     return <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[s.color]}`}>
       {l ? s.label_he : s.label_ru}
@@ -593,7 +601,8 @@ export default function AdminOrganizationsPage() {
 
   const openExtend = (org: Organization) => {
     setExtendOrg(org)
-    setExtendStatus(org.subscription_status === 'none' ? 'trial' : org.subscription_status)
+    const s = org.subscription_status
+    setExtendStatus((s === 'active' || s === 'manual') ? 'active' : (s === 'trial' || s === 'demo') ? 'demo' : 'inactive')
     const planKey = (org.plan || 'demo') as PlanKey
     setExtendPlan(planKey)
     const dbPlan = dbPlans.find(p => p.key === planKey)
@@ -636,6 +645,32 @@ export default function AdminOrganizationsPage() {
     finally { setExtendSaving(false) }
   }
 
+
+  const openModules = (org: Organization) => {
+    setModulesOrg(org)
+    const saved = org.features?.modules || {}
+    const full: Record<string, boolean> = {}
+    for (const m of MODULES) full[m.key] = saved[m.key] ?? false
+    setModulesState(full)
+    setSelectedOrg(null)
+    setModulesOpen(true)
+  }
+
+  const handleSaveModules = async () => {
+    if (!modulesOrg) return
+    setModulesSaving(true)
+    try {
+      const res = await fetch('/api/admin/organizations/features', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_id: modulesOrg.id, features: { modules: modulesState } }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success(l ? 'מודולים עודכנו' : 'Модули сохранены')
+      setModulesOpen(false)
+      loadData()
+    } catch { toast.error(l ? 'שגיאה' : 'Ошибка') }
+    finally { setModulesSaving(false) }
+  }
 
   const openAutopay = (org: Organization) => {
     setAutopayOrg(org)
@@ -779,6 +814,10 @@ export default function AdminOrganizationsPage() {
           <button onClick={() => openExtend(org)}
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
             <Shield className="w-4 h-4" />{l ? 'הארכה' : 'Продлить'}
+          </button>
+          <button onClick={() => openModules(org)}
+            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition-colors">
+            <Package className="w-4 h-4" />{l ? 'מודולים' : 'Модули'}
           </button>
           <button onClick={() => { setEditOrg(org); setEditOpen(true); setSelectedOrg(null) }}
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
@@ -980,6 +1019,32 @@ export default function AdminOrganizationsPage() {
             {inviteSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" />{l ? 'שלח' : 'Отправить'}</>}
           </button>
         </form>
+      </Modal>
+
+      {/* ── Modules Modal ── */}
+      <Modal open={modulesOpen && !!modulesOrg} onClose={() => setModulesOpen(false)}
+        title={l ? 'מודולים' : 'Модули'} subtitle={modulesOrg?.display_name || modulesOrg?.name} size="md"
+        footer={
+          <div className="flex gap-3">
+            <button onClick={() => setModulesOpen(false)} className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50">{l ? 'ביטול' : 'Отмена'}</button>
+            <button onClick={handleSaveModules} disabled={modulesSaving} className="flex-1 py-3 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50">{modulesSaving ? '...' : (l ? 'שמור' : 'Сохранить')}</button>
+          </div>
+        }
+      >
+        <div className="space-y-2">
+          {MODULES.map((mod) => {
+            const isEnabled = modulesState[mod.key] ?? false
+            return (
+              <div key={mod.key} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                <span className={`text-sm font-medium ${isEnabled ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}`}>{l ? mod.name_he : mod.name_ru}</span>
+                <button onClick={() => setModulesState(prev => ({ ...prev, [mod.key]: !isEnabled }))}
+                  className={`relative w-10 h-6 rounded-full transition-colors ${isEnabled ? 'bg-violet-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isEnabled ? 'left-5' : 'left-1'}`} />
+                </button>
+              </div>
+            )
+          })}
+        </div>
       </Modal>
 
       {/* ── Edit Org Modal ── */}

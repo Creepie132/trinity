@@ -21,8 +21,8 @@ interface ModalProps {
   className?: string
   contentClassName?: string
   dir?: 'rtl' | 'ltr'
-  modalId?: string   // уникальный ID для pin store (по умолчанию — случайный)
-  pinTitle?: string  // название для индикатора закреплённых
+  modalId?: string
+  pinTitle?: string
 }
 
 const sizeClasses = {
@@ -33,7 +33,6 @@ const sizeClasses = {
   full: 'max-w-4xl',
 }
 
-// Генерируем стабильный ID один раз на mount
 let idCounter = 0
 
 export function Modal({
@@ -61,12 +60,17 @@ export function Modal({
   const pinned_ = isPinned(modalId)
   const { containerRef, handleRef, resetPosition, getCurrentPosition } = useDraggableDialog()
 
-  // Восстанавливаем позицию если уже закреплена
   const pinnedData = pinned.find(p => p.id === modalId)
+
+  // Восстанавливаем позицию из store при монтировании закреплённого окна
+  // pinnedData.x/y — смещение от центра viewport → конвертируем в px от края
   useEffect(() => {
     if (pinnedData && containerRef.current) {
-      containerRef.current.style.transform =
-        `translate(calc(-50% + ${pinnedData.x}px), calc(-50% + ${pinnedData.y}px))`
+      const left = window.innerWidth / 2 + pinnedData.x
+      const top = window.innerHeight / 2 + pinnedData.y
+      containerRef.current.style.left = `${left}px`
+      containerRef.current.style.top = `${top}px`
+      containerRef.current.style.transform = 'translate(-50%, -50%)'
     }
   }, [pinned_])
 
@@ -74,13 +78,13 @@ export function Modal({
     if (pinned_) {
       unpin(modalId)
     } else {
-      // Сохраняем ТЕКУЩУЮ позицию окна при закреплении
       const pos = getCurrentPosition()
       const canPin = pin({
         id: modalId,
         title: (typeof pinTitle === 'string' ? pinTitle : typeof title === 'string' ? title : 'Окно'),
-        x: pos.x, y: pos.y,
-        zIndex: 100,
+        x: pos.x,
+        y: pos.y,
+        zIndex: 9100,
       })
       if (!canPin && containerRef.current) {
         containerRef.current.classList.add('animate-shake')
@@ -111,35 +115,40 @@ export function Modal({
 
   if (!open && !pinned_) return null
 
-  const zStyle = pinnedData ? { zIndex: pinnedData.zIndex } : { zIndex: 9000 }
+  const zIndex = pinnedData ? pinnedData.zIndex : 9000
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
-      style={zStyle}
-    >
-      {/* Backdrop */}
+    <>
+      {/* Backdrop — только когда незакреплено */}
       {!pinned_ && (
         <div
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+          style={{ zIndex: 8999 }}
           onClick={closeOnBackdrop ? onClose : undefined}
           aria-hidden="true"
         />
       )}
 
-      {/* Modal */}
+      {/* Modal — позиционируется абсолютно через left/top 50% + translate(-50%,-50%) */}
+      {/* Drag hook меняет left и top напрямую */}
       <div
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalId)}
         className={cn(
-          'relative w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl pointer-events-auto',
+          'fixed w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl pointer-events-auto',
           'animate-in fade-in-0 zoom-in-95 duration-200',
           'max-h-[90vh] flex flex-col',
           !width && sizeClasses[size],
           pinned_ && 'ring-2 ring-orange-400/60',
           className
         )}
-        style={width ? { maxWidth: `min(${width}, calc(100vw - 32px))` } : undefined}
+        style={{
+          zIndex,
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          maxWidth: width ? `min(${width}, calc(100vw - 32px))` : undefined,
+        }}
         role="dialog"
         aria-modal={!pinned_}
         aria-labelledby={title ? 'modal-title' : undefined}
@@ -198,7 +207,7 @@ export function Modal({
           </div>
         )}
       </div>
-    </div>
+    </>
   )
 }
 

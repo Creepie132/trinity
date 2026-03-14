@@ -45,6 +45,9 @@ const PERIOD_KEY  = 'trinity_analytics_period'
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label, prefix = '', suffix = '' }: any) => {
   if (!active || !payload?.length) return null
+  // Показываем tooltip только если есть ненулевые значения
+  const hasValue = payload.some((p: any) => typeof p.value === 'number' && p.value > 0)
+  if (!hasValue) return null
   return (
     <div className="bg-white border border-slate-100 rounded-xl shadow-lg px-4 py-2.5 text-sm">
       <p className="text-slate-400 text-xs mb-1">{label}</p>

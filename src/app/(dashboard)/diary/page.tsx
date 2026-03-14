@@ -1,23 +1,22 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Calendar, Clock, User, Filter, CheckCircle, CheckCircle2, Circle, AlertCircle, Phone, MessageSquare, Search, X, Mail, MapPin, ChevronRight, PlayCircle, XCircle, AlertTriangle, Trash2 } from 'lucide-react'
-import { TrinityCard } from '@/components/ui/TrinityCard'
-import { TrinityButton } from '@/components/ui/TrinityButton'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import {
+  Plus, Calendar, Clock, User, CheckCircle2, Circle, AlertTriangle,
+  MessageSquare, Search, X, XCircle, PlayCircle, Trash2, CheckCircle,
+  GripVertical, ChevronDown,
+} from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { TaskDesktopPanel } from '@/components/diary/TaskDesktopPanel'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useModalStore } from '@/store/useModalStore'
-import { getClientName } from '@/lib/client-utils'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { format, isToday, isTomorrow, isPast, startOfDay, parseISO } from 'date-fns'
+import { format, isToday, isTomorrow, isPast, parseISO, type Locale } from 'date-fns'
 import { he, ru } from 'date-fns/locale'
 
-// ===== Типы =====
+// ===== Types =====
 interface Task {
   id: string
   org_id: string
@@ -40,936 +39,476 @@ interface Task {
   is_read: boolean
   created_at: string
   updated_at: string
-  client?: {
-    id: string
-    name?: string
-    first_name?: string
-    last_name?: string
-    phone?: string
-  } | null
-  assigned_user?: {
-    user_id: string
-    full_name: string
-  } | null
+  client?: { id: string; name?: string; first_name?: string; last_name?: string; phone?: string } | null
 }
 
-type FilterType = 'all' | 'open' | 'in_progress' | 'completed'
+type KanbanColumn = { id: Task['status']; label: string; color: string; accent: string; icon: React.ReactNode }
+type PriorityFilter = 'all' | 'urgent' | 'high' | 'normal'
 
-interface TaskGroup {
-  key: string
-  label: string
+// ===== helpers =====
+function formatPhoneForWhatsApp(phone: string): string {
+  const clean = phone.replace(/[^0-9]/g, '')
+  if (clean.startsWith('0')) return '972' + clean.slice(1)
+  if (clean.startsWith('972')) return clean
+  return '972' + clean
+}
+
+function getClientDisplayName(client: Task['client']): string {
+  if (!client) return ''
+  return `${client.first_name || ''} ${client.last_name || ''}`.trim() || client.name || ''
+}
+
+function formatDeadline(due: string, locale: Locale, lang: string): { text: string; urgent: boolean; overdue: boolean } {
+  const d = parseISO(due)
+  const overdue = isPast(d) && !isToday(d)
+  const urgent = isToday(d) || isTomorrow(d) || overdue
+  let text = ''
+  if (overdue) text = lang === 'he' ? 'באיחור' : 'Просрочено'
+  else if (isToday(d)) text = format(d, 'HH:mm', { locale })
+  else if (isTomorrow(d)) text = (lang === 'he' ? 'מחר ' : 'Завтра ') + format(d, 'HH:mm', { locale })
+  else text = format(d, 'dd MMM', { locale })
+  return { text, urgent, overdue }
+}
+
+// ===== Priority dot =====
+function PriorityDot({ priority }: { priority: string }) {
+  const map: Record<string, string> = {
+    urgent: 'bg-red-500',
+    high: 'bg-amber-400',
+    normal: 'bg-blue-400',
+    low: 'bg-slate-300',
+  }
+  return <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 mt-1 ${map[priority] ?? map.normal}`} />
+}
+
+// ===== Kanban Card =====
+interface KanbanCardProps {
+  task: Task
+  language: string
+  dateLocale: Locale
+  clients: any[]
+  onComplete: (id: string) => void
+  onDelete: (id: string) => void
+  onDragStart: (e: React.DragEvent, task: Task) => void
+  onDragEnd: () => void
+  isDragging: boolean
+}
+
+function KanbanCard({ task, language, dateLocale, clients, onComplete, onDelete, onDragStart, onDragEnd, isDragging }: KanbanCardProps) {
+  const client = task.client_id ? clients.find((c: any) => c.id === task.client_id) : null
+  const clientName = getClientDisplayName(client)
+  const deadline = task.due_date ? formatDeadline(task.due_date, dateLocale, language) : null
+  const isRTL = language === 'he'
+
+  const priorityBorder: Record<string, string> = {
+    urgent: 'border-l-red-500',
+    high: 'border-l-amber-400',
+    normal: 'border-l-transparent',
+    low: 'border-l-transparent',
+  }
+
+  return (
+    <div
+      draggable
+      onDragStart={e => onDragStart(e, task)}
+      onDragEnd={onDragEnd}
+      className={[
+        'group relative bg-white dark:bg-slate-800/90 rounded-2xl',
+        'border border-slate-200 dark:border-slate-700 border-l-4',
+        priorityBorder[task.priority] ?? 'border-l-transparent',
+        'shadow-sm hover:shadow-md transition-all duration-200 cursor-grab active:cursor-grabbing',
+        isDragging ? 'opacity-40 scale-95' : 'opacity-100 scale-100',
+        task.status === 'completed' ? 'opacity-60' : '',
+        'animate-card-in',
+      ].join(' ')}
+    >
+      <div className={`absolute top-3 ${isRTL ? 'left-2' : 'right-2'} opacity-0 group-hover:opacity-40 transition-opacity pointer-events-none`}>
+        <GripVertical size={14} className="text-slate-400" />
+      </div>
+
+      <div className="p-3.5 space-y-2.5">
+        <div className="flex items-start gap-2">
+          <PriorityDot priority={task.priority} />
+          <p className={`text-sm font-semibold leading-snug text-slate-800 dark:text-slate-100 flex-1 ${task.status === 'completed' ? 'line-through text-slate-400 dark:text-slate-500' : ''}`}>
+            {task.title}
+          </p>
+        </div>
+
+        {task.description && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2 ps-4">
+            {task.description}
+          </p>
+        )}
+
+        {clientName && (
+          <div className="flex items-center gap-1.5 ps-4">
+            <User size={11} className="text-slate-400 flex-shrink-0" />
+            <span className="text-xs text-slate-500 dark:text-slate-400 truncate">{clientName}</span>
+          </div>
+        )}
+
+        {deadline && (
+          <div className="flex items-center gap-1.5 ps-4">
+            <Clock size={11} className={deadline.overdue ? 'text-red-500' : deadline.urgent ? 'text-amber-500' : 'text-slate-400'} />
+            <span className={`text-xs font-medium ${deadline.overdue ? 'text-red-500' : deadline.urgent ? 'text-amber-500' : 'text-slate-500 dark:text-slate-400'}`}>
+              {deadline.text}
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-700/60">
+          {task.contact_phone && (
+            <button
+              onClick={e => { e.stopPropagation(); window.open(`https://wa.me/${formatPhoneForWhatsApp(task.contact_phone!)}`, '_blank') }}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 transition text-xs font-medium"
+              title="WhatsApp"
+            >
+              <MessageSquare size={11} />
+              <span>WA</span>
+            </button>
+          )}
+          {task.status !== 'completed' && task.status !== 'cancelled' && (
+            <button
+              onClick={e => { e.stopPropagation(); onComplete(task.id) }}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-900/20 transition text-xs ms-auto"
+              title={language === 'he' ? 'סיים' : 'Завершить'}
+            >
+              <CheckCircle size={11} />
+            </button>
+          )}
+          <button
+            onClick={e => { e.stopPropagation(); onDelete(task.id) }}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 transition text-xs"
+            title={language === 'he' ? 'מחק' : 'Удалить'}
+          >
+            <Trash2 size={11} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ===== Kanban Column =====
+interface KanbanColProps {
+  col: KanbanColumn
   tasks: Task[]
-  color?: string
+  language: string
+  dateLocale: Locale
+  clients: any[]
+  onComplete: (id: string) => void
+  onDelete: (id: string) => void
+  onDrop: (status: Task['status']) => void
+  draggingId: string | null
+  onDragStart: (e: React.DragEvent, task: Task) => void
+  onDragEnd: () => void
 }
 
-// ===== TaskStatusIcon - иконки статусов =====
-function TaskStatusIcon({ status, priority }: { status: string; priority: string }) {
-  if (status === 'completed') return <CheckCircle2 size={20} className="text-emerald-500" />
-  if (status === 'cancelled') return <XCircle size={20} className="text-slate-300" />
-  if (status === 'in_progress') return <PlayCircle size={20} className="text-amber-500" />
-  if (priority === 'urgent') return <AlertTriangle size={20} className="text-red-500" />
-  if (priority === 'high') return <AlertTriangle size={20} className="text-amber-500" />
-  return <Circle size={20} className="text-blue-500" />
+function KanbanCol({ col, tasks, language, dateLocale, clients, onComplete, onDelete, onDrop, draggingId, onDragStart, onDragEnd }: KanbanColProps) {
+  const [isOver, setIsOver] = useState(false)
+
+  return (
+    <div
+      onDragOver={e => { e.preventDefault(); setIsOver(true) }}
+      onDragLeave={() => setIsOver(false)}
+      onDrop={e => { e.preventDefault(); setIsOver(false); onDrop(col.id) }}
+      className={[
+        'flex flex-col min-w-[280px] max-w-[320px] rounded-2xl transition-all duration-200',
+        isOver ? 'ring-2 ring-primary/40 bg-primary/5 scale-[1.01]' : 'bg-slate-50 dark:bg-slate-900/50',
+      ].join(' ')}
+    >
+      {/* Header */}
+      <div className={`flex items-center gap-2 px-4 py-3 rounded-t-2xl ${col.color}`}>
+        {col.icon}
+        <span className="text-sm font-bold text-slate-700 dark:text-slate-200 flex-1">{col.label}</span>
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${col.accent}`}>{tasks.length}</span>
+      </div>
+
+      {/* Drop hint */}
+      {isOver && (
+        <div className="mx-3 mt-2 h-12 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 flex items-center justify-center">
+          <span className="text-xs text-primary/60">{language === 'he' ? 'שחרר כאן' : 'Отпустите здесь'}</span>
+        </div>
+      )}
+
+      {/* Cards */}
+      <div className="flex flex-col gap-2 p-3 min-h-[120px] flex-1">
+        {tasks.length === 0 && !isOver && (
+          <div className="flex-1 flex items-center justify-center py-8">
+            <span className="text-xs text-slate-400 dark:text-slate-600 italic">
+              {language === 'he' ? 'אין משימות' : 'Нет задач'}
+            </span>
+          </div>
+        )}
+        {tasks.map(task => (
+          <KanbanCard
+            key={task.id}
+            task={task}
+            language={language}
+            dateLocale={dateLocale}
+            clients={clients}
+            onComplete={onComplete}
+            onDelete={onDelete}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            isDragging={draggingId === task.id}
+          />
+        ))}
+      </div>
+    </div>
+  )
 }
 
+// ===== Main Page =====
 export default function DiaryPage() {
   const router = useRouter()
   const { user, orgId } = useAuth()
   const { hasDiary } = useFeatures()
-  const { t, language } = useLanguage()
+  const { language } = useLanguage()
   const isRTL = language === 'he'
   const dateLocale = language === 'he' ? he : ru
   const supabase = createSupabaseBrowserClient()
 
   const [tasks, setTasks] = useState<Task[]>([])
   const [clients, setClients] = useState<any[]>([])
-  const [visits, setVisits] = useState<any[]>([])
-  const [orgUsers, setOrgUsers] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [filter, setFilter] = useState<FilterType>('open')
   const [searchQuery, setSearchQuery] = useState('')
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
+  const [draggingTask, setDraggingTask] = useState<Task | null>(null)
   const { openModal } = useModalStore()
-  const [selectedVisit, setSelectedVisit] = useState<any>(null)
-  const [desktopPanelTask, setDesktopPanelTask] = useState<Task | null>(null)
 
-  // ===== Проверка доступа =====
-  useEffect(() => {
-    if (!hasDiary) {
-      router.push('/dashboard')
-    }
-  }, [hasDiary, router])
+  const COLUMNS: KanbanColumn[] = [
+    {
+      id: 'open',
+      label: language === 'he' ? 'פתוח' : 'Открытые',
+      color: 'bg-slate-100 dark:bg-slate-800',
+      accent: 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300',
+      icon: <Circle size={14} className="text-slate-500" />,
+    },
+    {
+      id: 'in_progress',
+      label: language === 'he' ? 'בתהליך' : 'В процессе',
+      color: 'bg-amber-50 dark:bg-amber-900/20',
+      accent: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
+      icon: <PlayCircle size={14} className="text-amber-500" />,
+    },
+    {
+      id: 'completed',
+      label: language === 'he' ? 'הושלם' : 'Завершено',
+      color: 'bg-emerald-50 dark:bg-emerald-900/20',
+      accent: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300',
+      icon: <CheckCircle2 size={14} className="text-emerald-500" />,
+    },
+    {
+      id: 'cancelled',
+      label: language === 'he' ? 'בוטל' : 'Отменено',
+      color: 'bg-slate-50 dark:bg-slate-800/40',
+      accent: 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400',
+      icon: <XCircle size={14} className="text-slate-400" />,
+    },
+  ]
 
-  // ===== Загрузка задач =====
-  useEffect(() => {
-    loadTasks()
-    loadClients()
-    loadVisits()
-  }, [filter])
-
-  // Загружаем пользователей организации один раз
-  useEffect(() => {
-    fetch('/api/org-users')
-      .then(r => r.ok ? r.json() : [])
-      .then(data => setOrgUsers(Array.isArray(data) ? data : []))
-      .catch(() => {})
-  }, [])
+  useEffect(() => { if (!hasDiary) router.push('/dashboard') }, [hasDiary, router])
+  useEffect(() => { loadTasks(); loadClients() }, [])
 
   async function loadTasks() {
     try {
       setIsLoading(true)
-      const params = new URLSearchParams()
-      if (filter !== 'all') {
-        params.append('status', filter)
-      }
-      
-      const response = await fetch(`/api/tasks?${params}`)
-      if (!response.ok) throw new Error('Failed to load tasks')
-      const data = await response.json()
-      setTasks(data)
-    } catch (error) {
-      console.error('Load tasks error:', error)
-    } finally {
-      setIsLoading(false)
-    }
+      const res = await fetch('/api/tasks')
+      if (!res.ok) throw new Error('Failed')
+      setTasks(await res.json())
+    } catch (e) { console.error(e) }
+    finally { setIsLoading(false) }
   }
 
   async function loadClients() {
     try {
-      const response = await fetch('/api/clients')
-      if (!response.ok) return
-      const data = await response.json()
-      setClients(data)
-    } catch (error) {
-      console.error('Load clients error:', error)
-    }
+      const res = await fetch('/api/clients')
+      if (res.ok) setClients(await res.json())
+    } catch (e) { console.error(e) }
   }
 
-  async function loadVisits() {
-    try {
-      const response = await fetch('/api/visits')
-      if (!response.ok) return
-      const data = await response.json()
-      setVisits(data)
-    } catch (error) {
-      console.error('Load visits error:', error)
-    }
-  }
-
-  // ===== Фильтрация и поиск =====
   const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
-      const matchesSearch = !searchQuery || 
-        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        getTaskClientName(task).toLowerCase().includes(searchQuery.toLowerCase())
-      return matchesSearch
+    let list = tasks
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      list = list.filter(t =>
+        t.title.toLowerCase().includes(q) ||
+        t.description?.toLowerCase().includes(q) ||
+        getClientDisplayName(t.client).toLowerCase().includes(q)
+      )
+    }
+    if (priorityFilter !== 'all') {
+      list = list.filter(t => t.priority === priorityFilter)
+    }
+    return [...list].sort((a, b) => {
+      const w = (p: string) => p === 'urgent' ? 0 : p === 'high' ? 1 : 2
+      return w(a.priority) - w(b.priority)
     })
-  }, [tasks, searchQuery, clients])
+  }, [tasks, searchQuery, priorityFilter])
 
-  // ===== Группировка задач =====
-  const groupedTasks = useMemo((): TaskGroup[] => {
-    const groups: TaskGroup[] = [
-      { key: 'overdue', label: language === 'he' ? 'באיחור' : 'Просрочено', tasks: [], color: 'border-red-300' },
-      { key: 'today', label: language === 'he' ? 'היום' : 'Сегодня', tasks: [], color: 'border-blue-300' },
-      { key: 'tomorrow', label: language === 'he' ? 'מחר' : 'Завтра', tasks: [], color: 'border-green-300' },
-      { key: 'later', label: language === 'he' ? 'אחר כך' : 'Позже', tasks: [] },
-      { key: 'no-date', label: language === 'he' ? 'ללא תאריך' : 'Без даты', tasks: [] },
-    ]
+  const tasksByColumn = useMemo(() => {
+    const map: Record<string, Task[]> = { open: [], in_progress: [], completed: [], cancelled: [] }
+    filteredTasks.forEach(t => { if (map[t.status]) map[t.status].push(t) })
+    return map
+  }, [filteredTasks])
 
-    filteredTasks.forEach((task) => {
-      if (!task.due_date) {
-        groups[4].tasks.push(task)
-      } else {
-        const dueDate = parseISO(task.due_date)
-
-        if (isPast(dueDate) && !isToday(dueDate) && task.status !== 'completed') {
-          groups[0].tasks.push(task)
-        } else if (isToday(dueDate)) {
-          groups[1].tasks.push(task)
-        } else if (isTomorrow(dueDate)) {
-          groups[2].tasks.push(task)
-        } else {
-          groups[3].tasks.push(task)
-        }
-      }
-    })
-
-    // Sort each group: newest (created_at desc) first
-    groups.forEach(g => {
-      g.tasks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    })
-
-    return groups.filter((group) => group.tasks.length > 0)
-  }, [filteredTasks, language])
-
-  // ===== Получить имя клиента для задачи =====
-  function getTaskClientName(task: Task): string {
-    if (!task.client_id) return ''
-    const client = clients.find((c: any) => c.id === task.client_id)
-    if (!client) return ''
-    return `${client.first_name || ''} ${client.last_name || ''}`.trim()
+  async function handleComplete(taskId: string) {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' as const } : t))
+    await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId)
   }
 
-  // ===== Получить имя назначенного пользователя =====
-  function getAssignedUserName(userId: string | null): string {
-    if (!userId) return ''
-    const u = orgUsers.find((o: any) => o.user_id === userId)
-    return u?.full_name || ''
+  async function handleDelete(taskId: string) {
+    setTasks(prev => prev.filter(t => t.id !== taskId))
+    await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' })
   }
 
-  // ===== Рендер иконки по приоритету =====
-  function getTaskIcon(task: Task) {
-    if (task.status === 'completed') {
-      return <CheckCircle2 size={18} />
-    }
-    if (task.status === 'cancelled') {
-      return <Circle size={18} />
-    }
-    if (task.priority === 'urgent' || (task.due_date && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date)))) {
-      return <AlertCircle size={18} />
-    }
-    if (task.status === 'in_progress') {
-      return <Clock size={18} />
-    }
-    return <Circle size={18} />
+  function handleDragStart(e: React.DragEvent, task: Task) {
+    setDraggingTask(task)
+    e.dataTransfer.effectAllowed = 'move'
   }
 
-  // ===== Цвет иконки =====
-  function getIconBg(task: Task) {
-    if (task.status === 'completed') return 'bg-emerald-50 dark:bg-emerald-900/20'
-    if (task.status === 'cancelled') return 'bg-slate-50 dark:bg-slate-800'
-    if (task.priority === 'urgent') return 'bg-red-50 dark:bg-red-900/20'
-    if (task.priority === 'high') return 'bg-amber-50 dark:bg-amber-900/20'
-    if (task.status === 'in_progress') return 'bg-blue-50 dark:bg-blue-900/20'
-    if (task.due_date && isPast(parseISO(task.due_date)) && !isToday(parseISO(task.due_date))) {
-      return 'bg-red-50 dark:bg-red-900/20'
-    }
-    return 'bg-slate-50 dark:bg-slate-800'
+  function handleDragEnd() { setDraggingTask(null) }
+
+  async function handleDrop(targetStatus: Task['status']) {
+    if (!draggingTask || draggingTask.status === targetStatus) return
+    const prev = [...tasks]
+    setTasks(t => t.map(x => x.id === draggingTask.id ? { ...x, status: targetStatus } : x))
+    const { error } = await supabase.from('tasks').update({ status: targetStatus }).eq('id', draggingTask.id)
+    if (error) setTasks(prev)
+    setDraggingTask(null)
   }
 
-  // ===== Статус бейдж =====
-  function getStatusBadge(task: Task) {
-    const colors: Record<string, string> = {
-      open: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      in_progress: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-      completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-      cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    }
-    
-    return {
-      text: t(`task.status.${task.status}`),
-      className: colors[task.status] || colors.open,
-    }
-  }
+  const PRIORITY_FILTERS: { key: PriorityFilter; label: string; dot?: string }[] = [
+    { key: 'all', label: language === 'he' ? 'הכל' : 'Все' },
+    { key: 'urgent', label: language === 'he' ? 'דחוף' : 'Срочные', dot: 'bg-red-500' },
+    { key: 'high', label: language === 'he' ? 'גבוה' : 'Высокий', dot: 'bg-amber-400' },
+    { key: 'normal', label: language === 'he' ? 'רגיל' : 'Обычные', dot: 'bg-blue-400' },
+  ]
 
-  // ===== Звонок =====
-  function handleCall(phone: string) {
-    window.location.href = `tel:${phone}`
-  }
+  const urgentCount = tasks.filter(t => t.priority === 'urgent' && t.status !== 'completed' && t.status !== 'cancelled').length
 
-  // ===== WhatsApp =====
-  function handleWhatsApp(phone: string) {
-    const cleanPhone = phone.replace(/[^0-9]/g, '')
-    window.open(`https://wa.me/${cleanPhone}`, '_blank')
-  }
-
-  // ===== Обновление статуса задачи =====
-  async function updateTaskStatus(taskId: string, status: Task['status']) {
-    try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .update({ status })
-        .eq('id', taskId)
-        .select()
-      
-      console.log('Complete task result:', data, error)
-      
-      if (error) throw error
-      
-      await loadTasks()
-    } catch (error) {
-      console.error('Update task error:', error)
-    }
-  }
-
-  // ===== Форматирование телефона для WhatsApp (Израиль) =====
-  function formatPhoneForWhatsApp(phone: string): string {
-    const cleanPhone = phone.replace(/[^0-9]/g, '')
-    // Если начинается с 0, убираем и добавляем код 972
-    if (cleanPhone.startsWith('0')) {
-      return '972' + cleanPhone.slice(1)
-    }
-    // Если уже с кодом страны
-    if (cleanPhone.startsWith('972')) {
-      return cleanPhone
-    }
-    // По умолчанию добавляем код Израиля
-    return '972' + cleanPhone
-  }
-
-  // ===== Рендер карточки задачи =====
-  function renderTaskCard(task: Task) {
-    const clientName = getTaskClientName(task)
-    const badge = getStatusBadge(task)
-    const quickActions = []
-
-    // WhatsApp (если есть телефон)
-    if (task.contact_phone) {
-      quickActions.push({
-        icon: <MessageSquare size={16} />,
-        label: 'WhatsApp',
-        onClick: () => {
-          const formattedPhone = formatPhoneForWhatsApp(task.contact_phone!)
-          window.open(`https://wa.me/${formattedPhone}`, '_blank')
-        },
-        color: 'bg-green-50',
-        textColor: 'text-green-600',
-        darkBg: 'dark:bg-green-900/30',
-        darkText: 'dark:text-green-400',
-      })
-    }
-
-    // SMS (если есть телефон)
-    if (task.contact_phone) {
-      quickActions.push({
-        icon: <MessageSquare size={16} />,
-        label: 'SMS',
-        onClick: () => {
-          window.location.href = `sms:${task.contact_phone}`
-        },
-        color: 'bg-blue-50',
-        textColor: 'text-blue-600',
-        darkBg: 'dark:bg-blue-900/30',
-        darkText: 'dark:text-blue-400',
-      })
-    }
-
-    // Навигация (если есть адрес)
-    if (task.contact_address) {
-      quickActions.push({
-        icon: <MapPin size={16} />,
-        label: language === 'he' ? 'ניווט' : 'Навигация',
-        onClick: () => {
-          const encoded = encodeURIComponent(task.contact_address!)
-          window.open(`https://waze.com/ul?q=${encoded}`, '_blank')
-        },
-        color: 'bg-purple-50',
-        textColor: 'text-purple-600',
-        darkBg: 'dark:bg-purple-900/30',
-        darkText: 'dark:text-purple-400',
-      })
-    }
-
-    // Email (если есть email)
-    if (task.contact_email) {
-      quickActions.push({
-        icon: <Mail size={16} />,
-        label: 'Email',
-        onClick: () => {
-          window.location.href = `mailto:${task.contact_email}`
-        },
-        color: 'bg-red-50',
-        textColor: 'text-red-600',
-        darkBg: 'dark:bg-red-900/30',
-        darkText: 'dark:text-red-400',
-      })
-    }
-
-    // Завершить (если задача не завершена)
-    if (task.status !== 'completed' && task.status !== 'cancelled') {
-      quickActions.push({
-        icon: <CheckCircle size={16} />,
-        label: language === 'he' ? 'סיים' : 'Завершить',
-        onClick: () => updateTaskStatus(task.id, 'completed'),
-        color: 'bg-emerald-50',
-        textColor: 'text-emerald-600',
-        darkBg: 'dark:bg-emerald-900/30',
-        darkText: 'dark:text-emerald-400',
-      })
-    }
-
-    return (
-      <TrinityCard
-        key={task.id}
-        avatar={{
-          type: 'icon',
-          icon: <TaskStatusIcon status={task.status} priority={task.priority} />,
-          iconBg: 'bg-transparent',
-        }}
-        title={task.title}
-        subtitle={task.description ? (task.description.length > 60 ? task.description.slice(0, 60) + '...' : task.description) : clientName}
-        stats={[
-          ...(task.due_date ? [{
-            icon: <Clock size={13} />,
-            text: format(parseISO(task.due_date), 'dd MMM, HH:mm', { locale: dateLocale }),
-          }] : []),
-          ...(clientName ? [{
-            icon: <Circle size={13} />,
-            text: clientName,
-          }] : []),
-          ...(task.assigned_to ? [{
-            icon: <User size={13} />,
-            text: getAssignedUserName(task.assigned_to) || (language === 'he' ? 'מוקצה' : 'Назначено'),
-          }] : []),
-        ]}
-        quickActions={quickActions.length > 0 ? quickActions : undefined}
-        drawerTitle={task.title}
-        drawerContent={(
-          <div className="space-y-4">
-            {/* Описание */}
-            {task.description && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">{language === 'he' ? 'תיאור' : 'Описание'}</p>
-                <p className="text-sm whitespace-pre-wrap break-words">{task.description}</p>
-              </div>
-            )}
-
-            {/* Статус и приоритет */}
-            <div className="flex gap-2">
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.className}`}>
-                {badge.text}
-              </span>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                task.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                task.priority === 'high' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
-              }`}>
-                {task.priority === 'urgent' ? '🔴' : task.priority === 'high' ? '🟡' : '⚪'}
-                {' '}
-                {{
-                  urgent: language === 'he' ? 'דחוף' : 'Срочный',
-                  high: language === 'he' ? 'גבוה' : 'Высокий',
-                  normal: language === 'he' ? 'רגיל' : 'Обычный',
-                  low: language === 'he' ? 'נמוך' : 'Низкий'
-                }[task.priority] || task.priority}
-              </span>
-            </div>
-
-            {/* Дедлайн */}
-            {task.due_date && (
-              <div className="flex items-center gap-2 py-2 border-b border-muted">
-                <Clock size={14} className="text-muted-foreground" />
-                <span className="text-sm">{new Date(task.due_date).toLocaleString(language === 'he' ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-            )}
-
-            {/* Назначено */}
-            {task.assigned_to && getAssignedUserName(task.assigned_to) && (
-              <div className="flex items-center gap-2 py-2 border-b border-muted">
-                <User size={14} className="text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{language === 'he' ? 'הוקצה ל:' : 'Назначено:'}</span>
-                <span className="text-sm font-medium">{getAssignedUserName(task.assigned_to)}</span>
-              </div>
-            )}
-
-            {/* Клиент — КЛИКАБЕЛЬНЫЙ */}
-            {task.client_id && (
-              <button
-                onClick={() => {
-                  const client = clients.find((c: any) => c.id === task.client_id)
-                  if (client) openModal('client-details', { client, locale: language === 'he' ? 'he' : 'ru' })
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 transition text-start"
-              >
-                <User size={16} className="text-slate-600" />
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  {clientName || (language === 'he' ? 'לקוח' : 'Клиент')}
-                </span>
-                <ChevronRight size={14} className="text-slate-400 ms-auto" />
-              </button>
-            )}
-
-            {/* Визит — КЛИКАБЕЛЬНЫЙ */}
-            {task.visit_id && (
-              <button
-                onClick={() => {
-                  const visit = visits.find((v: any) => v.id === task.visit_id)
-                  if (visit) setSelectedVisit(visit)
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 transition text-start"
-              >
-                <Calendar size={16} className="text-slate-600" />
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  {language === 'he' ? 'צפה בביקור' : 'Посмотреть визит'}
-                </span>
-                <ChevronRight size={14} className="text-slate-400 ms-auto" />
-              </button>
-            )}
-
-            {/* Контакты */}
-            {(task.contact_phone || task.contact_email || task.contact_address) && (
-              <div className="space-y-2 pt-2 border-t border-muted">
-                <p className="text-xs text-muted-foreground">{language === 'he' ? 'יצירת קשר' : 'Контакты'}</p>
-                
-                {/* Телефон + WhatsApp */}
-                {task.contact_phone && (
-                  <div className="flex gap-2">
-                    <a
-                      href={`tel:${task.contact_phone}`}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 text-sm font-medium"
-                    >
-                      <Phone size={16} />
-                      {task.contact_phone}
-                    </a>
-                    <a
-                      href={`https://wa.me/${task.contact_phone.replace(/[^0-9]/g, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 text-sm font-medium"
-                    >
-                      <MessageSquare size={16} />
-                      WhatsApp
-                    </a>
-                  </div>
-                )}
-
-                {/* Email */}
-                {task.contact_email && (
-                  <a
-                    href={`mailto:${task.contact_email}`}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-medium"
-                  >
-                    <Mail size={16} />
-                    {task.contact_email}
-                  </a>
-                )}
-
-                {/* Адрес + Навигация */}
-                {task.contact_address && (
-                  <button
-                    onClick={() => {
-                      const encoded = encodeURIComponent(task.contact_address!)
-                      const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
-                      if (isMobile) {
-                        window.location.href = `geo:0,0?q=${encoded}`
-                      } else {
-                        window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank')
-                      }
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm font-medium text-start"
-                  >
-                    <MapPin size={16} />
-                    <span className="flex-1">{task.contact_address}</span>
-                    <span className="text-xs opacity-60">{language === 'he' ? 'נווט' : 'Навигация'} →</span>
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Действия */}
-            <div className="space-y-2 pt-2">
-              {task.status === 'open' && (
-                <button
-                  onClick={() => updateTaskStatus(task.id, 'in_progress')}
-                  className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition"
-                >
-                  ▶ {t('task.action.start')}
-                </button>
-              )}
-              {task.status === 'in_progress' && (
-                <button
-                  onClick={() => updateTaskStatus(task.id, 'completed')}
-                  className="w-full py-3 rounded-xl border-2 border-emerald-400 text-emerald-600 text-sm font-semibold hover:bg-emerald-50 transition"
-                >
-                  ✓ {language === 'he' ? 'סיים' : 'Завершить'}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-        isInactive={task.status === 'cancelled' || task.status === 'completed'}
-        locale={language}
-        // No onClick - TrinityCard will open drawer automatically on mobile
-      />
-    )
-  }
-
-  // ===== Рендер =====
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-muted-foreground">
-          {language === 'he' ? 'טוען...' : 'Загрузка...'}
+      <div className="p-4 md:p-6 space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-36 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+          <div className="h-10 w-28 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+        </div>
+        <div className="flex gap-3 overflow-x-auto">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="min-w-[280px]">
+              <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-t-2xl animate-pulse mb-2" />
+              {[1, 2, 3].map(j => <div key={j} className="h-24 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse mb-2" />)}
+            </div>
+          ))}
         </div>
       </div>
     )
-  }
-
-  const handleTaskClick = (task: Task) => {
-    // Used for desktop table only
-    setDesktopPanelTask(task)
-  }
-
-  const handleTaskStatusChange = async (taskId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: newStatus as any })
-        .eq('id', taskId)
-
-      if (error) throw error
-
-      loadTasks()
-      setDesktopPanelTask(null)
-    } catch (error) {
-      console.error('Error updating task status:', error)
-    }
-  }
-
-  const handleTaskEdit = (task: Task) => {
-    setDesktopPanelTask(null)
-    openModal('task-create', { 
-      editTask: task,
-      onCreated: loadTasks 
-    })
-  }
-
-  const handleTaskDelete = async (taskId: string) => {
-    try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        console.error('Delete task error:', data.error)
-        return
-      }
-
-      loadTasks()
-      setDesktopPanelTask(null)
-    } catch (error) {
-      console.error('Error deleting task:', error)
-    }
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Заголовок */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">
-          {language === 'he' ? 'יומן משימות' : 'Дневник задач'}
-        </h1>
-        {/* Десктоп кнопка */}
-        <div className="hidden md:block">
-          <TrinityButton
-            variant="primary"
-            size="md"
-            icon={<Plus className="w-5 h-5" />}
-            onClick={() => openModal('task-create', { onCreated: loadTasks })}
-          >
-            {language === 'he' ? 'משימה חדשה' : 'Новая задача'}
-          </TrinityButton>
+    <div className="flex flex-col h-full" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Top bar */}
+      <div className="flex items-center gap-3 px-4 md:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm sticky top-0 z-20 flex-wrap gap-y-2">
+        <div className="flex items-center gap-2 me-auto">
+          <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+            {language === 'he' ? 'יומן משימות' : 'Дневник задач'}
+          </h1>
+          {urgentCount > 0 && (
+            <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 animate-pulse">
+              <AlertTriangle size={10} />
+              {urgentCount}
+            </span>
+          )}
         </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search size={13} className={`absolute top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none ${isRTL ? 'right-3' : 'left-3'}`} />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder={language === 'he' ? 'חיפוש...' : 'Поиск...'}
+            className={`h-9 w-44 md:w-56 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition ${isRTL ? 'pr-8 pl-8' : 'pl-8 pr-8'}`}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className={`absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 ${isRTL ? 'left-2' : 'right-2'}`}>
+              <X size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* Priority filter pills */}
+        <div className="flex gap-1.5">
+          {PRIORITY_FILTERS.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setPriorityFilter(f.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                priorityFilter === f.key
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              {f.dot && <span className={`w-1.5 h-1.5 rounded-full ${f.dot}`} />}
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* New task */}
+        <button
+          onClick={() => openModal('task-create', { onCreated: loadTasks })}
+          className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm hover:shadow-md"
+        >
+          <Plus size={15} />
+          <span className="hidden sm:inline">{language === 'he' ? 'משימה חדשה' : 'Новая задача'}</span>
+        </button>
       </div>
 
-      {/* Поиск */}
-      <div className="mb-4 relative">
-        <Search
-          size={18}
-          className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none ${
-            isRTL ? 'right-3' : 'left-3'
-          }`}
-        />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={language === 'he' ? 'חיפוש משימות...' : 'Поиск задач...'}
-          className={`w-full py-3 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition ${
-            isRTL ? 'pr-10 pl-10' : 'pl-10 pr-10'
-          }`}
-          dir={isRTL ? 'rtl' : 'ltr'}
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition ${
-              isRTL ? 'left-3' : 'right-3'
-            }`}
-          >
-            <X size={18} />
-          </button>
-        )}
-      </div>
-
-      {/* Фильтры */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        {[
-          { key: 'all', label: language === 'he' ? 'הכל' : 'Все' },
-          { key: 'open', label: language === 'he' ? 'פתוח' : 'Открытые' },
-          { key: 'in_progress', label: language === 'he' ? 'בתהליך' : 'В процессе' },
-          { key: 'completed', label: language === 'he' ? 'הושלם' : 'Завершённые' },
-        ].map((item) => (
-          <button
-            key={item.key}
-            onClick={() => setFilter(item.key as FilterType)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition ${
-              filter === item.key
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Список задач */}
-      {groupedTasks.length === 0 ? (
-        <EmptyState
-          icon={<Calendar className="w-8 h-8" />}
-          title={language === 'he' ? 'אין משימות' : 'Нет задач'}
-          description={language === 'he' ? 'צור משימה חדשה כדי להתחיל' : 'Создайте первую задачу для начала работы'}
-          action={{
-            label: language === 'he' ? 'צור משימה' : 'Создать задачу',
-            onClick: () => openModal('task-create', { onCreated: loadTasks }),
-          }}
-        />
+      {/* Board */}
+      {tasks.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center p-8">
+          <EmptyState
+            icon={<Calendar className="w-8 h-8" />}
+            title={language === 'he' ? 'אין משימות' : 'Нет задач'}
+            description={language === 'he' ? 'צור משימה חדשה כדי להתחיל' : 'Создайте первую задачу для начала работы'}
+            action={{ label: language === 'he' ? 'צור משימה' : 'Создать задачу', onClick: () => openModal('task-create', { onCreated: loadTasks }) }}
+          />
+        </div>
       ) : (
-        <>
-          {/* Desktop Table */}
-          <div className="hidden md:block bg-card rounded-2xl border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-muted bg-muted/30">
-                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'משימה' : 'Задача'}</th>
-                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'לקוח' : 'Клиент'}</th>
-                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'תאריך יעד' : 'Дедлайн'}</th>
-                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'עדיפות' : 'Приоритет'}</th>
-                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'סטטוס' : 'Статус'}</th>
-                  <th className="text-start py-3 px-4 font-medium text-muted-foreground">{language === 'he' ? 'פעולות' : 'Действия'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groupedTasks.flatMap((group) => group.tasks).map((task: Task) => {
-                  const client = task.client_id ? clients.find((c: any) => c.id === task.client_id) : null
-                  const clientName = client ? getClientName(client) : '—'
-                  const badge = getStatusBadge(task)
-                  
-                  return (
-                    <tr
-                      key={task.id}
-                      className={`border-b border-muted/50 hover:bg-muted/30 transition ${
-                        task.status === 'cancelled' || task.status === 'completed' ? 'opacity-50' : ''
-                      }`}
-                    >
-                      <td className="py-3 px-4 font-medium cursor-pointer" onClick={() => handleTaskClick(task)}>{task.title}</td>
-                      <td className="py-3 px-4 text-muted-foreground cursor-pointer" onClick={() => handleTaskClick(task)}>{clientName}</td>
-                      <td className="py-3 px-4 text-muted-foreground cursor-pointer" onClick={() => handleTaskClick(task)}>
-                        {task.due_date ? new Date(task.due_date).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU') : '—'}
-                      </td>
-                      <td className="py-3 px-4 cursor-pointer" onClick={() => handleTaskClick(task)}>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${
-                            task.priority === 'urgent'
-                              ? 'bg-red-100 text-red-700'
-                              : task.priority === 'high'
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {task.priority}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 cursor-pointer" onClick={() => handleTaskClick(task)}>
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.className}`}>
-                          {badge.text}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
-                          {/* WhatsApp */}
-                          {task.contact_phone && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                const formattedPhone = formatPhoneForWhatsApp(task.contact_phone!)
-                                window.open(`https://wa.me/${formattedPhone}`, '_blank')
-                              }}
-                              className="w-7 h-7 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center transition"
-                              title="WhatsApp"
-                            >
-                              <MessageSquare size={14} />
-                            </button>
-                          )}
-                          
-                          {/* SMS */}
-                          {task.contact_phone && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                window.location.href = `sms:${task.contact_phone}`
-                              }}
-                              className="w-7 h-7 rounded-full bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center transition"
-                              title="SMS"
-                            >
-                              <MessageSquare size={14} />
-                            </button>
-                          )}
-                          
-                          {/* Навигация */}
-                          {task.contact_address && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                const encoded = encodeURIComponent(task.contact_address!)
-                                window.open(`https://waze.com/ul?q=${encoded}`, '_blank')
-                              }}
-                              className="w-7 h-7 rounded-full bg-purple-500 hover:bg-purple-600 text-white flex items-center justify-center transition"
-                              title={language === 'he' ? 'ניווט' : 'Навигация'}
-                            >
-                              <MapPin size={14} />
-                            </button>
-                          )}
-                          
-                          {/* Email */}
-                          {task.contact_email && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                window.location.href = `mailto:${task.contact_email}`
-                              }}
-                              className="w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition"
-                              title="Email"
-                            >
-                              <Mail size={14} />
-                            </button>
-                          )}
-                          
-                          {/* Завершить */}
-                          {task.status !== 'completed' && task.status !== 'cancelled' && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                updateTaskStatus(task.id, 'completed')
-                              }}
-                              className="w-7 h-7 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition"
-                              title={language === 'he' ? 'סיים' : 'Завершить'}
-                            >
-                              <CheckCircle size={14} />
-                            </button>
-                          )}
-
-                          {/* Удалить */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleTaskDelete(task.id)
-                            }}
-                            className="w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition"
-                            title={language === 'he' ? 'מחק' : 'Удалить'}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Cards */}
-          <div className="md:hidden space-y-6">
-            {groupedTasks.map((group) => (
-              <div key={group.key}>
-                <div className={`flex items-center gap-2 mb-3 ${group.color ? `border-l-4 ${group.color} pl-3` : 'pl-1'}`}>
-                  <h2 className="text-sm font-bold text-foreground">
-                    {group.label}
-                  </h2>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                    group.key === 'overdue' ? 'bg-red-100 text-red-700' :
-                    group.key === 'today' ? 'bg-blue-100 text-blue-700' :
-                    group.key === 'tomorrow' ? 'bg-green-100 text-green-700' :
-                    'bg-muted text-muted-foreground'
-                  }`}>
-                    {group.tasks.length}
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {group.tasks.map((task) => renderTaskCard(task))}
-                </div>
-              </div>
+        <div className="flex-1 overflow-x-auto">
+          <div className="flex gap-4 p-4 md:p-6 min-w-max h-full">
+            {COLUMNS.map(col => (
+              <KanbanCol
+                key={col.id}
+                col={col}
+                tasks={tasksByColumn[col.id] ?? []}
+                language={language}
+                dateLocale={dateLocale}
+                clients={clients}
+                onComplete={handleComplete}
+                onDelete={handleDelete}
+                onDrop={handleDrop}
+                draggingId={draggingTask?.id ?? null}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              />
             ))}
           </div>
-        </>
+        </div>
       )}
 
-      {/* FAB мобильный */}
+      {/* FAB mobile */}
       <div className="md:hidden fixed bottom-20 end-4 z-30">
         <button
           onClick={() => openModal('task-create', { onCreated: loadTasks })}
-          className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 flex items-center justify-center transition"
+          className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
         >
           <Plus className="w-6 h-6" />
         </button>
       </div>
-
-      {/* Modals managed by ModalManager */}
-
-      {/* Drawer визита */}
-      {selectedVisit && (
-        <TrinityBottomDrawer
-          isOpen={!!selectedVisit}
-          onClose={() => setSelectedVisit(null)}
-          title={language === 'he' ? 'פרטי ביקור' : 'Детали визита'}
-        >
-          <div className="space-y-3">
-            <div className="flex justify-between py-2 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{language === 'he' ? 'תאריך' : 'Дата'}</span>
-              <span className="text-sm font-medium">
-                {new Date(selectedVisit.scheduled_at).toLocaleDateString(language === 'he' ? 'he-IL' : 'ru-RU')}
-              </span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{language === 'he' ? 'שעה' : 'Время'}</span>
-              <span className="text-sm font-medium">
-                {new Date(selectedVisit.scheduled_at).toLocaleTimeString(language === 'he' ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-muted">
-              <span className="text-sm text-muted-foreground">{language === 'he' ? 'סטטוס' : 'Статус'}</span>
-              <span className="text-sm font-medium">{selectedVisit.status}</span>
-            </div>
-            {selectedVisit.price > 0 && (
-              <div className="flex justify-between py-2 border-b border-muted">
-                <span className="text-sm text-muted-foreground">{language === 'he' ? 'מחיר' : 'Цена'}</span>
-                <span className="text-sm font-medium">₪{selectedVisit.price}</span>
-              </div>
-            )}
-            {selectedVisit.notes && (
-              <div className="py-2">
-                <p className="text-sm text-muted-foreground mb-1">{language === 'he' ? 'הערות' : 'Заметки'}</p>
-                <p className="text-sm whitespace-pre-wrap">{selectedVisit.notes}</p>
-              </div>
-            )}
-          </div>
-        </TrinityBottomDrawer>
-      )}
-
-      {/* Desktop Panel */}
-      <TaskDesktopPanel
-        task={desktopPanelTask}
-        isOpen={!!desktopPanelTask}
-        onClose={() => setDesktopPanelTask(null)}
-        locale={language === 'he' ? 'he' : 'ru'}
-        clients={clients}
-        visits={visits}
-        orgUsers={orgUsers}
-        onStatusChange={handleTaskStatusChange}
-        onEdit={handleTaskEdit}
-        onDelete={handleTaskDelete}
-        onClientClick={(clientId) => {
-          const client = clients.find((c: any) => c.id === clientId)
-          if (client) openModal('client-details', { client, locale: language === 'he' ? 'he' : 'ru' })
-        }}
-        onVisitClick={(visitId) => {
-          const visit = visits.find((v: any) => v.id === visitId)
-          if (visit) setSelectedVisit(visit)
-        }}
-      />
     </div>
   )
 }

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import {
   Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock,
@@ -279,28 +279,28 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-500 transition-colors" />
           </button>
         )}
-        {clientPhone && (
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => (window.location.href = `tel:${clientPhone}`)}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 active:scale-95 transition-all text-sm font-medium">
-              <Phone className="w-4 h-4" />{isHe ? 'התקשר' : 'Позвонить'}
-            </button>
-            <button onClick={() => {
-              const msg = isHe
-                ? `שלום ${clientName}! תזכורת לביקור ב-${dateStr} בשעה ${timeStr}. מחכים לך! 💇`
-                : `Здравствуйте, ${clientName}! Напоминаем о визите ${dateStr} в ${timeStr}. Ждём вас! 💇`
-              window.open(`https://wa.me/${clientPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank')
-            }} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 active:scale-95 transition-all text-sm font-medium">
-              <MessageCircle className="w-4 h-4" />WhatsApp
-            </button>
-          </div>
-        )}
         {visit.status === 'scheduled' && (
           <div className="space-y-2 pt-1">
             <button onClick={onStart}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold hover:from-emerald-600 hover:to-teal-600 active:scale-98 transition-all shadow-sm shadow-emerald-200 dark:shadow-emerald-900/30 flex items-center justify-center gap-2">
               <Play className="w-4 h-4 fill-white" />{isHe ? 'התחל ביקור' : 'Начать визит'}
             </button>
+            {clientPhone && (
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => (window.location.href = `tel:${clientPhone}`)}
+                  className="flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 active:scale-95 transition-all text-sm font-medium">
+                  <Phone className="w-4 h-4" />{isHe ? 'התקשר' : 'Позвонить'}
+                </button>
+                <button onClick={() => {
+                  const msg = isHe
+                    ? `שלום ${clientName}! תזכורת לביקור ב-${dateStr} בשעה ${timeStr}. מחכים לך! 💇`
+                    : `Здравствуйте, ${clientName}! Напоминаем о визите ${dateStr} в ${timeStr}. Ждём вас! 💇`
+                  window.open(`https://wa.me/${clientPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank')
+                }} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 active:scale-95 transition-all text-sm font-medium">
+                  <MessageCircle className="w-4 h-4" />WhatsApp
+                </button>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <button onClick={onEdit} className="flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 active:scale-95 transition-all text-sm font-medium">
                 <Pencil className="w-3.5 h-3.5" />{isHe ? 'ערוך' : 'Редактировать'}
@@ -317,6 +317,22 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold hover:from-emerald-600 hover:to-teal-600 active:scale-98 transition-all shadow-sm shadow-emerald-200 dark:shadow-emerald-900/30 flex items-center justify-center gap-2">
               <CheckCircle className="w-4 h-4" />{isHe ? 'סיים ביקור' : 'Завершить визит'}
             </button>
+            {clientPhone && (
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => (window.location.href = `tel:${clientPhone}`)}
+                  className="flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 active:scale-95 transition-all text-sm font-medium">
+                  <Phone className="w-4 h-4" />{isHe ? 'התקשר' : 'Позвонить'}
+                </button>
+                <button onClick={() => {
+                  const msg = isHe
+                    ? `שלום ${clientName}! תזכורת לביקור ב-${dateStr} בשעה ${timeStr}. מחכים לך! 💇`
+                    : `Здравствуйте, ${clientName}! Напоминаем о визите ${dateStr} в ${timeStr}. Ждём вас! 💇`
+                  window.open(`https://wa.me/${clientPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank')
+                }} className="flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 active:scale-95 transition-all text-sm font-medium">
+                  <MessageCircle className="w-4 h-4" />WhatsApp
+                </button>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => { setViewMode('services'); if (servicesList.length === 0) fetchServices(); if (productsList.length === 0) fetchProducts() }}
                 className="flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 active:scale-95 transition-all text-sm font-medium">

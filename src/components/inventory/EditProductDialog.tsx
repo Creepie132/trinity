@@ -163,6 +163,7 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
         onClose={onClose}
         title={t('inventory.edit')}
         width="580px"
+        dir={language === 'he' ? 'rtl' : 'ltr'}
         footer={
           <div className="flex gap-2">
             <button

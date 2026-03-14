@@ -67,6 +67,7 @@ export function AddStockDialog({ open, onClose, product }: AddStockDialogProps) 
       title={t('inventory.addStockDialog.title')}
       subtitle={product.name}
       width="440px"
+      dir={language === 'he' ? 'rtl' : 'ltr'}
       footer={
         <div className="flex gap-2 justify-end">
           <button

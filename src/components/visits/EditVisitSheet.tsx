@@ -165,6 +165,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale: propLo
       onClose={onClose}
       title={l.title}
       width="480px"
+      dir={locale === 'he' ? 'rtl' : 'ltr'}
       footer={
         <div className="flex gap-2">
           <button
@@ -184,7 +185,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale: propLo
         </div>
       }
     >
-      <div className="space-y-3">
+      <div className="space-y-3" dir={locale === 'he' ? 'rtl' : 'ltr'}>
         {/* Дата */}
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">{l.date} *</label>

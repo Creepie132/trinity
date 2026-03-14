@@ -87,7 +87,7 @@ export function ClientDetailsModal() {
 
   const handleEditClick = () => {
     closeModal('client-details')
-    openModal('client-edit', { client })
+    openModal('client-edit', { client, locale })
   }
 
   const handleSaleClick = () => {

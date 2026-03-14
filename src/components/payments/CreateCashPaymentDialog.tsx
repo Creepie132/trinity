@@ -78,6 +78,7 @@ export function CreateCashPaymentDialog({ open, onOpenChange, onSuccess }: Creat
       onClose={() => onOpenChange(false)}
       title={t('payments.cashPayment')}
       width="440px"
+      dir={language === 'he' ? 'rtl' : 'ltr'}
       footer={
         <div className="flex gap-2 justify-end">
           <button

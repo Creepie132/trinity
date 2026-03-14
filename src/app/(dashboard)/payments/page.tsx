@@ -1,38 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { Plus, Copy, ExternalLink, Eye, Banknote, CheckCircle, TrendingUp, SlidersHorizontal, Receipt, MessageCircle, MessageSquare, X, FileText } from 'lucide-react'
+import { Plus, SlidersHorizontal, Receipt, FileText, Search, TrendingUp, Banknote, CheckCircle } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
 import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
 import { PaymentReportModal } from '@/components/payments/PaymentReportModal'
-import { CreateSubscriptionDialog } from '@/components/payments/CreateSubscriptionDialog'
 import { CreateCashPaymentDialog } from '@/components/payments/CreateCashPaymentDialog'
 import { CreateBitPaymentDialog } from '@/components/payments/CreateBitPaymentDialog'
 import { PaymentMethodModal } from '@/components/payments/PaymentMethodModal'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { format } from 'date-fns'
+import { PaymentCard } from '@/components/payments/PaymentCard'
+import { PaymentDetailsDrawer } from '@/components/payments/PaymentDetailsDrawer'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { format, isToday, isYesterday, parseISO } from 'date-fns'
 import { toast } from 'sonner'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { PaymentCard } from '@/components/payments/PaymentCard'
-import { PaymentDesktopPanel } from '@/components/payments/PaymentDesktopPanel'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
-import { EmptyState } from '@/components/ui/EmptyState'
-import { useModalStore } from '@/store/useModalStore'
-import { AdminDeletePaymentButton } from '@/components/payments/AdminDeletePaymentButton'
 
 export default function PaymentsPage() {
   const searchParams = useSearchParams()
@@ -40,649 +30,242 @@ export default function PaymentsPage() {
   const features = useFeatures()
   const { data: isAdmin } = useIsAdmin()
   const { t, language } = useLanguage()
-  const { openModal } = useModalStore()
-  
+  const locale = language === 'he' ? 'he' : 'ru'
+
   const [methodModalOpen, setMethodModalOpen] = useState(false)
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [cardDialogOpen, setCardDialogOpen] = useState(false)
-  const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false)
   const [cashDialogOpen, setCashDialogOpen] = useState(false)
   const [bitDialogOpen, setBitDialogOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all')
-  const [clientFilter, setClientFilter] = useState('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(0)
-  const [desktopPanelPayment, setDesktopPanelPayment] = useState<any>(null)
-
-  // Parse payment info with priority logic
-  function parsePaymentInfo(description: string | undefined, payment: any) {
-    const locale = language === 'he' ? 'he' : 'ru'
-    
-    // Priority: separate fields from object
-    if (payment.client_name || payment.clients) {
-      const clientName = payment.client_name ||
-        (payment.clients
-          ? `${payment.clients.first_name || ''} ${payment.clients.last_name || ''}`.trim()
-          : '—')
-      return {
-        clientName,
-        subtitle: formatSubtitle(payment, null, locale)
-      }
-    }
-
-    // Fallback: parse concatenated string "Наличные - Владислав Халфин"
-    if (description && description.includes(' - ')) {
-      const parts = description.split(' - ')
-      const method = parts[0].trim()
-      const name = parts.slice(1).join(' - ').trim() // handle dashes in name
-      return {
-        clientName: name || '—',
-        subtitle: formatSubtitle(payment, method, locale)
-      }
-    }
-
-    return {
-      clientName: description || '—',
-      subtitle: formatSubtitle(payment, null, locale)
-    }
-  }
-
-  function formatSubtitle(payment: any, parsedMethod: string | null, locale: 'he' | 'ru') {
-    const methodLabels: Record<string, { he: string, ru: string }> = {
-      cash: { he: 'מזומן', ru: 'Наличные' },
-      card: { he: 'כרטיס', ru: 'Карта' },
-      credit_card: { he: 'כרטיס', ru: 'Карта' },
-      transfer: { he: 'העברה', ru: 'Перевод' },
-      bank_transfer: { he: 'העברה', ru: 'Перевод' },
-      bit: { he: 'ביט', ru: 'Bit' },
-    }
-
-    const method = parsedMethod ||
-      (payment.payment_method && methodLabels[payment.payment_method]?.[locale]) ||
-      (payment.method && methodLabels[payment.method]?.[locale]) ||
-      payment.payment_method ||
-      payment.method ||
-      ''
-
-    const number = payment.id
-      ? `#${payment.id.slice(0, 8)}`
-      : (payment.payment_number ? `#${payment.payment_number}` : '')
-
-    return [method, number].filter(Boolean).join(' — ')
-  }
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedPayment, setSelectedPayment] = useState<any>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const { data: payments, isLoading, refetch } = usePayments(undefined, {
     status: statusFilter,
     paymentMethod: paymentMethodFilter !== 'all' ? paymentMethodFilter : undefined,
-    clientId: clientFilter !== 'all' ? clientFilter : undefined,
     startDate,
     endDate,
     page,
   })
   const { data: stats } = usePaymentsStats()
 
-  // Check feature access and organization status
   useEffect(() => {
     if (!features.isLoading) {
-      if (!features.isActive) {
-        router.push('/blocked')
-      } else if (!features.hasPayments) {
-        router.push('/dashboard')
-      }
+      if (!features.isActive) router.push('/blocked')
+      else if (!features.hasPayments) router.push('/dashboard')
     }
   }, [features.hasPayments, features.isActive, features.isLoading, router])
 
-  // Show success/failure message from callback
   useEffect(() => {
     const status = searchParams.get('status')
     const success = searchParams.get('success')
     const subscription = searchParams.get('subscription')
-    const canceled = searchParams.get('canceled')
-    const paymentId = searchParams.get('payment_id')
-
     if (status === 'success' || success === 'true' || subscription === 'success') {
       toast.success(t('payments.paymentSuccess'))
     } else if (status === 'failed') {
       toast.error(t('payments.failedMessage'))
-    } else if (canceled === 'true') {
+    } else if (searchParams.get('canceled') === 'true') {
       toast.error(t('payments.paymentCanceled'))
     }
   }, [searchParams, t])
 
-  const handlePaymentSuccess = () => {
-    refetch()
-    router.refresh()
-  }
-
-  const copyPaymentLink = (link: string) => {
-    navigator.clipboard.writeText(link)
-    toast.success(t('payments.linkCopied'))
-  }
-
-  const cancelPayment = async (paymentId: string) => {
-    try {
-      console.log('Cancelling payment from page:', paymentId)
-      const response = await fetch(`/api/payments/${paymentId}/cancel`, {
-        method: 'POST',
-      })
-
-      console.log('Response status:', response.status)
-      const responseData = await response.json()
-      console.log('Response data:', responseData)
-
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to cancel payment')
-      }
-
-      toast.success(language === 'he' ? 'התשלום בוטל בהצלחה' : 'Платёж успешно отменён')
-      
-      // Refresh payments list
-      handlePaymentSuccess()
-    } catch (error: any) {
-      console.error('Cancel payment error:', error)
-      toast.error(`${language === 'he' ? 'שגיאה' : 'Ошибка'}: ${error.message}`)
-    }
-  }
-
-  const formatIsraeliPhone = (phone: string) => {
-    if (!phone) return ''
-    // Remove all non-digits
-    const cleaned = phone.replace(/\D/g, '')
-    // If starts with 0, remove it
-    if (cleaned.startsWith('0')) {
-      return cleaned.substring(1)
-    }
-    // If starts with 972, remove it
-    if (cleaned.startsWith('972')) {
-      return cleaned.substring(3)
-    }
-    return cleaned
-  }
-
-  const openWhatsApp = (phone: string, paymentLink: string) => {
-    const formattedPhone = formatIsraeliPhone(phone)
-    if (!formattedPhone) {
-      toast.error(language === 'he' ? 'אין מספר טלפון' : 'Номер телефона отсутствует')
-      return
-    }
-    const msg = language === 'he' 
-      ? `לתשלום לחץ כאן: ${paymentLink}` 
-      : `Ссылка для оплаты: ${paymentLink}`
-    const message = encodeURIComponent(msg)
-    window.open(`https://wa.me/972${formattedPhone}?text=${message}`, '_blank')
-  }
-
-  const openSMS = (phone: string, paymentLink: string) => {
-    const formattedPhone = formatIsraeliPhone(phone)
-    if (!formattedPhone) {
-      toast.error(language === 'he' ? 'אין мספר טלפון' : 'Номер телефона отсутствует')
-      return
-    }
-    const msg = language === 'he' 
-      ? `לתשלום לחץ כאן: ${paymentLink}` 
-      : `Ссылка для оплаты: ${paymentLink}`
-    window.open(`sms:${formattedPhone}&body=${encodeURIComponent(msg)}`)
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-500">{t('payments.paid')}</Badge>
-      case 'pending':
-        return <Badge className="bg-yellow-500">{t('payments.pending')}</Badge>
-      case 'failed':
-        return <Badge variant="destructive">{t('payments.failed')}</Badge>
-      case 'refunded':
-        return <Badge variant="secondary">{t('payments.refunded')}</Badge>
-      case 'cancelled':
-        return <Badge variant="secondary">{language === 'he' ? 'בוטל' : 'Отменён'}</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
-    }
-  }
+  const handlePaymentSuccess = () => { refetch(); router.refresh() }
 
   const handleMethodSelect = (method: 'card' | 'cash' | 'bit') => {
     switch (method) {
-      case 'card':
-        setCardDialogOpen(true)
-        break
-      case 'cash':
-        setCashDialogOpen(true)
-        break
-      case 'bit':
-        setBitDialogOpen(true)
-        break
+      case 'card': setCardDialogOpen(true); break
+      case 'cash': setCashDialogOpen(true); break
+      case 'bit': setBitDialogOpen(true); break
     }
   }
 
+  const openPaymentDrawer = (payment: any) => {
+    setSelectedPayment(payment)
+    setDrawerOpen(true)
+  }
+
+  // Client-side search filter
+  const filteredPayments = useMemo(() => {
+    if (!payments || !searchQuery.trim()) return payments || []
+    const q = searchQuery.toLowerCase()
+    return payments.filter((p: any) => {
+      const name = (
+        p.client_name ||
+        (p.clients ? `${p.clients.first_name || ''} ${p.clients.last_name || ''}` : '') ||
+        ''
+      ).toLowerCase()
+      const id = (p.id || '').toLowerCase()
+      const desc = (p.description || '').toLowerCase()
+      return name.includes(q) || id.includes(q) || desc.includes(q)
+    })
+  }, [payments, searchQuery])
+
+  // Group payments by date
+  const groupedPayments = useMemo(() => {
+    const groups: { label: string; payments: any[] }[] = []
+    const map: Record<string, any[]> = {}
+
+    filteredPayments.forEach((p: any) => {
+      const dateStr = (p.paid_at || p.created_at || '').slice(0, 10)
+      if (!map[dateStr]) map[dateStr] = []
+      map[dateStr].push(p)
+    })
+
+    Object.keys(map)
+      .sort((a, b) => b.localeCompare(a))
+      .forEach(dateStr => {
+        let label = dateStr
+        try {
+          const d = parseISO(dateStr)
+          if (isToday(d)) label = locale === 'he' ? 'היום' : 'Сегодня'
+          else if (isYesterday(d)) label = locale === 'he' ? 'אתמול' : 'Вчера'
+          else label = format(d, locale === 'he' ? 'dd/MM/yyyy' : 'dd MMMM yyyy')
+        } catch {}
+        groups.push({ label, payments: map[dateStr] })
+      })
+
+    return groups
+  }, [filteredPayments, locale])
+
+  const activeFilterCount =
+    (statusFilter !== 'all' ? 1 : 0) +
+    (paymentMethodFilter !== 'all' ? 1 : 0) +
+    (startDate ? 1 : 0) +
+    (endDate ? 1 : 0)
+
   return (
-    <div className="space-y-6 min-h-screen">
-      {/* Header - Mobile centered, Desktop left-aligned */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        {/* Title - centered on mobile, left on desktop */}
-        <div className="text-center md:text-right">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{t('payments.title')}</h1>
-          <p className="text-gray-600 mt-1">
-            {t('common.total')}: {payments?.length || 0} {t('payments.title')}
-          </p>
-        </div>
+    <div className="space-y-5 min-h-screen" style={{ animation: 'ppFadeIn .3s ease-out both' }}>
 
-        {/* Desktop single button */}
-        <div className="hidden md:flex gap-3">
-          <Button
-            onClick={() => setReportModalOpen(true)}
-            size="lg"
-            variant="outline"
-            className="border-amber-400 text-amber-600 hover:bg-amber-50"
-          >
-            <FileText className="w-5 h-5 ml-2" />
-            {language === 'he' ? 'סיכום תשלומים' : 'Сводка платежей'}
-          </Button>
-          <Button onClick={() => setMethodModalOpen(true)} size="lg" className="bg-primary hover:opacity-90">
-            <Plus className="w-5 h-5 ml-2" />
-            {language === 'he' ? 'עסקה חדשה' : 'Новая сделка'}
-          </Button>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="text-center md:text-start">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('payments.title')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{filteredPayments.length} {t('payments.title')}</p>
         </div>
-
-        {/* Mobile single button */}
-        <div className="md:hidden flex gap-2">
-          <Button
-            onClick={() => setReportModalOpen(true)}
-            variant="outline"
-            className="flex-1 border-amber-400 text-amber-600 hover:bg-amber-50"
-            size="lg"
-          >
-            <FileText className="w-4 h-4 ml-1" />
-            {language === 'he' ? 'סיכום' : 'Сводка'}
+        <div className="flex gap-2">
+          <Button onClick={() => setReportModalOpen(true)} variant="outline" size="sm" className="border-amber-400 text-amber-600 hover:bg-amber-50">
+            <FileText className="w-4 h-4 mr-1" />
+            {locale === 'he' ? 'סיכום' : 'Сводка'}
           </Button>
-          <Button
-            onClick={() => setMethodModalOpen(true)}
-            className="flex-1 bg-theme-primary dark:bg-gray-700 hover:opacity-90"
-            size="lg"
-          >
-            <Plus className="w-5 h-5 ml-2" />
-            {language === 'he' ? 'עסקה חדשה' : 'Новая сделка'}
+          <Button onClick={() => setMethodModalOpen(true)} size="sm" className="bg-primary hover:opacity-90">
+            <Plus className="w-4 h-4 mr-1" />
+            {locale === 'he' ? 'עסקה חדשה' : 'Новая сделка'}
           </Button>
         </div>
       </div>
 
-      {/* Recurring payments unavailable notice */}
-      {!features.recurringEnabled && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-          <span className="text-gray-400 text-xl">🔒</span>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {language === 'he' ? 'תשלומים חוזרים אינם זמינים בתוכנית שלך' : 'Рекуррентные платежи недоступны в вашем тарифе'}
-          </p>
-        </div>
-      )}
-
-      {/* Stats */}
+      {/* Stats cards */}
       {stats && (
-        <div className="space-y-3 md:space-y-0">
-          {/* Mobile: First 2 cards in a row */}
-          <div className="grid grid-cols-2 gap-3 md:hidden">
-            <div 
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
-              style={{ animation: 'fadeInScale 0.4s ease-out 0s both' }}
-            >
-              <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
-                <Banknote className="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                ₪{stats.totalAmount.toFixed(2)}
-              </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('payments.totalMonth')}</div>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { icon: <Banknote className="w-4 h-4" />, value: `₪${stats.totalAmount.toFixed(0)}`, label: t('payments.totalMonth'), color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20' },
+            { icon: <CheckCircle className="w-4 h-4" />, value: String(stats.count), label: t('payments.successfulTransactions'), color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+            { icon: <TrendingUp className="w-4 h-4" />, value: `₪${stats.avgAmount.toFixed(0)}`, label: t('payments.avgTransaction'), color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+          ].map((s, i) => (
+            <div key={i} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 p-3 text-center" style={{ animation: `ppFadeIn .3s ease-out ${i * 0.07}s both` }}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto mb-1.5 ${s.bg} ${s.color}`}>{s.icon}</div>
+              <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
+              <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">{s.label}</div>
             </div>
-
-            <div 
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
-              style={{ animation: 'fadeInScale 0.4s ease-out 0.1s both' }}
-            >
-              <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full">
-                <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.count}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('payments.successfulTransactions')}</div>
-            </div>
-          </div>
-
-          {/* Mobile: Third card centered below */}
-          <div className="flex justify-center md:hidden">
-            <div 
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md aspect-square flex flex-col items-center justify-between p-4 text-center"
-              style={{ maxWidth: '50%', animation: 'fadeInScale 0.4s ease-out 0.2s both' }}
-            >
-              <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-full">
-                <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                ₪{stats.avgAmount.toFixed(2)}
-              </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t('payments.avgTransaction')}</div>
-            </div>
-          </div>
-
-          {/* Desktop: Original layout */}
-          <div className="hidden md:grid md:grid-cols-3 gap-4">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                ₪{stats.totalAmount.toFixed(2)}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('payments.totalMonth')}</div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.count}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('payments.successfulTransactions')}</div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                ₪{stats.avgAmount.toFixed(2)}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('payments.avgTransaction')}</div>
-            </div>
-          </div>
+          ))}
         </div>
       )}
 
-      {/* Filters - Mobile: Button, Desktop: Fields */}
-      <div className="md:hidden">
+      {/* Search + Filters */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder={locale === 'he' ? 'חיפוש לפי שם...' : 'Поиск по имени...'}
+            className="pl-9 h-9 text-sm bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+          />
+        </div>
         <button
           onClick={() => setFiltersOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-muted text-sm font-medium w-full justify-center"
+          className="flex items-center gap-1.5 px-3 h-9 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
         >
-          <SlidersHorizontal size={16} />
-          {language === 'he' ? 'סינון' : 'Фильтры'}
-          {((statusFilter !== 'all' ? 1 : 0) +
-            (paymentMethodFilter !== 'all' ? 1 : 0) +
-            (clientFilter !== 'all' ? 1 : 0) +
-            (startDate ? 1 : 0) +
-            (endDate ? 1 : 0)) > 0 && (
-            <span className="bg-primary text-primary-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center">
-              {(statusFilter !== 'all' ? 1 : 0) +
-                (paymentMethodFilter !== 'all' ? 1 : 0) +
-                (clientFilter !== 'all' ? 1 : 0) +
-                (startDate ? 1 : 0) +
-                (endDate ? 1 : 0)}
+          <SlidersHorizontal size={15} />
+          {locale === 'he' ? 'סינון' : 'Фильтры'}
+          {activeFilterCount > 0 && (
+            <span className="bg-primary text-primary-foreground text-xs w-4 h-4 rounded-full flex items-center justify-center">
+              {activeFilterCount}
             </span>
           )}
         </button>
       </div>
 
-      {/* Filters - Desktop */}
-      <div className="hidden md:block bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">{t('payments.filterByStatus')}</label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                <SelectItem value="all" className="text-gray-900 dark:text-white">{t('payments.all')}</SelectItem>
-                <SelectItem value="pending" className="text-gray-900 dark:text-white">{t('payments.pending')}</SelectItem>
-                <SelectItem value="completed" className="text-gray-900 dark:text-white">{t('payments.paid')}</SelectItem>
-                <SelectItem value="failed" className="text-gray-900 dark:text-white">{t('payments.failed')}</SelectItem>
-                <SelectItem value="refunded" className="text-gray-900 dark:text-white">{t('payments.refunded')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">{t('payments.filterByMethod')}</label>
-            <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                <SelectItem value="all" className="text-gray-900 dark:text-white">{t('payments.all')}</SelectItem>
-                <SelectItem value="cash" className="text-gray-900 dark:text-white">💵 {t('payments.method.cash')}</SelectItem>
-                <SelectItem value="bit" className="text-gray-900 dark:text-white">📱 {t('payments.method.bit')}</SelectItem>
-                <SelectItem value="credit_card" className="text-gray-900 dark:text-white">💳 {t('payments.method.credit')}</SelectItem>
-                <SelectItem value="bank_transfer" className="text-gray-900 dark:text-white">🏦 {t('payments.method.bankTransfer')}</SelectItem>
-                <SelectItem value="phone_credit" className="text-gray-900 dark:text-white">📞 {t('payments.method.phoneCredit')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">{t('payments.fromDate')}</label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">{t('payments.toDate')}</label>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block text-gray-700 dark:text-gray-300">{t('payments.filterByClient')}</label>
-            <Select value={clientFilter} onValueChange={setClientFilter}>
-              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600">
-                <SelectItem value="all" className="text-gray-900 dark:text-white">{t('payments.all')}</SelectItem>
-                {/* Client options will be populated dynamically */}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Recurring payments notice */}
+      {!features.recurringEnabled && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+          <span className="text-gray-400">🔒</span>
+          <p className="text-xs text-gray-500">
+            {locale === 'he' ? 'תשלומים חוזרים אינם זמינים בתוכנית שלך' : 'Рекуррентные платежи недоступны в вашем тарифе'}
+          </p>
         </div>
-      </div>
+      )}
 
-      {/* Table - Desktop */}
-      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-        {isLoading ? (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
-        ) : payments && payments.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('payments.client')}</TableHead>
-                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('payments.description') || 'Описание'}</TableHead>
-                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('payments.amount')}</TableHead>
-                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('payments.status')}</TableHead>
-                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('common.date')}</TableHead>
-                <TableHead className="text-start text-gray-700 dark:text-gray-300">{t('clients.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {payments.map((payment: any) => {
-                const { clientName, subtitle } = parsePaymentInfo(payment.description, payment)
-                return (
-                  <TableRow key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700">
-                    <TableCell className="font-semibold text-gray-900 dark:text-gray-100 text-start">
-                      <div className="min-w-0">
-                        <p className="truncate">{clientName}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500 dark:text-gray-400 text-start">
-                      <div className="min-w-0">
-                        <p className="truncate">{subtitle}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-semibold text-lg text-gray-900 dark:text-gray-100 text-start">
-                      ₪{Number(payment.amount).toFixed(2)}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                    <TableCell className="text-gray-700 dark:text-gray-300 text-start">
-                      {payment.paid_at
-                        ? format(new Date(payment.paid_at), 'dd/MM/yyyy HH:mm')
-                        : format(new Date(payment.created_at), 'dd/MM/yyyy HH:mm')}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {/* 👁 Details - always show for all payments */}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openModal('payment-details', { payment, locale: language === 'he' ? 'he' : 'ru' })}
-                          title={language === 'he' ? 'פרטים' : 'Детали'}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-
-                        {/* 🗑 Admin Delete - only for admin */}
-                        {isAdmin && (
-                          <AdminDeletePaymentButton paymentId={payment.id} />
-                        )}
-                        
-                        {/* 💬 WhatsApp and 📱 SMS - always show if phone exists */}
-                        {(payment.clients?.phone || payment.client_phone) && payment.status === 'pending' && payment.payment_method === 'credit_card' && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => openWhatsApp(payment.clients?.phone || payment.client_phone, payment.payment_link || '')}
-                              title={language === 'he' ? 'שלח ב-WhatsApp' : 'Отправить в WhatsApp'}
-                              className="hover:bg-green-50 dark:hover:bg-green-900/20"
-                            >
-                              <MessageCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => openSMS(payment.clients?.phone || payment.client_phone, payment.payment_link || '')}
-                              title={language === 'he' ? 'שלח SMS' : 'Отправить SMS'}
-                              className="hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                            >
-                              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            </Button>
-                          </>
-                        )}
-                        
-                        {/* 📋 Copy and 🔗 Open - only for pending + credit_card */}
-                        {payment.payment_link && payment.status === 'pending' && payment.payment_method === 'credit_card' && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                navigator.clipboard.writeText(payment.payment_link)
-                                toast.success(language === 'he' ? 'הקישור הועתק' : 'Ссылка скопирована')
-                              }}
-                              title={language === 'he' ? 'העתק קישור' : 'Копировать ссылку'}
-                            >
-                              <Copy className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => window.open(payment.payment_link, '_blank')}
-                              title={language === 'he' ? 'פתח קישור' : 'Открыть ссылку'}
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                        
-                        {/* ✕ Cancel button - only for pending + credit_card */}
-                        {payment.status === 'pending' && payment.payment_method === 'credit_card' && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => cancelPayment(payment.id)}
-                            title={language === 'he' ? 'ביטול' : 'Отменить'}
-                            className="hover:bg-red-50 dark:hover:bg-red-900/20"
-                          >
-                            <X className="w-4 h-4 text-red-600 dark:text-red-400" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">{t('payments.noPayments')}</p>
-            <Button onClick={() => setMethodModalOpen(true)}>
-              <Plus className="w-4 h-4 ml-2" />
-              {t('payments.createFirst')}
-            </Button>
-          </div>
-        )}
-        
-        {/* Pagination */}
-        {payments && payments.length > 0 && (
-          <div className="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
-            <Button
-              onClick={() => setPage(p => Math.max(0, p - 1))}
-              disabled={page === 0}
-              variant="outline"
-              className="disabled:opacity-50"
-            >
+      {/* Payments list — grouped by date */}
+      {isLoading ? (
+        <div className="text-center py-12 text-gray-400 text-sm">{t('common.loading')}</div>
+      ) : groupedPayments.length > 0 ? (
+        <div className="space-y-4">
+          {groupedPayments.map(group => (
+            <div key={group.label}>
+              {/* Date label */}
+              <div className="flex items-center gap-2 mb-2 px-1">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{group.label}</span>
+                <div className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+                <span className="text-xs text-gray-400">
+                  ₪{group.payments.reduce((s: number, p: any) => s + Number(p.amount), 0).toFixed(0)}
+                </span>
+              </div>
+              {/* Cards */}
+              {group.payments.map((payment: any) => (
+                <PaymentCard
+                  key={payment.id}
+                  payment={payment}
+                  locale={locale}
+                  onClick={openPaymentDrawer}
+                />
+              ))}
+            </div>
+          ))}
+          {/* Pagination */}
+          <div className="flex items-center justify-between pt-2">
+            <Button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} variant="outline" size="sm">
               ← {t('common.previous') || 'Назад'}
             </Button>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {t('common.page') || 'Страница'} {page + 1}
-            </span>
-            <Button
-              onClick={() => setPage(p => p + 1)}
-              disabled={payments.length < 20}
-              variant="outline"
-              className="disabled:opacity-50"
-            >
+            <span className="text-xs text-gray-400">{t('common.page') || 'Стр.'} {page + 1}</span>
+            <Button onClick={() => setPage(p => p + 1)} disabled={(payments?.length || 0) < 20} variant="outline" size="sm">
               {t('common.next') || 'Вперёд'} →
             </Button>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <EmptyState
+          icon={<Receipt size={28} />}
+          title={locale === 'he' ? 'אין תשלומים עדיין' : 'Платежей пока нет'}
+          description={locale === 'he' ? 'צור את התשלום הראשון' : 'Создайте первый платёж'}
+          action={{ label: locale === 'he' ? 'הוסף' : 'Добавить', onClick: () => setMethodModalOpen(true) }}
+        />
+      )}
 
-      {/* Mobile - Payment Cards */}
-      <div className="md:hidden space-y-2">
-        {isLoading ? (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
-        ) : payments && payments.length > 0 ? (
-          payments.map((payment) => (
-            <PaymentCard
-              key={payment.id}
-              payment={payment}
-              locale={language === 'he' ? 'he' : 'ru'}
-            />
-          ))
-        ) : (
-          <EmptyState
-            icon={<Receipt size={28} />}
-            title={language === 'he' ? 'אין תשלומים עדיין' : 'Платежей пока нет'}
-            description={language === 'he' ? 'צור את התשלום הראשון' : 'Создайте первый платёж'}
-            action={{
-              label: language === 'he' ? 'הוסף תשלום' : 'Добавить',
-              onClick: () => setMethodModalOpen(true),
-            }}
-          />
-        )}
-      </div>
-
-      {/* Filters Drawer - Mobile */}
-      <TrinityBottomDrawer
-        isOpen={filtersOpen}
-        onClose={() => setFiltersOpen(false)}
-        title={language === 'he' ? 'סינון' : 'Фильтры'}
-      >
+      {/* Filters Drawer */}
+      <TrinityBottomDrawer isOpen={filtersOpen} onClose={() => setFiltersOpen(false)} title={locale === 'he' ? 'סינון' : 'Фильтры'}>
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium mb-2 block">{t('payments.filterByStatus')}</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('payments.all')}</SelectItem>
                 <SelectItem value="pending">{t('payments.pending')}</SelectItem>
@@ -692,108 +275,58 @@ export default function PaymentsPage() {
               </SelectContent>
             </Select>
           </div>
-
           <div>
             <label className="text-sm font-medium mb-2 block">{t('payments.filterByMethod')}</label>
             <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('payments.all')}</SelectItem>
-                <SelectItem value="cash">💵 {t('payments.method.cash')}</SelectItem>
-                <SelectItem value="bit">📱 {t('payments.method.bit')}</SelectItem>
-                <SelectItem value="credit_card">💳 {t('payments.method.credit')}</SelectItem>
-                <SelectItem value="bank_transfer">🏦 {t('payments.method.bankTransfer')}</SelectItem>
-                <SelectItem value="phone_credit">📞 {t('payments.method.phoneCredit')}</SelectItem>
+                <SelectItem value="cash">{t('payments.method.cash')}</SelectItem>
+                <SelectItem value="bit">{t('payments.method.bit')}</SelectItem>
+                <SelectItem value="credit_card">{t('payments.method.credit')}</SelectItem>
+                <SelectItem value="bank_transfer">{t('payments.method.bankTransfer')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
           <div>
             <label className="text-sm font-medium mb-2 block">{t('payments.fromDate')}</label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
+            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
           </div>
-
           <div>
             <label className="text-sm font-medium mb-2 block">{t('payments.toDate')}</label>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+            <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
           </div>
         </div>
-
         <div className="flex gap-2 mt-6">
-          <button
-            onClick={() => {
-              setStatusFilter('all')
-              setPaymentMethodFilter('all')
-              setClientFilter('all')
-              setStartDate('')
-              setEndDate('')
-            }}
-            className="flex-1 py-3 rounded-xl bg-muted font-medium"
-          >
-            {language === 'he' ? 'נקה' : 'Сбросить'}
+          <button onClick={() => { setStatusFilter('all'); setPaymentMethodFilter('all'); setStartDate(''); setEndDate('') }} className="flex-1 py-3 rounded-xl bg-muted font-medium text-sm">
+            {locale === 'he' ? 'נקה' : 'Сбросить'}
           </button>
-          <button
-            onClick={() => setFiltersOpen(false)}
-            className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium"
-          >
-            {language === 'he' ? 'החל' : 'Применить'}
+          <button onClick={() => setFiltersOpen(false)} className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm">
+            {locale === 'he' ? 'החל' : 'Применить'}
           </button>
         </div>
       </TrinityBottomDrawer>
 
-      {/* Payment Method Selection Modal */}
-      <PaymentMethodModal
-        open={methodModalOpen}
-        onOpenChange={setMethodModalOpen}
-        onSelectMethod={handleMethodSelect}
+      {/* Modals & Dialogs */}
+      <PaymentMethodModal open={methodModalOpen} onOpenChange={setMethodModalOpen} onSelectMethod={handleMethodSelect} />
+      <CreatePaymentLinkDialog open={cardDialogOpen} onOpenChange={setCardDialogOpen} onSuccess={handlePaymentSuccess} />
+      <CreateCashPaymentDialog open={cashDialogOpen} onOpenChange={setCashDialogOpen} onSuccess={handlePaymentSuccess} />
+      <CreateBitPaymentDialog open={bitDialogOpen} onOpenChange={setBitDialogOpen} onSuccess={handlePaymentSuccess} />
+      <PaymentReportModal open={reportModalOpen} onClose={() => setReportModalOpen(false)} locale={locale} />
+
+      {/* Payment details drawer */}
+      <PaymentDetailsDrawer
+        payment={selectedPayment}
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        locale={locale}
+        isOwner={!!isAdmin}
+        onRefunded={handlePaymentSuccess}
       />
 
-      {/* Payment Dialogs */}
-      <CreatePaymentLinkDialog 
-        open={cardDialogOpen} 
-        onOpenChange={setCardDialogOpen}
-        onSuccess={handlePaymentSuccess}
-      />
-      <CreateSubscriptionDialog open={subscriptionDialogOpen} onOpenChange={setSubscriptionDialogOpen} />
-      <CreateCashPaymentDialog 
-        open={cashDialogOpen} 
-        onOpenChange={setCashDialogOpen}
-        onSuccess={handlePaymentSuccess}
-      />
-      <CreateBitPaymentDialog 
-        open={bitDialogOpen} 
-        onOpenChange={setBitDialogOpen}
-        onSuccess={handlePaymentSuccess}
-      />
-
-      {/* Payment Report Modal */}
-      <PaymentReportModal
-        open={reportModalOpen}
-        onClose={() => setReportModalOpen(false)}
-        locale={language === 'he' ? 'he' : 'ru'}
-      />
-
-      {/* Desktop Panel */}
-      <PaymentDesktopPanel
-        payment={desktopPanelPayment}
-        isOpen={!!desktopPanelPayment}
-        onClose={() => setDesktopPanelPayment(null)}
-        locale={language === 'he' ? 'he' : 'ru'}
-        clients={payments?.map((p: any) => p.client || p.clients).filter(Boolean) || []}
-        onClientClick={(clientId) => {
-          // TODO: open ClientDesktopPanel
-        }}
-      />
+      <style>{`
+        @keyframes ppFadeIn { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
+      `}</style>
     </div>
   )
 }

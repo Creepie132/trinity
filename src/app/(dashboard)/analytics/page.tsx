@@ -45,9 +45,6 @@ const PERIOD_KEY  = 'trinity_analytics_period'
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label, prefix = '', suffix = '' }: any) => {
   if (!active || !payload?.length) return null
-  // Показываем tooltip только если есть ненулевые значения
-  const hasValue = payload.some((p: any) => typeof p.value === 'number' && p.value > 0)
-  if (!hasValue) return null
   return (
     <div className="bg-white border border-slate-100 rounded-xl shadow-lg px-4 py-2.5 text-sm">
       <p className="text-slate-400 text-xs mb-1">{label}</p>
@@ -278,7 +275,7 @@ export default function AnalyticsPage() {
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={45}
                 tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
               <Tooltip content={<CustomTooltip prefix="₪" />} />
-              <Area type="monotone" dataKey="amount" name={L.revenue_lbl}
+              <Area type="monotone" dataKey="amountDisplay" name={L.revenue_lbl}
                 stroke="#6366f1" strokeWidth={2.5} fill="url(#revGrad)"
                 dot={false} activeDot={{ r: 5, fill: '#6366f1', strokeWidth: 0 }}
                 isAnimationActive animationDuration={800} animationEasing="ease-out" />

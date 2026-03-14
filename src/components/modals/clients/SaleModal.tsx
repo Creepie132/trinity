@@ -51,7 +51,7 @@ const paymentMethods = [
 ]
 
 export function SaleModal() {
-  const { isModalOpen, closeModal, getModalData } = useModalStore()
+  const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
   const { orgId } = useAuth()
   const { activeOrgId } = useBranch()
   const { data: org } = useOrganization()
@@ -92,6 +92,7 @@ export function SaleModal() {
 
   const client = data?.client || localClient
   const locale = data?.locale || 'he'
+  const isRTL = locale === 'he'
 
   // Load draft on open / pre-populate cart from preloaded product
   useEffect(() => {
@@ -574,6 +575,7 @@ export function SaleModal() {
         subtitle={clientName}
         width="500px"
         className="max-w-[95vw]"
+        dir={isRTL ? 'rtl' : 'ltr'}
       >
         <div className="space-y-6">
           {/* Amount */}
@@ -646,6 +648,7 @@ export function SaleModal() {
         subtitle={clientName}
         width="600px"
         className="max-w-[95vw]"
+        dir={isRTL ? 'rtl' : 'ltr'}
       >
         <div className="space-y-6">
           {/* Client Info */}
@@ -790,14 +793,15 @@ export function SaleModal() {
       subtitle={client ? clientName : (locale === 'he' ? 'בחר לקוח' : 'Выберите клиента')}
       width="800px"
       className="max-w-[95vw]"
+      dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* Client search (for inventory mode — no pre-selected client) */}
       {!data?.client && (
         <div className="mb-4 relative">
-          <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-700">
+          <div className={`flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-700 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <Search className="w-4 h-4 text-blue-500 flex-shrink-0" />
             {localClient ? (
-              <div className="flex-1 flex items-center justify-between">
+              <div className={`flex-1 flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <span className="font-medium text-sm">
                   {getClientName(localClient)} · {localClient.phone}
                 </span>
@@ -812,22 +816,50 @@ export function SaleModal() {
                 value={clientSearch}
                 onChange={e => setClientSearch(e.target.value)}
                 placeholder={locale === 'he' ? 'חיפוש לקוח...' : 'Поиск клиента...'}
-                className="flex-1 bg-transparent outline-none text-sm"
+                className={`flex-1 bg-transparent outline-none text-sm ${isRTL ? 'text-right' : 'text-left'}`}
+                dir={isRTL ? 'rtl' : 'ltr'}
                 autoFocus
               />
             )}
           </div>
-          {clientResults.length > 0 && !localClient && (
+          {/* Результаты поиска клиента */}
+          {(clientResults.length > 0 || (clientSearch.length >= 2 && !clientSearching)) && !localClient && (
             <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
               {clientResults.map((c: any) => (
                 <button key={c.id} onClick={() => { setLocalClient(c); setClientSearch(''); setClientResults([]) }}
-                  className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b last:border-b-0">
+                  className={`w-full ${isRTL ? 'text-right' : 'text-left'} flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b last:border-b-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm flex-shrink-0">
+                    {(c.first_name?.[0] || '') + (c.last_name?.[0] || '')}
+                  </div>
                   <div>
                     <p className="font-medium text-sm">{getClientName(c)}</p>
                     <p className="text-xs text-gray-500">{c.phone}</p>
                   </div>
                 </button>
               ))}
+              {/* Кнопка "Новый клиент" */}
+              <button
+                onClick={() => {
+                  setClientResults([])
+                  openModal('client-add', {
+                    onSuccess: (newClient: any) => {
+                      setLocalClient(newClient)
+                      setClientSearch('')
+                    }
+                  })
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition text-indigo-600 font-medium border-t border-gray-100 ${isRTL ? 'flex-row-reverse text-right' : 'text-left'}`}
+              >
+                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                  <Plus className="w-4 h-4 text-indigo-600" />
+                </div>
+                <span className="text-sm">{locale === 'he' ? '+ לקוח חדש' : '+ Новый клиент'}</span>
+              </button>
+            </div>
+          )}
+          {clientSearching && (
+            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-800 border border-gray-200 rounded-xl shadow p-3 text-center text-sm text-gray-400">
+              {locale === 'he' ? 'מחפש...' : 'Поиск...'}
             </div>
           )}
         </div>

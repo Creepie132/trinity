@@ -125,7 +125,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
               </span>
             </button>
             <button
-              onClick={() => openModal('payment-create')}
+              onClick={() => openModal('client-sale', { locale: language === 'he' ? 'he' : 'ru' })}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all active:scale-95"
             >
               <ShoppingCart className="w-4 h-4 text-amber-600 dark:text-amber-400" />

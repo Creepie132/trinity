@@ -15,9 +15,10 @@ import { useQueryClient } from '@tanstack/react-query'
 interface AddClientDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSuccess?: (client: any) => void
 }
 
-export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
+export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDialogProps) {
   const { orgId, isLoading: authLoading, user } = useAuth()
   const { t, language } = useLanguage()
   const { isDemo } = useDemoMode()
@@ -49,7 +50,7 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
     if (isDemo && clientCount >= 10) return
 
     try {
-      await addClient.mutateAsync({
+      const newClient = await addClient.mutateAsync({
         first_name: formData.first_name,
         last_name: formData.last_name,
         phone: formData.phone,
@@ -73,6 +74,11 @@ export function AddClientDialog({ open, onOpenChange }: AddClientDialogProps) {
       })
 
       onOpenChange(false)
+
+      // Если передан onSuccess — вызываем с созданным клиентом
+      if (onSuccess && newClient) {
+        onSuccess(newClient)
+      }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
         console.error('[AddClientDialog] Error:', error)

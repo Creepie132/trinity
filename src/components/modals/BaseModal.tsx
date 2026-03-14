@@ -28,52 +28,60 @@ export function BaseModal({
   const pinned_ = isPinned(modalType)
   const containerRef = useRef<HTMLDivElement>(null)
   const handleRef = useRef<HTMLDivElement>(null)
-  const dragState = useRef({ dragging: false, startX: 0, startY: 0, currentX: 0, currentY: 0, modalW: 0, modalH: 0 })
+  // left/top — абсолютные пиксели на экране (не смещение от центра)
+  const dragState = useRef({ dragging: false, offX: 0, offY: 0, left: 0, top: 0 })
 
-  // Восстанавливаем позицию если уже закреплена
+  // Центрируем модалку при открытии и восстанавливаем позицию если уже закреплена
   useEffect(() => {
+    if (!containerRef.current) return
+    const el = containerRef.current
     const existing = pinned.find(p => p.id === modalType)
-    if (existing && containerRef.current) {
-      containerRef.current.style.transform =
-        `translate(calc(-50% + ${existing.x}px), calc(-50% + ${existing.y}px))`
-      dragState.current.currentX = existing.x
-      dragState.current.currentY = existing.y
+    if (existing) {
+      el.style.left = `${existing.x}px`
+      el.style.top  = `${existing.y}px`
+      dragState.current.left = existing.x
+      dragState.current.top  = existing.y
+    } else {
+      // Центр экрана
+      const l = Math.round((window.innerWidth  - el.offsetWidth)  / 2)
+      const t = Math.round((window.innerHeight - el.offsetHeight) / 2)
+      el.style.left = `${l}px`
+      el.style.top  = `${t}px`
+      dragState.current.left = l
+      dragState.current.top  = t
     }
-  }, [pinned_, modalType])
+  }, [open, pinned_, modalType])
 
   // ── Drag ──────────────────────────────────────────────────────────────────
+  const rafId = useRef<number | null>(null)
+
   const onMouseDown = useCallback((e: MouseEvent) => {
     if (e.button !== 0) return
     const target = e.target as HTMLElement
     if (target.closest('button') || target.closest('input') || target.closest('a')) return
     const s = dragState.current
-    // Кешируем размеры один раз при начале drag — чтобы не вызывать getBoundingClientRect() в mousemove
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect()
-      s.modalW = rect.width
-      s.modalH = rect.height
-    }
     s.dragging = true
-    s.startX = e.clientX - s.currentX
-    s.startY = e.clientY - s.currentY
+    // Запоминаем смещение курсора относительно левого верхнего угла модалки
+    s.offX = e.clientX - s.left
+    s.offY = e.clientY - s.top
     document.body.style.userSelect = 'none'
     document.body.style.cursor = 'grabbing'
     e.preventDefault()
   }, [])
 
-  const rafId = useRef<number | null>(null)
-
   const onMouseMove = useCallback((e: MouseEvent) => {
     const s = dragState.current
     if (!s.dragging || !containerRef.current) return
-    // Отменяем предыдущий незавершённый кадр
     if (rafId.current !== null) cancelAnimationFrame(rafId.current)
     rafId.current = requestAnimationFrame(() => {
       if (!containerRef.current) return
-      const dx = Math.min(window.innerWidth - s.modalW / 2, Math.max(-(s.modalW / 2), e.clientX - s.startX))
-      const dy = Math.min(window.innerHeight - 40, Math.max(-(s.modalH / 2) + 40, e.clientY - s.startY))
-      s.currentX = dx; s.currentY = dy
-      containerRef.current.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`
+      const el = containerRef.current
+      const l = Math.min(window.innerWidth  - el.offsetWidth,  Math.max(0, e.clientX - s.offX))
+      const t = Math.min(window.innerHeight - 40,              Math.max(0, e.clientY - s.offY))
+      s.left = l; s.top = t
+      // Пишем left/top напрямую — никаких transform, никаких calc()
+      el.style.left = `${l}px`
+      el.style.top  = `${t}px`
     })
   }, [])
 
@@ -84,9 +92,8 @@ export function BaseModal({
     if (rafId.current !== null) { cancelAnimationFrame(rafId.current); rafId.current = null }
     document.body.style.userSelect = ''
     document.body.style.cursor = ''
-    // Обновляем позицию в store если закреплено
     if (isPinned(modalType)) {
-      usePinnedModals.getState().updatePosition(modalType, s.currentX, s.currentY)
+      usePinnedModals.getState().updatePosition(modalType, s.left, s.top)
     }
   }, [isPinned, modalType])
 
@@ -111,8 +118,8 @@ export function BaseModal({
       const canPin = pin({
         id: modalType,
         title: title || modalType,
-        x: dragState.current.currentX,
-        y: dragState.current.currentY,
+        x: dragState.current.left,
+        y: dragState.current.top,
         zIndex: 100,
       })
       if (!canPin) {
@@ -177,35 +184,31 @@ export function BaseModal({
   if (!open && !pinned_) return null
 
   const pinnedData = usePinnedModals.getState().pinned.find(p => p.id === modalType)
-  const zStyle = pinnedData ? { zIndex: pinnedData.zIndex } : { zIndex: 50 }
+  const zIdx = pinnedData ? pinnedData.zIndex : 50
 
   return (
-    <div
-      className={cn(
-        'fixed inset-0 flex items-center justify-center p-4 pointer-events-none',
-      )}
-      style={zStyle}
-    >
+    <>
       {/* Backdrop — только когда не закреплено и открыто */}
       {!pinned_ && open && (
         <div
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+          style={{ zIndex: zIdx - 1 }}
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Modal container */}
+      {/* Modal container — position:fixed с left/top напрямую, без flex-родителя */}
       <div
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalType)}
         className={cn(
-          'relative w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl pointer-events-auto',
+          'fixed w-full max-w-lg bg-white dark:bg-gray-900 rounded-2xl shadow-2xl pointer-events-auto',
           'max-h-[90vh] flex flex-col',
           pinned_ && 'ring-2 ring-orange-400/60',
           className
         )}
-        style={{ transition: 'box-shadow .2s', willChange: 'transform' }}
+        style={{ zIndex: zIdx, willChange: 'left, top', transition: 'box-shadow .2s' }}
         role="dialog"
         aria-modal={!pinned_}
       >
@@ -249,6 +252,6 @@ export function BaseModal({
           {children}
         </div>
       </div>
-    </div>
+    </>
   )
 }

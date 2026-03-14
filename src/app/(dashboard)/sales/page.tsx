@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { Plus, Upload, Search, SlidersHorizontal, TrendingUp, ShoppingBag, Receipt, BookmarkCheck } from 'lucide-react'
+import { Plus, Upload, Search, SlidersHorizontal, TrendingUp, ShoppingBag, Receipt, BookmarkCheck, Trash2 } from 'lucide-react'
 import { useModalStore } from '@/store/useModalStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,7 +64,7 @@ interface DraftSale {
   savedAt?: string
 }
 
-function useDraftSales(): DraftSale[] {
+function useDraftSales(refreshKey?: number): DraftSale[] {
   const [drafts, setDrafts] = useState<DraftSale[]>([])
 
   useEffect(() => {
@@ -134,7 +134,7 @@ function useDraftSales(): DraftSale[] {
         savedAt,
       })))
     })
-  }, [])
+  }, [refreshKey])
 
   return drafts
 }
@@ -181,6 +181,7 @@ export default function SalesPage() {
   const [filtersOpen, setFiltersOpen]     = useState(false)
   const [newSaleOpen, setNewSaleOpen]     = useState(false)
   const [importOpen, setImportOpen]       = useState(false)
+  const [draftRefreshKey, setDraftRefreshKey] = useState(0)
 
   const { data: sales = [], isLoading } = useSales({
     status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -190,7 +191,12 @@ export default function SalesPage() {
 
   const stats = useSaleStats(sales)
   const toggleReceipt = useToggleReceipt()
-  const draftSales = useDraftSales()
+  const draftSales = useDraftSales(draftRefreshKey)
+
+  const deleteDraft = useCallback((clientId: string) => {
+    localStorage.removeItem(`draft_sale_${clientId}`)
+    setDraftRefreshKey(k => k + 1)
+  }, [])
 
   const activeFilters = (statusFilter !== 'all' ? 1 : 0) + (methodFilter !== 'all' ? 1 : 0)
     + (selectedMonth ? 1 : 0) + (search.length >= 2 ? 1 : 0)
@@ -403,6 +409,16 @@ export default function SalesPage() {
                     })}
                     className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600 active:scale-95 transition-all">
                     {locale === 'he' ? 'פתח' : 'Открыть'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(locale === 'he' ? 'למחוק את העסקה השמורה?' : 'Удалить сохранённую сделку?')) {
+                        deleteDraft(d.clientId)
+                      }
+                    }}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-400 hover:text-red-600 transition-all active:scale-95 flex-shrink-0"
+                    title={locale === 'he' ? 'מחק' : 'Удалить'}>
+                    <Trash2 size={13} />
                   </button>
                 </div>
               </div>

@@ -10,7 +10,6 @@ import { useCreateSale } from '@/hooks/useSales'
 import { useBranch } from '@/contexts/BranchContext'
 import { useServices } from '@/hooks/useServices'
 import { useQuery } from '@tanstack/react-query'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { toast } from 'sonner'
 
 interface LineItem {
@@ -148,11 +147,10 @@ function ProductPicker({ t, language, onAdd, onBack }: {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products-for-sale'],
     queryFn: async () => {
-      const sb = createSupabaseBrowserClient()
-      const { data } = await sb.from('products')
-        .select('id,name,sell_price,stock_quantity,image_url,category')
-        .eq('is_active', true).order('name')
-      return data ?? []
+      const res = await fetch('/api/products')
+      if (!res.ok) return []
+      const json = await res.json()
+      return (json.products ?? []) as { id: string; name: string; sell_price: number; stock_quantity?: number; image_url?: string; category?: string }[]
     },
   })
   const filtered = products.filter((p: any) => !search || p.name.toLowerCase().includes(search.toLowerCase()))

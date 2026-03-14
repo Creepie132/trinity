@@ -1,130 +1,228 @@
 import crypto from 'crypto'
 
-const BILLING_BASE = 'https://billing5.tranzila.com'
-const DISPLAY_BASE = 'https://my.tranzila.com'
+// ─── Auth ────────────────────────────────────────────────────────────────────
 
-function getTranzilaInvoiceHeaders() {
-  const nonce = crypto.randomUUID()
-  const timestamp = Math.floor(Date.now() / 1000).toString()
+function buildHeaders(): Record<string, string> {
+  const publicKey  = process.env.TRANZILA_PUBLIC_KEY!
+  const privateKey = process.env.TRANZILA_PRIVATE_KEY!
+
+  if (!publicKey || !privateKey) {
+    throw new Error('TRANZILA_PUBLIC_KEY / TRANZILA_PRIVATE_KEY not set')
+  }
+
+  const time  = Math.floor(Date.now() / 1000).toString()
+  const nonce = crypto.randomBytes(40).toString('hex') // 80 chars
+
+  // hash_hmac('sha256', message=publicKey, key=privateKey+time+nonce)
+  const accessToken = crypto
+    .createHmac('sha256', privateKey + time + nonce)
+    .update(publicKey)
+    .digest('hex')
 
   return {
     'Content-Type': 'application/json',
-    'X-tranzila-api-access-token': process.env.TRANZILLA_BILLING_ACCESS_TOKEN!,
-    'X-tranzila-api-app-key': process.env.TRANZILLA_BILLING_APP_KEY!,
-    'X-tranzila-api-nonce': nonce,
-    'X-tranzila-api-request-time': timestamp,
+    'X-tranzila-api-app-key':      publicKey,
+    'X-tranzila-api-request-time': time,
+    'X-tranzila-api-nonce':        nonce,
+    'X-tranzila-api-access-token': accessToken,
   }
 }
 
-export const TRANZILA_INVOICE_ERRORS: Record<number, string> = {
-  10000: 'Неверное имя терминала',
-  10003: 'Неверный формат даты',
-  10008: 'Сумма товаров и платежей не совпадает',
-  10300: 'Ошибка создания документа',
-  10301: 'Настройки терминала не найдены',
-  10302: 'Ошибка создания PDF',
-  10400: 'Неизвестный метод оплаты',
-  10405: 'Сумма платежа не указана',
-  10600: 'Документ не найден',
+const BILLING_BASE = 'https://billing5.tranzila.com/api/documents_db'
+// Терминал с активным Invoices API
+const INVOICE_TERMINAL = process.env.TRANZILA_TERMINAL_ID ?? 'ambersolt'
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface ReceiptItem {
+  name: string
+  quantity: number
+  unit_price: number
 }
 
-export function mapPaymentMethodToTranzila(method: string): number {
-  const map: Record<string, number> = {
-    credit_card: 1,
-    cash: 5,
-    bank_transfer: 4,
-    bit: 10,
-    check: 3,
-  }
-  return map[method] ?? 1
+/** payment_method codes per Tranzila Invoices API */
+export type TranzilaPaymentMethod = '1' | '2' | '3' | '4' | '5'
+// 1=credit card, 2=cash, 3=check, 4=bank transfer, 5=other
+
+export const PAYMENT_METHOD_MAP: Record<string, TranzilaPaymentMethod> = {
+  credit_card: '1',
+  card:        '1',
+  cash:        '2',
+  check:       '3',
+  bank_transfer: '4',
+  transfer:    '4',
+  bit:         '1', // Bit работает как карта
+  other:       '5',
 }
 
-export interface CreateInvoiceParams {
-  terminalName: string
-  clientName: string
-  clientEmail: string
-  amount: number
-  items: Array<{
-    name: string
-    unitPrice: number
-    quantity?: number
-    code?: string
-  }>
-  paymentMethod: string
-  ccLast4?: string
-  ccBrand?: number
-  txnIndex?: number
+export interface CreateReceiptParams {
+  clientName:    string
+  clientEmail?:  string   // если есть — Tranzila сама шлёт PDF на email
+  items:         ReceiptItem[]
+  totalAmount:   number
+  paymentMethod: string   // ключ из PAYMENT_METHOD_MAP или уже '1'..'5'
 }
 
-export interface TranzilaInvoiceResponse {
-  status_code: number
-  status_msg: string
-  document?: {
-    id: string
-    number: string
-    total_charge_amount: number
-    currency: string
-    created_at: string
-    retrieval_key: string
-  }
+export interface TranzilaDocumentResult {
+  documentId:   string
+  documentNum:  string
+  createdAt:    string
+  retrievalKey: string
 }
 
-export async function createTranzilaInvoice(
-  params: CreateInvoiceParams
-): Promise<TranzilaInvoiceResponse> {
-  const today = new Date().toISOString().split('T')[0]
+// ─── createReceipt ───────────────────────────────────────────────────────────
 
-  const body = {
-    terminal_name: params.terminalName,
-    document_date: today,
-    document_type: 'IR',
+/**
+ * Creates a receipt (קבלה) via Tranzila Invoices API.
+ * If clientEmail is provided, Tranzila automatically emails the PDF.
+ * Returns document ID to store in DB and later fetch PDF.
+ */
+export async function createReceipt(
+  params: CreateReceiptParams
+): Promise<TranzilaDocumentResult> {
+  const method: TranzilaPaymentMethod =
+    (PAYMENT_METHOD_MAP[params.paymentMethod] ?? params.paymentMethod ?? '5') as TranzilaPaymentMethod
+
+  const body: Record<string, unknown> = {
+    terminal_name:     INVOICE_TERMINAL,
     document_language: 'heb',
-    document_currency_code: 'ILS',
-    action: 1,
     response_language: 'eng',
-    vat_percent: 18,
-    client_name: params.clientName,
-    client_email: params.clientEmail,
-    client_country_code: 'IL',
-    created_by_system: 'TrinityCRM',
-    items: params.items.map((item, idx) => ({
-      type: 'I',
-      code: item.code ?? `ITEM-${idx + 1}`,
-      name: item.name,
-      price_type: 'G',
-      unit_price: item.unitPrice,
-      units_number: item.quantity ?? 1,
-      unit_type: 1,
+    client: {
+      name:  params.clientName,
+      ...(params.clientEmail ? { email: params.clientEmail } : {}),
+    },
+    items: params.items.map(item => ({
+      name:          item.name,
+      quantity:      item.quantity,
+      unit_price:    item.unit_price,
       currency_code: 'ILS',
-      to_doc_currency_exchange_rate: 1,
     })),
     payments: [{
-      payment_method: mapPaymentMethodToTranzila(params.paymentMethod),
-      payment_date: today,
-      amount: params.amount,
-      currency_code: 'ILS',
-      ...(params.paymentMethod === 'credit_card' && {
-        cc_last_4_digits: params.ccLast4 ?? '0000',
-        cc_credit_term: 1,
-        cc_brand: params.ccBrand ?? 2,
-      }),
-      ...(params.txnIndex && { txnindex: params.txnIndex }),
+      payment_method: method,
+      amount:         params.totalAmount,
+      currency_code:  'ILS',
     }],
   }
 
-  const response = await fetch(`${BILLING_BASE}/api/documents_db/create_document`, {
-    method: 'POST',
-    headers: getTranzilaInvoiceHeaders(),
-    body: JSON.stringify(body),
+  const res = await fetch(`${BILLING_BASE}/create_document`, {
+    method:  'POST',
+    headers: buildHeaders(),
+    body:    JSON.stringify(body),
   })
 
-  if (!response.ok) {
-    throw new Error(`Tranzila Billing API HTTP error: ${response.status}`)
+  const data = await res.json()
+
+  if (data.status_code !== 0) {
+    throw new Error(
+      `Tranzila create_document error ${data.status_code}: ${data.status_msg} [key: ${data.enquiry_key}]`
+    )
   }
 
-  return response.json()
+  return {
+    documentId:   data.document.id,
+    documentNum:  data.document.number,
+    createdAt:    data.document.created_at,
+    retrievalKey: data.document.retrieval_key,
+  }
+}
+
+// ─── getReceiptPdf ───────────────────────────────────────────────────────────
+
+/**
+ * Fetches PDF bytes for a previously created Tranzila document.
+ * Returns a Buffer ready to stream or attach to WhatsApp/email.
+ */
+export async function getReceiptPdf(documentId: string): Promise<Buffer> {
+  const body = {
+    terminal_name:     INVOICE_TERMINAL,
+    document_id:       documentId,
+    response_language: 'eng',
+  }
+
+  const res = await fetch(`${BILLING_BASE}/get_document`, {
+    method:  'POST',
+    headers: buildHeaders(),
+    body:    JSON.stringify(body),
+  })
+
+  const contentType = res.headers.get('content-type') ?? ''
+
+  if (!contentType.includes('application/pdf')) {
+    const errData = await res.json().catch(() => ({}))
+    throw new Error(
+      `Tranzila get_document error: ${JSON.stringify(errData)}`
+    )
+  }
+
+  const arrayBuffer = await res.arrayBuffer()
+  return Buffer.from(arrayBuffer)
+}
+
+// ─── Legacy aliases (backward compatibility) ─────────────────────────────────
+// tranzila/webhook и tranzila-success используют старые имена
+
+export const TRANZILA_INVOICE_ERRORS: Record<number, string> = {
+  10000: 'Invalid terminal name',
+  10001: 'Unknown document action',
+  10002: 'Invalid document type',
+  10300: 'Failed to create document',
+  10301: 'Terminal settings not found',
+  10302: 'Failed to create PDF file',
+  10400: 'Invalid payment method',
+  10600: 'Unknown document id',
+  10601: 'Document ID not found',
+  10602: 'No PDF file found',
+}
+
+export function mapPaymentMethodToTranzila(method: string): TranzilaPaymentMethod {
+  return PAYMENT_METHOD_MAP[method] ?? '5'
 }
 
 export function getInvoiceDisplayUrl(retrievalKey: string): string {
-  return `${DISPLAY_BASE}/api/get_financial_document/${retrievalKey}`
+  return `https://billing5.tranzila.com/api/documents_db/display_document?key=${retrievalKey}`
+}
+
+interface LegacyCreateParams {
+  terminalName?:  string
+  clientName:     string
+  clientEmail?:   string
+  amount:         number
+  items?:         Array<{ name: string; unitPrice: number; code?: string }>
+  paymentMethod?: string
+  ccLast4?:       string
+  ccBrand?:       number
+  txnIndex?:      number
+}
+
+/** @deprecated Use createReceipt() instead */
+export async function createTranzilaInvoice(params: LegacyCreateParams) {
+  const items: ReceiptItem[] = (params.items ?? []).map(i => ({
+    name:       i.name,
+    quantity:   1,
+    unit_price: i.unitPrice,
+  }))
+
+  if (items.length === 0) {
+    items.push({ name: 'תשלום', quantity: 1, unit_price: params.amount })
+  }
+
+  const receipt = await createReceipt({
+    clientName:    params.clientName,
+    clientEmail:   params.clientEmail,
+    items,
+    totalAmount:   params.amount,
+    paymentMethod: params.paymentMethod ?? 'credit_card',
+  })
+
+  // Return shape compatible with old callers
+  return {
+    status_code: 0,
+    status_msg:  'Success',
+    document: {
+      id:           receipt.documentId,
+      number:       receipt.documentNum,
+      created_at:   receipt.createdAt,
+      retrieval_key: receipt.retrievalKey,
+    },
+  }
 }

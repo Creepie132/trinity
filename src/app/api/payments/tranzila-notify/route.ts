@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createReceipt } from '@/lib/tranzila-invoices'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,7 +11,7 @@ const supabase = createClient(
  * POST /api/payments/tranzila-notify
  *
  * Tranzila My Billing шлёт этот callback при каждом автоматическом
- * рекуррентном списании. Мы обновляем статус подписки в БД.
+ * рекуррентном списании. Обновляем статус подписки и создаём квитанцию.
  *
  * Параметры от Tranzila:
  *   Response         — '000' = успех
@@ -39,8 +40,9 @@ export async function POST(request: NextRequest) {
   const responseCode  = body['Response']
   const orgId         = body['cField1']
   const transactionId = body['ConfirmationCode'] || body['index']
+  const amount        = parseFloat(body['sum'] ?? '0')
 
-  console.log('[tranzila-notify] Received:', { responseCode, orgId, transactionId })
+  console.log('[tranzila-notify] Received:', { responseCode, orgId, transactionId, amount })
 
   if (!orgId) {
     console.error('[tranzila-notify] No org_id in cField1')
@@ -56,7 +58,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'charge_failed' })
   }
 
-  // Успешное списание — продлеваем подписку на 30 дней
+  // ── Update subscription ──────────────────────────────────────────────────
   const nextBilling = new Date()
   nextBilling.setDate(nextBilling.getDate() + 30)
   const nextBillingStr = nextBilling.toISOString().split('T')[0]
@@ -64,10 +66,10 @@ export async function POST(request: NextRequest) {
   const { error } = await supabase
     .from('organizations')
     .update({
-      subscription_status: 'active',
-      billing_status: 'paid',
-      billing_due_date: nextBillingStr,
-      last_billing_date: new Date().toISOString().split('T')[0],
+      subscription_status:  'active',
+      billing_status:       'paid',
+      billing_due_date:     nextBillingStr,
+      last_billing_date:    new Date().toISOString().split('T')[0],
       subscription_expires_at: new Date(
         nextBilling.getTime() + 3 * 24 * 60 * 60 * 1000
       ).toISOString(),
@@ -77,6 +79,42 @@ export async function POST(request: NextRequest) {
   if (error) {
     console.error('[tranzila-notify] Failed to update org:', orgId, error)
     return NextResponse.json({ ok: false, reason: 'db_error' })
+  }
+
+  // ── Create Tranzila receipt ──────────────────────────────────────────────
+  if (amount > 0) {
+    try {
+      // Get org name + owner email for receipt
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('name, owner_email, owner_name')
+        .eq('id', orgId)
+        .single()
+
+      const receipt = await createReceipt({
+        clientName:    org?.owner_name  ?? org?.name ?? 'לקוח',
+        clientEmail:   org?.owner_email ?? undefined,
+        items: [{
+          name:       `Trinity CRM — מנוי חודשי`,
+          quantity:   1,
+          unit_price: amount,
+        }],
+        totalAmount:   amount,
+        paymentMethod: 'credit_card',
+      })
+
+      // Store document_id in the payments record for this transaction
+      await supabase
+        .from('payments')
+        .update({ tranzila_document_id: receipt.documentId })
+        .eq('org_id', orgId)
+        .eq('transaction_id', transactionId)
+
+      console.log('[tranzila-notify] ✅ Receipt created:', receipt.documentId, '| doc#', receipt.documentNum)
+    } catch (receiptErr) {
+      // Non-fatal — subscription was updated successfully
+      console.error('[tranzila-notify] Receipt creation failed:', receiptErr)
+    }
   }
 
   console.log('[tranzila-notify] ✅ Recurring OK for org:', orgId, '| next:', nextBillingStr)

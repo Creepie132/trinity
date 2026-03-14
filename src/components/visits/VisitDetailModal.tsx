@@ -65,7 +65,9 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
     lastVisitDate, onShowHistory,
   } = props
 
-  const { data: visitServices = [] } = useVisitServices(visit?.id || '')
+  const { data: visitServicesFromHook } = useVisitServices(visit?.id || '')
+  // Use hook data when available, fall back to visit.visit_services to avoid empty state on first open
+  const visitServices = visitServicesFromHook ?? visit?.visit_services ?? []
   const removeVisitService = useRemoveVisitService(visit?.id || '')
   const queryClient = useQueryClient()
 

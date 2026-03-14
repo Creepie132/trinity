@@ -60,7 +60,10 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
   const supabase = createSupabaseBrowserClient()
   const queryClient = useQueryClient()
   const { data: products } = useProducts()
-  const { data: visitServices } = useVisitServices(visit?.id || '')
+  const { data: visitServicesFromHook } = useVisitServices(visit?.id || '')
+  // Use hook data when available, fall back to visit.visit_services (already fetched with the visit)
+  // This prevents empty cart on first open (race condition before hook fetch completes)
+  const visitServices = visitServicesFromHook ?? visit?.visit_services ?? []
 
   const [paymentMethod, setPaymentMethod] = useState<string>('cash')
   const [isProcessing, setIsProcessing] = useState(false)

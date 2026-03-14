@@ -119,7 +119,7 @@ export default function VisitsPage() {
     return ''
   }
   function getServiceDuration(visit: any): number {
-    return visit?.services?.duration_minutes || visit?.duration_minutes || 0
+    return visit?.duration_minutes || visit?.services?.duration_minutes || 0
   }
   function getLastVisitDate(visit: any): string {
     if (!visit?.client_id || !visitsData?.data) return ''

@@ -150,7 +150,9 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
   }
 
   const getVisitHeight = (visit: any): number => {
-    const dur = visit.services?.duration_minutes || visit.duration_minutes || 30
+    // visit.duration_minutes is the authoritative value (set at booking time)
+    // fall back to service default only if visit has no own duration
+    const dur = visit.duration_minutes || visit.services?.duration_minutes || 30
     return Math.max((dur / 60) * HOUR_HEIGHT, 28)
   }
 

@@ -1,1 +1,1 @@
-feat: calendar prefills datetime in visit form
+fix: visit block height uses visit.duration_minutes over service default

@@ -61,6 +61,7 @@ export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [draftClients, setDraftClients] = useState<Set<string>>(new Set())
 
   const { openModal } = useModalStore()
 
@@ -92,6 +93,27 @@ export default function ClientsPage() {
   useEffect(() => {
     setPage(1)
   }, [debouncedSearch])
+
+  // Scan localStorage for draft sales and update on focus
+  useEffect(() => {
+    const scan = () => {
+      const drafts = new Set<string>()
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key?.startsWith('draft_sale_')) {
+          drafts.add(key.replace('draft_sale_', ''))
+        }
+      }
+      setDraftClients(drafts)
+    }
+    scan()
+    window.addEventListener('focus', scan)
+    window.addEventListener('storage', scan)
+    return () => {
+      window.removeEventListener('focus', scan)
+      window.removeEventListener('storage', scan)
+    }
+  }, [])
 
   // Check organization status and feature access
   useEffect(() => {
@@ -218,7 +240,9 @@ export default function ClientsPage() {
                 <div
                   key={client.id}
                   onClick={() => handleClientClick(client)}
-                  className="grid grid-cols-[2fr_1fr_1fr_80px_100px_80px] gap-4 px-4 py-3 items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+                  className={`grid grid-cols-[2fr_1fr_1fr_80px_100px_80px] gap-4 px-4 py-3 items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group ${
+                    draftClients.has(client.id) ? 'draft-glow' : ''
+                  }`}
                 >
                   {/* Имя + аватар */}
                   <div className="flex items-center gap-3 min-w-0">

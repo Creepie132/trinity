@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Eye, Upload, Users } from 'lucide-react'
+import { Plus, Search, Eye, Upload, Users, Phone, Calendar, TrendingUp, MessageCircle } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { useQueryClient } from '@tanstack/react-query'
 import { ClientSummary } from '@/types/database'
 import { useModalStore } from '@/store/useModalStore'
-import { format } from 'date-fns'
+import { format, differenceInDays } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -20,6 +19,38 @@ import { ExportButton } from '@/components/ExportButton'
 import { ClientCard } from '@/components/clients/ClientCard'
 import { DraftSaleIndicator } from '@/components/clients/DraftSaleIndicator'
 import { EmptyState } from '@/components/ui/EmptyState'
+
+// ── Аватар с инициалами ───────────────────────────────────────────────────────
+function ClientAvatar({ firstName, lastName, size = 'md' }: { firstName: string; lastName: string; size?: 'sm' | 'md' }) {
+  const initials = `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase()
+  const colors = [
+    'bg-blue-100 text-blue-700', 'bg-purple-100 text-purple-700',
+    'bg-emerald-100 text-emerald-700', 'bg-amber-100 text-amber-700',
+    'bg-rose-100 text-rose-700', 'bg-indigo-100 text-indigo-700',
+  ]
+  const colorIdx = (firstName?.charCodeAt(0) || 0) % colors.length
+  const sizeClass = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'
+  return (
+    <div className={`${sizeClass} rounded-full flex items-center justify-center font-semibold flex-shrink-0 ${colors[colorIdx]}`}>
+      {initials || '?'}
+    </div>
+  )
+}
+
+// ── Индикатор активности ──────────────────────────────────────────────────────
+function ActivityBadge({ lastVisit, locale }: { lastVisit: string | null; locale: string }) {
+  if (!lastVisit) return <span className="text-xs text-gray-300">—</span>
+  const days = differenceInDays(new Date(), new Date(lastVisit))
+  if (days <= 30) return <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+    {locale === 'he' ? `לפני ${days}י` : `${days}д назад`}
+  </span>
+  if (days <= 90) return <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+    {locale === 'he' ? `לפני ${Math.floor(days/30)}ח` : `${Math.floor(days/30)}мес назад`}
+  </span>
+  return <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+    {locale === 'he' ? 'לא פעיל' : 'Давно'}
+  </span>
+}
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -149,93 +180,106 @@ export default function ClientsPage() {
         )}
       </div>
 
-      {/* Desktop - Table */}
-      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden min-h-[400px]">
+      {/* Desktop — современный список */}
+      <div className="hidden md:block">
+        {/* Заголовок колонок */}
+        <div className="grid grid-cols-[2fr_1fr_1fr_80px_100px_80px] gap-4 px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-800">
+          <span>{t('clients.name')}</span>
+          <span>{t('clients.phone')}</span>
+          <span>{t('clients.lastVisit')}</span>
+          <span>{t('clients.visits')}</span>
+          <span>{t('clients.totalSpent')}</span>
+          <span></span>
+        </div>
+
+        {/* Скелетон */}
         {isFetching && clients.length === 0 ? (
-          /* Skeleton rows — показываем структуру таблицы пока грузятся данные */
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.name')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.phone')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.lastVisit')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.visits')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.totalSpent')}</TableHead>
-                <TableHead className="text-left text-gray-700 dark:text-gray-300">{t('clients.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...Array(8)].map((_, i) => (
-                <TableRow key={i} className="border-b border-gray-100 dark:border-gray-700">
-                  <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse w-32" /></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse w-24" /></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse w-20" /></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse w-8" /></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse w-16" /></TableCell>
-                  <TableCell><div className="flex gap-2">
-                    {[...Array(3)].map((_, j) => <div key={j} className="h-7 w-7 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />)}
-                  </div></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="divide-y divide-gray-50 dark:divide-gray-800">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="grid grid-cols-[2fr_1fr_1fr_80px_100px_80px] gap-4 px-4 py-3 items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 animate-pulse" />
+                  <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-28" />
+                </div>
+                <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-24" />
+                <div className="h-5 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-16" />
+                <div className="h-5 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-8 mx-auto" />
+                <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-14" />
+                <div className="h-7 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
         ) : paginatedClients && paginatedClients.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.name')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.phone')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.lastVisit')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.visits')}</TableHead>
-                <TableHead className="text-right text-gray-700 dark:text-gray-300">{t('clients.totalSpent')}</TableHead>
-                <TableHead className="text-left text-gray-700 dark:text-gray-300">{t('clients.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedClients.map((client) => (
-                <TableRow
+          <div className="divide-y divide-gray-50 dark:divide-gray-800">
+            {paginatedClients.map((client) => {
+              const fullName = `${client.first_name} ${client.last_name}`.trim()
+              const totalPaid = Number(client.total_paid || 0)
+              return (
+                <div
                   key={client.id}
-                  className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700"
                   onClick={() => handleClientClick(client)}
+                  className="grid grid-cols-[2fr_1fr_1fr_80px_100px_80px] gap-4 px-4 py-3 items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
                 >
-                  <TableCell className="font-medium text-gray-900 dark:text-gray-100">
-                    {client.first_name} {client.last_name}
-                  </TableCell>
-                  <TableCell className="text-gray-700 dark:text-gray-300">{client.phone}</TableCell>
-                  <TableCell className="text-gray-700 dark:text-gray-300">
-                    {client.last_visit
-                      ? format(new Date(client.last_visit), 'dd/MM/yyyy')
-                      : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{client.total_visits}</Badge>
-                  </TableCell>
-                  <TableCell className="font-semibold text-green-600 dark:text-green-400">
-                    ₪{Number(client.total_paid || 0).toFixed(2)}
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-2 items-center">
-                      <DraftSaleIndicator 
-                        clientId={client.id} 
-                        client={client} 
-                        locale={language === 'he' ? 'he' : 'ru'} 
-                      />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleClientClick(client)}
-                        className="text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                  {/* Имя + аватар */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ClientAvatar firstName={client.first_name} lastName={client.last_name} />
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{fullName || '—'}</p>
+                      {client.email && (
+                        <p className="text-xs text-gray-400 truncate">{client.email}</p>
+                      )}
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+
+                  {/* Телефон */}
+                  <span className="text-sm text-gray-600 dark:text-gray-300 tabular-nums">
+                    {client.phone || '—'}
+                  </span>
+
+                  {/* Последний визит */}
+                  <ActivityBadge lastVisit={client.last_visit} locale={language === 'he' ? 'he' : 'ru'} />
+
+                  {/* Кол-во визитов */}
+                  <div className="flex justify-center">
+                    <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
+                      client.total_visits >= 10 ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                      : client.total_visits >= 3 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                      : 'text-gray-500'
+                    }`}>
+                      {client.total_visits}
+                    </span>
+                  </div>
+
+                  {/* Сумма */}
+                  <span className={`text-sm font-semibold ${totalPaid > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-300'}`}>
+                    {totalPaid > 0 ? `₪${totalPaid.toLocaleString()}` : '—'}
+                  </span>
+
+                  {/* Действия */}
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                    <DraftSaleIndicator clientId={client.id} client={client} locale={language === 'he' ? 'he' : 'ru'} />
+                    {client.phone && (
+                      <a href={`tel:${client.phone}`}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-emerald-600 transition-colors"
+                        title="Позвонить">
+                        <Phone className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    <button onClick={() => handleClientClick(client)}
+                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-600 transition-colors"
+                      title="Открыть">
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         ) : (
-          <div className="text-center py-12">
+          <div className="text-center py-16">
+            <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+              <Users className="w-7 h-7 text-gray-300" />
+            </div>
             <p className="text-gray-500 dark:text-gray-400 mb-4">{t('clients.noClients')}</p>
             <Button onClick={() => openModal('client-add')} className="bg-theme-primary text-white hover:opacity-90">
               <Plus className="w-4 h-4 ml-2" />

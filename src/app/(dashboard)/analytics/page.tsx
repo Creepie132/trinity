@@ -43,21 +43,22 @@ const STORAGE_KEY = 'trinity_analytics_widgets'
 const PERIOD_KEY  = 'trinity_analytics_period'
 
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
-const CustomTooltip = ({ active, payload, label, prefix = '', suffix = '' }: any) => {
-  if (!active || !payload?.length) return null
-  const hasValue = payload.some((p: any) => typeof p.value === 'number' && p.value > 0)
-  if (!hasValue) return null
-  return (
-    <div className="bg-white border border-slate-100 rounded-xl shadow-lg px-4 py-2.5 text-sm">
-      <p className="text-slate-400 text-xs mb-1">{label}</p>
-      {payload.map((p: any, i: number) => (
-        <p key={i} className="font-bold" style={{ color: p.color || '#6366f1' }}>
-          {prefix}{typeof p.value === 'number' ? p.value.toLocaleString() : p.value}{suffix}
-        </p>
-      ))}
-    </div>
-  )
-}
+const makeTooltip = (prefix = '', suffix = '') =>
+  ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null
+    const hasValue = payload.some((p: any) => typeof p.value === 'number' && p.value > 0)
+    if (!hasValue) return null
+    return (
+      <div className="bg-white border border-slate-100 rounded-xl shadow-lg px-4 py-2.5 text-sm">
+        <p className="text-slate-400 text-xs mb-1">{label}</p>
+        {payload.map((p: any, i: number) => (
+          <p key={i} className="font-bold" style={{ color: p.color || '#6366f1' }}>
+            {prefix}{typeof p.value === 'number' ? p.value.toLocaleString() : p.value}{suffix}
+          </p>
+        ))}
+      </div>
+    )
+  }
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 const KpiCard = ({ icon: Icon, label, value, change, color }: {
@@ -276,7 +277,7 @@ export default function AnalyticsPage() {
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={45}
                 tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-              <Tooltip content={<CustomTooltip prefix="₪" />} />
+              <Tooltip content={makeTooltip('₪')} />
               <Area type="monotone" dataKey="amount" name={L.revenue_lbl}
                 stroke="#6366f1" strokeWidth={2.5} fill="url(#revGrad)"
                 dot={false} activeDot={{ r: 5, fill: '#6366f1', strokeWidth: 0 }}
@@ -295,7 +296,7 @@ export default function AnalyticsPage() {
               <XAxis dataKey="dateLabel" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}
                 interval={period <= 7 ? 0 : period <= 30 ? 4 : 9} />
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={makeTooltip()} />
               <Bar dataKey="count" name={L.visitsCount} radius={[6,6,0,0]}
                 fill="#8b5cf6"
                 isAnimationActive animationDuration={700} animationEasing="ease-out">

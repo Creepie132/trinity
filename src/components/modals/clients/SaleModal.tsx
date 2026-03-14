@@ -222,7 +222,12 @@ export function SaleModal() {
   const handleSaveDraft = () => {
     if (!client?.id) return
     const draftKey = `draft_sale_${client.id}`
-    localStorage.setItem(draftKey, JSON.stringify({ cart, discount }))
+    localStorage.setItem(draftKey, JSON.stringify({
+      cart,
+      discount,
+      clientName: clientName || '',
+      savedAt: new Date().toISOString(),
+    }))
     toast.success(locale === 'he' ? 'העסקה נשמרה' : 'Сделка сохранена')
     handleClose()
   }

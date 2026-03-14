@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
-import { Plus, Upload, Search, SlidersHorizontal, TrendingUp, ShoppingBag, Receipt } from 'lucide-react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { Plus, Upload, Search, SlidersHorizontal, TrendingUp, ShoppingBag, Receipt, BookmarkCheck } from 'lucide-react'
+import { useModalStore } from '@/store/useModalStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -24,7 +25,7 @@ const T = {
     newSale: 'מכירה חדשה', import: 'ייבוא מאקסל',
     revenue: 'הכנסות', count: 'עסקאות', avg: 'ממוצע לעסקה',
     monthlyChart: 'מכירות לפי חודש', clickHint: 'לחץ על עמודה לסינון',
-    all: 'הכל', paid: 'שולם', partial: 'חלקי', newStatus: 'חדש',
+    all: 'הכל', paid: 'שולם', partial: 'חלקי', newStatus: 'חדש', draft: 'שמורה',
     filterAll: 'כל השיטות', cash: 'מזומן', card: 'כרטיס', bit: 'ביט',
     search: 'חיפוש לפי לקוח, מוצר, עובד...',
     syncNote: 'כל מכירה יוצרת אוטומטית רשומה בתשלומים',
@@ -38,7 +39,7 @@ const T = {
     newSale: 'Новая сделка', import: 'Импорт из Excel',
     revenue: 'Выручка', count: 'Сделок', avg: 'Средний чек',
     monthlyChart: 'Продажи по месяцам', clickHint: 'нажмите на столбец для фильтрации',
-    all: 'Все', paid: 'Оплачено', partial: 'Частично', newStatus: 'Новая',
+    all: 'Все', paid: 'Оплачено', partial: 'Частично', newStatus: 'Новая', draft: 'Сохранённые',
     filterAll: 'Все способы', cash: 'Наличные', card: 'Карта', bit: 'Bit',
     search: 'Поиск по клиенту, товару, мастеру...',
     syncNote: 'Каждая продажа автоматически создаёт запись в разделе «Платежи»',
@@ -53,6 +54,37 @@ const MONTHS_HE = ['אוק', 'נוב', 'דצמ', 'ינו', 'פבר', 'מרץ']
 const MONTHS_RU = ['Окт', 'Ноя', 'Дек', 'Янв', 'Фев', 'Мар']
 const MONTH_KEYS = ['2024-10','2024-11','2024-12','2025-01','2025-02','2025-03']
 const BAR_HEIGHTS = [45, 58, 50, 72, 64, 90]
+
+interface DraftSale {
+  clientId: string
+  clientName: string
+  total: number
+  itemCount: number
+  savedAt?: string
+}
+
+function useDraftSales(): DraftSale[] {
+  const [drafts, setDrafts] = useState<DraftSale[]>([])
+  useEffect(() => {
+    const result: DraftSale[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith('draft_sale_')) continue
+      const clientId = key.replace('draft_sale_', '')
+      try {
+        const raw = localStorage.getItem(key)
+        if (!raw) continue
+        const parsed = JSON.parse(raw)
+        const cart: { quantity: number; price: number; product?: { name?: string } }[] = parsed.cart || []
+        const total = cart.reduce((s, item) => s + item.price * item.quantity, 0)
+        const clientLabel = parsed.clientName || clientId
+        result.push({ clientId, clientName: clientLabel, total, itemCount: cart.length, savedAt: parsed.savedAt })
+      } catch { /* skip */ }
+    }
+    setDrafts(result)
+  }, [])
+  return drafts
+}
 
 const STATUS_BADGE: Record<string, string> = {
   paid:      'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -87,6 +119,7 @@ export default function SalesPage() {
   const dir   = locale === 'he' ? 'rtl' : 'ltr'
   const t     = T[locale]
   const months = locale === 'he' ? MONTHS_HE : MONTHS_RU
+  const { openModal } = useModalStore()
 
   const [statusFilter, setStatusFilter]   = useState('all')
   const [methodFilter, setMethodFilter]   = useState('all')
@@ -104,6 +137,7 @@ export default function SalesPage() {
 
   const stats = useSaleStats(sales)
   const toggleReceipt = useToggleReceipt()
+  const draftSales = useDraftSales()
 
   const activeFilters = (statusFilter !== 'all' ? 1 : 0) + (methodFilter !== 'all' ? 1 : 0)
     + (selectedMonth ? 1 : 0) + (search.length >= 2 ? 1 : 0)
@@ -218,14 +252,20 @@ export default function SalesPage() {
       {/* ── Tab bar ────────────────────────────────────────────────────── */}
       <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 gap-0.5"
         style={{ animation: 'fadeInUp 0.4s 0.12s ease both' }}>
-        {(['all','paid','partial','new'] as const).map(s => (
+        {(['all','paid','partial','new','draft'] as const).map(s => (
           <button key={s}
-            className={`flex-1 text-xs py-2 rounded-lg transition-all font-medium
+            className={`flex-1 text-xs py-2 rounded-lg transition-all font-medium flex items-center justify-center gap-1
               ${statusFilter === s
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm border border-gray-100 dark:border-gray-600'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
             onClick={() => setStatusFilter(s)}>
-            {s === 'all' ? t.all : s === 'paid' ? t.paid : s === 'partial' ? t.partial : t.newStatus}
+            {s === 'draft' && <BookmarkCheck size={11} />}
+            {s === 'all' ? t.all : s === 'paid' ? t.paid : s === 'partial' ? t.partial : s === 'new' ? t.newStatus : t.draft}
+            {s === 'draft' && draftSales.length > 0 && (
+              <span className="bg-amber-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                {draftSales.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -274,8 +314,52 @@ export default function SalesPage() {
         {t.syncNote}
       </div>
 
+      {/* ── Draft sales ────────────────────────────────────────────── */}
+      {statusFilter === 'draft' && (
+        <div className="space-y-2">
+          {draftSales.length === 0 ? (
+            <EmptyState
+              icon={<BookmarkCheck size={28} />}
+              title={locale === 'he' ? 'אין עסקאות שמורות' : 'Нет сохранённых сделок'}
+              description={locale === 'he' ? 'שמור עסקה מכרטיס לקוח' : 'Сохраните сделку из карточки клиента'}
+            />
+          ) : draftSales.map((d, i) => {
+            const av = AV[d.clientName.charCodeAt(0) % AV.length]
+            const ini = d.clientName.split(' ').map((w:string) => w[0]?.toUpperCase() || '').join('').slice(0,2) || '?'
+            return (
+              <div key={d.clientId}
+                className="bg-white dark:bg-gray-800 rounded-xl border border-amber-200 dark:border-amber-800 p-3 flex items-center gap-3"
+                style={{ animation: `fadeInUp 0.3s ${i * 0.04}s ease both`, borderLeft: '3px solid #f59e0b' }}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${av}`}>
+                  {ini}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{d.clientName}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {d.itemCount} {locale === 'he' ? 'פריטים' : 'позиций'} · ₪{d.total.toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-xs px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-medium">
+                    {locale === 'he' ? 'שמורה' : 'Сохранена'}
+                  </span>
+                  <button
+                    onClick={() => openModal('client-sale', {
+                      client: { id: d.clientId, first_name: d.clientName },
+                      locale,
+                    })}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600 active:scale-95 transition-all">
+                    {locale === 'he' ? 'פתח' : 'Открыть'}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* ── Mobile list ────────────────────────────────────────────────── */}
-      <div className="md:hidden space-y-2">
+      <div className={`md:hidden space-y-2 ${statusFilter === 'draft' ? 'hidden' : ''}`}>
         {isLoading ? (
           [...Array(4)].map((_, i) => (
             <div key={i} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100
@@ -305,8 +389,8 @@ export default function SalesPage() {
       </div>
 
       {/* ── Desktop table ──────────────────────────────────────────────── */}
-      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-xl border
-        border-gray-100 dark:border-gray-700 overflow-hidden"
+      <div className={`hidden md:block bg-white dark:bg-gray-800 rounded-xl border
+        border-gray-100 dark:border-gray-700 overflow-hidden ${statusFilter === 'draft' ? '!hidden' : ''}`}
         style={{ animation: 'fadeInUp 0.4s 0.18s ease both' }}>
         {isLoading ? (
           <div className="p-8 text-center text-gray-400 text-sm">

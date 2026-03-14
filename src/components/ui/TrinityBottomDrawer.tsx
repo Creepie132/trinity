@@ -45,9 +45,11 @@ export function TrinityBottomDrawer({
       open={isOpen}
       onOpenChange={(open) => !open && onClose()}
       snapPoints={snapPoints}
-      // Отключаем масштабирование фона — убирает один из источников лагов
       shouldScaleBackground={false}
-      // Нативный drag без задержки
+      // handleOnly: drag только через handle-зону — убирает scrollLockTimeout конфликт
+      handleOnly
+      // scrollLockTimeout=0: не ждём после scroll, реагируем мгновенно
+      scrollLockTimeout={0}
       modal
     >
       <Drawer.Portal>
@@ -56,12 +58,13 @@ export function TrinityBottomDrawer({
           className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl flex flex-col outline-none will-change-transform"
           style={{ maxHeight: `calc(${viewportHeight} - 2rem)` }}
         >
-          {/* Drag handle — touch-action: none убирает задержку распознавания жеста */}
+          {/* Drag handle — data-vaul-handle регистрирует зону для handleOnly режима */}
           <div
-            className="flex-shrink-0 flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
+            data-vaul-handle
+            className="flex-shrink-0 flex justify-center pt-3 pb-3 cursor-grab active:cursor-grabbing select-none"
             style={{ touchAction: 'none' }}
           >
-            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30 pointer-events-none" />
           </div>
 
           {/* Title */}

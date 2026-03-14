@@ -105,11 +105,10 @@ function AdBlock() {
   )
 }
 
-// ─── Слот Киры с процедурным лицом ───────────────────────────────────────────
+// ─── Слот Киры — тёмное окно ─────────────────────────────────────────────────
 function KiraBlock() {
   const [mood, setMood] = useState<'idle' | 'happy' | 'thinking' | 'speaking'>('idle')
 
-  // Случайно меняем настроение
   useEffect(() => {
     const moods: Array<'idle' | 'happy' | 'thinking'> = ['idle', 'idle', 'happy', 'thinking', 'idle']
     let i = 0
@@ -121,24 +120,29 @@ function KiraBlock() {
   }, [])
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-orange-100 dark:border-orange-900/30 bg-gradient-to-b from-[#fdf6ee] to-[#f5e6d3] dark:from-slate-900 dark:to-slate-800 shadow-sm">
-      {/* Canvas шара */}
-      <div className="relative flex items-center justify-center py-4 bg-gradient-to-b from-[#fef8f2] to-[#f0dfc8]">
+    <div className="rounded-2xl overflow-hidden shadow-lg" style={{ background: 'linear-gradient(160deg, #0a0e1a 0%, #0d1224 50%, #0f1530 100%)' }}>
+      {/* Орб */}
+      <div className="relative flex items-center justify-center pt-5 pb-3">
+        {/* Фоновое свечение */}
+        <div className="absolute inset-0 opacity-30" style={{
+          background: 'radial-gradient(circle at 50% 60%, rgba(30,60,255,0.25) 0%, transparent 70%)'
+        }} />
         <KiraFace size={160} mood={mood} />
-        <div className="absolute bottom-3 right-4 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-          <span className="text-xs text-amber-700/50 dark:text-white/40">
+        {/* Статус */}
+        <div className="absolute bottom-4 right-4 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+          <span className="text-xs text-blue-300/50">
             {mood === 'thinking' ? 'Думает...' : mood === 'happy' ? 'Рада видеть!' : 'Скоро'}
           </span>
         </div>
       </div>
       {/* Подпись */}
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
         <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-          <span className="text-xs font-bold text-amber-900/70 dark:text-white/60 uppercase tracking-wide">AI Ассистент Кира</span>
+          <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+          <span className="text-xs font-bold uppercase tracking-wide text-blue-300/70">AI Ассистент Кира</span>
         </div>
-        <p className="text-xs text-amber-800/50 dark:text-white/30 leading-relaxed">
+        <p className="text-xs text-white/30 leading-relaxed">
           Личный ИИ-помощник для вашего бизнеса
         </p>
       </div>

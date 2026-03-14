@@ -406,7 +406,7 @@ export default function VisitsPage() {
                 danger: stats.cancelledCount > 3,
               },
             ].map((s: any, i) => (
-              <div key={i} className={`rounded-xl border p-3 md:p-4 ${
+              <div key={i} className={`rounded-xl border p-3 md:p-4 cursor-default select-none transition-all duration-200 hover:scale-[1.02] hover:shadow-md active:scale-100 ${
                 s.danger
                   ? 'bg-red-50 border-red-100 dark:bg-red-900/10 dark:border-red-900/30'
                   : s.highlight

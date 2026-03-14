@@ -14,6 +14,8 @@ import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { FileText } from 'lucide-react'
 import { format } from 'date-fns'
+import NewSaleModal from '@/components/sales/NewSaleModal'
+import ImportSalesModal from '@/components/sales/ImportSalesModal'
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
 const T = {
@@ -50,9 +52,8 @@ const T = {
 const MONTHS_HE = ['אוק', 'נוב', 'דצמ', 'ינו', 'פבר', 'מרץ']
 const MONTHS_RU = ['Окт', 'Ноя', 'Дек', 'Янв', 'Фев', 'Мар']
 const MONTH_KEYS = ['2024-10','2024-11','2024-12','2025-01','2025-02','2025-03']
-const BAR_HEIGHTS = [45, 58, 50, 72, 64, 90] // % of max
+const BAR_HEIGHTS = [45, 58, 50, 72, 64, 90]
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
 const STATUS_BADGE: Record<string, string> = {
   paid:      'bg-emerald-50 text-emerald-700 border-emerald-200',
   partial:   'bg-amber-50 text-amber-700 border-amber-200',
@@ -92,6 +93,8 @@ export default function SalesPage() {
   const [search, setSearch]               = useState('')
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen]     = useState(false)
+  const [newSaleOpen, setNewSaleOpen]     = useState(false)
+  const [importOpen, setImportOpen]       = useState(false)
 
   const { data: sales = [], isLoading } = useSales({
     status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -131,11 +134,14 @@ export default function SalesPage() {
           </p>
         </div>
         <div className="flex gap-2 justify-center md:justify-end">
-          <Button variant="outline" className="border-amber-400 text-amber-600 hover:bg-amber-50 text-sm">
+          <Button variant="outline"
+            className="border-amber-400 text-amber-600 hover:bg-amber-50 text-sm"
+            onClick={() => setImportOpen(true)}>
             <Upload className="w-4 h-4 me-2" />{t.import}
           </Button>
           <Button className="bg-theme-primary text-white hover:opacity-90 text-sm"
-            style={{ animation: 'pulseRing 2.5s ease-in-out infinite' }}>
+            style={{ animation: 'pulseRing 2.5s ease-in-out infinite' }}
+            onClick={() => setNewSaleOpen(true)}>
             <Plus className="w-4 h-4 me-2" />{t.newSale}
           </Button>
         </div>
@@ -225,7 +231,6 @@ export default function SalesPage() {
       </div>
 
       {/* ── Filters ────────────────────────────────────────────────────── */}
-      {/* Mobile: filter button */}
       <div className="md:hidden">
         <button onClick={() => setFiltersOpen(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-100
@@ -240,7 +245,6 @@ export default function SalesPage() {
         </button>
       </div>
 
-      {/* Desktop: inline filters */}
       <div className="hidden md:flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl
         border border-gray-100 dark:border-gray-700 p-3"
         style={{ animation: 'fadeInUp 0.4s 0.14s ease both' }}>
@@ -295,7 +299,7 @@ export default function SalesPage() {
             icon={<ShoppingBag size={28} />}
             title={t.noSales}
             description={t.noSalesDesc}
-            action={{ label: t.newSale, onClick: () => {} }}
+            action={{ label: t.newSale, onClick: () => setNewSaleOpen(true) }}
           />
         )}
       </div>
@@ -337,8 +341,6 @@ export default function SalesPage() {
                       borderLeft: `3px solid ${BORDER_L[sale.status] || '#e5e7eb'}`,
                     }}
                     onClick={() => handleSaleClick(sale)}>
-
-                    {/* Client */}
                     <TableCell>
                       <div className="flex items-center gap-2.5">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center
@@ -350,13 +352,9 @@ export default function SalesPage() {
                         </span>
                       </div>
                     </TableCell>
-
-                    {/* Date */}
                     <TableCell className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       {sale.sale_date}
                     </TableCell>
-
-                    {/* Staff */}
                     <TableCell>
                       {sale.staff_name ? (
                         <span className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
@@ -365,8 +363,6 @@ export default function SalesPage() {
                         </span>
                       ) : <span className="text-gray-300 text-sm">—</span>}
                     </TableCell>
-
-                    {/* Items */}
                     <TableCell>
                       <div className="flex flex-wrap gap-1 max-w-xs">
                         {(sale.sale_items || []).slice(0, 3).map(item => (
@@ -377,14 +373,10 @@ export default function SalesPage() {
                           </span>
                         ))}
                         {(sale.sale_items?.length || 0) > 3 && (
-                          <span className="text-xs text-gray-400">
-                            +{(sale.sale_items?.length || 0) - 3}
-                          </span>
+                          <span className="text-xs text-gray-400">+{(sale.sale_items?.length || 0) - 3}</span>
                         )}
                       </div>
                     </TableCell>
-
-                    {/* Amount */}
                     <TableCell>
                       <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
                         ₪{Number(sale.total_amount).toLocaleString()}
@@ -396,8 +388,6 @@ export default function SalesPage() {
                         </div>
                       )}
                     </TableCell>
-
-                    {/* Receipt toggle */}
                     <TableCell onClick={e => e.stopPropagation()}>
                       <button
                         className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md
@@ -411,8 +401,6 @@ export default function SalesPage() {
                         <span className="ms-0.5">{sale.receipt_sent ? '✓' : '—'}</span>
                       </button>
                     </TableCell>
-
-                    {/* Status */}
                     <TableCell>
                       <span className={`text-xs px-2 py-1 rounded-full font-medium border
                         ${STATUS_BADGE[sale.status] || 'bg-gray-50 text-gray-500 border-gray-200'}`}>
@@ -436,7 +424,8 @@ export default function SalesPage() {
       <button className="md:hidden fixed bottom-6 end-6 w-14 h-14 bg-theme-primary text-white
         rounded-full shadow-lg flex items-center justify-center hover:opacity-90
         active:scale-95 transition-all z-50"
-        aria-label={t.newSale}>
+        aria-label={t.newSale}
+        onClick={() => setNewSaleOpen(true)}>
         <Plus className="w-6 h-6" />
       </button>
 
@@ -470,7 +459,7 @@ export default function SalesPage() {
           </div>
         </div>
         <div className="flex gap-2 mt-6">
-          <button onClick={() => { setMethodFilter('all'); setSearch(''); setSelectedMonth(null); }}
+          <button onClick={() => { setMethodFilter('all'); setSearch(''); setSelectedMonth(null) }}
             className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 font-medium text-sm">
             {locale === 'he' ? 'נקה' : 'Сбросить'}
           </button>
@@ -480,6 +469,10 @@ export default function SalesPage() {
           </button>
         </div>
       </TrinityBottomDrawer>
+
+      {/* ── Modals ─────────────────────────────────────────────────────── */}
+      <NewSaleModal isOpen={newSaleOpen} onClose={() => setNewSaleOpen(false)} />
+      <ImportSalesModal isOpen={importOpen} onClose={() => setImportOpen(false)} />
 
     </div>
   )

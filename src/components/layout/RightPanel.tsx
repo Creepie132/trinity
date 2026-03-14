@@ -121,25 +121,24 @@ function KiraBlock() {
   }, [])
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-indigo-100 dark:border-indigo-900/40 bg-gradient-to-b from-slate-900 to-indigo-950 shadow-lg">
-      {/* Canvas лица */}
-      <div className="relative flex items-center justify-center py-3 bg-gradient-to-b from-slate-900 to-indigo-950/80">
+    <div className="rounded-2xl overflow-hidden border border-orange-100 dark:border-orange-900/30 bg-gradient-to-b from-[#fdf6ee] to-[#f5e6d3] dark:from-slate-900 dark:to-slate-800 shadow-sm">
+      {/* Canvas шара */}
+      <div className="relative flex items-center justify-center py-4 bg-gradient-to-b from-[#fef8f2] to-[#f0dfc8]">
         <KiraFace size={160} mood={mood} />
-        {/* Статус индикатор */}
         <div className="absolute bottom-3 right-4 flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-          <span className="text-xs text-white/40">
-            {mood === 'thinking' ? 'Думает...' : mood === 'happy' ? 'Рада видеть вас!' : 'Скоро'}
+          <span className="text-xs text-amber-700/50 dark:text-white/40">
+            {mood === 'thinking' ? 'Думает...' : mood === 'happy' ? 'Рада видеть!' : 'Скоро'}
           </span>
         </div>
       </div>
       {/* Подпись */}
-      <div className="px-4 py-3 bg-indigo-950/50">
+      <div className="px-4 py-3">
         <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-          <span className="text-xs font-bold text-white/80 uppercase tracking-wide">AI Ассистент Кира</span>
+          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+          <span className="text-xs font-bold text-amber-900/70 dark:text-white/60 uppercase tracking-wide">AI Ассистент Кира</span>
         </div>
-        <p className="text-xs text-white/40 leading-relaxed">
+        <p className="text-xs text-amber-800/50 dark:text-white/30 leading-relaxed">
           Личный ИИ-помощник для вашего бизнеса
         </p>
       </div>

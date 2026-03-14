@@ -1,7 +1,7 @@
 'use client'
 
-import { Drawer } from 'vaul'
-import { useEffect, useState, ReactNode } from 'react'
+import { useEffect, useRef, ReactNode } from 'react'
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 
 interface TrinityBottomDrawerProps {
   isOpen: boolean
@@ -16,73 +16,126 @@ export function TrinityBottomDrawer({
   onClose,
   title,
   children,
-  snapPoints,
 }: TrinityBottomDrawerProps) {
-  const [viewportHeight, setViewportHeight] = useState('100dvh')
+  const y = useMotionValue(0)
+  const overlayOpacity = useTransform(y, [0, 300], [1, 0])
+  const isDragging = useRef(false)
+  const startY = useRef(0)
+  const startVal = useRef(0)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const drawerHeight = useRef(0)
 
+  // Закрываем по Escape
   useEffect(() => {
-    function handleResize() {
-      if (window.visualViewport) {
-        setViewportHeight(`${window.visualViewport.height}px`)
-      }
-    }
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen, onClose])
 
-    function handleFocusOut() {
-      setTimeout(() => setViewportHeight('100dvh'), 100)
+  // Сброс позиции при открытии
+  useEffect(() => {
+    if (isOpen) {
+      y.set(0)
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
     }
+    return () => { document.body.style.overflow = '' }
+  }, [isOpen, y])
 
-    window.visualViewport?.addEventListener('resize', handleResize)
-    document.addEventListener('focusout', handleFocusOut)
+  // ── Touch handlers на handle ────────────────────────────────────────────────
+  function onHandleTouchStart(e: React.TouchEvent) {
+    isDragging.current = true
+    startY.current = e.touches[0].clientY
+    startVal.current = y.get()
+    if (contentRef.current) drawerHeight.current = contentRef.current.offsetHeight
+  }
 
-    return () => {
-      window.visualViewport?.removeEventListener('resize', handleResize)
-      document.removeEventListener('focusout', handleFocusOut)
+  function onHandleTouchMove(e: React.TouchEvent) {
+    if (!isDragging.current) return
+    const delta = e.touches[0].clientY - startY.current
+    // Разрешаем только вниз (положительный delta)
+    const next = Math.max(0, startVal.current + delta)
+    // Резиновый эффект при попытке тянуть вверх
+    y.set(next)
+  }
+
+  function onHandleTouchEnd() {
+    if (!isDragging.current) return
+    isDragging.current = false
+    const current = y.get()
+    const threshold = drawerHeight.current * 0.35
+
+    if (current > threshold) {
+      // Закрыть — анимируем вниз
+      animate(y, drawerHeight.current || 600, {
+        type: 'tween',
+        duration: 0.25,
+        ease: [0.32, 0.72, 0, 1],
+        onComplete: onClose,
+      })
+    } else {
+      // Вернуть на место
+      animate(y, 0, { type: 'spring', stiffness: 400, damping: 40 })
     }
-  }, [])
+  }
 
   return (
-    <Drawer.Root
-      open={isOpen}
-      onOpenChange={(open) => !open && onClose()}
-      snapPoints={snapPoints}
-      shouldScaleBackground={false}
-      // handleOnly: drag только через handle-зону — убирает scrollLockTimeout конфликт
-      handleOnly
-      // scrollLockTimeout=0: не ждём после scroll, реагируем мгновенно
-      scrollLockTimeout={0}
-      modal
-    >
-      <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
-        <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl flex flex-col outline-none will-change-transform"
-          style={{ maxHeight: `calc(${viewportHeight} - 2rem)` }}
-        >
-          {/* Drag handle — data-vaul-handle регистрирует зону для handleOnly режима */}
-          <div
-            data-vaul-handle
-            className="flex-shrink-0 flex justify-center pt-3 pb-3 cursor-grab active:cursor-grabbing select-none"
-            style={{ touchAction: 'none' }}
-          >
-            <div className="w-10 h-1 rounded-full bg-muted-foreground/30 pointer-events-none" />
-          </div>
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Overlay */}
+          <motion.div
+            key="overlay"
+            className="fixed inset-0 bg-black/40 z-40"
+            style={{ opacity: overlayOpacity }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+          />
 
-          {/* Title */}
-          {title && (
-            <Drawer.Title className="flex-shrink-0 px-6 pb-3">
-              <h3 className="text-lg font-semibold">{title}</h3>
-            </Drawer.Title>
-          )}
-
-          {/* Scrollable content — overscroll-contain не даёт drawer закрыться при скролле внутри */}
-          <div
-            className="flex-1 overflow-y-auto px-6 pb-6"
-            style={{ overscrollBehavior: 'contain' }}
+          {/* Drawer */}
+          <motion.div
+            key="drawer"
+            ref={contentRef}
+            className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl flex flex-col outline-none"
+            style={{ y, maxHeight: 'calc(100dvh - 2rem)', touchAction: 'none' }}
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 40 }}
           >
-            {children}
-          </div>
-        </Drawer.Content>
-      </Drawer.Portal>
-    </Drawer.Root>
+            {/* Handle — единственная зона drag */}
+            <div
+              className="flex-shrink-0 flex justify-center pt-3 pb-3 cursor-grab active:cursor-grabbing select-none"
+              style={{ touchAction: 'none' }}
+              onTouchStart={onHandleTouchStart}
+              onTouchMove={onHandleTouchMove}
+              onTouchEnd={onHandleTouchEnd}
+            >
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/30 pointer-events-none" />
+            </div>
+
+            {/* Title */}
+            {title && (
+              <div className="flex-shrink-0 px-6 pb-3">
+                <h3 className="text-lg font-semibold">{title}</h3>
+              </div>
+            )}
+
+            {/* Scrollable content */}
+            <div
+              className="flex-1 overflow-y-auto px-6 pb-6"
+              style={{ overscrollBehavior: 'contain', touchAction: 'pan-y' }}
+            >
+              {children}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   )
 }

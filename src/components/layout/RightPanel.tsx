@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Sparkles, Megaphone, Bell, ExternalLink } from 'lucide-react'
 import dynamic from 'next/dynamic'
-const KiraFace = dynamic(() => import('@/components/kira/KiraOrb3D').then(m => ({ default: m.KiraOrb3D })), { ssr: false })
+const KiraWave = dynamic(() => import('@/components/kira/KiraWave').then(m => ({ default: m.KiraWave })), { ssr: false })
 
 // ─── Типы ────────────────────────────────────────────────────────────────────
 interface Ad { id: string; title: string; description: string; image_url: string | null; link_url: string | null; button_text: string | null }
@@ -105,44 +105,48 @@ function AdBlock() {
   )
 }
 
-// ─── Слот Киры — тёмное окно ─────────────────────────────────────────────────
+// ─── Слот Киры — звуковая волна ──────────────────────────────────────────────
 function KiraBlock() {
-  const [mood, setMood] = useState<'idle' | 'happy' | 'thinking' | 'speaking'>('idle')
+  const [state, setState] = useState<'idle' | 'sale' | 'client' | 'thinking' | 'payment' | 'visit' | 'cancel'>('idle')
 
   useEffect(() => {
-    const moods: Array<'idle' | 'happy' | 'thinking'> = ['idle', 'idle', 'happy', 'thinking', 'idle']
+    const states = ['idle', 'idle', 'thinking', 'idle', 'sale', 'idle', 'visit'] as const
     let i = 0
     const t = setInterval(() => {
-      i = (i + 1) % moods.length
-      setMood(moods[i])
-    }, 5000)
+      i = (i + 1) % states.length
+      setState(states[i])
+    }, 4000)
     return () => clearInterval(t)
   }, [])
 
   return (
-    <div className="rounded-2xl overflow-hidden shadow-lg" style={{ background: 'linear-gradient(160deg, #0a0e1a 0%, #0d1224 50%, #0f1530 100%)' }}>
-      {/* Орб */}
-      <div className="relative flex items-center justify-center pt-5 pb-3">
-        {/* Фоновое свечение */}
-        <div className="absolute inset-0 opacity-30" style={{
-          background: 'radial-gradient(circle at 50% 60%, rgba(30,60,255,0.25) 0%, transparent 70%)'
+    <div className="rounded-2xl overflow-hidden shadow-md" style={{ background: '#1e2025' }}>
+      {/* Волна */}
+      <div className="relative flex items-center justify-center px-2 pt-5 pb-3"
+        style={{ background: '#1e2025' }}>
+        <div className="absolute inset-0 opacity-20" style={{
+          background: 'radial-gradient(circle at 50% 80%, rgba(40,80,255,0.3) 0%, transparent 70%)'
         }} />
-        <KiraFace size={160} mood={mood} />
-        {/* Статус */}
-        <div className="absolute bottom-4 right-4 flex items-center gap-1.5">
+        <KiraWave state={state} width={224} height={72} />
+        <div className="absolute bottom-3 right-4 flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-          <span className="text-xs text-blue-300/50">
-            {mood === 'thinking' ? 'Думает...' : mood === 'happy' ? 'Рада видеть!' : 'Скоро'}
+          <span className="text-xs" style={{ color: 'rgba(100,150,255,0.45)' }}>
+            {state === 'thinking' ? 'Думает...'
+              : state === 'sale' ? 'Продажа!'
+              : state === 'visit' ? 'Визит'
+              : 'Скоро'}
           </span>
         </div>
       </div>
       {/* Подпись */}
-      <div className="px-4 py-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-          <span className="text-xs font-bold uppercase tracking-wide text-blue-300/70">AI Ассистент Кира</span>
+          <Sparkles className="w-3.5 h-3.5" style={{ color: 'rgba(100,160,255,0.7)' }} />
+          <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'rgba(140,180,255,0.6)' }}>
+            AI Ассистент Кира
+          </span>
         </div>
-        <p className="text-xs text-white/30 leading-relaxed">
+        <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.25)' }}>
           Личный ИИ-помощник для вашего бизнеса
         </p>
       </div>

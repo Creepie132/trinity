@@ -46,8 +46,6 @@ const PERIOD_KEY  = 'trinity_analytics_period'
 const makeTooltip = (prefix = '', suffix = '') =>
   ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null
-    const hasValue = payload.some((p: any) => typeof p.value === 'number' && p.value > 0)
-    if (!hasValue) return null
     return (
       <div className="bg-white border border-slate-100 rounded-xl shadow-lg px-4 py-2.5 text-sm">
         <p className="text-slate-400 text-xs mb-1">{label}</p>
@@ -277,10 +275,10 @@ export default function AnalyticsPage() {
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={45}
                 tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-              <Tooltip content={makeTooltip('₪')} />
+              <Tooltip content={makeTooltip('₪')} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} />
               <Area type="monotone" dataKey="amount" name={L.revenue_lbl}
                 stroke="#6366f1" strokeWidth={2.5} fill="url(#revGrad)"
-                dot={false} activeDot={{ r: 5, fill: '#6366f1', strokeWidth: 0 }}
+                dot={false} activeDot={{ r: 6, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
                 isAnimationActive animationDuration={800} animationEasing="ease-out" />
             </AreaChart>
           </ResponsiveContainer>
@@ -296,7 +294,7 @@ export default function AnalyticsPage() {
               <XAxis dataKey="dateLabel" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}
                 interval={period <= 7 ? 0 : period <= 30 ? 4 : 9} />
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
-              <Tooltip content={makeTooltip()} />
+              <Tooltip content={makeTooltip()} cursor={{ fill: 'rgba(139, 92, 246, 0.08)' }} />
               <Bar dataKey="count" name={L.visitsCount} radius={[6,6,0,0]}
                 fill="#8b5cf6"
                 isAnimationActive animationDuration={700} animationEasing="ease-out">

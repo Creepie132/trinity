@@ -27,8 +27,13 @@ interface QuickReceiveProps {
 
 function QuickReceiveModal({ products, locale, onClose, onSave }: QuickReceiveProps) {
   const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
   const l = locale === 'he'
+
+  const filtered = search.length >= 1
+    ? products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+    : products
 
   const setQty = (id: string, delta: number) => {
     setQuantities(prev => {
@@ -70,9 +75,24 @@ function QuickReceiveModal({ products, locale, onClose, onSave }: QuickReceivePr
           </button>
         </div>
 
+        {/* Search */}
+        <div className="px-6 pb-3 border-b border-slate-100">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+            <input
+              type="text"
+              placeholder={l ? 'חיפוש מוצר...' : 'Поиск товара...'}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              autoFocus
+            />
+          </div>
+        </div>
+
         {/* Product list */}
         <div className="flex-1 overflow-y-auto px-6 py-3 space-y-2">
-          {products.map(p => {
+          {filtered.map(p => {
             const qty = quantities[p.id] || 0
             return (
               <div key={p.id} className={`flex items-center gap-3 py-3 px-3 rounded-2xl transition-all ${qty > 0 ? 'bg-emerald-50 border border-emerald-200' : 'border border-transparent'}`}>

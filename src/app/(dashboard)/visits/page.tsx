@@ -364,7 +364,15 @@ export default function VisitsPage() {
         <CalendarView
           visits={visits || []}
           onVisitClick={(visit) => setSelectedVisit(visit)}
-          onDateClick={(date) => { setSelectedVisit(null); openModal('visit-create') }}
+          onDateClick={(date) => {
+            setSelectedVisit(null)
+            const dateStr = date.toISOString().split('T')[0]
+            const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+            openModal('visit-create', {
+              date: dateStr,
+              time: date.getHours() > 0 || date.getMinutes() > 0 ? timeStr : undefined,
+            })
+          }}
           serviceColors={serviceColors}
         />
       )}

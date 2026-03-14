@@ -427,15 +427,33 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                   return (
                     <div
                       key={colIdx}
-                      onClick={() => { setSelectedDay(day); onDateClick(day) }}
+                      onClick={() => setSelectedDay(day)}
                       className={`
-                        relative border-e border-gray-100 dark:border-gray-700 last:border-e-0 cursor-pointer
+                        relative border-e border-gray-100 dark:border-gray-700 last:border-e-0
                         ${isTodayCol ? 'bg-blue-50/40 dark:bg-blue-900/10' : ''}
                         ${isSelectedCol && !isTodayCol ? 'bg-blue-50/20 dark:bg-blue-900/5' : ''}
-                        ${!isTodayCol && !isSelectedCol ? 'hover:bg-gray-50/60 dark:hover:bg-gray-700/20' : ''}
                       `}
                       style={{ minHeight: `${HOURS.length * HOUR_HEIGHT}px` }}
                     >
+                      {/* Click on empty time slot → create visit at that time */}
+                      {HOURS.map((hour) => (
+                        <div
+                          key={`slot-${hour}`}
+                          className="absolute w-full hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors cursor-pointer group/slot"
+                          style={{ top: (hour - 8) * HOUR_HEIGHT, height: HOUR_HEIGHT, zIndex: 1 }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const dt = new Date(day)
+                            dt.setHours(hour, 0, 0, 0)
+                            onDateClick(dt)
+                          }}
+                        >
+                          <span className="absolute left-1 top-1 text-[9px] text-blue-400 opacity-0 group-hover/slot:opacity-100 transition-opacity select-none">
+                            {hour.toString().padStart(2, '0')}:00
+                          </span>
+                        </div>
+                      ))}
+
                       {/* Hour lines */}
                       {HOURS.map((hour) => (
                         <div

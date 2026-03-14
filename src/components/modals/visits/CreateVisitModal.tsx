@@ -15,6 +15,7 @@ export function CreateVisitModal() {
       onOpenChange={(open) => !open && closeModal('visit-create')}
       preselectedClientId={data?.clientId}
       preselectedDate={data?.date}
+      preselectedTime={data?.time}
       onVisitCreated={data?.onVisitCreated}
     />
   )

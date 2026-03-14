@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useQueryClient } from '@tanstack/react-query'
@@ -43,7 +43,8 @@ interface CreateVisitDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   preselectedClientId?: string
-  preselectedDate?: Date | null
+  preselectedDate?: Date | string | null
+  preselectedTime?: string | null
   onVisitCreated?: (visitData: { clientName: string; clientPhone?: string; date: string; time: string }) => void
 }
 
@@ -71,7 +72,7 @@ const durations = [
   { value: 120, labelKey: 'duration.120min' },
 ]
 
-export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, preselectedDate, onVisitCreated }: CreateVisitDialogProps) {
+export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, preselectedDate, preselectedTime, onVisitCreated }: CreateVisitDialogProps) {
   const { t, language } = useLanguage()
   const { orgId } = useAuth()
   const queryClient = useQueryClient()
@@ -85,14 +86,34 @@ export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, pre
     clientId: preselectedClientId || '',
     serviceId: '',
     service: '',
-    date: preselectedDate ? preselectedDate.toISOString().split('T')[0] : getDefaultDate(),
-    time: getDefaultTime(),
+    date: preselectedDate
+      ? (preselectedDate instanceof Date
+          ? preselectedDate.toISOString().split('T')[0]
+          : String(preselectedDate))
+      : getDefaultDate(),
+    time: preselectedTime || getDefaultTime(),
     duration: 60,
     price: '',
     notes: '',
     city: '',
     address: '',
   })
+
+  // Sync preselected date/time when modal reopens with new data
+  useEffect(() => {
+    if (open) {
+      setFormData(prev => ({
+        ...prev,
+        clientId: preselectedClientId || prev.clientId,
+        date: preselectedDate
+          ? (preselectedDate instanceof Date
+              ? preselectedDate.toISOString().split('T')[0]
+              : String(preselectedDate))
+          : prev.date,
+        time: preselectedTime || prev.time,
+      }))
+    }
+  }, [open, preselectedDate, preselectedTime, preselectedClientId])
 
   const services = (customServices && customServices.length > 0) 
     ? customServices 

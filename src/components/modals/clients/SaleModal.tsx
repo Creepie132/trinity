@@ -123,8 +123,14 @@ export function SaleModal() {
 
   // Client search for inventory mode (no pre-selected client)
   useEffect(() => {
-    if (!isOpen || data?.client || clientSearch.length < 2) {
+    if (!isOpen || data?.client) {
       setClientResults([])
+      return
+    }
+    // Не ищем пока не введено 2+ символа
+    if (clientSearch.length < 2) {
+      setClientResults([])
+      setClientSearching(false)
       return
     }
     setClientSearching(true)
@@ -132,7 +138,7 @@ export function SaleModal() {
       try {
         const res = await fetch(`/api/clients?search=${encodeURIComponent(clientSearch)}`)
         const json = await res.json()
-        setClientResults((json.clients || json || []).slice(0, 8))
+        setClientResults((json.clients || json.data || json || []).slice(0, 8))
       } catch {
         setClientResults([])
       } finally {
@@ -815,15 +821,15 @@ export function SaleModal() {
                 type="text"
                 value={clientSearch}
                 onChange={e => setClientSearch(e.target.value)}
-                placeholder={locale === 'he' ? 'חיפוש לקוח...' : 'Поиск клиента...'}
+                placeholder={locale === 'he' ? 'הקלד שם או טלפון...' : 'Введите имя или телефон...'}
                 className={`flex-1 bg-transparent outline-none text-sm ${isRTL ? 'text-right' : 'text-left'}`}
                 dir={isRTL ? 'rtl' : 'ltr'}
                 autoFocus
               />
             )}
           </div>
-          {/* Результаты поиска клиента */}
-          {(clientResults.length > 0 || (clientSearch.length >= 2 && !clientSearching)) && !localClient && (
+          {/* Результаты поиска — только если введено 2+ символа */}
+          {clientSearch.length >= 2 && !localClient && (clientResults.length > 0 || clientSearching || clientSearch.length >= 2) && (
             <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
               {clientResults.map((c: any) => (
                 <button key={c.id} onClick={() => { setLocalClient(c); setClientSearch(''); setClientResults([]) }}

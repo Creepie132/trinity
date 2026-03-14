@@ -61,12 +61,12 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
     ? (locale === 'ru' ? (visit.services.name_ru || visit.services.name) : visit.services.name)
     : serviceName
   
-  // Calculate total duration including all services
-  const totalDuration = visitServices.reduce((sum, service) => sum + (service.duration_minutes || 0), 0)
+  // visit.duration_minutes is always recalculated by API on service add/remove — use as source of truth
+  // visitServices only contains additionally-added services (not the main service from visits.service_id)
+  // So we never sum them together to avoid double-counting the main service
+  const totalDuration = visit.duration_minutes || 0
   const endTime = totalDuration > 0
     ? new Date(date.getTime() + totalDuration * 60000)
-    : visit.duration_minutes
-    ? new Date(date.getTime() + visit.duration_minutes * 60000)
     : null
 
   const content = (
@@ -131,7 +131,7 @@ export function VisitFlowCard(props: VisitFlowCardProps) {
         <InfoRow
           icon={<Clock size={16} />}
           label={l ? 'משך' : 'Длительность'}
-          value={totalDuration > 0 ? `${totalDuration} ${l ? 'דק' : 'мин'}` : visit.duration_minutes ? `${visit.duration_minutes} ${l ? 'דק' : 'мин'}` : '—'}
+          value={totalDuration > 0 ? `${totalDuration} ${l ? 'דק' : 'мин'}` : '—'}
         />
         <InfoRow
           icon={<Clock size={16} />}

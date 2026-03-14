@@ -103,11 +103,10 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
 
   // Calculate total from visitServices only (visit.price is already included if service was added)
   const totalPrice = visitServices?.reduce((sum, s) => sum + (s.price || 0), 0) || 0;
-  const totalDuration = visitServices?.reduce((sum, s) => sum + (s.duration_minutes || 0), 0) || 0;
-  
-  // Calculate end time (start time + main service duration + additional services duration)
-  const mainServiceDuration = visit.services?.duration_minutes || visit.duration_minutes || 0;
-  const fullDuration = mainServiceDuration + totalDuration;
+
+  // visit.duration_minutes is always recalculated by API on service add/remove — use as source of truth
+  // Do NOT sum visit.services.duration_minutes + visitServices (double count of main service)
+  const fullDuration = visit.duration_minutes || 0;
   const startTime = visit.started_at ? new Date(visit.started_at) : new Date(visit.scheduled_at);
   const endTime = new Date(startTime.getTime() + fullDuration * 60000);
   

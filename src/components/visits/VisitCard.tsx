@@ -81,11 +81,10 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
       })
     : ''
   
-  // Calculate end time: start + main service duration + additional services
-  const mainDuration = visit.services?.duration_minutes || visit.duration_minutes || 0
-  const additionalDuration = visitServices.reduce((sum, service) => sum + (service.duration_minutes || 0), 0)
-  const totalDuration = mainDuration + additionalDuration
-  
+  // Calculate end time from DB value (always recalculated by API on service add/remove)
+  // visit.duration_minutes is the source of truth — never sum visit.services + visitServices (double count)
+  const totalDuration = visit.duration_minutes || 0
+
   const endTime = startTime && totalDuration > 0
     ? new Date(new Date(startTime).getTime() + totalDuration * 60000).toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', {
         hour: '2-digit',

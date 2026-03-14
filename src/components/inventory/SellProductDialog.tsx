@@ -171,6 +171,7 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
           </div>
         }
         width="480px"
+        dir={language === 'he' ? 'rtl' : 'ltr'}
         footer={
           <div className="flex gap-2">
             <button
@@ -199,7 +200,7 @@ export function SellProductDialog({ open, onClose, product }: SellProductDialogP
           </div>
         }
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" dir={language === 'he' ? 'rtl' : 'ltr'}>
           {/* Product Name */}
           <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-200 dark:border-blue-800">
             <p className="font-medium text-gray-900 dark:text-gray-100">{product.name}</p>

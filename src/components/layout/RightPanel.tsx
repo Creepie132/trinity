@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Sparkles, Megaphone, Bell, ExternalLink } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import { useKiraRealtime } from '@/hooks/useKiraRealtime'
+import type { KiraWaveState } from '@/components/kira/KiraWave'
 const KiraWave = dynamic(() => import('@/components/kira/KiraWave').then(m => ({ default: m.KiraWave })), { ssr: false })
 
 // ─── Типы ────────────────────────────────────────────────────────────────────
@@ -105,19 +107,23 @@ function AdBlock() {
   )
 }
 
-// ─── Слот Киры — звуковая волна ──────────────────────────────────────────────
+// ─── Слот Киры — звуковая волна + Realtime ───────────────────────────────────
 function KiraBlock() {
-  const [state, setState] = useState<'idle' | 'sale' | 'client' | 'thinking' | 'payment' | 'visit' | 'cancel'>('idle')
+  const [state, setState] = useState<KiraWaveState>('idle')
 
-  useEffect(() => {
-    const states = ['idle', 'idle', 'thinking', 'idle', 'sale', 'idle', 'visit'] as const
-    let i = 0
-    const t = setInterval(() => {
-      i = (i + 1) % states.length
-      setState(states[i])
-    }, 4000)
-    return () => clearInterval(t)
-  }, [])
+  // Supabase Realtime — реагируем на реальные события
+  const handleStateChange = useCallback((s: KiraWaveState) => setState(s), [])
+  useKiraRealtime({ onStateChange: handleStateChange })
+
+  const stateLabel: Record<KiraWaveState, string> = {
+    idle:     'Слушаю...',
+    sale:     '🎉 Продажа!',
+    client:   '👤 Новый клиент!',
+    thinking: 'Думает...',
+    payment:  '💳 Платёж!',
+    visit:    '📅 Визит',
+    cancel:   '❌ Отмена',
+  }
 
   return (
     <div className="rounded-2xl overflow-hidden shadow-md" style={{ background: '#2a2d35' }}>
@@ -129,12 +135,16 @@ function KiraBlock() {
         }} />
         <KiraWave state={state} width={224} height={72} />
         <div className="absolute bottom-3 right-4 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-          <span className="text-xs" style={{ color: 'rgba(100,150,255,0.45)' }}>
-            {state === 'thinking' ? 'Думает...'
-              : state === 'sale' ? 'Продажа!'
-              : state === 'visit' ? 'Визит'
-              : 'Скоро'}
+          <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+            state === 'idle' ? 'bg-blue-400' :
+            state === 'payment' ? 'bg-purple-400' :
+            state === 'client' ? 'bg-amber-400' :
+            state === 'visit' ? 'bg-cyan-400' :
+            state === 'cancel' ? 'bg-gray-400' :
+            'bg-green-400'
+          }`} />
+          <span className="text-xs transition-all duration-300" style={{ color: 'rgba(100,150,255,0.6)' }}>
+            {stateLabel[state]}
           </span>
         </div>
       </div>

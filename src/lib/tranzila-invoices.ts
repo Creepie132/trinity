@@ -11,16 +11,15 @@ function buildHeaders(): Record<string, string> {
   }
 
   const time  = Math.floor(Date.now() / 1000).toString()
-  const nonce = crypto.randomBytes(40).toString('hex') // 80 chars
+  const nonce = crypto.randomBytes(40).toString('hex')
 
-  // hash_hmac('sha256', message=publicKey, key=privateKey+time+nonce)
   const accessToken = crypto
     .createHmac('sha256', privateKey + time + nonce)
     .update(publicKey)
     .digest('hex')
 
   return {
-    'Content-Type': 'application/json',
+    'Content-Type':                'application/json',
     'X-tranzila-api-app-key':      publicKey,
     'X-tranzila-api-request-time': time,
     'X-tranzila-api-nonce':        nonce,
@@ -28,39 +27,47 @@ function buildHeaders(): Record<string, string> {
   }
 }
 
-const BILLING_BASE = 'https://billing5.tranzila.com/api/documents_db'
-// Терминал с активным Invoices API
+const BILLING_BASE    = 'https://billing5.tranzila.com/api/documents_db'
 const INVOICE_TERMINAL = process.env.TRANZILA_TERMINAL_ID ?? 'ambersolt'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface ReceiptItem {
-  name: string
-  quantity: number
+  name:      string
+  quantity:  number
   unit_price: number
 }
 
-/** payment_method codes per Tranzila Invoices API */
 export type TranzilaPaymentMethod = '1' | '2' | '3' | '4' | '5'
 // 1=credit card, 2=cash, 3=check, 4=bank transfer, 5=other
 
 export const PAYMENT_METHOD_MAP: Record<string, TranzilaPaymentMethod> = {
-  credit_card: '1',
-  card:        '1',
-  cash:        '2',
-  check:       '3',
+  credit_card:   '1',
+  card:          '1',
+  cash:          '2',
+  check:         '3',
   bank_transfer: '4',
-  transfer:    '4',
-  bit:         '1', // Bit работает как карта
-  other:       '5',
+  transfer:      '4',
+  bit:           '1',
+  other:         '5',
+}
+
+export interface CardDetails {
+  last4?:       string   // 4 последние цифры карты
+  brand?:       string   // 'visa' | 'mastercard' | 'amex' | 'diners' | etc.
+  expiry?:      string   // 'MM/YY'
+  approvalNum?: string   // מספר אישור
+  shovar?:      string   // מספר שובר שב"א
+  tranIndex?:   string   // Tranzila transaction index
 }
 
 export interface CreateReceiptParams {
   clientName:    string
-  clientEmail?:  string   // если есть — Tranzila сама шлёт PDF на email
+  clientEmail?:  string
   items:         ReceiptItem[]
   totalAmount:   number
-  paymentMethod: string   // ключ из PAYMENT_METHOD_MAP или уже '1'..'5'
+  paymentMethod: string
+  card?:         CardDetails  // ← данные карточной транзакции
 }
 
 export interface TranzilaDocumentResult {
@@ -70,12 +77,28 @@ export interface TranzilaDocumentResult {
   retrievalKey: string
 }
 
+// cc_brand codes in Tranzila Invoices API
+const BRAND_CODE: Record<string, string> = {
+  visa:       '1',
+  mastercard: '2',
+  master:     '2',
+  amex:       '3',
+  diners:     '4',
+  isracard:   '5',
+  discover:   '6',
+}
+
+function brandCode(brand?: string): string | undefined {
+  if (!brand) return undefined
+  return BRAND_CODE[brand.toLowerCase()] ?? '2' // default mastercard
+}
+
 // ─── createReceipt ───────────────────────────────────────────────────────────
 
 /**
- * Creates a receipt (קבלה) via Tranzila Invoices API.
- * If clientEmail is provided, Tranzila automatically emails the PDF.
- * Returns document ID to store in DB and later fetch PDF.
+ * Creates a חשבונית מס קבלה via Tranzila Invoices API.
+ * Tranzila auto-emails signed PDF to client if clientEmail provided.
+ * Card details (last4, brand, expiry, approval, shovar) appear in the document.
  */
 export async function createReceipt(
   params: CreateReceiptParams
@@ -83,12 +106,29 @@ export async function createReceipt(
   const method: TranzilaPaymentMethod =
     (PAYMENT_METHOD_MAP[params.paymentMethod] ?? params.paymentMethod ?? '5') as TranzilaPaymentMethod
 
+  // Build payment object — include card details if available
+  const payment: Record<string, unknown> = {
+    payment_method: method,
+    amount:         params.totalAmount,
+    currency_code:  'ILS',
+  }
+
+  if (params.card && method === '1') {
+    const c = params.card
+    if (c.last4)       payment['cc_last_4_digits'] = c.last4
+    if (c.brand)       payment['cc_brand']         = brandCode(c.brand)
+    if (c.expiry)      payment['cc_expiry_date']   = c.expiry
+    if (c.approvalNum) payment['cc_approval_number'] = c.approvalNum
+    if (c.shovar)      payment['cc_shovar']          = c.shovar
+    if (c.tranIndex)   payment['cc_transaction_id']  = c.tranIndex
+  }
+
   const body: Record<string, unknown> = {
     terminal_name:     INVOICE_TERMINAL,
     document_language: 'heb',
     response_language: 'eng',
     client: {
-      name:  params.clientName,
+      name: params.clientName,
       ...(params.clientEmail ? { email: params.clientEmail } : {}),
     },
     items: params.items.map(item => ({
@@ -97,11 +137,7 @@ export async function createReceipt(
       unit_price:    item.unit_price,
       currency_code: 'ILS',
     })),
-    payments: [{
-      payment_method: method,
-      amount:         params.totalAmount,
-      currency_code:  'ILS',
-    }],
+    payments: [payment],
   }
 
   const res = await fetch(`${BILLING_BASE}/create_document`, {
@@ -128,38 +164,27 @@ export async function createReceipt(
 
 // ─── getReceiptPdf ───────────────────────────────────────────────────────────
 
-/**
- * Fetches PDF bytes for a previously created Tranzila document.
- * Returns a Buffer ready to stream or attach to WhatsApp/email.
- */
 export async function getReceiptPdf(documentId: string): Promise<Buffer> {
-  const body = {
-    terminal_name:     INVOICE_TERMINAL,
-    document_id:       documentId,
-    response_language: 'eng',
-  }
-
   const res = await fetch(`${BILLING_BASE}/get_document`, {
     method:  'POST',
     headers: buildHeaders(),
-    body:    JSON.stringify(body),
+    body:    JSON.stringify({
+      terminal_name:     INVOICE_TERMINAL,
+      document_id:       documentId,
+      response_language: 'eng',
+    }),
   })
 
   const contentType = res.headers.get('content-type') ?? ''
-
   if (!contentType.includes('application/pdf')) {
     const errData = await res.json().catch(() => ({}))
-    throw new Error(
-      `Tranzila get_document error: ${JSON.stringify(errData)}`
-    )
+    throw new Error(`Tranzila get_document error: ${JSON.stringify(errData)}`)
   }
 
-  const arrayBuffer = await res.arrayBuffer()
-  return Buffer.from(arrayBuffer)
+  return Buffer.from(await res.arrayBuffer())
 }
 
-// ─── Legacy aliases (backward compatibility) ─────────────────────────────────
-// tranzila/webhook и tranzila-success используют старые имена
+// ─── Legacy aliases ───────────────────────────────────────────────────────────
 
 export const TRANZILA_INVOICE_ERRORS: Record<number, string> = {
   10000: 'Invalid terminal name',
@@ -197,11 +222,8 @@ interface LegacyCreateParams {
 /** @deprecated Use createReceipt() instead */
 export async function createTranzilaInvoice(params: LegacyCreateParams) {
   const items: ReceiptItem[] = (params.items ?? []).map(i => ({
-    name:       i.name,
-    quantity:   1,
-    unit_price: i.unitPrice,
+    name: i.name, quantity: 1, unit_price: i.unitPrice,
   }))
-
   if (items.length === 0) {
     items.push({ name: 'תשלום', quantity: 1, unit_price: params.amount })
   }
@@ -212,16 +234,16 @@ export async function createTranzilaInvoice(params: LegacyCreateParams) {
     items,
     totalAmount:   params.amount,
     paymentMethod: params.paymentMethod ?? 'credit_card',
+    card: params.ccLast4 ? { last4: params.ccLast4 } : undefined,
   })
 
-  // Return shape compatible with old callers
   return {
     status_code: 0,
     status_msg:  'Success',
     document: {
-      id:           receipt.documentId,
-      number:       receipt.documentNum,
-      created_at:   receipt.createdAt,
+      id:            receipt.documentId,
+      number:        receipt.documentNum,
+      created_at:    receipt.createdAt,
       retrieval_key: receipt.retrievalKey,
     },
   }

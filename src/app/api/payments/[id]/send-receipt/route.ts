@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/api-auth'
-import { createReceipt, getReceiptPdf } from '@/lib/tranzila-invoices'
+import { createReceipt, getReceiptPdf, CardDetails } from '@/lib/tranzila-invoices'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,11 +37,10 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    // Idempotency
     if (payment.tranzila_document_id) {
       return NextResponse.json({
-        ok: true,
-        documentId: payment.tranzila_document_id,
-        alreadySent: true,
+        ok: true, documentId: payment.tranzila_document_id, alreadySent: true,
       })
     }
 
@@ -57,12 +56,26 @@ export async function POST(
     const clientPhone = client?.phone ?? undefined
     const itemName    = payment.description || 'תשלום'
 
+    // Extract card details from payment metadata (saved during Tranzila callback)
+    const meta = (payment.metadata ?? {}) as Record<string, string>
+    const card: CardDetails | undefined = (
+      meta.card_last4 || meta.card_type || meta.tranzila_approval_number
+    ) ? {
+      last4:       meta.card_last4       ?? undefined,
+      brand:       meta.card_type        ?? undefined,
+      expiry:      meta.card_expiry      ?? undefined,
+      approvalNum: meta.tranzila_approval_number ?? meta.ConfirmationCode ?? undefined,
+      shovar:      meta.tranzila_shovar  ?? undefined,
+      tranIndex:   payment.transaction_id ?? undefined,
+    } : undefined
+
     const receipt = await createReceipt({
       clientName,
       clientEmail,
       items: [{ name: itemName, quantity: 1, unit_price: Number(payment.amount) }],
       totalAmount:   Number(payment.amount),
       paymentMethod: payment.payment_method ?? 'other',
+      card,
     })
 
     await supabase
@@ -97,8 +110,6 @@ export async function POST(
 }
 
 // ─── WhatsApp Business API (Meta Cloud API) ──────────────────────────────────
-// Required env vars: WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID
-// WHATSAPP_RECEIPT_TEMPLATE_NAME (default: 'receipt_document')
 async function sendReceiptWhatsApp(opts: {
   phone: string; clientName: string; amount: number
   documentNum: string; pdfBuffer: Buffer
@@ -108,7 +119,7 @@ async function sendReceiptWhatsApp(opts: {
   const templateName  = process.env.WHATSAPP_RECEIPT_TEMPLATE_NAME ?? 'receipt_document'
 
   if (!accessToken || !phoneNumberId) {
-    console.info('[send-receipt] WhatsApp Business API not configured — skipping')
+    console.info('[send-receipt] WhatsApp not configured — skipping')
     return false
   }
 
@@ -120,29 +131,25 @@ async function sendReceiptWhatsApp(opts: {
   const binary = atob(base64)
   const bytes  = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-  const blob = new Blob([bytes], { type: 'application/pdf' })
-  formData.append('file', blob, `receipt-${opts.documentNum}.pdf`)
+  formData.append('file', new Blob([bytes], { type: 'application/pdf' }), `receipt-${opts.documentNum}.pdf`)
   formData.append('type', 'application/pdf')
   formData.append('messaging_product', 'whatsapp')
 
   const uploadRes = await fetch(`${baseUrl}/media`, {
     method: 'POST', headers: { Authorization: `Bearer ${accessToken}` }, body: formData,
   })
-  if (!uploadRes.ok) throw new Error(`WhatsApp media upload failed: ${uploadRes.status}`)
+  if (!uploadRes.ok) throw new Error(`WA media upload failed: ${uploadRes.status}`)
 
   const { id: mediaId } = await uploadRes.json()
-  if (!mediaId) throw new Error('WhatsApp media upload: no media_id returned')
+  if (!mediaId) throw new Error('WA upload: no media_id')
 
   const msgRes = await fetch(`${baseUrl}/messages`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      to: phone,
-      type: 'template',
+      messaging_product: 'whatsapp', to: phone, type: 'template',
       template: {
-        name: templateName,
-        language: { code: 'he' },
+        name: templateName, language: { code: 'he' },
         components: [
           { type: 'header', parameters: [{ type: 'document', document: { id: mediaId, filename: `receipt-${opts.documentNum}.pdf` } }] },
           { type: 'body', parameters: [
@@ -154,6 +161,5 @@ async function sendReceiptWhatsApp(opts: {
       },
     }),
   })
-  if (!msgRes.ok) throw new Error(`WhatsApp send failed: ${msgRes.status}`)
-  return true
+  return msgRes.ok
 }

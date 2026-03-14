@@ -285,6 +285,98 @@ function KanbanCol({ col, tasks, language, dateLocale, clients, orgUsers, onComp
   )
 }
 
+// ── MobileKanban ──
+interface MobileKanbanProps {
+  columns: KanbanColumn[]
+  tasksByColumn: Record<string, Task[]>
+  language: string
+  dateLocale: Locale
+  clients: any[]
+  orgUsers: OrgUser[]
+  onComplete: (id: string) => void
+  onDelete: (id: string) => void
+  onCardClick: (task: Task) => void
+}
+
+function MobileKanban({ columns, tasksByColumn, language, dateLocale, clients, orgUsers, onComplete, onDelete, onCardClick }: MobileKanbanProps) {
+  const [activeIdx, setActiveIdx] = useState(0)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  function handleScroll() {
+    if (!scrollRef.current) return
+    const idx = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth)
+    setActiveIdx(idx)
+  }
+
+  function scrollToCol(idx: number) {
+    if (!scrollRef.current) return
+    scrollRef.current.scrollTo({ left: idx * scrollRef.current.offsetWidth, behavior: 'smooth' })
+    setActiveIdx(idx)
+  }
+
+  return (
+    <div className="md:hidden flex flex-col flex-1 overflow-hidden">
+      {/* tab nav — equal-width, never overflow */}
+      <div className="grid border-b border-slate-200 dark:border-slate-800" style={{ gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
+        {columns.map((col, i) => (
+          <button
+            key={col.id}
+            onClick={() => scrollToCol(i)}
+            className={[
+              'flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-semibold transition-all border-b-2 min-w-0 overflow-hidden',
+              activeIdx === i
+                ? 'border-primary text-primary'
+                : 'border-transparent text-slate-400 dark:text-slate-500',
+            ].join(' ')}
+          >
+            <span className="truncate max-w-full px-1">{col.label}</span>
+            <span className={[
+              'text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none',
+              activeIdx === i ? 'bg-primary/10 text-primary' : 'bg-slate-100 dark:bg-slate-800 text-slate-400',
+            ].join(' ')}>
+              {(tasksByColumn[col.id] ?? []).length}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* snap scroll columns */}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex flex-1 overflow-x-auto snap-x snap-mandatory scrollbar-none"
+        style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}
+      >
+        {columns.map(col => (
+          <div
+            key={col.id}
+            className="flex-shrink-0 w-full snap-start overflow-y-auto"
+            style={{ scrollSnapAlign: 'start' }}
+          >
+            <div className="flex flex-col gap-2 p-3 min-h-full">
+              {(tasksByColumn[col.id] ?? []).length === 0 && (
+                <div className="flex-1 flex items-center justify-center py-16">
+                  <span className="text-sm text-slate-400 dark:text-slate-600 italic">
+                    {language === 'he' ? 'אין משימות' : 'Нет задач'}
+                  </span>
+                </div>
+              )}
+              {(tasksByColumn[col.id] ?? []).map(task => (
+                <KanbanCard
+                  key={task.id} task={task} language={language} dateLocale={dateLocale}
+                  clients={clients} orgUsers={orgUsers}
+                  onComplete={onComplete} onDelete={onDelete} onCardClick={onCardClick}
+                  onDragStart={() => {}} onDragEnd={() => {}} isDragging={false}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── DiaryPage ──
 export default function DiaryPage() {
   const router = useRouter()
@@ -419,10 +511,10 @@ export default function DiaryPage() {
         </div>
 
         {/* priority pills */}
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none flex-nowrap max-w-full">
           {PRIORITY_FILTERS.map(f => (
             <button key={f.key} onClick={() => setPriorityFilter(f.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${priorityFilter === f.key ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${priorityFilter === f.key ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
               {f.dot && <span className={`w-1.5 h-1.5 rounded-full ${f.dot}`} />}
               {f.label}
             </button>
@@ -447,25 +539,40 @@ export default function DiaryPage() {
           />
         </div>
       ) : (
-        <div className="flex-1 overflow-x-auto">
-          <div className="flex gap-4 p-4 md:p-6 min-w-max h-full">
-            {COLUMNS.map(col => (
-              <KanbanCol
-                key={col.id} col={col}
-                tasks={tasksByColumn[col.id] ?? []}
-                language={language} dateLocale={dateLocale}
-                clients={clients} orgUsers={orgUsers}
-                onComplete={handleComplete}
-                onDelete={handleDelete}
-                onCardClick={handleCardClick}
-                onDrop={handleDrop}
-                draggingId={draggingTask?.id ?? null}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-              />
-            ))}
+        <>
+          {/* ── Mobile: snap scroll ── */}
+          <MobileKanban
+            columns={COLUMNS}
+            tasksByColumn={tasksByColumn}
+            language={language}
+            dateLocale={dateLocale}
+            clients={clients}
+            orgUsers={orgUsers}
+            onComplete={handleComplete}
+            onDelete={handleDelete}
+            onCardClick={handleCardClick}
+          />
+          {/* ── Desktop: standard kanban ── */}
+          <div className="hidden md:flex flex-1 overflow-x-auto">
+            <div className="flex gap-4 p-4 md:p-6 min-w-max h-full">
+              {COLUMNS.map(col => (
+                <KanbanCol
+                  key={col.id} col={col}
+                  tasks={tasksByColumn[col.id] ?? []}
+                  language={language} dateLocale={dateLocale}
+                  clients={clients} orgUsers={orgUsers}
+                  onComplete={handleComplete}
+                  onDelete={handleDelete}
+                  onCardClick={handleCardClick}
+                  onDrop={handleDrop}
+                  draggingId={draggingTask?.id ?? null}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* FAB mobile */}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Bell, CheckCheck, Phone, MessageCircle, Check, X } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
 import { TrinityNotificationIcon } from './TrinityNotificationIcon'
@@ -446,8 +447,8 @@ export function NotificationBell({ locale }: NotificationBellProps) {
           </TrinityBottomDrawer>
         )}
 
-        {/* Desktop — dropdown popup под иконкой */}
-        {!isMobile && isOpen && (
+        {/* Desktop — dropdown popup через portal (выходит за пределы aside/overflow контейнеров) */}
+        {!isMobile && isOpen && typeof document !== 'undefined' && createPortal(
           <>
             {/* Backdrop для закрытия по клику вне */}
             <div
@@ -457,7 +458,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
             />
             {/* Сам dropdown */}
             <div
-              className="fixed bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden"
+              className="fixed bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 flex flex-col overflow-hidden"
               style={{
                 zIndex: 9999,
                 width: '420px',
@@ -470,17 +471,16 @@ export function NotificationBell({ locale }: NotificationBellProps) {
                 left: (() => {
                   if (!bellRef.current) return '20px'
                   const r = bellRef.current.getBoundingClientRect()
-                  // Прижимаем к левому краю иконки, но не выходим за экран
                   const left = Math.min(r.left, window.innerWidth - 428)
                   return `${Math.max(8, left)}px`
                 })(),
               }}
             >
               {/* Заголовок */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700">
                 <div className="flex items-center gap-2">
                   <Bell className="w-5 h-5 text-indigo-500" />
-                  <span className="font-semibold text-gray-900">{l.title}</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100">{l.title}</span>
                   {unreadCount > 0 && (
                     <span className="px-2 py-0.5 text-xs font-bold bg-indigo-500 text-white rounded-full">
                       {unreadCount}
@@ -489,7 +489,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                  className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                 >
                   <X className="w-4 h-4 text-gray-400" />
                 </button>
@@ -502,7 +502,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
 
               {/* Footer */}
               {notifications.length > 0 && (
-                <div className="px-4 py-3 border-t border-gray-100 flex justify-end">
+                <div className="px-4 py-3 border-t border-gray-100 dark:border-slate-700 flex justify-end">
                   <button
                     onClick={markAllRead}
                     className="flex items-center gap-1.5 text-xs text-indigo-600 hover:underline"
@@ -513,7 +513,8 @@ export function NotificationBell({ locale }: NotificationBellProps) {
                 </div>
               )}
             </div>
-          </>
+          </>,
+          document.body
         )}
       </div>
     </>

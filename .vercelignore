@@ -1,0 +1,9 @@
+# Не деплоим эти файлы — экономим время билда
+.git
+*.md
+*.test.ts
+*.test.tsx
+*.spec.ts
+__tests__
+.env.local
+.env.development

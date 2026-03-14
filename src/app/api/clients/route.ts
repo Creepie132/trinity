@@ -35,16 +35,32 @@ export async function GET(req: NextRequest) {
     if ('error' in auth) return auth.error
 
     const { orgId } = auth
+    const { searchParams } = req.nextUrl
+    const search = searchParams.get('search')?.trim() || ''
 
     // Resolve all org IDs in the branch family for shared client access
     const relatedOrgIds = await getRelatedOrgIds(orgId)
 
-    // Get clients for this organization family (using admin to bypass RLS)
-    const { data: clients, error: clientsError } = await supabaseAdmin
+    // Build query
+    let query = supabaseAdmin
       .from('clients')
       .select('*')
       .in('org_id', relatedOrgIds)
       .order('created_at', { ascending: false })
+
+    // Фильтрация по поиску — ищем по имени, фамилии, телефону, email
+    // Каждое слово ищется отдельно (чтобы "Влад Халфин" нашло Владислав Халфин)
+    if (search) {
+      const words = search.split(/\s+/).filter(Boolean)
+      for (const word of words) {
+        const term = `%${word}%`
+        query = query.or(
+          `first_name.ilike.${term},last_name.ilike.${term},phone.ilike.${term},email.ilike.${term}`
+        )
+      }
+    }
+
+    const { data: clients, error: clientsError } = await query
 
     if (clientsError) {
       console.error('Clients fetch error:', clientsError)

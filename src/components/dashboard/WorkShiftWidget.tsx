@@ -148,6 +148,9 @@ export function WorkShiftWidget() {
     }
   }
 
+  // While role is not yet resolved — render nothing to avoid flash
+  if (role === undefined || role === null) return null
+
   // Owner view: who is on shift
   if (isOwner) {
     // Hide while loading OR if no staff members exist

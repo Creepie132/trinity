@@ -1,6 +1,7 @@
 'use client'
 
 import { ReactNode, ButtonHTMLAttributes } from 'react'
+import { buildMessage, buildWhatsAppUrl, MessageVars } from '@/lib/message-utils'
 
 // ============================================
 // УНИВЕРСАЛЬНЫЕ КНОПКИ TRINITY CRM
@@ -168,7 +169,23 @@ export function TrinityCallButton({ phone, locale = 'ru', ...props }: PresetButt
 }
 
 // Кнопка WhatsApp
-export function TrinityWhatsAppButton({ phone, locale = 'ru', ...props }: PresetButtonProps & { phone: string }) {
+export function TrinityWhatsAppButton({
+  phone,
+  locale = 'ru',
+  template,
+  templateVars,
+  ...props
+}: PresetButtonProps & {
+  phone: string
+  template?: string
+  templateVars?: MessageVars
+}) {
+  function handleClick() {
+    const text = template ? buildMessage(template, templateVars ?? {}) : undefined
+    const url = buildWhatsAppUrl(phone, text || undefined)
+    window.open(url, '_blank')
+  }
+
   return (
     <TrinityButton
       variant="whatsapp"
@@ -178,7 +195,7 @@ export function TrinityWhatsAppButton({ phone, locale = 'ru', ...props }: Preset
           <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
         </svg>
       }
-      onClick={() => window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}`, '_blank')}
+      onClick={handleClick}
       {...props}
     >
       WhatsApp

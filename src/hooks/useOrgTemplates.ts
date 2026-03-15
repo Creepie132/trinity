@@ -5,7 +5,6 @@ export interface OrgTemplates {
   sms_template: string
 }
 
-// Stable initial data — same on server and client, prevents hydration mismatch
 const EMPTY_TEMPLATES: OrgTemplates = {
   whatsapp_template: '',
   sms_template: '',
@@ -21,12 +20,11 @@ export function useOrgTemplates() {
       if (!res.ok) throw new Error('Failed to load templates')
       return res.json()
     },
-    // Always enabled — API determines org from session cookie server-side
-    // No orgId dependency avoids SSR/client mismatch
     enabled: true,
     staleTime: 5 * 60 * 1000,
-    // Same initial value on server and client — no hydration mismatch
-    initialData: EMPTY_TEMPLATES,
+    // placeholderData вместо initialData: данные загружаются только на клиенте,
+    // не вызывая hydration mismatch
+    placeholderData: EMPTY_TEMPLATES,
   })
 
   const mutation = useMutation({

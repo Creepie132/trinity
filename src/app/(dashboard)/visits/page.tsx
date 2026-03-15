@@ -266,11 +266,25 @@ export default function VisitsPage() {
       .select('*')
       .eq('visit_id', visit.id)
 
-    const preloadedItems = (freshServices || (visit as any).visit_services || []).map((vs: any) => ({
+    // Build main service item first — always included
+    const mainServiceName = isHe
+      ? (visit.services?.name || visit.service_type || '')
+      : (visit.services?.name_ru || visit.services?.name || visit.service_type || '')
+    const mainItem = {
+      id: visit.id,
+      name: mainServiceName,
+      price: visit.price || 0,
+    }
+
+    // Additional services from visit_services
+    const additionalItems = (freshServices || (visit as any).visit_services || []).map((vs: any) => ({
       id: vs.id,
       name: isHe ? (vs.service_name || vs.service_name_ru) : (vs.service_name_ru || vs.service_name),
       price: vs.price || 0,
     }))
+
+    // Main service is always first → checkout step is always shown (never empty cart screen)
+    const preloadedItems = [mainItem, ...additionalItems]
     openModal('client-sale', {
       client: clientData || { id: visit.client_id, first_name: getClientName(visit), last_name: '', phone: getClientPhone(visit), email: getClientEmail(visit) },
       locale: isHe ? 'he' : 'ru',

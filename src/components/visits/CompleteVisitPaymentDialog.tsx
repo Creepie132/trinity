@@ -29,7 +29,7 @@ import { Check, Plus, Trash2, Camera, Package, ChevronDown, ArrowRight, ArrowLef
 import { Banknote, Smartphone, CreditCard, Building2, Phone, Zap } from 'lucide-react'
 import { Visit } from '@/types/visits'
 import { Product } from '@/types/inventory'
-import { BarcodeScanner } from '@/components/inventory/BarcodeScanner'
+import { BarcodeScanner } from '@/components/inventory/BarcodeScannerLazy'
 import { CareInstructionsButtons } from '@/components/care-instructions/CareInstructionsButtons'
 import { useVisitServices } from '@/hooks/useVisitServices'
 

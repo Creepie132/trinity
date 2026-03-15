@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useSales, useSaleStats, useToggleReceipt, Sale } from '@/hooks/useSales'
 import { SaleCard } from '@/components/sales/SaleCard'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { FileText } from 'lucide-react'
 import { format } from 'date-fns'

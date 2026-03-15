@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { User, Calendar, Phone, MessageCircle, MapPin, Mail, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { format, parseISO } from 'date-fns'

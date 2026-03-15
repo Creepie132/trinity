@@ -12,7 +12,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { CreateProductDialog } from '@/components/inventory/CreateProductDialog'
-import { BarcodeScanner } from '@/components/inventory/BarcodeScanner'
+import { BarcodeScanner } from '@/components/inventory/BarcodeScannerLazy'
 import { useModalStore } from '@/store/useModalStore'
 import { useBranch } from '@/contexts/BranchContext'
 import type { Product } from '@/types/inventory'

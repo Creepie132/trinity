@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock, Calendar, User, Scissors, FileText, History } from 'lucide-react'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { toast } from 'sonner'
 import { useVisitServices, useAddVisitService } from '@/hooks/useVisitServices'
 import { useModalStore } from '@/store/useModalStore'

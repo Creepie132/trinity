@@ -1,52 +1,52 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const PUBLIC_PATHS = ['/login', '/unauthorized', '/blocked', '/landing', '/terms', '/policy', '/pricing', '/access-pending', '/subscription-expired', '/onboarding']
-const CALLBACK_PATH = '/callback'
-const WEBHOOK_PATH = '/api/payments/webhook'
-const STRIPE_WEBHOOK_PATH = '/api/payments/stripe-webhook'
-const TRANZILA_WEBHOOK_PATH = '/api/payments/tranzila/webhook'
-const TRANZILA_SUCCESS_PATH = '/api/payments/tranzila-success'
-const TRANZILA_FAILED_PATH = '/api/payments/tranzila-failed'
-const CARDCOM_SUCCESS_PATH = '/api/payments/cardcom-success'
-const PAYMENT_SUCCESS_PATH = '/payment-success'
-const PAYMENT_FAILED_PATH = '/payment-failed'
-const HEALTH_PATH = '/api/health'
-const ACCESS_API_PATH = '/api/access'
+// ─── Public paths — O(1) Set lookup ──────────────────────────────────────────
+const PUBLIC_PATH_SET = new Set([
+  '/', '/login', '/unauthorized', '/blocked', '/landing',
+  '/terms', '/policy', '/pricing', '/access-pending',
+  '/subscription-expired', '/onboarding', '/callback',
+  '/payment-success', '/payment-failed', '/payment/success', '/payment/fail',
+])
+
+const PUBLIC_PATH_PREFIXES = [
+  '/onboarding/', '/book/', '/invite/', '/.well-known',
+  '/api/payments/webhook', '/api/payments/stripe-webhook',
+  '/api/payments/tranzila/webhook', '/api/payments/tranzila-success',
+  '/api/payments/tranzila-failed', '/api/payments/cardcom-success',
+  '/api/payments/tranzila/success', '/api/payments/callback',
+  '/api/booking/', '/api/contact', '/api/access/', '/api/health',
+]
+
+function isPublicPath(pathname: string): boolean {
+  if (PUBLIC_PATH_SET.has(pathname)) return true
+  for (const prefix of PUBLIC_PATH_PREFIXES) {
+    if (pathname.startsWith(prefix)) return true
+  }
+  return false
+}
+
+// ─── CSRF allowed origins ─────────────────────────────────────────────────────
+const ALLOWED_ORIGINS = new Set([
+  'https://ambersol.co.il',
+  'https://www.ambersol.co.il',
+  'http://localhost:3000',
+  'http://localhost:3001',
+])
+
+const CSRF_EXEMPT_PREFIXES = [
+  '/api/payments/', '/api/booking/', '/api/contact', '/api/access/',
+]
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Allow root page
-  if (pathname === '/') {
-    return NextResponse.next()
-  }
+  // ── 1. Public paths — no auth needed ──────────────────────────────────────
+  if (isPublicPath(pathname)) return NextResponse.next()
 
-  // Allow public routes
-  if (
-    PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/')) ||
-    pathname === CALLBACK_PATH ||
-    pathname.startsWith(CALLBACK_PATH + '?') ||
-    pathname === WEBHOOK_PATH ||
-    pathname.startsWith(WEBHOOK_PATH + '/') ||
-    pathname === STRIPE_WEBHOOK_PATH ||
-    pathname.startsWith(STRIPE_WEBHOOK_PATH + '/') ||
-    pathname === TRANZILA_WEBHOOK_PATH ||
-    pathname.startsWith(TRANZILA_WEBHOOK_PATH + '/') ||
-    pathname === TRANZILA_SUCCESS_PATH ||
-    pathname.startsWith(TRANZILA_SUCCESS_PATH + '/') ||
-    pathname === TRANZILA_FAILED_PATH ||
-    pathname === CARDCOM_SUCCESS_PATH ||
-    pathname === PAYMENT_SUCCESS_PATH ||
-    pathname === PAYMENT_FAILED_PATH ||
-    pathname === HEALTH_PATH ||
-    pathname.startsWith(ACCESS_API_PATH + '/') ||
-    pathname.startsWith('/book/') ||
-    pathname.startsWith('/invite/') ||
-    pathname.startsWith('/.well-known')
-  ) {
-    return NextResponse.next()
-  }
+  // ── 2. API routes — skip access-check, protected by getAuthContext() ──────
+  //    Only do session validation + CSRF here, NOT subscription checks
+  const isApiRoute = pathname.startsWith('/api/')
 
   let response = NextResponse.next()
 
@@ -55,9 +55,7 @@ export async function middleware(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return req.cookies.getAll()
-        },
+        getAll() { return req.cookies.getAll() },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options)
@@ -67,30 +65,21 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // FIX: Handle stale/invalid auth cookies
+  // ── 3. Auth check — getSession() reads JWT, NO DB roundtrip ───────────────
   let session = null
   try {
     const result = await supabase.auth.getSession()
     session = result.data.session
   } catch (error) {
-    // If getSession throws error (stale cookies, invalid JWT, etc.)
-    // Clear all supabase cookies and redirect to login
-    console.error('[middleware] getSession error (clearing cookies):', error)
-    
-    // Clear all supabase-related cookies
+    console.error('[middleware] getSession error:', error)
     const cookiesToClear = req.cookies.getAll().filter(
-      (cookie) => cookie.name.startsWith('sb-') || cookie.name.includes('supabase')
+      c => c.name.startsWith('sb-') || c.name.includes('supabase')
     )
-    
-    const redirectResponse = NextResponse.redirect(new URL('/login', req.url))
-    cookiesToClear.forEach((cookie) => {
-      redirectResponse.cookies.delete(cookie.name)
-    })
-    
-    return redirectResponse
+    const redirect = NextResponse.redirect(new URL('/login', req.url))
+    cookiesToClear.forEach(c => redirect.cookies.delete(c.name))
+    return redirect
   }
 
-  // No session or invalid session → redirect to login
   if (!session) {
     const url = req.nextUrl.clone()
     url.pathname = '/login'
@@ -98,161 +87,110 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Session exists → CSRF protection for API routes
-  if (pathname.startsWith("/api/") && !["GET", "HEAD", "OPTIONS"].includes(req.method)) {
-    // Исключаем webhooks и публичные API (они приходят от внешних сервисов)
-    const csrfExempt = [
-      "/api/payments/webhook",
-      "/api/payments/stripe-webhook",
-      "/api/payments/tranzila/webhook",
-      "/api/payments/tranzila/success",
-      "/api/payments/callback",
-      "/api/booking/",
-      "/api/contact",
-      "/api/access/",
-    ]
-
-    const isExempt = csrfExempt.some(p => pathname.startsWith(p))
-
+  // ── 4. CSRF — only for mutating API calls ─────────────────────────────────
+  if (isApiRoute && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    const isExempt = CSRF_EXEMPT_PREFIXES.some(p => pathname.startsWith(p))
     if (!isExempt) {
-      const origin = req.headers.get("origin")
-
-      // Allowed origins: all variants of the app domain
-      const allowedOrigins = [
-        "https://ambersol.co.il",
-        "https://www.ambersol.co.il",
-        "http://localhost:3000",
-        "http://localhost:3001",
-      ]
-
-      // Also allow any Vercel preview deployments for this project
-      const isVercelPreview = origin?.includes("vercel.app") && origin?.includes("trinity")
-
-      if (origin && !allowedOrigins.includes(origin) && !isVercelPreview) {
+      const origin = req.headers.get('origin')
+      const isVercelPreview = origin?.includes('vercel.app') && origin?.includes('trinity')
+      if (origin && !ALLOWED_ORIGINS.has(origin) && !isVercelPreview) {
         console.warn('[middleware] CSRF blocked:', { origin, pathname })
-        return NextResponse.json({ error: "CSRF: Invalid origin" }, { status: 403 })
+        return NextResponse.json({ error: 'CSRF: Invalid origin' }, { status: 403 })
       }
     }
   }
 
-  // Check access control (subscription/trial status)
-  // Skip for admin routes and static paths
-  if (!pathname.startsWith('/admin') && !pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
-    try {
-      // Check if user is admin from JWT claims (no DB query!)
-      const isAdmin = session.user.app_metadata?.is_admin === true
-      
-      // Fallback: check admin_users table if not in JWT
-      let adminUser = null
-      if (!isAdmin) {
-        const { data } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
-        adminUser = data
-      }
+  // ── 5. API routes stop here — no subscription check needed ────────────────
+  if (isApiRoute) return response
 
-      // Admins always have access
-      if (!isAdmin && !adminUser) {
-        // Try to get org data from JWT claims first
-        const jwtOrgId = session.user.app_metadata?.org_id
-        
-        let org: any = null
-        
-        if (jwtOrgId) {
-          // Fast path: org_id from JWT, fetch only org data (no join needed)
-          const { data: orgData } = await supabase
-            .from('organizations')
-            .select('subscription_status, subscription_expires_at, features')
-            .eq('id', jwtOrgId)
-            .single()
-          org = orgData
-        } else {
-          // Fallback: old way via org_users join
-          const { data: orgUser } = await supabase
-            .from('org_users')
-            .select('org_id, organizations(subscription_status, subscription_expires_at, features)')
-            .eq('user_id', session.user.id)
-            .maybeSingle()
-          org = orgUser?.organizations
-        }
+  // ── 6. Admin routes — skip subscription check ────────────────────────────
+  if (pathname.startsWith('/admin')) return response
 
-        const now = new Date()
+  // ── 7. Subscription / access check — page routes only ────────────────────
+  try {
+    // is_admin from JWT app_metadata — NO DB query, reads from token
+    const isAdmin = session.user.app_metadata?.is_admin === true
+    if (isAdmin) return response
 
-        // Check if subscription is expired
-        // Новые статусы: active, inactive, demo
-        // Legacy: manual → active, trial → demo, expired/none → inactive
-        const isExpired = org && (
-          org.subscription_status === 'inactive' ||
-          org.subscription_status === 'expired' ||
-          (org.subscription_expires_at && new Date(org.subscription_expires_at) < now &&
-            !['active', 'manual', 'demo'].includes(org.subscription_status))
-        )
+    // org_id from JWT — fast path, no join needed
+    const jwtOrgId = session.user.app_metadata?.org_id as string | undefined
+    let org: any = null
 
-        if (isExpired && pathname !== '/subscription-expired') {
-          const url = req.nextUrl.clone()
-          url.pathname = '/subscription-expired'
-          return NextResponse.redirect(url)
-        }
-
-        // active/manual — всегда, demo — до истечения даты
-        const hasAccess = org && (
-          org.subscription_status === 'active' ||
-          org.subscription_status === 'manual' ||
-          org.subscription_status === 'demo' ||
-          (org.subscription_status === 'trial' && org.subscription_expires_at && new Date(org.subscription_expires_at) > now)
-        )
-
-        if (!hasAccess && !isExpired && pathname !== '/access-pending') {
-          const url = req.nextUrl.clone()
-          url.pathname = '/access-pending'
-          return NextResponse.redirect(url)
-        }
-
-        // Module-based access control (Trinity requirement)
-        if (hasAccess && org?.features?.modules) {
-          const modules = org.features.modules as Record<string, boolean>
-          
-          // Map routes to module keys
-          const moduleRoutes: Record<string, string> = {
-            '/payments': 'payments',
-            '/inventory': 'inventory',
-            '/sms': 'sms',
-            '/stats': 'statistics',
-            '/reports': 'reports',
-            '/subscriptions': 'subscriptions',
-            '/booking': 'booking',
-            '/settings/booking': 'booking',
-            '/loyalty': 'loyalty',
-          }
-
-          // Check if current route requires a module
-          for (const [route, moduleKey] of Object.entries(moduleRoutes)) {
-            if (pathname.startsWith(route)) {
-              // For booking, check both 'booking' and 'online_booking' module keys
-              const hasModule = moduleKey === 'booking' 
-                ? (modules.booking === true || modules.online_booking === true)
-                : modules[moduleKey] === true
-
-              if (!hasModule) {
-                // Module is disabled, redirect to dashboard
-                console.log(`[middleware] Module ${moduleKey} access denied for route ${pathname}`)
-                const url = req.nextUrl.clone()
-                url.pathname = '/dashboard'
-                return NextResponse.redirect(url)
-              }
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('[middleware] Access check error:', error)
-      // On error, allow access to avoid blocking legitimate users
+    if (jwtOrgId) {
+      // Single DB query — only subscription fields, no joins
+      const { data } = await supabase
+        .from('organizations')
+        .select('subscription_status, subscription_expires_at, features')
+        .eq('id', jwtOrgId)
+        .single()
+      org = data
+    } else {
+      // Fallback: user doesn't have org_id in JWT yet (first login edge case)
+      const { data: orgUser } = await supabase
+        .from('org_users')
+        .select('org_id, organizations(subscription_status, subscription_expires_at, features)')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+      org = (orgUser?.organizations as any)
     }
+
+    const now = new Date()
+
+    const isExpired = org && (
+      org.subscription_status === 'inactive' ||
+      org.subscription_status === 'expired' ||
+      (org.subscription_expires_at &&
+        new Date(org.subscription_expires_at) < now &&
+        !['active', 'manual', 'demo'].includes(org.subscription_status))
+    )
+
+    if (isExpired && pathname !== '/subscription-expired') {
+      return NextResponse.redirect(new URL('/subscription-expired', req.url))
+    }
+
+    const hasAccess = org && (
+      org.subscription_status === 'active' ||
+      org.subscription_status === 'manual' ||
+      org.subscription_status === 'demo' ||
+      (org.subscription_status === 'trial' &&
+        org.subscription_expires_at &&
+        new Date(org.subscription_expires_at) > now)
+    )
+
+    if (!hasAccess && !isExpired && pathname !== '/access-pending') {
+      return NextResponse.redirect(new URL('/access-pending', req.url))
+    }
+
+    // ── Module access control ────────────────────────────────────────────────
+    if (hasAccess && org?.features?.modules) {
+      const modules = org.features.modules as Record<string, boolean>
+      const MODULE_ROUTES: Record<string, string> = {
+        '/payments': 'payments',
+        '/inventory': 'inventory',
+        '/sms': 'sms',
+        '/stats': 'statistics',
+        '/reports': 'reports',
+        '/subscriptions': 'subscriptions',
+        '/booking': 'booking',
+        '/settings/booking': 'booking',
+        '/loyalty': 'loyalty',
+      }
+      for (const [route, moduleKey] of Object.entries(MODULE_ROUTES)) {
+        if (pathname.startsWith(route)) {
+          const hasModule = moduleKey === 'booking'
+            ? (modules.booking === true || modules.online_booking === true)
+            : modules[moduleKey] === true
+          if (!hasModule) {
+            return NextResponse.redirect(new URL('/dashboard', req.url))
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[middleware] Access check error:', error)
+    // Allow on error — don't block legitimate users
   }
 
-  // All other checks (admin, org_users, org status) happen on client side
   return response
 }
 

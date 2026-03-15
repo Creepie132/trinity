@@ -2,7 +2,7 @@
 
 import { useState, ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import Image from 'next/image'
 
 // ============================================

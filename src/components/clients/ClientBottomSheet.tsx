@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Calendar, DollarSign, MessageSquare, Trash2, Phone, MessageCircle, Pencil, ArrowRight, ArrowLeft, RefreshCw, Plus } from 'lucide-react'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EditClientSheet } from './EditClientSheet'
 import { getClientName, getClientInitials } from '@/lib/client-utils'

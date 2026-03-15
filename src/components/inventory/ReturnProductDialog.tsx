@@ -17,7 +17,7 @@ import { useProducts } from '@/hooks/useProducts'
 import { toast } from 'sonner'
 import { Camera, RotateCcw } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { BarcodeScanner } from './BarcodeScanner'
+import { BarcodeScanner } from './BarcodeScannerLazy'
 import ModalWrapper from '@/components/ModalWrapper'
 import type { Product } from '@/types/inventory'
 

@@ -15,7 +15,7 @@ import { CreateBitPaymentDialog } from '@/components/payments/CreateBitPaymentDi
 import { PaymentMethodModal } from '@/components/payments/PaymentMethodModal'
 import { PaymentCard } from '@/components/payments/PaymentCard'
 import { PaymentDetailsDrawer } from '@/components/payments/PaymentDetailsDrawer'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { format, isToday, isYesterday, parseISO } from 'date-fns'
 import { toast } from 'sonner'

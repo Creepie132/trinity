@@ -19,7 +19,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useModalStore } from '@/store/useModalStore'
 import { CalendarView } from '@/components/visits/CalendarView'
 import { VisitCard } from '@/components/visits/VisitCard'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
 import {
   MessageCircle, MessageSquare, CheckCircle2, Mail, Download

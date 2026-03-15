@@ -1,7 +1,7 @@
 'use client'
 
 import { Phone, MessageCircle, Clock, MapPin, X, Plus } from 'lucide-react'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 
 interface MeetingDetailCardProps {
   visit: any

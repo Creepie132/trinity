@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Bell, CheckCheck, Phone, MessageCircle, Check, X } from 'lucide-react'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawer'
+import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { TrinityNotificationIcon } from './TrinityNotificationIcon'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 

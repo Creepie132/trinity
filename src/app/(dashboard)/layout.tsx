@@ -7,12 +7,9 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { BranchProvider } from '@/contexts/BranchContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GlobalSearch } from '@/components/GlobalSearch'
-import dynamic from 'next/dynamic'
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner'
 import { PinnedModalsTray } from '@/components/ui/PinnedModalsTray'
 import { RightPanel } from '@/components/layout/RightPanel'
-
-const KiraHAL = dynamic(() => import('@/components/kira/KiraHAL'), { ssr: false })
 
 export default function DashboardLayout({
   children,
@@ -61,7 +58,6 @@ export default function DashboardLayout({
         </div>
 
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-        {/* <KiraHAL /> */}
         <ImpersonationBanner />
         <PinnedModalsTray />
       </BranchProvider>

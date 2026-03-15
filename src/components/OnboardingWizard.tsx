@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import dynamic from 'next/dynamic'
 import Modal from '@/components/ui/Modal'
-const KiraOrb = dynamic(() => import('@/components/kira/KiraOrb'), { ssr: false })
+// KiraOrb removed — replaced with lightweight SVG orb below
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -496,7 +495,9 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
           <div className="space-y-3">
             <div className="flex items-center gap-4 mb-2">
               <div className="shrink-0">
-                <KiraOrb size={72} isThinking={false} />
+                <div className="flex items-center justify-center w-[72px] h-[72px] rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 shadow-lg shadow-indigo-200">
+                  <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="14" fill="white" fillOpacity="0.2"/><circle cx="18" cy="18" r="7" fill="white" fillOpacity="0.9"/></svg>
+                </div>
               </div>
               <div>
                 <h2 className="text-xl font-bold mb-1">Привет! Я Кира 👋</h2>
@@ -758,7 +759,9 @@ export function OnboardingWizard({ open, organizationName }: OnboardingWizardPro
         {step === 4 && (
           <div className="space-y-6 text-center">
             <div className="flex justify-center">
-              <KiraOrb size={120} isThinking={loading} />
+              <div className="flex items-center justify-center w-[120px] h-[120px] rounded-full bg-gradient-to-br from-indigo-400 to-violet-600 shadow-xl shadow-indigo-200 mx-auto">
+                  <svg width="56" height="56" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="22" fill="white" fillOpacity="0.15"/><circle cx="28" cy="28" r="11" fill="white" fillOpacity="0.9"/></svg>
+                </div>
             </div>
 
             <div>

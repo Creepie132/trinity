@@ -171,7 +171,6 @@ export function ClientDetailsModal() {
         || undefined
       const visitRef = buildVisitRef({
         date: item.scheduled_at || item.created_at,
-        service: serviceName,
         locale: locale as 'he' | 'ru',
       })
       const vars = { ...pendingVars, visit_ref: visitRef }

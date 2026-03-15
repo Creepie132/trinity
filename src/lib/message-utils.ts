@@ -64,11 +64,29 @@ export function buildVisitRef(opts: {
 }
 
 /**
- * Build a wa.me URL with optional pre-filled text from template.
- * phone should be raw digits (will be cleaned here).
+ * Build a WhatsApp URL with optional pre-filled text.
+ * On mobile: uses wa.me deep link (opens app directly).
+ * On desktop: uses web.whatsapp.com/send (avoids blank screen on wa.me).
+ * phone should be raw digits or Israeli format (normalized here to 972xxx).
  */
 export function buildWhatsAppUrl(phone: string, text?: string): string {
-  const clean = phone.replace(/[^0-9]/g, '')
-  if (!text) return `https://wa.me/${clean}`
-  return `https://wa.me/${clean}?text=${encodeURIComponent(text)}`
+  const digits = phone.replace(/[^0-9]/g, '')
+  // Normalize Israeli numbers: 05x → 9725x
+  const clean = digits.startsWith('972')
+    ? digits
+    : digits.startsWith('0')
+    ? '972' + digits.slice(1)
+    : '972' + digits
+
+  const isMobile = typeof navigator !== 'undefined'
+    && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
+  if (isMobile) {
+    return text
+      ? `https://wa.me/${clean}?text=${encodeURIComponent(text)}`
+      : `https://wa.me/${clean}`
+  }
+  // Desktop: web.whatsapp.com/send works better than wa.me in browser
+  const base = `https://web.whatsapp.com/send?phone=${clean}`
+  return text ? `${base}&text=${encodeURIComponent(text)}` : base
 }

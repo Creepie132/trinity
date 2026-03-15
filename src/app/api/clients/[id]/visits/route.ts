@@ -12,6 +12,8 @@ export async function GET(
     
     const { orgId, supabase } = auth
 
+    const now = new Date().toISOString()
+
     const { data } = await supabase
       .from('visits')
       .select(`
@@ -28,8 +30,10 @@ export async function GET(
       `)
       .eq('org_id', orgId)
       .eq('client_id', id)
-      .order('scheduled_at', { ascending: false })
-      .limit(20)
+      .neq('status', 'cancelled')
+      .gte('scheduled_at', now)
+      .order('scheduled_at', { ascending: true })
+      .limit(10)
 
     return NextResponse.json(data || [])
   } catch (error) {

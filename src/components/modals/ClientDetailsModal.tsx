@@ -164,9 +164,14 @@ export function ClientDetailsModal() {
   function handlePickerSelect(item: any) {
     setShowPicker(false)
     if (pickerType === 'visit') {
+      const serviceName = item.visit_services?.[0]?.service_name
+        || item.visit_services?.[0]?.service_name_ru
+        || item.services?.name
+        || item.services?.name_ru
+        || undefined
       const visitRef = buildVisitRef({
         date: item.scheduled_at || item.created_at,
-        service: item.service_type || undefined,
+        service: serviceName,
         locale: locale as 'he' | 'ru',
       })
       const vars = { ...pendingVars, visit_ref: visitRef }
@@ -383,82 +388,121 @@ export function ClientDetailsModal() {
         locale={locale as 'he' | 'ru'}
       />
 
-      {/* Visit / Product Picker — rendered via portal to escape Modal stacking context */}
+      {/* Visit / Product Picker — portal, animated */}
       {showPicker && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-end justify-center" onClick={() => setShowPicker(false)}>
-          <div className="absolute inset-0 bg-black/40" />
+        <div
+          className="fixed inset-0 z-[9999] flex items-end justify-center"
+          style={{ animation: 'fadeInOverlay 0.2s ease' }}
+          onClick={() => setShowPicker(false)}
+        >
+          <style>{`
+            @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
+            @keyframes slideUpSheet { from { transform: translateY(100%) } to { transform: translateY(0) } }
+            .picker-shimmer { background: linear-gradient(90deg, var(--muted) 25%, var(--muted-foreground/10) 50%, var(--muted) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+            @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+          `}</style>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div
-            className="relative z-10 bg-background rounded-t-2xl shadow-xl w-full max-w-md p-5 pb-8"
+            className="relative z-10 bg-background rounded-t-3xl shadow-2xl w-full max-w-lg"
+            style={{ animation: 'slideUpSheet 0.3s cubic-bezier(0.32,0.72,0,1)' }}
             onClick={e => e.stopPropagation()}
           >
+            {/* Handle bar */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+            </div>
+
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <p className="font-semibold text-base">
-                {pickerType === 'visit'
-                  ? (locale === 'he' ? 'בחר ביקור' : 'Выберите визит')
-                  : (locale === 'he' ? 'בחר מוצר' : 'Выберите товар')}
-              </p>
-              <button onClick={() => setShowPicker(false)} className="p-1 rounded-lg hover:bg-muted">
-                <X size={18} />
+            <div className="flex items-center justify-between px-5 py-3 border-b border-muted">
+              <div>
+                <p className="font-semibold text-base">
+                  {pickerType === 'visit'
+                    ? (locale === 'he' ? '📅 בחר ביקור' : '📅 Выберите визит')
+                    : (locale === 'he' ? '🛍️ בחר מוצר' : '🛍️ Выберите товар')}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {locale === 'he' ? 'יוכנס לתבנית WhatsApp' : 'Будет вставлено в шаблон WhatsApp'}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPicker(false)}
+                className="w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition"
+              >
+                <X size={16} />
               </button>
             </div>
 
             {/* Items */}
-            {pickerLoading ? (
-              <p className="text-center py-6 text-sm text-muted-foreground">
-                {locale === 'he' ? 'טוען...' : 'Загрузка...'}
-              </p>
-            ) : pickerItems.length === 0 ? (
-              <p className="text-center py-6 text-sm text-muted-foreground">
-                {locale === 'he' ? 'אין פריטים' : 'Нет элементов'}
-              </p>
-            ) : (
-              <div className="space-y-1 max-h-64 overflow-y-auto">
-                {pickerItems.map((item: any) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handlePickerSelect(item)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-muted/60 transition text-start"
-                  >
-                    <div>
-                      {pickerType === 'visit' ? (
-                        <>
-                          <p className="text-sm font-medium">
-                            {new Date(item.scheduled_at || item.created_at).toLocaleDateString(
-                              locale === 'he' ? 'he-IL' : 'ru-RU',
-                              { day: '2-digit', month: '2-digit', year: 'numeric' }
-                            )}
-                            {item.scheduled_at && (
-                              <span className="text-muted-foreground font-normal">
-                                {' · '}{new Date(item.scheduled_at).toLocaleTimeString(
-                                  locale === 'he' ? 'he-IL' : 'ru-RU',
-                                  { hour: '2-digit', minute: '2-digit' }
-                                )}
-                              </span>
-                            )}
+            <div className="px-3 py-3 max-h-72 overflow-y-auto">
+              {pickerLoading ? (
+                <div className="space-y-2">
+                  {[1,2,3].map(i => (
+                    <div key={i} className="h-14 rounded-2xl picker-shimmer opacity-60" />
+                  ))}
+                </div>
+              ) : pickerItems.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-3xl mb-2">🗓️</p>
+                  <p className="text-sm text-muted-foreground">
+                    {locale === 'he' ? 'אין פריטים' : 'Нет элементов'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {pickerItems.map((item: any, idx: number) => {
+                    const serviceName = item.visit_services?.[0]?.service_name
+                      || item.visit_services?.[0]?.service_name_ru
+                      || item.services?.name
+                      || item.services?.name_ru
+                      || null
+                    const dateStr = new Date(item.scheduled_at || item.created_at)
+                      .toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    const timeStr = item.scheduled_at
+                      ? new Date(item.scheduled_at).toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })
+                      : null
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handlePickerSelect(item)}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 active:scale-[0.98] transition-all text-start group"
+                        style={{ animationDelay: `${idx * 40}ms` }}
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                          {pickerType === 'visit' ? timeStr?.split(':')[0] || '—' : '📦'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">
+                            {pickerType === 'visit'
+                              ? `${dateStr}${timeStr ? ` · ${timeStr}` : ''}`
+                              : item.name}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            {[item.service_type, item.price ? `₪${item.price}` : null, item.status]
-                              .filter(Boolean).join(' · ')}
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-sm font-medium">{item.name}</p>
-                      )}
-                    </div>
-                    <ChevronRight size={16} className="text-muted-foreground" />
-                  </button>
-                ))}
-              </div>
-            )}
+                          {pickerType === 'visit' && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {[serviceName, item.price ? `₪${item.price}` : null]
+                                .filter(Boolean).join(' · ') || '—'}
+                            </p>
+                          )}
+                          {pickerType === 'product' && item.price && (
+                            <p className="text-xs text-muted-foreground">₪{item.price}</p>
+                          )}
+                        </div>
+                        <ChevronRight size={16} className="text-muted-foreground group-hover:text-emerald-500 transition-colors flex-shrink-0" />
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
-            {/* Skip button */}
-            <button
-              onClick={handlePickerSkip}
-              className="mt-3 w-full py-2 rounded-xl border text-sm text-muted-foreground hover:bg-muted/50 transition"
-            >
-              {locale === 'he' ? 'דלג' : 'Пропустить'}
-            </button>
+            {/* Skip */}
+            <div className="px-5 pb-8 pt-2 border-t border-muted">
+              <button
+                onClick={handlePickerSkip}
+                className="w-full py-3 rounded-2xl border border-dashed border-muted-foreground/30 text-sm text-muted-foreground hover:bg-muted/40 transition"
+              >
+                {locale === 'he' ? 'דלג — שלח ללא ביקור ספציפי' : 'Пропустить — отправить без выбора'}
+              </button>
+            </div>
           </div>
         </div>
       , document.body)}

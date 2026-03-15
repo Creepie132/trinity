@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import * as THREE from 'three'
 
 export type KiraWaveState = 'idle' | 'sale' | 'client' | 'thinking' | 'payment' | 'visit' | 'cancel'
 

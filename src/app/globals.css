@@ -277,32 +277,23 @@
 
 /* Loading animations */
 @keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.3s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) both;
 }
 
 .animate-fade-in {
   animation: fade-in 0.6s ease-out;
-}
-
-/* Bottom sheet slide-up animation */
-@keyframes slide-up {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
 }
 
 /* Animated login button - Orbit style (comet trail) */
@@ -605,104 +596,7 @@
   animation: fadeInUp 0.6s ease-out both;
 }
 
-/* ========== NEURAL GRID BACKGROUND ========== */
-/* Технологическая сетка для основного фона */
-body {
-  position: relative;
-  background: 
-    /* Тонкая вертикальная сетка */
-    linear-gradient(90deg, rgba(255, 191, 0, 0.05) 1px, transparent 1px),
-    /* Тонкая горизонтальная сетка */
-    linear-gradient(180deg, rgba(255, 191, 0, 0.05) 1px, transparent 1px),
-    /* Темный базовый фон */
-    hsl(var(--background));
-  background-size: 60px 60px, 60px 60px, 100%;
-  background-position: 0 0, 0 0, 0 0;
-}
-
-/* Анимированные нейронные узлы */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background-image: 
-    /* Светящиеся узлы */
-    radial-gradient(circle at 15% 20%, rgba(255, 191, 0, 0.05) 0px, transparent 120px),
-    radial-gradient(circle at 85% 30%, rgba(255, 107, 53, 0.04) 0px, transparent 100px),
-    radial-gradient(circle at 30% 70%, rgba(255, 191, 0, 0.03) 0px, transparent 90px),
-    radial-gradient(circle at 70% 80%, rgba(255, 107, 53, 0.05) 0px, transparent 110px),
-    radial-gradient(circle at 50% 50%, rgba(255, 191, 0, 0.02) 0px, transparent 150px);
-  animation: neuralPulse 8s ease-in-out infinite;
-}
-
-/* Анимированные связи между узлами */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background: 
-    /* Диагональные линии-связи */
-    repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 250px,
-      rgba(255, 191, 0, 0.015) 250px,
-      rgba(255, 191, 0, 0.015) 251px
-    ),
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 280px,
-      rgba(255, 107, 53, 0.01) 280px,
-      rgba(255, 107, 53, 0.01) 281px
-    );
-  animation: neuralShift 15s linear infinite;
-}
-
-/* Анимация пульсации узлов */
-@keyframes neuralPulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.05);
-  }
-}
-
-/* Анимация движения связей */
-@keyframes neuralShift {
-  0% {
-    background-position: 0 0, 0 0;
-  }
-  100% {
-    background-position: 100px 100px, -100px 100px;
-  }
-}
-
 /* Dark mode removed — light theme only */
-
-/* Убедимся, что контент выше сетки */
-#__next,
-main,
-header,
-footer {
-  position: relative;
-  z-index: 1;
-}
-
-/* Отключение анимаций для пользователей с prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-  body::before,
-  body::after {
-    animation: none !important;
-  }
-}
 
 /* Исправление для клавиатуры в bottom drawer на мобильных */
 @supports (height: 100dvh) {
@@ -736,15 +630,7 @@ footer {
   font-size: 16px !important;
 }
 
-/* Bottom sheet slide-up animation */
-@keyframes slide-up {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-}
+/* animate-slide-up defined in animations section above */
 
 /* Shake animation for invalid form fields */
 @keyframes shake {
@@ -784,19 +670,4 @@ footer {
   animation: golden-border 2.2s ease-in-out infinite;
 }
 
-/* ===== Inventory animations ===== */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-in {
-  animation: fade-in 0.3s cubic-bezier(0.34, 1.2, 0.64, 1) both;
-}
-
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(40px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.animate-slide-up {
-  animation: slide-up 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) both;
-}
+/* animate-fade-in and animate-slide-up defined above */

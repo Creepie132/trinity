@@ -357,7 +357,21 @@ export default function ClientsPage() {
 
       {/* Mobile - ClientCard */}
       <div className="md:hidden space-y-2">
-        {paginatedClients && paginatedClients.length > 0 ? (
+        {/* Skeleton — показывается пока данные грузятся */}
+        {(isLoading || (isFetching && clients.length === 0)) ? (
+          <div className="space-y-2">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 flex items-center gap-3 animate-pulse">
+                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full w-32" />
+                  <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full w-24" />
+                </div>
+                <div className="h-5 bg-gray-100 dark:bg-gray-700 rounded-full w-12" />
+              </div>
+            ))}
+          </div>
+        ) : paginatedClients && paginatedClients.length > 0 ? (
           paginatedClients.map((client) => (
             <ClientCard
               key={client.id}

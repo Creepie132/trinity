@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 
 interface TrinityBottomDrawerProps {
@@ -24,6 +25,13 @@ export function TrinityBottomDrawer({
   const startVal = useRef(0)
   const contentRef = useRef<HTMLDivElement>(null)
   const drawerHeight = useRef(0)
+  const isMounted = useRef(false)
+
+  // Track client-side mount for portal
+  useEffect(() => {
+    isMounted.current = true
+    return () => { isMounted.current = false }
+  }, [])
 
   // Закрываем по Escape
   useEffect(() => {
@@ -33,7 +41,7 @@ export function TrinityBottomDrawer({
     return () => window.removeEventListener('keydown', handler)
   }, [isOpen, onClose])
 
-  // Сброс позиции при открытии
+  // Сброс позиции при открытии + блокировка скролла body
   useEffect(() => {
     if (isOpen) {
       y.set(0)
@@ -57,7 +65,6 @@ export function TrinityBottomDrawer({
     const delta = e.touches[0].clientY - startY.current
     // Разрешаем только вниз (положительный delta)
     const next = Math.max(0, startVal.current + delta)
-    // Резиновый эффект при попытке тянуть вверх
     y.set(next)
   }
 
@@ -81,15 +88,17 @@ export function TrinityBottomDrawer({
     }
   }
 
-  return (
+  // Контент drawer — рендерится через portal в document.body
+  // Это обходит overflow: auto на <main>, который ломает position: fixed на iOS/PWA
+  const drawerContent = (
     <AnimatePresence>
       {isOpen && (
         <>
           {/* Overlay */}
           <motion.div
             key="overlay"
-            className="fixed inset-0 bg-black/40 z-40"
-            style={{ opacity: overlayOpacity }}
+            className="fixed inset-0 bg-black/40"
+            style={{ opacity: overlayOpacity, zIndex: 9998 }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -97,12 +106,12 @@ export function TrinityBottomDrawer({
             onClick={onClose}
           />
 
-          {/* Drawer */}
+          {/* Drawer — portal в body, поэтому fixed работает корректно на iOS/PWA */}
           <motion.div
             key="drawer"
             ref={contentRef}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl flex flex-col outline-none"
-            style={{ y, maxHeight: 'calc(100dvh - 2rem)', touchAction: 'none' }}
+            className="fixed bottom-0 left-0 right-0 bg-background rounded-t-2xl flex flex-col outline-none"
+            style={{ y, maxHeight: 'calc(100dvh - 2rem)', touchAction: 'none', zIndex: 9999 }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -138,4 +147,8 @@ export function TrinityBottomDrawer({
       )}
     </AnimatePresence>
   )
+
+  // Рендерим через portal — только на клиенте
+  if (typeof document === 'undefined') return null
+  return createPortal(drawerContent, document.body)
 }

@@ -88,7 +88,7 @@ export function ClientBottomSheet({
   function getWhatsAppUrl() {
     if (!client.phone) return '#'
     const text = templates?.whatsapp_template
-      ? buildMessage(templates.whatsapp_template, { client_name: clientName })
+      ? buildMessage(templates.whatsapp_template, { client_name: clientName, org_name: templates?.org_name })
       : undefined
     return buildWhatsAppUrl(client.phone, text)
   }

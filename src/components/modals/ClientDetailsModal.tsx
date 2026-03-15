@@ -2,17 +2,24 @@
 
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
-import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart } from 'lucide-react'
+import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useState } from 'react'
 import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 import { useOrgTemplates } from '@/hooks/useOrgTemplates'
-import { buildMessage, buildWhatsAppUrl } from '@/lib/message-utils'
+import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-utils'
 
 export function ClientDetailsModal() {
   const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
   const [showGdprDialog, setShowGdprDialog] = useState(false)
   const { templates } = useOrgTemplates()
+
+  // Picker state
+  const [showPicker, setShowPicker] = useState(false)
+  const [pickerType, setPickerType] = useState<'visit' | 'product' | null>(null)
+  const [pickerItems, setPickerItems] = useState<any[]>([])
+  const [pickerLoading, setPickerLoading] = useState(false)
+  const [pendingVars, setPendingVars] = useState<Record<string, string>>({})
   
   const isOpen = isModalOpen('client-details')
   const data = getModalData('client-details')
@@ -104,13 +111,95 @@ export function ClientDetailsModal() {
     }
   }
 
-  const handleWhatsApp = () => {
-    if (client.phone) {
-      const text = templates?.whatsapp_template
-        ? buildMessage(templates.whatsapp_template, { client_name: clientName })
-        : undefined
-      window.open(buildWhatsAppUrl(client.phone, text), '_blank')
+  const needsVisitRef  = templates?.whatsapp_template?.includes('{visit_ref}')
+  const needsProductRef = templates?.whatsapp_template?.includes('{product_ref}')
+
+  async function openWhatsAppWithVars(vars: Record<string, string>) {
+    if (!client.phone) return
+    const text = templates?.whatsapp_template
+      ? buildMessage(templates.whatsapp_template, {
+          client_name: clientName,
+          org_name: templates.org_name,
+          ...vars,
+        })
+      : undefined
+    window.open(buildWhatsAppUrl(client.phone, text), '_blank')
+  }
+
+  async function handleWhatsApp() {
+    if (!client.phone) return
+    // If template needs visit_ref — show visit picker first
+    if (needsVisitRef) {
+      setPickerLoading(true)
+      setPickerType('visit')
+      setShowPicker(true)
+      setPendingVars({})
+      try {
+        const res = await fetch(`/api/clients/${client.id}/visits`)
+        const items = res.ok ? await res.json() : []
+        setPickerItems(items.slice(0, 10))
+      } catch { setPickerItems([]) }
+      setPickerLoading(false)
+      return
     }
+    // If template needs product_ref — show product picker
+    if (needsProductRef) {
+      setPickerLoading(true)
+      setPickerType('product')
+      setShowPicker(true)
+      setPendingVars({})
+      try {
+        const res = await fetch('/api/products')
+        const data = res.ok ? await res.json() : []
+        setPickerItems((data.products || data).slice(0, 20))
+      } catch { setPickerItems([]) }
+      setPickerLoading(false)
+      return
+    }
+    // No special vars needed
+    openWhatsAppWithVars({})
+  }
+
+  function handlePickerSelect(item: any) {
+    setShowPicker(false)
+    if (pickerType === 'visit') {
+      const visitRef = buildVisitRef({
+        date: item.scheduled_at || item.created_at,
+        service: item.service_type || undefined,
+        locale: locale as 'he' | 'ru',
+      })
+      const vars = { ...pendingVars, visit_ref: visitRef }
+      // If also needs product_ref — chain to product picker
+      if (needsProductRef) {
+        setPendingVars(vars)
+        setPickerLoading(true)
+        setPickerType('product')
+        setShowPicker(true)
+        fetch('/api/products')
+          .then(r => r.ok ? r.json() : [])
+          .then(data => { setPickerItems((data.products || data).slice(0, 20)); setPickerLoading(false) })
+          .catch(() => { setPickerItems([]); setPickerLoading(false) })
+        return
+      }
+      openWhatsAppWithVars(vars)
+    } else if (pickerType === 'product') {
+      openWhatsAppWithVars({ ...pendingVars, product_ref: item.name })
+    }
+  }
+
+  function handlePickerSkip() {
+    setShowPicker(false)
+    if (pickerType === 'visit' && needsProductRef) {
+      setPickerLoading(true)
+      setPickerType('product')
+      setShowPicker(true)
+      fetch('/api/products')
+        .then(r => r.ok ? r.json() : [])
+        .then(data => { setPickerItems((data.products || data).slice(0, 20)); setPickerLoading(false) })
+        .catch(() => { setPickerItems([]); setPickerLoading(false) })
+      return
+    }
+    openWhatsAppWithVars(pendingVars)
   }
 
   const handleSMS = () => {
@@ -292,6 +381,82 @@ export function ClientDetailsModal() {
         clientName={clientName}
         locale={locale as 'he' | 'ru'}
       />
+
+      {/* Visit / Product Picker */}
+      {showPicker && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={() => setShowPicker(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative z-10 bg-background rounded-t-2xl shadow-xl w-full max-w-md p-5 pb-8"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-semibold text-base">
+                {pickerType === 'visit'
+                  ? (locale === 'he' ? 'בחר ביקור' : 'Выберите визит')
+                  : (locale === 'he' ? 'בחר מוצר' : 'Выберите товар')}
+              </p>
+              <button onClick={() => setShowPicker(false)} className="p-1 rounded-lg hover:bg-muted">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Items */}
+            {pickerLoading ? (
+              <p className="text-center py-6 text-sm text-muted-foreground">
+                {locale === 'he' ? 'טוען...' : 'Загрузка...'}
+              </p>
+            ) : pickerItems.length === 0 ? (
+              <p className="text-center py-6 text-sm text-muted-foreground">
+                {locale === 'he' ? 'אין פריטים' : 'Нет элементов'}
+              </p>
+            ) : (
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {pickerItems.map((item: any) => (
+                  <button
+                    key={item.id}
+                    onClick={() => handlePickerSelect(item)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-muted/60 transition text-start"
+                  >
+                    <div>
+                      {pickerType === 'visit' ? (
+                        <>
+                          <p className="text-sm font-medium">
+                            {item.service_type || (locale === 'he' ? 'ביקור' : 'Визит')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(item.scheduled_at || item.created_at).toLocaleDateString(
+                              locale === 'he' ? 'he-IL' : 'ru-RU'
+                            )}
+                            {item.scheduled_at && (
+                              <> · {new Date(item.scheduled_at).toLocaleTimeString(
+                                locale === 'he' ? 'he-IL' : 'ru-RU',
+                                { hour: '2-digit', minute: '2-digit' }
+                              )}</>
+                            )}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-sm font-medium">{item.name}</p>
+                      )}
+                    </div>
+                    <ChevronRight size={16} className="text-muted-foreground" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Skip button */}
+            <button
+              onClick={handlePickerSkip}
+              className="mt-3 w-full py-2 rounded-xl border text-sm text-muted-foreground hover:bg-muted/50 transition"
+            >
+              {locale === 'he' ? 'דלג' : 'Пропустить'}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }

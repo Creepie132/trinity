@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const supabase = createSupabaseServiceClient()
     const { data, error } = await supabase
       .from('organizations')
-      .select('whatsapp_template, sms_template')
+      .select('whatsapp_template, sms_template, name')
       .eq('id', orgId)
       .single()
 
@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       whatsapp_template: data?.whatsapp_template ?? '',
       sms_template: data?.sms_template ?? '',
+      org_name: data?.name ?? '',
     })
   } catch (error: any) {
     console.error('[org-templates GET]', error)

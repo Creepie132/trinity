@@ -347,7 +347,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
                 <button
                   onClick={() => {
                     const text = templates?.whatsapp_template
-                      ? buildMessage(templates.whatsapp_template, { client_name: getClientName(client) })
+                      ? buildMessage(templates.whatsapp_template, { client_name: getClientName(client), org_name: templates.org_name })
                       : undefined
                     window.open(buildWhatsAppUrl(client.phone, text), '_blank')
                   }}

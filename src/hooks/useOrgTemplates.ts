@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 export interface OrgTemplates {
   whatsapp_template: string
   sms_template: string
+  org_name: string
 }
 
 const EMPTY_TEMPLATES: OrgTemplates = {
   whatsapp_template: '',
   sms_template: '',
+  org_name: '',
 }
 
 export function useOrgTemplates() {

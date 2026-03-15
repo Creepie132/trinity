@@ -6,6 +6,8 @@ import { TrinityButton } from '@/components/ui/TrinityButton'
 import { getClientName } from '@/lib/client-utils'
 import { useVisitServices } from '@/hooks/useVisitServices'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useOrgTemplates } from '@/hooks/useOrgTemplates'
+import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-utils'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 interface VisitDesktopPanelProps {
@@ -33,6 +35,7 @@ export function VisitDesktopPanel({
   const locale = propLocale || language
   const [activeTab, setActiveTab] = useState<'services' | 'notes'>('services')
   const [servicesWithNames, setServicesWithNames] = useState<any[]>([])
+  const { templates } = useOrgTemplates()
   const supabase = createSupabaseBrowserClient()
 
   // Fetch visit services
@@ -245,7 +248,23 @@ export function VisitDesktopPanel({
               </button>
               <button
                 onClick={() =>
-                  window.open(`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`, '_blank')
+                  (() => {
+                    const serviceNames = servicesWithNames.map((s: any) =>
+                      locale === 'he' ? (s.service_name || s.name) : (s.service_name_ru || s.service_name || s.name)
+                    ).filter(Boolean).join(', ')
+                    const visitRef = buildVisitRef({
+                      date: visit?.scheduled_at,
+                      service: serviceNames || undefined,
+                      locale,
+                    })
+                    const text = templates?.whatsapp_template
+                      ? buildMessage(templates.whatsapp_template, {
+                          client_name: clientName,
+                          visit_ref: visitRef || undefined,
+                        })
+                      : undefined
+                    window.open(buildWhatsAppUrl(client.phone, text), '_blank')
+                  })()
                 }
                 className="w-10 h-10 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 flex items-center justify-center transition"
               >

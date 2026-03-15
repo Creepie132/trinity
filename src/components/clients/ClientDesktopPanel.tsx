@@ -5,6 +5,9 @@ import { X, Phone, MessageCircle, Mail, Pencil, Calendar, CreditCard, MessageSqu
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrgTemplates } from '@/hooks/useOrgTemplates'
+import { buildMessage, buildWhatsAppUrl } from '@/lib/message-utils'
+import { getClientName } from '@/lib/client-utils'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { toast } from 'sonner'
 
@@ -24,6 +27,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
   const [loading, setLoading] = useState(false)
   const features = useFeatures()
   const { orgId } = useAuth()
+  const { templates } = useOrgTemplates()
   const supabase = createSupabaseBrowserClient()
 
   // Recurring state
@@ -341,7 +345,12 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
                   <Phone size={18} />
                 </button>
                 <button
-                  onClick={() => window.open(`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`, '_blank')}
+                  onClick={() => {
+                    const text = templates?.whatsapp_template
+                      ? buildMessage(templates.whatsapp_template, { client_name: getClientName(client) })
+                      : undefined
+                    window.open(buildWhatsAppUrl(client.phone, text), '_blank')
+                  }}
                   className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 flex items-center justify-center transition"
                 >
                   <MessageCircle size={18} />

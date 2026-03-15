@@ -2,6 +2,8 @@
 
 import { Phone, MessageCircle, Clock, MapPin, X, Plus } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
+import { useOrgTemplates } from '@/hooks/useOrgTemplates'
+import { buildMessage, buildWhatsAppUrl } from '@/lib/message-utils'
 
 interface MeetingDetailCardProps {
   visit: any
@@ -29,6 +31,7 @@ export function MeetingDetailCard({
   if (!visit) return null
 
   const l = locale === 'he'
+  const { templates } = useOrgTemplates()
   const date = new Date(visit.scheduled_at)
 
   return (
@@ -123,15 +126,18 @@ export function MeetingDetailCard({
               <Phone size={16} />
               {l ? 'התקשר' : 'Позвонить'}
             </a>
-            <a
-              href={`https://wa.me/${visit.clients.phone.replace(/[^0-9]/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => {
+                const text = templates?.whatsapp_template
+                  ? buildMessage(templates.whatsapp_template, { client_name: clientName })
+                  : undefined
+                window.open(buildWhatsAppUrl(visit.clients.phone, text), '_blank')
+              }}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-emerald-600 text-white text-sm font-medium"
             >
               <MessageCircle size={16} />
               WhatsApp
-            </a>
+            </button>
           </div>
         )}
 

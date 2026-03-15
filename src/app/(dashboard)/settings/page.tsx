@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useBranches } from '@/hooks/useBranches'
-import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, CreditCard } from 'lucide-react'
+import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, CreditCard, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -31,10 +31,13 @@ export default function SettingsPage() {
       title: t('settings.booking'),
       description: t('settings.booking.desc'),
     },
-    // { id: 'notifications', href: '/settings/notifications', icon: Bell, title: 'Telegram Notifications / התראות Telegram', description: 'Receive instant notifications about bookings and payments' },
-    // { id: 'loyalty', href: '/settings/loyalty', icon: Star, title: 'Loyalty Program / תוכנית נאמנות', description: 'Manage customer loyalty points and rewards' },
-    // { id: 'templates', href: '/settings/templates', icon: MessageSquare, title: 'Message Templates / תבניות הודעות', description: 'Manage SMS message templates / נהל תבניות הודעות SMS' },
-    // { id: 'birthday-templates', href: '/settings/birthday-templates', icon: Cake, title: t('birthdays.templatesTitle'), description: t('birthdays.templatesSubtitle') },
+    {
+      id: 'message-templates',
+      href: '/settings/message-templates',
+      icon: MessageSquare,
+      title: language === 'he' ? 'תבניות הודעות' : 'Шаблоны сообщений',
+      description: language === 'he' ? 'הגדר הודעות ברירת מחדל ל-SMS ו-WhatsApp' : 'Шаблоны по умолчанию для SMS и WhatsApp',
+    },
     {
       id: 'services',
       href: '/settings/services',
@@ -79,23 +82,20 @@ export default function SettingsPage() {
       title: language === 'he' ? 'הגדרות תשלום' : 'Настройки платежей',
       description: language === 'he' ? 'חיבור Tranzila — טרמינל ואישורים' : 'Подключение Tranzila — терминал и учётные данные',
     },
-    // { id: 'service-colors', href: '/settings/service-colors', icon: Palette, title: t('settings.serviceColors'), description: t('settings.serviceColors.desc') },
   ]
 
   // Filter settings based on permissions AND module access
   const filteredCategories = settingsCategories.filter((category) => {
-    // Check module access first (if module is disabled, hide the setting)
     if (category.id === 'booking' && features.hasBooking === false) return false
     if (category.id === 'branches' && !features.hasBranches) return false
     if (category.id === 'payments' && !features.hasPayments) return false
-    
-    // Owner-only settings (check permissions)
+
     if (category.id === 'services' && !permissions.canManageServices) return false
     if (category.id === 'care-instructions' && !permissions.canManageCareInstructions) return false
     if (category.id === 'booking' && !permissions.canManageBookingSettings) return false
     if (category.id === 'users' && !permissions.canManageUsers) return false
     if (category.id === 'permissions' && !permissions.canManageUsers) return false
-    
+
     return true
   })
 
@@ -138,8 +138,6 @@ export default function SettingsPage() {
           </Link>
         ))}
       </div>
-
-      {/* Advanced Settings Placeholder - REMOVED */}
     </div>
   )
 }

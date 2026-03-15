@@ -8,6 +8,8 @@ import { User, Calendar, Phone, MessageCircle, MapPin, Mail, CheckCircle, Clock,
 import { format, parseISO } from 'date-fns'
 import { getClientName } from '@/lib/client-utils'
 import { he, ru } from 'date-fns/locale'
+import { useOrgTemplates } from '@/hooks/useOrgTemplates'
+import { buildMessage, buildWhatsAppUrl } from '@/lib/message-utils'
 
 interface Task {
   id: string
@@ -54,6 +56,7 @@ export function TaskDetailSheet({
   const router = useRouter()
   const dateLocale = locale === 'he' ? he : ru
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const { templates } = useOrgTemplates()
 
   if (!task) return null
 
@@ -149,8 +152,11 @@ export function TaskDetailSheet({
   }
 
   function handleWhatsApp(phone: string) {
-    const cleanPhone = phone.replace(/[^0-9]/g, '')
-    window.open(`https://wa.me/${cleanPhone}`, '_blank')
+    const clientName = task?.client ? getClientName(task.client) : undefined
+    const text = templates?.whatsapp_template
+      ? buildMessage(templates.whatsapp_template, { client_name: clientName })
+      : undefined
+    window.open(buildWhatsAppUrl(phone, text), '_blank')
   }
 
   function handleSMS(phone: string) {

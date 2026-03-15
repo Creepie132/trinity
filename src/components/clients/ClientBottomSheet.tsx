@@ -8,6 +8,8 @@ import { EditClientSheet } from './EditClientSheet'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrgTemplates } from '@/hooks/useOrgTemplates'
+import { buildMessage, buildWhatsAppUrl } from '@/lib/message-utils'
 import { toast } from 'sonner'
 
 type Tab = 'main' | 'visits' | 'payments' | 'sms' | 'gdpr' | 'recurring'
@@ -55,6 +57,7 @@ export function ClientBottomSheet({
   // Recurring state
   const { orgId } = useAuth()
   const supabase = createSupabaseBrowserClient()
+  const { templates } = useOrgTemplates()
   const [subscription, setSubscription] = useState<any>(null)
   const [recurringPlans, setRecurringPlans] = useState<any[]>([])
   const [charges, setCharges] = useState<any[]>([])
@@ -80,6 +83,15 @@ export function ClientBottomSheet({
 
   // RTL-aware back arrow
   const BackIcon = locale === 'he' ? ArrowRight : ArrowLeft
+
+  // Build WhatsApp URL with template
+  function getWhatsAppUrl() {
+    if (!client.phone) return '#'
+    const text = templates?.whatsapp_template
+      ? buildMessage(templates.whatsapp_template, { client_name: clientName })
+      : undefined
+    return buildWhatsAppUrl(client.phone, text)
+  }
 
   // Загрузка визитов
   async function loadVisits() {
@@ -216,21 +228,16 @@ export function ClientBottomSheet({
     }
   }
 
-  // Сброс при закрытии
   function handleClose() {
     setActiveTab('main')
     setConfirmDelete(false)
     onClose()
   }
 
-  // Кнопка назад
   function BackButton() {
     return (
       <button
-        onClick={() => {
-          setActiveTab('main')
-          setConfirmDelete(false)
-        }}
+        onClick={() => { setActiveTab('main'); setConfirmDelete(false) }}
         className="flex items-center gap-1 text-sm text-primary mb-4"
       >
         <BackIcon size={16} />
@@ -247,9 +254,7 @@ export function ClientBottomSheet({
         <>
           {/* Аватар + контакты */}
           <div className="flex flex-col items-center mb-5">
-            <div
-              className={`${avatarColor} w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl mb-2`}
-            >
+            <div className={`${avatarColor} w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl mb-2`}>
               {initials}
             </div>
             <h3 className="text-xl font-bold">{clientName}</h3>
@@ -269,7 +274,7 @@ export function ClientBottomSheet({
             )}
             {client.phone && (
               <a
-                href={`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`}
+                href={getWhatsAppUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center w-12 h-12 rounded-full bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
@@ -294,10 +299,7 @@ export function ClientBottomSheet({
             <div className="text-center">
               <p className="text-lg font-bold">
                 {client.last_visit
-                  ? new Date(client.last_visit).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU', {
-                      day: 'numeric',
-                      month: 'short',
-                    })
+                  ? new Date(client.last_visit).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })
                   : '—'}
               </p>
               <p className="text-xs text-muted-foreground">{locale === 'he' ? 'ביקור אחרון' : 'Последний'}</p>
@@ -306,60 +308,41 @@ export function ClientBottomSheet({
 
           {/* Навигация 2x2 */}
           <div className="grid grid-cols-2 gap-2 mb-4">
-            {/* Визиты */}
-            <button
-              onClick={loadVisits}
-              disabled={isDemo || enabledModules?.visits === false}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-muted/50 transition disabled:opacity-40 disabled:cursor-not-allowed"
-            >
+            <button onClick={loadVisits} disabled={isDemo || enabledModules?.visits === false}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-muted/50 transition disabled:opacity-40 disabled:cursor-not-allowed">
               <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
                 <Calendar size={20} className="text-amber-600 dark:text-amber-400" />
               </div>
               <span className="text-xs font-medium">{locale === 'he' ? 'ביקורים' : 'Визиты'}</span>
             </button>
 
-            {/* Платежи */}
-            <button
-              onClick={loadPayments}
-              disabled={isDemo || enabledModules?.payments === false}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-muted/50 transition disabled:opacity-40 disabled:cursor-not-allowed"
-            >
+            <button onClick={loadPayments} disabled={isDemo || enabledModules?.payments === false}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-muted/50 transition disabled:opacity-40 disabled:cursor-not-allowed">
               <div className="w-10 h-10 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
                 <DollarSign size={20} className="text-green-600 dark:text-green-400" />
               </div>
               <span className="text-xs font-medium">{locale === 'he' ? 'תשלומים' : 'Платежи'}</span>
             </button>
 
-            {/* SMS */}
-            <button
-              onClick={() => setActiveTab('sms')}
-              disabled={isDemo || enabledModules?.sms === false}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-muted/50 transition disabled:opacity-40 disabled:cursor-not-allowed"
-            >
+            <button onClick={() => setActiveTab('sms')} disabled={isDemo || enabledModules?.sms === false}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-muted/50 transition disabled:opacity-40 disabled:cursor-not-allowed">
               <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
                 <MessageSquare size={20} className="text-blue-600 dark:text-blue-400" />
               </div>
               <span className="text-xs font-medium">SMS</span>
             </button>
 
-            {/* GDPR / Удаление */}
-            <button
-              onClick={() => setActiveTab('gdpr')}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-muted/50 transition"
-            >
+            <button onClick={() => setActiveTab('gdpr')}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-muted/50 transition">
               <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
                 <Trash2 size={20} className="text-red-600 dark:text-red-400" />
               </div>
               <span className="text-xs font-medium">GDPR</span>
             </button>
 
-            {/* Рекуррентные платежи */}
             {enabledModules?.recurring && (
-              <button
-                onClick={loadRecurring}
-                disabled={isDemo}
-                className="col-span-2 flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-muted/50 transition disabled:opacity-40 disabled:cursor-not-allowed"
-              >
+              <button onClick={loadRecurring} disabled={isDemo}
+                className="col-span-2 flex flex-col items-center gap-2 p-4 rounded-xl bg-card border hover:bg-muted/50 transition disabled:opacity-40 disabled:cursor-not-allowed">
                 <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
                   <RefreshCw size={20} className="text-indigo-600 dark:text-indigo-400" />
                 </div>
@@ -368,7 +351,6 @@ export function ClientBottomSheet({
             )}
           </div>
 
-          {/* Заметки */}
           {client.notes && (
             <div className="bg-muted/30 rounded-xl p-3">
               <p className="text-xs text-muted-foreground mb-1">{locale === 'he' ? 'הערות' : 'Заметки'}</p>
@@ -384,13 +366,9 @@ export function ClientBottomSheet({
           <BackButton />
           <h4 className="font-semibold mb-3">{locale === 'he' ? 'היסטוריית ביקורים' : 'История визитов'}</h4>
           {loadingVisits ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              {locale === 'he' ? 'טוען...' : 'Загрузка...'}
-            </div>
+            <div className="text-center py-8 text-muted-foreground text-sm">{locale === 'he' ? 'טוען...' : 'Загрузка...'}</div>
           ) : visits.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              {locale === 'he' ? 'אין ביקורים' : 'Визитов нет'}
-            </div>
+            <div className="text-center py-8 text-muted-foreground text-sm">{locale === 'he' ? 'אין ביקורים' : 'Визитов нет'}</div>
           ) : (
             <div className="space-y-2">
               {visits.map((v: any) => (
@@ -398,9 +376,7 @@ export function ClientBottomSheet({
                   <div>
                     <p className="text-sm font-medium">{v.service_type || (locale === 'he' ? 'ביקור' : 'Визит')}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(v.scheduled_at || v.created_at).toLocaleDateString(
-                        locale === 'he' ? 'he-IL' : 'ru-RU'
-                      )}
+                      {new Date(v.scheduled_at || v.created_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU')}
                     </p>
                   </div>
                   <div className="text-end">
@@ -420,22 +396,16 @@ export function ClientBottomSheet({
           <BackButton />
           <h4 className="font-semibold mb-3">{locale === 'he' ? 'היסטוריית תשלומים' : 'История платежей'}</h4>
           {loadingPayments ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              {locale === 'he' ? 'טוען...' : 'Загрузка...'}
-            </div>
+            <div className="text-center py-8 text-muted-foreground text-sm">{locale === 'he' ? 'טוען...' : 'Загрузка...'}</div>
           ) : payments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              {locale === 'he' ? 'אין תשלומים' : 'Платежей нет'}
-            </div>
+            <div className="text-center py-8 text-muted-foreground text-sm">{locale === 'he' ? 'אין תשלומים' : 'Платежей нет'}</div>
           ) : (
             <div className="space-y-2">
               {payments.map((p: any) => (
                 <div key={p.id} className="flex items-center justify-between py-2.5 border-b border-muted">
                   <div>
                     <p className="text-sm font-medium">{p.description || (locale === 'he' ? 'תשלום' : 'Платёж')}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(p.created_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU')}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU')}</p>
                   </div>
                   <div className="text-end">
                     <p className="text-sm font-bold">₪{p.amount}</p>
@@ -453,9 +423,7 @@ export function ClientBottomSheet({
         <>
           <BackButton />
           <h4 className="font-semibold mb-3">SMS</h4>
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            {locale === 'he' ? 'בקרוב...' : 'Скоро...'}
-          </div>
+          <div className="text-center py-8 text-muted-foreground text-sm">{locale === 'he' ? 'בקרוב...' : 'Скоро...'}</div>
         </>
       )}
 
@@ -495,28 +463,18 @@ export function ClientBottomSheet({
                   {subscription.status === 'active' ? (locale === 'he' ? 'פעיל' : 'Активен') : (locale === 'he' ? 'מושהה' : 'Пауза')}
                 </span>
                 <div className="flex gap-2 flex-wrap pt-1">
-                  <button
-                    onClick={handleChargeNow}
-                    disabled={charging || subscription.status !== 'active'}
-                    className="flex-1 py-2 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-50"
-                  >
+                  <button onClick={handleChargeNow} disabled={charging || subscription.status !== 'active'}
+                    className="flex-1 py-2 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition disabled:opacity-50">
                     {charging ? '...' : (locale === 'he' ? 'חייב עכשיו' : 'Списать')}
                   </button>
-                  <button
-                    onClick={handleToggleStatus}
-                    className="flex-1 py-2 rounded-lg border text-xs font-medium hover:bg-muted transition"
-                  >
+                  <button onClick={handleToggleStatus} className="flex-1 py-2 rounded-lg border text-xs font-medium hover:bg-muted transition">
                     {subscription.status === 'active' ? (locale === 'he' ? 'השהה' : 'Пауза') : (locale === 'he' ? 'חדש' : 'Возобновить')}
                   </button>
-                  <button
-                    onClick={handleCancelSubscription}
-                    className="flex-1 py-2 rounded-lg border border-red-200 text-red-500 text-xs font-medium hover:bg-red-50 transition"
-                  >
+                  <button onClick={handleCancelSubscription} className="flex-1 py-2 rounded-lg border border-red-200 text-red-500 text-xs font-medium hover:bg-red-50 transition">
                     {locale === 'he' ? 'בטל' : 'Отменить'}
                   </button>
                 </div>
               </div>
-
               {charges.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground mb-2">{locale === 'he' ? 'היסטוריית חיובים' : 'История списаний'}</p>
@@ -536,18 +494,13 @@ export function ClientBottomSheet({
             </div>
           )}
 
-          {/* Subscribe Modal */}
           {showSubscribeModal && (
             <div className="fixed inset-0 z-[60] flex items-end justify-center" onClick={() => setShowSubscribeModal(false)}>
               <div className="absolute inset-0 bg-black/40" />
               <div className="relative z-10 bg-background rounded-t-2xl shadow-xl p-6 w-full" onClick={e => e.stopPropagation()}>
                 <h3 className="text-base font-bold mb-4">{locale === 'he' ? 'הוסף מנוי' : 'Оформить подписку'}</h3>
                 <div className="space-y-3">
-                  <select
-                    value={selectedPlanId}
-                    onChange={e => setSelectedPlanId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border bg-background text-sm"
-                  >
+                  <select value={selectedPlanId} onChange={e => setSelectedPlanId(e.target.value)} className="w-full px-3 py-2 rounded-xl border bg-background text-sm">
                     <option value="">{locale === 'he' ? 'בחר תוכנית...' : 'Выберите план...'}</option>
                     {recurringPlans.map(p => (
                       <option key={p.id} value={p.id}>
@@ -557,12 +510,7 @@ export function ClientBottomSheet({
                   </select>
                   <div>
                     <label className="text-xs text-muted-foreground mb-1 block">{locale === 'he' ? 'תאריך חיוב ראשון' : 'Дата первого списания'}</label>
-                    <input
-                      type="date"
-                      value={firstBillingDate}
-                      onChange={e => setFirstBillingDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border bg-background text-sm"
-                    />
+                    <input type="date" value={firstBillingDate} onChange={e => setFirstBillingDate(e.target.value)} className="w-full px-3 py-2 rounded-xl border bg-background text-sm" />
                   </div>
                   {!(client as any).card_token && (
                     <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-xs text-amber-700 dark:text-amber-300">
@@ -588,13 +536,9 @@ export function ClientBottomSheet({
       {activeTab === 'gdpr' && (
         <>
           <BackButton />
-          <h4 className="font-semibold mb-3">
-            {locale === 'he' ? 'מחיקת נתוני לקוח' : 'Удаление данных клиента'}
-          </h4>
+          <h4 className="font-semibold mb-3">{locale === 'he' ? 'מחיקת נתוני לקוח' : 'Удаление данных клиента'}</h4>
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-4">
-            <p className="text-sm text-red-700 dark:text-red-400 mb-2 font-medium">
-              {locale === 'he' ? '⚠️ פעולה זו בלתי הפיכה!' : '⚠️ Это действие необратимо!'}
-            </p>
+            <p className="text-sm text-red-700 dark:text-red-400 mb-2 font-medium">{locale === 'he' ? '⚠️ פעולה זו בלתי הפיכה!' : '⚠️ Это действие необратимо!'}</p>
             <p className="text-xs text-red-600/80 dark:text-red-400/80">
               {locale === 'he'
                 ? 'מחיקת הלקוח תסיר את כל הנתונים שלו לצמיתות: פרטים אישיים, היסטוריית ביקורים, תשלומים והערות. לא ניתן לשחזר נתונים אלה.'
@@ -602,10 +546,7 @@ export function ClientBottomSheet({
             </p>
           </div>
           {!confirmDelete ? (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="w-full py-3 rounded-xl border-2 border-red-500 text-red-600 dark:text-red-400 font-medium text-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition"
-            >
+            <button onClick={() => setConfirmDelete(true)} className="w-full py-3 rounded-xl border-2 border-red-500 text-red-600 dark:text-red-400 font-medium text-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition">
               {locale === 'he' ? 'מחק לקוח (GDPR)' : 'Удалить клиента (GDPR)'}
             </button>
           ) : (
@@ -613,19 +554,10 @@ export function ClientBottomSheet({
               <p className="text-center text-sm font-medium text-red-600 dark:text-red-400">
                 {locale === 'he' ? 'בטוח? לחץ שוב לאישור סופי' : 'Уверены? Нажмите ещё раз для подтверждения'}
               </p>
-              <button
-                onClick={() => {
-                  onDelete?.(client.id)
-                  handleClose()
-                }}
-                className="w-full py-3 rounded-xl bg-red-600 text-white font-medium text-sm hover:bg-red-700 transition"
-              >
+              <button onClick={() => { onDelete?.(client.id); handleClose() }} className="w-full py-3 rounded-xl bg-red-600 text-white font-medium text-sm hover:bg-red-700 transition">
                 {locale === 'he' ? '🗑️ כן, מחק לצמיתות' : '🗑️ Да, удалить навсегда'}
               </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="w-full py-3 rounded-xl bg-muted text-foreground font-medium text-sm"
-              >
+              <button onClick={() => setConfirmDelete(false)} className="w-full py-3 rounded-xl bg-muted text-foreground font-medium text-sm">
                 {locale === 'he' ? 'ביטול' : 'Отмена'}
               </button>
             </div>
@@ -634,15 +566,11 @@ export function ClientBottomSheet({
       )}
     </TrinityBottomDrawer>
 
-    {/* Форма редактирования */}
     <EditClientSheet
       client={client}
       isOpen={editOpen}
       onClose={() => setEditOpen(false)}
-      onSaved={(updated) => {
-        // Обновить данные клиента в родителе через onClose
-        onClose()
-      }}
+      onSaved={() => { onClose() }}
       locale={locale}
     />
   </>

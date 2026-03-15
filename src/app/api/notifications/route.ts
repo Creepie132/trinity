@@ -47,7 +47,6 @@ export async function PUT(request: NextRequest) {
   const { ids, all } = body
 
   if (all) {
-    // Пометить все уведомления как прочитанные
     const { error } = await supabase
       .from('notifications')
       .update({ is_read: true })
@@ -66,7 +65,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid ids array' }, { status: 400 })
   }
 
-  // Пометить конкретные уведомления как прочитанные
   const { error } = await supabase
     .from('notifications')
     .update({ is_read: true })
@@ -75,6 +73,37 @@ export async function PUT(request: NextRequest) {
 
   if (error) {
     console.error('Mark notifications read error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}
+
+// DELETE /api/notifications - удалить уведомление по id
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  if (!id) {
+    return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  }
+
+  // user_id фильтр — никто не может удалить чужое уведомление
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('Delete notification error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 

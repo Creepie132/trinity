@@ -5,6 +5,7 @@ import Modal from '@/components/ui/Modal'
 import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 import { useOrgTemplates } from '@/hooks/useOrgTemplates'
 import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-utils'
@@ -382,9 +383,9 @@ export function ClientDetailsModal() {
         locale={locale as 'he' | 'ru'}
       />
 
-      {/* Visit / Product Picker */}
-      {showPicker && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center" onClick={() => setShowPicker(false)}>
+      {/* Visit / Product Picker — rendered via portal to escape Modal stacking context */}
+      {showPicker && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-end justify-center" onClick={() => setShowPicker(false)}>
           <div className="absolute inset-0 bg-black/40" />
           <div
             className="relative z-10 bg-background rounded-t-2xl shadow-xl w-full max-w-md p-5 pb-8"
@@ -423,18 +424,22 @@ export function ClientDetailsModal() {
                       {pickerType === 'visit' ? (
                         <>
                           <p className="text-sm font-medium">
-                            {item.service_type || (locale === 'he' ? 'ביקור' : 'Визит')}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
                             {new Date(item.scheduled_at || item.created_at).toLocaleDateString(
-                              locale === 'he' ? 'he-IL' : 'ru-RU'
+                              locale === 'he' ? 'he-IL' : 'ru-RU',
+                              { day: '2-digit', month: '2-digit', year: 'numeric' }
                             )}
                             {item.scheduled_at && (
-                              <> · {new Date(item.scheduled_at).toLocaleTimeString(
-                                locale === 'he' ? 'he-IL' : 'ru-RU',
-                                { hour: '2-digit', minute: '2-digit' }
-                              )}</>
+                              <span className="text-muted-foreground font-normal">
+                                {' · '}{new Date(item.scheduled_at).toLocaleTimeString(
+                                  locale === 'he' ? 'he-IL' : 'ru-RU',
+                                  { hour: '2-digit', minute: '2-digit' }
+                                )}
+                              </span>
                             )}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {[item.service_type, item.price ? `₪${item.price}` : null, item.status]
+                              .filter(Boolean).join(' · ')}
                           </p>
                         </>
                       ) : (
@@ -456,7 +461,7 @@ export function ClientDetailsModal() {
             </button>
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   )
 }

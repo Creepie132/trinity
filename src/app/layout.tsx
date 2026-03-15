@@ -4,10 +4,7 @@ import "./globals.css";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster } from "@/components/ui/sonner";
-import ConditionalChatWidget from "@/components/ConditionalChatWidget";
-import { ModalManager } from "@/components/modals/ModalManager";
-import { PWAInstallBanner } from "@/components/PWAInstallBanner";
-import { ForceLightMode } from "@/components/ForceLightMode";
+import { ClientProviders } from "@/components/providers/ClientProviders";
 
 const inter = Inter({ 
   subsets: ["latin", "cyrillic"], 
@@ -38,6 +35,9 @@ export default function RootLayout({
     <html lang="he" dir="rtl" className="light">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        {/* Preconnect to Supabase — reduces TTFB for first API call */}
+        <link rel="preconnect" href="https://tjryzcqvsavtllahjyrj.supabase.co" />
+        <link rel="dns-prefetch" href="https://tjryzcqvsavtllahjyrj.supabase.co" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
         <meta name="theme-color" content="#6366f1" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -67,10 +67,7 @@ export default function RootLayout({
                 }
               }}
             />
-            <ConditionalChatWidget />
-            <ModalManager />
-            <PWAInstallBanner />
-            <ForceLightMode />
+            <ClientProviders />
           </LanguageProvider>
         </QueryProvider>
       </body>

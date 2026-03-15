@@ -9,10 +9,12 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000, // 1 minute
+            staleTime: 2 * 60 * 1000,   // 2 min — данные свежие, не рефетчим без нужды
+            gcTime: 10 * 60 * 1000,      // 10 min — кеш живёт в памяти (было 5min default)
             refetchOnWindowFocus: false,
-            retry: false, // Don't retry failed queries
-            throwOnError: false, // Don't throw errors to error boundary
+            refetchOnReconnect: false,   // не рефетчить при восстановлении соединения
+            retry: false,
+            throwOnError: false,
           },
           mutations: {
             retry: false,

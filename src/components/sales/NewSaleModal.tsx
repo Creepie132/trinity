@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { X, Plus, Trash2, Search, ShoppingCart, Wrench, Package, ChevronLeft } from 'lucide-react'
+import { SaleCareInstructions } from '@/components/care-instructions/SaleCareInstructions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -520,6 +521,12 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
                   focus:outline-none focus:ring-2 focus:ring-amber-400/40 placeholder:text-gray-400"
                 placeholder={locale === 'he' ? 'הערות נוספות...' : 'Дополнительные примечания...'} />
             </div>
+
+            {/* ── Care Instructions ── */}
+            <SaleCareInstructions
+              clientName={clientLabel || undefined}
+              clientPhone={clientResults.find(c => `${c.first_name} ${c.last_name}`.trim() === clientLabel)?.phone}
+            />
           </div>
 
           {/* ── Footer ── */}

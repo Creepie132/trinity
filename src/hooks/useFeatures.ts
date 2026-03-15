@@ -109,7 +109,7 @@ export function useFeatures(): Features {
       hasStatistics: modules.analytics ?? false,
       hasReports:    modules.analytics ?? false,
       hasLoyalty:    false,
-      paymentsEnabled:  organization.payments_enabled ?? true,
+      paymentsEnabled:  modules.payments ?? organization.payments_enabled ?? true,
       recurringEnabled: organization.recurring_enabled === true,
       isActive,
       category: organization.category ?? 'other',

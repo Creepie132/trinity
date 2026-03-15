@@ -1,66 +1,56 @@
-'use client'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { getActiveOrgId } from '@/lib/get-active-org'
+import { DashboardShell } from './DashboardShell'
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from '@tanstack/react-query'
 
-import { useState, useEffect } from 'react'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { MobileHeader } from '@/components/layout/MobileHeader'
-import { AuthProvider } from '@/contexts/AuthContext'
-import { BranchProvider } from '@/contexts/BranchContext'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { GlobalSearch } from '@/components/GlobalSearch'
-import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner'
-import { PinnedModalsTray } from '@/components/ui/PinnedModalsTray'
-import { RightPanel } from '@/components/layout/RightPanel'
-
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const [searchOpen, setSearchOpen] = useState(false)
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setSearchOpen(true)
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  // org_id из JWT, fallback на таблицу
+  let orgId = user.app_metadata?.org_id as string | undefined
+  if (!orgId) {
+    const { data: orgUser } = await supabase
+      .from('org_users').select('org_id').eq('user_id', user.id).single()
+    orgId = orgUser?.org_id
+  }
+  if (!orgId) redirect('/unauthorized')
+
+  // Активный филиал из БД
+  const activeOrgId = await getActiveOrgId(user.id, orgId)
+
+  // Prefetch организации — сайдбар получит данные без ожидания
+  const service = createSupabaseServiceClient()
+  const [{ data: organization }] = await Promise.all([
+    service.from('organizations').select('*').eq('id', activeOrgId).single(),
+  ])
+
+  // isAdmin из JWT — без DB roundtrip
+  const isAdmin = user.app_metadata?.is_admin === true
+
+  // Кладём в React Query cache — useOrganization() и useIsAdmin() найдут данные сразу
+  const queryClient = new QueryClient()
+  if (organization) {
+    queryClient.setQueryData(['organization', activeOrgId], organization)
+  }
+  queryClient.setQueryData(['is-admin'], isAdmin)
 
   return (
-    <AuthProvider>
-      <BranchProvider>
-        <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-900 flex flex-col">
-          <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
-
-          <div className="flex-1 lg:flex lg:h-screen overflow-hidden">
-
-            {/* Сайдбар — зафиксирован слева */}
-            <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
-              <Sidebar onSearchOpen={() => setSearchOpen(true)} />
-            </aside>
-
-            {/* Контент — прижат к сайдбару, скроллится */}
-            <main className="flex-1 overflow-y-auto lg:h-screen">
-              <div className="p-4 lg:p-6">
-                <ErrorBoundary>
-                  {children}
-                </ErrorBoundary>
-              </div>
-            </main>
-
-            {/* Правая панель — реклама, Кира, объявления */}
-            <RightPanel />
-
-          </div>
-        </div>
-
-        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-        <ImpersonationBanner />
-        <PinnedModalsTray />
-      </BranchProvider>
-    </AuthProvider>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <DashboardShell>
+        {children}
+      </DashboardShell>
+    </HydrationBoundary>
   )
 }

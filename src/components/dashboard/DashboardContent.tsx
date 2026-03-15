@@ -166,7 +166,12 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   const { openModal } = useModalStore()
   const { activeOrgId } = useBranch()
   const { orgId: authOrgId } = useAuth()
-  const orgId = activeOrgId || authOrgId || _orgIdProp
+
+  // ВАЖНО: _orgIdProp — activeOrgId с сервера (источник истины при первом рендере).
+  // activeOrgId из useBranch() может быть null пока BranchContext не инициализирован.
+  // Используем _orgIdProp как приоритет — он совпадает с ключом в HydrationBoundary cache.
+  // После инициализации BranchContext activeOrgId возьмёт управление (смена филиала).
+  const orgId = _orgIdProp || activeOrgId || authOrgId
   const supabase = createSupabaseBrowserClient()
 
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
@@ -194,6 +199,8 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
     enabled: !!orgId,
     staleTime: 2 * 60_000,
     retry: false,
+    // placeholderData: keepPreviousData — не мигаем при refetch
+    placeholderData: (prev) => prev,
     queryFn: async () => {
       const res = await fetch(`/api/dashboard/stats?org_id=${orgId}`)
       if (!res.ok) throw new Error('stats fetch failed')
@@ -256,7 +263,9 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
 
   const revenueToday = (revenueData as any[])[(revenueData as any[]).length - 1]?.amount || 0
 
-  if (statsLoading) {
+  // Показываем скелетон только если нет данных вообще (не при refetch)
+  // Если данные пришли с сервера через HydrationBoundary — stats уже есть, скелетон не нужен
+  if (statsLoading && !stats) {
     return (
       <div className="p-4 md:p-6">
         <div className="mb-5 h-12 w-64 rounded-xl bg-gray-100 animate-pulse" />

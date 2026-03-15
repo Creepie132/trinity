@@ -273,14 +273,12 @@ export function ClientBottomSheet({
               </a>
             )}
             {client.phone && (
-              <a
-                href={getWhatsAppUrl()}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => window.open(getWhatsAppUrl(), '_blank')}
                 className="flex items-center justify-center w-12 h-12 rounded-full bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
               >
                 <MessageCircle size={20} />
-              </a>
+              </button>
             )}
             <button
               onClick={() => setEditOpen(true)}

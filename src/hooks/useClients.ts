@@ -8,84 +8,23 @@ import { useBranch } from '@/contexts/BranchContext'
 export function useClients(searchQuery?: string, page: number = 1, pageSize: number = 25) {
   const { orgId: authOrgId } = useAuth()
   const { activeOrgId, mainOrgId, isOrgResolved } = useBranch()
-  // При impersonation: activeOrgId = impersonated org (из user_active_branch в DB)
-  // mainOrgId = всегда твой собственный org (из AuthContext → org_users)
-  // Clients shared across branches — берём mainOrgId, но если mainOrgId === authOrgId
-  // и activeOrgId отличается (impersonation) — тогда activeOrgId IS the impersonated mainOrgId
-  // Используем activeOrgId как основу: сервер сам разрешит всё семейство филиалов
   const orgId = activeOrgId || mainOrgId || authOrgId
 
   return useQuery({
     queryKey: ['clients', orgId, searchQuery, page, pageSize],
-    // Ждём пока org подтверждён (auth или DB) — иначе race condition при перезагрузке
     enabled: !!orgId && isOrgResolved,
-    placeholderData: keepPreviousData, // держим старые данные пока грузятся новые — нет мигания
+    placeholderData: keepPreviousData,
+    staleTime: 60_000, // 1 min — не рефетчим при каждом переходе
     queryFn: async () => {
-      console.log('Loading clients for org_id:', orgId)
-
-      const from = (page - 1) * pageSize
-      const to = page * pageSize - 1
-
-      // Загружаем клиентов напрямую из таблицы clients (обход проблемы с view)
-      let query = supabase
-        .from('clients')
-        .select('*', { count: 'exact' })
-        .eq('org_id', orgId)
-        .order('created_at', { ascending: false })
-        .range(from, to)
-
-      if (searchQuery && searchQuery.trim()) {
-        query = query.or(
-          `first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%`
-        )
-      }
-
-      const { data: clients, error, count } = await query
-      
-      if (error) {
-        console.error('Error loading clients:', error)
-        throw error
-      }
-      
-      console.log('Loaded clients count:', count)
-      console.log('Clients query result:', { data: clients, error, count, orgId })
-      
-      if (!clients || clients.length === 0) {
-        return { data: [], count: 0 }
-      }
-
-      // Загружаем статистику визитов и платежей
-      const clientIds = clients.map(c => c.id)
-      
-      const { data: visits } = await supabase
-        .from('visits')
-        .select('client_id, scheduled_at')
-        .in('client_id', clientIds)
-
-      const { data: payments } = await supabase
-        .from('payments')
-        .select('client_id, amount, status')
-        .in('client_id', clientIds)
-        .eq('status', 'completed')
-
-      // Собираем данные с статистикой
-      const clientsWithStats = clients.map(client => {
-        const clientVisits = visits?.filter(v => v.client_id === client.id) || []
-        const clientPayments = payments?.filter(p => p.client_id === client.id) || []
-        
-        return {
-          ...client,
-          last_visit: clientVisits.length > 0 
-            ? clientVisits.sort((a, b) => 
-                new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime()
-              )[0].scheduled_at
-            : null,
-          total_visits: clientVisits.length,
-          total_paid: clientPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
-        }
+      const params = new URLSearchParams({
+        page:  String(page),
+        limit: String(pageSize),
       })
-      
-      return { data: clientsWithStats as ClientSummary[], count: count || 0 }
+      if (searchQuery?.trim()) params.set('search', searchQuery.trim())
+
+      const res = await fetch(`/api/clients/summary?${params}`)
+      if (!res.ok) throw new Error('Failed to fetch clients')
+      return res.json() as Promise<{ data: ClientSummary[]; count: number }>
     },
   })
 }

@@ -30,8 +30,9 @@ export default async function DashboardLayout({
   // Активный филиал из БД
   const activeOrgId = await getActiveOrgId(user.id, orgId)
 
-  // Prefetch организации — сайдбар получит данные без ожидания
+  // Prefetch организации + первая страница клиентов — всё параллельно
   const service = createSupabaseServiceClient()
+
   const [{ data: organization }] = await Promise.all([
     service.from('organizations').select('*').eq('id', activeOrgId).single(),
   ])
@@ -41,9 +42,7 @@ export default async function DashboardLayout({
 
   // Кладём в React Query cache — useOrganization() и useIsAdmin() найдут данные сразу
   const queryClient = new QueryClient()
-  if (organization) {
-    queryClient.setQueryData(['organization', activeOrgId], organization)
-  }
+  if (organization) queryClient.setQueryData(['organization', activeOrgId], organization)
   queryClient.setQueryData(['is-admin'], isAdmin)
 
   return (

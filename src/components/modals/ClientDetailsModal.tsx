@@ -6,10 +6,13 @@ import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart } fro
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useState } from 'react'
 import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
+import { useOrgTemplates } from '@/hooks/useOrgTemplates'
+import { buildMessage, buildWhatsAppUrl } from '@/lib/message-utils'
 
 export function ClientDetailsModal() {
   const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
   const [showGdprDialog, setShowGdprDialog] = useState(false)
+  const { templates } = useOrgTemplates()
   
   const isOpen = isModalOpen('client-details')
   const data = getModalData('client-details')
@@ -103,11 +106,10 @@ export function ClientDetailsModal() {
 
   const handleWhatsApp = () => {
     if (client.phone) {
-      const cleanPhone = client.phone.replace(/\D/g, '')
-      const whatsappPhone = cleanPhone.startsWith('0') 
-        ? '972' + cleanPhone.substring(1) 
-        : '972' + cleanPhone
-      window.open(`https://wa.me/${whatsappPhone}`, '_blank')
+      const text = templates?.whatsapp_template
+        ? buildMessage(templates.whatsapp_template, { client_name: clientName })
+        : undefined
+      window.open(buildWhatsAppUrl(client.phone, text), '_blank')
     }
   }
 

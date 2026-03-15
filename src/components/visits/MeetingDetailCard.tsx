@@ -28,10 +28,11 @@ export function MeetingDetailCard({
   onCancel,
   onAddService,
 }: MeetingDetailCardProps) {
+  const { templates } = useOrgTemplates()
+
   if (!visit) return null
 
   const l = locale === 'he'
-  const { templates } = useOrgTemplates()
   const date = new Date(visit.scheduled_at)
 
   return (

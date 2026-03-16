@@ -45,6 +45,7 @@ export default function AdminDemoPage() {
   const [showForm, setShowForm] = useState(false)
   const [label, setLabel] = useState('')
   const [hours, setHours] = useState(24)
+  const [demoLang, setDemoLang] = useState<'he' | 'ru'>('he')
   const [selectedModules, setSelectedModules] = useState(['clients','visits','payments','analytics'])
   const [newSession, setNewSession] = useState<{email:string;password:string;expires_at:string} | null>(null)
   const [showPasswords, setShowPasswords] = useState<Record<string,boolean>>({})
@@ -71,7 +72,7 @@ export default function AdminDemoPage() {
     const r = await fetch('/api/admin/demo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label, hours, modules: selectedModules }),
+      body: JSON.stringify({ label, hours, modules: selectedModules, lang: demoLang }),
     })
     const data = await r.json()
     if (r.ok) {
@@ -137,6 +138,18 @@ export default function AdminDemoPage() {
               <input value={label} onChange={e => setLabel(e.target.value)}
                 placeholder='למשל: "אלינה קואצ׳"'
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all"/>
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-gray-700 mb-1 block">שפת הממשק והנתונים</label>
+              <div className="flex gap-2">
+                {([['he','🇮🇱 עברית'],['ru','🇷🇺 Русский']] as const).map(([l, name]) => (
+                  <button key={l} onClick={() => setDemoLang(l)}
+                    className={`flex-1 px-4 py-2.5 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2
+                      ${demoLang === l ? 'bg-blue-500 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                    {name}
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <label className="text-sm font-semibold text-gray-700 mb-1 block">זמן גישה</label>

@@ -10,9 +10,12 @@ import { GlobalSearch } from '@/components/GlobalSearch'
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner'
 import { PinnedModalsTray } from '@/components/ui/PinnedModalsTray'
 import { RightPanel } from '@/components/layout/RightPanel'
+import { DemoBannerGlobal } from '@/components/demo/DemoBannerGlobal'
+import { DemoLanguagePicker, useDemoLanguagePicker } from '@/components/demo/DemoLanguagePicker'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
+  const { show: showLangPicker, handleSelect: handleLangSelect } = useDemoLanguagePicker()
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -28,7 +31,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <BranchProvider>
+        {/* Demo: language picker (first visit only) */}
+        {showLangPicker && <DemoLanguagePicker onSelect={handleLangSelect}/>}
+
         <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+          {/* Demo: top sticky banner on every page */}
+          <DemoBannerGlobal/>
           <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
           <div className="flex-1 lg:flex lg:h-screen overflow-hidden">
             <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto">

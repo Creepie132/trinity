@@ -708,19 +708,28 @@ export default function LandingPage() {
   const [toastType, setToastType] = useState<'success' | 'error'>('success')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [landingPlans, setLandingPlans] = useState<LandingPlan[] | null>(null)
+  const [landingScreenshots, setLandingScreenshots] = useState<{slot:number;url:string;alt_he:string;alt_ru:string}[]>([
+    {slot:1,url:'/screenshot-1.jpg',alt_he:'צילום מסך 1',alt_ru:'Скриншот 1'},
+    {slot:2,url:'/screenshot-2.jpg',alt_he:'צילום מסך 2',alt_ru:'Скриншот 2'},
+    {slot:3,url:'/screenshot-3.jpg',alt_he:'צילום מסך 3',alt_ru:'Скриншот 3'},
+    {slot:4,url:'/screenshot-4.jpg',alt_he:'צילום מסך 4',alt_ru:'Скриншот 4'},
+  ])
   const [demoModalOpen, setDemoModalOpen] = useState(false)
   const [demoModalPlan, setDemoModalPlan] = useState('')
   const [demoModalPlanKey, setDemoModalPlanKey] = useState('')
   const t = translations[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
 
-  // Load pricing config from DB
+  // Load pricing config from DB (plans + screenshots)
   useEffect(() => {
     fetch('/api/admin/pricing-config')
       .then(r => { if (!r.ok) throw new Error('fetch failed'); return r.json() })
       .then(d => {
         const plans = (d.landing_plans || []).filter((p: LandingPlan) => p.is_active)
         setLandingPlans(plans.length > 0 ? plans : DEFAULT_PLANS)
+        if (d.landing_screenshots?.length > 0) {
+          setLandingScreenshots(d.landing_screenshots)
+        }
       })
       .catch(() => setLandingPlans(DEFAULT_PLANS))
   }, [])
@@ -1458,15 +1467,14 @@ export default function LandingPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[1, 2, 3, 4].map((num) => (
-              <div key={num} className="group relative overflow-hidden rounded-xl shadow-lg border-2 border-gray-200">
-                <Image 
-                  src={`/screenshot-${num}.jpg`}
-                  alt={`${t.gallery.screenshot} ${num}`}
-                  width={600}
-                  height={400}
+            {landingScreenshots.map((shot) => (
+              <div key={shot.slot} className="group relative overflow-hidden rounded-xl shadow-lg border-2 border-gray-200">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={shot.url}
+                  alt={language === 'he' ? shot.alt_he : shot.alt_ru}
                   className="w-full h-auto transition-transform duration-300 group-hover:scale-105"
-                  loading={num <= 2 ? "eager" : "lazy"}
+                  loading={shot.slot <= 2 ? 'eager' : 'lazy'}
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
               </div>

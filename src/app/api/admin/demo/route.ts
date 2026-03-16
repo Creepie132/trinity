@@ -11,7 +11,16 @@ function generatePassword(): string {
 }
 
 function generateEmail(label: string): string {
-  const slug = label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 20)
+  // Transliterate basic cyrillic + strip non-ascii
+  const translit: Record<string, string> = {
+    'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z',
+    'и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r',
+    'с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh',
+    'щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya',
+  }
+  const slug = label.toLowerCase()
+    .split('').map(c => translit[c] ?? c).join('')
+    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 20) || 'demo'
   const rand = Math.floor(Math.random() * 9000) + 1000
   return `demo-${slug}-${rand}@trinity-demo.app`
 }
@@ -219,6 +228,8 @@ export async function POST(request: NextRequest) {
   const { label, hours = 24, modules, lang = 'he' } = await request.json()
   if (!label?.trim()) return NextResponse.json({ error: 'label required' }, { status: 400 })
 
+  try {
+
   const service = createSupabaseServiceClient()
   const email = generateEmail(label)
   const password = generatePassword()
@@ -260,8 +271,17 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = authData.user.id
-  await service.from('org_users').insert({ user_id: userId, org_id: orgId, email, role: 'owner' })
-  await service.from('user_active_branch').insert({ user_id: userId, active_org_id: orgId })
+
+  const { error: ouError } = await service.from('org_users').insert({ user_id: userId, org_id: orgId, email, role: 'owner' })
+  if (ouError) {
+    console.error('[demo/create] org_users insert:', ouError)
+    await service.auth.admin.deleteUser(userId)
+    await service.from('organizations').delete().eq('id', orgId)
+    return NextResponse.json({ error: ouError.message }, { status: 500 })
+  }
+
+  const { error: uabError } = await service.from('user_active_branch').insert({ user_id: userId, active_org_id: orgId })
+  if (uabError) console.error('[demo/create] user_active_branch:', uabError) // non-fatal
 
   // Seed demo data with correct language
   try { await seedDemoData(orgId, userId, selectedModules, lang as 'he' | 'ru') }
@@ -273,6 +293,10 @@ export async function POST(request: NextRequest) {
   })
 
   return NextResponse.json({ email, password, expires_at: expiresAt, org_id: orgId })
+  } catch (err: any) {
+    console.error('[demo/create] Unexpected error:', err)
+    return NextResponse.json({ error: err?.message || 'Internal server error' }, { status: 500 })
+  }
 }
 
 export async function GET(request: NextRequest) {

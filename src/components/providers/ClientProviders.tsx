@@ -24,6 +24,11 @@ const PWAInstallBanner = dynamic(
   { ssr: false }
 )
 
+const PushNotificationPrompt = dynamic(
+  () => import('@/components/PushNotificationPrompt').then(m => ({ default: m.PushNotificationPrompt })),
+  { ssr: false }
+)
+
 const ForceLightMode = dynamic(
   () => import('@/components/ForceLightMode').then(m => ({ default: m.ForceLightMode })),
   { ssr: false }
@@ -35,6 +40,7 @@ export function ClientProviders() {
       <ForceLightMode />
       <ModalManager />
       <PWAInstallBanner />
+      <PushNotificationPrompt />
       <ConditionalChatWidget />
     </>
   )

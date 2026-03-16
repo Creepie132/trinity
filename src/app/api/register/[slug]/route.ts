@@ -123,20 +123,50 @@ export async function POST(
       )
     }
 
-    // Insert new client
-    const { error: insertError } = await supabase.from('clients').insert({
-      org_id: org.id,
-      first_name: first_name.trim(),
-      last_name: last_name.trim(),
-      phone: normalizedPhone,
-      email: email.trim().toLowerCase(),
-      date_of_birth,
-      loyalty_balance: 0,
-    })
+    // Insert new client — get the new client id back
+    const { data: newClient, error: insertError } = await supabase
+      .from('clients')
+      .insert({
+        org_id: org.id,
+        first_name: first_name.trim(),
+        last_name: last_name.trim(),
+        phone: normalizedPhone,
+        email: email.trim().toLowerCase(),
+        date_of_birth,
+        loyalty_balance: 0,
+      })
+      .select('id')
+      .single()
 
-    if (insertError) {
+    if (insertError || !newClient) {
       console.error('[Register API] Insert error:', insertError)
       return NextResponse.json({ error: 'Failed to register. Please try again.' }, { status: 500 })
+    }
+
+    // Notify all users of this org
+    try {
+      const { data: orgUsers } = await supabase
+        .from('org_users')
+        .select('user_id')
+        .eq('org_id', org.id)
+
+      if (orgUsers && orgUsers.length > 0) {
+        const clientFullName = `${first_name.trim()} ${last_name.trim()}`
+        const notifications = orgUsers.map((u: { user_id: string }) => ({
+          org_id: org.id,
+          user_id: u.user_id,
+          type: 'client_registered',
+          title: `🆕 ${clientFullName}`,
+          body: `${normalizedPhone}${email ? ` · ${email.trim().toLowerCase()}` : ''}`,
+          link: `/clients/${newClient.id}`,
+          reference_id: newClient.id,
+          is_read: false,
+        }))
+        await supabase.from('notifications').insert(notifications)
+      }
+    } catch (notifErr) {
+      // Non-fatal — client already created, just log
+      console.error('[Register API] Notification error:', notifErr)
     }
 
     return NextResponse.json({ success: true })

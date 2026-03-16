@@ -320,6 +320,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
     const typeIcon: Record<string, string> = {
       access_invitation: '👥', access_request: '🔑', transfer_request: '📦',
       transfer_result: '✅', payment: '💳', visit: '📅', task: '✅', system: 'ℹ️',
+      client_registered: '🆕',
     }
     const icon = typeIcon[n.type] || '🔔'
 
@@ -377,6 +378,18 @@ export function NotificationBell({ locale }: NotificationBellProps) {
             {n.metadata.invited_user_email && n.metadata.org_id && (
               <button onClick={() => rejectInvitation(n.id, n.metadata!.invited_user_email!, n.metadata!.org_id!)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 transition-colors"><X className="w-3 h-3" />{locale === 'he' ? 'דחה' : 'Отклонить'}</button>
             )}
+          </div>
+        )}
+
+        {n.type === 'client_registered' && n.link && (
+          <div className="mt-2 ms-5">
+            <a
+              href={n.link}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors border border-amber-200 dark:border-amber-800/40"
+            >
+              <span>👤</span>
+              {locale === 'he' ? 'פתח כרטיס לקוח' : 'Открыть карточку'}
+            </a>
           </div>
         )}
       </div>

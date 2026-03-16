@@ -684,6 +684,17 @@ const COLOR_TEXT: Record<string, string> = {
   red: 'text-white',
 }
 
+// Default plans shown if API is unavailable
+const DEFAULT_PLANS: LandingPlan[] = [
+  { key: 'basic',      name_he: 'בסיסי',          name_ru: 'Base',             subtitle_he: 'Solo',   subtitle_ru: 'Solo',   price_he: '₪199', price_ru: '₪199', period_he: '/חודש', period_ru: '/мес', badge_he: null, badge_ru: null, color: 'gray',   features_he: ['לקוחות', 'ביקורים / רשומות', 'יומן ומשימות', 'מלאי'],                   features_ru: ['Клиенты', 'Визиты / Записи', 'Дневник и задачи', 'Склад'],                                      cta_he: 'להירשם', cta_ru: 'Оформить', is_active: true },
+  { key: 'pro',        name_he: 'פרו',             name_ru: 'Pro',              subtitle_he: 'Studio', subtitle_ru: 'Studio', price_he: '₪249', price_ru: '₪249', period_he: '/חודש', period_ru: '/мес', badge_he: 'מומלץ', badge_ru: 'Рекомендован', color: 'blue',  features_he: ['הכל מ-Base', 'הזמנה אונליין', 'סטטיסטיקה ודוחות', 'SMS והתראות'],       features_ru: ['Всё из Base', 'Онлайн-запись', 'Статистика и отчёты', 'SMS и напоминания'],                   cta_he: 'להירשם', cta_ru: 'Оформить', is_active: true },
+  { key: 'enterprise', name_he: 'ארגוני',          name_ru: 'Enterprise',       subtitle_he: 'Chain',  subtitle_ru: 'Chain',  price_he: '₪499', price_ru: '₪499', period_he: '/חודש', period_ru: '/мес', badge_he: null, badge_ru: null, color: 'amber',  features_he: ['הכל מ-Base ו-Pro', 'סניפים', 'תוכנית נאמנות', 'עד 5 עובדים כלולים'],   features_ru: ['Всё из Base и Pro', 'Филиалы', 'Программа лояльности', 'До 5 сотрудников включено'],          cta_he: 'להירשם', cta_ru: 'Оформить', is_active: true },
+  { key: 'custom',     name_he: 'הרכבה אישית',     name_ru: 'Инд. настройка',   subtitle_he: null,     subtitle_ru: null,     price_he: 'לפי בחירה', price_ru: 'По выбору', period_he: null, period_ru: null, badge_he: null, badge_ru: null, color: 'purple', features_he: ['בחרו מודולים לפי הצורך', 'קונפיגורציה אישית', 'תמיכה בעדיפות', 'הנחה 15% על 5+ מודולים'], features_ru: ['Выберите нужные модули', 'Индивидуальная конфигурация', 'Приоритетная поддержка', 'Скидка 15% на 5+ модулей'], cta_he: 'להירשם', cta_ru: 'Оформить', is_active: true },
+]
+
+// Plan keys that show module selection (custom/individual)
+const CUSTOM_PLAN_KEYS = ['custom', 'individual', 'modules', 'custom_modules']
+
 export default function LandingPage() {
   const [language, setLanguage] = useState<'he' | 'ru'>('he')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -699,15 +710,19 @@ export default function LandingPage() {
   const [landingPlans, setLandingPlans] = useState<LandingPlan[] | null>(null)
   const [demoModalOpen, setDemoModalOpen] = useState(false)
   const [demoModalPlan, setDemoModalPlan] = useState('')
+  const [demoModalPlanKey, setDemoModalPlanKey] = useState('')
   const t = translations[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
 
   // Load pricing config from DB
   useEffect(() => {
     fetch('/api/admin/pricing-config')
-      .then(r => r.json())
-      .then(d => setLandingPlans((d.landing_plans || []).filter((p: LandingPlan) => p.is_active)))
-      .catch(() => {}) // fail silently — skeleton stays
+      .then(r => { if (!r.ok) throw new Error('fetch failed'); return r.json() })
+      .then(d => {
+        const plans = (d.landing_plans || []).filter((p: LandingPlan) => p.is_active)
+        setLandingPlans(plans.length > 0 ? plans : DEFAULT_PLANS)
+      })
+      .catch(() => setLandingPlans(DEFAULT_PLANS))
   }, [])
 
   // Handle scroll for header background and scroll-to-top button
@@ -757,8 +772,9 @@ export default function LandingPage() {
   }, [dir, language])
 
   // Handle order modal — now opens DemoRegisterModal
-  const openOrderModal = (planName: string) => {
+  const openOrderModal = (planName: string, planKey?: string) => {
     setDemoModalPlan(planName)
+    setDemoModalPlanKey(planKey || '')
     setDemoModalOpen(true)
   }
 
@@ -1420,7 +1436,7 @@ export default function LandingPage() {
 
                       {/* CTA Button */}
                       <button
-                        onClick={() => openOrderModal(language === 'he' ? plan.name_he : plan.name_ru)}
+                        onClick={() => openOrderModal(language === 'he' ? plan.name_he : plan.name_ru, plan.key)}
                         className={`w-full py-3 px-4 rounded-2xl font-bold text-sm transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] ${ctaStyle}`}
                       >
                         {language === 'he' ? plan.cta_he : plan.cta_ru}
@@ -1562,6 +1578,7 @@ export default function LandingPage() {
         <DemoRegisterModal
           lang={language}
           planName={demoModalPlan}
+          planKey={demoModalPlanKey}
           onClose={() => setDemoModalOpen(false)}
         />
       )}

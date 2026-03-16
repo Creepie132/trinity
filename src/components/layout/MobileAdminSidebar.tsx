@@ -78,13 +78,7 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
           {/* Header */}
           <SheetHeader className="p-6 pb-4 border-b border-slate-700 bg-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <img
-                  src="/logo.png"
-                  alt="Trinity Admin"
-                  className="w-7 h-7 object-contain"
-                />
-              </div>
+              <img src="/logo.png" alt="Trinity Admin" className="w-12 h-12 object-contain rounded-xl" />
               <div>
                 <SheetTitle className="text-xl font-bold text-white">
                   Trinity Admin

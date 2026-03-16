@@ -157,13 +157,7 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
             </div>
           ) : (
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
-                <img
-                  src="/logo.png"
-                  alt="Amber Solutions"
-                  className="h-8 w-auto object-contain"
-                />
-              </div>
+              <img src="/logo.png" alt="Amber Solutions" className="w-9 h-9 object-contain rounded-lg" />
               <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-indigo-400">
                 Trinity
               </h1>

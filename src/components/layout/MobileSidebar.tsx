@@ -90,9 +90,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
         <div className="flex flex-col h-full">
           <SheetHeader className="p-6 pb-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                <img src="/logo.png" alt="Trinity" className="w-12 h-12 object-contain" />
-              </div>
+              <img src="/logo.png" alt="Trinity" className="w-16 h-16 object-contain rounded-xl" />
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Trinity</h1>
                 <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Amber Solutions Systems</p>

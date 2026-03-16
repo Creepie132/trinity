@@ -53,10 +53,13 @@ const COUNTRIES = [
   { code: 'OTHER', label_he: 'אחר', label_ru: 'Другая' },
 ]
 
-const SETUP_BASE = 1500
-const MODULE_PRICE = 50
-const DISCOUNT_THRESHOLD = 5
-const DISCOUNT_PCT = 15
+// Demo pricing defaults — overridden by DB values on mount
+const PRICING_DEFAULTS = {
+  demo_setup_base: 1500,
+  demo_module_price: 50,
+  demo_discount_threshold: 5,
+  demo_discount_pct: 15,
+}
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 function StepDots({ current, total }: { current: number; total: number }) {
@@ -126,6 +129,7 @@ export default function DemoRegisterPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [registrationId, setRegistrationId] = useState<string | null>(null)
   const [pricingInfo, setPricingInfo] = useState<{setup_fee:number;monthly_fee:number;discount_pct:number} | null>(null)
+  const [demoConfig, setDemoConfig] = useState(PRICING_DEFAULTS)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const [form, setForm] = useState<FormData>({
@@ -135,6 +139,19 @@ export default function DemoRegisterPage() {
   const [selectedModules, setSelectedModules] = useState<string[]>([])
 
   const isIsrael = form.country === 'IL'
+
+  // Load demo pricing config from DB
+  useEffect(() => {
+    fetch('/api/admin/pricing-config')
+      .then(r => r.json())
+      .then(d => setDemoConfig({
+        demo_setup_base: d.demo_setup_base ?? PRICING_DEFAULTS.demo_setup_base,
+        demo_module_price: d.demo_module_price ?? PRICING_DEFAULTS.demo_module_price,
+        demo_discount_threshold: d.demo_discount_threshold ?? PRICING_DEFAULTS.demo_discount_threshold,
+        demo_discount_pct: d.demo_discount_pct ?? PRICING_DEFAULTS.demo_discount_pct,
+      }))
+      .catch(() => {}) // fallback to defaults
+  }, [])
 
   const set = (k: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(f => ({ ...f, [k]: e.target.value }))
@@ -221,9 +238,9 @@ export default function DemoRegisterPage() {
     setSelectedModules(m => m.includes(key) ? m.filter(k=>k!==key) : [...m, key])
   }
 
-  const monthlyFee = selectedModules.length * MODULE_PRICE
-  const discountPct = selectedModules.length >= DISCOUNT_THRESHOLD ? DISCOUNT_PCT : 0
-  const setupFee = Math.round(SETUP_BASE * (1 - discountPct / 100))
+  const monthlyFee = selectedModules.length * demoConfig.demo_module_price
+  const discountPct = selectedModules.length >= demoConfig.demo_discount_threshold ? demoConfig.demo_discount_pct : 0
+  const setupFee = Math.round(demoConfig.demo_setup_base * (1 - discountPct / 100))
 
   const he = lang === 'he'
 
@@ -340,8 +357,8 @@ export default function DemoRegisterPage() {
               {isIsrael && (
                 <>
                   <p className="text-gray-500 text-sm">
-                    {he ? `כל מודול — ₪${MODULE_PRICE}/חודש. בחירת ${DISCOUNT_THRESHOLD}+ מודולים — הנחה של ${DISCOUNT_PCT}% על דמי ההגדרה!`
-                         : `Каждый модуль — ₪${MODULE_PRICE}/мес. При выборе ${DISCOUNT_THRESHOLD}+ модулей — скидка ${DISCOUNT_PCT}% на настройку!`}
+                    {he ? `כל מודול — ₪${demoConfig.demo_module_price}/חודש. בחירת ${demoConfig.demo_discount_threshold}+ מודולים — הנחה של ${demoConfig.demo_discount_pct}% על דמי ההגדרה!`
+                         : `Каждый модуль — ₪${demoConfig.demo_module_price}/мес. При выборе ${demoConfig.demo_discount_threshold}+ модулей — скидка ${demoConfig.demo_discount_pct}% на настройку!`}
                   </p>
                   <div className="grid grid-cols-1 gap-3">
                     {MODULES.map(m => {
@@ -384,7 +401,7 @@ export default function DemoRegisterPage() {
                       <div className="flex justify-between mb-2">
                         <span className="text-white/70 text-sm">{he ? 'הגדרה' : 'Настройка'}:</span>
                         <span className="font-bold">
-                          {discountPct > 0 && <span className="line-through text-white/40 text-sm me-2">₪{SETUP_BASE}</span>}
+                          {discountPct > 0 && <span className="line-through text-white/40 text-sm me-2">₪{demoConfig.demo_setup_base}</span>}
                           ₪{setupFee}
                         </span>
                       </div>
@@ -433,7 +450,7 @@ export default function DemoRegisterPage() {
                   <span className="text-gray-600">{he ? 'דמי הגדרה חד-פעמיים' : 'Разовая плата за настройку'}</span>
                   <div className="text-end">
                     {pricingInfo.discount_pct > 0 && (
-                      <span className="line-through text-gray-400 text-xs me-2">₪{SETUP_BASE}</span>
+                      <span className="line-through text-gray-400 text-xs me-2">₪{demoConfig.demo_setup_base}</span>
                     )}
                     <span className="font-bold text-gray-900">₪{pricingInfo.setup_fee}</span>
                   </div>
@@ -445,7 +462,7 @@ export default function DemoRegisterPage() {
                 {pricingInfo.discount_pct > 0 && (
                   <div className="flex justify-between text-sm border-t border-dashed border-gray-200 pt-3">
                     <span className="text-green-600 font-semibold">{he ? `הנחה ${pricingInfo.discount_pct}%` : `Скидка ${pricingInfo.discount_pct}%`}</span>
-                    <span className="text-green-600 font-semibold">-₪{SETUP_BASE - pricingInfo.setup_fee}</span>
+                    <span className="text-green-600 font-semibold">-₪{demoConfig.demo_setup_base - pricingInfo.setup_fee}</span>
                   </div>
                 )}
                 <div className="border-t border-gray-200 pt-3 flex justify-between">

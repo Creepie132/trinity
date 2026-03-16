@@ -10,23 +10,24 @@ export async function POST(request: NextRequest) {
       selected_modules,
     } = body
 
-    // Validate required fields
     if (!first_name || !last_name || !business_name || !phone || !country) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Calculate pricing
-    const moduleCount = (selected_modules || []).length
-    const SETUP_BASE = 1500
-    const MODULE_MONTHLY = 50
-    const DISCOUNT_THRESHOLD = 5
-    const DISCOUNT_PCT = 15
-
-    const monthly_fee = moduleCount * MODULE_MONTHLY
-    const discount_pct = moduleCount >= DISCOUNT_THRESHOLD ? DISCOUNT_PCT : 0
-    const setup_fee = Math.round(SETUP_BASE * (1 - discount_pct / 100))
-
     const service = createSupabaseServiceClient()
+
+    // Read pricing config from DB (server-side — source of truth)
+    const DEFAULTS = { demo_setup_base: 1500, demo_module_price: 50, demo_discount_threshold: 5, demo_discount_pct: 15 }
+    let pricing = DEFAULTS
+    try {
+      const { data: cfg } = await service.from('pricing_config').select('demo_setup_base,demo_module_price,demo_discount_threshold,demo_discount_pct').single()
+      if (cfg) pricing = cfg
+    } catch (_) { /* fallback to defaults */ }
+
+    const moduleCount = (selected_modules || []).length
+    const monthly_fee = moduleCount * pricing.demo_module_price
+    const discount_pct = moduleCount >= pricing.demo_discount_threshold ? pricing.demo_discount_pct : 0
+    const setup_fee = Math.round(pricing.demo_setup_base * (1 - discount_pct / 100))
 
     const { data: reg, error } = await service
       .from('demo_registrations')

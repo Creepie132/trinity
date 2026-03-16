@@ -638,6 +638,51 @@ const translations: Record<'he' | 'ru', Translations> = {
   },
 }
 
+interface LandingPlan {
+  key: string
+  name_he: string
+  name_ru: string
+  subtitle_he: string | null
+  subtitle_ru: string | null
+  price_he: string
+  price_ru: string
+  period_he: string | null
+  period_ru: string | null
+  badge_he: string | null
+  badge_ru: string | null
+  color: string
+  features_he: string[]
+  features_ru: string[]
+  cta_he: string
+  cta_ru: string
+  is_active: boolean
+}
+
+const COLOR_HEADER: Record<string, string> = {
+  gray: 'bg-gray-100',
+  blue: 'bg-blue-600',
+  amber: 'bg-amber-500',
+  purple: 'bg-purple-700',
+  green: 'bg-green-600',
+  red: 'bg-red-600',
+}
+const COLOR_RING: Record<string, string> = {
+  gray: 'ring-gray-400',
+  blue: 'ring-blue-500',
+  amber: 'ring-amber-500',
+  purple: 'ring-purple-500',
+  green: 'ring-green-500',
+  red: 'ring-red-500',
+}
+const COLOR_TEXT: Record<string, string> = {
+  gray: 'text-gray-900',
+  blue: 'text-white',
+  amber: 'text-white',
+  purple: 'text-white',
+  green: 'text-white',
+  red: 'text-white',
+}
+
 export default function LandingPage() {
   const [language, setLanguage] = useState<'he' | 'ru'>('he')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -650,8 +695,17 @@ export default function LandingPage() {
   const [toastMessage, setToastMessage] = useState('')
   const [toastType, setToastType] = useState<'success' | 'error'>('success')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [landingPlans, setLandingPlans] = useState<LandingPlan[] | null>(null)
   const t = translations[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
+
+  // Load pricing config from DB
+  useEffect(() => {
+    fetch('/api/admin/pricing-config')
+      .then(r => r.json())
+      .then(d => setLandingPlans((d.landing_plans || []).filter((p: LandingPlan) => p.is_active)))
+      .catch(() => {}) // fail silently — skeleton stays
+  }, [])
 
   // Handle scroll for header background and scroll-to-top button
   useEffect(() => {
@@ -1239,69 +1293,99 @@ export default function LandingPage() {
             {t.pricing.subtitle}
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {t.pricing.plans.map((plan, index) => (
-              <div
-                key={index}
-                className={`relative bg-white rounded-2xl shadow-lg transition-all duration-300 hover:shadow-2xl ${
-                  plan.recommended ? 'md:scale-105 ring-2 ring-blue-500' : ''
-                }`}
-              >
-                {/* Recommended Badge */}
-                {plan.recommended && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-amber-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                      {plan.recommended}
-                    </span>
-                  </div>
-                )}
+          {/* Skeleton while loading */}
+          {!landingPlans && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[0,1,2].map(i => (
+                <div key={i} className={`rounded-2xl bg-gray-100 animate-pulse h-80 ${i===1?'md:scale-105':''}`} />
+              ))}
+            </div>
+          )}
 
-                {/* Header */}
-                <div
-                  className={`p-6 rounded-t-2xl ${
-                    index === 0
-                      ? 'bg-gray-100'
-                      : index === 1
-                      ? 'bg-blue-600'
-                      : 'bg-slate-800'
-                  }`}
-                >
-                  <h3
-                    className={`text-2xl font-bold ${
-                      index === 0 ? 'text-gray-900' : 'text-white'
+          {/* Real plan cards from DB */}
+          {landingPlans && (
+            <div className={`grid grid-cols-1 gap-8 ${
+              landingPlans.length === 4 ? 'md:grid-cols-2 xl:grid-cols-4' :
+              landingPlans.length === 3 ? 'md:grid-cols-3' :
+              landingPlans.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1'
+            }`}>
+              {landingPlans.map((plan, index) => {
+                const badge = language === 'he' ? plan.badge_he : plan.badge_ru
+                const headerBg = COLOR_HEADER[plan.color] ?? 'bg-gray-100'
+                const headerText = COLOR_TEXT[plan.color] ?? 'text-gray-900'
+                const ringColor = COLOR_RING[plan.color] ?? 'ring-gray-400'
+                const features = language === 'he' ? plan.features_he : plan.features_ru
+                const isHighlighted = !!badge
+
+                return (
+                  <div
+                    key={plan.key}
+                    className={`relative bg-white rounded-2xl shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
+                      isHighlighted ? `md:scale-105 ring-2 ${ringColor}` : ''
                     }`}
                   >
-                    {plan.name}
-                  </h3>
-                </div>
+                    {/* Badge */}
+                    {badge && (
+                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+                        <span className="bg-amber-500 text-white px-4 py-1 rounded-full text-sm font-semibold whitespace-nowrap shadow-md">
+                          {badge}
+                        </span>
+                      </div>
+                    )}
 
-                {/* Заглушка "В разработке" */}
-                <div className="p-6 flex flex-col items-center justify-center py-12">
-                  {/* Шлагбаум */}
-                  <div className="relative mb-4">
-                    {/* Столб */}
-                    <div className="w-2 h-24 bg-slate-400 rounded-full mx-auto" />
-                    {/* Полосатая перекладина */}
-                    <div 
-                      className="absolute top-4 -left-12 -right-12 h-6 rounded-sm transform -rotate-3"
-                      style={{ 
-                        backgroundSize: '24px 100%',
-                        backgroundImage: 'repeating-linear-gradient(90deg, #facc15 0px, #facc15 12px, #1a1a1a 12px, #1a1a1a 24px)'
-                      }}
-                    />
-                    {/* Табличка */}
-                    <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-white border-2 border-slate-300 rounded-lg px-4 py-2 shadow-md mt-4">
-                      <p className="text-sm font-bold text-slate-700 whitespace-nowrap">🚧 בבנייה</p>
+                    {/* Header */}
+                    <div className={`p-6 rounded-t-2xl ${headerBg}`}>
+                      <h3 className={`text-2xl font-bold ${headerText}`}>
+                        {language === 'he' ? plan.name_he : plan.name_ru}
+                      </h3>
+                      {(language === 'he' ? plan.subtitle_he : plan.subtitle_ru) && (
+                        <p className={`text-sm mt-1 ${headerText} opacity-70`}>
+                          {language === 'he' ? plan.subtitle_he : plan.subtitle_ru}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Body */}
+                    <div className="p-6 flex flex-col gap-4">
+                      {/* Price */}
+                      <div className="flex items-end gap-1">
+                        <span className="text-3xl font-bold text-gray-900">
+                          {language === 'he' ? plan.price_he : plan.price_ru}
+                        </span>
+                        {(language === 'he' ? plan.period_he : plan.period_ru) && (
+                          <span className="text-gray-500 mb-1 text-sm">
+                            {language === 'he' ? plan.period_he : plan.period_ru}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Features */}
+                      <ul className="space-y-2 flex-1">
+                        {features.map((f, fi) => (
+                          <li key={fi} className="flex items-start gap-2 text-sm text-gray-700">
+                            <span className="text-green-500 font-bold mt-0.5 flex-shrink-0">✓</span>
+                            <span>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      {/* CTA */}
+                      <button
+                        onClick={() => openOrderModal(language === 'he' ? plan.name_he : plan.name_ru)}
+                        className={`mt-2 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
+                          isHighlighted
+                            ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-md hover:shadow-lg'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                        }`}
+                      >
+                        {language === 'he' ? plan.cta_he : plan.cta_ru}
+                      </button>
                     </div>
                   </div>
-                  {/* Подпись */}
-                  <p className="text-sm text-gray-500 mt-12">
-                    {language === 'he' ? 'העמוד בבנייה — בקרוב!' : 'Страница в разработке — скоро!'}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </section>
 

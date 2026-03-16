@@ -2,12 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const supabase = createSupabaseBrowserClient()
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [emailMode, setEmailMode] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
 
   // FIX: Clear stale supabase cookies on login page load
   useEffect(() => {
@@ -42,10 +49,21 @@ export default function LoginPage() {
     setLoading(true)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/callback` },
     })
+  }
+
+  const signInWithEmail = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      setError('אימייל או סיסמה שגויים')
+      setLoading(false)
+    } else {
+      router.push('/dashboard')
+    }
   }
 
   return (
@@ -90,7 +108,7 @@ export default function LoginPage() {
           disabled={loading}
           className="relative w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl bg-blue-600 text-white font-bold text-base hover:bg-blue-700 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden group"
         >
-          {loading ? (
+          {loading && !emailMode ? (
             <>
               <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -111,6 +129,62 @@ export default function LoginPage() {
             </>
           )}
         </button>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs text-gray-400">או</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        {/* Email/password toggle */}
+        {!emailMode ? (
+          <button
+            onClick={() => setEmailMode(true)}
+            className="w-full py-3 px-4 rounded-xl border-2 border-gray-200 text-gray-600 font-medium text-sm hover:border-blue-300 hover:text-blue-600 transition-all"
+          >
+            כניסה עם אימייל וסיסמה
+          </button>
+        ) : (
+          <form onSubmit={signInWithEmail} className="space-y-3">
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="אימייל"
+              required
+              dir="ltr"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all"
+            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="סיסמה"
+                required
+                dir="ltr"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all pr-12"
+              />
+              <button type="button" onClick={() => setShowPassword(p => !p)}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
+              </button>
+            </div>
+            {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+            <button type="submit" disabled={loading}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2">
+              {loading && emailMode
+                ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                : null}
+              כניסה
+            </button>
+            <button type="button" onClick={() => { setEmailMode(false); setError('') }}
+              className="w-full text-xs text-gray-400 hover:text-gray-600 py-1">
+              חזרה לכניסה עם Google
+            </button>
+          </form>
+        )}
 
         {/* Футер */}
         <div className="mt-8 text-center">

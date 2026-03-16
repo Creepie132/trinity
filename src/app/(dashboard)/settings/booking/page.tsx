@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 import QRCode from 'qrcode'
 import { generateBookingCode } from '@/lib/utils'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { UserPlus } from 'lucide-react'
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
 
@@ -743,6 +744,9 @@ export default function BookingSettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Registration Link */}
+      <RegistrationLinkCard orgId={orgId} slug={settings.slug} language={language} />
+
       {/* QR Code Section */}
       {settings.slug && qrCodeUrl && (
         <Card>
@@ -822,5 +826,148 @@ export default function BookingSettingsPage() {
         </Button>
       </div>
     </div>
+  )
+}
+
+// ─── Registration Link Card ──────────────────────────────────────────────────
+
+function RegistrationLinkCard({
+  orgId,
+  slug,
+  language,
+}: {
+  orgId: string | null
+  slug: string
+  language: string
+}) {
+  const [enabled, setEnabled] = useState<boolean | null>(null)
+  const [privacyUrl, setPrivacyUrl] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  // Load current values
+  useEffect(() => {
+    if (!orgId) return
+    const load = async () => {
+      const supabase = createSupabaseBrowserClient()
+      const { data } = await supabase
+        .from('organizations')
+        .select('registration_enabled, privacy_policy_url')
+        .eq('id', orgId)
+        .single()
+      if (data) {
+        setEnabled(data.registration_enabled ?? false)
+        setPrivacyUrl(data.privacy_policy_url ?? '')
+      }
+    }
+    load()
+  }, [orgId])
+
+  const save = async () => {
+    if (!orgId) return
+    setSaving(true)
+    const supabase = createSupabaseBrowserClient()
+    await supabase
+      .from('organizations')
+      .update({
+        registration_enabled: enabled,
+        privacy_policy_url: privacyUrl || null,
+      })
+      .eq('id', orgId)
+    setSaving(false)
+    toast.success(language === 'he' ? 'נשמר!' : 'Сохранено!')
+  }
+
+  const regLink = slug
+    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://ambersol.co.il'}/register/${slug}`
+    : ''
+
+  const copyLink = () => {
+    if (!regLink) return
+    navigator.clipboard.writeText(regLink)
+    setCopied(true)
+    toast.success(language === 'he' ? 'הקישור הועתק!' : 'Ссылка скопирована!')
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  if (enabled === null) return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <UserPlus className="w-5 h-5 text-amber-500" />
+          {language === 'he' ? 'הרשמה עצמית של לקוחות' : 'Самостоятельная регистрация клиентов'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          {language === 'he'
+            ? 'לקוחות יוכלו להירשם לבסיס הנתונים שלך דרך קישור ייחודי'
+            : 'Клиенты смогут самостоятельно добавиться в вашу базу через уникальную ссылку'}
+        </p>
+
+        {/* Toggle */}
+        <div className="flex items-center justify-between gap-4 min-h-[44px]">
+          <Label>{language === 'he' ? 'הפעל הרשמה עצמית' : 'Включить регистрацию'}</Label>
+          <Switch checked={enabled} onCheckedChange={setEnabled} />
+        </div>
+
+        {enabled && (
+          <>
+            {/* Link display */}
+            <div className="p-3 bg-muted rounded-lg">
+              <span className="text-xs text-muted-foreground block mb-1">
+                {language === 'he' ? 'קישור לשיתוף:' : 'Ссылка для клиентов:'}
+              </span>
+              <div className="flex items-center gap-2">
+                <code className="text-sm font-mono font-medium break-all flex-1">
+                  {slug ? `/register/${slug}` : '...'}
+                </code>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={copyLink}
+                  disabled={!slug}
+                  className="flex-shrink-0"
+                >
+                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+
+            {/* Privacy Policy URL */}
+            <div className="space-y-2">
+              <Label htmlFor="privacy-url">
+                {language === 'he' ? 'קישור לתנאי השימוש (אופציונלי)' : 'Ссылка на пользовательское соглашение (опционально)'}
+              </Label>
+              <Input
+                id="privacy-url"
+                type="url"
+                value={privacyUrl}
+                onChange={e => setPrivacyUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full"
+                dir="ltr"
+              />
+              <p className="text-xs text-muted-foreground">
+                {language === 'he'
+                  ? 'הלקוח יראה קישור לתנאי השימוש בטופס ההרשמה'
+                  : 'Клиент увидит ссылку на соглашение в форме регистрации'}
+              </p>
+            </div>
+          </>
+        )}
+
+        {/* Save */}
+        <div className="flex justify-end pt-1">
+          <Button onClick={save} disabled={saving} size="sm">
+            {saving
+              ? (language === 'he' ? 'שומר...' : 'Сохранение...')
+              : (language === 'he' ? 'שמור' : 'Сохранить')}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

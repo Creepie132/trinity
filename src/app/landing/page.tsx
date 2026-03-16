@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Menu, X, ChevronRight, ChevronUp, Monitor, Bot, Globe, Code, Mail, MessageCircle, Facebook, Gift } from 'lucide-react'
+import { Menu, X, ChevronRight, ChevronUp, Monitor, Bot, Globe, Code, Mail, MessageCircle, Facebook, Gift, Download, Smartphone, Monitor as DesktopIcon, Apple } from 'lucide-react'
 import { PrismButton } from '@/components/landing/PrismButton'
 import Image from 'next/image'
 
@@ -14,6 +14,7 @@ interface Translations {
     gallery: string
     reviews: string
     contact: string
+    download: string
   }
   about: {
     title: string
@@ -114,6 +115,14 @@ interface Translations {
   floatingButton: {
     text?: string
   }
+  download: {
+    title: string
+    subtitle: string
+    ios: { title: string; steps: string[] }
+    android: { title: string; steps: string[] }
+    desktop: { title: string; steps: string[] }
+    badge: string
+  }
   footer: {
     copyright: string
     location: string
@@ -144,6 +153,7 @@ const translations: Record<'he' | 'ru', Translations> = {
       gallery: 'גלריה',
       reviews: 'המלצות',
       contact: 'צור קשר',
+      download: 'הורד',
     },
     about: {
       title: 'אודות',
@@ -332,6 +342,37 @@ const translations: Record<'he' | 'ru', Translations> = {
     },
     floatingButton: {
     },
+    download: {
+      title: 'הורד את Trinity',
+      subtitle: 'התקן את האפליקציה על המכשיר שלך לגישה מהירה ונוחה',
+      ios: {
+        title: 'iPhone / iPad',
+        steps: [
+          'פתח את ambersol.co.il ב-Safari',
+          'לחץ על כפתור השיתוף ↑ בתחתית המסך',
+          'בחר "הוסף למסך הבית"',
+          'לחץ "הוסף" לאישור',
+        ],
+      },
+      android: {
+        title: 'Android',
+        steps: [
+          'פתח את ambersol.co.il ב-Chrome',
+          'לחץ על תפריט ⋮ בפינה הימנית העליונה',
+          'בחר "הוסף למסך הבית"',
+          'לחץ "הוסף" לאישור',
+        ],
+      },
+      desktop: {
+        title: 'מחשב (Chrome)',
+        steps: [
+          'פתח את ambersol.co.il ב-Chrome',
+          'לחץ על אייקון ⊕ בסוף שורת הכתובת',
+          'לחץ "התקן" לאישור',
+        ],
+      },
+      badge: 'PWA — אין צורך ב-App Store',
+    },
     footer: {
       copyright: '© 2026 Amber Solutions Systems | ת.ז. 323358507 | עוסק פטור',
       location: 'אשקלון, ישראל',
@@ -360,6 +401,7 @@ const translations: Record<'he' | 'ru', Translations> = {
       gallery: 'Галерея',
       reviews: 'Отзывы',
       contact: 'Контакты',
+      download: 'Скачать',
     },
     about: {
       title: 'О нас',
@@ -541,6 +583,37 @@ const translations: Record<'he' | 'ru', Translations> = {
       successMessage: 'Сообщение отправлено!',
     },
     floatingButton: {
+    },
+    download: {
+      title: 'Скачать Trinity',
+      subtitle: 'Установите приложение на устройство для быстрого доступа',
+      ios: {
+        title: 'iPhone / iPad',
+        steps: [
+          'Откройте ambersol.co.il в Safari',
+          'Нажмите кнопку "Поделиться" ↑ внизу экрана',
+          'Выберите "На экран Домой"',
+          'Нажмите "Добавить"',
+        ],
+      },
+      android: {
+        title: 'Android',
+        steps: [
+          'Откройте ambersol.co.il в Chrome',
+          'Нажмите меню ⋮ в правом верхнем углу',
+          'Выберите "Добавить на главный экран"',
+          'Нажмите "Добавить"',
+        ],
+      },
+      desktop: {
+        title: 'Компьютер (Chrome)',
+        steps: [
+          'Откройте ambersol.co.il в Chrome',
+          'Нажмите иконку ⊕ в конце адресной строки',
+          'Нажмите "Установить"',
+        ],
+      },
+      badge: 'PWA — не нужен App Store',
     },
     footer: {
       copyright: '© 2026 Amber Solutions Systems | И.Н. 323358507 | Освобождённый плательщик',
@@ -789,6 +862,14 @@ export default function LandingPage() {
               >
                 {t.nav.contact}
               </a>
+              <a
+                href="#download"
+                className={`font-medium transition-colors flex items-center gap-1 ${scrolled ? 'text-blue-600 hover:text-blue-800' : 'text-amber-300 hover:text-amber-200'}`}
+                style={{ fontWeight: 600 }}
+              >
+                <Download size={15} />
+                {t.nav.download}
+              </a>
             </div>
 
             {/* Language Switcher & Login */}
@@ -878,6 +959,14 @@ export default function LandingPage() {
                   className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
                 >
                   {t.nav.contact}
+                </a>
+                <a
+                  href="#download"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`transition-colors flex items-center gap-2 font-semibold ${scrolled ? 'text-blue-600' : 'text-amber-300'}`}
+                >
+                  <Download size={16} />
+                  {t.nav.download}
                 </a>
               </div>
             </div>
@@ -1278,6 +1367,78 @@ export default function LandingPage() {
             {/* Gradient overlays */}
             <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white to-transparent pointer-events-none"></div>
             <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+          </div>
+        </div>
+      </section>
+
+      {/* Download Section */}
+      <section id="download" className="py-20 bg-gradient-to-br from-indigo-50 to-blue-50 fade-in-section">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
+              <Download className="w-4 h-4" />
+              {t.download.badge}
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{t.download.title}</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">{t.download.subtitle}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* iOS */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-gray-800 hover:shadow-xl transition-shadow">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-800" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">{t.download.ios.title}</h3>
+              </div>
+              <ol className="space-y-3">
+                {t.download.ios.steps.map((step, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 bg-gray-800 text-white rounded-full flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                    <span className="text-gray-700 text-sm leading-relaxed">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            {/* Android */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-green-500 hover:shadow-xl transition-shadow">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                  <Smartphone className="w-6 h-6 text-green-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">{t.download.android.title}</h3>
+              </div>
+              <ol className="space-y-3">
+                {t.download.android.steps.map((step, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                    <span className="text-gray-700 text-sm leading-relaxed">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            {/* Desktop */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 border-t-4 border-blue-500 hover:shadow-xl transition-shadow">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <DesktopIcon className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">{t.download.desktop.title}</h3>
+              </div>
+              <ol className="space-y-3">
+                {t.download.desktop.steps.map((step, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                    <span className="text-gray-700 text-sm leading-relaxed">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
         </div>
       </section>

@@ -878,9 +878,8 @@ function RegistrationLinkCard({
     toast.success(language === 'he' ? 'נשמר!' : 'Сохранено!')
   }
 
-  const regLink = slug
-    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://ambersol.co.il'}/register/${slug}`
-    : ''
+  const appOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://ambersol.co.il'
+  const regLink = slug ? `${appOrigin}/register/${slug}` : ''
 
   const copyLink = () => {
     if (!regLink) return

@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { Sparkles, X, MessageCircle } from 'lucide-react'
+// MessageCircle used in ExpiredOverlay
 import { useLanguage } from '@/contexts/LanguageContext'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { DemoOrderModal } from '@/components/demo/DemoOrderModal'
 
 interface DemoState {
   isDemo: boolean
@@ -64,6 +66,8 @@ function ExpiredOverlay({ locale }: { locale: string }) {
 function DemoTopBanner({ locale, expiresAt }: { locale: string; expiresAt: string | null }) {
   const [dismissed, setDismissed] = useState(false)
   const [pulse, setPulse] = useState(false)
+  const [orderOpen, setOrderOpen] = useState(false)
+  const [btnShimmer, setBtnShimmer] = useState(false)
   const l = locale === 'he'
 
   // Countdown
@@ -87,63 +91,86 @@ function DemoTopBanner({ locale, expiresAt }: { locale: string; expiresAt: strin
     return () => clearInterval(t)
   }, [])
 
+  // Button shimmer loop — every 3s
+  useEffect(() => {
+    const t = setInterval(() => {
+      setBtnShimmer(true)
+      setTimeout(() => setBtnShimmer(false), 700)
+    }, 3000)
+    return () => clearInterval(t)
+  }, [])
+
   if (dismissed) return null
 
   return (
-    <div className={`relative overflow-hidden transition-all duration-500 ${pulse ? 'scale-y-[1.02]' : 'scale-y-100'}`}
-      style={{ background: 'linear-gradient(90deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)' }}>
-      {/* Animated gradient sweep */}
-      <div className="absolute inset-0 opacity-30 pointer-events-none"
-        style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(251,191,36,0.15) 50%, transparent 100%)',
-          animation: 'demo-sweep 4s ease-in-out infinite' }}/>
-      {/* Top glow line */}
-      <div className="absolute top-0 left-0 right-0 h-0.5"
-        style={{ background: 'linear-gradient(90deg, #f59e0b, #fb923c, #f59e0b)',
-          animation: 'demo-border 2s ease-in-out infinite' }}/>
+    <>
+      <DemoOrderModal open={orderOpen} onClose={() => setOrderOpen(false)}/>
 
-      <div className="flex items-center gap-3 px-4 py-2 max-w-7xl mx-auto">
-        {/* Icon */}
-        <div className="relative flex-shrink-0">
-          <div className={`absolute inset-0 rounded-lg bg-amber-400/40 ${pulse ? 'animate-ping' : ''}`}/>
-          <div className="relative w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center">
-            <Sparkles size={14} className="text-white"/>
+      <div className={`relative overflow-hidden transition-all duration-500 ${pulse ? 'scale-y-[1.02]' : 'scale-y-100'}`}
+        style={{ background: 'linear-gradient(90deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)' }}>
+        {/* Animated gradient sweep */}
+        <div className="absolute inset-0 opacity-30 pointer-events-none"
+          style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(251,191,36,0.15) 50%, transparent 100%)',
+            animation: 'demo-sweep 4s ease-in-out infinite' }}/>
+        {/* Top glow line */}
+        <div className="absolute top-0 left-0 right-0 h-0.5"
+          style={{ background: 'linear-gradient(90deg, #f59e0b, #fb923c, #f59e0b)',
+            animation: 'demo-border 2s ease-in-out infinite' }}/>
+
+        <div className="flex items-center gap-3 px-4 py-2 max-w-7xl mx-auto">
+          {/* Icon */}
+          <div className="relative flex-shrink-0">
+            <div className={`absolute inset-0 rounded-lg bg-amber-400/40 ${pulse ? 'animate-ping' : ''}`}/>
+            <div className="relative w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center">
+              <Sparkles size={14} className="text-white"/>
+            </div>
           </div>
+
+          {/* Text */}
+          <div className="flex items-center gap-3 flex-1 flex-wrap min-w-0">
+            <span className="text-white font-bold text-sm whitespace-nowrap">
+              {l ? '🚀 מצב דמו' : '🚀 Демо режим'}
+            </span>
+            <span className="text-xs bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium animate-pulse flex-shrink-0">
+              DEMO
+            </span>
+            {timeLeft && (
+              <span className="text-xs text-white/50 flex-shrink-0">• {timeLeft}</span>
+            )}
+            <span className="text-xs text-white/40 hidden sm:inline">
+              {l ? 'הנתונים לדוגמה בלבד' : 'Данные демонстрационные'}
+            </span>
+          </div>
+
+          {/* ── Animated CTA button ── */}
+          <button onClick={() => setOrderOpen(true)}
+            className="relative flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-xl font-bold text-xs text-white overflow-hidden transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', boxShadow: '0 0 0 0 rgba(34,197,94,0.6)' }}>
+            {/* Outer pulse ring */}
+            <span className="absolute inset-0 rounded-xl animate-[ping_2s_ease-in-out_infinite] bg-green-400/40 pointer-events-none"/>
+            {/* Shimmer sweep */}
+            <span className={`absolute inset-0 rounded-xl pointer-events-none transition-opacity duration-300 ${btnShimmer ? 'opacity-100' : 'opacity-0'}`}
+              style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)' }}/>
+            {/* Glowing border */}
+            <span className="absolute inset-0 rounded-xl border-2 border-green-300/60 animate-pulse pointer-events-none"/>
+            <span className="relative flex items-center gap-1.5">
+              <span className="text-base leading-none">🛒</span>
+              <span className="hidden sm:inline">{l ? 'לרכישה' : 'Купить'}</span>
+            </span>
+          </button>
+
+          <button onClick={() => setDismissed(true)}
+            className="flex-shrink-0 w-6 h-6 rounded-md bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/50 hover:text-white transition-all">
+            <X size={12}/>
+          </button>
         </div>
 
-        {/* Text */}
-        <div className="flex items-center gap-3 flex-1 flex-wrap min-w-0">
-          <span className="text-white font-bold text-sm whitespace-nowrap">
-            {l ? '🚀 מצב דמו' : '🚀 Демо режим'}
-          </span>
-          <span className="text-xs bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium animate-pulse flex-shrink-0">
-            DEMO
-          </span>
-          {timeLeft && (
-            <span className="text-xs text-white/50 flex-shrink-0">• {timeLeft}</span>
-          )}
-          <span className="text-xs text-white/40 hidden sm:inline">
-            {l ? 'הנתונים לדוגמה בלבד' : 'Данные демонстрационные'}
-          </span>
-        </div>
-
-        {/* CTA */}
-        <a href="https://wa.me/972544858586" target="_blank" rel="noopener noreferrer"
-          className="flex-shrink-0 flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all hover:scale-105 shadow">
-          <MessageCircle size={12}/>
-          <span className="hidden sm:inline">{l ? 'לרכישה' : 'Купить'}</span>
-        </a>
-
-        <button onClick={() => setDismissed(true)}
-          className="flex-shrink-0 w-6 h-6 rounded-md bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/50 hover:text-white transition-all">
-          <X size={12}/>
-        </button>
+        <style jsx global>{`
+          @keyframes demo-sweep { 0%,100%{opacity:0.1} 50%{opacity:0.3} }
+          @keyframes demo-border { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        `}</style>
       </div>
-
-      <style jsx global>{`
-        @keyframes demo-sweep { 0%,100%{opacity:0.1} 50%{opacity:0.3} }
-        @keyframes demo-border { 0%,100%{opacity:1} 50%{opacity:0.3} }
-      `}</style>
-    </div>
+    </>
   )
 }
 

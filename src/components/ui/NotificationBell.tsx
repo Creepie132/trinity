@@ -35,6 +35,7 @@ interface Notification {
   body?: string
   link?: string
   is_read: boolean
+  priority?: 'normal' | 'high' | 'urgent'
   created_at: string
   metadata?: NotificationMetadata
 }
@@ -325,31 +326,40 @@ export function NotificationBell({ locale }: NotificationBellProps) {
     const typeIcon: Record<string, string> = {
       access_invitation: '👥', access_request: '🔑', transfer_request: '📦',
       transfer_result: '✅', payment: '💳', visit: '📅', task: '✅', system: 'ℹ️',
-      client_registered: '🆕',
+      client_registered: '🆕', demo_order_submitted: '🛒', demo_abandoned: '⚠️',
     }
     const icon = typeIcon[n.type] || '🔔'
+    const isUrgent = n.priority === 'urgent'
+    const isHigh   = n.priority === 'high'
 
     return (
       <div className={`rounded-xl border p-3 transition-all ${
-        !n.is_read
+        isUrgent
+          ? 'bg-red-50 border-red-300 animate-pulse'
+          : isHigh
+          ? 'bg-orange-50 border-orange-200'
+          : !n.is_read
           ? 'bg-indigo-50/60 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800/30'
           : 'border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'
       }`}>
         <a href={n.type === 'access_invitation' ? '#' : (n.link || '#')}>
           <div className="flex items-start gap-3">
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${
-              !n.is_read ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-gray-100 dark:bg-gray-800'
+              isUrgent ? 'bg-red-100' : isHigh ? 'bg-orange-100' : !n.is_read ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-gray-100 dark:bg-gray-800'
             }`}>{icon}</div>
             <div className="flex-1 min-w-0">
-              <p className={`text-sm leading-snug ${!n.is_read ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'}`}>
+              <p className={`text-sm leading-snug ${
+                isUrgent ? 'font-bold text-red-700' : isHigh ? 'font-semibold text-orange-700' :
+                !n.is_read ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'
+              }`}>
                 {n.title}
               </p>
-              {n.body && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{n.body}</p>}
+              {n.body && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 whitespace-pre-line line-clamp-3">{n.body}</p>}
               <p className="text-xs text-gray-400 mt-1">
                 {new Date(n.created_at).toLocaleString(locale === 'he' ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
-            {!n.is_read && <div className="w-2 h-2 rounded-full bg-indigo-500 mt-1 flex-shrink-0" />}
+            {!n.is_read && <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${isUrgent ? 'bg-red-500 animate-ping' : isHigh ? 'bg-orange-500' : 'bg-indigo-500'}`}/>}
           </div>
         </a>
 

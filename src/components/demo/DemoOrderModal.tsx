@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { X, ChevronRight, ChevronLeft, Check, Sparkles, Package, Zap,
-  Settings2, Lock, ExternalLink, CreditCard, AlertCircle } from 'lucide-react'
+  Settings2, Lock, ExternalLink, CreditCard, AlertCircle, Crown, Plus, Minus } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 export interface OrderForm {
   firstName: string; lastName: string; birthDate: string
   street: string; city: string; country: string
@@ -29,22 +28,32 @@ export const MODULES: ModuleItem[] = [
 const COUNTRIES_HE = ['ישראל','ארה"ב','רוסיה','אוקראינה','גרמניה','צרפת','בריטניה','אחר']
 const COUNTRIES_RU = ['Израиль','США','Россия','Украина','Германия','Франция','Великобритания','Другое']
 
-// ── Setup price calculator ─────────────────────────────────────────────────────
-// Full=2000 | Standart=1300 | Self=300 | discount 15% on Full+Standart if 5+ modules
 export type SetupType = 'full' | 'standart' | 'self' | null
 export function calcSetup(type: SetupType, discount: boolean): number {
   if (!type) return 0
   const base = type === 'full' ? 2000 : type === 'standart' ? 1300 : 300
-  if (type === 'self') return base
-  return discount ? Math.round(base * 0.85) : base
+  return (!discount || type === 'self') ? base : Math.round(base * 0.85)
 }
-
-// ── Monthly price for custom ──────────────────────────────────────────────────
-// 1-2 modules: 149₪, each next +50₪
 export function calcMonthly(count: number): number {
   if (count === 0) return 0
   if (count <= 2) return 149
   return 149 + (count - 2) * 50
+}
+// staff pricing: 1→99/each, 3→79/each, 5+→50/each
+export function calcStaffMonthly(count: number): number {
+  if (count === 0) return 0
+  if (count === 1 || count === 2) return count * 99
+  if (count >= 3 && count <= 4)   return count * 79
+  return count * 50
+}
+
+async function notifyAdmin(type: 'order_submitted' | 'abandoned', data: Record<string, any>) {
+  try {
+    await fetch('/api/demo/notify-admin', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, data }),
+    })
+  } catch {}
 }
 
 // ─── FormField ────────────────────────────────────────────────────────────────
@@ -105,9 +114,9 @@ Step1.displayName = 'Step1'
 
 // ─── PlanCard ─────────────────────────────────────────────────────────────────
 const PlanCard = memo(({ id, icon, title, price, priceNote, features, accent, badge, selected, onSelect }: {
-  id: 'base' | 'pro' | 'custom'; icon: React.ReactNode; title: string
+  id: 'base' | 'pro' | 'enterprise' | 'custom'; icon: React.ReactNode; title: string
   price: string; priceNote?: string; features: string[]; accent: string
-  badge?: string; selected: boolean; onSelect: (id: 'base' | 'pro' | 'custom') => void
+  badge?: string; selected: boolean; onSelect: (id: 'base' | 'pro' | 'enterprise' | 'custom') => void
 }) => (
   <div onClick={() => onSelect(id)}
     className={`relative rounded-2xl border-2 p-4 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg mt-4
@@ -139,18 +148,58 @@ const PlanCard = memo(({ id, icon, title, price, priceNote, features, accent, ba
 ))
 PlanCard.displayName = 'PlanCard'
 
+// ─── StaffCounter ─────────────────────────────────────────────────────────────
+const StaffCounter = memo(({ l, count, setCount }: { l: boolean; count: number; setCount: (n: number) => void }) => {
+  const pricePerStaff = count >= 5 ? 50 : count >= 3 ? 79 : 99
+  const total = calcStaffMonthly(count)
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold text-slate-700">{l ? 'מספר עובדים' : 'Количество работников'}</span>
+        <span className="text-xs text-slate-400">
+          {count === 0 ? '' : `₪${pricePerStaff}/${l ? 'עובד' : 'чел'}`}
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        <button onClick={() => setCount(Math.max(0, count - 1))}
+          className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-all active:scale-95">
+          <Minus size={14} className="text-slate-600"/>
+        </button>
+        <span className="flex-1 text-center font-bold text-slate-800 text-lg">{count}</span>
+        <button onClick={() => setCount(count + 1)}
+          className="w-8 h-8 rounded-lg bg-amber-100 hover:bg-amber-200 flex items-center justify-center transition-all active:scale-95">
+          <Plus size={14} className="text-amber-600"/>
+        </button>
+      </div>
+      {count > 0 && (
+        <div className="mt-2 flex justify-between items-center pt-2 border-t border-slate-100">
+          <span className="text-xs text-slate-500">{l ? 'תוספת חודשית:' : 'Доп. в месяц:'}</span>
+          <span className="font-bold text-amber-600 text-sm">+₪{total}</span>
+        </div>
+      )}
+      <div className="mt-2 text-xs text-slate-400 space-y-0.5">
+        <div>1–2 {l ? 'עובדים' : 'работника'}: ₪99/{l ? 'כל אחד' : 'каждый'}</div>
+        <div>3–4: ₪79/{l ? 'כל אחד' : 'каждый'} · 5+: ₪50/{l ? 'כל אחד' : 'каждый'}</div>
+      </div>
+    </div>
+  )
+})
+StaffCounter.displayName = 'StaffCounter'
+
 // ─── CustomPicker ─────────────────────────────────────────────────────────────
-const CustomPicker = memo(({ l, selectedModules, setSelectedModules, discountApplied, monthlyPrice }: {
+const CustomPicker = memo(({ l, selectedModules, setSelectedModules, discountApplied,
+  monthlyPrice, staffCount, setStaffCount }: {
   l: boolean; selectedModules: Set<string>
   setSelectedModules: React.Dispatch<React.SetStateAction<Set<string>>>
   discountApplied: boolean; monthlyPrice: number
+  staffCount: number; setStaffCount: (n: number) => void
 }) => {
   const toggle = useCallback((id: string) => {
     setSelectedModules(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   }, [setSelectedModules])
   return (
-    <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4">
-      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">{l ? 'בחר מודולים' : 'Выберите модули'}</p>
+    <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-3">
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{l ? 'בחר מודולים' : 'Выберите модули'}</p>
       <div className="grid grid-cols-2 gap-2">
         {MODULES.map(mod => {
           const selected = selectedModules.has(mod.id)
@@ -166,22 +215,35 @@ const CustomPicker = memo(({ l, selectedModules, setSelectedModules, discountApp
           )
         })}
       </div>
-      {/* Discount banner inside picker */}
       {discountApplied ? (
-        <div className="mt-3 bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-xs text-green-700 font-medium flex items-center gap-2">
+        <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-xs text-green-700 flex items-center gap-2">
           <Sparkles size={12} className="text-green-500 flex-shrink-0"/>
           {l ? '🎉 הנחה עד 15% על Full-setup ו-Standart-setup!' : '🎉 Скидка до 15% на Full-setup и Standart-setup!'}
         </div>
       ) : (
-        <div className="mt-3 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-xs text-blue-700 flex items-center gap-2">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-xs text-blue-700 flex items-center gap-2">
           <AlertCircle size={12} className="text-blue-500 flex-shrink-0"/>
           {l ? 'בחר 5+ מודולים לקבלת הנחה עד 15% על סטאפ' : 'Выберите 5+ модулей для скидки до 15% на сетап'}
         </div>
       )}
+      {/* Staff counter */}
+      <StaffCounter l={l} count={staffCount} setCount={setStaffCount}/>
       {selectedModules.size > 0 && (
-        <div className="mt-3 pt-3 border-t border-slate-200 flex justify-between items-center">
-          <span className="text-xs text-slate-500">{l ? 'תשלום חודשי:' : 'Ежемесячно:'}</span>
-          <span className="font-bold text-purple-600">₪{monthlyPrice}/{l ? 'חודש' : 'мес'}</span>
+        <div className="pt-2 border-t border-slate-200 space-y-1">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-500">{l ? 'מודולים:' : 'Модули:'}</span>
+            <span className="font-bold text-purple-600 text-sm">₪{monthlyPrice}/{l ? 'חודש' : 'мес'}</span>
+          </div>
+          {staffCount > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-slate-500">{l ? 'עובדים:' : 'Работники:'}</span>
+              <span className="font-bold text-amber-600 text-sm">+₪{calcStaffMonthly(staffCount)}/{l ? 'חודש' : 'мес'}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center pt-1 border-t border-slate-100">
+            <span className="text-xs font-semibold text-slate-600">{l ? 'סה"כ:' : 'Итого:'}</span>
+            <span className="font-extrabold text-slate-800">₪{monthlyPrice + calcStaffMonthly(staffCount)}/{l ? 'חודש' : 'мес'}</span>
+          </div>
         </div>
       )}
     </div>
@@ -191,109 +253,109 @@ CustomPicker.displayName = 'CustomPicker'
 
 // ─── Step2 ────────────────────────────────────────────────────────────────────
 interface Step2Props {
-  l: boolean; isIsrael: boolean; plan: 'base' | 'pro' | 'custom' | null
-  onPlan: (p: 'base' | 'pro' | 'custom') => void
+  l: boolean; isIsrael: boolean; plan: 'base' | 'pro' | 'enterprise' | 'custom' | null
+  onPlan: (p: 'base' | 'pro' | 'enterprise' | 'custom') => void
   selectedModules: Set<string>; setSelectedModules: React.Dispatch<React.SetStateAction<Set<string>>>
   discountApplied: boolean; monthlyPrice: number
+  staffCount: number; setStaffCount: (n: number) => void
   wantsPayments: boolean; setWantsPayments: (v: boolean) => void
 }
-const Step2 = memo(({ l, isIsrael, plan, onPlan, selectedModules, setSelectedModules,
-  discountApplied, monthlyPrice, wantsPayments, setWantsPayments }: Step2Props) => (
-  <div className="flex flex-col gap-3 pt-2">
-    <PlanCard id="base" selected={plan === 'base'} onSelect={onPlan}
-      icon={<Package size={18} className="text-white"/>}
-      title={l ? 'בייס' : 'Base'} price="₪199" priceNote={l ? '/חודש' : '/мес'} accent="blue"
-      badge={l ? 'פופולרי' : 'Популярный'}
-      features={l ? ['לקוחות','ביקורים / תורים','יומן ומשימות','מלאי']
-                  : ['Клиенты','Визиты / Записи','Дневник и задачи','Склад']}/>
-    <PlanCard id="pro" selected={plan === 'pro'} onSelect={onPlan}
-      icon={<Zap size={18} className="text-white"/>}
-      title="Pro" price="₪349" priceNote={l ? '/חודש' : '/мес'} accent="amber"
-      badge={l ? 'מומלץ' : 'Рекомендован'}
-      features={l ? ['הכל מ-Base','הזמנה אונליין','אנליטיקה ודוחות','SMS ותזכורות']
-                  : ['Всё из Base','Онлайн-запись','Статистика и отчёты','SMS и напоминания']}/>
-    <PlanCard id="custom" selected={plan === 'custom'} onSelect={onPlan}
-      icon={<Settings2 size={18} className="text-white"/>}
-      title={l ? 'הגדרה אישית' : 'Инд. настройка'} price={l ? 'לפי בחירה' : 'По выбору'}
-      accent="purple"
-      features={l
-        ? ['בחר מודולים לפי הצורך','הגדרות מותאמות אישית','תמיכה מועדפת','הנחה עד 15% על סטאפ (5+ מודולים)']
-        : ['Выберите нужные модули','Индивидуальная конфигурация','Приоритетная поддержка','Скидка до 15% на setup (Full и Standart) от 5+ модулей']}/>
-
-    {/* Custom picker */}
-    {plan === 'custom' && (
-      <>
-        {/* Discount hint above picker */}
-        <div className="bg-purple-50 border border-purple-200 rounded-xl px-3 py-2 text-xs text-purple-700 flex items-center gap-2">
-          <Sparkles size={12} className="text-purple-500 flex-shrink-0"/>
-          {l ? 'בחר 5+ מודולים וקבל הנחה עד 15% על Full-setup ו-Standart-setup'
-             : 'Выберите 5+ модулей и получите скидку до 15% на Full-setup и Standart-setup'}
+const Step2 = memo((p: Step2Props) => {
+  const { l, isIsrael, plan, onPlan, selectedModules, setSelectedModules,
+    discountApplied, monthlyPrice, staffCount, setStaffCount, wantsPayments, setWantsPayments } = p
+  return (
+    <div className="flex flex-col gap-3 pt-2">
+      <PlanCard id="base" selected={plan === 'base'} onSelect={onPlan}
+        icon={<Package size={18} className="text-white"/>}
+        title="Base" price="₪199" priceNote={l ? '/חודש' : '/мес'} accent="blue"
+        badge={l ? 'פופולרי' : 'Популярный'}
+        features={l ? ['לקוחות','ביקורים / תורים','יומן ומשימות','מלאי']
+                    : ['Клиенты','Визиты / Записи','Дневник и задачи','Склад']}/>
+      <PlanCard id="pro" selected={plan === 'pro'} onSelect={onPlan}
+        icon={<Zap size={18} className="text-white"/>}
+        title="Pro" price="₪249" priceNote={l ? '/חודש' : '/мес'} accent="amber"
+        badge={l ? 'מומלץ' : 'Рекомендован'}
+        features={l ? ['הכל מ-Base','הזמנה אונליין','אנליטיקה ודוחות','SMS ותזכורות']
+                    : ['Всё из Base','Онлайн-запись','Статистика и отчёты','SMS и напоминания']}/>
+      <PlanCard id="enterprise" selected={plan === 'enterprise'} onSelect={onPlan}
+        icon={<Crown size={18} className="text-white"/>}
+        title="Enterprise" price="₪499" priceNote={l ? '/חודש' : '/мес'} accent="indigo"
+        badge={l ? 'עסקים גדולים' : 'Для бизнеса'}
+        features={l ? ['הכל מ-Pro','סניפים מרובים','מועדון נאמנות','עד 5 עובדים כלולים']
+                    : ['Всё из Base и Pro','Филиалы','Программа лояльности','До 5 работников включено']}/>
+      <PlanCard id="custom" selected={plan === 'custom'} onSelect={onPlan}
+        icon={<Settings2 size={18} className="text-white"/>}
+        title={l ? 'הגדרה אישית' : 'Инд. настройка'} price={l ? 'לפי בחירה' : 'По выбору'}
+        accent="purple"
+        features={l ? ['בחר מודולים לפי הצורך','הגדרות מותאמות אישית','תמיכה מועדפת','הנחה עד 15% על סטאפ (5+ מודולים)']
+                    : ['Выберите нужные модули','Индивидуальная конфигурация','Приоритетная поддержка','Скидка до 15% на setup от 5+ модулей']}/>
+      {plan === 'custom' && (
+        <>
+          <div className="bg-purple-50 border border-purple-200 rounded-xl px-3 py-2 text-xs text-purple-700 flex items-center gap-2">
+            <Sparkles size={12} className="text-purple-500 flex-shrink-0"/>
+            {l ? 'בחר 5+ מודולים וקבל הנחה עד 15% על Full-setup ו-Standart-setup'
+               : 'Выберите 5+ модулей и получите скидку до 15% на Full-setup и Standart-setup'}
+          </div>
+          <CustomPicker l={l} selectedModules={selectedModules} setSelectedModules={setSelectedModules}
+            discountApplied={discountApplied} monthlyPrice={monthlyPrice}
+            staffCount={staffCount} setStaffCount={setStaffCount}/>
+        </>
+      )}
+      {plan !== 'custom' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700 flex items-center gap-2">
+          <Sparkles size={12} className="text-amber-500 flex-shrink-0"/>
+          {l ? 'עם הגדרה אישית של 5+ מודולים — הנחה עד 15% על סטאפ Full ו-Standart'
+             : 'При инд. настройке 5+ модулей — скидка до 15% на сетап Full и Standart'}
         </div>
-        <CustomPicker l={l} selectedModules={selectedModules} setSelectedModules={setSelectedModules}
-          discountApplied={discountApplied} monthlyPrice={monthlyPrice}/>
-      </>
-    )}
-
-    {/* Discount banner (between custom picker and payments) */}
-    {plan !== 'custom' && (
-      <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700 flex items-center gap-2">
-        <Sparkles size={12} className="text-amber-500 flex-shrink-0"/>
-        {l ? 'עם הגדרה אישית של 5+ מודולים — הנחה עד 15% על סטאפ Full ו-Standart'
-           : 'При инд. настройке 5+ модулей — скидка до 15% на сетап Full и Standart'}
-      </div>
-    )}
-
-    {/* Payments checkbox */}
-    <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer select-none transition-all
-      ${isIsrael ? (wantsPayments ? 'border-green-400 bg-green-50' : 'border-slate-200 hover:border-green-300') : 'opacity-40 cursor-not-allowed border-slate-200 bg-slate-50'}`}
-      onClick={() => isIsrael && setWantsPayments(!wantsPayments)}>
-      <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${wantsPayments && isIsrael ? 'bg-green-500 border-green-500' : 'border-slate-300'}`}>
-        {wantsPayments && isIsrael && <Check size={10} className="text-white" strokeWidth={3}/>}
-      </div>
-      <div className="flex-1">
-        <span className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-          <CreditCard size={14} className="text-green-600"/>
-          {l ? 'מערכת תשלומים' : 'Платёжная система'}
-          {!isIsrael && <Lock size={11} className="text-slate-400"/>}
-        </span>
-        <span className="text-xs text-slate-500">
-          {isIsrael
-            ? (l ? 'קבלת כרטיסי אשראי, קבלות, תשלומים חוזרים — ישראל בלבד' : 'Приём карт, квитанции, рекуррентные платежи — только Израиль')
-            : (l ? 'זמין לבעלי עסקים בישראל בלבד' : 'Доступно только для бизнесов в Израиле')}
-        </span>
-      </div>
-    </label>
-    {wantsPayments && isIsrael && (
-      <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-xs text-green-700 flex items-center gap-2">
-        <AlertCircle size={12} className="text-green-500 flex-shrink-0"/>
-        {l ? 'נציג Amber Solutions ייצור איתך קשר בהקדם לתיאום הגדרת מערכת התשלומים.'
-           : 'Представитель Amber Solutions свяжется с вами в ближайшее время для настройки платёжной системы.'}
-      </div>
-    )}
-  </div>
-))
+      )}
+      {/* Payments checkbox */}
+      <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer select-none transition-all
+        ${isIsrael ? (wantsPayments ? 'border-green-400 bg-green-50' : 'border-slate-200 hover:border-green-300') : 'opacity-40 cursor-not-allowed border-slate-200 bg-slate-50'}`}
+        onClick={() => isIsrael && setWantsPayments(!wantsPayments)}>
+        <div className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${wantsPayments && isIsrael ? 'bg-green-500 border-green-500' : 'border-slate-300'}`}>
+          {wantsPayments && isIsrael && <Check size={10} className="text-white" strokeWidth={3}/>}
+        </div>
+        <div className="flex-1">
+          <span className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+            <CreditCard size={14} className="text-green-600"/>
+            {l ? 'מערכת תשלומים' : 'Платёжная система'}
+            {!isIsrael && <Lock size={11} className="text-slate-400"/>}
+          </span>
+          <span className="text-xs text-slate-500">
+            {isIsrael
+              ? (l ? 'קבלת כרטיסי אשראי, קבלות, תשלומים חוזרים — ישראל בלבד' : 'Приём карт, квитанции, рекуррентные платежи')
+              : (l ? 'זמין לבעלי עסקים בישראל בלבד' : 'Доступно только для бизнесов в Израиле')}
+          </span>
+        </div>
+      </label>
+      {wantsPayments && isIsrael && (
+        <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-xs text-green-700 flex items-center gap-2">
+          <AlertCircle size={12} className="text-green-500 flex-shrink-0"/>
+          {l ? 'נציג Amber Solutions ייצור איתך קשר בהקדם לתיאום הגדרת מערכת התשלומים.'
+             : 'Представитель Amber Solutions свяжется с вами в ближайшее время для настройки платёжной системы.'}
+        </div>
+      )}
+    </div>
+  )
+})
 Step2.displayName = 'Step2'
 
-// ─── SetupPicker mini-modal ───────────────────────────────────────────────────
+// ─── SetupPicker ──────────────────────────────────────────────────────────────
 const SetupPicker = memo(({ l, discountApplied, onSelect, onClose }: {
   l: boolean; discountApplied: boolean
   onSelect: (t: SetupType, price: number) => void; onClose: () => void
 }) => {
-  const options: { id: SetupType; emoji: string; titleRu: string; titleHe: string; descRu: string; descHe: string; base: number }[] = [
-    { id: 'full',     emoji: '🏆', titleRu: 'Full-setup',     titleHe: 'Full-setup',
-      descRu: 'Полная настройка под клиента, кастомные поля, категории, обучение',
-      descHe: 'הגדרה מלאה, שדות מותאמים, קטגוריות, הדרכה', base: 2000 },
-    { id: 'standart', emoji: '⚙️', titleRu: 'Standart-setup', titleHe: 'Standart-setup',
-      descRu: 'Стандартная настройка без кастомизации, обучение',
-      descHe: 'הגדרה סטנדרטית, ללא התאמה אישית, הדרכה', base: 1300 },
-    { id: 'self',     emoji: '🚀', titleRu: 'Self-onboarding', titleHe: 'Self-onboarding',
-      descRu: 'Без кастомной настройки и обучения — Pay & Go',
-      descHe: 'ללא הגדרה מותאמת ו-ללא הדרכה — Pay & Go', base: 300 },
+  const options = [
+    { id: 'full' as SetupType,     emoji: '🏆', titleRu: 'Full-setup',      titleHe: 'Full-setup',
+      descRu: 'Полная настройка, кастомные поля, категории, обучение', descHe: 'הגדרה מלאה, שדות מותאמים, קטגוריות, הדרכה', base: 2000 },
+    { id: 'standart' as SetupType, emoji: '⚙️', titleRu: 'Standart-setup', titleHe: 'Standart-setup',
+      descRu: 'Стандартная настройка без кастомизации, обучение', descHe: 'הגדרה סטנדרטית, ללא התאמה, הדרכה', base: 1300 },
+    { id: 'self' as SetupType,     emoji: '🚀', titleRu: 'Self-onboarding', titleHe: 'Self-onboarding',
+      descRu: 'Без настройки и обучения — Pay & Go', descHe: 'ללא הגדרה ו-ללא הדרכה — Pay & Go', base: 300 },
   ]
   return (
     <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden"
-        style={{ animation: 'modal-pop 0.3s cubic-bezier(0.34,1.3,0.64,1) both' }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden" style={{ animation: 'modal-pop 0.3s cubic-bezier(0.34,1.3,0.64,1) both' }}>
         <div className="h-1.5 bg-gradient-to-r from-amber-400 to-orange-400"/>
         <div className="p-5">
           <div className="flex items-center justify-between mb-4">
@@ -309,24 +371,21 @@ const SetupPicker = memo(({ l, discountApplied, onSelect, onClose }: {
           <div className="space-y-2">
             {options.map(opt => {
               const final = calcSetup(opt.id, discountApplied)
-              const isSelf = opt.id === 'self'
               return (
-                <button key={opt.id} onClick={() => onSelect(opt.id, final)}
-                  className="w-full text-left p-3 rounded-2xl border-2 border-slate-200 hover:border-amber-400 hover:bg-amber-50 transition-all group">
+                <button key={String(opt.id)} onClick={() => onSelect(opt.id, final)}
+                  className="w-full text-left p-3 rounded-2xl border-2 border-slate-200 hover:border-amber-400 hover:bg-amber-50 transition-all">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{opt.emoji}</span>
                       <span className="font-bold text-slate-800 text-sm">{l ? opt.titleHe : opt.titleRu}</span>
                     </div>
                     <div className="text-right">
-                      {!isSelf && discountApplied && (
-                        <span className="text-xs line-through text-slate-400 mr-1">₪{opt.base}</span>
-                      )}
+                      {opt.id !== 'self' && discountApplied && <span className="text-xs line-through text-slate-400 mr-1">₪{opt.base}</span>}
                       <span className="font-extrabold text-amber-600">₪{final}</span>
                     </div>
                   </div>
                   <p className="text-xs text-slate-500 mt-1 ml-7">{l ? opt.descHe : opt.descRu}</p>
-                  {isSelf && <p className="text-xs text-slate-400 mt-0.5 ml-7 italic">{l ? 'ללא הנחה' : 'Без скидки'}</p>}
+                  {opt.id === 'self' && <p className="text-xs text-slate-400 mt-0.5 ml-7 italic">{l ? 'ללא הנחה' : 'Без скидки'}</p>}
                 </button>
               )
             })}
@@ -344,8 +403,9 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
   const l = language === 'he'
   const [step, setStep]     = useState<1 | 2>(1)
   const [form, setForm]     = useState<OrderForm>({ firstName:'', lastName:'', birthDate:'', street:'', city:'', country:'', email:'', notes:'', agreed: false })
-  const [plan, setPlan]     = useState<'base' | 'pro' | 'custom' | null>(null)
+  const [plan, setPlan]     = useState<'base' | 'pro' | 'enterprise' | 'custom' | null>(null)
   const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set())
+  const [staffCount, setStaffCount]           = useState(0)
   const [wantsPayments, setWantsPayments]     = useState(false)
   const [showSetupPicker, setShowSetupPicker] = useState(false)
   const [setupType, setSetupType]             = useState<SetupType>(null)
@@ -353,16 +413,18 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
   const [submitted, setSubmitted]             = useState(false)
   const [submitting, setSubmitting]           = useState(false)
   const [paymentUrl, setPaymentUrl]           = useState<string | null>(null)
-  const overlayRef = useRef<HTMLDivElement>(null)
+  const overlayRef  = useRef<HTMLDivElement>(null)
+  const abandonSent = useRef(false)
 
-  const isIsrael       = form.country === (l ? 'ישראל' : 'Израиль')
+  const isIsrael        = form.country === (l ? 'ישראל' : 'Израиль')
   const discountApplied = selectedModules.size >= 5
-  const monthlyPrice   = calcMonthly(selectedModules.size)
-  const planAmount     = plan === 'base' ? 199 : plan === 'pro' ? 349 : monthlyPrice
+  const monthlyPrice    = calcMonthly(selectedModules.size)
+  const staffMonthly    = calcStaffMonthly(staffCount)
+  const planAmount      = plan === 'base' ? 199 : plan === 'pro' ? 249 : plan === 'enterprise' ? 499
+    : monthlyPrice + staffMonthly
 
-  const handlePlan = useCallback((p: 'base' | 'pro' | 'custom') => {
-    setPlan(p)
-    if (p !== 'custom') setSelectedModules(new Set())
+  const handlePlan = useCallback((p: 'base' | 'pro' | 'enterprise' | 'custom') => {
+    setPlan(p); if (p !== 'custom') { setSelectedModules(new Set()); setStaffCount(0) }
   }, [])
 
   useEffect(() => {
@@ -370,58 +432,72 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
       setStep(1); setSubmitted(false); setPlan(null); setPaymentUrl(null)
       setSelectedModules(new Set()); setWantsPayments(false)
       setShowSetupPicker(false); setSetupType(null); setSetupFinalPrice(0)
+      setStaffCount(0); abandonSent.current = false
     }
   }, [open])
+
+  // Abandon detection: send notification when modal closes without submitting
+  useEffect(() => {
+    if (!open && !submitted && !abandonSent.current) {
+      if (form.firstName || form.email) {
+        abandonSent.current = true
+        notifyAdmin('abandoned', { firstName: form.firstName, lastName: form.lastName, email: form.email, country: form.country })
+      }
+    }
+  }, [open, submitted, form])
 
   const canProceed = !!(form.firstName && form.lastName && form.email && form.country && form.agreed)
   const canSubmit  = !!(plan && (plan !== 'custom' || selectedModules.size > 0)) && !submitting
 
-  // "Отправить заявку" → first show setup picker
   const handleSendClick = () => { if (canSubmit) setShowSetupPicker(true) }
 
   const handleSetupSelect = async (type: SetupType, price: number) => {
     setSetupType(type); setSetupFinalPrice(price); setShowSetupPicker(false)
     setSubmitting(true)
     try {
+      // 1. Notify admin
+      await notifyAdmin('order_submitted', {
+        firstName: form.firstName, lastName: form.lastName, email: form.email,
+        country: form.country, plan, setupType: type, setupPrice: price,
+        monthlyPrice: planAmount, staffCount, wantsPayments, notes: form.notes,
+      })
+      // 2. Send contact email
       await fetch('/api/contact', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subject: `🛒 Заказ Trinity CRM — ${plan?.toUpperCase()} | ${form.firstName} ${form.lastName}`,
           message: [
-            `Имя: ${form.firstName} ${form.lastName}`,
-            `Email: ${form.email}`,
-            `Дата рождения: ${form.birthDate || '—'}`,
+            `Имя: ${form.firstName} ${form.lastName}`, `Email: ${form.email}`,
             `Адрес: ${[form.street, form.city, form.country].filter(Boolean).join(', ')}`,
-            `Пакет: ${plan}${plan === 'custom' ? ` (модули: ${Array.from(selectedModules).join(', ')})` : ''}`,
-            `Ежемесячно: ₪${planAmount}`,
+            `Пакет: ${plan}`, `Ежемесячно: ₪${planAmount}`,
+            plan === 'custom' && staffCount > 0 ? `Работники: ${staffCount} (+₪${staffMonthly}/мес)` : '',
             `Setup: ${type} — ₪${price}${discountApplied && type !== 'self' ? ' (−15%)' : ''}`,
-            `Платёжная система: ${wantsPayments ? 'Да' : 'Нет'}`,
-            `Заметки: ${form.notes || '—'}`,
-          ].join('\n'),
-          from: form.email,
+            wantsPayments ? '💳 Запросил платёжную систему' : '',
+            form.notes ? `Заметки: ${form.notes}` : '',
+          ].filter(Boolean).join('\n'), from: form.email,
         }),
       })
+      // 3. Tranzila link (Israel only)
       if (isIsrael && price > 0) {
+        const d = new Date(); d.setDate(d.getDate() + 30)
         const res = await fetch('/api/demo/create-payment-link', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            setupAmount: price,                        // first charge = setup fee
-            monthlyAmount: planAmount || undefined,    // recurring monthly after
+            setupAmount: price, monthlyAmount: planAmount,
             description: `Trinity CRM ${type} | ${form.firstName} ${form.lastName}`,
-            email: form.email,
-            plan,
+            email: form.email, plan,
           }),
         })
         const json = await res.json()
         if (json.url) setPaymentUrl(json.url)
       }
-    } catch (e) { console.error('[DemoOrderModal] submit:', e) }
+    } catch (e) { console.error('[DemoOrderModal]', e) }
     setSubmitting(false); setSubmitted(true)
   }
 
   if (!open) return null
 
-  // ─── Success ────────────────────────────────────────────────────────────────
+  // ─── Success ──────────────────────────────────────────────────────────────────
   if (submitted) return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center" style={{ animation: 'modal-pop 0.35s cubic-bezier(0.34,1.3,0.64,1) both' }}>
@@ -429,13 +505,11 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
           <Check size={36} className="text-white" strokeWidth={2.5}/>
         </div>
         <h2 className="text-2xl font-bold text-slate-800 mb-2">{l ? 'תודה!' : 'Спасибо!'}</h2>
-        <p className="text-slate-500 text-sm mb-4">
-          {l ? 'הבקשה שלך התקבלה. ניצור איתך קשר תוך 24 שעות.' : 'Ваша заявка получена. Мы свяжемся с вами в течение 24 часов.'}
-        </p>
+        <p className="text-slate-500 text-sm mb-4">{l ? 'הבקשה שלך התקבלה. ניצור איתך קשר תוך 24 שעות.' : 'Ваша заявка получена. Мы свяжемся с вами в течение 24 часов.'}</p>
         {setupType && (
           <div className="mb-4 bg-slate-50 rounded-xl px-4 py-3 text-sm text-left space-y-1">
             <div className="flex justify-between"><span className="text-slate-500">{l ? 'תוכנית:' : 'Пакет:'}</span><span className="font-bold">{plan}</span></div>
-            {plan === 'custom' && <div className="flex justify-between"><span className="text-slate-500">{l ? 'חודשי:' : 'Ежемесячно:'}</span><span className="font-bold text-purple-600">₪{monthlyPrice}</span></div>}
+            <div className="flex justify-between"><span className="text-slate-500">{l ? 'חודשי:' : 'Ежемесячно:'}</span><span className="font-bold text-purple-600">₪{planAmount}</span></div>
             <div className="flex justify-between"><span className="text-slate-500">Setup:</span><span className="font-bold text-amber-600">₪{setupFinalPrice}</span></div>
           </div>
         )}
@@ -450,7 +524,7 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
           </div>
         )}
         <a href="https://wa.me/972544858586" target="_blank" rel="noopener noreferrer"
-          className="block w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold py-3 rounded-2xl transition-all hover:scale-[1.02] text-sm mb-3">
+          className="block w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold py-3 rounded-2xl transition-all hover:scale-[1.02] text-sm mb-3">
           💬 WhatsApp
         </a>
         <button onClick={onClose} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">{l ? 'סגור' : 'Закрыть'}</button>
@@ -485,12 +559,12 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
             </div>
           </div>
           <div className="overflow-y-auto flex-1 px-6 pb-4">
-            {step === 1
-              ? <Step1 form={form} setForm={setForm} l={l}/>
-              : <Step2 l={l} isIsrael={isIsrael} plan={plan} onPlan={handlePlan}
-                  selectedModules={selectedModules} setSelectedModules={setSelectedModules}
-                  discountApplied={discountApplied} monthlyPrice={monthlyPrice}
-                  wantsPayments={wantsPayments} setWantsPayments={setWantsPayments}/>}
+            {step === 1 ? <Step1 form={form} setForm={setForm} l={l}/> :
+              <Step2 l={l} isIsrael={isIsrael} plan={plan} onPlan={handlePlan}
+                selectedModules={selectedModules} setSelectedModules={setSelectedModules}
+                discountApplied={discountApplied} monthlyPrice={monthlyPrice}
+                staffCount={staffCount} setStaffCount={setStaffCount}
+                wantsPayments={wantsPayments} setWantsPayments={setWantsPayments}/>}
           </div>
           <div className="flex-shrink-0 px-6 py-4 border-t border-slate-100 flex gap-3">
             {step === 2 && (

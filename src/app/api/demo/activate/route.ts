@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         manual_price: 0,
         monthly_price: reg.monthly_fee,
         onboarding_completed: false,
-        is_demo: false,
+        is_demo: true,
         tranzila_token: tranzila_token || null,
         business_info: {
           owner_name: `${reg.first_name} ${reg.last_name}`,
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     const userId = authData.user.id
 
     // 5. Link user to org
-    await service.from('org_users').insert({ user_id: userId, org_id: orgId, role: 'admin' })
+    await service.from('org_users').insert({ user_id: userId, org_id: orgId, email, role: 'owner' })
     await service.from('user_active_branch').insert({ user_id: userId, active_org_id: orgId })
 
     // 6. Mark registration as paid

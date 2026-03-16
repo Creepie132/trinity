@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Menu, X, ChevronRight, ChevronUp, Monitor, Bot, Globe, Code, Mail, MessageCircle, Download } from 'lucide-react'
 import { PrismButton } from '@/components/landing/PrismButton'
 import { InstallCards } from '@/components/landing/InstallCards'
+import DemoRegisterModal from '@/components/landing/DemoRegisterModal'
 import Image from 'next/image'
 
 // Translations type
@@ -696,6 +697,8 @@ export default function LandingPage() {
   const [toastType, setToastType] = useState<'success' | 'error'>('success')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [landingPlans, setLandingPlans] = useState<LandingPlan[] | null>(null)
+  const [demoModalOpen, setDemoModalOpen] = useState(false)
+  const [demoModalPlan, setDemoModalPlan] = useState('')
   const t = translations[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
 
@@ -753,10 +756,10 @@ export default function LandingPage() {
     document.documentElement.setAttribute('lang', language)
   }, [dir, language])
 
-  // Handle order modal
+  // Handle order modal — now opens DemoRegisterModal
   const openOrderModal = (planName: string) => {
-    setSelectedPlan(planName)
-    setOrderModalOpen(true)
+    setDemoModalPlan(planName)
+    setDemoModalOpen(true)
   }
 
   const handleSubmitOrder = (e: React.FormEvent<HTMLFormElement>) => {
@@ -1297,86 +1300,128 @@ export default function LandingPage() {
           {!landingPlans && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[0,1,2].map(i => (
-                <div key={i} className={`rounded-2xl bg-gray-100 animate-pulse h-80 ${i===1?'md:scale-105':''}`} />
+                <div key={i} className={`rounded-3xl bg-gray-100 animate-pulse h-96 ${i===1?'md:scale-105':''}`} />
               ))}
             </div>
           )}
 
           {/* Real plan cards from DB */}
           {landingPlans && (
-            <div className={`grid grid-cols-1 gap-8 ${
+            <div className={`grid grid-cols-1 gap-6 ${
               landingPlans.length === 4 ? 'md:grid-cols-2 xl:grid-cols-4' :
               landingPlans.length === 3 ? 'md:grid-cols-3' :
-              landingPlans.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1'
+              landingPlans.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1 max-w-sm mx-auto'
             }`}>
-              {landingPlans.map((plan, index) => {
+              {landingPlans.map((plan) => {
                 const badge = language === 'he' ? plan.badge_he : plan.badge_ru
-                const headerBg = COLOR_HEADER[plan.color] ?? 'bg-gray-100'
-                const headerText = COLOR_TEXT[plan.color] ?? 'text-gray-900'
-                const ringColor = COLOR_RING[plan.color] ?? 'ring-gray-400'
                 const features = language === 'he' ? plan.features_he : plan.features_ru
                 const isHighlighted = !!badge
+
+                // Color mappings
+                const gradients: Record<string, string> = {
+                  gray:   'from-gray-600 to-gray-800',
+                  blue:   'from-blue-500 to-blue-700',
+                  amber:  'from-amber-400 to-orange-500',
+                  purple: 'from-purple-500 to-purple-700',
+                  green:  'from-green-500 to-green-700',
+                  red:    'from-red-500 to-red-700',
+                }
+                const glows: Record<string, string> = {
+                  gray:   'hover:shadow-[0_20px_60px_rgba(100,100,100,0.3)]',
+                  blue:   'hover:shadow-[0_20px_60px_rgba(59,130,246,0.4)]',
+                  amber:  'hover:shadow-[0_20px_60px_rgba(245,158,11,0.4)]',
+                  purple: 'hover:shadow-[0_20px_60px_rgba(168,85,247,0.4)]',
+                  green:  'hover:shadow-[0_20px_60px_rgba(34,197,94,0.4)]',
+                  red:    'hover:shadow-[0_20px_60px_rgba(239,68,68,0.4)]',
+                }
+                const badgeColors: Record<string, string> = {
+                  gray:   'bg-gray-500',
+                  blue:   'bg-blue-500',
+                  amber:  'bg-amber-500',
+                  purple: 'bg-purple-500',
+                  green:  'bg-green-500',
+                  red:    'bg-red-500',
+                }
+                const ctaStyles: Record<string, string> = {
+                  gray:   'bg-gray-100 hover:bg-gray-200 text-gray-800',
+                  blue:   'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md hover:shadow-lg',
+                  amber:  'bg-white hover:bg-gray-50 text-amber-700',
+                  purple: 'bg-white hover:bg-gray-50 text-purple-700',
+                  green:  'bg-white hover:bg-gray-50 text-green-700',
+                  red:    'bg-white hover:bg-gray-50 text-red-700',
+                }
+                const headerGrad = gradients[plan.color] ?? gradients.gray
+                const glowClass  = glows[plan.color] ?? glows.gray
+                const badgeBg    = badgeColors[plan.color] ?? badgeColors.gray
+                const ctaStyle   = isHighlighted ? (ctaStyles[plan.color] ?? ctaStyles.blue) : ctaStyles.gray
 
                 return (
                   <div
                     key={plan.key}
-                    className={`relative bg-white rounded-2xl shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
-                      isHighlighted ? `md:scale-105 ring-2 ${ringColor}` : ''
+                    className={`relative group flex flex-col rounded-3xl overflow-hidden shadow-lg transition-all duration-500 hover:-translate-y-2 ${glowClass} ${
+                      isHighlighted ? 'ring-2 ring-amber-400/60 md:scale-105 z-10' : 'bg-white'
                     }`}
                   >
                     {/* Badge */}
                     {badge && (
-                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                        <span className="bg-amber-500 text-white px-4 py-1 rounded-full text-sm font-semibold whitespace-nowrap shadow-md">
+                      <div className="absolute -top-px left-1/2 -translate-x-1/2 z-20">
+                        <span className={`inline-block ${badgeBg} text-white text-xs font-bold px-4 py-1 rounded-b-xl shadow-md`}>
                           {badge}
                         </span>
                       </div>
                     )}
 
-                    {/* Header */}
-                    <div className={`p-6 rounded-t-2xl ${headerBg}`}>
-                      <h3 className={`text-2xl font-bold ${headerText}`}>
-                        {language === 'he' ? plan.name_he : plan.name_ru}
-                      </h3>
-                      {(language === 'he' ? plan.subtitle_he : plan.subtitle_ru) && (
-                        <p className={`text-sm mt-1 ${headerText} opacity-70`}>
-                          {language === 'he' ? plan.subtitle_he : plan.subtitle_ru}
-                        </p>
-                      )}
+                    {/* Gradient header */}
+                    <div className={`relative bg-gradient-to-br ${headerGrad} px-6 pt-8 pb-6 overflow-hidden`}>
+                      {/* Shimmer effect */}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-out" />
+                      </div>
+                      {/* Floating orb */}
+                      <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-white/10 blur-xl" />
+                      <div className="absolute -bottom-2 -left-2 w-16 h-16 rounded-full bg-black/10 blur-lg" />
+
+                      <div className="relative z-10">
+                        <h3 className="text-2xl font-bold text-white leading-tight">
+                          {language === 'he' ? plan.name_he : plan.name_ru}
+                        </h3>
+                        {(language === 'he' ? plan.subtitle_he : plan.subtitle_ru) && (
+                          <p className="text-white/60 text-sm mt-0.5">
+                            {language === 'he' ? plan.subtitle_he : plan.subtitle_ru}
+                          </p>
+                        )}
+                        <div className="flex items-end gap-1 mt-4">
+                          <span className="text-3xl font-extrabold text-white">
+                            {language === 'he' ? plan.price_he : plan.price_ru}
+                          </span>
+                          {(language === 'he' ? plan.period_he : plan.period_ru) && (
+                            <span className="text-white/60 text-sm mb-1">
+                              {language === 'he' ? plan.period_he : plan.period_ru}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Body */}
-                    <div className="p-6 flex flex-col gap-4">
-                      {/* Price */}
-                      <div className="flex items-end gap-1">
-                        <span className="text-3xl font-bold text-gray-900">
-                          {language === 'he' ? plan.price_he : plan.price_ru}
-                        </span>
-                        {(language === 'he' ? plan.period_he : plan.period_ru) && (
-                          <span className="text-gray-500 mb-1 text-sm">
-                            {language === 'he' ? plan.period_he : plan.period_ru}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Features */}
-                      <ul className="space-y-2 flex-1">
+                    {/* Features */}
+                    <div className="flex-1 bg-white px-6 py-5 flex flex-col gap-4">
+                      <ul className="space-y-2.5 flex-1">
                         {features.map((f, fi) => (
-                          <li key={fi} className="flex items-start gap-2 text-sm text-gray-700">
-                            <span className="text-green-500 font-bold mt-0.5 flex-shrink-0">✓</span>
+                          <li key={fi} className="flex items-start gap-2.5 text-sm text-gray-700 group/item">
+                            <span className="flex-shrink-0 w-4 h-4 mt-0.5 rounded-full bg-green-100 flex items-center justify-center transition-transform duration-200 group-hover/item:scale-110">
+                              <svg className="w-2.5 h-2.5 text-green-600" fill="none" viewBox="0 0 10 10">
+                                <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </span>
                             <span>{f}</span>
                           </li>
                         ))}
                       </ul>
 
-                      {/* CTA */}
+                      {/* CTA Button */}
                       <button
                         onClick={() => openOrderModal(language === 'he' ? plan.name_he : plan.name_ru)}
-                        className={`mt-2 w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
-                          isHighlighted
-                            ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-md hover:shadow-lg'
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                        }`}
+                        className={`w-full py-3 px-4 rounded-2xl font-bold text-sm transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] ${ctaStyle}`}
                       >
                         {language === 'he' ? plan.cta_he : plan.cta_ru}
                       </button>
@@ -1512,7 +1557,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Order Modal */}
+      {/* Demo Register Modal — открывается при нажатии на кнопку плана */}
+      {demoModalOpen && (
+        <DemoRegisterModal
+          lang={language}
+          planName={demoModalPlan}
+          onClose={() => setDemoModalOpen(false)}
+        />
+      )}
+
+      {/* Order Modal (legacy — kept for other uses) */}
       {orderModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"

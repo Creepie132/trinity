@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Badge } from '@/components/ui/badge'
@@ -12,24 +12,20 @@ import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { 
+import {
   useAdStats,
   useAdCampaigns,
   useCreateAdCampaign,
-  useUpdateAdCampaign,
   useToggleAdActive,
   useDeleteAdCampaign,
   uploadBanner,
 } from '@/hooks/useAdmin'
-import { 
-  Megaphone, 
+import {
+  Megaphone,
   Plus,
-  Edit,
   Trash,
   TrendingUp,
   MousePointerClick,
@@ -37,211 +33,473 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  Upload,
+  ImageIcon,
+  Link2,
+  Tag,
+  CalendarRange,
+  ArrowLeft,
+  ArrowRight,
+  Sparkles,
+  ExternalLink,
+  ChevronRight,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { AdCampaign } from '@/types/database'
 import { useLanguage } from '@/contexts/LanguageContext'
 
-function AdsPageContent() {
-  const { t } = useLanguage()
-  const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [editingCampaign, setEditingCampaign] = useState<AdCampaign | null>(null)
-  const [uploading, setUploading] = useState(false)
+// ─── Wizard Steps ──────────────────────────────────────────────────────────────
 
-  const CATEGORIES = [
-    { value: 'salon', label: t('admin.orgs.salon') },
-    { value: 'carwash', label: t('admin.orgs.carwash') },
-    { value: 'clinic', label: t('admin.orgs.clinic') },
-    { value: 'restaurant', label: t('admin.orgs.restaurant') },
-    { value: 'gym', label: t('admin.orgs.gym') },
-    { value: 'other', label: t('admin.orgs.other') },
-  ]
+const STEPS = [
+  { id: 1, label: 'פרטי מפרסם', icon: Megaphone },
+  { id: 2, label: 'באנר', icon: ImageIcon },
+  { id: 3, label: 'טרגוט ותאריכים', icon: CalendarRange },
+]
 
-  const [newCampaign, setNewCampaign] = useState({
-    advertiser_name: '',
-    banner_url: '',
-    link_url: '',
-    target_categories: [] as string[],
-    start_date: '',
-    end_date: '',
-  })
+const CATEGORIES = [
+  { value: 'salon', label: '💇 סלון יופי', color: 'bg-pink-50 border-pink-200 text-pink-700' },
+  { value: 'carwash', label: '🚗 שטיפת רכב', color: 'bg-blue-50 border-blue-200 text-blue-700' },
+  { value: 'clinic', label: '🏥 קליניקה', color: 'bg-green-50 border-green-200 text-green-700' },
+  { value: 'restaurant', label: '🍕 מסעדה', color: 'bg-orange-50 border-orange-200 text-orange-700' },
+  { value: 'gym', label: '💪 כושר', color: 'bg-purple-50 border-purple-200 text-purple-700' },
+  { value: 'other', label: '⚡ אחר', color: 'bg-gray-50 border-gray-200 text-gray-700' },
+]
 
-  // Catch unhandled promise rejections in this component
-  useEffect(() => {
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('Unhandled promise rejection in AdsPage:', event.reason)
-      event.preventDefault() // Prevent the error from bubbling up
-    }
+// ─── Step Indicator ───────────────────────────────────────────────────────────
 
-    window.addEventListener('unhandledrejection', handleUnhandledRejection)
-    return () => {
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
-    }
-  }, [])
+function StepIndicator({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="flex items-center justify-center gap-2 mb-6">
+      {STEPS.map((step, idx) => {
+        const isActive = step.id === current
+        const isDone = step.id < current
+        const Icon = step.icon
+        return (
+          <div key={step.id} className="flex items-center gap-2">
+            <div className="flex flex-col items-center gap-1">
+              <div className={`
+                w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300
+                ${isDone ? 'bg-emerald-500 shadow-lg shadow-emerald-200' : isActive ? 'bg-indigo-600 shadow-lg shadow-indigo-200' : 'bg-gray-100'}
+              `}>
+                {isDone
+                  ? <CheckCircle2 className="w-5 h-5 text-white" />
+                  : <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-400'}`} />
+                }
+              </div>
+              <span className={`text-[10px] font-medium transition-colors duration-200 ${isActive ? 'text-indigo-600' : isDone ? 'text-emerald-600' : 'text-gray-400'}`}>
+                {step.label}
+              </span>
+            </div>
+            {idx < STEPS.length - 1 && (
+              <div className={`w-10 h-0.5 mb-4 rounded-full transition-all duration-500 ${isDone ? 'bg-emerald-400' : 'bg-gray-200'}`} />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
-  const { data: stats, isLoading: statsLoading, error: statsError } = useAdStats()
-  const { data: campaigns, isLoading: campaignsLoading, error: campaignsError } = useAdCampaigns()
-  
-  const createCampaign = useCreateAdCampaign()
-  const updateCampaign = useUpdateAdCampaign()
-  const toggleActive = useToggleAdActive()
-  const deleteCampaign = useDeleteAdCampaign()
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+// ─── Sidebar Preview ─────────────────────────────────────────────────────────
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('אנא העלה קובץ תמונה (jpg, png, webp)')
-      return
-    }
+function SidebarPreview({ bannerUrl, advertiserName }: { bannerUrl: string; advertiserName: string }) {
+  return (
+    <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm w-48">
+      <div className="bg-gray-50 px-2 py-1 border-b border-gray-100">
+        <p className="text-[9px] text-gray-400 font-medium uppercase tracking-wide">תצוגה בסייבר</p>
+      </div>
+      <div className="bg-white">
+        {bannerUrl ? (
+          <div className="relative overflow-hidden group cursor-pointer">
+            <img src={bannerUrl} alt="preview" className="w-full h-20 object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          </div>
+        ) : (
+          <div className="w-full h-20 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
+            <ImageIcon className="w-6 h-6 text-gray-300" />
+          </div>
+        )}
+        <div className="p-2 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[9px] bg-gray-100 text-gray-400 px-1 py-0.5 rounded">פרסומת</span>
+            <span className="text-[10px] font-semibold text-gray-700 truncate max-w-[80px]">
+              {advertiserName || 'שם מפרסם'}
+            </span>
+          </div>
+          <ExternalLink className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('הקובץ גדול מדי. מקסימום: 5MB')
-      return
-    }
 
+// ─── Drag & Drop Banner Upload ────────────────────────────────────────────────
+
+function BannerUploader({ value, onChange, uploading, setUploading }: {
+  value: string
+  onChange: (url: string) => void
+  uploading: boolean
+  setUploading: (v: boolean) => void
+}) {
+  const [dragOver, setDragOver] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) { alert('אנא העלה קובץ תמונה'); return }
+    if (file.size > 5 * 1024 * 1024) { alert('מקסימום 5MB'); return }
     try {
       setUploading(true)
       const url = await uploadBanner(file)
-      setNewCampaign({ ...newCampaign, banner_url: url })
-    } catch (error: any) {
-      console.error('Upload error:', error)
-      
-      let errorMessage = error.message
-      
-      if (errorMessage.includes('Bucket not found')) {
-        errorMessage = 'Storage bucket לא קיים. צור bucket בשם "ad-banners" ב-Supabase Dashboard → Storage'
-      } else if (errorMessage.includes('SERVICE_ROLE_KEY')) {
-        errorMessage = 'חסר SUPABASE_SERVICE_ROLE_KEY ב-.env.local. הוסף אותו והפעל מחדש את השרת'
-      } else if (errorMessage.includes('row-level security')) {
-        errorMessage = 'בעיית RLS. ראה הוראות ב-FIX_BANNER_UPLOAD.md'
-      }
-      
-      alert(`שגיאה בהעלאת קובץ: ${errorMessage}`)
+      onChange(url)
+    } catch (e: any) {
+      alert(`שגיאה: ${e.message}`)
     } finally {
       setUploading(false)
     }
+  }, [onChange, setUploading])
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(file)
+  }, [handleFile])
+
+  return (
+    <div className="space-y-3">
+      <div
+        onClick={() => !value && inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        className={`
+          relative rounded-2xl border-2 border-dashed transition-all duration-200 overflow-hidden
+          ${dragOver ? 'border-indigo-400 bg-indigo-50 scale-[1.01]' : value ? 'border-emerald-300 bg-emerald-50/30' : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50 cursor-pointer'}
+        `}
+      >
+        {uploading && (
+          <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs text-indigo-600 font-medium">מעלה...</p>
+            </div>
+          </div>
+        )}
+        {value ? (
+          <div className="relative">
+            <img src={value} alt="banner" className="w-full h-40 object-cover" />
+            <button
+              onClick={(e) => { e.stopPropagation(); onChange(''); inputRef.current?.click() }}
+              className="absolute top-2 right-2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-md transition-all hover:scale-110"
+            >
+              <Upload className="w-3.5 h-3.5 text-gray-600" />
+            </button>
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/50 to-transparent p-3">
+              <p className="text-white text-xs font-medium flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> הועלה בהצלחה
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="p-8 text-center">
+            <div className={`w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center transition-all duration-200 ${dragOver ? 'bg-indigo-100 scale-110' : 'bg-gray-100'}`}>
+              <Upload className={`w-6 h-6 ${dragOver ? 'text-indigo-600' : 'text-gray-400'}`} />
+            </div>
+            <p className="text-sm font-medium text-gray-700">גרור תמונה לכאן</p>
+            <p className="text-xs text-gray-400 mt-1">או לחץ לבחירת קובץ</p>
+            <p className="text-[10px] text-gray-300 mt-2">JPG, PNG, WebP · מקסימום 5MB</p>
+          </div>
+        )}
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+      />
+    </div>
+  )
+}
+
+
+// ─── Create Campaign Wizard Dialog ───────────────────────────────────────────
+
+interface CampaignForm {
+  advertiser_name: string
+  banner_url: string
+  link_url: string
+  target_categories: string[]
+  start_date: string
+  end_date: string
+}
+
+const EMPTY_FORM: CampaignForm = {
+  advertiser_name: '',
+  banner_url: '',
+  link_url: '',
+  target_categories: [],
+  start_date: '',
+  end_date: '',
+}
+
+function CreateCampaignWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [step, setStep] = useState(1)
+  const [form, setForm] = useState<CampaignForm>(EMPTY_FORM)
+  const [uploading, setUploading] = useState(false)
+  const [animDir, setAnimDir] = useState<'left' | 'right'>('right')
+  const createCampaign = useCreateAdCampaign()
+
+  const update = (key: keyof CampaignForm, val: any) =>
+    setForm(f => ({ ...f, [key]: val }))
+
+  const toggleCategory = (cat: string) =>
+    update('target_categories',
+      form.target_categories.includes(cat)
+        ? form.target_categories.filter(c => c !== cat)
+        : [...form.target_categories, cat]
+    )
+
+  const goNext = () => { setAnimDir('right'); setStep(s => s + 1) }
+  const goPrev = () => { setAnimDir('left'); setStep(s => s - 1) }
+
+  const canProceed = () => {
+    if (step === 1) return form.advertiser_name.trim().length > 0 && form.link_url.trim().length > 0
+    if (step === 2) return form.banner_url.length > 0
+    if (step === 3) return form.start_date && form.end_date
+    return false
   }
 
-  const handleCreateCampaign = async () => {
-    if (!newCampaign.advertiser_name || !newCampaign.banner_url || !newCampaign.link_url || !newCampaign.start_date || !newCampaign.end_date) {
-      alert('אנא מלא את כל השדות החובה')
-      return
-    }
-
-    await createCampaign.mutateAsync(newCampaign)
-    setAddDialogOpen(false)
-    setNewCampaign({
-      advertiser_name: '',
-      banner_url: '',
-      link_url: '',
-      target_categories: [],
-      start_date: '',
-      end_date: '',
-    })
+  const handleSubmit = async () => {
+    await createCampaign.mutateAsync(form)
+    setForm(EMPTY_FORM)
+    setStep(1)
+    onClose()
   }
 
-  const handleToggleActive = (id: string, isActive: boolean) => {
+  const handleClose = () => {
+    setForm(EMPTY_FORM)
+    setStep(1)
+    onClose()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl p-0 overflow-hidden gap-0">
+        {/* Header gradient */}
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 pt-5 pb-6">
+          <DialogHeader>
+            <DialogTitle className="text-white text-xl flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-white/80" />
+              קמפיין פרסומי חדש
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <StepIndicator current={step} total={3} />
+          </div>
+        </div>
+
+        {/* Content area */}
+        <div className="p-6 min-h-[320px]">
+
+          {/* Step 1: Advertiser info */}
+          {step === 1 && (
+            <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <Megaphone className="w-3.5 h-3.5 text-indigo-500" />
+                  שם המפרסם *
+                </Label>
+                <Input
+                  autoFocus
+                  value={form.advertiser_name}
+                  onChange={e => update('advertiser_name', e.target.value)}
+                  placeholder="למשל: חברת ABC"
+                  className="h-11 text-base border-gray-200 focus:border-indigo-400 focus:ring-indigo-400/20"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <Link2 className="w-3.5 h-3.5 text-indigo-500" />
+                  קישור יעד *
+                </Label>
+                <Input
+                  type="url"
+                  value={form.link_url}
+                  onChange={e => update('link_url', e.target.value)}
+                  placeholder="https://example.com"
+                  className="h-11 text-base border-gray-200 focus:border-indigo-400 focus:ring-indigo-400/20"
+                  dir="ltr"
+                />
+                <p className="text-xs text-gray-400">הלינק שנפתח כשמשתמש לוחץ על הבאנר</p>
+              </div>
+              {/* Live preview small */}
+              {form.advertiser_name && (
+                <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100 animate-in fade-in duration-200">
+                  <Sparkles className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                  <p className="text-xs text-indigo-700">
+                    הבאנר יוצג בשם: <strong>{form.advertiser_name}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Banner upload */}
+          {step === 2 && (
+            <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="flex gap-5 items-start">
+                <div className="flex-1">
+                  <Label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5 mb-2">
+                    <ImageIcon className="w-3.5 h-3.5 text-indigo-500" />
+                    תמונת באנר *
+                  </Label>
+                  <BannerUploader
+                    value={form.banner_url}
+                    onChange={url => update('banner_url', url)}
+                    uploading={uploading}
+                    setUploading={setUploading}
+                  />
+                </div>
+                {/* Live sidebar preview */}
+                <div className="flex-shrink-0">
+                  <p className="text-xs text-gray-400 font-medium mb-2 text-center">תצוגה מקדימה</p>
+                  <SidebarPreview bannerUrl={form.banner_url} advertiserName={form.advertiser_name} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Targeting & dates */}
+          {step === 3 && (
+            <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-indigo-500" />
+                  קטגוריות יעד
+                </Label>
+                <p className="text-xs text-gray-400">השאר ריק להצגה לכל הלקוחות</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {CATEGORIES.map(cat => {
+                    const isSelected = form.target_categories.includes(cat.value)
+                    return (
+                      <button key={cat.value} type="button"
+                        onClick={() => toggleCategory(cat.value)}
+                        className={`
+                          px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all duration-150 text-right
+                          ${isSelected ? `${cat.color} border-current shadow-sm scale-[1.02]` : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}
+                        `}>
+                        {cat.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                    <CalendarRange className="w-3.5 h-3.5 text-indigo-500" />
+                    תאריך התחלה *
+                  </Label>
+                  <Input type="date" value={form.start_date}
+                    onChange={e => update('start_date', e.target.value)}
+                    className="h-11 border-gray-200 focus:border-indigo-400"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold text-gray-700">תאריך סיום *</Label>
+                  <Input type="date" value={form.end_date}
+                    onChange={e => update('end_date', e.target.value)}
+                    min={form.start_date}
+                    className="h-11 border-gray-200 focus:border-indigo-400"
+                  />
+                </div>
+              </div>
+              {/* Summary card */}
+              {form.start_date && form.end_date && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl animate-in fade-in duration-200">
+                  <p className="text-xs font-semibold text-emerald-800 mb-1">✅ סיכום קמפיין</p>
+                  <div className="text-xs text-emerald-700 space-y-0.5">
+                    <p>• מפרסם: <strong>{form.advertiser_name}</strong></p>
+                    <p>• תקופה: {form.start_date} → {form.end_date}</p>
+                    <p>• קטגוריות: {form.target_categories.length === 0 ? 'כל הלקוחות' : form.target_categories.join(', ')}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>{/* end content */}
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+          <Button variant="ghost" onClick={step === 1 ? handleClose : goPrev}
+            className="gap-1.5 text-gray-600">
+            {step === 1 ? 'ביטול' : <><ArrowRight className="w-4 h-4" />חזור</>}
+          </Button>
+          <div className="flex items-center gap-2">
+            {STEPS.map(s => (
+              <div key={s.id} className={`rounded-full transition-all duration-300 ${s.id === step ? 'w-5 h-2 bg-indigo-600' : s.id < step ? 'w-2 h-2 bg-emerald-400' : 'w-2 h-2 bg-gray-200'}`} />
+            ))}
+          </div>
+          {step < 3 ? (
+            <Button onClick={goNext} disabled={!canProceed()}
+              className="gap-1.5 bg-indigo-600 hover:bg-indigo-700">
+              הבא <ArrowLeft className="w-4 h-4" />
+            </Button>
+          ) : (
+            <Button onClick={handleSubmit}
+              disabled={!canProceed() || createCampaign.isPending || uploading}
+              className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 min-w-[120px]">
+              {createCampaign.isPending
+                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> שומר...</>
+                : <><CheckCircle2 className="w-4 h-4" /> צור קמפיין</>
+              }
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+function AdsPageContent() {
+  const { t } = useLanguage()
+  const [wizardOpen, setWizardOpen] = useState(false)
+
+  const { data: stats } = useAdStats()
+  const { data: campaigns, isLoading: campaignsLoading, error: campaignsError } = useAdCampaigns()
+  const toggleActive = useToggleAdActive()
+  const deleteCampaign = useDeleteAdCampaign()
+
+  const handleToggleActive = (id: string, isActive: boolean) =>
     toggleActive.mutate({ id, isActive })
-  }
 
   const handleDelete = (id: string, name: string) => {
-    if (confirm(`${t('admin.ads.deleteConfirm')} "${name}"?`)) {
-      deleteCampaign.mutate(id)
-    }
+    if (confirm(`למחוק את הקמפיין "${name}"?`)) deleteCampaign.mutate(id)
   }
 
-  const toggleCategory = (category: string) => {
-    const current = newCampaign.target_categories
-    const updated = current.includes(category)
-      ? current.filter(c => c !== category)
-      : [...current, category]
-    setNewCampaign({ ...newCampaign, target_categories: updated })
-  }
-
-  const calculateCTR = (clicks: number, impressions: number) => {
-    if (impressions === 0) return '0.00'
-    return ((clicks / impressions) * 100).toFixed(2)
-  }
+  const calculateCTR = (clicks: number, impressions: number) =>
+    impressions === 0 ? '0.00' : ((clicks / impressions) * 100).toFixed(2)
 
   const getCampaignStatus = (campaign: AdCampaign) => {
     const now = new Date()
     const start = new Date(campaign.start_date)
     const end = new Date(campaign.end_date)
-
-    if (!campaign.is_active) {
-      return { label: t('admin.ads.inactive'), variant: 'secondary' as const, icon: XCircle }
-    }
-    
-    if (now < start) {
-      return { label: t('admin.ads.scheduled'), variant: 'default' as const, icon: Clock }
-    }
-    
-    if (now > end) {
-      return { label: t('admin.ads.expired'), variant: 'secondary' as const, icon: XCircle }
-    }
-    
-    return { label: t('admin.ads.active'), variant: 'default' as const, icon: CheckCircle2 }
+    if (!campaign.is_active) return { label: 'לא פעיל', variant: 'secondary' as const, icon: XCircle, color: 'text-gray-500' }
+    if (now < start) return { label: 'מתוזמן', variant: 'default' as const, icon: Clock, color: 'text-amber-600' }
+    if (now > end) return { label: 'הסתיים', variant: 'secondary' as const, icon: XCircle, color: 'text-gray-400' }
+    return { label: 'פעיל', variant: 'default' as const, icon: CheckCircle2, color: 'text-emerald-600' }
   }
 
-  // Show errors if any
-  if (statsError || campaignsError) {
-    const error = statsError || campaignsError
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    
-    const isTableMissing = errorMessage.includes('relation') || 
-                           errorMessage.includes('does not exist') ||
-                           errorMessage.includes('PGRST204')
-    
+  if (campaignsError) {
+    const msg = campaignsError instanceof Error ? campaignsError.message : String(campaignsError)
     return (
-      <div className="space-y-6">
-        <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
-          <h2 className="text-xl font-bold text-red-900 mb-2">שגיאה בטעינת נתונים</h2>
-          <p className="text-red-700 mb-4">{errorMessage}</p>
-          
-          {isTableMissing && (
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
-              <p className="font-semibold text-yellow-900 mb-2">🔧 פתרון:</p>
-              <p className="text-sm text-yellow-800 mb-3">
-                טבלת ad_campaigns לא קיימת. יש להריץ את ה-SQL הבא ב-Supabase:
-              </p>
-              <div className="bg-white p-3 rounded border text-xs font-mono overflow-auto max-h-64">
-                <pre>{`-- Copy this to Supabase SQL Editor:
-
-CREATE TABLE IF NOT EXISTS ad_campaigns (
-  id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
-  advertiser_name text NOT NULL,
-  banner_url text NOT NULL,
-  link_url text NOT NULL,
-  target_categories text[] DEFAULT '{}',
-  start_date date NOT NULL,
-  end_date date NOT NULL,
-  is_active boolean DEFAULT true,
-  clicks integer DEFAULT 0,
-  impressions integer DEFAULT 0,
-  created_at timestamptz DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_ad_campaigns_active 
-ON ad_campaigns(is_active, start_date, end_date);
-
-ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
-
--- Then refresh this page`}</pre>
-              </div>
-              <p className="text-xs text-yellow-700 mt-2">
-                או выполни полный файл: <code>supabase/schema-v2.sql</code>
-              </p>
-            </div>
-          )}
-          
-          <Button onClick={() => window.location.reload()} className="mt-4">
-            נסה שוב
-          </Button>
-        </div>
+      <div className="p-6 bg-red-50 border border-red-200 rounded-xl">
+        <p className="text-red-800 font-semibold mb-1">שגיאה בטעינת נתונים</p>
+        <p className="text-red-600 text-sm">{msg}</p>
+        <Button onClick={() => window.location.reload()} className="mt-3" variant="outline">נסה שוב</Button>
       </div>
     )
   }
@@ -251,330 +509,187 @@ ALTER TABLE ad_campaigns ENABLE ROW LEVEL SECURITY;
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('admin.ads.title')}</h1>
-          <p className="text-gray-600 mt-1">{t('admin.ads.subtitle')}</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">ניהול פרסומות</h1>
+          <p className="text-gray-500 text-sm mt-1">קמפיינים ובאנרים פרסומיים</p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <Plus className="w-4 h-4 ml-2" />
-          {t('admin.ads.addNew')}
+        <Button onClick={() => setWizardOpen(true)}
+          className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200">
+          <Plus className="w-4 h-4" />
+          קמפיין חדש
         </Button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">{t('admin.ads.activeCampaigns')}</p>
-                <p className="text-2xl md:text-3xl font-bold text-green-600 mt-1">
-                  {stats?.activeCampaigns || 0}
-                </p>
+        {[
+          { label: 'קמפיינים פעילים', value: stats?.activeCampaigns || 0, icon: Megaphone, color: 'emerald' },
+          { label: 'קליקים החודש', value: stats?.monthClicks || 0, icon: MousePointerClick, color: 'blue' },
+          { label: 'CTR ממוצע', value: `${stats?.avgCtr || '0.00'}%`, icon: TrendingUp, color: 'purple' },
+        ].map(({ label, value, icon: Icon, color }) => (
+          <Card key={label} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">{label}</p>
+                  <p className={`text-3xl font-bold text-${color}-600 mt-1`}>{value}</p>
+                </div>
+                <div className={`bg-${color}-100 p-3 rounded-xl`}>
+                  <Icon className={`w-6 h-6 text-${color}-600`} />
+                </div>
               </div>
-              <div className="bg-green-100 p-3 rounded-full">
-                <Megaphone className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">{t('admin.ads.totalClicks')}</p>
-                <p className="text-2xl md:text-3xl font-bold text-blue-600 mt-1">
-                  {stats?.monthClicks || 0}
-                </p>
-              </div>
-              <div className="bg-blue-100 p-3 rounded-full">
-                <MousePointerClick className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">{t('admin.ads.ctr')}</p>
-                <p className="text-2xl md:text-3xl font-bold text-purple-600 mt-1">
-                  {stats?.avgCtr || '0.00'}%
-                </p>
-              </div>
-              <div className="bg-purple-100 p-3 rounded-full">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Campaigns Table */}
+
+      {/* Campaigns table */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Megaphone className="w-5 h-5" />
-            {t('admin.ads.allCampaigns')}
+        <CardHeader className="border-b border-gray-100 pb-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Megaphone className="w-4 h-4 text-indigo-500" />
+            כל הקמפיינים
+            {campaigns && <Badge variant="secondary" className="mr-2 text-xs">{campaigns.length}</Badge>}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {campaignsLoading ? (
-            <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
+            <div className="flex items-center justify-center py-16 gap-2 text-gray-400">
+              <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm">טוען...</span>
+            </div>
+          ) : !campaigns || campaigns.length === 0 ? (
+            <div className="text-center py-16">
+              <Megaphone className="w-14 h-14 mx-auto mb-3 text-gray-200" />
+              <p className="text-gray-400 font-medium">אין קמפיינים עדיין</p>
+              <p className="text-gray-300 text-sm mt-1">לחץ "קמפיין חדש" כדי להוסיף</p>
+            </div>
           ) : (
             <>
-            {/* Mobile cards */}
-            <div className="md:hidden divide-y">
-              {campaigns?.map((campaign: AdCampaign) => {
-                const status = getCampaignStatus(campaign)
-                const StatusIcon = status.icon
-                return (
-                  <div key={campaign.id} className="py-4 space-y-3">
-                    <div className="flex items-start gap-3">
-                      <img src={campaign.banner_url} alt={campaign.advertiser_name} className="w-16 h-10 object-cover rounded border flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{campaign.advertiser_name}</p>
-                        <p className="text-xs text-gray-500 truncate">{campaign.link_url}</p>
-                      </div>
-                      <Badge variant={status.variant} className="flex items-center gap-1 flex-shrink-0">
-                        <StatusIcon className="w-3 h-3" />
-                        {status.label}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                      <span className="flex items-center gap-1"><MousePointerClick className="w-3 h-3" />{campaign.clicks}</span>
-                      <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{campaign.impressions}</span>
-                      <span className="font-medium text-purple-600">{calculateCTR(campaign.clicks, campaign.impressions)}%</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch checked={campaign.is_active} onCheckedChange={(checked) => handleToggleActive(campaign.id, checked)} />
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(campaign.id, campaign.advertiser_name)} className="min-h-[44px]">
-                        <Trash className="w-4 h-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })}
-              {(!campaigns || campaigns.length === 0) && (
-                <div className="text-center py-12 text-gray-500">אין קמפיינים פעילים</div>
-              )}
-            </div>
-            {/* Desktop table */}
-            <div className="hidden md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-right">{t('admin.ads.advertiser')}</TableHead>
-                  <TableHead className="text-right">{t('admin.ads.title')}</TableHead>
-                  <TableHead className="text-right">{t('admin.ads.categories')}</TableHead>
-                  <TableHead className="text-right">{t('admin.ads.dates')}</TableHead>
-                  <TableHead className="text-right">{t('admin.ads.clicks')}</TableHead>
-                  <TableHead className="text-right">{t('admin.ads.impressions')}</TableHead>
-                  <TableHead className="text-right">{t('admin.ads.ctr')}</TableHead>
-                  <TableHead className="text-right">{t('admin.orgs.status')}</TableHead>
-                  <TableHead className="text-right">{t('clients.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {campaigns?.map((campaign: AdCampaign) => {
+              {/* Mobile */}
+              <div className="md:hidden divide-y divide-gray-50">
+                {campaigns.map((campaign: AdCampaign) => {
                   const status = getCampaignStatus(campaign)
                   const StatusIcon = status.icon
-
                   return (
-                    <TableRow key={campaign.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{campaign.advertiser_name}</p>
-                          <a 
-                            href={campaign.link_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-500 hover:underline"
-                          >
-                            {campaign.link_url}
-                          </a>
+                    <div key={campaign.id} className="p-4 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <img src={campaign.banner_url} alt="" className="w-16 h-10 object-cover rounded-lg border flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-800 truncate">{campaign.advertiser_name}</p>
+                          <p className="text-xs text-gray-400 truncate">{campaign.link_url}</p>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <img 
-                          src={campaign.banner_url} 
-                          alt={campaign.advertiser_name}
-                          className="w-20 h-12 object-cover rounded border"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {campaign.target_categories.length === 0 ? (
-                          <Badge variant="outline">הכל</Badge>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {campaign.target_categories.map((cat) => (
-                              <Badge key={cat} variant="secondary" className="text-xs">
-                                {CATEGORIES.find(c => c.value === cat)?.label || cat}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <p>{format(new Date(campaign.start_date), 'dd/MM/yyyy')}</p>
-                          <p className="text-gray-500">עד {format(new Date(campaign.end_date), 'dd/MM/yyyy')}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <MousePointerClick className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium">{campaign.clicks}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Eye className="w-4 h-4 text-gray-400" />
-                          <span>{campaign.impressions}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium text-purple-600">
-                          {calculateCTR(campaign.clicks, campaign.impressions)}%
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={status.variant} className="flex items-center gap-1 w-fit">
+                        <div className={`flex items-center gap-1 text-xs font-medium ${status.color}`}>
                           <StatusIcon className="w-3 h-3" />
                           {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={campaign.is_active}
-                            onCheckedChange={(checked) => handleToggleActive(campaign.id, checked)}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(campaign.id, campaign.advertiser_name)}
-                          >
-                            <Trash className="w-4 h-4 text-red-500" />
-                          </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <span className="flex items-center gap-1"><MousePointerClick className="w-3 h-3" />{campaign.clicks}</span>
+                        <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{campaign.impressions}</span>
+                        <span className="font-semibold text-purple-600">{calculateCTR(campaign.clicks, campaign.impressions)}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={campaign.is_active} onCheckedChange={v => handleToggleActive(campaign.id, v)} />
+                        <span className="text-xs text-gray-400">{campaign.is_active ? 'פעיל' : 'כבוי'}</span>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(campaign.id, campaign.advertiser_name)} className="mr-auto">
+                          <Trash className="w-4 h-4 text-red-400" />
+                        </Button>
+                      </div>
+                    </div>
                   )
                 })}
-                {(!campaigns || campaigns.length === 0) && (
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-gray-500">
-                      אין קמפיינים פעילים
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-            </div>
+              </div>
+              {/* Desktop */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50/50">
+                      <TableHead className="text-right font-semibold">מפרסם</TableHead>
+                      <TableHead className="text-right font-semibold">באנר</TableHead>
+                      <TableHead className="text-right font-semibold">קטגוריות</TableHead>
+                      <TableHead className="text-right font-semibold">תאריכים</TableHead>
+                      <TableHead className="text-right font-semibold">קליקים</TableHead>
+                      <TableHead className="text-right font-semibold">חשיפות</TableHead>
+                      <TableHead className="text-right font-semibold">CTR</TableHead>
+                      <TableHead className="text-right font-semibold">סטטוס</TableHead>
+                      <TableHead className="text-right font-semibold">פעולות</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {campaigns.map((campaign: AdCampaign) => {
+                      const status = getCampaignStatus(campaign)
+                      const StatusIcon = status.icon
+                      return (
+                        <TableRow key={campaign.id} className="hover:bg-gray-50/50 transition-colors">
+                          <TableCell>
+                            <p className="font-semibold text-gray-800">{campaign.advertiser_name}</p>
+                            <a href={campaign.link_url} target="_blank" rel="noopener noreferrer"
+                              className="text-xs text-indigo-500 hover:underline flex items-center gap-0.5 mt-0.5">
+                              {campaign.link_url.replace(/^https?:\/\//, '').slice(0, 30)}
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          </TableCell>
+                          <TableCell>
+                            <img src={campaign.banner_url} alt="" className="w-20 h-12 object-cover rounded-lg border shadow-sm" />
+                          </TableCell>
+                          <TableCell>
+                            {campaign.target_categories.length === 0
+                              ? <Badge variant="outline" className="text-xs">הכל</Badge>
+                              : <div className="flex flex-wrap gap-1">
+                                  {campaign.target_categories.map(c => (
+                                    <Badge key={c} variant="secondary" className="text-xs">{c}</Badge>
+                                  ))}
+                                </div>
+                            }
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-600">
+                              <p>{format(new Date(campaign.start_date), 'dd/MM/yy')}</p>
+                              <p className="text-gray-400 text-xs">עד {format(new Date(campaign.end_date), 'dd/MM/yy')}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-semibold text-blue-600 flex items-center gap-1">
+                              <MousePointerClick className="w-3.5 h-3.5" />{campaign.clicks}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-gray-600 flex items-center gap-1">
+                              <Eye className="w-3.5 h-3.5 text-gray-400" />{campaign.impressions}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-bold text-purple-600">{calculateCTR(campaign.clicks, campaign.impressions)}%</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className={`flex items-center gap-1.5 text-sm font-medium ${status.color}`}>
+                              <StatusIcon className="w-3.5 h-3.5" />
+                              {status.label}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Switch checked={campaign.is_active} onCheckedChange={v => handleToggleActive(campaign.id, v)} />
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(campaign.id, campaign.advertiser_name)}
+                                className="hover:bg-red-50">
+                                <Trash className="w-4 h-4 text-red-400" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </>
           )}
         </CardContent>
       </Card>
 
-      {/* Add Campaign Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>הוסף קמפיין פרסומי</DialogTitle>
-            <DialogDescription>
-              צור קמפיין באנר חדש למערכת
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>שם המפרסם *</Label>
-              <Input
-                value={newCampaign.advertiser_name}
-                onChange={(e) => setNewCampaign({ ...newCampaign, advertiser_name: e.target.value })}
-                placeholder="שם החברה"
-              />
-            </div>
-
-            <div>
-              <Label>תמונת באנר *</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                disabled={uploading}
-              />
-              {uploading && <p className="text-sm text-gray-500 mt-1">מעלה קובץ...</p>}
-              {newCampaign.banner_url && (
-                <img 
-                  src={newCampaign.banner_url} 
-                  alt="Preview" 
-                  className="mt-2 w-full h-32 object-cover rounded border"
-                />
-              )}
-            </div>
-
-            <div>
-              <Label>קישור יעד *</Label>
-              <Input
-                type="url"
-                value={newCampaign.link_url}
-                onChange={(e) => setNewCampaign({ ...newCampaign, link_url: e.target.value })}
-                placeholder="https://example.com"
-              />
-            </div>
-
-            <div>
-              <Label>קטגוריות יעד</Label>
-              <p className="text-sm text-gray-500 mb-2">השאר ריק כדי להציג לכולם</p>
-              <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map((cat) => (
-                  <label key={cat.value} className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50">
-                    <input
-                      type="checkbox"
-                      checked={newCampaign.target_categories.includes(cat.value)}
-                      onChange={() => toggleCategory(cat.value)}
-                      className="rounded"
-                    />
-                    <span className="text-sm">{cat.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>תאריך התחלה *</Label>
-                <Input
-                  type="date"
-                  value={newCampaign.start_date}
-                  onChange={(e) => setNewCampaign({ ...newCampaign, start_date: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>תאריך סיום *</Label>
-                <Input
-                  type="date"
-                  value={newCampaign.end_date}
-                  onChange={(e) => setNewCampaign({ ...newCampaign, end_date: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
-              ביטול
-            </Button>
-            <Button 
-              onClick={handleCreateCampaign}
-              disabled={!newCampaign.advertiser_name || !newCampaign.banner_url || !newCampaign.link_url || !newCampaign.start_date || !newCampaign.end_date}
-            >
-              צור קמפיין
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Wizard */}
+      <CreateCampaignWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
     </div>
   )
 }

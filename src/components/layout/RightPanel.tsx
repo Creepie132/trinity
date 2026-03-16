@@ -8,7 +8,6 @@ import type { KiraWaveState } from '@/components/kira/KiraWave'
 const KiraWave = dynamic(() => import('@/components/kira/KiraWave').then(m => ({ default: m.KiraWave })), { ssr: false })
 
 // ─── Типы ────────────────────────────────────────────────────────────────────
-interface Ad { id: string; title: string; description: string; image_url: string | null; link_url: string | null; button_text: string | null }
 interface Announcement { id: string; text: string; type: 'info' | 'success' | 'warning' }
 
 // ─── Объявления (статичные пока нет API) ─────────────────────────────────────
@@ -58,20 +57,45 @@ function Ticker({ items }: { items: Announcement[] }) {
 }
 
 // ─── Рекламный баннер ─────────────────────────────────────────────────────────
+interface AdCampaign {
+  id: string
+  advertiser_name: string
+  banner_url: string
+  link_url: string
+  target_categories: string[]
+  is_active: boolean
+}
+
 function AdBlock() {
-  const [ad, setAd] = useState<Ad | null>(null)
+  const [ad, setAd] = useState<AdCampaign | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    fetch('/api/ads/active?category=beauty')
+    fetch('/api/ads/active?category=')
       .then(r => r.json())
-      .then(d => { if (d.campaigns?.length) setAd(d.campaigns[0]) })
+      .then(d => {
+        if (d.campaigns?.length) {
+          // Pick random campaign if multiple
+          const idx = Math.floor(Math.random() * d.campaigns.length)
+          setAd(d.campaigns[idx])
+        }
+      })
       .catch(() => {})
       .finally(() => setLoaded(true))
   }, [])
 
-  // Если нет рекламы — показываем промо-заглушку
-  if (loaded && !ad) return (
+  // Placeholder while loading
+  if (!loaded) return (
+    <div className="rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden animate-pulse">
+      <div className="w-full h-28 bg-gray-100 dark:bg-slate-700" />
+      <div className="p-3 bg-white dark:bg-slate-800">
+        <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-2/3" />
+      </div>
+    </div>
+  )
+
+  // No campaigns — show promo slot
+  if (!ad) return (
     <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-4 text-center">
       <Megaphone className="w-6 h-6 text-gray-300 mx-auto mb-2" />
       <p className="text-xs text-gray-400 font-medium">Место для рекламы</p>
@@ -79,29 +103,41 @@ function AdBlock() {
     </div>
   )
 
-  if (!ad) return null
-
   const handleClick = () => {
     if (!ad.link_url) return
-    fetch('/api/ads/click', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaign_id: ad.id }) }).catch(() => {})
-    window.open(ad.link_url, '_blank')
+    fetch('/api/ads/click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaign_id: ad.id })
+    }).catch(() => {})
+    window.open(ad.link_url, '_blank', 'noopener,noreferrer')
   }
 
   return (
-    <button onClick={handleClick}
-      className="w-full rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 hover:shadow-md transition-all duration-200 active:scale-[0.98] text-left group">
-      {ad.image_url && <img src={ad.image_url} alt={ad.title} className="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-300" />}
-      <div className="p-3 bg-white dark:bg-slate-800">
-        <div className="flex items-center gap-1 mb-1">
-          <span className="text-xs text-gray-400">Реклама</span>
+    <button
+      onClick={handleClick}
+      className="w-full rounded-2xl overflow-hidden border border-gray-100 dark:border-slate-700 hover:shadow-lg transition-all duration-300 active:scale-[0.98] text-left group"
+    >
+      {ad.banner_url && (
+        <div className="relative overflow-hidden">
+          <img
+            src={ad.banner_url}
+            alt={ad.advertiser_name}
+            className="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
-        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{ad.title}</p>
-        {ad.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{ad.description}</p>}
-        {ad.button_text && (
-          <div className="mt-2 flex items-center gap-1 text-xs font-medium text-indigo-600">
-            {ad.button_text} <ExternalLink className="w-3 h-3" />
-          </div>
-        )}
+      )}
+      <div className="p-3 bg-white dark:bg-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-400">
+            פרסומת
+          </span>
+          <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate max-w-[120px]">
+            {ad.advertiser_name}
+          </p>
+        </div>
+        <ExternalLink className="w-3 h-3 text-gray-300 group-hover:text-indigo-500 transition-colors duration-200 flex-shrink-0" />
       </div>
     </button>
   )

@@ -190,7 +190,7 @@ async function seedDemoData(orgId: string, userId: string, modules: string[], la
         paid_at: paidDate.toISOString(),
         description: services[svcIdx].name,
         created_at: paidDate.toISOString(),
-        type: 'service',
+        type: 'client',
       })
     }
   }

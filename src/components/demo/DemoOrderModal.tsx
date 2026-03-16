@@ -404,7 +404,13 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
       if (isIsrael && price > 0) {
         const res = await fetch('/api/demo/create-payment-link', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: price, description: `Trinity CRM ${type} | ${form.firstName} ${form.lastName}`, email: form.email, plan }),
+          body: JSON.stringify({
+            setupAmount: price,                        // first charge = setup fee
+            monthlyAmount: planAmount || undefined,    // recurring monthly after
+            description: `Trinity CRM ${type} | ${form.firstName} ${form.lastName}`,
+            email: form.email,
+            plan,
+          }),
         })
         const json = await res.json()
         if (json.url) setPaymentUrl(json.url)

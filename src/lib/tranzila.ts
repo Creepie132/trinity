@@ -44,6 +44,7 @@ export function generateTranzilaHeaders() {
 
 export function createSubscriptionPaymentUrl({
   amount,
+  recurSum,
   orgId,
   orgName,
   ownerEmail,
@@ -52,6 +53,7 @@ export function createSubscriptionPaymentUrl({
   failUrl,
 }: {
   amount: number
+  recurSum?: number   // monthly recurring charge; defaults to amount if omitted
   orgId: string
   orgName: string
   ownerEmail?: string
@@ -80,7 +82,7 @@ export function createSubscriptionPaymentUrl({
     lang: 'il',
     // My Billing: ежемесячно, автоматически, без выбора пользователя
     recur_transaction: '4_approved',
-    recur_sum: amount.toFixed(2),
+    recur_sum: (recurSum ?? amount).toFixed(2),
     // success/fail/notify URLs
     success_url_address: successUrl,
     fail_url_address: failUrl,

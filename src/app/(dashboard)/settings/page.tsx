@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useBranches } from '@/hooks/useBranches'
-import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, CreditCard, MessageSquare } from 'lucide-react'
+import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, CreditCard, MessageSquare, Bell } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -81,6 +81,13 @@ export default function SettingsPage() {
       icon: CreditCard,
       title: language === 'he' ? 'הגדרות תשלום' : 'Настройки платежей',
       description: language === 'he' ? 'חיבור Tranzila — טרמינל ואישורים' : 'Подключение Tranzila — терминал и учётные данные',
+    },
+    {
+      id: 'notifications',
+      href: '/settings/notifications',
+      icon: Bell,
+      title: language === 'he' ? 'התראות' : 'Уведомления',
+      description: language === 'he' ? 'Push, Telegram — הגדר מה תקבל ומתי' : 'Push, Telegram — настройте что и когда получать',
     },
   ]
 

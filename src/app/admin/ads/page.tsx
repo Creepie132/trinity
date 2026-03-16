@@ -38,6 +38,7 @@ const I18N = {
     dragHere: 'גרור תמונה לכאן',
     orClick: 'או לחץ לבחירת קובץ',
     maxSize: 'JPG, PNG, WebP · מקסימום 5MB',
+    bannerRatio: 'יחס מומלץ: 800×320px',
     uploading: 'מעלה...',
     uploaded: 'הועלה בהצלחה',
     targetCategories: 'קטגוריות יעד',
@@ -91,6 +92,7 @@ const I18N = {
     dragHere: 'Перетащите изображение сюда',
     orClick: 'или нажмите для выбора файла',
     maxSize: 'JPG, PNG, WebP · максимум 5MB',
+    bannerRatio: 'Рекомендуемый размер: 800×320px',
     uploading: 'Загрузка...',
     uploaded: 'Загружено успешно',
     targetCategories: 'Целевые категории',
@@ -279,6 +281,10 @@ function BannerUploader({ value, onChange, uploading, setUploading, s }: {
             </div>
             <p className="text-sm font-medium text-gray-700">{s.dragHere}</p>
             <p className="text-xs text-gray-400 mt-1">{s.orClick}</p>
+            <div className="mt-3 inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-1.5">
+              <span className="text-[11px] font-bold text-indigo-600">5:2</span>
+              <span className="text-[10px] text-indigo-500">{s.bannerRatio}</span>
+            </div>
             <p className="text-[10px] text-gray-300 mt-2">{s.maxSize}</p>
           </div>
         )}

@@ -34,9 +34,15 @@ const ForceLightMode = dynamic(
   { ssr: false }
 )
 
+const UpdateBanner = dynamic(
+  () => import('@/components/UpdateBanner').then(m => ({ default: m.UpdateBanner })),
+  { ssr: false }
+)
+
 export function ClientProviders() {
   return (
     <>
+      <UpdateBanner />
       <ForceLightMode />
       <ModalManager />
       <PWAInstallBanner />

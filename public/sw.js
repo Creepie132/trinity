@@ -10,7 +10,18 @@ self.addEventListener('install', (event) => {
 
 // ─── Activate ──────────────────────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim())
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((key) => caches.delete(key)))
+    ).then(() => clients.claim())
+  )
+})
+
+// ─── Message (SKIP_WAITING) ────────────────────────────────────────────────
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
 })
 
 // ─── Push received ─────────────────────────────────────────────────────────

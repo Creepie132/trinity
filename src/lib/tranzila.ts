@@ -45,6 +45,7 @@ export function generateTranzilaHeaders() {
 export function createSubscriptionPaymentUrl({
   amount,
   recurSum,
+  recurStartDate,
   orgId,
   orgName,
   ownerEmail,
@@ -53,7 +54,8 @@ export function createSubscriptionPaymentUrl({
   failUrl,
 }: {
   amount: number
-  recurSum?: number   // monthly recurring charge; defaults to amount if omitted
+  recurSum?: number
+  recurStartDate?: string  // DD/MM/YYYY — если не передан, рекуррент стартует сразу
   orgId: string
   orgName: string
   ownerEmail?: string
@@ -83,11 +85,8 @@ export function createSubscriptionPaymentUrl({
     // My Billing: ежемесячно, автоматически, без выбора пользователя
     recur_transaction: '4_approved',
     recur_sum: (recurSum ?? amount).toFixed(2),
-    // Вариант В: первый рекуррентный платёж через 30 дней после сетапа
-    recur_start_date: (() => {
-      const d = new Date(); d.setDate(d.getDate() + 30)
-      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
-    })(),
+    // Опциональная дата старта рекуррента (Вариант В: +30 дней для demo)
+    ...(recurStartDate ? { recur_start_date: recurStartDate } : {}),
     // success/fail/notify URLs
     success_url_address: successUrl,
     fail_url_address: failUrl,

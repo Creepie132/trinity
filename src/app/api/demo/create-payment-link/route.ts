@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSubscriptionPaymentUrl } from '@/lib/tranzila'
 
 // POST /api/demo/create-payment-link
-// Creates a Tranzila RECURRING payment link:
-//   - First charge  = setup fee (one-time)
-//   - Monthly after = monthly subscription price
-// Called from DemoOrderModal after form submission (no auth required — public endpoint)
+// Variant C: First charge = setup fee, subscription starts 30 days later
 export async function POST(request: NextRequest) {
   try {
     const { setupAmount, monthlyAmount, description, email, plan } = await request.json()
@@ -15,19 +12,22 @@ export async function POST(request: NextRequest) {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ambersol.co.il'
-    // orgId not available here — use a temp ID for DCdisable dedup
-    const tempId = `demo-${Date.now()}`
+    const tempId  = `demo-${Date.now()}`
+
+    // +30 days: setup today, subscription starts next month
+    const d = new Date(); d.setDate(d.getDate() + 30)
+    const recurStartDate = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
 
     const url = createSubscriptionPaymentUrl({
-      amount: Number(setupAmount),              // first charge = setup
-      orgId: tempId,
-      orgName: description || `Trinity CRM — ${plan}`,
-      ownerEmail: email || undefined,
-      notifyUrl: `${baseUrl}/api/payments/tranzila-notify`,
-      successUrl: `${baseUrl}/payment-success?type=demo-setup`,
-      failUrl:    `${baseUrl}/payment-failed?type=demo-setup`,
-      // Override recur_sum to monthly price if provided, else same as setup
-      ...(monthlyAmount ? { recurSum: Number(monthlyAmount) } : {}),
+      amount:          Number(setupAmount),
+      recurSum:        monthlyAmount ? Number(monthlyAmount) : undefined,
+      recurStartDate,
+      orgId:           tempId,
+      orgName:         description || `Trinity CRM — ${plan}`,
+      ownerEmail:      email || undefined,
+      notifyUrl:       `${baseUrl}/api/payments/tranzila-notify`,
+      successUrl:      `${baseUrl}/payment-success?type=demo-setup`,
+      failUrl:         `${baseUrl}/payment-failed?type=demo-setup`,
     })
 
     return NextResponse.json({ url })

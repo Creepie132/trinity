@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Copy, Check, Download, Printer, QrCode } from 'lucide-react'
+import { ArrowLeft, Copy, Check, Download, Printer, QrCode, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import QRCode from 'qrcode'
@@ -63,6 +63,7 @@ export default function BookingSettingsPage() {
   const { t, language } = useLanguage()
   const { orgId, user } = useAuth()
   const router = useRouter()
+  const [activeTab, setActiveTab] = useState<'booking' | 'registration'>('booking')
   const [settings, setSettings] = useState<BookingSettings>(defaultSettings)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -326,13 +327,45 @@ export default function BookingSettingsPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {t('booking.title')}
+            {language === 'he' ? 'הזמנות ורישום' : 'Запись и регистрация'}
           </h1>
           <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 mt-1">
-            {t('booking.subtitle')}
+            {language === 'he' ? 'הגדרות הזמנה מקוונת ורישום עצמי' : 'Настройки онлайн-записи и самостоятельной регистрации'}
           </p>
         </div>
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
+        <button
+          onClick={() => setActiveTab('booking')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'booking'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          {language === 'he' ? 'הזמנה מקוונת' : 'Онлайн запись'}
+        </button>
+        <button
+          onClick={() => setActiveTab('registration')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'registration'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <UserPlus className="w-4 h-4" />
+          {language === 'he' ? 'רישום עצמי' : 'Онлайн регистрация'}
+        </button>
+      </div>
+
+      {activeTab === 'registration' && (
+        <RegistrationLinkCard orgId={orgId} language={language} />
+      )}
+
+      {activeTab === 'booking' && (<>
 
       {/* Enable Toggle */}
       <Card>
@@ -744,9 +777,6 @@ export default function BookingSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Registration Link */}
-      <RegistrationLinkCard orgId={orgId} slug={settings.slug} language={language} />
-
       {/* QR Code Section */}
       {settings.slug && qrCodeUrl && (
         <Card>
@@ -825,6 +855,9 @@ export default function BookingSettingsPage() {
           {saving ? t('booking.saving') : t('booking.save')}
         </Button>
       </div>
+
+      </>)}
+
     </div>
   )
 }
@@ -833,31 +866,31 @@ export default function BookingSettingsPage() {
 
 function RegistrationLinkCard({
   orgId,
-  slug,
   language,
 }: {
   orgId: string | null
-  slug: string
   language: string
 }) {
   const [enabled, setEnabled] = useState<boolean | null>(null)
   const [privacyUrl, setPrivacyUrl] = useState('')
+  const [orgSlug, setOrgSlug] = useState('')
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  // Load current values
+  // Load current values directly from organizations table
   useEffect(() => {
     if (!orgId) return
     const load = async () => {
       const supabase = createSupabaseBrowserClient()
       const { data } = await supabase
         .from('organizations')
-        .select('registration_enabled, privacy_policy_url')
+        .select('registration_enabled, privacy_policy_url, slug')
         .eq('id', orgId)
         .single()
       if (data) {
         setEnabled(data.registration_enabled ?? false)
         setPrivacyUrl(data.privacy_policy_url ?? '')
+        setOrgSlug(data.slug ?? '')
       }
     }
     load()
@@ -878,8 +911,10 @@ function RegistrationLinkCard({
     toast.success(language === 'he' ? 'נשמר!' : 'Сохранено!')
   }
 
-  const appOrigin = process.env.NEXT_PUBLIC_APP_URL || 'https://ambersol.co.il'
-  const regLink = slug ? `${appOrigin}/register/${slug}` : ''
+  const appOrigin = typeof window !== 'undefined' 
+    ? (process.env.NEXT_PUBLIC_APP_URL || window.location.origin)
+    : 'https://ambersol.co.il'
+  const regLink = orgSlug ? `${appOrigin}/register/${orgSlug}` : ''
 
   const copyLink = () => {
     if (!regLink) return
@@ -921,13 +956,13 @@ function RegistrationLinkCard({
               </span>
               <div className="flex items-center gap-2">
                 <code className="text-sm font-mono font-medium break-all flex-1">
-                  {slug ? `/register/${slug}` : '...'}
+                  {orgSlug ? `ambersol.co.il/register/${orgSlug}` : '...'}
                 </code>
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={copyLink}
-                  disabled={!slug}
+                  disabled={!orgSlug}
                   className="flex-shrink-0"
                 >
                   {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}

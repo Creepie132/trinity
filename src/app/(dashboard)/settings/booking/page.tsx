@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
+import { useBranch } from '@/contexts/BranchContext'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Copy, Check, Download, Printer, QrCode, Calendar } from 'lucide-react'
 import Link from 'next/link'
@@ -62,6 +63,7 @@ const defaultSettings: BookingSettings = {
 export default function BookingSettingsPage() {
   const { t, language } = useLanguage()
   const { orgId, user } = useAuth()
+  const { activeOrgId } = useBranch()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'booking' | 'registration'>('booking')
   const [settings, setSettings] = useState<BookingSettings>(defaultSettings)
@@ -79,7 +81,7 @@ export default function BookingSettingsPage() {
       const { data } = await supabase
         .from('organizations')
         .select('features')
-        .eq('id', orgId)
+        .eq('id', activeOrgId)
         .single()
 
       const modules = (data?.features as any)?.modules || {}
@@ -90,22 +92,22 @@ export default function BookingSettingsPage() {
       }
     }
 
-    if (orgId) {
+    if (activeOrgId) {
       checkAccess()
     }
-  }, [orgId, router])
+  }, [activeOrgId, router])
 
   // Load settings
   useEffect(() => {
-    if (!orgId) {
+    if (!activeOrgId) {
       setLoading(false)
       return
     }
 
     const loadSettings = async () => {
       try {
-        console.log('[BOOKING SETTINGS] Loading for org:', orgId)
-        const res = await fetch(`/api/organizations/${orgId}`)
+        console.log('[BOOKING SETTINGS] Loading for org:', activeOrgId)
+        const res = await fetch(`/api/organizations/${activeOrgId}`)
         
         if (!res.ok) {
           const errorData = await res.json()
@@ -252,37 +254,30 @@ export default function BookingSettingsPage() {
   }
 
   const handleSave = async () => {
-    if (!orgId) {
+    if (!activeOrgId) {
       toast.error('Organization ID not found')
       return
     }
 
-    console.log('[BOOKING SETTINGS] Saving settings for org:', orgId)
+    console.log('[BOOKING SETTINGS] Saving settings for org:', activeOrgId)
     setSaving(true)
     
     try {
-      // Prepare settings with or without break
       const settingsToSave = {
         ...settings,
         break_times: hasBreak ? settings.break_times : [],
       }
 
-      console.log('[BOOKING SETTINGS] Payload:', {
-        orgId,
-        settings: settingsToSave,
-      })
-
       const res = await fetch(`/api/organizations/booking-settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orgId,
+          orgId: activeOrgId,
           booking_settings: settingsToSave,
         }),
       })
 
       const data = await res.json()
-      console.log('[BOOKING SETTINGS] Response:', { status: res.status, data })
 
       if (!res.ok) {
         throw new Error(data.error || `HTTP ${res.status}: ${res.statusText}`)
@@ -362,7 +357,7 @@ export default function BookingSettingsPage() {
       </div>
 
       {activeTab === 'registration' && (
-        <RegistrationLinkCard orgId={orgId} language={language} />
+        <RegistrationLinkCard orgId={activeOrgId} language={language} />
       )}
 
       {activeTab === 'booking' && (<>

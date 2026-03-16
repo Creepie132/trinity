@@ -58,7 +58,7 @@ const translations = {
 
 function playNotificationSound() {
   if (document.visibilityState !== 'visible') return
-  const audio = new Audio('/sounds/notification.mp3')
+  const audio = new Audio('/sounds/Notification.mp3')
   audio.volume = 0.5
   audio.play().catch(() => {})
 }
@@ -246,11 +246,13 @@ export function NotificationBell({ locale }: NotificationBellProps) {
 
   // Realtime subscription
   useEffect(() => {
-    let userId: string | null = null
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
     supabase.auth.getUser().then(({ data }) => {
-      userId = data?.user?.id ?? null
+      const userId = data?.user?.id ?? null
       if (!userId) return
-      const channel = supabase
+
+      channel = supabase
         .channel(`notifications:${userId}`)
         .on('postgres_changes', {
           event: 'INSERT', schema: 'public', table: 'notifications',
@@ -262,8 +264,11 @@ export function NotificationBell({ locale }: NotificationBellProps) {
           playNotificationSound()
         })
         .subscribe()
-      return () => { supabase.removeChannel(channel) }
     })
+
+    return () => {
+      if (channel) supabase.removeChannel(channel)
+    }
   }, [])
 
   async function rejectInvitation(notifId: string, userId: string, orgId: string) {

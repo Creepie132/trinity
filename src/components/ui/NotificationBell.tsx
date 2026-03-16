@@ -57,11 +57,55 @@ const translations = {
   },
 }
 
+// AudioContext singleton — создаётся после первого клика пользователя (обходит autoplay policy)
+let _audioCtx: AudioContext | null = null
+let _audioBuffer: AudioBuffer | null = null
+let _audioUnlocked = false
+
+// Разблокируем AudioContext при любом клике (вызывается один раз)
+function unlockAudio() {
+  if (_audioUnlocked) return
+  _audioUnlocked = true
+  try {
+    _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    // Прогружаем буфер заранее
+    fetch('/sounds/Notification.mp3')
+      .then(r => r.arrayBuffer())
+      .then(buf => _audioCtx!.decodeAudioData(buf))
+      .then(decoded => { _audioBuffer = decoded })
+      .catch(() => {})
+  } catch {}
+}
+
+// Вешаем разблокировку на первый клик в документе
+if (typeof window !== 'undefined') {
+  window.addEventListener('click', unlockAudio, { once: true })
+  window.addEventListener('touchstart', unlockAudio, { once: true })
+  window.addEventListener('keydown', unlockAudio, { once: true })
+}
+
 function playNotificationSound() {
-  if (document.visibilityState !== 'visible') return
-  const audio = new Audio('/sounds/Notification.mp3')
-  audio.volume = 0.5
-  audio.play().catch(() => {})
+  // Метод 1: AudioContext (предпочтительный — работает в фоне)
+  if (_audioCtx && _audioBuffer) {
+    try {
+      if (_audioCtx.state === 'suspended') _audioCtx.resume()
+      const source = _audioCtx.createBufferSource()
+      source.buffer = _audioBuffer
+      const gainNode = _audioCtx.createGain()
+      gainNode.gain.value = 0.6
+      source.connect(gainNode)
+      gainNode.connect(_audioCtx.destination)
+      source.start(0)
+      return
+    } catch {}
+  }
+  // Метод 2: fallback — обычный Audio (может быть заблокирован браузером)
+  try {
+    const audio = new Audio('/sounds/Notification.mp3')
+    audio.volume = 0.6
+    const p = audio.play()
+    if (p) p.catch(() => {})
+  } catch {}
 }
 
 // ── Swipeable notification item ──────────────────────────────────────────────
@@ -317,6 +361,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   }
 
   function handleOpen() {
+    unlockAudio() // гарантируем что AudioContext создан после клика
     setIsOpen(true)
     if (unreadCount > 0) markAllRead()
   }

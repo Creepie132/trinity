@@ -322,10 +322,28 @@ export async function DELETE(request: NextRequest) {
   }
   const { id } = await request.json()
   const service = createSupabaseServiceClient()
+
   const { data: session } = await service
     .from('demo_sessions').select('user_id, org_id').eq('id', id).single()
-  if (session?.user_id) await service.auth.admin.deleteUser(session.user_id)
-  if (session?.org_id) await service.from('organizations').delete().eq('id', session.org_id)
-  await service.from('demo_sessions').delete().eq('id', id)
+
+  // 1. Delete auth user first (no FK dependency)
+  if (session?.user_id) {
+    const { error: authErr } = await service.auth.admin.deleteUser(session.user_id)
+    if (authErr) console.error('[demo/delete] deleteUser:', authErr.message)
+  }
+
+  // 2. Cascade-delete org + ALL related data via SQL function
+  //    (simple .delete() fails due to FK constraints)
+  if (session?.org_id) {
+    const { error: fnErr } = await service.rpc('delete_demo_org', { p_org_id: session.org_id })
+    if (fnErr) {
+      console.error('[demo/delete] delete_demo_org RPC:', fnErr.message)
+      return NextResponse.json({ error: fnErr.message }, { status: 500 })
+    }
+  } else {
+    // Fallback: session record might have already been deleted, clean by id
+    await service.from('demo_sessions').delete().eq('id', id)
+  }
+
   return NextResponse.json({ ok: true })
 }

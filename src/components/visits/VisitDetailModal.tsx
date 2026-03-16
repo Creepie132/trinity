@@ -163,21 +163,26 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const getInstructionTitle = (i: CareInstruction) => isHe ? i.title : (i.title_ru || i.title)
   const getInstructionContent = (i: CareInstruction) => isHe ? i.content : (i.content_ru || i.content)
 
-  const sendViaWhatsApp = async (instruction: CareInstruction) => {
+  const sendViaWhatsApp = (instruction: CareInstruction) => {
     if (!clientPhone) { toast.error(isHe ? 'אין מספר טלפון' : 'Нет номера телефона'); return }
     const phone = clientPhone.replace(/[^0-9]/g, '')
     const fp = phone.startsWith('972') ? phone : `972${phone.replace(/^0/, '')}`
+    const title = getInstructionTitle(instruction)
+    let message: string
     if (instruction.file_url) {
-      try {
-        const r = await fetch(instruction.file_url); const blob = await r.blob()
-        const url = URL.createObjectURL(blob); const a = document.createElement('a')
-        a.href = url; a.download = `${getInstructionTitle(instruction)}.pdf`
-        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
-        window.open(`https://wa.me/${fp}?text=${encodeURIComponent(isHe ? 'ההוראה מוכנה לשליחה.' : 'Инструкция готова.')}`, '_blank')
-      } catch { toast.error(isHe ? 'שגיאה' : 'Ошибка') }
+      message = `היי ${clientName}! 👋\n\n` +
+        `תודה שביקרת ב${instruction.services?.name || ''}.\n\n` +
+        `הוראות הטיפול שלך:\n*${title}*\n\n` +
+        `📄 להורדה: ${instruction.file_url}\n\n` +
+        `נשמח לראותך שוב! 🌟`
     } else {
-      window.open(`https://wa.me/${fp}?text=${encodeURIComponent(getInstructionContent(instruction))}`, '_blank')
+      message = `היי ${clientName}! 👋\n\n` +
+        `תודה על הביקור.\n\n` +
+        `*${title}*\n\n` +
+        `${getInstructionContent(instruction)}\n\n` +
+        `נשמח לראותך שוב! 🌟`
     }
+    window.open(`https://wa.me/${fp}?text=${encodeURIComponent(message)}`, '_blank')
   }
 
   const SubHeader = ({ title, back }: { title: string; back: ViewMode }) => (

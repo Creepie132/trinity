@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
+import { queuePushNotification } from '@/lib/push-notify'
 
 // PUT /api/tasks/[id] - обновить задачу
 export async function PUT(
@@ -111,6 +112,15 @@ export async function PUT(
       link: `/diary?task=${id}`,
       reference_id: id,
     })
+    await queuePushNotification({
+      org_id: orgId,
+      user_id: body.assigned_to,
+      type: 'task_assigned',
+      title: '✅ הוקצתה לך משימה',
+      body: `${taskTitle}${currentUserName ? ` מ-${currentUserName}` : ''}`,
+      link: `/diary?task=${id}`,
+      reference_id: id,
+    })
   }
 
   // Если задача завершена — уведомление создателю (если создатель ≠ исполнитель)
@@ -121,6 +131,15 @@ export async function PUT(
       type: 'task_completed',
       title: 'משימה הושלמה',
       body: `${taskTitle}${currentUserName ? ` — הושלמה על ידי ${currentUserName}` : ''}`,
+      link: `/diary?task=${id}`,
+      reference_id: id,
+    })
+    await queuePushNotification({
+      org_id: orgId,
+      user_id: existingTask.created_by,
+      type: 'task_completed',
+      title: '✅ משימה הושלמה',
+      body: `${taskTitle}${currentUserName ? ` על ידי ${currentUserName}` : ''}`,
       link: `/diary?task=${id}`,
       reference_id: id,
     })

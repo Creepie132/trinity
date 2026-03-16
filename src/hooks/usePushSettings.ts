@@ -11,6 +11,9 @@ export const DEFAULT_PUSH_SETTINGS: PushSettings = {
   new_payment: true,
   new_client: false,
   birthday: false,
+  task_mentions: true,
+  stock_alerts: true,
+  admin_messages: true,
 }
 
 export function usePushSettings() {

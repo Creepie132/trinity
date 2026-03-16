@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { ratelimitPublic, getClientIp } from '@/lib/ratelimit'
 import { validateBody, createBookingSchema } from '@/lib/validations'
 import { sendTelegramMessage } from '@/lib/telegram'
+import { queuePushToOrgOwners } from '@/lib/push-notify'
 
 // Public API - no auth required
 export async function POST(
@@ -352,6 +353,16 @@ export async function POST(
     } else {
       console.log('⏭️ Telegram notification skipped (not enabled or no chat_id)')
     }
+
+    // Send push notification to org owners
+    await queuePushToOrgOwners({
+      org_id: org.id,
+      type: 'new_booking',
+      title: '📅 הזמנה חדשה',
+      body: `${client_name} — ${service_name} ב-${new Date(scheduled_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`,
+      link: '/diary',
+      reference_id: visit.id,
+    })
 
     // Get confirmation message
     const confirmationMessage = settings.confirmation_message_he || 'תודה שקבעת תור! נתראה בקרוב'

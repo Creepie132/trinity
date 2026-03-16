@@ -19,6 +19,14 @@
     {
       "path": "/api/cron/archive-tasks",
       "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/cron/push-dispatch",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/push-events",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

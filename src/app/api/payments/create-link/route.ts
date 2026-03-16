@@ -5,6 +5,7 @@ import { ratelimitStrict } from '@/lib/ratelimit'
 import { validateBody, createPaymentSchema } from '@/lib/validations'
 import { logAudit } from '@/lib/audit'
 import { getClientIp } from '@/lib/ratelimit'
+import { queuePushNotification } from '@/lib/push-notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -140,6 +141,17 @@ export async function POST(request: NextRequest) {
       entity_id: payment.id,
       new_data: { amount, currency: 'ILS', client_id: data.client_id },
       ip_address: getClientIp(request),
+    })
+
+    // Push notification
+    await queuePushNotification({
+      org_id,
+      user_id: authResult.data.user.id,
+      type: 'new_payment',
+      title: '💰 תשלום חדש',
+      body: `₪${amount}`,
+      link: '/payments',
+      reference_id: payment.id,
     })
 
     return NextResponse.json({

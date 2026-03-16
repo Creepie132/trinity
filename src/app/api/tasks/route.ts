@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
+import { queuePushNotification } from '@/lib/push-notify'
 
 // GET /api/tasks - список задач с фильтрами
 export async function GET(request: NextRequest) {
@@ -110,6 +111,16 @@ export async function POST(request: NextRequest) {
       type: 'task_assigned',
       title: 'הוקצתה לך משימה',
       body: `${title.trim()}${creatorName ? ` — הוקצה על ידי ${creatorName}` : ''}`,
+      link: `/diary?task=${task.id}`,
+      reference_id: task.id,
+    })
+    // Push notification
+    await queuePushNotification({
+      org_id: orgId,
+      user_id: assigned_to,
+      type: 'task_assigned',
+      title: '✅ הוקצתה לך משימה',
+      body: `${title.trim()}${creatorName ? ` מ-${creatorName}` : ''}`,
       link: `/diary?task=${task.id}`,
       reference_id: task.id,
     })

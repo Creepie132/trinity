@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Bell, Smartphone, Calendar, CreditCard, UserPlus, Cake, Clock } from 'lucide-react'
+import { ArrowRight, Bell, Smartphone, Calendar, CreditCard, UserPlus, Cake, Clock, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -30,18 +30,18 @@ const PUSH_EVENTS: PushEventConfig[] = [
   {
     key: 'new_visit',
     icon: Calendar,
-    labelHe: 'ביקור חדש',
-    labelRu: 'Новый визит',
-    descHe: 'כשנוצרת תור חדש במערכת',
-    descRu: 'При создании новой записи',
+    labelHe: 'ביקור / הזמנה חדשה',
+    labelRu: 'Новый визит / бронь',
+    descHe: 'כשנוצרת הזמנה — ידנית או דרך קישור',
+    descRu: 'При создании записи — вручную или по ссылке',
   },
   {
     key: 'visit_reminder',
     icon: Clock,
-    labelHe: 'תזכורת לביקור',
-    labelRu: 'Напоминание о визите',
-    descHe: 'שעה לפני הביקור המתוזמן',
-    descRu: 'За час до запланированного визита',
+    labelHe: 'תזכורות ביקור',
+    labelRu: 'Напоминания о визите',
+    descHe: '4ש׳ / שעה / 30 דק׳ לפני; 10 דק׳ / שעה אחרי אם לא הסתיים',
+    descRu: 'За 4ч/1ч/30мин до; через 10мин/1ч после если не завершён',
   },
   {
     key: 'new_payment',
@@ -50,6 +50,22 @@ const PUSH_EVENTS: PushEventConfig[] = [
     labelRu: 'Новый платёж',
     descHe: 'כשמתקבל תשלום מלקוח',
     descRu: 'При получении платежа от клиента',
+  },
+  {
+    key: 'task_mentions',
+    icon: Bell,
+    labelHe: 'משימות',
+    labelRu: 'Задачи',
+    descHe: 'הקצאה, ציון, ביצוע, דדליין, פג תוקף',
+    descRu: 'Назначение, упоминание, выполнение, дедлайн, просрочка',
+  },
+  {
+    key: 'stock_alerts',
+    icon: Package,
+    labelHe: 'התראות מלאי',
+    labelRu: 'Уведомления о складе',
+    descHe: 'מוצר מגיע לסף נמוך או נגמר לגמרי',
+    descRu: 'Товар заканчивается или закончился',
   },
   {
     key: 'new_client',

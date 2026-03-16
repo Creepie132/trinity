@@ -4,6 +4,7 @@ import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 import { bookingConfirmEmail, newBookingNotifyEmail } from '@/lib/email-templates'
+import { queuePushNotification } from '@/lib/push-notify'
 
 // GET /api/visits - список визитов для текущей организации
 export async function GET(request: NextRequest) {
@@ -186,6 +187,18 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[API /api/visits POST] Visit created successfully:', visit.id)
+
+    // Queue push notification to visit creator (and org owners)
+    const visitTime = new Date(scheduled_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+    await queuePushNotification({
+      org_id: org_id,
+      user_id: user.id,
+      type: 'new_visit',
+      title: '📅 ביקור נוצר',
+      body: `${visitTime} — ${insertData.service_type || 'ביקור'}`,
+      link: '/diary',
+      reference_id: visit.id,
+    })
 
     // Award loyalty points for visit
     try {

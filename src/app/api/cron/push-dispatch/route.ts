@@ -79,6 +79,8 @@ export async function GET(request: NextRequest) {
       const pushSettings = org?.metadata?.push_settings ?? {}
       const eventKey = NOTIFICATION_TYPE_TO_SETTING[notif.type]
 
+      // Если тип есть в маппинге и явно выключен — пропускаем
+      // Если типа нет в маппинге — отправляем всегда (неизвестные типы не блокируем)
       if (eventKey && pushSettings[eventKey] === false) {
         notificationIds.push(notif.id)
         stats.skipped++
@@ -141,31 +143,26 @@ export async function GET(request: NextRequest) {
 }
 
 // Map notification type → push_settings key
+// Types NOT in this map are always sent (no per-event toggle)
 const NOTIFICATION_TYPE_TO_SETTING: Record<string, string> = {
-  // Visit / booking
   new_booking:            'new_visit',
   new_visit:              'new_visit',
+  client_registered:      'new_client',
   visit_reminder_4h:      'visit_reminder',
   visit_reminder_1h:      'visit_reminder',
   visit_reminder_30m:     'visit_reminder',
   visit_overdue_10m:      'visit_reminder',
   visit_overdue_1h:       'visit_reminder',
-  // Payment
   new_payment:            'new_payment',
-  // Client
-  new_client:             'new_client',
-  // Birthday
   client_birthday:        'birthday',
-  // Tasks — always send (no per-event setting for tasks)
   task_assigned:          'task_mentions',
   task_mention:           'task_mentions',
   task_completed:         'task_mentions',
   task_reminder:          'task_mentions',
   task_overdue_1h:        'task_mentions',
   task_overdue:           'task_mentions',
-  // Stock
   stock_low:              'stock_alerts',
   stock_out:              'stock_alerts',
-  // Admin
   admin_message:          'admin_messages',
+  demo_order_submitted:   'admin_messages',
 }

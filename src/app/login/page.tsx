@@ -59,7 +59,13 @@ export default function LoginPage() {
     setError('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
-      setError('אימייל או סיסמה שגויים')
+      if (error.message?.includes('Invalid login credentials') || error.status === 400) {
+        setError(email.includes('@') && password ? 'אימייל או סיסמה שגויים' : 'נא למלא אימייל וסיסמה')
+      } else if (error.message?.includes('Email not confirmed')) {
+        setError('האימייל לא אושר — פנה לתמיכה')
+      } else {
+        setError('שגיאה בהתחברות — נסה שוב')
+      }
       setLoading(false)
     } else {
       router.push('/dashboard')

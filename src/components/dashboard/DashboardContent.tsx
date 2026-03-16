@@ -298,6 +298,12 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   // Используем _orgIdProp как приоритет — он совпадает с ключом в HydrationBoundary cache.
   // После инициализации BranchContext activeOrgId возьмёт управление (смена филиала).
   const orgId = _orgIdProp || activeOrgId || authOrgId
+  // Для демо-аккаунтов данные статичные — используем долгий кеш чтобы не было лагов
+  const [isDemoMode, setIsDemoMode] = useState(false)
+  const STALE_STATS    = isDemoMode ? 10 * 60_000 : 2 * 60_000
+  const STALE_VISITS   = isDemoMode ? 10 * 60_000 : 60_000
+  const STALE_REVENUE  = isDemoMode ? 15 * 60_000 : 5 * 60_000
+  const STALE_TASKS    = isDemoMode ? 10 * 60_000 : 60_000
   const supabase = createSupabaseBrowserClient()
 
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
@@ -325,11 +331,17 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
     },
   })
 
+  // Включаем демо-режим кеша как только знаем что это демо
+  useEffect(() => {
+    if ((onboardingData as any)?.isDemoOrg) setIsDemoMode(true)
+  }, [(onboardingData as any)?.isDemoOrg])
+
   // ── 2. KPI stats — server-side aggregated, no raw data transfer ───────────
   const { data: stats, isLoading: statsLoading } = useQuery<StatsData>({
     queryKey: ['dashboard-stats', orgId],
     enabled: !!orgId,
-    staleTime: 2 * 60_000,
+    staleTime: STALE_STATS,
+    gcTime: STALE_STATS * 2,
     retry: false,
     // placeholderData: keepPreviousData — не мигаем при refetch
     placeholderData: (prev) => prev,
@@ -344,7 +356,8 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   const { data: todayVisits = [] } = useQuery({
     queryKey: ['dashboard-today', orgId],
     enabled: !!orgId,
-    staleTime: 60_000,
+    staleTime: STALE_VISITS,
+    gcTime: STALE_VISITS * 2,
     retry: false,
     queryFn: async () => {
       const res = await fetch('/api/dashboard/today')
@@ -357,7 +370,8 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   const { data: revenueData = [] } = useQuery({
     queryKey: ['dashboard-revenue', orgId],
     enabled: !!orgId,
-    staleTime: 5 * 60_000,
+    staleTime: STALE_REVENUE,
+    gcTime: STALE_REVENUE * 2,
     retry: false,
     queryFn: async () => {
       const res = await fetch(`/api/dashboard/revenue?org_id=${orgId}&days=7`)
@@ -370,7 +384,8 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   const { data: todayTasksRaw = [] } = useQuery({
     queryKey: ['dashboard-tasks', orgId],
     enabled: !!orgId,
-    staleTime: 60_000,
+    staleTime: STALE_TASKS,
+    gcTime: STALE_TASKS * 2,
     retry: false,
     queryFn: async () => {
       const res = await fetch('/api/tasks?status=open')

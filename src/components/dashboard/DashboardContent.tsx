@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, ReactNode } from 'react'
-import { Users, Calendar, TrendingUp, Receipt, AlertTriangle } from 'lucide-react'
+import { Users, Calendar, TrendingUp, Receipt, AlertTriangle, Sparkles, X, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useProducts } from '@/hooks/useProducts'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -76,6 +76,90 @@ function LowStockAlert({ locale }: { locale: string }) {
       </div>
       <span className="text-xs text-amber-600 font-medium flex-shrink-0">{l ? 'לפרטים →' : 'Подробнее →'}</span>
     </Link>
+  )
+}
+
+// ─── Demo Banner ─────────────────────────────────────────────────────────────
+function DemoBanner({ locale, isDemoOrg }: { locale: string; isDemoOrg: boolean }) {
+  const [dismissed, setDismissed] = useState(false)
+  const [pulse, setPulse] = useState(false)
+  const l = locale === 'he'
+
+  useEffect(() => {
+    // Pulse every 8 seconds to catch attention
+    const t = setInterval(() => { setPulse(true); setTimeout(() => setPulse(false), 1000) }, 8000)
+    return () => clearInterval(t)
+  }, [])
+
+  if (!isDemoOrg || dismissed) return null
+
+  return (
+    <div className={`relative mb-5 overflow-hidden rounded-2xl transition-all duration-700 ${pulse ? 'scale-[1.01]' : 'scale-100'}`}>
+      {/* Animated gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 animate-demo-gradient" />
+      {/* Shimmer sweep */}
+      <div className="absolute inset-0 opacity-20 animate-shimmer-sweep"
+        style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)', backgroundSize: '200% 100%' }} />
+      {/* Animated top border */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-400 animate-border-slide" />
+
+      <div className="relative flex items-center gap-4 px-5 py-4">
+        {/* Icon with pulse ring */}
+        <div className="relative flex-shrink-0">
+          <div className={`absolute inset-0 rounded-xl bg-amber-400/30 ${pulse ? 'animate-ping' : ''}`} />
+          <div className="relative w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg">
+            <Sparkles size={18} className="text-white" />
+          </div>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-bold text-white">
+              {l ? '🚀 זוהי סביבת DEMO' : '🚀 Это DEMO аккаунт'}
+            </span>
+            <span className="text-xs bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium animate-pulse">
+              DEMO
+            </span>
+          </div>
+          <p className="text-xs text-white/60 mt-0.5 truncate">
+            {l
+              ? 'הנתונים הם לדוגמה בלבד. לרכישת מנוי מלא — דברו עם נציג'
+              : 'Данные демонстрационные. Для покупки полной подписки — свяжитесь с представителем'}
+          </p>
+        </div>
+
+        {/* Contact button */}
+        <a href="https://wa.me/972544858586" target="_blank" rel="noopener noreferrer"
+          className="flex-shrink-0 flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all hover:scale-105 shadow-md">
+          <MessageCircle size={14} />
+          <span className="hidden sm:inline">{l ? 'לרכישה' : 'Купить'}</span>
+        </a>
+
+        {/* Dismiss */}
+        <button onClick={() => setDismissed(true)}
+          className="flex-shrink-0 w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all">
+          <X size={14} />
+        </button>
+      </div>
+
+      <style jsx>{`
+        @keyframes demo-gradient {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        .animate-demo-gradient { background-size: 200% 200%; animation: demo-gradient 6s ease infinite; }
+        @keyframes shimmer-sweep {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .animate-shimmer-sweep { animation: shimmer-sweep 4s ease-in-out infinite; }
+        @keyframes border-slide {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        .animate-border-slide { animation: border-slide 2s ease-in-out infinite; }
+      `}</style>
+    </div>
   )
 }
 
@@ -184,11 +268,12 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
     retry: false,
     queryFn: async () => {
       const { data: org, error } = await supabase.from('organizations').select('name, features').eq('id', orgId).single()
-      if (error || !org) return { showOnboarding: false, organizationName: '', ownerName: '' }
+      if (error || !org) return { showOnboarding: false, organizationName: '', ownerName: '', isDemoOrg: false }
       return {
         showOnboarding: !org.features?.onboarding_completed,
         organizationName: org.name || '',
         ownerName: (org.features as any)?.business_info?.owner_name || '',
+        isDemoOrg: !!(org.features as any)?.is_demo,
       }
     },
   })
@@ -283,6 +368,7 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   return (
     <>
       <div className="p-4 md:p-6">
+        <DemoBanner locale={locale} isDemoOrg={!!(onboardingData as any)?.isDemoOrg} />
         <GreetingHeader ownerName={onboardingData?.ownerName || ''} todayVisitsCount={todayVisits.length} locale={locale} />
         <ActivityStrip visitsToday={todayVisits.length} visitsDone={(todayVisits as any[]).filter((v: any) => v.status === 'completed').length} tasksOpen={todayTasks.length} tasksUrgent={todayTasks.filter((t: any) => t.priority === 'urgent').length} revenueToday={revenueToday} locale={locale} />
         <LowStockAlert locale={locale} />

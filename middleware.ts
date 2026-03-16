@@ -10,8 +10,8 @@ const PUBLIC_PATH_SET = new Set([
 ])
 
 const PUBLIC_PATH_PREFIXES = [
-  '/onboarding/', '/book/', '/invite/', '/.well-known',
-  '/api/payments/webhook', '/api/payments/stripe-webhook',
+  '/demo', '/onboarding/', '/book/', '/invite/', '/.well-known',
+  '/api/demo/', '/api/payments/webhook', '/api/payments/stripe-webhook',
   '/api/payments/tranzila/webhook', '/api/payments/tranzila-success',
   '/api/payments/tranzila-failed', '/api/payments/cardcom-success',
   '/api/payments/tranzila/success', '/api/payments/callback',

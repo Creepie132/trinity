@@ -86,7 +86,6 @@ function DemoBanner({ locale, isDemoOrg }: { locale: string; isDemoOrg: boolean 
   const l = locale === 'he'
 
   useEffect(() => {
-    // Pulse every 8 seconds to catch attention
     const t = setInterval(() => { setPulse(true); setTimeout(() => setPulse(false), 1000) }, 8000)
     return () => clearInterval(t)
   }, [])
@@ -95,69 +94,112 @@ function DemoBanner({ locale, isDemoOrg }: { locale: string; isDemoOrg: boolean 
 
   return (
     <div className={`relative mb-5 overflow-hidden rounded-2xl transition-all duration-700 ${pulse ? 'scale-[1.01]' : 'scale-100'}`}>
-      {/* Animated gradient background */}
       <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 animate-demo-gradient" />
-      {/* Shimmer sweep */}
       <div className="absolute inset-0 opacity-20 animate-shimmer-sweep"
         style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)', backgroundSize: '200% 100%' }} />
-      {/* Animated top border */}
       <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-400 animate-border-slide" />
-
       <div className="relative flex items-center gap-4 px-5 py-4">
-        {/* Icon with pulse ring */}
         <div className="relative flex-shrink-0">
           <div className={`absolute inset-0 rounded-xl bg-amber-400/30 ${pulse ? 'animate-ping' : ''}`} />
           <div className="relative w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg">
             <Sparkles size={18} className="text-white" />
           </div>
         </div>
-
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-white">
-              {l ? '🚀 זוהי סביבת DEMO' : '🚀 Это DEMO аккаунт'}
-            </span>
-            <span className="text-xs bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium animate-pulse">
-              DEMO
-            </span>
+            <span className="text-sm font-bold text-white">{l ? '🚀 זוהי סביבת DEMO' : '🚀 Это DEMO аккаунт'}</span>
+            <span className="text-xs bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium animate-pulse">DEMO</span>
           </div>
           <p className="text-xs text-white/60 mt-0.5 truncate">
-            {l
-              ? 'הנתונים הם לדוגמה בלבד. לרכישת מנוי מלא — דברו עם נציג'
-              : 'Данные демонстрационные. Для покупки полной подписки — свяжитесь с представителем'}
+            {l ? 'הנתונים הם לדוגמה בלבד. לרכישת מנוי מלא — דברו עם נציג' : 'Данные демонстрационные. Для покупки — свяжитесь с представителем'}
           </p>
         </div>
-
-        {/* Contact button */}
         <a href="https://wa.me/972544858586" target="_blank" rel="noopener noreferrer"
           className="flex-shrink-0 flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all hover:scale-105 shadow-md">
           <MessageCircle size={14} />
           <span className="hidden sm:inline">{l ? 'לרכישה' : 'Купить'}</span>
         </a>
-
-        {/* Dismiss */}
         <button onClick={() => setDismissed(true)}
           className="flex-shrink-0 w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all">
           <X size={14} />
         </button>
       </div>
-
       <style jsx>{`
-        @keyframes demo-gradient {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
+        @keyframes demo-gradient { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
         .animate-demo-gradient { background-size: 200% 200%; animation: demo-gradient 6s ease infinite; }
-        @keyframes shimmer-sweep {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
+        @keyframes shimmer-sweep { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
         .animate-shimmer-sweep { animation: shimmer-sweep 4s ease-in-out infinite; }
-        @keyframes border-slide {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
+        @keyframes border-slide { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         .animate-border-slide { animation: border-slide 2s ease-in-out infinite; }
+      `}</style>
+    </div>
+  )
+}
+
+// ─── Expired Demo Banner ──────────────────────────────────────────────────────
+function ExpiredDemoBanner({ locale }: { locale: string }) {
+  const l = locale === 'he'
+  const [shimmer, setShimmer] = useState(false)
+
+  useEffect(() => {
+    const t = setInterval(() => { setShimmer(true); setTimeout(() => setShimmer(false), 600) }, 3000)
+    return () => clearInterval(t)
+  }, [])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
+        {/* Animated top bar */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-red-400 via-orange-400 to-red-400 animate-pulse"/>
+        <div className="p-8 text-center">
+          {/* Icon */}
+          <div className="relative w-20 h-20 mx-auto mb-5">
+            <div className="absolute inset-0 rounded-full bg-red-100 animate-ping opacity-30"/>
+            <div className="relative w-20 h-20 bg-gradient-to-br from-red-100 to-orange-100 rounded-full flex items-center justify-center">
+              <span className="text-4xl">⏰</span>
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {l ? 'הגישה לדמו פגה' : 'Доступ к демо истёк'}
+          </h2>
+          <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+            {l
+              ? 'תקופת הניסיון שלך הסתיימה. כדי להמשיך להשתמש ב-Trinity CRM — צור קשר עם נציג ורכוש מנוי.'
+              : 'Ваш пробный период завершён. Чтобы продолжить использование Trinity CRM — свяжитесь с представителем.'}
+          </p>
+
+          {/* WhatsApp CTA — animated */}
+          <a href="https://wa.me/972544858586"
+            target="_blank" rel="noopener noreferrer"
+            className="group relative block w-full overflow-hidden">
+            {/* Animated background */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-green-400 to-emerald-500 transition-all duration-300 group-hover:from-green-500 group-hover:to-emerald-600"/>
+            {/* Shimmer sweep */}
+            <div className={`absolute inset-0 rounded-2xl transition-opacity duration-300 ${shimmer ? 'opacity-100' : 'opacity-0'}`}
+              style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)', backgroundSize: '200% 100%', animation: shimmer ? 'shimmer-wa 0.6s ease-out' : 'none' }}/>
+            {/* Pulse ring */}
+            <div className="absolute inset-0 rounded-2xl border-2 border-green-300 animate-ping opacity-20"/>
+            <div className="relative flex items-center justify-center gap-3 py-4 px-6">
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <MessageCircle size={18} className="text-white"/>
+              </div>
+              <span className="text-white font-bold text-lg">
+                {l ? 'דברו איתנו ב-WhatsApp' : 'Написать в WhatsApp'}
+              </span>
+              <span className="text-white/80 text-sm">{l ? '054-485-8586' : '+972-54-485-8586'}</span>
+            </div>
+          </a>
+
+          <p className="text-xs text-gray-400 mt-4">
+            {l ? 'Trinity CRM — מערכת ניהול לעסקים קטנים ובינוניים' : 'Trinity CRM — система управления для малого бизнеса'}
+          </p>
+        </div>
+      </div>
+      <style jsx>{`
+        @keyframes shimmer-wa {
+          from { background-position: -200% 0; }
+          to { background-position: 200% 0; }
+        }
       `}</style>
     </div>
   )
@@ -267,13 +309,18 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
     staleTime: 5 * 60_000,
     retry: false,
     queryFn: async () => {
-      const { data: org, error } = await supabase.from('organizations').select('name, features').eq('id', orgId).single()
-      if (error || !org) return { showOnboarding: false, organizationName: '', ownerName: '', isDemoOrg: false }
+      const { data: org, error } = await supabase.from('organizations').select('name, features, subscription_status, subscription_expires_at').eq('id', orgId).single()
+      if (error || !org) return { showOnboarding: false, organizationName: '', ownerName: '', isDemoOrg: false, isExpiredDemo: false }
+      const isDemo = !!(org.features as any)?.is_demo
+      const isExpired = isDemo && org.subscription_expires_at
+        ? new Date(org.subscription_expires_at) < new Date()
+        : false
       return {
         showOnboarding: !org.features?.onboarding_completed,
         organizationName: org.name || '',
         ownerName: (org.features as any)?.business_info?.owner_name || '',
-        isDemoOrg: !!(org.features as any)?.is_demo,
+        isDemoOrg: isDemo,
+        isExpiredDemo: isExpired,
       }
     },
   })
@@ -368,7 +415,8 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   return (
     <>
       <div className="p-4 md:p-6">
-        <DemoBanner locale={locale} isDemoOrg={!!(onboardingData as any)?.isDemoOrg} />
+        <DemoBanner locale={locale} isDemoOrg={!!(onboardingData as any)?.isDemoOrg && !(onboardingData as any)?.isExpiredDemo} />
+        {!!(onboardingData as any)?.isExpiredDemo && <ExpiredDemoBanner locale={locale} />}
         <GreetingHeader ownerName={onboardingData?.ownerName || ''} todayVisitsCount={todayVisits.length} locale={locale} />
         <ActivityStrip visitsToday={todayVisits.length} visitsDone={(todayVisits as any[]).filter((v: any) => v.status === 'completed').length} tasksOpen={todayTasks.length} tasksUrgent={todayTasks.filter((t: any) => t.priority === 'urgent').length} revenueToday={revenueToday} locale={locale} />
         <LowStockAlert locale={locale} />

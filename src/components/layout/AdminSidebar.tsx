@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Megaphone, Settings, Home, Shield, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, Home, Shield, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, FlaskConical } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
@@ -56,6 +56,11 @@ export function AdminSidebar() {
       name: t('admin.settings'),
       href: '/admin/settings',
       icon: Settings,
+    },
+    {
+      name: language === 'he' ? 'דמו' : 'Демо',
+      href: '/admin/demo',
+      icon: FlaskConical,
     },
   ]
 

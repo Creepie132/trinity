@@ -159,7 +159,13 @@ export function DemoBannerGlobal() {
         const sb = createSupabaseBrowserClient()
         const { data: { user } } = await sb.auth.getUser()
         if (!user) { setChecked(true); return }
-        const orgId = user.app_metadata?.org_id
+        // Try app_metadata first, fallback to org_users table
+        let orgId = user.app_metadata?.org_id as string | undefined
+        if (!orgId) {
+          const { data: orgUser } = await sb.from('org_users')
+            .select('org_id').eq('user_id', user.id).single()
+          orgId = orgUser?.org_id
+        }
         if (!orgId) { setChecked(true); return }
         const { data: org } = await sb.from('organizations')
           .select('features, subscription_expires_at')

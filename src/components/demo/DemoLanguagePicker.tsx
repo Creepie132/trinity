@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 interface Props {
@@ -65,6 +65,7 @@ export function DemoLanguagePicker({ onSelect }: Props) {
 export function useDemoLanguagePicker() {
   const [show, setShow] = useState(false)
   const [isDemo, setIsDemo] = useState(false)
+  const langPickerOrgId = useRef<string>('')
 
   useEffect(() => {
     const check = async () => {
@@ -72,13 +73,20 @@ export function useDemoLanguagePicker() {
         const sb = createSupabaseBrowserClient()
         const { data: { user } } = await sb.auth.getUser()
         if (!user) return
-        const orgId = user.app_metadata?.org_id
+        // Try app_metadata first, fallback to org_users table
+        let orgId = user.app_metadata?.org_id as string | undefined
+        if (!orgId) {
+          const { data: orgUser } = await sb.from('org_users')
+            .select('org_id').eq('user_id', user.id).single()
+          orgId = orgUser?.org_id
+        }
         if (!orgId) return
         const { data: org } = await sb.from('organizations')
           .select('features').eq('id', orgId).single()
         if (!(org?.features as any)?.is_demo) return
         setIsDemo(true)
-        // Show picker if no lang chosen yet for this demo
+        langPickerOrgId.current = orgId
+        // Show picker if no lang chosen yet for this demo org
         const key = `demo_lang_${orgId}`
         if (!localStorage.getItem(key)) setShow(true)
       } catch {}
@@ -87,8 +95,9 @@ export function useDemoLanguagePicker() {
   }, [])
 
   const handleSelect = async (lang: 'he' | 'ru') => {
-    // Mark as chosen for this demo session
-    localStorage.setItem('demo_lang_chosen', lang)
+    // Mark as chosen — use the SAME key we check in the condition above
+    const key = `demo_lang_${langPickerOrgId.current}`
+    localStorage.setItem(key, lang)
     // Set the app language (key LanguageContext reads)
     localStorage.setItem('trinity-language', lang)
     setShow(false)

@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
 import { Menu, ArrowRight, Search, Building2, ChevronDown, Check } from 'lucide-react'
 import { MobileSidebar } from './MobileSidebar'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useBranch } from '@/contexts/BranchContext'
 import { useOrganization } from '@/hooks/useOrganization'
+import { useBackNavigation } from '@/hooks/useBackNavigation'
 import { cn } from '@/lib/utils'
 
 interface MobileHeaderProps {
@@ -18,11 +18,10 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [branchOpen, setBranchOpen] = useState(false)
   const branchRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
-  const pathname = usePathname()
   const { language } = useLanguage()
   const { activeOrgId, mainOrgId, branches, switchBranch, isMainOrg, currentBranchName } = useBranch()
   const { data: mainOrg } = useOrganization()
+  const { handleBack } = useBackNavigation()
 
   const hasBranches = branches && branches.length > 0
 
@@ -36,13 +35,6 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
-
-  // На главной странице не показываем кнопку "назад"
-  const showBackButton = pathname !== '/'
-
-  const handleBack = () => {
-    router.back()
-  }
 
   const activeBranchLabel = isMainOrg
     ? (mainOrg?.name || (language === 'he' ? 'ראשי' : 'Главная'))
@@ -64,16 +56,14 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
               <Menu className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </button>
 
-            {/* Кнопка "назад" */}
-            {showBackButton && (
-              <button
-                onClick={handleBack}
-                className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 active:bg-gray-200 dark:active:bg-slate-600 transition-all duration-200 active:scale-95 group"
-                aria-label="חזור"
-              >
-                <ArrowRight className="w-5 h-5 text-gray-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
-              </button>
-            )}
+            {/* Кнопка "назад" — всегда видна, хук знает что делать */}
+            <button
+              onClick={handleBack}
+              className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 active:bg-gray-200 dark:active:bg-slate-600 transition-all duration-200 active:scale-95 group"
+              aria-label="חזור"
+            >
+              <ArrowRight className="w-5 h-5 text-gray-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
+            </button>
           </div>
 
           {/* Центр: Логотип или Branch Switcher */}

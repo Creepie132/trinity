@@ -1,21 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
 import { Menu, ArrowRight } from 'lucide-react'
 import { MobileAdminSidebar } from './MobileAdminSidebar'
+import { useBackNavigation } from '@/hooks/useBackNavigation'
 
 export function MobileAdminHeader() {
   const [isOpen, setIsOpen] = useState(false)
-  const router = useRouter()
-  const pathname = usePathname()
-
-  // На главной странице админки не показываем кнопку "назад"
-  const showBackButton = pathname !== '/admin'
-
-  const handleBack = () => {
-    router.back()
-  }
+  const { handleBack } = useBackNavigation()
 
   return (
     <>
@@ -33,16 +25,14 @@ export function MobileAdminHeader() {
               <Menu className="w-6 h-6 text-white" />
             </button>
 
-            {/* Кнопка "назад" */}
-            {showBackButton && (
-              <button
-                onClick={handleBack}
-                className="p-2.5 rounded-xl hover:bg-slate-700 active:bg-slate-600 transition-all duration-200 active:scale-95 group"
-                aria-label="חזור"
-              >
-                <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-white transition-colors" />
-              </button>
-            )}
+            {/* Кнопка "назад" — всегда видна, хук знает что делать */}
+            <button
+              onClick={handleBack}
+              className="p-2.5 rounded-xl hover:bg-slate-700 active:bg-slate-600 transition-all duration-200 active:scale-95 group"
+              aria-label="חזור"
+            >
+              <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-white transition-colors" />
+            </button>
           </div>
 
           {/* Центр: Логотип */}

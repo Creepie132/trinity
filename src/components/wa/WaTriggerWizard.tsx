@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { MessageCircle, Zap, Clock, FileText, Check, ChevronRight, ChevronLeft, Loader2, X, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -71,7 +72,8 @@ export function WaTriggerWizard({ onClose }: Props) {
   const [saving, setSaving] = useState(false)
   const [activeTrigger, setActiveTrigger] = useState<TriggerType>('visit_created')
   const [previewText, setPreviewText] = useState('')
-  const l = true // иврит по умолчанию
+  const { language } = useLanguage()
+  const l = language === 'he'
 
   useEffect(() => {
     fetch('/api/wa-triggers')

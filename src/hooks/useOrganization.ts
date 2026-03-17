@@ -85,12 +85,17 @@ async function fetchCurrentOrganization(): Promise<Organization | null> {
 export function useOrganization() {
   const queryClient = useQueryClient()
   const router = useRouter()
+  // activeOrgId нужен только для invalidation при switchBranch —
+  // не блокируем первый рендер ожиданием BranchContext
   const { activeOrgId } = useBranch()
+
+  // queryKey читается синхронно из cookie при монтировании — нет задержки.
+  // При смене филиала switchBranch вызывает queryClient.removeQueries() →
+  // query перезапускается автоматически, подхватив новый cookie.
+  const cookieOrgId = getActiveOrgIdFromCookie()
   
   const query = useQuery({
-    // Используем activeOrgId из BranchContext как queryKey —
-    // так query автоматически перезапускается при смене орг
-    queryKey: ['organization', activeOrgId ?? getActiveOrgIdFromCookie()],
+    queryKey: ['organization', cookieOrgId ?? activeOrgId],
     queryFn: fetchCurrentOrganization,
     staleTime: 5 * 60 * 1000,
     retry: 1,

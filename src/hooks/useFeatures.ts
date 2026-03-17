@@ -30,7 +30,9 @@ export interface Features {
 
 export function useFeatures(): Features {
   const { data: organization, isLoading: orgLoading } = useOrganization()
-  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin()
+  // adminLoading НЕ блокирует рендер — /api/admin/check медленный и нужен только
+  // для показа пункта "Панель управления". Обычные пункты меню не должны его ждать.
+  const { data: isAdmin } = useIsAdmin()
 
   const emptyFeatures: Features = {
     hasClients: false,
@@ -54,7 +56,7 @@ export function useFeatures(): Features {
     isLoading: true,
   }
 
-  if (orgLoading || adminLoading) return emptyFeatures
+  if (orgLoading) return emptyFeatures
 
   // Админ видит всё
   if (isAdmin) {

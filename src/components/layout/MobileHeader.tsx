@@ -45,17 +45,8 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
       {/* Мобильный header — только на <1024px */}
       <header className="lg:hidden sticky top-0 z-40 w-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg border-b border-gray-200 dark:border-slate-700 shadow-sm">
         <div className="flex items-center justify-between px-4 h-16">
-          {/* Левая сторона: Бургер и кнопка "назад" */}
+          {/* Левая сторона: кнопка "назад" */}
           <div className="flex items-center gap-1">
-            {/* Бургер-кнопка */}
-            <button
-              onClick={() => setIsOpen(true)}
-              className="p-2.5 rounded-xl hover:bg-blue-50 dark:hover:bg-slate-700 active:bg-blue-100 dark:active:bg-slate-600 transition-all duration-200 active:scale-95"
-              aria-label="פתח תפריט"
-            >
-              <Menu className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </button>
-
             {/* Кнопка "назад" — всегда видна, хук знает что делать */}
             <button
               onClick={handleBack}
@@ -154,7 +145,7 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
             </div>
           )}
 
-          {/* Правая сторона: уведомления + поиск */}
+          {/* Правая сторона: уведомления + поиск + бургер */}
           <div className="flex items-center gap-1">
             <NotificationBell locale={language === 'he' ? 'he' : 'ru'} />
             <button
@@ -163,6 +154,14 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
               aria-label="חיפוש"
             >
               <Search className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </button>
+            {/* Бургер-кнопка */}
+            <button
+              onClick={() => setIsOpen(true)}
+              className="p-2.5 rounded-xl hover:bg-blue-50 dark:hover:bg-slate-700 active:bg-blue-100 dark:active:bg-slate-600 transition-all duration-200 active:scale-95"
+              aria-label="פתח תפריט"
+            >
+              <Menu className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             </button>
           </div>
         </div>

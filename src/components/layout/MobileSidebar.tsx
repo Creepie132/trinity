@@ -32,7 +32,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const { t, language, dir } = useLanguage()
   const meetingMode = useMeetingMode()
   const { isDemo } = useDemoMode()
-  const sidebarSide = dir === 'rtl' ? 'right' : 'left'
+  const sidebarSide = 'right'
 
   const getModuleName = (moduleKey: string) => {
     const module = MODULES.find(m => m.key === moduleKey)

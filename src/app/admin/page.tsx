@@ -256,6 +256,20 @@ export default function AdminDashboard() {
     <div className="space-y-6 pb-8">
       {showImpersonate && <ImpersonateModal onClose={() => setShowImpersonate(false)} />}
 
+      {/* ── Rate Limit Reminder ─────────────────────────────────────────── */}
+      <div className="flex items-start gap-3 rounded-2xl border-2 border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-5 py-4" dir="rtl">
+        <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-bold text-red-700 dark:text-red-400 mb-1">
+            ⚠️ תזכורת: Rate Limit על קבלות AI (OCR)
+          </p>
+          <p className="text-xs text-red-600 dark:text-red-500 leading-relaxed">
+            כל העלאת קבלה = קריאה ל-Claude Vision API (עלות ~$0.01 לקבלה). אין כרגע הגבלה לארגון.{' '}
+            עם צמיחה מעל 200 לקוחות יש להוסיף <span className="font-bold">rate limit של ~50 קבלות/חודש לארגון</span> כדי למנוע חשבון בלתי צפוי.
+          </p>
+        </div>
+      </div>
+
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>

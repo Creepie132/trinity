@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Megaphone, Settings, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, FlaskConical, Package, Image } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, FlaskConical, Package, Image, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
@@ -21,114 +21,55 @@ export function AdminSidebar() {
   }
 
   const navigation = [
-    {
-      name: t('admin.dashboard'),
-      href: '/admin',
-      icon: LayoutDashboard,
-      exact: true,
-    },
-    {
-      name: language === 'he' ? 'ארגונים' : 'Организации',
-      href: '/admin/organizations',
-      icon: Building2,
-    },
-    {
-      name: language === 'he' ? 'אנליטיקה' : 'Аналитика',
-      href: '/admin/modules',
-      icon: BarChart3,
-    },
-    {
-      name: language === 'he' ? 'פיננסים' : 'Финансы',
-      href: '/admin/billing',
-      icon: CreditCard,
-    },
-    {
-      name: language === 'he' ? 'תמיכה' : 'Поддержка',
-      href: '/admin/support',
-      icon: HeadphonesIcon,
-    },
-    {
-      name: t('admin.ads'),
-      href: '/admin/ads',
-      icon: Megaphone,
-    },
-    {
-      name: t('admin.settings'),
-      href: '/admin/settings',
-      icon: Settings,
-    },
-    {
-      name: language === 'he' ? 'דמו' : 'Демо',
-      href: '/admin/demo',
-      icon: FlaskConical,
-    },
-    {
-      name: language === 'he' ? 'כרטיסי תוכניות' : 'Карточки планов',
-      href: '/admin/plans-editor',
-      icon: Package,
-    },
-    {
-      name: language === 'he' ? 'מדיה לנדינג' : 'Медиа лендинга',
-      href: '/admin/landing-media',
-      icon: Image,
-    },
+    { name: t('admin.dashboard'), href: '/admin', icon: LayoutDashboard, exact: true },
+    { name: language === 'he' ? 'ארגונים' : 'Организации', href: '/admin/organizations', icon: Building2 },
+    { name: language === 'he' ? 'אנליטיקה' : 'Аналитика', href: '/admin/modules', icon: BarChart3 },
+    { name: language === 'he' ? 'פיננסים' : 'Финансы', href: '/admin/billing', icon: CreditCard },
+    { name: language === 'he' ? 'תמיכה' : 'Поддержка', href: '/admin/support', icon: HeadphonesIcon },
+    { name: t('admin.ads'), href: '/admin/ads', icon: Megaphone },
+    { name: t('admin.settings'), href: '/admin/settings', icon: Settings },
+    { name: language === 'he' ? 'דמו' : 'Демо', href: '/admin/demo', icon: FlaskConical },
+    { name: language === 'he' ? 'כרטיסי תוכניות' : 'Карточки планов', href: '/admin/plans-editor', icon: Package },
+    { name: language === 'he' ? 'מדיה לנדינג' : 'Медиа лендинга', href: '/admin/landing-media', icon: Image },
+    { name: language === 'he' ? 'WhatsApp' : 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
   ]
 
   return (
     <div className="w-64 h-full flex flex-col bg-gradient-to-b from-slate-800 to-slate-900 text-white shadow-lg">
-      {/* Header */}
       <div className="p-6 pb-4 border-b border-slate-700 bg-slate-800">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="Trinity Admin" className="w-16 h-16 object-contain rounded-xl" />
           <div>
-            <h1 className="text-2xl font-bold text-white">
-              Trinity Admin
-            </h1>
+            <h1 className="text-2xl font-bold text-white">Trinity Admin</h1>
             <p className="text-xs text-slate-400 mt-0.5">Amber Solutions Systems</p>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {navigation.map((item, index) => {
+        {navigation.map((item) => {
           const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
           const Icon = item.icon
-
           return (
-            <Link
-              key={item.href}
-              href={item.href}
+            <Link key={item.href} href={item.href}
               className={cn(
                 'flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group',
                 isActive
                   ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]'
                   : 'text-slate-300 hover:bg-slate-700 hover:text-white active:scale-[0.98]'
-              )}
-            >
-              <div className={cn(
-                'p-1.5 rounded-lg transition-colors',
-                isActive ? 'bg-white/20' : 'bg-slate-700 group-hover:bg-slate-600'
               )}>
-                <Icon className={cn(
-                  'w-5 h-5 flex-shrink-0',
-                  isActive ? 'text-white' : 'text-blue-400'
-                )} />
+              <div className={cn('p-1.5 rounded-lg transition-colors', isActive ? 'bg-white/20' : 'bg-slate-700 group-hover:bg-slate-600')}>
+                <Icon className={cn('w-5 h-5 flex-shrink-0', isActive ? 'text-white' : 'text-blue-400')} />
               </div>
               <span className="flex-1">{item.name}</span>
-              {isActive && (
-                <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />
-              )}
+              {isActive && <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />}
             </Link>
           )
         })}
 
-        {/* Кнопка возврата в систему */}
         <Separator className="my-4 bg-slate-700" />
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-2 border-green-500/30 hover:border-green-500/50 hover:bg-gradient-to-r hover:from-green-600/30 hover:to-emerald-600/30 active:scale-[0.98]"
-        >
+        <Link href="/dashboard"
+          className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-2 border-green-500/30 hover:border-green-500/50 hover:bg-gradient-to-r hover:from-green-600/30 hover:to-emerald-600/30 active:scale-[0.98]">
           <div className="p-1.5 rounded-lg bg-green-600/30">
             <Home className="w-5 h-5 flex-shrink-0 text-green-400" />
           </div>
@@ -136,12 +77,9 @@ export function AdminSidebar() {
         </Link>
       </nav>
 
-      {/* Logout */}
       <div className="p-4 border-t border-slate-700">
-        <button
-          onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/20 active:scale-[0.98] transition-all duration-200"
-        >
+        <button onClick={onLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/20 active:scale-[0.98] transition-all duration-200">
           <div className="p-1.5 rounded-lg bg-red-900/30">
             <LogOut className="w-5 h-5 text-red-400" />
           </div>

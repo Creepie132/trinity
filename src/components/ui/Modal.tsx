@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useCallback, ReactNode, useRef } from 'react'
+import { useEffect, useCallback, ReactNode, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, GripHorizontal, Pin, PinOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDraggableDialog } from '@/hooks/useDraggableDialog'
@@ -55,6 +56,9 @@ export function Modal({
 }: ModalProps) {
   const idRef = useRef<string>(modalIdProp || `modal-${++idCounter}`)
   const modalId = idRef.current
+
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   const { pin, unpin, isPinned, bringToFront, pinned, maxPinned } = usePinnedModals()
   const pinned_ = isPinned(modalId)
@@ -114,10 +118,11 @@ export function Modal({
   }, [open])
 
   if (!open && !pinned_) return null
+  if (!mounted) return null
 
   const zIndex = pinnedData ? pinnedData.zIndex : 9000
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop — только когда незакреплено */}
       {!pinned_ && (
@@ -148,6 +153,7 @@ export function Modal({
           top: '50%',
           transform: 'translate(-50%, -50%)',
           maxWidth: width ? `min(${width}, calc(100vw - 32px))` : undefined,
+          maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px)',
         }}
         role="dialog"
         aria-modal={!pinned_}
@@ -207,7 +213,8 @@ export function Modal({
           </div>
         )}
       </div>
-    </>
+    </>,
+    document.body
   )
 }
 

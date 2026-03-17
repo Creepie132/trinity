@@ -1,185 +1,75 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Settings, Sliders, Save, Loader2, Check } from 'lucide-react'
-import { useLanguage } from '@/contexts/LanguageContext'
-import { toast } from 'sonner'
 import Link from 'next/link'
-import { Package, Image as ImageIcon, ArrowLeft } from 'lucide-react'
-
-interface PricingConfig {
-  landing_plans: any[]
-  demo_setup_base: number
-  demo_module_price: number
-  demo_discount_threshold: number
-  demo_discount_pct: number
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-  return <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wide">{children}</label>
-}
+import { Settings, Package, Image as ImageIcon, Sliders, MessageCircle, ArrowLeft } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function AdminSettingsPage() {
   const { language } = useLanguage()
   const l = language === 'he'
-  const [config, setConfig] = useState<PricingConfig | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [savedFlash, setSavedFlash] = useState(false)
 
-  useEffect(() => {
-    fetch('/api/admin/pricing-config').then(r=>r.json()).then(setConfig)
-      .catch(()=>toast.error(l?'שגיאה בטעינה':'Ошибка загрузки'))
-  }, [])
-
-  const handleSave = async () => {
-    if (!config) return
-    setSaving(true)
-    try {
-      const res = await fetch('/api/admin/pricing-config', {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
-      })
-      if (!res.ok) throw new Error()
-      toast.success(l?'✓ נשמר':'✓ Сохранено')
-      setSavedFlash(true); setTimeout(()=>setSavedFlash(false), 1500)
-    } catch { toast.error(l?'שגיאה':'Ошибка') }
-    finally { setSaving(false) }
-  }
-
-  if (!config) return (
-    <div className="flex items-center justify-center h-64">
-      <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-    </div>
-  )
-
-  // Demo live preview
-  const prev_monthly_base = 3 * config.demo_module_price
-  const prev_setup_base   = config.demo_setup_base
-  const prev_monthly_disc = config.demo_discount_threshold * config.demo_module_price
-  const prev_setup_disc   = Math.round(config.demo_setup_base * (1 - config.demo_discount_pct / 100))
+  const sections = [
+    {
+      href: '/admin/plans-editor',
+      icon: Package,
+      iconBg: 'bg-purple-100 group-hover:bg-purple-200',
+      iconColor: 'text-purple-600',
+      title: l ? 'עורך כרטיסי תוכניות' : 'Редактор карточек планов',
+      desc: l ? 'ניהול כרטיסי תמחור בלנדינג' : 'Управление тарифными карточками',
+    },
+    {
+      href: '/admin/landing-media',
+      icon: ImageIcon,
+      iconBg: 'bg-blue-100 group-hover:bg-blue-200',
+      iconColor: 'text-blue-600',
+      title: l ? 'מדיה לנדינג' : 'Медиа лендинга',
+      desc: l ? 'עדכון צילומי מסך בגלריה' : 'Замена скриншотов в галерее',
+    },
+    {
+      href: '/admin/settings/pricing',
+      icon: Sliders,
+      iconBg: 'bg-amber-100 group-hover:bg-amber-200',
+      iconColor: 'text-amber-600',
+      title: l ? 'פרמטרי תמחור דמו' : 'Параметры ценообразования',
+      desc: l ? 'מחירי מודולים והנחות' : 'Цены модулей и скидки',
+    },
+    {
+      href: '/admin/whatsapp',
+      icon: MessageCircle,
+      iconBg: 'bg-green-100 group-hover:bg-green-200',
+      iconColor: 'text-green-600',
+      title: 'WhatsApp',
+      desc: l ? 'הגדרות Wati.io ותבניות' : 'Настройки Wati.io и шаблоны',
+    },
+  ]
 
   return (
-    <div className="space-y-6 pb-24">
-      {/* Header */}
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Settings className="w-7 h-7 text-slate-600" />
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{l?'הגדרות מערכת':'Настройки системы'}</h1>
-          <p className="text-sm text-slate-500">{l?'פרמטרי תמחור דמו והגדרות כלליות':'Параметры ценообразования демо и общие настройки'}</p>
+          <h1 className="text-2xl font-bold text-slate-900">{l ? 'הגדרות מערכת' : 'Настройки системы'}</h1>
+          <p className="text-sm text-slate-500">{l ? 'ניהול הגדרות ופרמטרים' : 'Управление настройками и параметрами'}</p>
         </div>
       </div>
 
-      {/* Quick links to other sections */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Link href="/admin/plans-editor"
-          className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-300 transition-all group">
-          <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-            <Package className="w-5 h-5 text-purple-600" />
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-slate-800 text-sm">{l?'עורך כרטיסי תוכניות':'Редактор карточек планов'}</p>
-            <p className="text-xs text-slate-500">{l?'ניהול כרטיסי תמחור בלנדינג':'Управление тарифными карточками'}</p>
-          </div>
-          <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-amber-500 transition-colors" />
-        </Link>
-
-        <Link href="/admin/landing-media"
-          className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-300 transition-all group">
-          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-            <ImageIcon className="w-5 h-5 text-blue-600" />
-          </div>
-          <div className="flex-1">
-            <p className="font-semibold text-slate-800 text-sm">{l?'מדיה לנדינג':'Медиа лендинга'}</p>
-            <p className="text-xs text-slate-500">{l?'עדכון צילומי מסך בגלריה':'Замена скриншотов в галерее'}</p>
-          </div>
-          <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-amber-500 transition-colors" />
-        </Link>
-      </div>
-
-      {/* Demo pricing params */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
-        <div className="flex items-center gap-2 mb-2">
-          <Sliders className="w-5 h-5 text-amber-500" />
-          <h2 className="font-bold text-slate-800">{l?'פרמטרי תמחור דמו':'Параметры ценообразования демо'}</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Setup base */}
-          <div className="space-y-1.5">
-            <Label>{l?'בסיס דמי הגדרה':'База стоимости настройки'}</Label>
-            <div className="flex items-center gap-2">
-              <span className="text-slate-500 font-bold">₪</span>
-              <input type="number" min={0} value={config.demo_setup_base}
-                onChange={e=>setConfig({...config, demo_setup_base: Number(e.target.value)})}
-                className="flex-1 px-3 py-3 text-xl font-bold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            </div>
-            <p className="text-xs text-slate-400">{l?'תשלום חד פעמי לפני הנחה':'Единоразовая оплата до скидки'}</p>
-          </div>
-
-          {/* Module price */}
-          <div className="space-y-1.5">
-            <Label>{l?'מחיר מודול לחודש':'Цена модуля в месяц'}</Label>
-            <div className="flex items-center gap-2">
-              <span className="text-slate-500 font-bold">₪</span>
-              <input type="number" min={0} value={config.demo_module_price}
-                onChange={e=>setConfig({...config, demo_module_price: Number(e.target.value)})}
-                className="flex-1 px-3 py-3 text-xl font-bold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            </div>
-            <p className="text-xs text-slate-400">{l?'לכל מודול שנבחר':'За каждый выбранный модуль'}</p>
-          </div>
-
-          {/* Discount threshold */}
-          <div className="space-y-1.5">
-            <Label>{l?'סף הנחה (מספר מודולים)':'Порог скидки (кол-во модулей)'}</Label>
-            <div className="flex items-center gap-2">
-              <input type="number" min={1} value={config.demo_discount_threshold}
-                onChange={e=>setConfig({...config, demo_discount_threshold: Number(e.target.value)})}
-                className="flex-1 px-3 py-3 text-xl font-bold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400" />
-              <span className="text-slate-500 font-bold text-sm">{l?'מודולים+':'мод.+'}</span>
-            </div>
-          </div>
-
-          {/* Discount pct */}
-          <div className="space-y-1.5">
-            <Label>{l?'אחוז הנחה':'Процент скидки'}</Label>
-            <div className="flex items-center gap-2">
-              <input type="number" min={0} max={100} value={config.demo_discount_pct}
-                onChange={e=>setConfig({...config, demo_discount_pct: Number(e.target.value)})}
-                className="flex-1 px-3 py-3 text-xl font-bold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400" />
-              <span className="text-slate-500 font-bold">%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Live preview */}
-        <div className="bg-gradient-to-r from-slate-900 to-blue-950 rounded-2xl p-5 text-white space-y-3">
-          <p className="text-xs font-semibold text-white/60 uppercase tracking-wide">{l?'תצוגה מקדימה':'Предпросмотр'}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="bg-white/10 rounded-xl p-3 space-y-1">
-              <p className="text-xs text-white/60">{l?'3 מודולים (ללא הנחה)':'3 модуля (без скидки)'}</p>
-              <p className="text-lg font-bold">₪{prev_monthly_base}<span className="text-white/60 font-normal text-sm">{l?'/חודש':'/мес'}</span></p>
-              <p className="text-sm text-white/80">{l?`הגדרה: ₪${prev_setup_base}`:`Настройка: ₪${prev_setup_base}`}</p>
-            </div>
-            <div className="bg-amber-500/20 border border-amber-400/30 rounded-xl p-3 space-y-1">
-              <p className="text-xs text-amber-300">{l?`${config.demo_discount_threshold}+ מודולים 🎉`:`${config.demo_discount_threshold}+ модулей 🎉`}</p>
-              <p className="text-lg font-bold">₪{prev_monthly_disc}<span className="text-white/60 font-normal text-sm">{l?'/חודש':'/мес'}</span></p>
-              <p className="text-sm">
-                <span className="line-through text-white/40">₪{prev_setup_base}</span>
-                {' '}<span className="text-amber-300 font-bold">₪{prev_setup_disc}</span>
-                {' '}<span className="text-xs text-amber-400">(-{config.demo_discount_pct}%)</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Save */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 px-6 py-4 bg-white/90 backdrop-blur border-t border-slate-200 flex justify-end">
-        <button onClick={handleSave} disabled={saving}
-          className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-sm transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-md ${savedFlash?'bg-green-500 text-white':'bg-amber-500 hover:bg-amber-600 text-white'}`}>
-          {saving?<Loader2 size={16} className="animate-spin"/>:savedFlash?<Check size={16}/>:<Save size={16}/>}
-          {saving?(l?'שומר...':'Сохраняю...'):savedFlash?(l?'נשמר!':'Сохранено!'):(l?'שמור שינויים':'Сохранить изменения')}
-        </button>
+        {sections.map((s) => {
+          const Icon = s.icon
+          return (
+            <Link key={s.href} href={s.href}
+              className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-300 transition-all group">
+              <div className={`w-12 h-12 ${s.iconBg} rounded-xl flex items-center justify-center transition-colors flex-shrink-0`}>
+                <Icon className={`w-6 h-6 ${s.iconColor}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-800 text-sm">{s.title}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{s.desc}</p>
+              </div>
+              <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-amber-500 transition-colors flex-shrink-0" />
+            </Link>
+          )
+        })}
       </div>
     </div>
   )

@@ -5,6 +5,8 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 import { bookingConfirmEmail, newBookingNotifyEmail } from '@/lib/email-templates'
 import { queuePushNotification } from '@/lib/push-notify'
+import { scheduleMessage } from '@/lib/wa/scheduler'
+import { normalizePhone } from '@/lib/wa/phone'
 
 // GET /api/visits - список визитов для текущей организации
 export async function GET(request: NextRequest) {
@@ -65,72 +67,36 @@ export async function POST(request: NextRequest) {
     const isMeetingMode = orgData?.features?.meeting_mode === true
     console.log('[API /api/visits POST] Meeting mode:', isMeetingMode)
 
-    // Extract and validate fields
     const { clientId, service, serviceId, date, time, duration, price, notes } = data
-    
-    console.log('[API /api/visits POST] Extracted fields:', {
-      clientId,
-      service,
-      serviceId,
-      date,
-      time,
-      duration,
-      price,
-      notes
-    })
 
-    // Validate required fields
     if (!clientId) {
-      console.error('[API /api/visits POST] Missing clientId')
       return NextResponse.json({ error: 'חסר מזהה לקוח' }, { status: 400 })
     }
-    
-    // Support both service (legacy) and serviceId (new)
     if (!service && !serviceId) {
-      console.error('[API /api/visits POST] Missing service or serviceId')
       return NextResponse.json({ error: 'חסר סוג שירות' }, { status: 400 })
     }
-    
     if (!date || !time) {
-      console.error('[API /api/visits POST] Missing date or time')
       return NextResponse.json({ error: 'חסר תאריך או שעה' }, { status: 400 })
     }
-    
-    // In meeting mode, price is not required
     if (!isMeetingMode && !price) {
-      console.error('[API /api/visits POST] Missing price')
       return NextResponse.json({ error: 'חסר מחיר' }, { status: 400 })
     }
 
-    // Combine date and time into ISO timestamp
-    // Treat date+time as Israel local time (Asia/Jerusalem, UTC+2/UTC+3 DST).
-    // We append +02:00 as a baseline; JS Date will parse this as a fixed offset
-    // which keeps the user-selected time correct regardless of server timezone (Vercel = UTC).
     const scheduled_at = new Date(`${date}T${time}:00+02:00`).toISOString()
-    console.log('[API /api/visits POST] Scheduled at (ISO):', scheduled_at)
 
-    // Prepare insert data
-    // UUID validation regex
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-    // Auto-load price from service if service is selected and price not provided
     let visitPrice = price ? parseFloat(price) : 0
-    
     if (!price && serviceId) {
-      const selectedServiceId = serviceId
-      
-      // Only fetch price if it's a valid UUID (from services table)
-      if (uuidRegex.test(selectedServiceId)) {
+      if (uuidRegex.test(serviceId)) {
         const { data: serviceData, error: serviceError } = await supabase
           .from('services')
           .select('price, duration_minutes')
-          .eq('id', selectedServiceId)
+          .eq('id', serviceId)
           .eq('org_id', org_id)
           .single()
-        
         if (!serviceError && serviceData) {
           visitPrice = serviceData.price || 0
-          console.log('[API /api/visits POST] Auto-loaded price from service:', visitPrice)
         }
       }
     }
@@ -141,35 +107,28 @@ export async function POST(request: NextRequest) {
       scheduled_at: scheduled_at,
       duration_minutes: duration !== null && duration !== undefined 
         ? (typeof duration === 'number' ? duration : parseInt(duration))
-        : (isMeetingMode ? null : 60), // null for meetings, default 60 for visits
+        : (isMeetingMode ? null : 60),
       price: visitPrice,
       notes: notes || null,
       status: 'scheduled',
-      staff_user_id: user.id, // Track who created the visit
+      staff_user_id: user.id,
     }
 
-    // Add service field (either service_id or service_type)
     if (serviceId) {
-      // Check if serviceId is a valid UUID
       if (uuidRegex.test(serviceId)) {
-        // It's a UUID from services table
         insertData.service_id = serviceId
         insertData.service_type = service || null
       } else {
-        // It's a text identifier (service type like 'haircut', 'coloring')
         insertData.service_id = null
         insertData.service_type = serviceId
       }
     } else if (service) {
-      // Legacy: only service field provided
       insertData.service_id = null
       insertData.service_type = service
     } else {
       insertData.service_id = null
       insertData.service_type = 'other'
     }
-
-    console.log('[API /api/visits POST] Insert data:', JSON.stringify(insertData, null, 2))
 
     // Insert visit
     const { data: visit, error: insertError } = await supabase
@@ -188,19 +147,82 @@ export async function POST(request: NextRequest) {
 
     console.log('[API /api/visits POST] Visit created successfully:', visit.id)
 
-    // Queue push notification to visit creator (and org owners)
-    const visitTime = new Date(scheduled_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+    // ─── WhatsApp reminder (non-critical) ────────────────────────────────────
+    try {
+      // Проверяем что у org есть активная WA-интеграция
+      const { data: waIntegration } = await supabase
+        .from('wa_integrations')
+        .select('id')
+        .eq('org_id', org_id)
+        .eq('is_active', true)
+        .single()
+
+      if (waIntegration) {
+        // Получаем телефон клиента
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('first_name, last_name, phone')
+          .eq('id', clientId)
+          .single()
+
+        const phone = normalizePhone(clientData?.phone)
+
+        if (phone) {
+          // Время визита в читаемом виде (Израиль)
+          const visitDate = new Date(scheduled_at).toLocaleDateString('he-IL', {
+            day: 'numeric', month: 'long', year: 'numeric',
+            timeZone: 'Asia/Jerusalem',
+          })
+          const visitTime = new Date(scheduled_at).toLocaleTimeString('he-IL', {
+            hour: '2-digit', minute: '2-digit',
+            timeZone: 'Asia/Jerusalem',
+          })
+
+          const clientName = [clientData?.first_name, clientData?.last_name]
+            .filter(Boolean).join(' ') || 'לקוח יקר'
+
+          const serviceName = insertData.service_type || 'שירות'
+
+          const message = `שלום ${clientName} 👋\nתורך אושר!\n📅 ${visitDate} בשעה ${visitTime}\n💇 ${serviceName}\n\nנתראה בקרוב ✨`
+
+          // Отправить за 24 часа до визита
+          const reminderAt = new Date(new Date(scheduled_at).getTime() - 24 * 60 * 60 * 1000)
+          // Если визит меньше чем через 24ч — отправляем через 1 минуту
+          const scheduledAt = reminderAt > new Date()
+            ? reminderAt
+            : new Date(Date.now() + 60_000)
+
+          await scheduleMessage(supabase, {
+            orgId: org_id,
+            clientId: clientId,
+            phone,
+            messageBody: message,
+            scheduledAt,
+            idempotencyKey: `visit_reminder_${visit.id}`,
+          })
+
+          console.log('[API /api/visits POST] WA reminder scheduled for:', phone, 'at', scheduledAt)
+        }
+      }
+    } catch (waError) {
+      // WA-ошибка НЕ фейлит создание визита
+      console.error('[API /api/visits POST] WA reminder error (non-critical):', waError)
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Queue push notification
+    const visitTimeStr = new Date(scheduled_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
     await queuePushNotification({
       org_id: org_id,
       user_id: user.id,
       type: 'new_visit',
       title: '📅 ביקור נוצר',
-      body: `${visitTime} — ${insertData.service_type || 'ביקור'}`,
+      body: `${visitTimeStr} — ${insertData.service_type || 'ביקור'}`,
       link: '/diary',
       reference_id: visit.id,
     })
 
-    // Award loyalty points for visit
+    // Award loyalty points
     try {
       const { data: loyaltySettings } = await supabase
         .from('loyalty_settings')
@@ -217,23 +239,19 @@ export async function POST(request: NextRequest) {
           description: 'Визит',
           reference_id: visit.id,
         })
-        console.log('[API /api/visits POST] Awarded loyalty points:', loyaltySettings.points_per_visit)
       }
     } catch (error) {
       console.error('[API /api/visits POST] Loyalty points error (non-critical):', error)
-      // Don't fail the request if loyalty fails
     }
 
     // Send email notifications
     try {
-      // Get client info
       const { data: clientData } = await supabase
         .from('clients')
         .select('name, email, phone')
         .eq('id', clientId)
         .single()
 
-      // Get service name
       let serviceName = 'Услуга | שירות'
       if (insertData.service_id && uuidRegex.test(insertData.service_id)) {
         const { data: serviceData } = await supabase
@@ -246,22 +264,19 @@ export async function POST(request: NextRequest) {
         serviceName = insertData.service_type
       }
 
-      // Get organization info
-      const { data: orgData } = await supabase
+      const { data: orgInfo } = await supabase
         .from('organizations')
         .select('name, contact_email')
         .eq('id', org_id)
         .single()
 
-      const businessName = orgData?.name || 'Trinity CRM'
-      const businessEmail = orgData?.contact_email
+      const businessName = orgInfo?.name || 'Trinity CRM'
+      const businessEmail = orgInfo?.contact_email
       const visitDate = new Date(scheduled_at).toLocaleDateString('he-IL')
-      const visitTime = new Date(scheduled_at).toLocaleTimeString('he-IL', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      const visitTimeLabel = new Date(scheduled_at).toLocaleTimeString('he-IL', {
+        hour: '2-digit', minute: '2-digit',
       })
 
-      // Send confirmation email to client
       if (clientData?.email) {
         await resend.emails.send({
           from: 'Trinity CRM <notifications@ambersol.co.il>',
@@ -269,18 +284,10 @@ export async function POST(request: NextRequest) {
           subject: `✓ התור שלך אושר | Ваша запись подтверждена - ${businessName}`,
           headers: getEmailHeaders(),
           tags: getEmailTags('transactional'),
-          html: bookingConfirmEmail(
-            clientData.name,
-            visitDate,
-            visitTime,
-            serviceName,
-            businessName
-          ),
+          html: bookingConfirmEmail(clientData.name, visitDate, visitTimeLabel, serviceName, businessName),
         })
-        console.log('[API /api/visits POST] Confirmation email sent to client:', clientData.email)
       }
 
-      // Send notification email to business
       if (businessEmail) {
         await resend.emails.send({
           from: 'Trinity CRM <notifications@ambersol.co.il>',
@@ -292,23 +299,18 @@ export async function POST(request: NextRequest) {
             clientData?.name || 'Клиент | לקוח',
             clientData?.phone || '',
             visitDate,
-            visitTime,
+            visitTimeLabel,
             serviceName
           ),
         })
-        console.log('[API /api/visits POST] Notification email sent to business:', businessEmail)
       }
     } catch (emailError) {
       console.error('[API /api/visits POST] Email error (non-critical):', emailError)
-      // Don't fail the request if email fails
     }
 
     return NextResponse.json({ visit }, { status: 201 })
   } catch (error: any) {
     console.error('[API /api/visits POST] Exception:', error)
-    return NextResponse.json(
-      { error: `שגיאה: ${error.message}` },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: `שגיאה: ${error.message}` }, { status: 500 })
   }
 }

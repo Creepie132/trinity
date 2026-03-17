@@ -229,7 +229,7 @@ function ImpersonateModal({ onClose }: { onClose: () => void }) {
 
 // ── Main dashboard ────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const queryClient = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
   const [showImpersonate, setShowImpersonate] = useState(false)
@@ -257,18 +257,31 @@ export default function AdminDashboard() {
       {showImpersonate && <ImpersonateModal onClose={() => setShowImpersonate(false)} />}
 
       {/* ── Rate Limit Reminder ─────────────────────────────────────────── */}
-      <div className="flex items-start gap-3 rounded-2xl border-2 border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-5 py-4" dir="rtl">
-        <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-bold text-red-700 dark:text-red-400 mb-1">
-            ⚠️ תזכורת: Rate Limit על קבלות AI (OCR)
-          </p>
-          <p className="text-xs text-red-600 dark:text-red-500 leading-relaxed">
-            כל העלאת קבלה = קריאה ל-Claude Vision API (עלות ~$0.01 לקבלה). אין כרגע הגבלה לארגון.{' '}
-            עם צמיחה מעל 200 לקוחות יש להוסיף <span className="font-bold">rate limit של ~50 קבלות/חודש לארגון</span> כדי למנוע חשבון בלתי צפוי.
-          </p>
-        </div>
-      </div>
+      {(() => {
+        const rl = {
+          he: {
+            title: '⚠️ תזכורת: Rate Limit על קבלות AI (OCR)',
+            body: 'כל העלאת קבלה = קריאה ל-Claude Vision API (עלות ~$0.01 לקבלה). אין כרגע הגבלה לארגון.',
+            action: 'עם צמיחה מעל 200 לקוחות יש להוסיף rate limit של ~50 קבלות/חודש לארגון כדי למנוע חשבון בלתי צפוי.',
+          },
+          ru: {
+            title: '⚠️ Напоминание: Rate Limit для квитанций AI (OCR)',
+            body: 'Каждая загрузка квитанции = вызов Claude Vision API (~$0.01 за квитанцию). Лимита на организацию сейчас нет.',
+            action: 'При росте свыше 200 клиентов — добавить rate limit ~50 квитанций/месяц на организацию во избежание неожиданного счёта.',
+          },
+        }[language] ?? { title: '', body: '', action: '' }
+        return (
+          <div className="flex items-start gap-3 rounded-2xl border-2 border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-5 py-4" dir={language === 'he' ? 'rtl' : 'ltr'}>
+            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-red-700 dark:text-red-400 mb-1">{rl.title}</p>
+              <p className="text-xs text-red-600 dark:text-red-500 leading-relaxed">
+                {rl.body}{' '}<span className="font-bold">{rl.action}</span>
+              </p>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">

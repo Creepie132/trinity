@@ -20,6 +20,13 @@ export interface Expense {
   verified: boolean
   created_at: string
   updated_at: string
+  // Extended fields
+  vendor_phone: string | null
+  vendor_website: string | null
+  order_number: string | null
+  notes: string | null
+  vat_amount: number | null
+  items: Array<{ name: string; qty: number; unit_price: number; is_gift?: boolean }> | null
 }
 
 export interface ExpensesStats {

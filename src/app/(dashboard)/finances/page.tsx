@@ -4,10 +4,11 @@ import { useState } from 'react'
 import { format, startOfMonth, subMonths, addMonths } from 'date-fns'
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet,
   Receipt, Trash2, CheckCircle, Clock, ExternalLink } from 'lucide-react'
-import { useExpenses, useExpensesStats, useDeleteExpense, useUpdateExpense } from '@/hooks/useExpenses'
+import { useExpenses, useExpensesStats, useDeleteExpense, useUpdateExpense, type Expense } from '@/hooks/useExpenses'
 import { usePaymentsStats } from '@/hooks/usePayments'
 import { ReceiptUploadZone } from '@/components/finances/ReceiptUploadZone'
 import { FinancesChart } from '@/components/finances/FinancesChart'
+import { ExpenseDetailModal } from '@/components/finances/ExpenseDetailModal'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -48,6 +49,7 @@ export default function FinancesPage() {
 
   const [currentDate, setCurrentDate] = useState(startOfMonth(new Date()))
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
   const month = format(currentDate, 'yyyy-MM')
   const monthLabel = currentDate.toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU',
     { month: 'long', year: 'numeric' })
@@ -75,6 +77,7 @@ export default function FinancesPage() {
   }
 
   return (
+    <>
     <div className="max-w-3xl mx-auto space-y-5" dir={dir}>
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -207,7 +210,8 @@ export default function FinancesPage() {
             : '—'
           return (
             <div key={expense.id}
-              className={cn('flex items-center gap-3 px-4 py-3.5 border-b border-gray-50 dark:border-gray-700/50 last:border-0 group transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/30',
+              onClick={() => setSelectedExpense(expense)}
+              className={cn('flex items-center gap-3 px-4 py-3.5 border-b border-gray-50 dark:border-gray-700/50 last:border-0 group transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer',
                 'animate-in fade-in slide-in-from-left-2')}
               style={{ animationDelay: `${i * 40}ms`, animationFillMode: 'both' }}>
               <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0', meta.bg)}>
@@ -241,12 +245,12 @@ export default function FinancesPage() {
                     </a>
                   )}
                   {!expense.verified && (
-                    <button onClick={() => handleVerify(expense.id)}
+                    <button onClick={(e) => { e.stopPropagation(); handleVerify(expense.id) }}
                       className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors">
                       <CheckCircle className="w-3.5 h-3.5 text-gray-500 hover:text-emerald-500" />
                     </button>
                   )}
-                  <button onClick={() => handleDelete(expense.id)}
+                  <button onClick={(e) => { e.stopPropagation(); handleDelete(expense.id) }}
                     className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
                     <Trash2 className="w-3.5 h-3.5 text-gray-500 hover:text-red-500" />
                   </button>
@@ -262,5 +266,13 @@ export default function FinancesPage() {
         </div>
       </div>
     </div>
+
+    {selectedExpense && (
+      <ExpenseDetailModal
+        expense={selectedExpense}
+        onClose={() => setSelectedExpense(null)}
+      />
+    )}
+    </>
   )
 }

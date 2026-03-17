@@ -122,7 +122,7 @@ export function Modal({
       {/* Backdrop — только когда незакреплено */}
       {!pinned_ && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/50"
           style={{ zIndex: 8999 }}
           onClick={closeOnBackdrop ? onClose : undefined}
           aria-hidden="true"
@@ -137,7 +137,7 @@ export function Modal({
         className={cn(
           'fixed w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl pointer-events-auto',
           'animate-in fade-in-0 zoom-in-95 duration-200',
-          'max-h-[90vh] flex flex-col',
+          'max-h-[calc(100dvh-32px)] flex flex-col',
           !width && sizeClasses[size],
           pinned_ && 'ring-2 ring-orange-400/60',
           className

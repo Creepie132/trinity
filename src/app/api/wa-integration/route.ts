@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const allowed = ['green_api', 'wati', 'meta_cloud'];
+  const allowed = ['whapi', 'wati', 'meta_cloud'];
   if (!allowed.includes(providerType)) {
     return NextResponse.json({ error: `Unknown providerType: ${providerType}` }, { status: 400 });
   }
@@ -35,7 +35,6 @@ export async function POST(req: NextRequest) {
 
   try {
     // 1. Сохраняем API-ключ в Vault
-    // vault.create_secret(secret, name, description) → returns UUID
     const { data: secretId, error: vaultError } = await supabase
       .rpc('vault_create_secret', {
         secret:      apiKey,

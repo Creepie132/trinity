@@ -1,12 +1,13 @@
-import { GreenApiProvider } from './green-api.provider.ts';
+import { WhapiProvider } from './whapi.provider.ts';
 import { WatiProvider } from './wati.provider.ts';
 import type { WhatsAppProvider } from './types.ts';
 
-// Фабрика — чтобы переключить провайдера, меняется только здесь
+// Фабрика — переключение провайдера в одном месте
+// Чтобы сменить провайдера: изменить provider_type в wa_integrations для org
 export function createProvider(providerType: string): WhatsAppProvider {
   switch (providerType) {
-    case 'green_api':
-      return new GreenApiProvider();
+    case 'whapi':
+      return new WhapiProvider();
     case 'wati':
       return new WatiProvider();
     default:

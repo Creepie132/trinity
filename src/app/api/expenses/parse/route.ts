@@ -101,7 +101,7 @@ Return ONLY valid JSON with no markdown or backticks:
         vendor: parsed.vendor ?? null,
         amount: parsed.amount ?? null,
         currency: (parsed.currency as string) ?? 'ILS',
-        expense_date: parsed.expense_date ?? null,
+        expense_date: parsed.expense_date ?? new Date().toISOString().split('T')[0],
         category: (parsed.category as string) ?? 'other',
         description: parsed.description ?? null,
         receipt_url: urlData.publicUrl,

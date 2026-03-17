@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet,
 import { useExpenses, useExpensesStats, useDeleteExpense, useUpdateExpense } from '@/hooks/useExpenses'
 import { usePaymentsStats } from '@/hooks/usePayments'
 import { ReceiptUploadZone } from '@/components/finances/ReceiptUploadZone'
+import { FinancesChart } from '@/components/finances/FinancesChart'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -119,6 +120,9 @@ export default function FinancesPage() {
           </div>
         ))}
       </div>
+
+      {/* Chart */}
+      <FinancesChart month={month} />
 
       {/* Category breakdown */}
       {stats && Object.keys(stats.byCategory).length > 0 && (

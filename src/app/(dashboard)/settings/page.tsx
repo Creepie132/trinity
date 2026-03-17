@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
-import { useBranches } from '@/hooks/useBranches'
 import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, CreditCard, MessageSquare, Bell } from 'lucide-react'
 import Link from 'next/link'
 
@@ -12,11 +11,9 @@ export default function SettingsPage() {
   const { t, language } = useLanguage()
   const permissions = usePermissions()
   const features = useFeatures()
-  const { data: branches = [] } = useBranches()
 
+  // Статичные описания — не грузим лишних данных только ради subtitle
   const settingsCategories = [
-    // { id: 'dashboard', href: '/settings/dashboard', icon: LayoutDashboard, title: t('dashboard.settings'), description: t('dashboard.settingsSubtitle') },
-    // { id: 'display', href: '/settings/display', icon: Monitor, title: t('settings.display'), description: t('settings.display.desc') },
     {
       id: 'language',
       href: '/settings/language',
@@ -57,9 +54,7 @@ export default function SettingsPage() {
       href: '/settings/branches',
       icon: Building2,
       title: language === 'he' ? 'ניהול סניפים' : 'Управление филиалами',
-      description: language === 'he'
-        ? `${branches.length > 0 ? `${branches.length} סניפים` : 'אין סניפים'}`
-        : `${branches.length > 0 ? `${branches.length} филиалов` : 'Нет филиалов'}`,
+      description: language === 'he' ? 'ניהל סניפים ומיקומים' : 'Управляйте филиалами и локациями',
     },
     {
       id: 'users',
@@ -91,17 +86,21 @@ export default function SettingsPage() {
     },
   ]
 
-  // Filter settings based on permissions AND module access
+  // Фильтрация оптимистичная: пока features/permissions грузятся — показываем все карточки.
+  // Убираем только после того как данные пришли и явно запрещают доступ.
   const filteredCategories = settingsCategories.filter((category) => {
-    if (category.id === 'booking' && features.hasBooking === false) return false
-    if (category.id === 'branches' && !features.hasBranches) return false
-    if (category.id === 'payments' && !features.hasPayments) return false
-
-    if (category.id === 'services' && !permissions.canManageServices) return false
-    if (category.id === 'care-instructions' && !permissions.canManageCareInstructions) return false
-    if (category.id === 'booking' && !permissions.canManageBookingSettings) return false
-    if (category.id === 'users' && !permissions.canManageUsers) return false
-    if (category.id === 'permissions' && !permissions.canManageUsers) return false
+    // Скрываем только если features уже загружены И модуль отключён
+    if (!features.isLoading) {
+      if (category.id === 'booking' && features.hasBooking === false) return false
+      if (category.id === 'branches' && !features.hasBranches) return false
+      if (category.id === 'payments' && !features.hasPayments) return false
+    }
+    // Скрываем только если role уже известна И доступ запрещён
+    if (permissions.canManageServices === false && category.id === 'services') return false
+    if (permissions.canManageCareInstructions === false && category.id === 'care-instructions') return false
+    if (permissions.canManageBookingSettings === false && category.id === 'booking') return false
+    if (permissions.canManageUsers === false && category.id === 'users') return false
+    if (permissions.canManageUsers === false && category.id === 'permissions') return false
 
     return true
   })

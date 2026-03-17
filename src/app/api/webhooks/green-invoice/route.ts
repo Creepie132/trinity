@@ -1,120 +1,98 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import crypto from 'crypto'
 
+const GI_SECRET = process.env.GREEN_INVOICE_WEBHOOK_SECRET!
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const GI_SECRET = process.env.GREEN_INVOICE_SECRET!
-
-// ─── Verify signature ─────────────────────────────────────────────────────────
-function verifySignature(payload: string, signature: string | null): boolean {
-  if (!signature || !GI_SECRET) return false
-  const expected = crypto
-    .createHmac('sha256', GI_SECRET)
-    .update(payload)
-    .digest('hex')
-  try {
-    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))
-  } catch {
-    return false
-  }
+async function verifySignature(req: NextRequest, rawBody: string): Promise<boolean> {
+  const signature = req.headers.get('x-webhook-signature') || req.headers.get('x-gi-signature')
+  if (!signature) return false
+  const encoder = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw', encoder.encode(GI_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  )
+  const signed = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody))
+  const expected = Buffer.from(signed).toString('hex')
+  return signature === expected || signature === `sha256=${expected}`
 }
 
-// ─── POST handler ─────────────────────────────────────────────────────────────
-export async function POST(request: NextRequest) {
-  const rawBody = await request.text()
-  const signature = request.headers.get('x-green-invoice-signature')
+export async function POST(req: NextRequest) {
+  const rawBody = await req.text()
+  let body: any
+  try { body = JSON.parse(rawBody) } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
 
-  if (!verifySignature(rawBody, signature)) {
-    console.warn('Green Invoice webhook: invalid signature')
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+  // Verify signature (skip in dev)
+  if (process.env.NODE_ENV === 'production') {
+    const valid = await verifySignature(req, rawBody)
+    if (!valid) return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
-  let event: any
-  try {
-    event = JSON.parse(rawBody)
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-  }
-
-  const { type, data } = event
-  console.log('Green Invoice webhook:', type, data?.id)
+  const { event, data } = body
+  console.log(`[GreenInvoice Webhook] event: ${event}`, data?.id)
 
   try {
-    switch (type) {
+    switch (event) {
 
-      // ── Документ создан ──────────────────────────────────────────────────────
+      // ── Квитанция / документ создан ────────────────────────────────────
       case 'document/created': {
         const doc = data
-        const phone = doc.client?.phone?.replace(/\D/g, '') ?? null
-        const email = doc.client?.email ?? null
-        let clientId: string | null = null
-        if (phone) {
-          const { data: client } = await supabase
-            .from('clients').select('id').ilike('phone', `%${phone}%`).limit(1).single()
-          if (client) clientId = client.id
-        }
+        // Логируем в audit_log для истории
         await supabase.from('audit_log').insert({
-          action: 'green_invoice_document_created',
-          resource_type: 'document',
-          resource_id: doc.id,
-          metadata: { document_number: doc.number, amount: doc.amount, client_id: clientId, email },
+          action: 'green_invoice.document_created',
+          entity_type: 'document',
+          entity_id: doc.id,
+          details: { type: doc.type, number: doc.number, amount: doc.amount, client: doc.client?.name }
         })
         break
       }
 
-      // ── Платёж получен ───────────────────────────────────────────────────────
+      // ── Платёж получен ─────────────────────────────────────────────────
       case 'payment/received': {
+        const payment = data
+        // Найти платёж в Trinity по сумме и клиенту, обновить статус
         await supabase.from('audit_log').insert({
-          action: 'green_invoice_payment_received',
-          resource_type: 'payment',
-          resource_id: data.id,
-          metadata: { amount: data.amount, currency: data.currency, document_id: data.documentId },
+          action: 'green_invoice.payment_received',
+          entity_type: 'payment',
+          entity_id: payment.id,
+          details: { amount: payment.amount, client: payment.client?.name, method: payment.type }
         })
         break
       }
 
-      // ── Расход распознан AI ──────────────────────────────────────────────────
+      // ── AI распознал черновик расхода ──────────────────────────────────
       case 'expense-draft/parsed': {
+        const draft = data
         await supabase.from('audit_log').insert({
-          action: 'green_invoice_expense_parsed',
-          resource_type: 'expense',
-          resource_id: data.id,
-          metadata: { vendor: data.vendor?.name, amount: data.amount, vat: data.vat },
+          action: 'green_invoice.expense_draft_parsed',
+          entity_type: 'expense_draft',
+          entity_id: draft.id,
+          details: { vendor: draft.supplier?.name, amount: draft.amount, date: draft.date }
         })
         break
       }
 
-      // ── Клиент создан ────────────────────────────────────────────────────────
+      // ── Новый клиент создан ────────────────────────────────────────────
       case 'client/created': {
         await supabase.from('audit_log').insert({
-          action: 'green_invoice_client_created',
-          resource_type: 'client',
-          resource_id: data.id,
-          metadata: { name: data.name, phone: data.phone, email: data.email },
+          action: 'green_invoice.client_created',
+          entity_type: 'client',
+          entity_id: data.id,
+          details: { name: data.name, email: data.email, phone: data.phone }
         })
         break
       }
 
       default:
-        console.log('Unhandled Green Invoice event:', type)
+        console.log(`[GreenInvoice Webhook] Unhandled event: ${event}`)
     }
   } catch (err) {
-    console.error('Green Invoice webhook error:', err)
-    return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
+    console.error('[GreenInvoice Webhook] Handler error:', err)
+    return NextResponse.json({ error: 'Handler failed' }, { status: 500 })
   }
 
-  return NextResponse.json({ received: true })
-}
-
-// ─── GET — health check ───────────────────────────────────────────────────────
-export async function GET() {
-  return NextResponse.json({
-    status: 'ok',
-    endpoint: 'Green Invoice webhook',
-    events: ['document/created', 'payment/received', 'expense-draft/parsed', 'client/created'],
-  })
+  return NextResponse.json({ ok: true })
 }

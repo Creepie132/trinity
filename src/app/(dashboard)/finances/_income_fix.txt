@@ -1,0 +1,2 @@
+  // Income from payments for this month
+  const income = paymentsStats?.totalAmount ?? 0

@@ -1,0 +1,1 @@
+  { name_he: 'כספים', name_ru: 'Финансы', href: '/finances', icon: PiggyBank, requireFeature: null },

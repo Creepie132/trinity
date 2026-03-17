@@ -1,9 +1,9 @@
-﻿'use client'
+'use client'
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Calendar, Settings, BookOpen, Package, UserPlus, CalendarPlus, ShoppingCart, ShoppingBag } from 'lucide-react'
+import { Users, CreditCard, BarChart3, Shield, Home, LogOut, Calendar, Settings, BookOpen, Package, UserPlus, CalendarPlus, ShoppingCart, ShoppingBag, PiggyBank } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -19,6 +19,7 @@ const baseNavigation = [
   { name_he: 'ביקורים', name_ru: 'Визиты', href: '/visits', icon: Calendar, requireFeature: 'visits' },
   { name_he: 'מכירות', name_ru: 'Продажи', href: '/sales', icon: ShoppingBag, requireFeature: 'sales' },
   { name_he: 'תשלומים', name_ru: 'Платежи', href: '/payments', icon: CreditCard, requireFeature: 'payments' },
+  { name_he: 'כספים', name_ru: 'Финансы', href: '/finances', icon: PiggyBank, requireFeature: 'finances' },
   { name_he: 'מלאי', name_ru: 'Склад', href: '/inventory', icon: Package, requireFeature: 'inventory' },
   { name_he: 'יומן', name_ru: 'Дневник', href: '/diary', icon: BookOpen, requireFeature: 'diary' },
   { name_he: 'אנליטיקה', name_ru: 'Аналитика', href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
@@ -52,26 +53,26 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const navigation = baseNavigation.filter((item) => {
     if (!item.requireFeature) return true
     const featureMap: Record<string, boolean> = {
-      'clients': features.hasClients,
-      'visits': features.hasVisits,
-      'payments': features.hasPayments && features.paymentsEnabled,
-      'inventory': features.hasInventory,
-      'diary': features.hasDiary,
-      'sms': features.hasSms,
-      'analytics': features.hasAnalytics,
-      'statistics': features.hasStatistics,
-      'reports': features.hasReports,
-      'subscriptions': features.hasSubscriptions,
-      'booking': features.hasBooking,
-      'loyalty': features.hasLoyalty,
-      'sales': features.hasSales,
+      clients: features.hasClients,
+      visits: features.hasVisits,
+      payments: features.hasPayments && features.paymentsEnabled,
+      finances: features.hasPayments,
+      inventory: features.hasInventory,
+      diary: features.hasDiary,
+      sms: features.hasSms,
+      analytics: features.hasAnalytics,
+      statistics: features.hasStatistics,
+      reports: features.hasReports,
+      subscriptions: features.hasSubscriptions,
+      booking: features.hasBooking,
+      loyalty: features.hasLoyalty,
+      sales: features.hasSales,
     }
     return featureMap[item.requireFeature] ?? true
   })
 
   return (
     <div className="w-64 h-full flex flex-col bg-gradient-to-b from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 shadow-lg">
-      {/* Header */}
       <div className="p-6 pb-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -88,28 +89,21 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
             <button onClick={() => openModal('client-add')}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all active:scale-95">
               <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">
-                {language === 'he' ? 'לקוח' : 'Клиент'}
-              </span>
+              <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">{language === 'he' ? 'לקוח' : 'Клиент'}</span>
             </button>
             <button onClick={() => openModal('visit-create')}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all active:scale-95">
               <CalendarPlus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">
-                {language === 'he' ? 'ביקור' : 'Визит'}
-              </span>
+              <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">{language === 'he' ? 'ביקור' : 'Визит'}</span>
             </button>
             <button onClick={() => openModal('client-sale', { locale: language === 'he' ? 'he' : 'ru' })}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-all active:scale-95">
               <ShoppingCart className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">
-                {language === 'he' ? 'מכירה' : 'Продажа'}
-              </span>
+              <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">{language === 'he' ? 'מכירה' : 'Продажа'}</span>
             </button>
           </div>
         )}
       </div>
-
       {features.hasBranches && <BranchSwitcher />}
 
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
@@ -118,7 +112,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
             <div className="p-1.5 rounded-lg bg-gray-100 dark:bg-slate-700">
               <div className="w-5 h-5 bg-gray-200 dark:bg-slate-600 rounded" />
             </div>
-            <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded flex-1" style={{ width: `${60 + i * 8}%` }} />
+            <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded flex-1" />
           </div>
         ))}
         {!features.isLoading && navigation.map((item) => {

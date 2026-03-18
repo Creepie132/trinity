@@ -28,6 +28,7 @@ interface Message {
   id: string; direction: 'inbound' | 'outbound'
   message_type: string; body: string | null
   status: string; created_at: string
+  _pending?: boolean // optimistic — ещё не сохранено
 }
 
 const LEAD_LABELS: Record<LeadStatus, string> = {
@@ -163,13 +164,39 @@ export default function InboxPage() {
     const body = text.trim()
     setText('')
     if (textareaRef.current) textareaRef.current.style.height = '40px'
-    await fetch('/api/wa-inbox/send', {
+
+    // Optimistic update — показываем сообщение мгновенно
+    const tempId = `temp_${Date.now()}`
+    const optimisticMsg: Message = {
+      id: tempId,
+      direction: 'outbound',
+      message_type: 'text',
+      body,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      _pending: true,
+    }
+    setMessages(prev => [...prev, optimisticMsg])
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+
+    const res = await fetch('/api/wa-inbox/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversation_id: selected.id, message: body }),
     })
+
+    if (res.ok) {
+      // Заменяем optimistic на реальное сообщение
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, _pending: false, status: 'sent' } : m
+      ))
+    } else {
+      // Ошибка — помечаем красным
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, _pending: false, status: 'failed' } : m
+      ))
+    }
     setSending(false)
-    loadMessages(selected.id)
   }
 
   const updateStatus = async (field: 'status' | 'lead_status', value: string) => {
@@ -515,13 +542,34 @@ export default function InboxPage() {
                   <div className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-xs lg:max-w-md px-3.5 py-2 rounded-2xl text-sm shadow-sm transition-all ${
                       isOut
-                        ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white rounded-br-sm'
+                        ? msg.status === 'failed'
+                          ? 'bg-red-100 text-red-700 rounded-br-sm border border-red-200'
+                          : 'bg-gradient-to-br from-violet-500 to-purple-600 text-white rounded-br-sm'
                         : 'bg-white text-gray-900 rounded-bl-sm border border-gray-100'
-                    }`}>
+                    } ${msg._pending ? 'opacity-75' : 'opacity-100'}`}>
                       <p className="leading-relaxed whitespace-pre-wrap">{msg.body}</p>
                       {isOut && (
                         <div className="flex items-center justify-end gap-1 mt-1">
-                          <CheckCheck className={`w-3 h-3 ${msg.status === 'read' ? 'text-blue-300' : 'text-violet-300'}`} />
+                          {msg._pending ? (
+                            // Песочные часы — ещё не отправлено
+                            <svg className="w-3 h-3 text-violet-300 animate-spin" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                            </svg>
+                          ) : msg.status === 'failed' ? (
+                            <span className="text-xs text-red-500">!</span>
+                          ) : msg.status === 'read' ? (
+                            // Две синие галочки — прочитано
+                            <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
+                          ) : msg.status === 'delivered' ? (
+                            // Две серые галочки — доставлено
+                            <CheckCheck className="w-3.5 h-3.5 text-violet-300" />
+                          ) : (
+                            // Одна галочка — отправлено
+                            <svg className="w-3 h-3 text-violet-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                          )}
                         </div>
                       )}
                     </div>

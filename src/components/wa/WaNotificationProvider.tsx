@@ -1,10 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { MessageCircle, X } from 'lucide-react'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 interface WaToast {
   id: number
   name: string | null
@@ -44,7 +42,7 @@ function showBrowserNotif(name: string | null, phone: string, text: string | nul
     new Notification(name ?? phone, {
       body: text ?? 'Новое сообщение из WhatsApp',
       icon: '/favicon.ico',
-      tag: 'wa-inbox-new',
+      tag: `wa-${phone}`,
     })
   } catch {}
 }
@@ -66,10 +64,7 @@ function ToastList({ toasts, onDismiss }: { toasts: WaToast[]; onDismiss: (id: n
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
               <p className="text-xs font-bold text-gray-900 truncate">{t.name ?? t.phone}</p>
-              <button
-                onClick={() => onDismiss(t.id)}
-                className="text-gray-300 hover:text-gray-500 ml-2 flex-shrink-0 transition-colors"
-              >
+              <button onClick={() => onDismiss(t.id)} className="text-gray-300 hover:text-gray-500 ml-2 flex-shrink-0 transition-colors">
                 <X className="w-3 h-3" />
               </button>
             </div>
@@ -86,60 +81,72 @@ function ToastList({ toasts, onDismiss }: { toasts: WaToast[]; onDismiss: (id: n
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
+// Работает через polling /api/wa-inbox/conversations — надёжно, без RLS проблем Realtime
 export function WaNotificationProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<WaToast[]>([])
-  // Храним последние известные conversation_id → last message id чтобы не дублировать
-  const seenRef = useRef<Set<string>>(new Set())
+
+  // prevState: Map<convId → { unread_count, last_message_at }>
+  // undefined = первый poll, не показываем уведомления
+  const prevRef = useRef<Map<string, { unread: number; lastAt: string }> | null>(null)
+  const isFirstPollRef = useRef(true)
+
+  useEffect(() => { requestPermission() }, [])
 
   const fire = useCallback((name: string | null, phone: string, text: string | null) => {
     playSound()
-    if (document.hidden) showBrowserNotif(name, phone, text)
+    showBrowserNotif(name, phone, text)
     const id = ++_toastId
     setToasts(prev => [...prev, { id, name, phone, text }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500)
   }, [])
 
-  // Запрашиваем разрешение один раз при монтировании
-  useEffect(() => { requestPermission() }, [])
+  const poll = useCallback(async () => {
+    try {
+      const res = await fetch('/api/wa-inbox/conversations')
+      if (!res.ok) return
+      const data = await res.json()
+      const convs: any[] = data.conversations ?? []
 
-  // Realtime подписка на ВСЕ входящие сообщения
-  useEffect(() => {
-    const supabase = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+      if (isFirstPollRef.current) {
+        // Первый poll — просто запоминаем состояние, ничего не показываем
+        const map = new Map<string, { unread: number; lastAt: string }>()
+        for (const c of convs) map.set(c.id, { unread: c.unread_count ?? 0, lastAt: c.last_message_at })
+        prevRef.current = map
+        isFirstPollRef.current = false
+        return
+      }
 
-    const channel = supabase
-      .channel('wa_global_notifications')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'wa_messages' },
-        async (payload) => {
-          const msg = payload.new as any
-          if (msg.direction !== 'inbound') return
-          if (seenRef.current.has(msg.id)) return
-          seenRef.current.add(msg.id)
+      const prev = prevRef.current!
+      const next = new Map<string, { unread: number; lastAt: string }>()
 
-          // Получаем имя контакта из conversations
-          let name: string | null = null
-          let phone = ''
-          try {
-            const { data } = await supabase
-              .from('wa_conversations')
-              .select('contact_name, phone')
-              .eq('id', msg.conversation_id)
-              .single()
-            name = data?.contact_name ?? null
-            phone = data?.phone ?? ''
-          } catch {}
+      for (const c of convs) {
+        const prevEntry = prev.get(c.id)
+        const curUnread = c.unread_count ?? 0
+        const curAt = c.last_message_at
 
-          fire(name, phone, msg.body)
+        // Новый разговор ИЛИ unread вырос ИЛИ новое сообщение по времени
+        const isNew = !prevEntry
+        const unreadGrew = prevEntry && curUnread > prevEntry.unread
+        const newMsg = prevEntry && curAt !== prevEntry.lastAt && curUnread > 0
+
+        if (isNew || unreadGrew || newMsg) {
+          fire(c.contact_name ?? null, c.phone, c.last_message_text ?? null)
         }
-      )
-      .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+        next.set(c.id, { unread: curUnread, lastAt: curAt })
+      }
+
+      prevRef.current = next
+    } catch {}
   }, [fire])
+
+  useEffect(() => {
+    // Первый poll сразу
+    poll()
+    // Затем каждые 4 секунды
+    const interval = setInterval(poll, 4000)
+    return () => clearInterval(interval)
+  }, [poll])
 
   return (
     <>

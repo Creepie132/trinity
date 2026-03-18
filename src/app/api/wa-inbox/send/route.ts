@@ -38,16 +38,21 @@ export async function POST(req: NextRequest) {
 
   if (!integration) return NextResponse.json({ error: 'WhatsApp not configured' }, { status: 400 })
 
-  const { data: secret } = await supabase
-    .rpc('vault_read_secret', { secret_id: integration.vault_secret_id })
+  // Читаем ключ из vault.decrypted_secrets
+  const { data: secretRow } = await supabase
+    .from('vault.decrypted_secrets')
+    .select('decrypted_secret')
+    .eq('id', integration.vault_secret_id)
+    .single()
 
-  if (!secret) return NextResponse.json({ error: 'Cannot read API key' }, { status: 500 })
+  const apiKey = secretRow?.decrypted_secret
+  if (!apiKey) return NextResponse.json({ error: 'Cannot read API key' }, { status: 500 })
 
   const whapiRes = await fetch('https://gate.whapi.cloud/messages/text', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${secret}`,
+      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({ to: conv.phone + '@s.whatsapp.net', body: message }),
   })

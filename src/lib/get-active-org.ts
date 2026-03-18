@@ -8,7 +8,14 @@ const supabaseAdmin = createClient(
 /**
  * Получить активный org_id пользователя из user_active_branch таблицы.
  * Источник истины на сервере — не заголовки, не localStorage.
- * Fallback: возвращает mainOrgId если запись не найдена.
+ *
+ * Security: после чтения из БД всегда валидируем что значение
+ * принадлежит mainOrg или её легитимному филиалу. Это защищает от
+ * сценария когда user_active_branch был напрямую подделан (слабый RLS,
+ * race condition, etc.) — злоумышленник не может таким образом
+ * переключиться на чужую организацию.
+ *
+ * Fallback: возвращает mainOrgId если запись не найдена или не прошла валидацию.
  */
 export async function getActiveOrgId(
   userId: string,
@@ -20,5 +27,30 @@ export async function getActiveOrgId(
     .eq('user_id', userId)
     .maybeSingle()
 
-  return data?.active_org_id ?? mainOrgId
+  const stored = data?.active_org_id
+
+  // Нет сохранённого значения → основная org
+  if (!stored) return mainOrgId
+
+  // Основная org — всегда валидна
+  if (stored === mainOrgId) return mainOrgId
+
+  // Проверяем что stored является легитимным филиалом mainOrgId
+  const { data: branch } = await supabaseAdmin
+    .from('branches')
+    .select('child_org_id')
+    .eq('parent_org_id', mainOrgId)
+    .eq('child_org_id', stored)
+    .maybeSingle()
+
+  // Легитимный филиал → возвращаем; иначе → безопасный fallback
+  if (branch) return stored
+
+  // Подозрительно: в user_active_branch записан org_id не из нашего дерева.
+  // Логируем и возвращаем mainOrgId как безопасное значение.
+  console.warn(
+    `[security] getActiveOrgId: user ${userId} has stored active_org_id=${stored} ` +
+    `which is NOT a valid branch of mainOrgId=${mainOrgId}. Falling back to mainOrgId.`
+  )
+  return mainOrgId
 }

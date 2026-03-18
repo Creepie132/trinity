@@ -39,9 +39,23 @@ export async function GET(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+    // ── Check which providers are actually connected for this org ────────────
+    const { data: orgRow } = await supabaseAdmin
+      .from('organizations')
+      .select('tranzila_terminal, tranzila_token_terminal')
+      .eq('id', orgId)
+      .maybeSingle()
+
+    // Tranzila подключена если есть хотя бы один из терминалов
+    const hasTranzila = !!(orgRow?.tranzila_terminal || orgRow?.tranzila_token_terminal)
+    // Morning — таблицы integrations нет, пока всегда false
+    const hasMorning  = false
+
     // Return defaults if not configured yet
     if (!data) {
       return NextResponse.json({
+        hasTranzila,
+        hasMorning,
         settings: {
           org_id: orgId,
           is_enabled: false,
@@ -52,7 +66,7 @@ export async function GET(
       })
     }
 
-    return NextResponse.json({ settings: data })
+    return NextResponse.json({ hasTranzila, hasMorning, settings: data })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
@@ -79,6 +93,31 @@ export async function PUT(
 
     if (!VALID_PROVIDERS.includes(provider)) {
       return NextResponse.json({ error: `Invalid provider: ${provider}` }, { status: 400 })
+    }
+
+    // ── Validate org has credentials for the selected provider ───────────────
+    if (provider === 'tranzila') {
+      const { data: orgRow } = await supabaseAdmin
+        .from('organizations')
+        .select('tranzila_terminal, tranzila_token_terminal')
+        .eq('id', orgId)
+        .maybeSingle()
+      if (!orgRow?.tranzila_terminal && !orgRow?.tranzila_token_terminal) {
+        return NextResponse.json(
+          { error: 'Tranzila не подключён для этой организации. Сначала настройте токен Tranzila.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (provider === 'morning') {
+      // Morning integration not yet available
+      if (true) {
+        return NextResponse.json(
+          { error: 'Morning не подключён для этой организации. Сначала настройте интеграцию Morning.' },
+          { status: 400 }
+        )
+      }
     }
 
     if (!Array.isArray(trigger_events) || trigger_events.some((t: string) => !VALID_TRIGGERS.includes(t as any))) {

@@ -234,11 +234,15 @@ export default function InboxPage() {
     })
 
     if (res.ok) {
-      // Убираем pending флаг — сообщение отправлено
-      // Realtime или polling подхватит реальный статус
-      setMessages(prev => prev.map(m =>
-        m.id === tempId ? { ...m, _pending: false, status: 'sent' } : m
-      ))
+      const data = await res.json()
+      const realMsg: Message | null = data.message ?? null
+      setMessages(prev => prev.map(m => {
+        if (m.id !== tempId) return m
+        // Заменяем temp на реальное сообщение с настоящим id
+        // Это предотвращает дублирование: Realtime увидит этот id и пропустит INSERT
+        if (realMsg) return { ...realMsg, _pending: false }
+        return { ...m, _pending: false, status: 'sent' }
+      }))
     } else {
       setMessages(prev => prev.map(m =>
         m.id === tempId ? { ...m, _pending: false, status: 'failed' } : m

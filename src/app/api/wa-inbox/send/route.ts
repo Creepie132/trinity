@@ -63,17 +63,21 @@ export async function POST(req: NextRequest) {
 
   const whapiData = await whapiRes.json()
 
-  // Сохраняем исходящее сообщение
-  await supabase.from('wa_messages').insert({
-    conversation_id,
-    org_id: orgId,
-    whapi_message_id: whapiData.message?.id ?? null,
-    direction: 'outbound',
-    message_type: 'text',
-    body: message,
-    status: 'sent',
-    sent_by_user_id: user.id,
-  })
+  // Сохраняем исходящее сообщение и возвращаем реальный id
+  const { data: savedMsg } = await supabase
+    .from('wa_messages')
+    .insert({
+      conversation_id,
+      org_id: orgId,
+      whapi_message_id: whapiData.message?.id ?? null,
+      direction: 'outbound',
+      message_type: 'text',
+      body: message,
+      status: 'sent',
+      sent_by_user_id: user.id,
+    })
+    .select('id, status, created_at, direction, message_type, body')
+    .single()
 
   // Обновляем last_message
   await supabase
@@ -84,5 +88,6 @@ export async function POST(req: NextRequest) {
     })
     .eq('id', conversation_id)
 
-  return NextResponse.json({ ok: true })
+  // Возвращаем реальный id — фронт заменит им temp сообщение
+  return NextResponse.json({ ok: true, message: savedMsg ?? null })
 }

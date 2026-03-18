@@ -44,7 +44,18 @@ export async function getSupabaseServerClient() {
  * (из user_active_branch), а не всегда главная org.
  *
  * Performance: admin_users и org_users запрашиваются параллельно через
- * Promise.all — экономит один round-trip на каждый API-вызов.
+ * Promise.all — экономит один DB round-trip на каждый API-вызов.
+ *
+ * Fault tolerance: если один из параллельных запросов вернул DB-ошибку
+ * (сеть, permissions, временный сбой) — возвращаем 503, а не падаем
+ * с белым экраном. Supabase maybeSingle() никогда не возвращает ошибку
+ * за «нет строк» — только за настоящие сбои.
+ *
+ * Caching: getActiveOrgId() обёрнут в React cache() — request-scoped,
+ * сбрасывается автоматически на каждом новом запросе. ВАЖНО: если в
+ * будущем перейдём на долгосрочный кэш (Redis/Upstash), необходимо
+ * реализовать принудительную инвалидацию при бане/смене роли пользователя
+ * через паттерн cache-key по user_id с TTL не более 60 секунд.
  */
 export async function checkAuth(): Promise<
   | { success: true; data: AuthCheckResult }
@@ -64,7 +75,9 @@ export async function checkAuth(): Promise<
   const user = userData.user
   const email = user.email || ''
 
-  // 2. admin_users + org_users параллельно — экономим один round-trip
+  // 2. admin_users + org_users параллельно — экономим один round-trip.
+  //    Обе операции используют maybeSingle(): "нет строк" = { data: null, error: null }.
+  //    Если error != null — это настоящий сбой (сеть, DB), возвращаем 503.
   const [adminResult, orgResult] = await Promise.all([
     supabase
       .from('admin_users')
@@ -78,6 +91,28 @@ export async function checkAuth(): Promise<
       .maybeSingle(),
   ])
 
+  if (adminResult.error) {
+    console.error('[checkAuth] admin_users query error:', adminResult.error.message)
+    return {
+      success: false,
+      response: NextResponse.json(
+        { error: 'Authentication service temporarily unavailable' },
+        { status: 503 }
+      ),
+    }
+  }
+
+  if (orgResult.error) {
+    console.error('[checkAuth] org_users query error:', orgResult.error.message)
+    return {
+      success: false,
+      response: NextResponse.json(
+        { error: 'Authentication service temporarily unavailable' },
+        { status: 503 }
+      ),
+    }
+  }
+
   const isAdmin = !!adminResult.data
   const mainOrgId = orgResult.data?.org_id || ''
 
@@ -89,8 +124,8 @@ export async function checkAuth(): Promise<
   }
 
   // 3. Branch-aware: получаем активный филиал.
-  //    getActiveOrgId() кэшируется React cache() — повторный вызов в рамках
-  //    одного запроса не идёт в БД.
+  //    getActiveOrgId() кэшируется React cache() — request-scoped, безопасно.
+  //    Повторный вызов в рамках одного запроса не идёт в БД.
   const org_id = isAdmin ? mainOrgId : await getActiveOrgId(user.id, mainOrgId)
 
   // 4. Получение данных организации (если не админ)
@@ -114,7 +149,9 @@ export async function checkAuth(): Promise<
 
     organization = orgData
 
-    // 5. Проверка активности организации
+    // 5. Проверка активности организации.
+    //    Если org заблокирована — сразу 403. Бан работает мгновенно
+    //    потому что organization всегда читается из БД (не кэшируется).
     if (!orgData.is_active) {
       return {
         success: false,
@@ -140,7 +177,12 @@ export async function checkAuth(): Promise<
 }
 
 /**
- * Проверяет доступность фичи для организации
+ * Проверяет доступность фичи для организации.
+ *
+ * ВАЖНО: Этот метод проверяет features из organizations.features (JSONB),
+ * которая читается свежо из БД на каждом запросе (не кэшируется).
+ * Критические действия (смена прав, удаление) логируются через logAudit()
+ * непосредственно в роутах — этот метод к аудиту не относится.
  */
 export function checkFeature(
   organization: any,

@@ -7,12 +7,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Product, CreateProductDTO, UpdateProductDTO } from '@/types/inventory'
 import { useBranch } from '@/contexts/BranchContext'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 
 /**
  * useProducts - Fetch all products (search is done locally in component)
  */
 export function useProducts(searchQuery?: string) {
   const { activeOrgId } = useBranch()
+  useRealtimeSync({ table: 'products', orgId: activeOrgId, queryKey: ['products'] })
 
   return useQuery({
     queryKey: ['products', activeOrgId],

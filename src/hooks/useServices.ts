@@ -1,7 +1,13 @@
+'use client'
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/hooks/useAuth'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import type { Service, CreateServiceDTO, UpdateServiceDTO } from '@/types/services'
 
 export function useServices() {
+  const { orgId } = useAuth()
+  useRealtimeSync({ table: 'services', orgId, queryKey: ['services'] })
   return useQuery({
     queryKey: ['services'],
     queryFn: async () => {

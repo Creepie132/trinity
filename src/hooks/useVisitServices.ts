@@ -1,7 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useBranch } from '@/contexts/BranchContext'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import type { VisitService, CreateVisitServiceDTO } from '@/types/visits'
 
 export function useVisitServices(visitId: string) {
+  const { activeOrgId } = useBranch()
+  useRealtimeSync({ table: 'visit_services', orgId: activeOrgId, queryKey: ['visit-services'] })
   return useQuery({
     queryKey: ['visit-services', visitId],
     queryFn: async () => {

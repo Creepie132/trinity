@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useBranch } from '@/contexts/BranchContext'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 
 export interface SaleItem {
   id: string
@@ -40,6 +41,7 @@ export interface SalesFilters {
 
 export function useSales(filters?: SalesFilters) {
   const { activeOrgId } = useBranch()
+  useRealtimeSync({ table: 'sales', orgId: activeOrgId, queryKey: ['sales'] })
 
   return useQuery({
     queryKey: ['sales', activeOrgId, filters],

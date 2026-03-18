@@ -2,6 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useBranch } from '@/contexts/BranchContext'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 
 export interface Expense {
   id: string
@@ -36,6 +38,8 @@ export interface ExpensesStats {
 }
 
 export function useExpenses(month?: string, category?: string) {
+  const { activeOrgId } = useBranch()
+  useRealtimeSync({ table: 'expenses', orgId: activeOrgId, queryKey: ['expenses'] })
   return useQuery<Expense[]>({
     queryKey: ['expenses', month, category],
     queryFn: async () => {
@@ -52,6 +56,8 @@ export function useExpenses(month?: string, category?: string) {
 }
 
 export function useExpensesStats(month?: string) {
+  const { activeOrgId } = useBranch()
+  useRealtimeSync({ table: 'expenses', orgId: activeOrgId, queryKey: ['expenses-stats'] })
   return useQuery<ExpensesStats>({
     queryKey: ['expenses-stats', month],
     queryFn: async () => {

@@ -7,12 +7,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { InventoryTransaction, CreateInventoryTransactionDTO } from '@/types/inventory'
 import { useBranch } from '@/contexts/BranchContext'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 
 /**
  * useInventoryTransactions - Fetch transaction history (optional product filter)
  */
 export function useInventoryTransactions(productId?: string) {
   const { activeOrgId } = useBranch()
+  useRealtimeSync({ table: 'inventory_transactions', orgId: activeOrgId, queryKey: ['inventory-transactions'] })
 
   return useQuery({
     queryKey: ['inventory-transactions', productId, activeOrgId],

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Settings, Calendar, Package, BookOpen, ShoppingBag, PiggyBank } from 'lucide-react'
+import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Settings, Calendar, Package, BookOpen, ShoppingBag, PiggyBank, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -46,6 +46,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     { name: meetingMode.t.visits, href: '/visits', icon: Calendar, requireFeature: 'visits' },
     { name: language === 'he' ? 'מכירות' : 'Продажи', href: '/sales', icon: ShoppingBag, requireFeature: 'sales' },
     { name: getModuleName('diary'), href: '/diary', icon: BookOpen, requireFeature: 'diary' },
+    { name: language === 'he' ? 'וואטסאפ' : 'WhatsApp', href: '/inbox', icon: MessageCircle, requireFeature: null },
     { name: getModuleName('inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
     { name: getModuleName('payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: language === 'he' ? 'כספים' : 'Финансы', href: '/finances', icon: PiggyBank, requireFeature: 'finances' },

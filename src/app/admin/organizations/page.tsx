@@ -13,13 +13,14 @@ import {
   CheckCircle, XCircle, AlertCircle, Loader2, X,
   Shield, Pencil, CreditCard, Eye, Package,
   Clock, TrendingUp, Users, Calendar, BarChart3,
-  Wifi, WifiOff, AlertTriangle, Trash2, EyeOff, Edit3, Check,
+  Wifi, WifiOff, AlertTriangle, Trash2, EyeOff, Edit3, Check, Leaf,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/switch'
 import { getPlan, PLANS, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
 import { EditOrganizationModal } from '@/components/modals/other/EditOrganizationModal'
+import { MorningIntegrationModal } from '@/components/modals/integrations/MorningIntegrationModal'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useRouter } from 'next/navigation'
 
@@ -494,6 +495,9 @@ export default function AdminOrganizationsPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteOrg, setDeleteOrg] = useState<Organization | null>(null)
 
+  const [morningOpen, setMorningOpen] = useState(false)
+  const [morningOrg, setMorningOrg] = useState<Organization | null>(null)
+
   const [modulesOpen, setModulesOpen] = useState(false)
   const [modulesOrg, setModulesOrg] = useState<Organization | null>(null)
   const [modulesState, setModulesState] = useState<Record<string, boolean>>({})
@@ -819,6 +823,10 @@ export default function AdminOrganizationsPage() {
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition-colors">
             <Package className="w-4 h-4" />{l ? 'מודולים' : 'Модули'}
           </button>
+          <button onClick={() => { setMorningOrg(org); setMorningOpen(true); setSelectedOrg(null) }}
+            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 border border-emerald-200 transition-colors">
+            <Leaf className="w-4 h-4" />{l ? 'Morning' : 'Morning'}
+          </button>
           <button onClick={() => { setEditOrg(org); setEditOpen(true); setSelectedOrg(null) }}
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
             <Pencil className="w-4 h-4" />{l ? 'ערוך' : 'Редактировать'}
@@ -1054,6 +1062,15 @@ export default function AdminOrganizationsPage() {
       <DeleteOrgModal org={deleteOrg} open={deleteOpen} onClose={() => { setDeleteOpen(false); setDeleteOrg(null) }} onDeleted={() => { setDeleteOpen(false); setDeleteOrg(null); loadData() }} lang={language} />
 
       {/* ── FAB ── */}
+      {morningOrg && (
+        <MorningIntegrationModal
+          open={morningOpen}
+          onClose={() => { setMorningOpen(false); setMorningOrg(null) }}
+          orgId={morningOrg.id}
+          orgName={morningOrg.display_name || morningOrg.name}
+        />
+      )}
+
       <OrgsFab onInvite={() => setInviteOpen(true)} language={language} />
     </div>
   )

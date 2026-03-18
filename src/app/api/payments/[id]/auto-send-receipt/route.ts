@@ -11,16 +11,13 @@ const supabaseAdmin = createClient(
 )
 
 // POST /api/payments/[id]/auto-send-receipt
-// Called internally (server-to-server) after payment is created/updated.
-// Checks org_receipt_settings, generates receipt via chosen provider,
-// sends PDF via Whapi (per-org token from Vault).
-// Authorization: Bearer <CRON_SECRET> (same secret used by cron jobs)
+// Internal route (Bearer CRON_SECRET). Checks org_receipt_settings,
+// generates receipt via Tranzila or Morning, sends PDF via Whapi.
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Internal auth — same pattern as cron routes
     const authHeader = req.headers.get('authorization') ?? ''
     const cronSecret = process.env.CRON_SECRET
     if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
@@ -29,7 +26,6 @@ export async function POST(
 
     const { id: paymentId } = await params
 
-    // Load payment + client
     const { data: payment, error: payErr } = await supabaseAdmin
       .from('payments')
       .select('*, clients:client_id (id, first_name, last_name, phone, email)')
@@ -40,7 +36,6 @@ export async function POST(
       return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
     }
 
-    // Load org receipt settings
     const { data: settings } = await supabaseAdmin
       .from('org_receipt_settings')
       .select('*')
@@ -61,15 +56,17 @@ export async function POST(
       return NextResponse.json({ ok: true, skipped: true, reason: 'no client phone' })
     }
 
-    const clientName  = client ? `${client.first_name ?? ''} ${client.last_name ?? ''}`.trim() || 'לקוח' : 'לקוח'
+    const clientName  = client
+      ? `${client.first_name ?? ''} ${client.last_name ?? ''}`.trim() || 'לקוח'
+      : 'לקוח'
     const clientEmail = client?.email ?? undefined
 
-    // Only Tranzila supported for now (Morning receipt generation TBD)
     let documentId: string
     let documentNum: string
+    let pdfBuffer: Buffer
 
+    // ── Tranzila ─────────────────────────────────────────────────────────────
     if (settings.provider === 'tranzila') {
-      // If receipt already created for this payment — reuse
       if (payment.tranzila_document_id) {
         documentId  = payment.tranzila_document_id
         documentNum = payment.tranzila_document_num ?? documentId
@@ -85,8 +82,7 @@ export async function POST(
         } : undefined
 
         const receipt = await createReceipt({
-          clientName,
-          clientEmail,
+          clientName, clientEmail,
           items: [{ name: payment.description || 'תשלום', quantity: 1, unit_price: Number(payment.amount) }],
           totalAmount:   Number(payment.amount),
           paymentMethod: payment.payment_method ?? 'other',
@@ -95,17 +91,45 @@ export async function POST(
         documentId  = receipt.documentId
         documentNum = receipt.documentNum
 
-        // Save document ID on payment so we don't re-generate
         await supabaseAdmin.from('payments')
           .update({ tranzila_document_id: documentId })
           .eq('id', paymentId)
       }
+      pdfBuffer = await getReceiptPdf(documentId)
+
+    // ── Morning (Green Invoice) ───────────────────────────────────────────────
+    } else if (settings.provider === 'morning') {
+      // Load Morning API key from org_integrations
+      const { data: integration } = await supabaseAdmin
+        .from('org_integrations')
+        .select('config, is_active')
+        .eq('org_id', payment.org_id)
+        .eq('provider', 'green_invoice')
+        .maybeSingle()
+
+      if (!integration?.is_active || !integration.config?.api_key) {
+        return NextResponse.json({ ok: true, skipped: true, reason: 'Morning not configured for this org' })
+      }
+
+      const morningResult = await createMorningReceipt({
+        apiKey:      integration.config.api_key as string,
+        clientName,
+        clientEmail,
+        clientPhone,
+        amount:      Number(payment.amount),
+        description: payment.description || 'תשלום',
+        paymentMethod: payment.payment_method ?? 'other',
+      })
+
+      documentId  = morningResult.documentId
+      documentNum = morningResult.documentNum
+      pdfBuffer   = morningResult.pdfBuffer
+
     } else {
-      // Morning provider — receipt generation not yet implemented
-      return NextResponse.json({ ok: true, skipped: true, reason: 'morning receipt generation not yet implemented' })
+      return NextResponse.json({ ok: true, skipped: true, reason: `unknown provider: ${settings.provider}` })
     }
 
-    // Get Whapi config for this org from wa_integrations + Vault
+    // ── Send via Whapi ────────────────────────────────────────────────────────
     const { data: waIntegration } = await supabaseAdmin
       .from('wa_integrations')
       .select('provider_type, instance_id, vault_secret_id, is_active')
@@ -116,31 +140,25 @@ export async function POST(
       return NextResponse.json({ ok: true, skipped: true, reason: 'no active Whapi integration' })
     }
 
-    // Read API key from Vault
     const { data: secretData } = await supabaseAdmin
       .rpc('vault_read_secret', { secret_id: waIntegration.vault_secret_id })
 
-    const apiKey = secretData as string | null
-    if (!apiKey) {
+    const whapiKey = secretData as string | null
+    if (!whapiKey) {
       return NextResponse.json({ ok: true, skipped: true, reason: 'vault_read_secret failed' })
     }
 
-    // Fetch receipt PDF
-    const pdfBuffer = await getReceiptPdf(documentId)
-
-    // Build message from template
     const message = buildMessage(settings.message_template, {
-      client_name: clientName,
-      amount: Number(payment.amount).toFixed(2),
+      client_name:  clientName,
+      amount:       Number(payment.amount).toFixed(2),
       document_num: documentNum,
     })
 
-    // Send via Whapi
     const whapiBase = waIntegration.instance_id
       ? `https://gate.whapi.cloud/${waIntegration.instance_id}`
       : 'https://gate.whapi.cloud'
 
-    const sent = await sendViaWhapi({ apiKey, whapiBase, phone: clientPhone, message, pdfBuffer, documentNum })
+    const sent = await sendViaWhapi({ apiKey: whapiKey, whapiBase, phone: clientPhone, message, pdfBuffer, documentNum })
 
     return NextResponse.json({ ok: true, sent, documentId, documentNum })
   } catch (err: any) {
@@ -149,7 +167,79 @@ export async function POST(
   }
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Morning (Green Invoice) receipt creation ────────────────────────────────
+// API: https://api.greeninvoice.co.il/api/v1
+// Document type 400 = קבלה (receipt)
+const GI_BASE = 'https://api.greeninvoice.co.il/api/v1'
+
+const PAYMENT_METHOD_MAP: Record<string, number> = {
+  cash: 1, check: 2, bank_transfer: 3, credit_card: 4, other: 1,
+}
+
+async function createMorningReceipt(opts: {
+  apiKey: string; clientName: string; clientEmail?: string; clientPhone: string
+  amount: number; description: string; paymentMethod: string
+}): Promise<{ documentId: string; documentNum: string; pdfBuffer: Buffer }> {
+  const { apiKey, clientName, clientEmail, clientPhone, amount, description, paymentMethod } = opts
+
+  const today = new Date().toISOString().slice(0, 10)
+  const giPaymentType = PAYMENT_METHOD_MAP[paymentMethod] ?? 1
+
+  const body: Record<string, unknown> = {
+    description: 'קבלה',
+    type: 400,
+    date: today,
+    dueDate: today,
+    lang: 'he',
+    currency: 'ILS',
+    vatType: 0,
+    discount: 0,
+    roundingRequested: false,
+    signed: true,
+    client: {
+      name: clientName,
+      ...(clientEmail ? { emailAddress: clientEmail } : {}),
+      ...(clientPhone ? { phone: clientPhone } : {}),
+    },
+    income: [{ description, quantity: 1, price: amount, currency: 'ILS', vatType: 0 }],
+    payment: [{ type: giPaymentType, price: amount, currency: 'ILS', date: today }],
+  }
+
+  const createRes = await fetch(`${GI_BASE}/documents`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!createRes.ok) {
+    const errText = await createRes.text()
+    throw new Error(`Morning createReceipt failed ${createRes.status}: ${errText}`)
+  }
+
+  const doc = await createRes.json()
+  const documentId  = String(doc.id)
+  const documentNum = String(doc.number ?? doc.id)
+
+  // Fetch PDF — Green Invoice returns download URL or we call /documents/{id}/download
+  const pdfBuffer = await fetchMorningPdf(apiKey, documentId, doc.attachment?.downloadUrl)
+
+  return { documentId, documentNum, pdfBuffer }
+}
+
+async function fetchMorningPdf(apiKey: string, docId: string, downloadUrl?: string): Promise<Buffer> {
+  const url = downloadUrl ?? `${GI_BASE}/documents/${docId}/download`
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  if (!res.ok) throw new Error(`Morning PDF fetch failed ${res.status}`)
+  const arrayBuffer = await res.arrayBuffer()
+  return Buffer.from(arrayBuffer)
+}
+
+// ─── Shared helpers ──────────────────────────────────────────────────────────
 
 function buildMessage(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`)
@@ -161,17 +251,12 @@ async function sendViaWhapi(opts: {
 }): Promise<boolean> {
   const { apiKey, whapiBase, phone, message, pdfBuffer, documentNum } = opts
   const normalizedPhone = phone.replace(/\D/g, '').replace(/^0/, '972')
-
-  // Convert buffer to base64 data URI for Whapi document send
-  const base64 = pdfBuffer.toString('base64')
+  const base64   = pdfBuffer.toString('base64')
   const mediaUrl = `data:application/pdf;base64,${base64}`
 
   const res = await fetch(`${whapiBase}/messages/document`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       to:       `${normalizedPhone}@s.whatsapp.net`,
       media:    mediaUrl,
@@ -185,6 +270,5 @@ async function sendViaWhapi(opts: {
     console.error('[auto-send-receipt] Whapi error:', res.status, errText)
     return false
   }
-
   return true
 }

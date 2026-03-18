@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { WizardModal, WizardStep } from '@/components/ui/WizardModal'
@@ -15,7 +15,7 @@ const I18N = {
     providerLabel: 'ספק קבלות',
     providerNone: 'כבוי — אל תשלח קבלות',
     providerTranzila: 'Tranzila — יצירת קבלה דרך Tranzila',
-    providerMorning: 'Morning — יצירת קבלה דרך Morning (בקרוב)',
+    providerMorning: 'Morning — יצירת קבלה דרך Morning',
     triggerTitle: 'מתי לשלוח?',
     triggerPayCreated: 'כשתשלום נוצר',
     triggerPayCompleted: 'כשתשלום מסומן כהושלם',
@@ -34,7 +34,7 @@ const I18N = {
     providerLabel: 'Провайдер квитанций',
     providerNone: 'Выключено — не отправлять квитанции',
     providerTranzila: 'Tranzila — создание квитанции через Tranzila',
-    providerMorning: 'Morning — создание квитанции через Morning (скоро)',
+    providerMorning: 'Morning — создание квитанции через Morning',
     triggerTitle: 'Когда отправлять?',
     triggerPayCreated: 'При создании платежа',
     triggerPayCompleted: 'Когда платёж отмечен как завершённый',
@@ -193,7 +193,7 @@ export function ReceiptSettingsModal({ open, onClose, orgId, orgName, lang = 'he
             {([ 
               { value: 'none',     label: s.providerNone,     disabled: false },
               { value: 'tranzila', label: s.providerTranzila, disabled: false },
-              { value: 'morning',  label: s.providerMorning,  disabled: true  },
+              { value: 'morning',  label: s.providerMorning,  disabled: false },
             ] as const).map(opt => (
               <button
                 key={opt.value}

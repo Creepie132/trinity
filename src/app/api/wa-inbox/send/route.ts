@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
 
   const supabase = createSupabaseServiceClient()
 
+  // Получаем телефон разговора
   const { data: conv } = await supabase
     .from('wa_conversations')
     .select('phone')
@@ -29,25 +30,16 @@ export async function POST(req: NextRequest) {
 
   if (!conv) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { data: integration } = await supabase
-    .from('wa_integrations')
-    .select('instance_id, vault_secret_id')
-    .eq('org_id', orgId)
-    .eq('is_active', true)
-    .single()
+  // Читаем API ключ через SECURITY DEFINER функцию
+  const { data: apiKey, error: keyError } = await supabase
+    .rpc('get_wa_api_key', { p_org_id: orgId })
 
-  if (!integration) return NextResponse.json({ error: 'WhatsApp not configured' }, { status: 400 })
+  if (keyError || !apiKey) {
+    console.error('[send] API key error:', keyError)
+    return NextResponse.json({ error: 'WhatsApp not configured' }, { status: 400 })
+  }
 
-  // Читаем ключ из vault.decrypted_secrets
-  const { data: secretRow } = await supabase
-    .from('vault.decrypted_secrets')
-    .select('decrypted_secret')
-    .eq('id', integration.vault_secret_id)
-    .single()
-
-  const apiKey = secretRow?.decrypted_secret
-  if (!apiKey) return NextResponse.json({ error: 'Cannot read API key' }, { status: 500 })
-
+  // Отправляем через Whapi
   const whapiRes = await fetch('https://gate.whapi.cloud/messages/text', {
     method: 'POST',
     headers: {
@@ -59,11 +51,13 @@ export async function POST(req: NextRequest) {
 
   if (!whapiRes.ok) {
     const err = await whapiRes.text()
+    console.error('[send] Whapi error:', err)
     return NextResponse.json({ error: `Whapi error: ${err}` }, { status: 500 })
   }
 
   const whapiData = await whapiRes.json()
 
+  // Сохраняем исходящее сообщение
   await supabase.from('wa_messages').insert({
     conversation_id,
     org_id: orgId,
@@ -75,6 +69,7 @@ export async function POST(req: NextRequest) {
     sent_by_user_id: user.id,
   })
 
+  // Обновляем last_message
   await supabase
     .from('wa_conversations')
     .update({

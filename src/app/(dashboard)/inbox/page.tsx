@@ -92,6 +92,10 @@ export default function InboxPage() {
   const [visitDate, setVisitDate] = useState('')
   const [visitNote, setVisitNote] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [showNewChat, setShowNewChat] = useState(false)
+  const [newChatPhone, setNewChatPhone] = useState('')
+  const [newChatName, setNewChatName] = useState('')
+  const [creatingChat, setCreatingChat] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -217,8 +221,66 @@ export default function InboxPage() {
 
   const totalUnread = conversations.reduce((s, c) => s + (c.unread_count ?? 0), 0)
 
+  const startNewChat = async () => {
+    if (!newChatPhone.trim() || creatingChat) return
+    setCreatingChat(true)
+    const phone = newChatPhone.replace(/\D/g, '')
+    const res = await fetch('/api/wa-inbox/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, contact_name: newChatName.trim() || null }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setShowNewChat(false)
+      setNewChatPhone('')
+      setNewChatName('')
+      await loadConversations()
+      if (data.conversation) selectConversation(data.conversation)
+    }
+    setCreatingChat(false)
+  }
+
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
+
+      {/* Модалка нового чата */}
+      {showNewChat && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center"
+          onClick={e => e.target === e.currentTarget && setShowNewChat(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-80 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900">Новый разговор</h3>
+              <button onClick={() => setShowNewChat(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Номер телефона *</label>
+                <input className="w-full h-9 text-sm border border-gray-200 rounded-lg px-3 focus:outline-none focus:ring-2 focus:ring-violet-300"
+                  placeholder="+972501234567"
+                  value={newChatPhone}
+                  onChange={e => setNewChatPhone(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && startNewChat()}
+                  autoFocus />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Имя (необязательно)</label>
+                <input className="w-full h-9 text-sm border border-gray-200 rounded-lg px-3 focus:outline-none focus:ring-2 focus:ring-violet-300"
+                  placeholder="Имя контакта..."
+                  value={newChatName}
+                  onChange={e => setNewChatName(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && startNewChat()} />
+              </div>
+              <button onClick={startNewChat} disabled={!newChatPhone.trim() || creatingChat}
+                className="w-full h-9 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-semibold rounded-lg hover:opacity-90 active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                {creatingChat ? 'Создаём...' : 'Начать разговор'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── ЛЕВАЯ ПАНЕЛЬ ── */}
       <div className="w-80 flex-shrink-0 flex flex-col bg-white/80 backdrop-blur-sm border-r border-gray-200/60 shadow-sm">
@@ -240,6 +302,10 @@ export default function InboxPage() {
                 {totalUnread}
               </span>
             )}
+            <button onClick={() => setShowNewChat(true)}
+              className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-sm ml-auto">
+              <span className="text-lg leading-none font-light">+</span>
+            </button>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />

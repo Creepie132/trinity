@@ -186,10 +186,8 @@ export default function InboxPage() {
     })
 
     if (res.ok) {
-      // Заменяем optimistic на реальное сообщение
-      setMessages(prev => prev.map(m =>
-        m.id === tempId ? { ...m, _pending: false, status: 'sent' } : m
-      ))
+      // Перезагружаем реальные сообщения из базы
+      await loadMessages(selected.id)
     } else {
       // Ошибка — помечаем красным
       setMessages(prev => prev.map(m =>

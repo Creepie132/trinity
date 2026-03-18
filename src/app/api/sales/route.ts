@@ -23,8 +23,8 @@ export async function GET(req: NextRequest) {
       sale_items(id, product_id, product_name, quantity, unit_price, total_price)
     `)
     .eq('org_id', activeOrgId)
-    .order('sale_date', { ascending: false })
     .order('created_at', { ascending: false })
+    .order('sale_date', { ascending: false })
 
   if (status && status !== 'all') query = query.eq('status', status)
   if (month) {

@@ -17,6 +17,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/payments/tranzila/success', '/api/payments/callback',
   '/api/booking/', '/api/contact', '/api/access/', '/api/health',
   '/api/cron/',
+  '/api/webhooks/',
 ]
 
 function isPublicPath(pathname: string): boolean {
@@ -37,6 +38,7 @@ const ALLOWED_ORIGINS = new Set([
 
 const CSRF_EXEMPT_PREFIXES = [
   '/api/payments/', '/api/booking/', '/api/contact', '/api/access/',
+  '/api/webhooks/',
 ]
 
 export async function middleware(req: NextRequest) {

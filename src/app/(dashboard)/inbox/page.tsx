@@ -6,77 +6,77 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   MessageCircle, Search, Send, UserPlus, Calendar,
-  ChevronDown, CheckCheck, Clock, X, Phone
+  CheckCheck, Clock, X, Phone, Sparkles, ChevronDown,
+  Circle, Inbox
 } from 'lucide-react'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { format, formatDistanceToNow } from 'date-fns'
 import { he } from 'date-fns/locale'
 
-// ── Типы ─────────────────────────────────────────────────────────────────────
 type ConvStatus = 'new' | 'in_progress' | 'waiting' | 'closed'
 type LeadStatus = 'new' | 'contacted' | 'demo_scheduled' | 'converted' | 'lost'
 
 interface Conversation {
-  id: string
-  phone: string
-  contact_name: string | null
-  status: ConvStatus
-  lead_status: LeadStatus
-  last_message_at: string
-  last_message_text: string | null
-  unread_count: number
-  client_id: string | null
+  id: string; phone: string; contact_name: string | null
+  status: ConvStatus; lead_status: LeadStatus
+  last_message_at: string; last_message_text: string | null
+  unread_count: number; client_id: string | null
   clients?: { id: string; first_name: string; last_name: string } | null
 }
 
 interface Message {
-  id: string
-  direction: 'inbound' | 'outbound'
-  message_type: string
-  body: string | null
-  status: string
-  created_at: string
+  id: string; direction: 'inbound' | 'outbound'
+  message_type: string; body: string | null
+  status: string; created_at: string
 }
 
-// ── Статусы ───────────────────────────────────────────────────────────────────
-const CONV_STATUS_LABELS: Record<ConvStatus, string> = {
-  new: 'Новый', in_progress: 'В работе', waiting: 'Ожидание', closed: 'Закрыт'
-}
-const CONV_STATUS_COLORS: Record<ConvStatus, string> = {
-  new: 'bg-blue-100 text-blue-700',
-  in_progress: 'bg-amber-100 text-amber-700',
-  waiting: 'bg-purple-100 text-purple-700',
-  closed: 'bg-gray-100 text-gray-500',
-}
-const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
+const LEAD_LABELS: Record<LeadStatus, string> = {
   new: 'Лид', contacted: 'Контакт', demo_scheduled: 'Демо',
   converted: 'Клиент', lost: 'Потерян'
 }
-const LEAD_STATUS_COLORS: Record<LeadStatus, string> = {
-  new: 'bg-blue-50 text-blue-600',
-  contacted: 'bg-amber-50 text-amber-600',
-  demo_scheduled: 'bg-purple-50 text-purple-700',
-  converted: 'bg-emerald-50 text-emerald-700',
-  lost: 'bg-red-50 text-red-500',
+const LEAD_COLORS: Record<LeadStatus, string> = {
+  new: 'bg-blue-100 text-blue-700',
+  contacted: 'bg-amber-100 text-amber-700',
+  demo_scheduled: 'bg-violet-100 text-violet-700',
+  converted: 'bg-emerald-100 text-emerald-700',
+  lost: 'bg-red-100 text-red-500',
+}
+const STATUS_LABELS: Record<ConvStatus, string> = {
+  new: 'Новый', in_progress: 'В работе', waiting: 'Ожидание', closed: 'Закрыт'
+}
+const STATUS_COLORS: Record<ConvStatus, string> = {
+  new: 'bg-blue-500', in_progress: 'bg-amber-500',
+  waiting: 'bg-purple-500', closed: 'bg-gray-400'
 }
 
-// ── Аватар ────────────────────────────────────────────────────────────────────
 function Avatar({ name, phone }: { name: string | null; phone: string }) {
-  const label = name ? name[0].toUpperCase() : phone.slice(-2)
-  const colors = [
-    'bg-violet-100 text-violet-700', 'bg-emerald-100 text-emerald-700',
-    'bg-blue-100 text-blue-700', 'bg-amber-100 text-amber-700',
-    'bg-rose-100 text-rose-700',
+  const label = name ? name.slice(0, 2).toUpperCase() : phone.slice(-2)
+  const palettes = [
+    'from-violet-400 to-purple-500', 'from-emerald-400 to-teal-500',
+    'from-blue-400 to-indigo-500', 'from-amber-400 to-orange-500',
+    'from-rose-400 to-pink-500', 'from-cyan-400 to-sky-500',
   ]
-  const idx = phone.charCodeAt(phone.length - 1) % colors.length
+  const idx = phone.charCodeAt(phone.length - 1) % palettes.length
   return (
-    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0 ${colors[idx]}`}>
+    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${palettes[idx]} flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-sm`}>
       {label}
     </div>
   )
 }
 
-// ── Главный компонент ─────────────────────────────────────────────────────────
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start px-4 py-1">
+      <div className="bg-white rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm border border-gray-100 flex gap-1 items-center">
+        {[0, 1, 2].map(i => (
+          <span key={i} className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+            style={{ animationDelay: `${i * 0.15}s` }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function InboxPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selected, setSelected] = useState<Conversation | null>(null)
@@ -91,9 +91,10 @@ export default function InboxPage() {
   const [newClientName, setNewClientName] = useState('')
   const [visitDate, setVisitDate] = useState('')
   const [visitNote, setVisitNote] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Загрузка разговоров
   const loadConversations = useCallback(async () => {
     const res = await fetch('/api/wa-inbox/conversations')
     if (!res.ok) return
@@ -104,7 +105,6 @@ export default function InboxPage() {
 
   useEffect(() => { loadConversations() }, [loadConversations])
 
-  // Realtime через Supabase
   useEffect(() => {
     const supabase = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -113,13 +113,11 @@ export default function InboxPage() {
     const channel = supabase
       .channel('wa_conversations')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations' },
-        () => loadConversations()
-      )
+        () => loadConversations())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [loadConversations])
 
-  // Загрузка сообщений выбранного разговора
   const loadMessages = useCallback(async (convId: string) => {
     const res = await fetch(`/api/wa-inbox/${convId}`)
     if (!res.ok) return
@@ -133,11 +131,9 @@ export default function InboxPage() {
     setShowCreateClient(false)
     setShowCreateVisit(false)
     loadMessages(conv.id)
-    // Сброс счётчика непрочитанных локально
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c))
   }, [loadMessages])
 
-  // Realtime для сообщений
   useEffect(() => {
     if (!selected) return
     const supabase = createSupabaseClient(
@@ -157,12 +153,12 @@ export default function InboxPage() {
     return () => { supabase.removeChannel(channel) }
   }, [selected])
 
-  // Отправка сообщения
   const sendMessage = async () => {
     if (!selected || !text.trim() || sending) return
     setSending(true)
     const body = text.trim()
     setText('')
+    if (textareaRef.current) textareaRef.current.style.height = '40px'
     await fetch('/api/wa-inbox/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -172,7 +168,6 @@ export default function InboxPage() {
     loadMessages(selected.id)
   }
 
-  // Смена статуса
   const updateStatus = async (field: 'status' | 'lead_status', value: string) => {
     if (!selected) return
     await fetch(`/api/wa-inbox/${selected.id}`, {
@@ -184,7 +179,6 @@ export default function InboxPage() {
     setConversations(prev => prev.map(c => c.id === selected.id ? { ...c, [field]: value as any } : c))
   }
 
-  // Создать клиента
   const createNewClient = async () => {
     if (!selected || !newClientName.trim()) return
     const res = await fetch(`/api/wa-inbox/${selected.id}/create-client`, {
@@ -201,17 +195,12 @@ export default function InboxPage() {
     }
   }
 
-  // Создать встречу
   const createVisit = async () => {
     if (!selected?.client_id || !visitDate) return
     await fetch(`/api/wa-inbox/${selected.id}/create-visit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client_id: selected.client_id,
-        scheduled_at: visitDate,
-        notes: visitNote,
-      }),
+      body: JSON.stringify({ client_id: selected.client_id, scheduled_at: visitDate, notes: visitNote }),
     })
     setShowCreateVisit(false)
     setVisitDate('')
@@ -219,10 +208,8 @@ export default function InboxPage() {
     updateStatus('lead_status', 'demo_scheduled')
   }
 
-  // Фильтрация
   const filtered = conversations.filter(c => {
-    const matchSearch = !search ||
-      c.phone.includes(search) ||
+    const matchSearch = !search || c.phone.includes(search) ||
       (c.contact_name?.toLowerCase().includes(search.toLowerCase()))
     const matchStatus = filterStatus === 'all' || c.status === filterStatus
     return matchSearch && matchStatus
@@ -231,30 +218,34 @@ export default function InboxPage() {
   const totalUnread = conversations.reduce((s, c) => s + (c.unread_count ?? 0), 0)
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden">
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
 
-      {/* ── Левая панель: список разговоров ── */}
-      <div className="w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col">
+      {/* ── ЛЕВАЯ ПАНЕЛЬ ── */}
+      <div className="w-80 flex-shrink-0 flex flex-col bg-white/80 backdrop-blur-sm border-r border-gray-200/60 shadow-sm">
 
-        {/* Заголовок */}
-        <div className="px-4 py-3 border-b border-gray-100">
+        {/* Шапка */}
+        <div className="px-4 pt-4 pb-3">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <MessageCircle className="w-5 h-5 text-violet-600" />
-              <h1 className="font-semibold text-gray-900">WhatsApp</h1>
-              {totalUnread > 0 && (
-                <span className="bg-violet-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                  {totalUnread}
-                </span>
-              )}
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-sm">
+                <MessageCircle className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h1 className="font-bold text-gray-900 text-sm leading-none">WhatsApp</h1>
+                <p className="text-xs text-gray-400 mt-0.5">Входящие сообщения</p>
+              </div>
             </div>
+            {totalUnread > 0 && (
+              <span className="bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                {totalUnread}
+              </span>
+            )}
           </div>
-          {/* Поиск */}
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" />
-            <Input
-              className="pl-8 h-8 text-sm bg-gray-50 border-gray-200"
-              placeholder="Поиск..."
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              className="w-full pl-8 pr-3 h-8 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent transition-all"
+              placeholder="Поиск по имени или номеру..."
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
@@ -262,92 +253,108 @@ export default function InboxPage() {
         </div>
 
         {/* Фильтры */}
-        <div className="flex gap-1 px-3 py-2 border-b border-gray-100 overflow-x-auto">
+        <div className="flex gap-1 px-3 pb-2 overflow-x-auto scrollbar-hide">
           {(['all', 'new', 'in_progress', 'waiting', 'closed'] as const).map(s => (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(s)}
-              className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${
+            <button key={s} onClick={() => setFilterStatus(s)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 ${
                 filterStatus === s
-                  ? 'bg-violet-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {s === 'all' ? 'Все' : CONV_STATUS_LABELS[s]}
+                  ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-sm scale-105'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}>
+              {s === 'all' ? 'Все' : STATUS_LABELS[s as ConvStatus]}
             </button>
           ))}
         </div>
 
-        {/* Список */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mx-3" />
+
+        {/* Список разговоров */}
+        <div className="flex-1 overflow-y-auto py-1">
           {loading ? (
-            <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Загрузка...</div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-gray-400">
-              <MessageCircle className="w-8 h-8 mb-2 opacity-30" />
-              <p className="text-sm">Нет разговоров</p>
-            </div>
-          ) : filtered.map(conv => (
-            <button
-              key={conv.id}
-              onClick={() => selectConversation(conv)}
-              className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-                selected?.id === conv.id ? 'bg-violet-50 border-l-2 border-l-violet-500' : ''
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <Avatar name={conv.contact_name} phone={conv.phone} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="font-medium text-sm text-gray-900 truncate">
-                      {conv.contact_name ?? conv.phone}
-                    </span>
-                    <span className="text-xs text-gray-400 flex-shrink-0 ml-1">
-                      {formatDistanceToNow(new Date(conv.last_message_at), { locale: he, addSuffix: false })}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 truncate mb-1">{conv.last_message_text ?? '—'}</p>
-                  <div className="flex items-center gap-1">
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${LEAD_STATUS_COLORS[conv.lead_status]}`}>
-                      {LEAD_STATUS_LABELS[conv.lead_status]}
-                    </span>
-                    {conv.unread_count > 0 && (
-                      <span className="ml-auto bg-violet-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                        {conv.unread_count}
-                      </span>
-                    )}
+            <div className="space-y-1 p-2">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl animate-pulse">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-gray-200 rounded w-3/4" />
+                    <div className="h-2.5 bg-gray-100 rounded w-1/2" />
                   </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+              <Inbox className="w-10 h-10 mb-3 opacity-20" />
+              <p className="text-sm font-medium">Нет разговоров</p>
+              <p className="text-xs mt-1 opacity-60">Сообщения появятся здесь</p>
+            </div>
+          ) : (
+            <div className="space-y-0.5 px-2">
+              {filtered.map(conv => (
+                <button key={conv.id} onClick={() => selectConversation(conv)}
+                  className={`w-full text-left p-3 rounded-xl transition-all duration-200 group ${
+                    selected?.id === conv.id
+                      ? 'bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200/60 shadow-sm'
+                      : 'hover:bg-gray-50 border border-transparent'
+                  }`}>
+                  <div className="flex items-start gap-2.5">
+                    <div className="relative">
+                      <Avatar name={conv.contact_name} phone={conv.phone} />
+                      <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${STATUS_COLORS[conv.status]}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-sm text-gray-900 truncate">
+                          {conv.contact_name ?? conv.phone}
+                        </span>
+                        <span className="text-xs text-gray-400 flex-shrink-0 ml-1">
+                          {formatDistanceToNow(new Date(conv.last_message_at), { locale: he, addSuffix: false })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 truncate mt-0.5">{conv.last_message_text ?? '—'}</p>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${LEAD_COLORS[conv.lead_status]}`}>
+                          {LEAD_LABELS[conv.lead_status]}
+                        </span>
+                        {conv.unread_count > 0 && (
+                          <span className="bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
+                            {conv.unread_count}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Правая панель: чат ── */}
+      {/* ── ПРАВАЯ ПАНЕЛЬ ── */}
       {!selected ? (
-        <div className="flex-1 flex items-center justify-center text-gray-400">
+        <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
-            <p className="text-sm">Выберите разговор</p>
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center mx-auto mb-4">
+              <MessageCircle className="w-10 h-10 text-violet-400" />
+            </div>
+            <h3 className="font-semibold text-gray-700 mb-1">Выберите разговор</h3>
+            <p className="text-sm text-gray-400">Нажмите на контакт слева</p>
           </div>
         </div>
       ) : (
         <div className="flex-1 flex flex-col min-w-0">
 
           {/* Шапка чата */}
-          <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between gap-3">
+          <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200/60 px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
             <div className="flex items-center gap-3">
               <Avatar name={selected.contact_name} phone={selected.phone} />
               <div>
-                <div className="font-semibold text-gray-900 text-sm">
-                  {selected.contact_name ?? selected.phone}
-                </div>
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <Phone className="w-3 h-3" />
-                  {selected.phone}
+                <div className="font-bold text-gray-900">{selected.contact_name ?? selected.phone}</div>
+                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Phone className="w-3 h-3" /> {selected.phone}
                   {selected.clients && (
-                    <span className="ml-2 text-emerald-600 font-medium">
+                    <span className="ml-1 text-emerald-600 font-semibold">
                       ✓ {selected.clients.first_name} {selected.clients.last_name}
                     </span>
                   )}
@@ -355,85 +362,63 @@ export default function InboxPage() {
               </div>
             </div>
 
-            {/* Кнопки действий */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
               {!selected.client_id && (
-                <Button size="sm" variant="outline" className="text-xs h-7 gap-1"
+                <Button size="sm" variant="outline"
+                  className="text-xs h-7 gap-1 border-blue-200 text-blue-600 hover:bg-blue-50"
                   onClick={() => { setShowCreateClient(true); setShowCreateVisit(false) }}>
                   <UserPlus className="w-3.5 h-3.5" /> Создать клиента
                 </Button>
               )}
               {selected.client_id && (
-                <Button size="sm" variant="outline" className="text-xs h-7 gap-1"
+                <Button size="sm" variant="outline"
+                  className="text-xs h-7 gap-1 border-purple-200 text-purple-600 hover:bg-purple-50"
                   onClick={() => { setShowCreateVisit(true); setShowCreateClient(false) }}>
                   <Calendar className="w-3.5 h-3.5" /> Встреча
                 </Button>
               )}
-
-              {/* Статус разговора */}
-              <select
-                value={selected.status}
-                onChange={e => updateStatus('status', e.target.value)}
-                className={`text-xs px-2 py-1 rounded-full border-0 font-medium cursor-pointer ${CONV_STATUS_COLORS[selected.status]}`}
-              >
-                {Object.entries(CONV_STATUS_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
+              <select value={selected.status} onChange={e => updateStatus('status', e.target.value)}
+                className="text-xs px-2 py-1 rounded-lg border border-gray-200 bg-white font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-300">
+                {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
-
-              {/* Статус лида */}
-              <select
-                value={selected.lead_status}
-                onChange={e => updateStatus('lead_status', e.target.value)}
-                className={`text-xs px-2 py-1 rounded-full border-0 font-medium cursor-pointer ${LEAD_STATUS_COLORS[selected.lead_status]}`}
-              >
-                {Object.entries(LEAD_STATUS_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
+              <select value={selected.lead_status} onChange={e => updateStatus('lead_status', e.target.value)}
+                className="text-xs px-2 py-1 rounded-lg border border-gray-200 bg-white font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-300">
+                {Object.entries(LEAD_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
           </div>
 
-          {/* Панель создания клиента */}
+          {/* Создать клиента */}
           {showCreateClient && (
-            <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 flex items-center gap-3">
-              <UserPlus className="w-4 h-4 text-blue-600 flex-shrink-0" />
-              <Input
-                className="h-7 text-sm flex-1"
-                placeholder="Имя клиента..."
-                value={newClientName}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200/60 px-4 py-2.5 flex items-center gap-3 animate-in slide-in-from-top duration-200">
+              <UserPlus className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <input className="flex-1 h-7 text-sm bg-white border border-blue-200 rounded-lg px-3 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="Имя клиента..." value={newClientName}
                 onChange={e => setNewClientName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && createNewClient()}
-                autoFocus
-              />
-              <Button size="sm" className="h-7 text-xs bg-blue-600 hover:bg-blue-700" onClick={createNewClient}>
+                onKeyDown={e => e.key === 'Enter' && createNewClient()} autoFocus />
+              <button onClick={createNewClient}
+                className="px-3 h-7 text-xs font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
                 Создать
-              </Button>
+              </button>
               <button onClick={() => setShowCreateClient(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-4 h-4" />
               </button>
             </div>
           )}
 
-          {/* Панель создания встречи */}
+          {/* Создать встречу */}
           {showCreateVisit && (
-            <div className="bg-purple-50 border-b border-purple-200 px-4 py-3 flex items-center gap-3">
-              <Calendar className="w-4 h-4 text-purple-600 flex-shrink-0" />
-              <input
-                type="datetime-local"
-                className="h-7 text-sm border border-purple-200 rounded px-2 bg-white"
-                value={visitDate}
-                onChange={e => setVisitDate(e.target.value)}
-              />
-              <Input
-                className="h-7 text-sm flex-1"
-                placeholder="Услуга / заметка..."
-                value={visitNote}
-                onChange={e => setVisitNote(e.target.value)}
-              />
-              <Button size="sm" className="h-7 text-xs bg-purple-600 hover:bg-purple-700" onClick={createVisit}>
+            <div className="bg-gradient-to-r from-purple-50 to-violet-50 border-b border-purple-200/60 px-4 py-2.5 flex items-center gap-3 animate-in slide-in-from-top duration-200">
+              <Calendar className="w-4 h-4 text-purple-500 flex-shrink-0" />
+              <input type="datetime-local"
+                className="h-7 text-sm border border-purple-200 rounded-lg px-2 bg-white focus:outline-none focus:ring-2 focus:ring-purple-300"
+                value={visitDate} onChange={e => setVisitDate(e.target.value)} />
+              <input className="flex-1 h-7 text-sm bg-white border border-purple-200 rounded-lg px-3 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                placeholder="Услуга / заметка..." value={visitNote} onChange={e => setVisitNote(e.target.value)} />
+              <button onClick={createVisit}
+                className="px-3 h-7 text-xs font-semibold bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors">
                 Создать
-              </Button>
+              </button>
               <button onClick={() => setShowCreateVisit(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-4 h-4" />
               </button>
@@ -441,54 +426,77 @@ export default function InboxPage() {
           )}
 
           {/* Сообщения */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
-            {messages.map(msg => (
-              <div key={msg.id} className={`flex ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-xs lg:max-w-md px-3 py-2 rounded-2xl text-sm ${
-                  msg.direction === 'outbound'
-                    ? 'bg-violet-600 text-white rounded-br-sm'
-                    : 'bg-white text-gray-900 shadow-sm rounded-bl-sm border border-gray-100'
-                }`}>
-                  <p className="leading-relaxed">{msg.body}</p>
-                  <div className={`flex items-center gap-1 mt-1 ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
-                    <span className={`text-xs ${msg.direction === 'outbound' ? 'text-violet-200' : 'text-gray-400'}`}>
-                      {format(new Date(msg.created_at), 'HH:mm')}
-                    </span>
-                    {msg.direction === 'outbound' && (
-                      <CheckCheck className={`w-3 h-3 ${msg.status === 'read' ? 'text-blue-300' : 'text-violet-300'}`} />
-                    )}
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
+            style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(148,163,184,0.07) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400 py-10">
+                <Sparkles className="w-8 h-8 mb-2 opacity-30" />
+                <p className="text-sm">Начало разговора</p>
+              </div>
+            )}
+            {messages.map((msg, i) => {
+              const isOut = msg.direction === 'outbound'
+              const showTime = i === 0 || new Date(msg.created_at).getMinutes() !== new Date(messages[i-1]?.created_at).getMinutes()
+              return (
+                <div key={msg.id}>
+                  {showTime && (
+                    <div className="flex justify-center my-2">
+                      <span className="text-xs text-gray-400 bg-white/60 px-2 py-0.5 rounded-full">
+                        {format(new Date(msg.created_at), 'HH:mm')}
+                      </span>
+                    </div>
+                  )}
+                  <div className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-xs lg:max-w-md px-3.5 py-2 rounded-2xl text-sm shadow-sm transition-all ${
+                      isOut
+                        ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white rounded-br-sm'
+                        : 'bg-white text-gray-900 rounded-bl-sm border border-gray-100'
+                    }`}>
+                      <p className="leading-relaxed whitespace-pre-wrap">{msg.body}</p>
+                      {isOut && (
+                        <div className="flex items-center justify-end gap-1 mt-1">
+                          <CheckCheck className={`w-3 h-3 ${msg.status === 'read' ? 'text-blue-300' : 'text-violet-300'}`} />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
+            {isTyping && <TypingIndicator />}
             <div ref={messagesEndRef} />
           </div>
 
           {/* Поле ввода */}
-          <div className="bg-white border-t border-gray-200 px-4 py-3">
-            <div className="flex items-end gap-2">
-              <textarea
-                className="flex-1 resize-none border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 max-h-32 min-h-[40px]"
+          <div className="bg-white/90 backdrop-blur-sm border-t border-gray-200/60 px-4 py-3">
+            <div className="flex items-end gap-2 bg-gray-50 rounded-2xl border border-gray-200 px-3 py-2 focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100 transition-all">
+              <textarea ref={textareaRef}
+                className="flex-1 resize-none bg-transparent text-sm focus:outline-none max-h-32 min-h-[24px] placeholder-gray-400"
                 placeholder="Написать сообщение..."
                 value={text}
-                onChange={e => setText(e.target.value)}
                 rows={1}
+                onChange={e => {
+                  setText(e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px'
+                }}
                 onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    sendMessage()
-                  }
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
                 }}
               />
-              <Button
-                onClick={sendMessage}
-                disabled={!text.trim() || sending}
-                className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl h-10 w-10 p-0 flex-shrink-0"
-              >
-                {sending ? <Clock className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </Button>
+              <button onClick={sendMessage} disabled={!text.trim() || sending}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                  text.trim() && !sending
+                    ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm hover:shadow-md hover:scale-105 active:scale-95'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}>
+                {sending
+                  ? <Clock className="w-3.5 h-3.5 animate-spin" />
+                  : <Send className="w-3.5 h-3.5" />
+                }
+              </button>
             </div>
-            <p className="text-xs text-gray-400 mt-1.5">Enter — отправить, Shift+Enter — новая строка</p>
+            <p className="text-xs text-gray-400 mt-1.5 px-1">Enter — отправить · Shift+Enter — новая строка</p>
           </div>
 
         </div>

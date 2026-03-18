@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { getActiveOrgId } from './get-active-org'
 
 /**
  * Утилита для проверки авторизации и features в API routes
@@ -9,7 +10,8 @@ import { NextResponse } from 'next/server'
 export interface AuthCheckResult {
   user: any
   email: string
-  org_id: string
+  org_id: string      // activeOrgId — активный филиал (используется для всех запросов данных)
+  mainOrgId: string   // основная org из org_users (для branch-validation)
   organization: any
   isAdmin: boolean
 }
@@ -36,7 +38,14 @@ export async function getSupabaseServerClient() {
 }
 
 /**
- * Проверяет авторизацию и получает данные пользователя + организации
+ * Проверяет авторизацию и получает данные пользователя + организации.
+ *
+ * Branch-aware: org_id в результате — это активный филиал пользователя
+ * (из user_active_branch), а не всегда главная org. Это гарантирует что
+ * платежи, SMS и другие данные записываются в нужный филиал.
+ *
+ * mainOrgId — всегда основная org из org_users (нужен для проверки
+ * принадлежности филиала и cross-org проверок).
  */
 export async function checkAuth(): Promise<
   | { success: true; data: AuthCheckResult }
@@ -56,7 +65,7 @@ export async function checkAuth(): Promise<
   const user = userData.user
   const email = user.email || ''
 
-  // 2. Проверка админа (FIXED: use user_id instead of email)
+  // 2. Проверка админа
   const { data: adminUser } = await supabase
     .from('admin_users')
     .select('email')
@@ -65,7 +74,7 @@ export async function checkAuth(): Promise<
 
   const isAdmin = !!adminUser
 
-  // 3. Получение org_id (FIXED: use user_id instead of email)
+  // 3. Получение mainOrgId из org_users (источник истины для главной org)
   const { data: orgUser, error: orgError } = await supabase
     .from('org_users')
     .select('org_id')
@@ -79,9 +88,14 @@ export async function checkAuth(): Promise<
     }
   }
 
-  const org_id = orgUser?.org_id || ''
+  const mainOrgId = orgUser?.org_id || ''
 
-  // 4. Получение данных организации (если не админ)
+  // 4. Branch-aware: получаем активный филиал из user_active_branch.
+  //    getActiveOrgId() сам валидирует что значение принадлежит mainOrgId
+  //    или его легитимным филиалам (защита от подделки записи).
+  const org_id = isAdmin ? mainOrgId : await getActiveOrgId(user.id, mainOrgId)
+
+  // 5. Получение данных организации (если не админ)
   let organization = null
   if (!isAdmin && org_id) {
     const { data: orgData, error: orgDataError } = await supabase
@@ -102,7 +116,7 @@ export async function checkAuth(): Promise<
 
     organization = orgData
 
-    // 5. Проверка активности организации
+    // 6. Проверка активности организации
     if (!orgData.is_active) {
       return {
         success: false,
@@ -120,6 +134,7 @@ export async function checkAuth(): Promise<
       user: userData.user,
       email,
       org_id,
+      mainOrgId,
       organization,
       isAdmin,
     },

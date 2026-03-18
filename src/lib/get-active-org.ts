@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { cache } from 'react'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,12 +16,16 @@ const supabaseAdmin = createClient(
  * race condition, etc.) — злоумышленник не может таким образом
  * переключиться на чужую организацию.
  *
+ * Performance: обёрнут в React cache() — если getActiveOrgId() вызывается
+ * несколько раз в одном серверном запросе (checkAuth + getAuthContext),
+ * БД-запрос выполняется только один раз.
+ *
  * Fallback: возвращает mainOrgId если запись не найдена или не прошла валидацию.
  */
-export async function getActiveOrgId(
+export const getActiveOrgId = cache(async (
   userId: string,
   mainOrgId: string
-): Promise<string> {
+): Promise<string> => {
   const { data } = await supabaseAdmin
     .from('user_active_branch')
     .select('active_org_id')
@@ -53,4 +58,4 @@ export async function getActiveOrgId(
     `which is NOT a valid branch of mainOrgId=${mainOrgId}. Falling back to mainOrgId.`
   )
   return mainOrgId
-}
+})

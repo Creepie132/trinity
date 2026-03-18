@@ -41,11 +41,10 @@ export async function getSupabaseServerClient() {
  * Проверяет авторизацию и получает данные пользователя + организации.
  *
  * Branch-aware: org_id в результате — это активный филиал пользователя
- * (из user_active_branch), а не всегда главная org. Это гарантирует что
- * платежи, SMS и другие данные записываются в нужный филиал.
+ * (из user_active_branch), а не всегда главная org.
  *
- * mainOrgId — всегда основная org из org_users (нужен для проверки
- * принадлежности филиала и cross-org проверок).
+ * Performance: admin_users и org_users запрашиваются параллельно через
+ * Promise.all — экономит один round-trip на каждый API-вызов.
  */
 export async function checkAuth(): Promise<
   | { success: true; data: AuthCheckResult }
@@ -53,7 +52,7 @@ export async function checkAuth(): Promise<
 > {
   const supabase = await getSupabaseServerClient()
 
-  // 1. Проверка пользователя
+  // 1. Верификация токена — должна быть первой
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError || !userData.user) {
     return {
@@ -65,37 +64,36 @@ export async function checkAuth(): Promise<
   const user = userData.user
   const email = user.email || ''
 
-  // 2. Проверка админа
-  const { data: adminUser } = await supabase
-    .from('admin_users')
-    .select('email')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  // 2. admin_users + org_users параллельно — экономим один round-trip
+  const [adminResult, orgResult] = await Promise.all([
+    supabase
+      .from('admin_users')
+      .select('email')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('org_users')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+  ])
 
-  const isAdmin = !!adminUser
+  const isAdmin = !!adminResult.data
+  const mainOrgId = orgResult.data?.org_id || ''
 
-  // 3. Получение mainOrgId из org_users (источник истины для главной org)
-  const { data: orgUser, error: orgError } = await supabase
-    .from('org_users')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (!isAdmin && (orgError || !orgUser?.org_id)) {
+  if (!isAdmin && !mainOrgId) {
     return {
       success: false,
       response: NextResponse.json({ error: 'No organization access' }, { status: 403 }),
     }
   }
 
-  const mainOrgId = orgUser?.org_id || ''
-
-  // 4. Branch-aware: получаем активный филиал из user_active_branch.
-  //    getActiveOrgId() сам валидирует что значение принадлежит mainOrgId
-  //    или его легитимным филиалам (защита от подделки записи).
+  // 3. Branch-aware: получаем активный филиал.
+  //    getActiveOrgId() кэшируется React cache() — повторный вызов в рамках
+  //    одного запроса не идёт в БД.
   const org_id = isAdmin ? mainOrgId : await getActiveOrgId(user.id, mainOrgId)
 
-  // 5. Получение данных организации (если не админ)
+  // 4. Получение данных организации (если не админ)
   let organization = null
   if (!isAdmin && org_id) {
     const { data: orgData, error: orgDataError } = await supabase
@@ -116,7 +114,7 @@ export async function checkAuth(): Promise<
 
     organization = orgData
 
-    // 6. Проверка активности организации
+    // 5. Проверка активности организации
     if (!orgData.is_active) {
       return {
         success: false,
@@ -154,16 +152,11 @@ export function checkFeature(
   }
 
   const features = organization.features || {}
-  console.log('🔍 [checkFeature] User modules:', JSON.stringify(features))
-  console.log('🔍 [checkFeature] Checking feature:', featureName)
-  
-  // Check new modular system first
+
+  // Новая модульная система
   const modules = features.modules
   if (modules) {
-    console.log('🔍 [checkFeature] Using new modular system, modules:', JSON.stringify(modules))
     const hasAccess = modules[featureName] === true
-    console.log(`🔍 [checkFeature] Has ${featureName}:`, hasAccess)
-    
     if (!hasAccess) {
       return {
         hasAccess: false,
@@ -175,12 +168,9 @@ export function checkFeature(
     }
     return { hasAccess: true }
   }
-  
-  // Fallback to old feature system
-  console.log('🔍 [checkFeature] Using old feature system')
-  const hasAccess = features[featureName] === true
-  console.log(`🔍 [checkFeature] Has ${featureName}:`, hasAccess)
 
+  // Fallback: старая система фич
+  const hasAccess = features[featureName] === true
   if (!hasAccess) {
     return {
       hasAccess: false,

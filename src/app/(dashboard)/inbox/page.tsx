@@ -50,6 +50,54 @@ const STATUS_COLORS: Record<ConvStatus, string> = {
   waiting: 'bg-purple-500', closed: 'bg-gray-400'
 }
 
+// ── Notification Toast ────────────────────────────────────────────────
+interface IncomingToast {
+  id: number
+  name: string | null
+  phone: string
+  text: string | null
+}
+
+let _toastId = 0
+
+function IncomingMessageToast({ toasts, onDismiss }: {
+  toasts: IncomingToast[]
+  onDismiss: (id: number) => void
+}) {
+  if (toasts.length === 0) return null
+  return (
+    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
+      {toasts.map(t => (
+        <div
+          key={t.id}
+          className="pointer-events-auto flex items-start gap-3 bg-white rounded-2xl shadow-2xl border border-gray-100 px-4 py-3 w-72 animate-in slide-in-from-right duration-300"
+          style={{ boxShadow: '0 8px 32px rgba(109,40,217,0.18), 0 2px 8px rgba(0,0,0,0.08)' }}
+        >
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <MessageCircle className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-gray-900 truncate">{t.name ?? t.phone}</p>
+              <button
+                onClick={() => onDismiss(t.id)}
+                className="text-gray-300 hover:text-gray-500 ml-2 flex-shrink-0 transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5 truncate">{t.text ?? 'Новое сообщение'}</p>
+            <div className="flex items-center gap-1 mt-1.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-[10px] text-green-600 font-medium">WhatsApp</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // Звук уведомления — короткий синтетический "дзынь"
 function playNotificationSound() {
   try {
@@ -64,6 +112,26 @@ function playNotificationSound() {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
     osc.start(ctx.currentTime)
     osc.stop(ctx.currentTime + 0.4)
+  } catch {}
+}
+
+// Web Notification API — показывает системное уведомление на фоновой вкладке
+async function requestNotificationPermission() {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission()
+  }
+}
+
+function showBrowserNotification(name: string | null, phone: string, text: string | null) {
+  if (typeof Notification === 'undefined') return
+  if (Notification.permission !== 'granted') return
+  try {
+    new Notification(name ?? phone, {
+      body: text ?? 'Новое сообщение из WhatsApp',
+      icon: '/favicon.ico',
+      tag: 'wa-inbox-new',
+    })
   } catch {}
 }
 
@@ -115,10 +183,33 @@ export default function InboxPage() {
   const [newChatPhone, setNewChatPhone] = useState('')
   const [newChatName, setNewChatName] = useState('')
   const [creatingChat, setCreatingChat] = useState(false)
+  const [incomingToasts, setIncomingToasts] = useState<IncomingToast[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const lastMessageCountRef = useRef(0)
+
+  // Запрашиваем разрешение на браузерные уведомления при монтировании
+  useEffect(() => { requestNotificationPermission() }, [])
+
+  const fireIncomingNotification = useCallback((conv: Conversation | null, msg: Message) => {
+    const name = conv?.contact_name ?? null
+    const phone = conv?.phone ?? ''
+    const text = msg.body
+
+    // Звук — работает на активной вкладке
+    playNotificationSound()
+
+    // Системное уведомление — работает на фоновой вкладке
+    if (document.hidden) {
+      showBrowserNotification(name, phone, text)
+    }
+
+    // Toast в UI — всегда
+    const id = ++_toastId
+    setIncomingToasts(prev => [...prev, { id, name, phone, text }])
+    setTimeout(() => setIncomingToasts(prev => prev.filter(t => t.id !== id)), 3000)
+  }, [])
 
   // Проверяем — пользователь уже внизу?
   const isNearBottom = useCallback(() => {
@@ -176,13 +267,16 @@ export default function InboxPage() {
       // Звук только на новое входящее (не при первой загрузке)
       if (!opts.initial && newMsgs.length > lastMessageCountRef.current) {
         const lastNew = newMsgs[newMsgs.length - 1]
-        if (lastNew?.direction === 'inbound') playNotificationSound()
+        if (lastNew?.direction === 'inbound') {
+          const conv = selected
+          setTimeout(() => fireIncomingNotification(conv, lastNew), 0)
+        }
       }
       lastMessageCountRef.current = newMsgs.length
       return [...newMsgs, ...pending]
     })
     if (opts.scroll) scrollToBottom(true)
-  }, [scrollToBottom])
+  }, [scrollToBottom, fireIncomingNotification, selected])
 
   const selectConversation = useCallback((conv: Conversation) => {
     setSelected(conv)
@@ -227,7 +321,9 @@ export default function InboxPage() {
         const newMsg = payload.new as Message
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev
-          if (newMsg.direction === 'inbound') playNotificationSound()
+          if (newMsg.direction === 'inbound') {
+            setTimeout(() => fireIncomingNotification(selected, newMsg), 0)
+          }
           lastMessageCountRef.current = prev.filter(m => !m._pending).length + 1
           return [...prev.filter(m => !m._pending), newMsg, ...prev.filter(m => m._pending)]
         })
@@ -351,6 +447,12 @@ export default function InboxPage() {
 
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
+
+      {/* Toast — уведомление о новом сообщении */}
+      <IncomingMessageToast
+        toasts={incomingToasts}
+        onDismiss={id => setIncomingToasts(prev => prev.filter(t => t.id !== id))}
+      />
 
       {/* Модалка нового чата */}
       {showNewChat && (

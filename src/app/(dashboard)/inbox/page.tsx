@@ -129,12 +129,25 @@ export default function InboxPage() {
     return () => { supabase.removeChannel(channel) }
   }, [loadConversations])
 
-  const loadMessages = useCallback(async (convId: string) => {
+  const loadMessages = useCallback(async (convId: string, scrollToBottom = true) => {
     const res = await fetch(`/api/wa-inbox/${convId}`)
     if (!res.ok) return
     const data = await res.json()
-    setMessages(data.messages ?? [])
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+    const newMsgs: Message[] = data.messages ?? []
+    setMessages(prev => {
+      // Если новых сообщений нет — не обновляем (нет мигания)
+      const realPrev = prev.filter(m => !m._pending)
+      if (realPrev.length === newMsgs.length &&
+          realPrev[realPrev.length-1]?.id === newMsgs[newMsgs.length-1]?.id) {
+        return prev // ничего не изменилось
+      }
+      // Есть новые — добавляем, сохраняем pending
+      const pending = prev.filter(m => m._pending)
+      return [...newMsgs, ...pending]
+    })
+    if (scrollToBottom) {
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+    }
   }, [])
 
   const selectConversation = useCallback((conv: Conversation) => {
@@ -149,7 +162,7 @@ export default function InboxPage() {
   useEffect(() => {
     if (!selected) return
     const interval = setInterval(() => {
-      loadMessages(selected.id)
+      loadMessages(selected.id, false) // без скролла при polling
     }, 3000)
     return () => clearInterval(interval)
   }, [selected, loadMessages])
@@ -166,8 +179,28 @@ export default function InboxPage() {
         event: 'INSERT', schema: 'public', table: 'wa_messages',
         filter: `conversation_id=eq.${selected.id}`
       }, (payload) => {
-        setMessages(prev => [...prev, payload.new as Message])
+        setMessages(prev => {
+          // Не добавляем если уже есть (дубликат из polling)
+          if (prev.some(m => m.id === (payload.new as Message).id)) return prev
+          return [...prev.filter(m => !m._pending), payload.new as Message, ...prev.filter(m => m._pending)]
+        })
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'wa_messages',
+        filter: `conversation_id=eq.${selected.id}`
+      }, (payload) => {
+        // Обновляем статус (delivered/read)
+        setMessages(prev => prev.map(m =>
+          m.id === (payload.new as Message).id ? { ...m, status: (payload.new as Message).status } : m
+        ))
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'wa_conversations',
+        filter: `id=eq.${selected.id}`
+      }, (payload) => {
+        // Typing indicator
+        setIsTyping((payload.new as any).is_typing ?? false)
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
@@ -201,10 +234,12 @@ export default function InboxPage() {
     })
 
     if (res.ok) {
-      // Перезагружаем реальные сообщения из базы
-      await loadMessages(selected.id)
+      // Убираем pending флаг — сообщение отправлено
+      // Realtime или polling подхватит реальный статус
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, _pending: false, status: 'sent' } : m
+      ))
     } else {
-      // Ошибка — помечаем красным
       setMessages(prev => prev.map(m =>
         m.id === tempId ? { ...m, _pending: false, status: 'failed' } : m
       ))

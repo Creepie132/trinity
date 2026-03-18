@@ -26,9 +26,36 @@ export async function POST(req: NextRequest) {
   console.log('[whapi webhook] messages count:', payload?.messages?.length ?? 0)
 
   const messages: any[] = payload?.messages ?? []
-  if (messages.length === 0) return NextResponse.json({ ok: true })
+  const statuses: any[] = payload?.statuses ?? []
 
   const supabase = createSupabaseServiceClient()
+
+  // Обрабатываем статусы доставки/прочтения
+  for (const status of statuses) {
+    const whapiMsgId = status.id
+    const newStatus = status.status // delivered, read, failed
+    if (!whapiMsgId || !newStatus) continue
+    await supabase
+      .from('wa_messages')
+      .update({ status: newStatus })
+      .eq('whapi_message_id', whapiMsgId)
+      .eq('org_id', orgId)
+  }
+
+  // Typing indicator — обновляем поле в разговоре
+  const typingEvents: any[] = payload?.presences ?? []
+  for (const event of typingEvents) {
+    const phone = normalizePhone(event.chat_id ?? '')
+    if (!phone) continue
+    const isTyping = event.type === 'composing'
+    await supabase
+      .from('wa_conversations')
+      .update({ is_typing: isTyping })
+      .eq('org_id', orgId)
+      .eq('phone', phone)
+  }
+
+  if (messages.length === 0 && statuses.length === 0) return NextResponse.json({ ok: true })
 
   for (const msg of messages) {
     if (msg.from_me === true || msg.type === 'status') continue

@@ -49,7 +49,14 @@ export async function GET(
     // Tranzila подключена если есть хотя бы один из терминалов
     const hasTranzila = !!(orgRow?.tranzila_terminal || orgRow?.tranzila_token_terminal)
     // Morning — таблицы integrations нет, пока всегда false
-    const hasMorning  = false
+    // Morning — query org_integrations (same table used by auto-send-receipt)
+    const { data: morningRow } = await supabaseAdmin
+      .from('org_integrations')
+      .select('is_active')
+      .eq('org_id', orgId)
+      .eq('provider', 'green_invoice')
+      .maybeSingle()
+    const hasMorning = !!morningRow?.is_active
 
     // Return defaults if not configured yet
     if (!data) {
@@ -111,8 +118,13 @@ export async function PUT(
     }
 
     if (provider === 'morning') {
-      // Morning integration not yet available
-      if (true) {
+      const { data: morningIntegration } = await supabaseAdmin
+        .from('org_integrations')
+        .select('is_active')
+        .eq('org_id', orgId)
+        .eq('provider', 'green_invoice')
+        .maybeSingle()
+      if (!morningIntegration?.is_active) {
         return NextResponse.json(
           { error: 'Morning не подключён для этой организации. Сначала настройте интеграцию Morning.' },
           { status: 400 }

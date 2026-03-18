@@ -39,7 +39,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <DemoBannerGlobal/>
           <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
           <div className="flex-1 lg:flex lg:h-screen overflow-hidden">
-            <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
+            <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto z-[0]">
               <Sidebar onSearchOpen={() => setSearchOpen(true)} />
             </aside>
             <main className="flex-1 overflow-y-auto lg:h-screen bg-[#f8fafc] dark:bg-gray-950">

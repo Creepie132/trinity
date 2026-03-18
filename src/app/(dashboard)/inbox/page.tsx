@@ -110,6 +110,12 @@ export default function InboxPage() {
 
   useEffect(() => { loadConversations() }, [loadConversations])
 
+  // Polling списка разговоров каждые 5 сек
+  useEffect(() => {
+    const interval = setInterval(() => loadConversations(), 5000)
+    return () => clearInterval(interval)
+  }, [loadConversations])
+
   useEffect(() => {
     const supabase = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -138,6 +144,15 @@ export default function InboxPage() {
     loadMessages(conv.id)
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c))
   }, [loadMessages])
+
+  // Polling — обновляем сообщения каждые 3 сек пока разговор открыт
+  useEffect(() => {
+    if (!selected) return
+    const interval = setInterval(() => {
+      loadMessages(selected.id)
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [selected, loadMessages])
 
   useEffect(() => {
     if (!selected) return

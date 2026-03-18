@@ -60,6 +60,16 @@ export function Modal({
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
 
+  // Detect mobile to use bottom-sheet positioning instead of centered modal.
+  // Cannot rely on Tailwind responsive classes since inline styles override them.
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   const { pin, unpin, isPinned, bringToFront, pinned, maxPinned } = usePinnedModals()
   const pinned_ = isPinned(modalId)
   const { containerRef, handleRef, resetPosition, getCurrentPosition } = useDraggableDialog()
@@ -140,21 +150,49 @@ export function Modal({
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalId)}
         className={cn(
-          'fixed w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl pointer-events-auto',
-          'animate-in fade-in-0 zoom-in-95 duration-200',
-          'max-h-[calc(100dvh-32px)] flex flex-col',
-          !width && sizeClasses[size],
+          'fixed w-full bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
+          isMobile
+            ? [
+                // Bottom-sheet: slides up from the bottom edge, full width
+                'animate-in slide-in-from-bottom duration-300 ease-out',
+                'rounded-t-2xl rounded-b-none',
+              ]
+            : [
+                // Desktop: centered modal.
+                // IMPORTANT: use fade-in only — zoom-in-95 conflicts with the
+                // inline transform:translate(-50%,-50%) (CSS animation @keyframes
+                // override inline styles), causing the modal to appear off-center
+                // for the first 200 ms on slower devices.
+                'animate-in fade-in-0 duration-200',
+                'rounded-2xl',
+                'max-h-[calc(100dvh-32px)]',
+                !width && sizeClasses[size],
+              ],
           pinned_ && 'ring-2 ring-orange-400/60',
           className
         )}
-        style={{
-          zIndex,
-          left: '50%',
-          top: '50%',
-          transform: 'translate(-50%, -50%)',
-          maxWidth: width ? `min(${width}, calc(100vw - 32px))` : undefined,
-          maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px)',
-        }}
+        style={
+          isMobile
+            ? {
+                // Bottom-sheet positioning — no transform trick needed
+                zIndex,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                top: 'auto',
+                transform: 'none',
+                maxHeight: '92dvh',
+              }
+            : {
+                // Centered desktop positioning
+                zIndex,
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                maxWidth: width ? `min(${width}, calc(100vw - 32px))` : undefined,
+                maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px)',
+              }
+        }
         role="dialog"
         aria-modal={!pinned_}
         aria-labelledby={title ? 'modal-title' : undefined}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/api-auth'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { createReceipt, getReceiptPdf, CardDetails } from '@/lib/tranzila-invoices'
 
 export const dynamic = 'force-dynamic'
@@ -35,6 +36,35 @@ export async function POST(
 
     if (!orgUser || orgUser.org_id !== payment.org_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    // ── Credential guard: org must have Tranzila configured to use platform invoice API ──
+    const serviceClient = createSupabaseServiceClient()
+
+    const { data: receiptSettings } = await serviceClient
+      .from('org_receipt_settings')
+      .select('provider, is_enabled')
+      .eq('org_id', payment.org_id)
+      .maybeSingle()
+
+    if (!receiptSettings?.is_enabled || receiptSettings.provider !== 'tranzila') {
+      return NextResponse.json(
+        { error: 'Tranzila квитанции не настроены для этой организации.' },
+        { status: 400 }
+      )
+    }
+
+    const { data: orgRow } = await serviceClient
+      .from('organizations')
+      .select('tranzila_token')
+      .eq('id', payment.org_id)
+      .maybeSingle()
+
+    if (!orgRow?.tranzila_token) {
+      return NextResponse.json(
+        { error: 'Tranzila не подключён для этой организации. Настройте токен Tranzila.' },
+        { status: 400 }
+      )
     }
 
     // Idempotency

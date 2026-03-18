@@ -75,6 +75,9 @@ export function ReceiptSettingsModal({ open, onClose, orgId, orgName, lang = 'he
   const [step, setStep]         = useState(1)
   const [loading, setLoading]   = useState(false)
   const [saving, setSaving]     = useState(false)
+  // Which providers are actually connected for this org (from API)
+  const [hasTranzila, setHasTranzila] = useState(false)
+  const [hasMorning, setHasMorning]   = useState(false)
   const [settings, setSettings] = useState<Settings>({
     is_enabled:       false,
     provider:         'none',
@@ -88,7 +91,9 @@ export function ReceiptSettingsModal({ open, onClose, orgId, orgName, lang = 'he
     setLoading(true)
     fetch(`/api/admin/organizations/${orgId}/receipt-settings`)
       .then(r => r.json())
-      .then(({ settings: data }) => {
+      .then(({ settings: data, hasTranzila: ht, hasMorning: hm }) => {
+        setHasTranzila(!!ht)
+        setHasMorning(!!hm)
         if (data) {
           setSettings({
             is_enabled:       Boolean(data.is_enabled),
@@ -192,8 +197,8 @@ export function ReceiptSettingsModal({ open, onClose, orgId, orgName, lang = 'he
             <label className="text-sm font-medium text-gray-700">{s.providerLabel}</label>
             {([ 
               { value: 'none',     label: s.providerNone,     disabled: false },
-              { value: 'tranzila', label: s.providerTranzila, disabled: false },
-              { value: 'morning',  label: s.providerMorning,  disabled: false },
+              { value: 'tranzila', label: s.providerTranzila, disabled: !hasTranzila },
+              { value: 'morning',  label: s.providerMorning,  disabled: !hasMorning },
             ] as const).map(opt => (
               <button
                 key={opt.value}
@@ -211,6 +216,11 @@ export function ReceiptSettingsModal({ open, onClose, orgId, orgName, lang = 'he
                   settings.provider === opt.value ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'
                 }`} />
                 {opt.label}
+                {opt.disabled && (
+                  <span className="ml-auto text-xs text-gray-400 shrink-0">
+                    {lang === 'he' ? '(לא מחובר)' : '(Не подключён)'}
+                  </span>
+                )}
               </button>
             ))}
           </div>

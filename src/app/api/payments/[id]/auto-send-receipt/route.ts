@@ -67,6 +67,17 @@ export async function POST(
 
     // ── Tranzila ─────────────────────────────────────────────────────────────
     if (settings.provider === 'tranzila') {
+      // Credential guard: org must have tranzila_token to use platform invoice API
+      const { data: orgRow } = await supabaseAdmin
+        .from('organizations')
+        .select('tranzila_token')
+        .eq('id', payment.org_id)
+        .maybeSingle()
+
+      if (!orgRow?.tranzila_token) {
+        return NextResponse.json({ ok: true, skipped: true, reason: 'Tranzila token not configured for this org' })
+      }
+
       if (payment.tranzila_document_id) {
         documentId  = payment.tranzila_document_id
         documentNum = payment.tranzila_document_num ?? documentId

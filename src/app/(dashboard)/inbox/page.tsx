@@ -1,13 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   MessageCircle, Search, Send, UserPlus, Calendar,
-  CheckCheck, Clock, X, Phone, Sparkles, ChevronDown,
-  Circle, Inbox
+  CheckCheck, Clock, X, Phone, Sparkles, Inbox
 } from 'lucide-react'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -36,10 +33,8 @@ const LEAD_LABELS: Record<LeadStatus, string> = {
   converted: 'Клиент', lost: 'Потерян'
 }
 const LEAD_COLORS: Record<LeadStatus, string> = {
-  new: 'bg-blue-100 text-blue-700',
-  contacted: 'bg-amber-100 text-amber-700',
-  demo_scheduled: 'bg-violet-100 text-violet-700',
-  converted: 'bg-emerald-100 text-emerald-700',
+  new: 'bg-blue-100 text-blue-700', contacted: 'bg-amber-100 text-amber-700',
+  demo_scheduled: 'bg-violet-100 text-violet-700', converted: 'bg-emerald-100 text-emerald-700',
   lost: 'bg-red-100 text-red-500',
 }
 const STATUS_LABELS: Record<ConvStatus, string> = {
@@ -48,91 +43,6 @@ const STATUS_LABELS: Record<ConvStatus, string> = {
 const STATUS_COLORS: Record<ConvStatus, string> = {
   new: 'bg-blue-500', in_progress: 'bg-amber-500',
   waiting: 'bg-purple-500', closed: 'bg-gray-400'
-}
-
-// ── Notification Toast ────────────────────────────────────────────────
-interface IncomingToast {
-  id: number
-  name: string | null
-  phone: string
-  text: string | null
-}
-
-let _toastId = 0
-
-function IncomingMessageToast({ toasts, onDismiss }: {
-  toasts: IncomingToast[]
-  onDismiss: (id: number) => void
-}) {
-  if (toasts.length === 0) return null
-  return (
-    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
-      {toasts.map(t => (
-        <div
-          key={t.id}
-          className="pointer-events-auto flex items-start gap-3 bg-white rounded-2xl shadow-2xl border border-gray-100 px-4 py-3 w-72 animate-in slide-in-from-right duration-300"
-          style={{ boxShadow: '0 8px 32px rgba(109,40,217,0.18), 0 2px 8px rgba(0,0,0,0.08)' }}
-        >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-            <MessageCircle className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-gray-900 truncate">{t.name ?? t.phone}</p>
-              <button
-                onClick={() => onDismiss(t.id)}
-                className="text-gray-300 hover:text-gray-500 ml-2 flex-shrink-0 transition-colors"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5 truncate">{t.text ?? 'Новое сообщение'}</p>
-            <div className="flex items-center gap-1 mt-1.5">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-[10px] text-green-600 font-medium">WhatsApp</span>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// Звук уведомления — короткий синтетический "дзынь"
-function playNotificationSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.frequency.setValueAtTime(880, ctx.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15)
-    gain.gain.setValueAtTime(0.3, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-    osc.start(ctx.currentTime)
-    osc.stop(ctx.currentTime + 0.4)
-  } catch {}
-}
-
-// Web Notification API — показывает системное уведомление на фоновой вкладке
-async function requestNotificationPermission() {
-  if (typeof Notification === 'undefined') return
-  if (Notification.permission === 'default') {
-    await Notification.requestPermission()
-  }
-}
-
-function showBrowserNotification(name: string | null, phone: string, text: string | null) {
-  if (typeof Notification === 'undefined') return
-  if (Notification.permission !== 'granted') return
-  try {
-    new Notification(name ?? phone, {
-      body: text ?? 'Новое сообщение из WhatsApp',
-      icon: '/favicon.ico',
-      tag: 'wa-inbox-new',
-    })
-  } catch {}
 }
 
 function Avatar({ name, phone }: { name: string | null; phone: string }) {
@@ -183,47 +93,30 @@ export default function InboxPage() {
   const [newChatPhone, setNewChatPhone] = useState('')
   const [newChatName, setNewChatName] = useState('')
   const [creatingChat, setCreatingChat] = useState(false)
-  const [incomingToasts, setIncomingToasts] = useState<IncomingToast[]>([])
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const lastMessageCountRef = useRef(0)
 
-  // Запрашиваем разрешение на браузерные уведомления при монтировании
-  useEffect(() => { requestNotificationPermission() }, [])
-
-  const fireIncomingNotification = useCallback((conv: Conversation | null, msg: Message) => {
-    const name = conv?.contact_name ?? null
-    const phone = conv?.phone ?? ''
-    const text = msg.body
-
-    // Звук — работает на активной вкладке
-    playNotificationSound()
-
-    // Системное уведомление — работает на фоновой вкладке
-    if (document.hidden) {
-      showBrowserNotification(name, phone, text)
-    }
-
-    // Toast в UI — всегда
-    const id = ++_toastId
-    setIncomingToasts(prev => [...prev, { id, name, phone, text }])
-    setTimeout(() => setIncomingToasts(prev => prev.filter(t => t.id !== id)), 3000)
-  }, [])
-
-  // Проверяем — пользователь уже внизу?
+  // Scroll helpers
   const isNearBottom = useCallback(() => {
     const el = messagesContainerRef.current
     if (!el) return true
-    return el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 100
   }, [])
 
   const scrollToBottom = useCallback((force = false) => {
     if (force || isNearBottom()) {
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 60)
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
   }, [isNearBottom])
 
+  const scrollToBottomInstant = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+  }, [])
+
+  // Conversations
   const loadConversations = useCallback(async () => {
     const res = await fetch('/api/wa-inbox/conversations')
     if (!res.ok) return
@@ -233,7 +126,6 @@ export default function InboxPage() {
   }, [])
 
   useEffect(() => { loadConversations() }, [loadConversations])
-
   useEffect(() => {
     const interval = setInterval(() => loadConversations(), 5000)
     return () => clearInterval(interval)
@@ -252,7 +144,8 @@ export default function InboxPage() {
     return () => { supabase.removeChannel(channel) }
   }, [loadConversations])
 
-  const loadMessages = useCallback(async (convId: string, opts: { scroll?: boolean; initial?: boolean } = {}) => {
+  // Messages polling (no notifications here — handled globally by WaNotificationProvider)
+  const loadMessages = useCallback(async (convId: string, opts: { scroll?: boolean } = {}) => {
     const res = await fetch(`/api/wa-inbox/${convId}`)
     if (!res.ok) return
     const data = await res.json()
@@ -260,24 +153,17 @@ export default function InboxPage() {
     setMessages(prev => {
       const realPrev = prev.filter(m => !m._pending)
       if (realPrev.length === newMsgs.length &&
-          realPrev[realPrev.length-1]?.id === newMsgs[newMsgs.length-1]?.id) {
+          realPrev[realPrev.length - 1]?.id === newMsgs[newMsgs.length - 1]?.id) {
         return prev
       }
       const pending = prev.filter(m => m._pending)
-      // Звук только на новое входящее (не при первой загрузке)
-      if (!opts.initial && newMsgs.length > lastMessageCountRef.current) {
-        const lastNew = newMsgs[newMsgs.length - 1]
-        if (lastNew?.direction === 'inbound') {
-          const conv = selected
-          setTimeout(() => fireIncomingNotification(conv, lastNew), 0)
-        }
-      }
       lastMessageCountRef.current = newMsgs.length
       return [...newMsgs, ...pending]
     })
-    if (opts.scroll) scrollToBottom(true)
-  }, [scrollToBottom, fireIncomingNotification, selected])
+    if (opts.scroll) setTimeout(() => scrollToBottom(true), 60)
+  }, [scrollToBottom])
 
+  // Select conversation — скролл в самый низ после загрузки
   const selectConversation = useCallback((conv: Conversation) => {
     setSelected(conv)
     setMessages([])
@@ -292,20 +178,34 @@ export default function InboxPage() {
         lastMessageCountRef.current = msgs.length
         setMessages(msgs)
         setMessagesLoading(false)
-        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 50)
+        // Instant scroll после рендера
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => scrollToBottomInstant())
+        })
       })
       .catch(() => setMessagesLoading(false))
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c))
-  }, [])
+  }, [scrollToBottomInstant])
 
-  // Polling сообщений каждые 3 сек
+  // Scroll to bottom when messages array changes (new message arrived)
+  const prevMsgCountRef = useRef(0)
+  useEffect(() => {
+    const realMsgs = messages.filter(m => !m._pending)
+    if (realMsgs.length > prevMsgCountRef.current) {
+      prevMsgCountRef.current = realMsgs.length
+      setTimeout(() => scrollToBottom(false), 80)
+    }
+    if (realMsgs.length === 0) prevMsgCountRef.current = 0
+  }, [messages, scrollToBottom])
+
+  // Polling every 3s
   useEffect(() => {
     if (!selected) return
     const interval = setInterval(() => loadMessages(selected.id), 3000)
     return () => clearInterval(interval)
   }, [selected, loadMessages])
 
-  // Realtime подписка
+  // Realtime subscription
   useEffect(() => {
     if (!selected) return
     const supabase = createSupabaseClient(
@@ -321,13 +221,9 @@ export default function InboxPage() {
         const newMsg = payload.new as Message
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev
-          if (newMsg.direction === 'inbound') {
-            setTimeout(() => fireIncomingNotification(selected, newMsg), 0)
-          }
           lastMessageCountRef.current = prev.filter(m => !m._pending).length + 1
           return [...prev.filter(m => !m._pending), newMsg, ...prev.filter(m => m._pending)]
         })
-        scrollToBottom()
       })
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'wa_messages',
@@ -345,7 +241,7 @@ export default function InboxPage() {
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [selected, scrollToBottom])
+  }, [selected])
 
   const sendMessage = async () => {
     if (!selected || !text.trim() || sending) return
@@ -353,21 +249,17 @@ export default function InboxPage() {
     const body = text.trim()
     setText('')
     if (textareaRef.current) textareaRef.current.style.height = '40px'
-
     const tempId = `temp_${Date.now()}`
     const optimisticMsg: Message = {
       id: tempId, direction: 'outbound', message_type: 'text',
       body, status: 'pending', created_at: new Date().toISOString(), _pending: true,
     }
     setMessages(prev => [...prev, optimisticMsg])
-    scrollToBottom(true)
-
+    setTimeout(() => scrollToBottom(true), 60)
     const res = await fetch('/api/wa-inbox/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ conversation_id: selected.id, message: body }),
     })
-
     if (res.ok) {
       const data = await res.json()
       const realMsg: Message | null = data.message ?? null
@@ -403,8 +295,7 @@ export default function InboxPage() {
     if (res.ok) {
       const data = await res.json()
       setSelected(prev => prev ? { ...prev, client_id: data.client.id } : prev)
-      setShowCreateClient(false)
-      setNewClientName('')
+      setShowCreateClient(false); setNewClientName('')
       loadConversations()
     }
   }
@@ -418,15 +309,6 @@ export default function InboxPage() {
     setShowCreateVisit(false); setVisitDate(''); setVisitNote('')
     updateStatus('lead_status', 'demo_scheduled')
   }
-
-  const filtered = conversations.filter(c => {
-    const matchSearch = !search || c.phone.includes(search) ||
-      (c.contact_name?.toLowerCase().includes(search.toLowerCase()))
-    const matchStatus = filterStatus === 'all' || c.status === filterStatus
-    return matchSearch && matchStatus
-  })
-
-  const totalUnread = conversations.reduce((s, c) => s + (c.unread_count ?? 0), 0)
 
   const startNewChat = async () => {
     if (!newChatPhone.trim() || creatingChat) return
@@ -445,14 +327,17 @@ export default function InboxPage() {
     setCreatingChat(false)
   }
 
+  const filtered = conversations.filter(c => {
+    const matchSearch = !search || c.phone.includes(search) ||
+      (c.contact_name?.toLowerCase().includes(search.toLowerCase()))
+    const matchStatus = filterStatus === 'all' || c.status === filterStatus
+    return matchSearch && matchStatus
+  })
+
+  const totalUnread = conversations.reduce((s, c) => s + (c.unread_count ?? 0), 0)
+
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
-
-      {/* Toast — уведомление о новом сообщении */}
-      <IncomingMessageToast
-        toasts={incomingToasts}
-        onDismiss={id => setIncomingToasts(prev => prev.filter(t => t.id !== id))}
-      />
 
       {/* Модалка нового чата */}
       {showNewChat && (
@@ -534,7 +419,7 @@ export default function InboxPage() {
         <div className="flex-1 overflow-y-auto py-1">
           {loading ? (
             <div className="space-y-1 p-2">
-              {[1,2,3,4].map(i => (
+              {[1, 2, 3, 4].map(i => (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-xl animate-pulse">
                   <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0" />
                   <div className="flex-1 space-y-2">
@@ -688,28 +573,24 @@ export default function InboxPage() {
           <div ref={messagesContainerRef}
             className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
             style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(148,163,184,0.07) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
-
-            {/* Skeleton при первой загрузке */}
             {messagesLoading && (
               <div className="space-y-3 pt-4">
-                {[1,2,3,4,5].map(i => (
+                {[1, 2, 3, 4, 5].map(i => (
                   <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'} animate-pulse`}>
                     <div className={`h-9 rounded-2xl ${i % 2 === 0 ? 'bg-violet-100 w-40' : 'bg-gray-100 w-56'}`} />
                   </div>
                 ))}
               </div>
             )}
-
             {!messagesLoading && messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-gray-400 py-10">
                 <Sparkles className="w-8 h-8 mb-2 opacity-30" />
                 <p className="text-sm">Начало разговора</p>
               </div>
             )}
-
             {!messagesLoading && messages.map((msg, i) => {
               const isOut = msg.direction === 'outbound'
-              const showTime = i === 0 || new Date(msg.created_at).getMinutes() !== new Date(messages[i-1]?.created_at).getMinutes()
+              const showTime = i === 0 || new Date(msg.created_at).getMinutes() !== new Date(messages[i - 1]?.created_at).getMinutes()
               return (
                 <div key={msg.id}>
                   {showTime && (
@@ -731,7 +612,7 @@ export default function InboxPage() {
                       {isOut && (
                         <div className="flex items-center justify-end gap-1 mt-1">
                           {msg._pending ? (
-                            <svg className="w-3 h-3 text-violet-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <svg className="w-3 h-3 text-violet-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
                           ) : msg.status === 'failed' ? (
                             <span className="text-xs text-red-500 font-bold">!</span>
                           ) : msg.status === 'read' ? (
@@ -739,7 +620,7 @@ export default function InboxPage() {
                           ) : msg.status === 'delivered' ? (
                             <CheckCheck className="w-3.5 h-3.5 text-violet-200" />
                           ) : (
-                            <svg className="w-3 h-3 text-violet-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <svg className="w-3 h-3 text-violet-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
                           )}
                         </div>
                       )}

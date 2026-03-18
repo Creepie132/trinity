@@ -12,6 +12,7 @@ import { PinnedModalsTray } from '@/components/ui/PinnedModalsTray'
 import { RightPanel } from '@/components/layout/RightPanel'
 import { DemoBannerGlobal } from '@/components/demo/DemoBannerGlobal'
 import { DemoLanguagePicker, useDemoLanguagePicker } from '@/components/demo/DemoLanguagePicker'
+import { WaNotificationProvider } from '@/components/wa/WaNotificationProvider'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -31,6 +32,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <BranchProvider>
+        <WaNotificationProvider>
         {/* Demo: language picker (first visit only) */}
         {showLangPicker && <DemoLanguagePicker onSelect={handleLangSelect}/>}
 
@@ -55,6 +57,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
         <ImpersonationBanner />
         <PinnedModalsTray />
+        </WaNotificationProvider>
       </BranchProvider>
     </AuthProvider>
   )

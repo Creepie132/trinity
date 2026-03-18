@@ -28,7 +28,7 @@ interface Message {
   id: string; direction: 'inbound' | 'outbound'
   message_type: string; body: string | null
   status: string; created_at: string
-  _pending?: boolean // optimistic — ещё не сохранено
+  _pending?: boolean
 }
 
 const LEAD_LABELS: Record<LeadStatus, string> = {
@@ -48,6 +48,23 @@ const STATUS_LABELS: Record<ConvStatus, string> = {
 const STATUS_COLORS: Record<ConvStatus, string> = {
   new: 'bg-blue-500', in_progress: 'bg-amber-500',
   waiting: 'bg-purple-500', closed: 'bg-gray-400'
+}
+
+// Звук уведомления — короткий синтетический "дзынь"
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.frequency.setValueAtTime(880, ctx.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15)
+    gain.gain.setValueAtTime(0.3, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.4)
+  } catch {}
 }
 
 function Avatar({ name, phone }: { name: string | null; phone: string }) {
@@ -82,6 +99,7 @@ export default function InboxPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selected, setSelected] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
+  const [messagesLoading, setMessagesLoading] = useState(false)
   const [text, setText] = useState('')
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState<ConvStatus | 'all'>('all')
@@ -98,7 +116,22 @@ export default function InboxPage() {
   const [newChatName, setNewChatName] = useState('')
   const [creatingChat, setCreatingChat] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const lastMessageCountRef = useRef(0)
+
+  // Проверяем — пользователь уже внизу?
+  const isNearBottom = useCallback(() => {
+    const el = messagesContainerRef.current
+    if (!el) return true
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 80
+  }, [])
+
+  const scrollToBottom = useCallback((force = false) => {
+    if (force || isNearBottom()) {
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 60)
+    }
+  }, [isNearBottom])
 
   const loadConversations = useCallback(async () => {
     const res = await fetch('/api/wa-inbox/conversations')
@@ -110,7 +143,6 @@ export default function InboxPage() {
 
   useEffect(() => { loadConversations() }, [loadConversations])
 
-  // Polling списка разговоров каждые 5 сек
   useEffect(() => {
     const interval = setInterval(() => loadConversations(), 5000)
     return () => clearInterval(interval)
@@ -129,44 +161,57 @@ export default function InboxPage() {
     return () => { supabase.removeChannel(channel) }
   }, [loadConversations])
 
-  const loadMessages = useCallback(async (convId: string, scrollToBottom = true) => {
+  const loadMessages = useCallback(async (convId: string, opts: { scroll?: boolean; initial?: boolean } = {}) => {
     const res = await fetch(`/api/wa-inbox/${convId}`)
     if (!res.ok) return
     const data = await res.json()
     const newMsgs: Message[] = data.messages ?? []
     setMessages(prev => {
-      // Если новых сообщений нет — не обновляем (нет мигания)
       const realPrev = prev.filter(m => !m._pending)
       if (realPrev.length === newMsgs.length &&
           realPrev[realPrev.length-1]?.id === newMsgs[newMsgs.length-1]?.id) {
-        return prev // ничего не изменилось
+        return prev
       }
-      // Есть новые — добавляем, сохраняем pending
       const pending = prev.filter(m => m._pending)
+      // Звук только на новое входящее (не при первой загрузке)
+      if (!opts.initial && newMsgs.length > lastMessageCountRef.current) {
+        const lastNew = newMsgs[newMsgs.length - 1]
+        if (lastNew?.direction === 'inbound') playNotificationSound()
+      }
+      lastMessageCountRef.current = newMsgs.length
       return [...newMsgs, ...pending]
     })
-    if (scrollToBottom) {
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
-    }
-  }, [])
+    if (opts.scroll) scrollToBottom(true)
+  }, [scrollToBottom])
 
   const selectConversation = useCallback((conv: Conversation) => {
     setSelected(conv)
+    setMessages([])
+    setMessagesLoading(true)
     setShowCreateClient(false)
     setShowCreateVisit(false)
-    loadMessages(conv.id)
+    lastMessageCountRef.current = 0
+    fetch(`/api/wa-inbox/${conv.id}`)
+      .then(r => r.json())
+      .then(data => {
+        const msgs: Message[] = data.messages ?? []
+        lastMessageCountRef.current = msgs.length
+        setMessages(msgs)
+        setMessagesLoading(false)
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 50)
+      })
+      .catch(() => setMessagesLoading(false))
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c))
-  }, [loadMessages])
+  }, [])
 
-  // Polling — обновляем сообщения каждые 3 сек пока разговор открыт
+  // Polling сообщений каждые 3 сек
   useEffect(() => {
     if (!selected) return
-    const interval = setInterval(() => {
-      loadMessages(selected.id, false) // без скролла при polling
-    }, 3000)
+    const interval = setInterval(() => loadMessages(selected.id), 3000)
     return () => clearInterval(interval)
   }, [selected, loadMessages])
 
+  // Realtime подписка
   useEffect(() => {
     if (!selected) return
     const supabase = createSupabaseClient(
@@ -179,18 +224,19 @@ export default function InboxPage() {
         event: 'INSERT', schema: 'public', table: 'wa_messages',
         filter: `conversation_id=eq.${selected.id}`
       }, (payload) => {
+        const newMsg = payload.new as Message
         setMessages(prev => {
-          // Не добавляем если уже есть (дубликат из polling)
-          if (prev.some(m => m.id === (payload.new as Message).id)) return prev
-          return [...prev.filter(m => !m._pending), payload.new as Message, ...prev.filter(m => m._pending)]
+          if (prev.some(m => m.id === newMsg.id)) return prev
+          if (newMsg.direction === 'inbound') playNotificationSound()
+          lastMessageCountRef.current = prev.filter(m => !m._pending).length + 1
+          return [...prev.filter(m => !m._pending), newMsg, ...prev.filter(m => m._pending)]
         })
-        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+        scrollToBottom()
       })
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'wa_messages',
         filter: `conversation_id=eq.${selected.id}`
       }, (payload) => {
-        // Обновляем статус (delivered/read)
         setMessages(prev => prev.map(m =>
           m.id === (payload.new as Message).id ? { ...m, status: (payload.new as Message).status } : m
         ))
@@ -199,12 +245,11 @@ export default function InboxPage() {
         event: 'UPDATE', schema: 'public', table: 'wa_conversations',
         filter: `id=eq.${selected.id}`
       }, (payload) => {
-        // Typing indicator
         setIsTyping((payload.new as any).is_typing ?? false)
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [selected])
+  }, [selected, scrollToBottom])
 
   const sendMessage = async () => {
     if (!selected || !text.trim() || sending) return
@@ -213,19 +258,13 @@ export default function InboxPage() {
     setText('')
     if (textareaRef.current) textareaRef.current.style.height = '40px'
 
-    // Optimistic update — показываем сообщение мгновенно
     const tempId = `temp_${Date.now()}`
     const optimisticMsg: Message = {
-      id: tempId,
-      direction: 'outbound',
-      message_type: 'text',
-      body,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      _pending: true,
+      id: tempId, direction: 'outbound', message_type: 'text',
+      body, status: 'pending', created_at: new Date().toISOString(), _pending: true,
     }
     setMessages(prev => [...prev, optimisticMsg])
-    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+    scrollToBottom(true)
 
     const res = await fetch('/api/wa-inbox/send', {
       method: 'POST',
@@ -238,8 +277,6 @@ export default function InboxPage() {
       const realMsg: Message | null = data.message ?? null
       setMessages(prev => prev.map(m => {
         if (m.id !== tempId) return m
-        // Заменяем temp на реальное сообщение с настоящим id
-        // Это предотвращает дублирование: Realtime увидит этот id и пропустит INSERT
         if (realMsg) return { ...realMsg, _pending: false }
         return { ...m, _pending: false, status: 'sent' }
       }))
@@ -254,8 +291,7 @@ export default function InboxPage() {
   const updateStatus = async (field: 'status' | 'lead_status', value: string) => {
     if (!selected) return
     await fetch(`/api/wa-inbox/${selected.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ [field]: value }),
     })
     setSelected(prev => prev ? { ...prev, [field]: value as any } : prev)
@@ -265,8 +301,7 @@ export default function InboxPage() {
   const createNewClient = async () => {
     if (!selected || !newClientName.trim()) return
     const res = await fetch(`/api/wa-inbox/${selected.id}/create-client`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ first_name: newClientName.trim() }),
     })
     if (res.ok) {
@@ -281,13 +316,10 @@ export default function InboxPage() {
   const createVisit = async () => {
     if (!selected?.client_id || !visitDate) return
     await fetch(`/api/wa-inbox/${selected.id}/create-visit`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ client_id: selected.client_id, scheduled_at: visitDate, notes: visitNote }),
     })
-    setShowCreateVisit(false)
-    setVisitDate('')
-    setVisitNote('')
+    setShowCreateVisit(false); setVisitDate(''); setVisitNote('')
     updateStatus('lead_status', 'demo_scheduled')
   }
 
@@ -305,15 +337,12 @@ export default function InboxPage() {
     setCreatingChat(true)
     const phone = newChatPhone.replace(/\D/g, '')
     const res = await fetch('/api/wa-inbox/conversations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, contact_name: newChatName.trim() || null }),
     })
     if (res.ok) {
       const data = await res.json()
-      setShowNewChat(false)
-      setNewChatPhone('')
-      setNewChatName('')
+      setShowNewChat(false); setNewChatPhone(''); setNewChatName('')
       await loadConversations()
       if (data.conversation) selectConversation(data.conversation)
     }
@@ -338,22 +367,19 @@ export default function InboxPage() {
               <div>
                 <label className="text-xs font-medium text-gray-600 mb-1 block">Номер телефона *</label>
                 <input className="w-full h-9 text-sm border border-gray-200 rounded-lg px-3 focus:outline-none focus:ring-2 focus:ring-violet-300"
-                  placeholder="+972501234567"
-                  value={newChatPhone}
+                  placeholder="+972501234567" value={newChatPhone}
                   onChange={e => setNewChatPhone(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && startNewChat()}
-                  autoFocus />
+                  onKeyDown={e => e.key === 'Enter' && startNewChat()} autoFocus />
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-600 mb-1 block">Имя (необязательно)</label>
                 <input className="w-full h-9 text-sm border border-gray-200 rounded-lg px-3 focus:outline-none focus:ring-2 focus:ring-violet-300"
-                  placeholder="Имя контакта..."
-                  value={newChatName}
+                  placeholder="Имя контакта..." value={newChatName}
                   onChange={e => setNewChatName(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && startNewChat()} />
               </div>
               <button onClick={startNewChat} disabled={!newChatPhone.trim() || creatingChat}
-                className="w-full h-9 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-semibold rounded-lg hover:opacity-90 active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                className="w-full h-9 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">
                 {creatingChat ? 'Создаём...' : 'Начать разговор'}
               </button>
             </div>
@@ -363,8 +389,6 @@ export default function InboxPage() {
 
       {/* ── ЛЕВАЯ ПАНЕЛЬ ── */}
       <div className="w-80 flex-shrink-0 flex flex-col bg-white/80 backdrop-blur-sm border-r border-gray-200/60 shadow-sm">
-
-        {/* Шапка */}
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
@@ -388,16 +412,10 @@ export default function InboxPage() {
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <input
-              className="w-full pl-8 pr-3 h-8 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent transition-all"
-              placeholder="Поиск по имени или номеру..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+            <input className="w-full pl-8 pr-3 h-8 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent transition-all"
+              placeholder="Поиск по имени или номеру..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
         </div>
-
-        {/* Фильтры */}
         <div className="flex gap-1 px-3 pb-2 overflow-x-auto scrollbar-hide">
           {(['all', 'new', 'in_progress', 'waiting', 'closed'] as const).map(s => (
             <button key={s} onClick={() => setFilterStatus(s)}
@@ -410,10 +428,7 @@ export default function InboxPage() {
             </button>
           ))}
         </div>
-
         <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mx-3" />
-
-        {/* Список разговоров */}
         <div className="flex-1 overflow-y-auto py-1">
           {loading ? (
             <div className="space-y-1 p-2">
@@ -449,9 +464,7 @@ export default function InboxPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm text-gray-900 truncate">
-                          {conv.contact_name ?? conv.phone}
-                        </span>
+                        <span className="font-semibold text-sm text-gray-900 truncate">{conv.contact_name ?? conv.phone}</span>
                         <span className="text-xs text-gray-400 flex-shrink-0 ml-1">
                           {formatDistanceToNow(new Date(conv.last_message_at), { locale: he, addSuffix: false })}
                         </span>
@@ -506,7 +519,6 @@ export default function InboxPage() {
                 </div>
               </div>
             </div>
-
             <div className="flex items-center gap-2 flex-wrap justify-end">
               {!selected.client_id && (
                 <Button size="sm" variant="outline"
@@ -571,15 +583,29 @@ export default function InboxPage() {
           )}
 
           {/* Сообщения */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
+          <div ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
             style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(148,163,184,0.07) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
-            {messages.length === 0 && (
+
+            {/* Skeleton при первой загрузке */}
+            {messagesLoading && (
+              <div className="space-y-3 pt-4">
+                {[1,2,3,4,5].map(i => (
+                  <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'} animate-pulse`}>
+                    <div className={`h-9 rounded-2xl ${i % 2 === 0 ? 'bg-violet-100 w-40' : 'bg-gray-100 w-56'}`} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!messagesLoading && messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-gray-400 py-10">
                 <Sparkles className="w-8 h-8 mb-2 opacity-30" />
                 <p className="text-sm">Начало разговора</p>
               </div>
             )}
-            {messages.map((msg, i) => {
+
+            {!messagesLoading && messages.map((msg, i) => {
               const isOut = msg.direction === 'outbound'
               const showTime = i === 0 || new Date(msg.created_at).getMinutes() !== new Date(messages[i-1]?.created_at).getMinutes()
               return (
@@ -603,23 +629,15 @@ export default function InboxPage() {
                       {isOut && (
                         <div className="flex items-center justify-end gap-1 mt-1">
                           {msg._pending ? (
-                            // Одна серая галочка — ещё отправляется
-                            <svg className="w-3 h-3 text-violet-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <polyline points="20 6 9 17 4 12"/>
-                            </svg>
+                            <svg className="w-3 h-3 text-violet-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                           ) : msg.status === 'failed' ? (
                             <span className="text-xs text-red-500 font-bold">!</span>
                           ) : msg.status === 'read' ? (
-                            // Две синие галочки — прочитано
                             <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
                           ) : msg.status === 'delivered' ? (
-                            // Две серые галочки — доставлено
                             <CheckCheck className="w-3.5 h-3.5 text-violet-200" />
                           ) : (
-                            // Одна галочка — отправлено, ждём доставки
-                            <svg className="w-3 h-3 text-violet-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <polyline points="20 6 9 17 4 12"/>
-                            </svg>
+                            <svg className="w-3 h-3 text-violet-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                           )}
                         </div>
                       )}
@@ -637,17 +655,13 @@ export default function InboxPage() {
             <div className="flex items-end gap-2 bg-gray-50 rounded-2xl border border-gray-200 px-3 py-2 focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100 transition-all">
               <textarea ref={textareaRef}
                 className="flex-1 resize-none bg-transparent text-sm focus:outline-none max-h-32 min-h-[24px] placeholder-gray-400"
-                placeholder="Написать сообщение..."
-                value={text}
-                rows={1}
+                placeholder="Написать сообщение..." value={text} rows={1}
                 onChange={e => {
                   setText(e.target.value)
                   e.target.style.height = 'auto'
                   e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px'
                 }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
-                }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
               />
               <button onClick={sendMessage} disabled={!text.trim() || sending}
                 className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
@@ -655,10 +669,7 @@ export default function InboxPage() {
                     ? 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm hover:shadow-md hover:scale-105 active:scale-95'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}>
-                {sending
-                  ? <Clock className="w-3.5 h-3.5 animate-spin" />
-                  : <Send className="w-3.5 h-3.5" />
-                }
+                {sending ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               </button>
             </div>
             <p className="text-xs text-gray-400 mt-1.5 px-1">Enter — отправить · Shift+Enter — новая строка</p>

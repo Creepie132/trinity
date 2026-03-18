@@ -17,6 +17,7 @@ import { FileText } from 'lucide-react'
 import { format } from 'date-fns'
 import NewSaleModal from '@/components/sales/NewSaleModal'
 import ImportSalesModal from '@/components/sales/ImportSalesModal'
+import { SaleDetailModal } from '@/components/sales/SaleDetailModal'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 // ─── i18n ────────────────────────────────────────────────────────────────────
@@ -181,6 +182,7 @@ export default function SalesPage() {
   const [filtersOpen, setFiltersOpen]     = useState(false)
   const [newSaleOpen, setNewSaleOpen]     = useState(false)
   const [importOpen, setImportOpen]       = useState(false)
+  const [selectedSale, setSelectedSale]   = useState<Sale | null>(null)
   const [draftRefreshKey, setDraftRefreshKey] = useState(0)
 
   const { data: sales = [], isLoading } = useSales({
@@ -211,7 +213,7 @@ export default function SalesPage() {
   }, [])
 
   const handleSaleClick = useCallback((sale: Sale) => {
-    // TODO: open detail drawer/panel
+    setSelectedSale(sale)
   }, [])
 
   return (
@@ -626,6 +628,7 @@ export default function SalesPage() {
       {/* ── Modals ─────────────────────────────────────────────────────── */}
       <NewSaleModal isOpen={newSaleOpen} onClose={() => setNewSaleOpen(false)} />
       <ImportSalesModal isOpen={importOpen} onClose={() => setImportOpen(false)} />
+      <SaleDetailModal sale={selectedSale} locale={locale} onClose={() => setSelectedSale(null)} />
 
     </div>
   )

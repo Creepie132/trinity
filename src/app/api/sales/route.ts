@@ -106,5 +106,42 @@ export async function POST(req: NextRequest) {
   const { error: itemsErr } = await supabase.from('sale_items').insert(saleItems)
   if (itemsErr) return NextResponse.json({ error: itemsErr.message }, { status: 500 })
 
+  // ── Склад: списываем товары (только те у которых есть product_id) ──────────
+  const productItems = items.filter((i: any) => i.product_id)
+  if (productItems.length > 0) {
+    for (const item of productItems) {
+      // Получаем текущий остаток
+      const { data: product } = await supabase
+        .from('products')
+        .select('id, quantity')
+        .eq('id', item.product_id)
+        .eq('org_id', activeOrgId)
+        .single()
+
+      if (!product) continue
+
+      const newQty = Math.max(0, product.quantity - item.quantity)
+
+      // Создаём транзакцию склада
+      await supabase.from('inventory_transactions').insert({
+        org_id: activeOrgId,
+        product_id: item.product_id,
+        type: 'sale',
+        quantity: item.quantity,
+        price_per_unit: item.unit_price,
+        total_price: item.quantity * item.unit_price,
+        related_payment_id: payment.id,
+        notes: `Продажа #${sale.id.slice(0, 8)}`,
+      })
+
+      // Обновляем остаток в products
+      await supabase
+        .from('products')
+        .update({ quantity: newQty })
+        .eq('id', item.product_id)
+        .eq('org_id', activeOrgId)
+    }
+  }
+
   return NextResponse.json({ id: sale.id, payment_id: payment.id }, { status: 201 })
 }

@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 
 interface LineItem {
   id: string
+  product_id?: string
   product_name: string
   quantity: number
   unit_price: number
@@ -171,7 +172,7 @@ function ProductPicker({ t, language, onAdd, onBack }: {
           : filtered.length === 0 ? <p className="py-8 text-center text-sm text-gray-400">{t.noItems}</p>
           : filtered.map((p: any) => (
             <button key={p.id}
-              onClick={() => onAdd({ product_name: p.name, quantity: 1, unit_price: p.sell_price || 0, type: 'product' })}
+              onClick={() => onAdd({ product_name: p.name, product_id: p.id, quantity: 1, unit_price: p.sell_price || 0, type: 'product' })}
               className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 active:scale-[0.98] transition-all group text-start">
               <div className="flex items-center gap-3 min-w-0">
                 {p.image_url
@@ -348,7 +349,7 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
     try {
       await createSale.mutateAsync({
         client_id: clientId || undefined,
-        items: items.map(i => ({ product_name: i.product_name, quantity: i.quantity, unit_price: i.unit_price })),
+        items: items.map(i => ({ product_name: i.product_name, product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price })),
         paid_amount: paidAmount ? Number(paidAmount) : total,
         payment_method: method,
         sale_date: saleDate,

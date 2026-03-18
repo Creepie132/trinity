@@ -24,6 +24,7 @@ export interface Sale {
   paid_amount: number
   status: 'new' | 'partial' | 'paid' | 'refunded' | 'cancelled'
   receipt_sent: boolean
+  payment_method?: string | null
   notes: string | null
   created_at: string
   clients?: { id: string; first_name: string; last_name: string; phone: string | null } | null

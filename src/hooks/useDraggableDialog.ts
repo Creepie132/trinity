@@ -145,15 +145,13 @@ export function useDraggableDialog() {
     s.initialized = false
     const el = containerRef.current
     if (!el) return
-    // On mobile the modal uses bottom-sheet positioning (bottom:0 left:0 right:0).
-    // Applying the desktop centered styles here would override the bottom-sheet
-    // layout and push the modal to an unexpected position.
-    if (window.innerWidth < 768) return
-    el.style.left = '50%'
-    el.style.top = '50%'
-    el.style.transform = 'translate(-50%, -50%)'
+    // Clear ALL inline positioning styles. Tailwind responsive CSS classes then
+    // take over automatically: bottom-sheet on <md, centered dialog on ≥md.
+    el.style.left = ''
+    el.style.top = ''
     el.style.bottom = ''
     el.style.right = ''
+    el.style.transform = ''
   }, [])
 
   // Возвращает смещение от центра viewport (для совместимости с pin store)

@@ -60,16 +60,6 @@ export function Modal({
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
 
-  // Detect mobile to use bottom-sheet positioning instead of centered modal.
-  // Cannot rely on Tailwind responsive classes since inline styles override them.
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-
   const { pin, unpin, isPinned, bringToFront, pinned, maxPinned } = usePinnedModals()
   const pinned_ = isPinned(modalId)
   const { containerRef, handleRef, resetPosition, getCurrentPosition } = useDraggableDialog()
@@ -150,49 +140,36 @@ export function Modal({
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalId)}
         className={cn(
+          // Base — always applied
           'fixed w-full bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
-          isMobile
-            ? [
-                // Bottom-sheet: slides up from the bottom edge, full width
-                'animate-in slide-in-from-bottom duration-300 ease-out',
-                'rounded-t-2xl rounded-b-none',
-              ]
-            : [
-                // Desktop: centered modal.
-                // IMPORTANT: use fade-in only — zoom-in-95 conflicts with the
-                // inline transform:translate(-50%,-50%) (CSS animation @keyframes
-                // override inline styles), causing the modal to appear off-center
-                // for the first 200 ms on slower devices.
-                'animate-in fade-in-0 duration-200',
-                'rounded-2xl',
-                'max-h-[calc(100dvh-32px)]',
-                !width && sizeClasses[size],
-              ],
+          // Animation: opacity-only fade. Transform-based enter animations
+          // (zoom-in-95, slide-in-from-bottom) conflict with the centering
+          // transform on desktop, so we use a clean fade for all breakpoints.
+          'animate-in fade-in-0 duration-200',
+          // ── Mobile (<md): bottom-sheet ──────────────────────────────────────
+          // Anchor to the bottom edge, span full width, slide-up feel via max-h.
+          'bottom-0 inset-x-0 max-h-[92dvh] rounded-t-2xl rounded-b-none',
+          // ── Desktop (≥md): classic centered dialog ──────────────────────────
+          // Reset the mobile anchoring, then center with the translate trick.
+          // left/top/transform are set here via CSS classes — the drag hook
+          // overrides them with inline styles on drag, and resetPosition()
+          // clears inline styles so these classes take effect again on reopen.
+          'md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2',
+          'md:rounded-2xl md:max-h-[calc(100dvh-32px)]',
+          !width && sizeClasses[size],
           pinned_ && 'ring-2 ring-orange-400/60',
           className
         )}
-        style={
-          isMobile
-            ? {
-                // Bottom-sheet positioning — no transform trick needed
-                zIndex,
-                bottom: 0,
-                left: 0,
-                right: 0,
-                top: 'auto',
-                transform: 'none',
-                maxHeight: '92dvh',
-              }
-            : {
-                // Centered desktop positioning
-                zIndex,
-                left: '50%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-                maxWidth: width ? `min(${width}, calc(100vw - 32px))` : undefined,
-                maxHeight: 'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px)',
-              }
-        }
+        style={{
+          zIndex,
+          // maxWidth: only when an explicit `width` prop is provided (desktop).
+          // Responsive width on desktop comes from sizeClasses above (max-w-*).
+          maxWidth: width ? `min(${width}, calc(100vw - 32px))` : undefined,
+          // left / top / transform / maxHeight are handled by Tailwind classes.
+          // The drag hook writes inline left/top/transform during drag (overriding
+          // the CSS classes). resetPosition() clears them after close so the
+          // responsive classes are back in control on the next open.
+        }}
         role="dialog"
         aria-modal={!pinned_}
         aria-labelledby={title ? 'modal-title' : undefined}

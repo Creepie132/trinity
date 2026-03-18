@@ -3,6 +3,8 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Payment } from '@/types/database'
 import { toast } from 'sonner'
 import { useBranch } from '@/contexts/BranchContext'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
+
 const supabase = createSupabaseBrowserClient()
 
 interface CreatePaymentLinkParams {
@@ -23,6 +25,10 @@ interface PaymentsFilters {
 
 export function usePayments(clientId?: string, filters?: PaymentsFilters) {
   const { activeOrgId } = useBranch()
+
+  // ── Realtime sync ────────────────────────────────────────────────────────
+  // Any INSERT/UPDATE/DELETE on payments for this org → invalidate cache
+  useRealtimeSync({ table: 'payments', orgId: activeOrgId, queryKey: ['payments'] })
 
   return useQuery({
     queryKey: ['payments', activeOrgId, clientId, filters],
@@ -54,6 +60,9 @@ export function usePayments(clientId?: string, filters?: PaymentsFilters) {
 
 export function usePaymentsStats() {
   const { activeOrgId } = useBranch()
+
+  // ── Realtime sync ────────────────────────────────────────────────────────
+  useRealtimeSync({ table: 'payments', orgId: activeOrgId, queryKey: ['payments-stats'] })
 
   return useQuery({
     queryKey: ['payments-stats', activeOrgId],

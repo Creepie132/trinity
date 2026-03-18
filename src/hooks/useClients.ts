@@ -4,11 +4,22 @@ import { Client, ClientSummary } from '@/types/database'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 
 export function useClients(searchQuery?: string, page: number = 1, pageSize: number = 25) {
   const { orgId: authOrgId } = useAuth()
   const { activeOrgId, mainOrgId, isOrgResolved } = useBranch()
   const orgId = activeOrgId || mainOrgId || authOrgId
+
+  // ── Realtime sync ────────────────────────────────────────────────────────
+  // Clients are shared at mainOrgId level — use mainOrgId as the filter.
+  // Any INSERT/UPDATE/DELETE on clients → invalidate the clients list cache.
+  useRealtimeSync({
+    table: 'clients',
+    orgId: mainOrgId,    // clients are shared across branches
+    queryKey: ['clients'],
+    enabled: !!mainOrgId && isOrgResolved,
+  })
 
   return useQuery({
     queryKey: ['clients', orgId, searchQuery, page, pageSize],
@@ -60,22 +71,17 @@ export function useAddClient() {
 
   return useMutation({
     mutationFn: async (client: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'org_id'>) => {
-      // Проверяем что auth загружен
       if (isLoading) {
         throw new Error('אנא המתן, הנתונים נטענים...')
       }
 
-      // Получаем session для токена и user для валидации
       const { data: { session } } = await supabase.auth.getSession()
       const { data: { user } } = await supabase.auth.getUser()
-      
+
       if (!user || !session) {
         throw new Error('לא נמצא ארגון למשתמש הנוכחי. אנא פנה לתמיכה.')
       }
 
-      console.log('Adding client via API route') // debug
-
-      // Вызываем API роут вместо прямого обращения к Supabase
       const response = await fetch('/api/clients', {
         method: 'POST',
         headers: {
@@ -90,21 +96,13 @@ export function useAddClient() {
         throw new Error(error.error || 'Failed to add client')
       }
 
-      const data = await response.json()
-      console.log('Client added successfully, ID:', data.id)
-      return data
+      return response.json()
     },
-    onSuccess: async (data) => {
-      console.log('[useAddClient] onSuccess: invalidating clients queries')
-      
-      // Инвалидируем все запросы клиентов
+    onSuccess: async () => {
+      // Realtime will also invalidate, but we invalidate immediately here
+      // so the user sees the new client even before the WebSocket event arrives
       await queryClient.invalidateQueries({ queryKey: ['clients'] })
-      
-      // Принудительно рефетчим все активные запросы клиентов
       await queryClient.refetchQueries({ queryKey: ['clients'], type: 'active' })
-      
-      console.log('[useAddClient] Queries invalidated and refetched')
-      
       toast.success('הלקוח נוסף בהצלחה')
     },
     onError: (error: any) => {
@@ -125,7 +123,7 @@ export function useUpdateClient() {
     mutationFn: async ({ id, ...client }: Partial<Client> & { id: string }) => {
       if (!orgId) throw new Error('Missing orgId')
 
-      // на всякий случай запрещаем обновлять org_id
+      // Запрещаем обновлять org_id
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { org_id, ...safeClient } = client as any
 

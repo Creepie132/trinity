@@ -1,4 +1,4 @@
-'use client'
+ÿþ'use client'
 
 import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,7 @@ import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useModalStore } from '@/store/useModalStore'
 import { CalendarView } from '@/components/visits/CalendarView'
@@ -75,6 +76,7 @@ export default function VisitsPage() {
   const orgId = activeOrgId || authOrgId
   const supabase = createSupabaseBrowserClient()
   const queryClient = useQueryClient()
+  useRealtimeSync({ table: 'visits', orgId, queryKey: ['visits'] })
 
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
   const { openModal } = useModalStore()

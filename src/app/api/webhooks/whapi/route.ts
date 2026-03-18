@@ -40,8 +40,12 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
+// Нормализуем телефон в локальный израильский формат
+// 972524024447@s.whatsapp.net → 0524024447
 function normalizePhone(raw: string): string {
-  return raw.replace('@s.whatsapp.net', '').replace(/\D/g, '')
+  let phone = raw.replace('@s.whatsapp.net', '').replace(/\D/g, '')
+  if (phone.startsWith('972')) phone = '0' + phone.slice(3)
+  return phone
 }
 
 async function processInboundMessage(supabase: any, msg: any, phone: string, orgId: string) {

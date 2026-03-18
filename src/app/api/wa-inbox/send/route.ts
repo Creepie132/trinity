@@ -39,6 +39,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'WhatsApp not configured' }, { status: 400 })
   }
 
+  // Конвертируем телефон в международный формат для Whapi
+  // 0524024447 → 972524024447
+  let phone = conv.phone.replace(/\D/g, '')
+  if (phone.startsWith('0')) phone = '972' + phone.slice(1)
+  if (!phone.startsWith('972')) phone = '972' + phone
+
   // Отправляем через Whapi
   const whapiRes = await fetch('https://gate.whapi.cloud/messages/text', {
     method: 'POST',
@@ -46,7 +52,7 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ to: conv.phone + '@s.whatsapp.net', body: message }),
+    body: JSON.stringify({ to: phone + '@s.whatsapp.net', body: message }),
   })
 
   if (!whapiRes.ok) {

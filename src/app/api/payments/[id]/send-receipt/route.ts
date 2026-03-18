@@ -56,11 +56,11 @@ export async function POST(
 
     const { data: orgRow } = await serviceClient
       .from('organizations')
-      .select('tranzila_token')
+      .select('tranzila_terminal')
       .eq('id', payment.org_id)
       .maybeSingle()
 
-    if (!orgRow?.tranzila_token) {
+    if (!orgRow?.tranzila_terminal) {
       return NextResponse.json(
         { error: 'Tranzila не подключён для этой организации. Настройте токен Tranzila.' },
         { status: 400 }

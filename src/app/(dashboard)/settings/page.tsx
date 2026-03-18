@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
-import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, CreditCard, MessageSquare, Bell } from 'lucide-react'
+import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, MessageSquare, Bell } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
@@ -71,13 +71,6 @@ export default function SettingsPage() {
       description: language === 'he' ? 'קבע מה כל עובד יכול לעשות' : 'Управляйте доступом сотрудников',
     },
     {
-      id: 'payments',
-      href: '/settings/payments',
-      icon: CreditCard,
-      title: language === 'he' ? 'הגדרות תשלום' : 'Настройки платежей',
-      description: language === 'he' ? 'חיבור Tranzila — טרמינל ואישורים' : 'Подключение Tranzila — терминал и учётные данные',
-    },
-    {
       id: 'notifications',
       href: '/settings/notifications',
       icon: Bell,
@@ -93,7 +86,6 @@ export default function SettingsPage() {
     if (!features.isLoading) {
       if (category.id === 'booking' && features.hasBooking === false) return false
       if (category.id === 'branches' && !features.hasBranches) return false
-      if (category.id === 'payments' && !features.hasPayments) return false
     }
     // Скрываем только если role уже известна И доступ запрещён
     if (permissions.canManageServices === false && category.id === 'services') return false

@@ -14,6 +14,7 @@ import {
   Shield, Pencil, CreditCard, Eye, Package,
   Clock, TrendingUp, Users, Calendar, BarChart3,
   Wifi, WifiOff, AlertTriangle, Trash2, EyeOff, Edit3, Check, Leaf, Receipt,
+  ChevronDown,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/switch'
@@ -21,6 +22,7 @@ import { getPlan, PLANS, type PlanKey } from '@/lib/subscription-plans'
 import { MODULES } from '@/lib/modules-config'
 import { EditOrganizationModal } from '@/components/modals/other/EditOrganizationModal'
 import { MorningIntegrationModal } from '@/components/modals/integrations/MorningIntegrationModal'
+import { TranzilaSettingsModal } from '@/components/modals/integrations/TranzilaSettingsModal'
 import { ReceiptSettingsModal } from '@/components/modals/integrations/ReceiptSettingsModal'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useRouter } from 'next/navigation'
@@ -498,6 +500,9 @@ export default function AdminOrganizationsPage() {
 
   const [morningOpen, setMorningOpen] = useState(false)
   const [morningOrg, setMorningOrg] = useState<Organization | null>(null)
+  const [tranzilaOpen, setTranzilaOpen] = useState(false)
+  const [tranzilaOrg, setTranzilaOrg] = useState<Organization | null>(null)
+  const [providerMenuOrg, setProviderMenuOrg] = useState<string | null>(null)
   const [receiptOpen, setReceiptOpen] = useState(false)
   const [receiptOrg, setReceiptOrg]   = useState<Organization | null>(null)
 
@@ -826,10 +831,33 @@ export default function AdminOrganizationsPage() {
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition-colors">
             <Package className="w-4 h-4" />{l ? 'מודולים' : 'Модули'}
           </button>
-          <button onClick={() => { setMorningOrg(org); setMorningOpen(true); setSelectedOrg(null) }}
-            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 border border-emerald-200 transition-colors">
-            <Leaf className="w-4 h-4" />{l ? 'Morning' : 'Morning'}
-          </button>
+          {/* Провайдеры button with inline submenu */}
+          <div className="relative">
+            <button
+              onClick={() => setProviderMenuOrg(providerMenuOrg === org.id ? null : org.id)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 border border-emerald-200 transition-colors"
+            >
+              <Wifi className="w-4 h-4" />
+              {l ? 'ספקים' : 'Провайдеры'}
+              <ChevronDown className={`w-3 h-3 transition-transform ${providerMenuOrg === org.id ? 'rotate-180' : ''}`} />
+            </button>
+            {providerMenuOrg === org.id && (
+              <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                <button
+                  onClick={() => { setTranzilaOrg(org); setTranzilaOpen(true); setProviderMenuOrg(null); setSelectedOrg(null) }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                >
+                  <CreditCard className="w-4 h-4" />Tranzila
+                </button>
+                <button
+                  onClick={() => { setMorningOrg(org); setMorningOpen(true); setProviderMenuOrg(null); setSelectedOrg(null) }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 border-t border-gray-100 transition-colors"
+                >
+                  <Leaf className="w-4 h-4" />Morning
+                </button>
+              </div>
+            )}
+          </div>
           <button onClick={() => { setReceiptOrg(org); setReceiptOpen(true); setSelectedOrg(null) }}
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-orange-50 text-orange-700 text-sm font-medium hover:bg-orange-100 border border-orange-200 transition-colors">
             <Receipt className="w-4 h-4" />{l ? 'קבלות' : 'Квитанции'}
@@ -1075,6 +1103,15 @@ export default function AdminOrganizationsPage() {
           onClose={() => { setMorningOpen(false); setMorningOrg(null) }}
           orgId={morningOrg.id}
           orgName={morningOrg.display_name || morningOrg.name}
+        />
+      )}
+
+      {tranzilaOrg && (
+        <TranzilaSettingsModal
+          open={tranzilaOpen}
+          onClose={() => { setTranzilaOpen(false); setTranzilaOrg(null) }}
+          orgId={tranzilaOrg.id}
+          orgName={tranzilaOrg.display_name || tranzilaOrg.name}
         />
       )}
 

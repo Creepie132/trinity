@@ -284,7 +284,7 @@ export default function LandingPage() {
           --shadow-md: 0 8px 32px rgba(30,45,74,0.10);
           --shadow-lg: 0 20px 60px rgba(30,45,74,0.14);
         }
-        body { background:var(--cream); color:var(--text); font-family:'Manrope',system-ui,sans-serif; overflow-x:hidden; line-height:1.65; }
+        body { background:var(--cream); color:var(--text); font-family:'Manrope',system-ui,sans-serif; overflow-x:hidden; line-height:1.65; min-height:100vh; display:flex; flex-direction:column; }
         ::-webkit-scrollbar { width:5px; }
         ::-webkit-scrollbar-track { background:var(--cream); }
         ::-webkit-scrollbar-thumb { background:var(--amber-light); border-radius:3px; }
@@ -434,7 +434,7 @@ export default function LandingPage() {
         .cta-section .hero-cta { position:relative; z-index:1; }
         .btn-white { background:white; color:var(--navy); padding:16px 36px; border-radius:14px; font-size:16px; font-weight:700; text-decoration:none; box-shadow:0 6px 24px rgba(0,0,0,0.2); transition:all 0.25s; display:inline-flex; align-items:center; gap:8px; }
         .btn-white:hover { transform:translateY(-2px); box-shadow:0 10px 36px rgba(0,0,0,0.3); }
-        footer { background:var(--navy); border-top:1px solid rgba(255,255,255,0.06); padding:60px; color:rgba(255,255,255,0.4); }
+        footer { background:var(--navy); border-top:1px solid rgba(255,255,255,0.06); padding:60px; color:rgba(255,255,255,0.4); margin-top:auto; }
         .footer-inner { max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; }
         .footer-logo { display:flex; align-items:center; gap:10px; }
         .footer-logo-wrap { width:32px; height:32px; border-radius:50%; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; }

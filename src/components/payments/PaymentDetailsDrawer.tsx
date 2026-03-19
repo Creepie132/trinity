@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, FileText, MessageCircle, RotateCcw, Phone, AlignLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
@@ -22,11 +23,24 @@ export function PaymentDetailsDrawer({
   isOwner,
   onRefunded,
 }: PaymentDetailsDrawerProps) {
-  const [refunding, setRefunding]       = useState(false)
-  const [sendingReceipt, setSending]    = useState(false)
+  const [refunding, setRefunding]        = useState(false)
+  const [sendingReceipt, setSending]     = useState(false)
   const [downloadingPdf, setDownloading] = useState(false)
+  const [mounted, setMounted]            = useState(false)
 
-  if (!isOpen || !payment) return null
+  useEffect(() => { setMounted(true) }, [])
+
+  // Lock body scroll when open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [isOpen])
+
+  if (!isOpen || !payment || !mounted) return null
 
   const isRTL = locale === 'he'
 
@@ -90,7 +104,7 @@ export function PaymentDetailsDrawer({
     payment.metadata?.transaction_id ||
     null
 
-  // Creates receipt via Tranzila Invoices API and sends via WhatsApp (if phone available)
+
   const handleWhatsApp = async () => {
     if (!clientPhone) { toast.error(l.noPhone); return }
     setSending(true)
@@ -106,17 +120,14 @@ export function PaymentDetailsDrawer({
     }
   }
 
-  // Downloads the official Tranzila PDF receipt
   const handleDownloadPdf = async () => {
     setDownloading(true)
     try {
-      // If no tranzila_document_id yet, create receipt first
       if (!payment.tranzila_document_id) {
         const res = await fetch(`/api/payments/${payment.id}/send-receipt`, { method: 'POST' })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Failed to create receipt')
       }
-      // Open PDF in new tab
       window.open(`/api/payments/${payment.id}/tranzila-pdf`, '_blank')
     } catch (e: any) {
       toast.error(`${l.receiptError}: ${e.message}`)
@@ -141,14 +152,19 @@ export function PaymentDetailsDrawer({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" dir={isRTL ? 'rtl' : 'ltr'}>
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center"
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
+      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
         onClick={onClose}
         style={{ animation: 'pdFadeIn .2s ease-out both' }}
       />
 
+      {/* Modal card */}
       <div
         className="relative z-10 bg-white dark:bg-gray-900 w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
         style={{ animation: 'pdSlideUp .3s cubic-bezier(.2,.8,.3,1) both' }}
@@ -173,6 +189,7 @@ export function PaymentDetailsDrawer({
             {statusLabel[payment.status] || payment.status}
           </span>
         </div>
+
 
         {/* Details grid */}
         <div className="px-5 py-4 grid grid-cols-2 gap-x-6 gap-y-3 border-b border-gray-100 dark:border-gray-800">
@@ -250,9 +267,10 @@ export function PaymentDetailsDrawer({
       </div>
 
       <style>{`
-        @keyframes pdFadeIn { from { opacity:0 } to { opacity:1 } }
+        @keyframes pdFadeIn  { from { opacity:0 }                           to { opacity:1 } }
         @keyframes pdSlideUp { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
       `}</style>
-    </div>
+    </div>,
+    document.body
   )
 }

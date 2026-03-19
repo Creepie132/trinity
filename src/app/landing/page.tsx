@@ -269,7 +269,7 @@ export default function LandingPage() {
   }, [lang])
 
   return (
-    <div dir={t.dir}>
+    <div dir={t.dir} className="page-root">
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Lora:wght@400;500;600&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -284,7 +284,8 @@ export default function LandingPage() {
           --shadow-md: 0 8px 32px rgba(30,45,74,0.10);
           --shadow-lg: 0 20px 60px rgba(30,45,74,0.14);
         }
-        body { background:var(--cream); color:var(--text); font-family:'Manrope',system-ui,sans-serif; overflow-x:hidden; line-height:1.65; min-height:100vh; display:flex; flex-direction:column; }
+        body { background:var(--cream); color:var(--text); font-family:'Manrope',system-ui,sans-serif; overflow-x:hidden; line-height:1.65; }
+        .page-root { min-height:100vh; display:flex; flex-direction:column; }
         ::-webkit-scrollbar { width:5px; }
         ::-webkit-scrollbar-track { background:var(--cream); }
         ::-webkit-scrollbar-thumb { background:var(--amber-light); border-radius:3px; }

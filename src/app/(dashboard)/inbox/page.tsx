@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   MessageCircle, Search, Send, UserPlus, Calendar,
-  CheckCheck, Clock, X, Phone, Sparkles, Inbox
+  CheckCheck, Clock, X, Phone, Sparkles, Inbox, ChevronLeft,
+  PanelLeftOpen
 } from 'lucide-react'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -93,13 +94,14 @@ export default function InboxPage() {
   const [newChatPhone, setNewChatPhone] = useState('')
   const [newChatName, setNewChatName] = useState('')
   const [creatingChat, setCreatingChat] = useState(false)
+  // Mobile: sidebar open/close when chat is selected
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const lastMessageCountRef = useRef(0)
 
-  // Scroll helpers
   const isNearBottom = useCallback(() => {
     const el = messagesContainerRef.current
     if (!el) return true
@@ -116,7 +118,6 @@ export default function InboxPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
   }, [])
 
-  // Conversations
   const loadConversations = useCallback(async () => {
     const res = await fetch('/api/wa-inbox/conversations')
     if (!res.ok) return
@@ -144,7 +145,6 @@ export default function InboxPage() {
     return () => { supabase.removeChannel(channel) }
   }, [loadConversations])
 
-  // Messages polling (no notifications here — handled globally by WaNotificationProvider)
   const loadMessages = useCallback(async (convId: string, opts: { scroll?: boolean } = {}) => {
     const res = await fetch(`/api/wa-inbox/${convId}`)
     if (!res.ok) return
@@ -163,13 +163,13 @@ export default function InboxPage() {
     if (opts.scroll) setTimeout(() => scrollToBottom(true), 60)
   }, [scrollToBottom])
 
-  // Select conversation — скролл в самый низ после загрузки
   const selectConversation = useCallback((conv: Conversation) => {
     setSelected(conv)
     setMessages([])
     setMessagesLoading(true)
     setShowCreateClient(false)
     setShowCreateVisit(false)
+    setMobileSidebarOpen(false) // close sidebar on mobile when chat selected
     lastMessageCountRef.current = 0
     fetch(`/api/wa-inbox/${conv.id}`)
       .then(r => r.json())
@@ -178,7 +178,6 @@ export default function InboxPage() {
         lastMessageCountRef.current = msgs.length
         setMessages(msgs)
         setMessagesLoading(false)
-        // Instant scroll после рендера
         requestAnimationFrame(() => {
           requestAnimationFrame(() => scrollToBottomInstant())
         })
@@ -187,7 +186,6 @@ export default function InboxPage() {
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c))
   }, [scrollToBottomInstant])
 
-  // Scroll to bottom when messages array changes (new message arrived)
   const prevMsgCountRef = useRef(0)
   useEffect(() => {
     const realMsgs = messages.filter(m => !m._pending)
@@ -198,14 +196,12 @@ export default function InboxPage() {
     if (realMsgs.length === 0) prevMsgCountRef.current = 0
   }, [messages, scrollToBottom])
 
-  // Polling every 3s
   useEffect(() => {
     if (!selected) return
     const interval = setInterval(() => loadMessages(selected.id), 3000)
     return () => clearInterval(interval)
   }, [selected, loadMessages])
 
-  // Realtime subscription
   useEffect(() => {
     if (!selected) return
     const supabase = createSupabaseClient(
@@ -336,10 +332,116 @@ export default function InboxPage() {
 
   const totalUnread = conversations.reduce((s, c) => s + (c.unread_count ?? 0), 0)
 
-  return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100">
+  // ── SIDEBAR JSX (shared between desktop always-visible and mobile drawer) ──
+  const SidebarContent = (
+    <>
+      <div className="px-4 pt-4 pb-3">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-sm">
+              <MessageCircle className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-gray-900 text-sm leading-none">WhatsApp</h1>
+              <p className="text-xs text-gray-400 mt-0.5">Входящие сообщения</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 ml-auto">
+            {totalUnread > 0 && (
+              <span className="bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                {totalUnread}
+              </span>
+            )}
+            <button onClick={() => setShowNewChat(true)}
+              className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-sm">
+              <span className="text-lg leading-none font-light">+</span>
+            </button>
+          </div>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <input className="w-full pl-8 pr-3 h-8 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent transition-all"
+            placeholder="Поиск по имени или номеру..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+      </div>
+      <div className="flex gap-1 px-3 pb-2 overflow-x-auto scrollbar-hide">
+        {(['all', 'new', 'in_progress', 'waiting', 'closed'] as const).map(s => (
+          <button key={s} onClick={() => setFilterStatus(s)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 ${
+              filterStatus === s
+                ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-sm scale-105'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}>
+            {s === 'all' ? 'Все' : STATUS_LABELS[s as ConvStatus]}
+          </button>
+        ))}
+      </div>
+      <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mx-3" />
+      <div className="flex-1 overflow-y-auto py-1">
+        {loading ? (
+          <div className="space-y-1 p-2">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="flex items-center gap-3 p-3 rounded-xl animate-pulse">
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-gray-200 rounded w-3/4" />
+                  <div className="h-2.5 bg-gray-100 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+            <Inbox className="w-10 h-10 mb-3 opacity-20" />
+            <p className="text-sm font-medium">Нет разговоров</p>
+            <p className="text-xs mt-1 opacity-60">Сообщения появятся здесь</p>
+          </div>
+        ) : (
+          <div className="space-y-0.5 px-2">
+            {filtered.map(conv => (
+              <button key={conv.id} onClick={() => selectConversation(conv)}
+                className={`w-full text-left p-3 rounded-xl transition-all duration-200 group ${
+                  selected?.id === conv.id
+                    ? 'bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200/60 shadow-sm'
+                    : 'hover:bg-gray-50 border border-transparent'
+                }`}>
+                <div className="flex items-start gap-2.5">
+                  <div className="relative">
+                    <Avatar name={conv.contact_name} phone={conv.phone} />
+                    <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${STATUS_COLORS[conv.status]}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-sm text-gray-900 truncate">{conv.contact_name ?? conv.phone}</span>
+                      <span className="text-xs text-gray-400 flex-shrink-0 ml-1">
+                        {formatDistanceToNow(new Date(conv.last_message_at), { locale: he, addSuffix: false })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">{conv.last_message_text ?? '—'}</p>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${LEAD_COLORS[conv.lead_status]}`}>
+                        {LEAD_LABELS[conv.lead_status]}
+                      </span>
+                      {conv.unread_count > 0 && (
+                        <span className="bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
+                          {conv.unread_count}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )
 
-      {/* Модалка нового чата */}
+  return (
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100 relative">
+
+      {/* ── Модалка нового чата ── */}
       {showNewChat && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center"
           onClick={e => e.target === e.currentTarget && setShowNewChat(false)}>
@@ -374,149 +476,94 @@ export default function InboxPage() {
         </div>
       )}
 
-      {/* ── ЛЕВАЯ ПАНЕЛЬ ── */}
-      <div className="w-80 flex-shrink-0 flex flex-col bg-white/80 backdrop-blur-sm border-r border-gray-200/60 shadow-sm">
-        <div className="px-4 pt-4 pb-3">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-sm">
-                <MessageCircle className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h1 className="font-bold text-gray-900 text-sm leading-none">WhatsApp</h1>
-                <p className="text-xs text-gray-400 mt-0.5">Входящие сообщения</p>
-              </div>
+      {/* ── MOBILE SIDEBAR DRAWER (only visible when chat is open on mobile) ── */}
+      {selected && (
+        <>
+          {/* Backdrop */}
+          <div
+            className={`md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-30 transition-opacity duration-300 ${
+              mobileSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          {/* Drawer panel */}
+          <div
+            className={`md:hidden fixed top-0 left-0 h-full w-[85vw] max-w-sm bg-white z-40 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
+              mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            {/* Close row */}
+            <div className="flex items-center justify-end px-3 pt-3">
+              <button
+                onClick={() => setMobileSidebarOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            {totalUnread > 0 && (
-              <span className="bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm animate-pulse">
-                {totalUnread}
-              </span>
-            )}
-            <button onClick={() => setShowNewChat(true)}
-              className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-sm ml-auto">
-              <span className="text-lg leading-none font-light">+</span>
-            </button>
+            {SidebarContent}
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <input className="w-full pl-8 pr-3 h-8 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent transition-all"
-              placeholder="Поиск по имени или номеру..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-        </div>
-        <div className="flex gap-1 px-3 pb-2 overflow-x-auto scrollbar-hide">
-          {(['all', 'new', 'in_progress', 'waiting', 'closed'] as const).map(s => (
-            <button key={s} onClick={() => setFilterStatus(s)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 ${
-                filterStatus === s
-                  ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-sm scale-105'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}>
-              {s === 'all' ? 'Все' : STATUS_LABELS[s as ConvStatus]}
-            </button>
-          ))}
-        </div>
-        <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent mx-3" />
-        <div className="flex-1 overflow-y-auto py-1">
-          {loading ? (
-            <div className="space-y-1 p-2">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-xl animate-pulse">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 bg-gray-200 rounded w-3/4" />
-                    <div className="h-2.5 bg-gray-100 rounded w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-              <Inbox className="w-10 h-10 mb-3 opacity-20" />
-              <p className="text-sm font-medium">Нет разговоров</p>
-              <p className="text-xs mt-1 opacity-60">Сообщения появятся здесь</p>
-            </div>
-          ) : (
-            <div className="space-y-0.5 px-2">
-              {filtered.map(conv => (
-                <button key={conv.id} onClick={() => selectConversation(conv)}
-                  className={`w-full text-left p-3 rounded-xl transition-all duration-200 group ${
-                    selected?.id === conv.id
-                      ? 'bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200/60 shadow-sm'
-                      : 'hover:bg-gray-50 border border-transparent'
-                  }`}>
-                  <div className="flex items-start gap-2.5">
-                    <div className="relative">
-                      <Avatar name={conv.contact_name} phone={conv.phone} />
-                      <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${STATUS_COLORS[conv.status]}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm text-gray-900 truncate">{conv.contact_name ?? conv.phone}</span>
-                        <span className="text-xs text-gray-400 flex-shrink-0 ml-1">
-                          {formatDistanceToNow(new Date(conv.last_message_at), { locale: he, addSuffix: false })}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{conv.last_message_text ?? '—'}</p>
-                      <div className="flex items-center justify-between mt-1.5">
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${LEAD_COLORS[conv.lead_status]}`}>
-                          {LEAD_LABELS[conv.lead_status]}
-                        </span>
-                        {conv.unread_count > 0 && (
-                          <span className="bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
-                            {conv.unread_count}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        </>
+      )}
+
+      {/* ── DESKTOP SIDEBAR (always visible on md+) ── */}
+      <div className="hidden md:flex w-80 flex-shrink-0 flex-col bg-white/80 backdrop-blur-sm border-r border-gray-200/60 shadow-sm">
+        {SidebarContent}
       </div>
 
-      {/* ── ПРАВАЯ ПАНЕЛЬ ── */}
-      {!selected ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center mx-auto mb-4">
-              <MessageCircle className="w-10 h-10 text-violet-400" />
-            </div>
-            <h3 className="font-semibold text-gray-700 mb-1">Выберите разговор</h3>
-            <p className="text-sm text-gray-400">Нажмите на контакт слева</p>
-          </div>
+      {/* ── MOBILE: full-screen list when NO chat selected ── */}
+      {!selected && (
+        <div className="flex md:hidden flex-1 flex-col bg-white/80 backdrop-blur-sm">
+          {SidebarContent}
         </div>
-      ) : (
-        <div className="flex-1 flex flex-col min-w-0">
+      )}
+
+      {/* ── CHAT PANEL ── */}
+      {selected ? (
+        <div className="flex flex-1 flex-col min-w-0">
 
           {/* Шапка чата */}
-          <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200/60 px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
-            <div className="flex items-center gap-3">
+          <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200/60 px-3 py-3 flex items-center justify-between gap-2 shadow-sm">
+            <div className="flex items-center gap-2 min-w-0">
+              {/* Mobile back button */}
+              <button
+                className="md:hidden flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 active:scale-95 transition-all"
+                onClick={() => setSelected(null)}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              {/* Mobile sidebar toggle */}
+              <button
+                className="md:hidden flex-shrink-0 w-8 h-8 rounded-full bg-violet-50 border border-violet-200 flex items-center justify-center text-violet-600 hover:bg-violet-100 active:scale-95 transition-all"
+                onClick={() => setMobileSidebarOpen(true)}
+                title="Все разговоры"
+              >
+                <PanelLeftOpen className="w-4 h-4" />
+              </button>
               <Avatar name={selected.contact_name} phone={selected.phone} />
-              <div>
-                <div className="font-bold text-gray-900">{selected.contact_name ?? selected.phone}</div>
-                <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Phone className="w-3 h-3" /> {selected.phone}
+              <div className="min-w-0">
+                <div className="font-bold text-gray-900 text-sm truncate">{selected.contact_name ?? selected.phone}</div>
+                <div className="flex items-center gap-1 text-xs text-gray-500 truncate">
+                  <Phone className="w-3 h-3 flex-shrink-0" /> {selected.phone}
                   {selected.clients && (
-                    <span className="ml-1 text-emerald-600 font-semibold">
+                    <span className="ml-1 text-emerald-600 font-semibold truncate">
                       ✓ {selected.clients.first_name} {selected.clients.last_name}
                     </span>
                   )}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-wrap justify-end">
+            <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
               {!selected.client_id && (
                 <Button size="sm" variant="outline"
-                  className="text-xs h-7 gap-1 border-blue-200 text-blue-600 hover:bg-blue-50"
+                  className="text-xs h-7 gap-1 border-blue-200 text-blue-600 hover:bg-blue-50 hidden sm:flex"
                   onClick={() => { setShowCreateClient(true); setShowCreateVisit(false) }}>
-                  <UserPlus className="w-3.5 h-3.5" /> Создать клиента
+                  <UserPlus className="w-3.5 h-3.5" /> Клиент
                 </Button>
               )}
               {selected.client_id && (
                 <Button size="sm" variant="outline"
-                  className="text-xs h-7 gap-1 border-purple-200 text-purple-600 hover:bg-purple-50"
+                  className="text-xs h-7 gap-1 border-purple-200 text-purple-600 hover:bg-purple-50 hidden sm:flex"
                   onClick={() => { setShowCreateVisit(true); setShowCreateClient(false) }}>
                   <Calendar className="w-3.5 h-3.5" /> Встреча
                 </Button>
@@ -601,14 +648,14 @@ export default function InboxPage() {
                     </div>
                   )}
                   <div className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-xs lg:max-w-md px-3.5 py-2 rounded-2xl text-sm shadow-sm transition-all ${
+                    <div className={`max-w-[75%] lg:max-w-md px-3.5 py-2 rounded-2xl text-sm shadow-sm transition-all ${
                       isOut
                         ? msg.status === 'failed'
                           ? 'bg-red-100 text-red-700 rounded-br-sm border border-red-200'
                           : 'bg-gradient-to-br from-violet-500 to-purple-600 text-white rounded-br-sm'
                         : 'bg-white text-gray-900 rounded-bl-sm border border-gray-100'
                     } ${msg._pending ? 'opacity-75' : 'opacity-100'}`}>
-                      <p className="leading-relaxed whitespace-pre-wrap">{msg.body}</p>
+                      <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.body}</p>
                       {isOut && (
                         <div className="flex items-center justify-end gap-1 mt-1">
                           {msg._pending ? (
@@ -634,7 +681,7 @@ export default function InboxPage() {
           </div>
 
           {/* Поле ввода */}
-          <div className="bg-white/90 backdrop-blur-sm border-t border-gray-200/60 px-4 py-3">
+          <div className="bg-white/90 backdrop-blur-sm border-t border-gray-200/60 px-3 py-3">
             <div className="flex items-end gap-2 bg-gray-50 rounded-2xl border border-gray-200 px-3 py-2 focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100 transition-all">
               <textarea ref={textareaRef}
                 className="flex-1 resize-none bg-transparent text-sm focus:outline-none max-h-32 min-h-[24px] placeholder-gray-400"
@@ -655,9 +702,20 @@ export default function InboxPage() {
                 {sending ? <Clock className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-1.5 px-1">Enter — отправить · Shift+Enter — новая строка</p>
+            <p className="text-xs text-gray-400 mt-1.5 px-1 hidden sm:block">Enter — отправить · Shift+Enter — новая строка</p>
           </div>
 
+        </div>
+      ) : (
+        /* Desktop empty state when no chat selected */
+        <div className="hidden md:flex flex-1 items-center justify-center">
+          <div className="text-center">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center mx-auto mb-4">
+              <MessageCircle className="w-10 h-10 text-violet-400" />
+            </div>
+            <h3 className="font-semibold text-gray-700 mb-1">Выберите разговор</h3>
+            <p className="text-sm text-gray-400">Нажмите на контакт слева</p>
+          </div>
         </div>
       )}
     </div>

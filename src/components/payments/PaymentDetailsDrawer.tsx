@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, FileText, MessageCircle, RotateCcw } from 'lucide-react'
+import { X, FileText, MessageCircle, RotateCcw, Phone, AlignLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 
@@ -188,6 +188,18 @@ export function PaymentDetailsDrawer({
               {payment.subscription_period_start ? l.subscription : payment.type === 'product' ? l.product : l.service}
             </p>
           </div>
+          {clientPhone && (
+            <div className="col-span-2 flex items-center gap-2">
+              <Phone size={12} className="text-gray-400 flex-shrink-0" />
+              <span className="text-sm text-gray-700 dark:text-gray-300 font-mono">{clientPhone}</span>
+            </div>
+          )}
+          {payment.description && (
+            <div className="col-span-2 flex items-start gap-2">
+              <AlignLeft size={12} className="text-gray-400 flex-shrink-0 mt-0.5" />
+              <span className="text-sm text-gray-700 dark:text-gray-300 leading-snug">{payment.description}</span>
+            </div>
+          )}
           {tranzilaId && (
             <div className="col-span-2">
               <p className="text-xs text-gray-400 mb-0.5">{l.tranzilaId}</p>
@@ -202,7 +214,7 @@ export function PaymentDetailsDrawer({
 
         {/* Actions */}
         <div className="px-5 py-4 flex flex-col gap-2">
-          {clientPhone && payment.status === 'completed' && (
+          {clientPhone && (
             <button
               onClick={handleWhatsApp}
               disabled={sendingReceipt}

@@ -1,2073 +1,697 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Menu, X, ChevronRight, ChevronUp, Monitor, Bot, Globe, Code, Mail, MessageCircle, Download } from 'lucide-react'
-import { PrismButton } from '@/components/landing/PrismButton'
-import { InstallCards } from '@/components/landing/InstallCards'
 import DemoRegisterModal from '@/components/landing/DemoRegisterModal'
-import Image from 'next/image'
 
-// Translations type
-interface Translations {
-  nav: {
-    about: string
-    services: string
-    pricing: string
-    gallery: string
-    reviews: string
-    contact: string
-    download: string
-  }
-  about: {
-    title: string
-    company: string
-    companyName: string
-    field: string
-    fieldDescription: string
-    whoWeAre: string
-    whoWeAreText: string
-    whyTitle: string
-    whyItems: string[]
-    contact: {
-      whatsapp: string
-      email: string
-      location: string
-    }
-  }
-  hero: {
-    title: string
-    subtitle: string
-    cta: string
-    disclaimer?: string
-  }
-  services: {
-    title: string
-    items: {
-      title: string
-      description: string
-    }[]
-  }
-  whyCrm: {
-    title: string
-    article: string
-    stats: {
-      value: string
-      label: string
-    }[]
-  }
-  gallery: {
-    title: string
-    screenshot: string
-  }
-  reviews: {
-    title: string
-    items: {
-      text?: string
-      author: string
-    }[]
-  }
-  cta: {
-    title: string
-    subtitle: string
-    whatsapp: string
-    email: string
-  }
-  pricing: {
-    title: string
-    subtitle?: string
-    plans: {
-      name: string
-      subtitle?: string
-      price: string
-      period?: string
-      features: string[]
-      cta: string
-      recommended?: string
-    }[]
-    setupFee?: {
-      title: string
-      description: string
-    }
-  }
-  orderModal: {
-    title: string
-    badge?: string
-    nameLabel: string
-    emailLabel: string
-    phoneLabel: string
-    businessLabel: string
-    categoryLabel: string
-    categoryPlaceholder: string
-    categories: string[]
-    submit: string
-    cancel: string
-    successMessage: string
-  }
-  contactModal: {
-    title: string
-    nameLabel: string
-    emailLabel: string
-    businessLabel: string
-    messageLabel: string
-    messagePlaceholder: string
-    submit: string
-    cancel: string
-    successMessage: string
-  }
-  floatingButton: {
-    text?: string
-  }
-  download: {
-    title: string
-    subtitle: string
-    ios: { title: string; steps: string[] }
-    android: { title: string; steps: string[] }
-    desktop: { title: string; steps: string[] }
-    badge: string
-  }
-  footer: {
-    copyright: string
-    location: string
-    contact: {
-      title: string
-      address: string
-      phone: string
-      email: string
-    }
-    links: {
-      title: string
-      terms: string
-      policy: string
-    }
-    payment: {
-      title: string
-      secure: string
-    }
-  }
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+type LDir = 'ltr' | 'rtl'
+type LangData = {
+  dir: LDir
+  langBtn: string
+  navFeatures: string
+  navPricing: string
+  navHow: string
+  navCta: string
+  badge: string
+  h1a: string
+  h1b: string
+  heroSub: string
+  ctaPrimary: string
+  ctaSecondary: string
+  stat1n: string; stat1u: string; stat1l: string
+  stat2n: string; stat2u: string; stat2l: string
+  stat3n: string; stat3u: string; stat3l: string
+  marqueeItems: string[]
+  probLabel: string
+  probH2a: string
+  probH2b: string
+  probSub: string
+  problems: { icon: string; title: string; text: string }[]
+  featLabel: string
+  featH2a: string
+  featH2b: string
+  featSub: string
+  features: { icon: string; title: string; text: string; tag: string }[]
+  howLabel: string
+  howH2a: string
+  howH2b: string
+  howSub: string
+  steps: { n: string; title: string; text: string }[]
+  priceLabel: string
+  priceH2a: string
+  priceH2b: string
+  priceSub: string
+  plans: { name: string; price: string; popular: boolean; period: string; features: string[] }[]
+  popularBadge: string
+  setupNote: string
+  setupNote2: string
+  testiLabel: string
+  testiH2a: string
+  testiH2b: string
+  testiSub: string
+  reviews: { text: string; name: string; role: string; avatar: string }[]
+  ctaH2a: string
+  ctaH2b: string
+  ctaSub: string
+  ctaWA: string
+  ctaPrice: string
+  footerLinks: string[]
+  footerCopy: string
+  choosePlan: string
 }
 
-const translations: Record<'he' | 'ru', Translations> = {
-  he: {
-    nav: {
-      about: 'אודות',
-      services: 'שירותים',
-      pricing: 'תמחור',
-      gallery: 'גלריה',
-      reviews: 'המלצות',
-      contact: 'צור קשר',
-      download: 'הורד',
-    },
-    about: {
-      title: 'אודות',
-      company: 'שם החברה',
-      companyName: 'Amber Solutions Systems',
-      field: 'תחום',
-      fieldDescription: 'פיתוח מערכות CRM וטכנולוגיות לעסקים קטנים ובינוניים',
-      whoWeAre: 'מי אנחנו',
-      whoWeAreText: 'Amber Solutions Systems היא חברת טכנולוגיה ישראלית המתמחה בפיתוח פתרונות דיגיטליים לעסקים. המערכת שלנו, Trinity, נבנתה מהיסוד כדי לתת מענה לצרכים האמיתיים של בעלי עסקים — ניהול לקוחות, תשלומים, תקשורת ושיווק במקום אחד.',
-      whyTitle: 'למה Trinity',
-      whyItems: [
-        'מערכת אחת לכל העסק — לקוחות, תשלומים, SMS, ניתוח נתונים',
-        'ממשק בעברית ורוסית — מותאם לשוק הישראלי',
-        'תמיכה בכרטיסי אשראי (Visa, Mastercard), Google Pay, Apple Pay והוראות קבע',
-        'גישה מכל מקום — מחשב, טאבלט ונייד',
-        'תמיכה אישית — אנחנו כאן בשבילך',
-      ],
-      contact: {
-        whatsapp: 'WhatsApp: 054-4858586',
-        email: 'Email: ambersolutions.systems@gmail.com',
-        location: 'אשקלון, ישראל',
-      },
-    },
-    hero: {
-      title: 'פתרונות טכנולוגיים לעסקים קטנים',
-      subtitle: 'מערכות CRM, בוטים, אתרים ודפי נחיתה — הכל במקום אחד',
-      cta: 'בואו נדבר',
-    },
-    services: {
-      title: 'מה אנחנו מציעים',
-      items: [
-        {
-          title: 'מערכות CRM',
-          description: 'ניהול לקוחות, תשלומים, SMS ואנליטיקה',
-        },
-        {
-          title: 'בוטים חכמים',
-          description: 'בוטי טלגרם ו-WhatsApp לאוטומציה',
-        },
-        {
-          title: 'אתרים ודפי נחיתה',
-          description: 'עיצוב ופיתוח אתרים מותאמים אישית',
-        },
-        {
-          title: 'פתרונות תוכנה',
-          description: 'פיתוח מותאם אישית לצרכי העסק שלך',
-        },
-      ],
-    },
-    whyCrm: {
-      title: 'למה העסק שלך צריך מערכת CRM?',
-      article:
-        'רבים חושבים שמערכת CRM מיועדת רק לעסקים גדולים, אבל האמת היא שדווקא עסקים קטנים מרוויחים ממנה הכי הרבה. כשהעסק רק נפתח, קל לנהל 10-20 לקוחות בראש או באקסל. אבל ברגע שמגיעים ל-50 לקוחות ומעלה, דברים מתחילים ליפול בין הכיסאות: לקוחות שוכחים לשלם, תורים הולכים לאיבוד, ואין מושג מי הלקוחות הכי רווחיים. הזמן האידיאלי להתחיל עם CRM הוא עכשיו — לא כשכבר יש בעיה, אלא לפני שהיא מתחילה.',
-      stats: [
-        {
-          value: '67%',
-          label: 'מהעסקים הקטנים מדווחים על עלייה במכירות אחרי הטמעת CRM',
-        },
-        {
-          value: '3x',
-          label: 'שיפור בשימור לקוחות',
-        },
-        {
-          value: '50%',
-          label: 'חיסכון בזמן ניהול',
-        },
-      ],
-    },
-    gallery: {
-      title: 'פרויקטים שלנו',
-      screenshot: 'צילום מסך',
-    },
-    reviews: {
-      title: 'מה הלקוחות שלנו אומרים',
-      items: [
-        {
-          text: 'שירות מעולה! המערכת שינתה את הדרך שבה אני מנהלת את העסק',
-          author: 'קסניה מ., BeautyMania',
-        },
-        {
-          text: 'הבוט בטלגרם חוסך לי שעות עבודה כל יום',
-          author: 'דוד ר., CarWash Pro',
-        },
-        {
-          text: 'סוף סוף מערכת שמבינה עברית ומתאימה לשוק הישראלי',
-          author: 'מירב ל., קליניקת שלום',
-        },
-        {
-          text: 'תוך שבוע כבר ראיתי שיפור בניהול הלקוחות',
-          author: 'אלכס ג., Barber House',
-        },
-        {
-          text: 'המחיר שווה כל שקל, חוסך לי הרבה כאב ראש',
-          author: 'נטלי ש., NailArt Studio',
-        },
-        {
-          text: 'צוות מקצועי ותמיכה מהירה',
-          author: 'יוסי כ., FitZone Gym',
-        },
-      ],
-    },
-    cta: {
-      title: 'מוכנים להתחיל?',
-      subtitle: 'צרו איתנו קשר ונבנה יחד את הפתרון המושלם לעסק שלכם',
-      whatsapp: 'דברו איתנו עכשיו',
-      email: 'שלחו מייל',
-    },
-    pricing: {
-      title: 'בחרו את התוכנית המתאימה',
-      plans: [
-        {
-          name: 'בסיסי',
-          subtitle: 'Solo',
-          price: '₪300',
-          period: '/חודש',
-          features: [
-            '✓ לוח שנה לתורים',
-            '✓ בסיס לקוחות',
-            '✓ SMS התראות',
-            '✓ הזמנה אונליין',
-            '✓ סטטיסטיקה בסיסית',
-            '✓ עובד אחד',
-          ],
-          cta: 'התחילו',
-        },
-        {
-          name: 'פרו',
-          subtitle: 'Studio',
-          price: '₪480',
-          period: '/חודש',
-          features: [
-            '✓ הכל מ-Basic',
-            '✓ אוטומציית WhatsApp',
-            '✓ ניתוח הכנסות',
-            '✓ ניהול מלאי',
-            '✓ תוכנית נאמנות',
-            '✓ עד 5 עובדים',
-          ],
-          cta: 'בחרו פרו',
-          recommended: 'מומלץ',
-        },
-        {
-          name: 'ארגוני',
-          subtitle: 'Chain',
-          price: 'אישי',
-          period: '',
-          features: [
-            '✓ הכל מ-Pro',
-            '✓ עובדים ללא הגבלה',
-            '✓ API אינטגרציות',
-            '✓ בוט טלגרם',
-            '✓ White Label',
-            '✓ מנהל אישי',
-          ],
-          cta: 'צרו קשר',
-        },
-      ],
-      setupFee: {
-        title: 'דמי התקנה חד פעמיים — ₪500',
-        description: 'כולל הגדרת המערכת, ייבוא נתונים, הדרכת צוות ותמיכה בחודש הראשון.',
-      },
-    },
-    orderModal: {
-      title: 'הזמנת תוכנית',
-      nameLabel: 'שם מלא',
-      emailLabel: 'אימייל',
-      phoneLabel: 'טלפון',
-      businessLabel: 'שם העסק',
-      categoryLabel: 'קטגוריה',
-      categoryPlaceholder: 'בחר קטגוריה',
-      categories: ['מספרה', 'מכון רכב', 'קליניקה', 'מסעדה', 'חדר כושר', 'אחר'],
-      submit: 'שלחו בקשה',
-      cancel: 'ביטול',
-      successMessage: '!הבקשה נשלחה בהצלחה נחזור אליכם תוך 24 שעות',
-    },
-    contactModal: {
-      title: 'צור קשר',
-      nameLabel: 'שם',
-      emailLabel: 'אימייל',
-      businessLabel: 'שם העסק',
-      messageLabel: 'הודעה',
-      messagePlaceholder: 'כתוב את ההודעה שלך כאן...',
-      submit: 'שלחו',
-      cancel: 'ביטול',
-      successMessage: '!ההודעה נשלחה',
-    },
-    floatingButton: {
-    },
-    download: {
-      title: 'הורד את Trinity',
-      subtitle: 'התקן את האפליקציה על המכשיר שלך לגישה מהירה ונוחה',
-      ios: {
-        title: 'iPhone / iPad',
-        steps: [
-          'פתח את ambersol.co.il ב-Safari',
-          'לחץ על כפתור השיתוף ↑ בתחתית המסך',
-          'בחר "הוסף למסך הבית"',
-          'לחץ "הוסף" לאישור',
-        ],
-      },
-      android: {
-        title: 'Android',
-        steps: [
-          'פתח את ambersol.co.il ב-Chrome',
-          'לחץ על תפריט ⋮ בפינה הימנית העליונה',
-          'בחר "הוסף למסך הבית"',
-          'לחץ "הוסף" לאישור',
-        ],
-      },
-      desktop: {
-        title: 'מחשב (Chrome)',
-        steps: [
-          'פתח את ambersol.co.il ב-Chrome',
-          'לחץ על אייקון ⊕ בסוף שורת הכתובת',
-          'לחץ "התקן" לאישור',
-        ],
-      },
-      badge: 'PWA — אין צורך ב-App Store',
-    },
-    footer: {
-      copyright: '© 2026 Amber Solutions Systems | ת.ז. 323358507 | עוסק פטור',
-      location: 'אשקלון, ישראל',
-      contact: {
-        title: 'צור קשר',
-        address: 'מנחם בגין 10, אשקלון, ישראל',
-        phone: '054-4858586',
-        email: 'ambersolutions.systems@gmail.com',
-      },
-      links: {
-        title: 'מידע משפטי',
-        terms: 'תקנון שימוש',
-        policy: 'מדיניות ביטולים ופרטיות',
-      },
-      payment: {
-        title: 'אמצעי תשלום',
-        secure: 'תשלום מאובטח',
-      },
-    },
-  },
-  ru: {
-    nav: {
-      about: 'О нас',
-      services: 'Услуги',
-      pricing: 'Тарифы',
-      gallery: 'Галерея',
-      reviews: 'Отзывы',
-      contact: 'Контакты',
-      download: 'Скачать',
-    },
-    about: {
-      title: 'О нас',
-      company: 'Компания',
-      companyName: 'Amber Solutions Systems',
-      field: 'Направление',
-      fieldDescription: 'Разработка CRM-систем и технологий для малого и среднего бизнеса',
-      whoWeAre: 'О нас',
-      whoWeAreText: 'Amber Solutions Systems — израильская технологическая компания, специализирующаяся на разработке цифровых решений для бизнеса. Наша система Trinity создана с нуля, чтобы закрыть реальные потребности владельцев бизнеса — управление клиентами, платежи, коммуникация и маркетинг в одном месте.',
-      whyTitle: 'Почему Trinity',
-      whyItems: [
-        'Одна система для всего бизнеса — клиенты, платежи, SMS, аналитика',
-        'Интерфейс на иврите и русском — адаптирован для израильского рынка',
-        'Поддержка кредитных карт (Visa, Mastercard), Google Pay, Apple Pay и рекуррентные платежи',
-        'Доступ отовсюду — компьютер, планшет и телефон',
-        'Персональная поддержка — мы всегда на связи',
-      ],
-      contact: {
-        whatsapp: 'WhatsApp: 054-4858586',
-        email: 'Email: ambersolutions.systems@gmail.com',
-        location: 'Ашкелон, Израиль',
-      },
-    },
-    hero: {
-      title: 'Технологические решения для малого бизнеса',
-      subtitle: 'CRM системы, боты, сайты и лендинги — всё в одном месте',
-      cta: 'Давайте поговорим',
-    },
-    services: {
-      title: 'Что мы предлагаем',
-      items: [
-        {
-          title: 'CRM системы',
-          description: 'Управление клиентами, платежи, SMS и аналитика',
-        },
-        {
-          title: 'Умные боты',
-          description: 'Telegram и WhatsApp боты для автоматизации',
-        },
-        {
-          title: 'Сайты и лендинги',
-          description: 'Дизайн и разработка персональных сайтов',
-        },
-        {
-          title: 'Программные решения',
-          description: 'Разработка под потребности вашего бизнеса',
-        },
-      ],
-    },
-    whyCrm: {
-      title: 'Почему вашему бизнесу нужна CRM система?',
-      article:
-        'Многие думают что CRM система нужна только крупным компаниям, но правда в том что именно малый бизнес получает от неё максимальную выгоду. Когда бизнес только открывается, легко управлять 10-20 клиентами в голове или в Excel. Но как только клиентов становится 50 и больше, начинают теряться данные: клиенты забывают платить, записи пропадают, и нет понимания кто самые прибыльные клиенты. Идеальное время начать с CRM — сейчас. Не когда проблема уже есть, а до того как она появится.',
-      stats: [
-        {
-          value: '67%',
-          label: 'малых бизнесов сообщают о росте продаж после внедрения CRM',
-        },
-        {
-          value: '3x',
-          label: 'улучшение удержания клиентов',
-        },
-        {
-          value: '50%',
-          label: 'экономия времени управления',
-        },
-      ],
-    },
-    gallery: {
-      title: 'Наши проекты',
-      screenshot: 'Скриншот',
-    },
-    reviews: {
-      title: 'Что говорят наши клиенты',
-      items: [
-        {
-          text: 'Отличный сервис! Система изменила то, как я управляю бизнесом',
-          author: 'Ксения М., BeautyMania',
-        },
-        {
-          text: 'Telegram бот экономит мне часы работы каждый день',
-          author: 'Давид Р., CarWash Pro',
-        },
-        {
-          text: 'Наконец-то система которая понимает иврит и подходит для израильского рынка',
-          author: 'Мирав Л., Клиника Шалом',
-        },
-        {
-          text: 'За неделю уже увидел улучшение в управлении клиентами',
-          author: 'Алекс Г., Barber House',
-        },
-        {
-          text: 'Цена стоит каждого шекеля, экономит мне много головной боли',
-          author: 'Наталья Ш., NailArt Studio',
-        },
-        {
-          text: 'Профессиональная команда и быстрая поддержка',
-          author: 'Йоси К., FitZone Gym',
-        },
-      ],
-    },
-    cta: {
-      title: 'Готовы начать?',
-      subtitle: 'Свяжитесь с нами и мы вместе создадим идеальное решение для вашего бизнеса',
-      whatsapp: 'Поговорите с нами сейчас',
-      email: 'Написать email',
-    },
-    pricing: {
-      title: 'Выберите подходящий план',
-      plans: [
-        {
-          name: 'Базовый',
-          price: 'Coming Soon',
-          features: [
-            '✓ База клиентов до 200',
-            '✓ История визитов',
-            '✗ Платёжные ссылки',
-            '✗ SMS рассылки',
-            '✗ Аналитика',
-            '✓ 1 пользователь',
-            '✓ Поддержка по Email',
-          ],
-          cta: 'Начать',
-        },
-        {
-          name: 'Профессиональный',
-          price: 'Coming Soon',
-          features: [
-            '✓ База клиентов до 1000',
-            '✓ История визитов',
-            '✓ Платёжные ссылки',
-            '✓ SMS до 500/мес',
-            '✓ Аналитика и графики',
-            '✓ 3 пользователя',
-            '✓ Поддержка WhatsApp',
-          ],
-          cta: 'Начать',
-          recommended: 'Рекомендуемый',
-        },
-        {
-          name: 'Корпоративный',
-          price: 'Coming Soon',
-          features: [
-            '✓ Безлимит клиентов',
-            '✓ История визитов',
-            '✓ Платёжные ссылки',
-            '✓ Безлимит SMS',
-            '✓ Продвинутая аналитика',
-            '✓ До 10 пользователей',
-            '✓ Приоритетная поддержка',
-            '✓ Брендинг (логотип и цвета)',
-          ],
-          cta: 'Связаться',
-        },
-      ],
-    },
-    orderModal: {
-      title: 'Заказ плана',
-      nameLabel: 'Полное имя',
-      emailLabel: 'Email',
-      phoneLabel: 'Телефон',
-      businessLabel: 'Название бизнеса',
-      categoryLabel: 'Категория',
-      categoryPlaceholder: 'Выберите категорию',
-      categories: ['Салон', 'Автомойка', 'Клиника', 'Ресторан', 'Зал', 'Другое'],
-      submit: 'Отправить заявку',
-      cancel: 'Отмена',
-      successMessage: 'Заявка отправлена! Мы свяжемся в течение 24 часов',
-    },
-    contactModal: {
-      title: 'Связаться с нами',
-      nameLabel: 'Имя',
-      emailLabel: 'Email',
-      businessLabel: 'Название бизнеса',
-      messageLabel: 'Сообщение',
-      messagePlaceholder: 'Напишите ваше сообщение здесь...',
-      submit: 'Отправить',
-      cancel: 'Отмена',
-      successMessage: 'Сообщение отправлено!',
-    },
-    floatingButton: {
-    },
-    download: {
-      title: 'Скачать Trinity',
-      subtitle: 'Установите приложение на устройство для быстрого доступа',
-      ios: {
-        title: 'iPhone / iPad',
-        steps: [
-          'Откройте ambersol.co.il в Safari',
-          'Нажмите кнопку "Поделиться" ↑ внизу экрана',
-          'Выберите "На экран Домой"',
-          'Нажмите "Добавить"',
-        ],
-      },
-      android: {
-        title: 'Android',
-        steps: [
-          'Откройте ambersol.co.il в Chrome',
-          'Нажмите меню ⋮ в правом верхнем углу',
-          'Выберите "Добавить на главный экран"',
-          'Нажмите "Добавить"',
-        ],
-      },
-      desktop: {
-        title: 'Компьютер (Chrome)',
-        steps: [
-          'Откройте ambersol.co.il в Chrome',
-          'Нажмите иконку ⊕ в конце адресной строки',
-          'Нажмите "Установить"',
-        ],
-      },
-      badge: 'PWA — не нужен App Store',
-    },
-    footer: {
-      copyright: '© 2026 Amber Solutions Systems | И.Н. 323358507 | Освобождённый плательщик',
-      location: 'Ашкелон, Израиль',
-      contact: {
-        title: 'Контакты',
-        address: 'Менахем Бегин 10, Ашкелон, Израиль',
-        phone: '054-4858586',
-        email: 'ambersolutions.systems@gmail.com',
-      },
-      links: {
-        title: 'Правовая информация',
-        terms: 'Условия использования',
-        policy: 'Политика возвратов и конфиденциальность',
-      },
-      payment: {
-        title: 'Способы оплаты',
-        secure: 'Безопасная оплата',
-      },
-    },
-  },
+const RU: LangData = {
+  dir: 'ltr',
+  langBtn: 'עברית',
+  navFeatures: 'Возможности',
+  navPricing: 'Тарифы',
+  navHow: 'Как это работает',
+  navCta: 'Войти →',
+  badge: 'Система управления бизнесом · Израиль',
+  h1a: 'Ваш бизнес заслуживает',
+  h1b: 'умной системы',
+  heroSub: 'Trinity CRM — это всё что нужно малому бизнесу: клиенты, записи, склад, аналитика и напоминания через WhatsApp. Одно место — полный порядок.',
+  ctaPrimary: 'Попробовать бесплатно →',
+  ctaSecondary: 'Посмотреть возможности',
+  stat1n: '90', stat1u: '%', stat1l: 'открываемость WhatsApp',
+  stat2n: '5', stat2u: 'мин', stat2l: 'на запуск системы',
+  stat3n: '0', stat3u: '₪', stat3l: 'скрытых комиссий',
+  marqueeItems: ['Салоны красоты','Косметологические клиники','Магазины мебели','Цветочные магазины','Медицинские кабинеты','Фотостудии','Автомастерские','Ветеринарные клиники'],
+  probLabel: 'Знакомо?',
+  probH2a: 'Бизнес растёт,',
+  probH2b: 'а хаос не уменьшается',
+  probSub: 'Большинство владельцев бизнеса сталкиваются с одними и теми же проблемами каждый день',
+  problems: [
+    { icon: '📋', title: 'Записи теряются', text: 'Тетрадка, заметки в телефоне, голова — клиенты падают в щели и не возвращаются' },
+    { icon: '📵', title: 'SMS никто не читает', text: 'Отправили напоминание — клиент не пришёл. Потому что SMS открывают 3 из 10. WhatsApp — 9 из 10' },
+    { icon: '📊', title: 'Непонятно что работает', text: 'Кто лучший клиент? Что приносит больше денег? Без системы — просто догадки' },
+  ],
+  featLabel: 'Возможности',
+  featH2a: 'Всё что нужно —',
+  featH2b: 'в одном месте',
+  featSub: 'Никаких лишних кнопок. Только то что реально используется каждый день',
+  features: [
+    { icon: '👥', title: 'База клиентов', text: 'Вся история каждого клиента: визиты, предпочтения, расходы, заметки. Всё в одном профиле.', tag: 'Всегда под рукой' },
+    { icon: '📅', title: 'Дневник записей', text: 'Удобный календарь с напоминаниями. Клиент записался — система сама напомнит через WhatsApp.', tag: 'Авто-напоминания' },
+    { icon: '💬', title: 'WhatsApp рассылки', text: 'Отправляйте акции, поздравления и напоминания прямо в WhatsApp. Открываемость 90%.', tag: 'Эксклюзив Trinity' },
+    { icon: '📦', title: 'Склад и материалы', text: 'Следите за остатками. Система напомнит когда пора заказывать. Автосписание при продаже.', tag: 'Умный учёт' },
+    { icon: '💰', title: 'Продажи и оплаты', text: 'Фиксируйте платежи, видите долги, следите за выручкой. Полная картина за любой период.', tag: 'Прозрачность' },
+    { icon: '📈', title: 'Аналитика', text: 'Доход за день, месяц, год. Лучшие клиенты. Самые прибыльные услуги. Нажатием кнопки.', tag: 'Решения на данных' },
+  ],
+  howLabel: 'Как это работает',
+  howH2a: 'Запуск за',
+  howH2b: 'один день',
+  howSub: 'Мы приезжаем, настраиваем, обучаем. Вы просто начинаете работать.',
+  steps: [
+    { n: '1', title: 'Встреча и демо', text: 'Показываем систему вживую, отвечаем на все вопросы. Никаких обязательств.' },
+    { n: '2', title: 'Настройка', text: 'Приезжаем и настраиваем всё под ваш бизнес. Переносим существующие данные.' },
+    { n: '3', title: 'Обучение', text: 'Объясняем как пользоваться. Вы и ваши сотрудники готовы за пару часов.' },
+    { n: '4', title: 'Работаете', text: 'Мы на связи. Любой вопрос — пишите. Система обновляется автоматически.' },
+  ],
+  priceLabel: 'Тарифы',
+  priceH2a: 'Честные цены.',
+  priceH2b: 'Без сюрпризов.',
+  priceSub: 'Платите только за то что используете. Никаких скрытых комиссий.',
+  plans: [
+    { name: 'Старт', price: '199', popular: false, period: 'в месяц', features: ['База клиентов','Дневник записей','WhatsApp напоминания','История визитов','Поддержка'] },
+    { name: 'Бизнес', price: '349', popular: true, period: 'в месяц', features: ['Всё из тарифа Старт','Склад и материалы','Продажи и оплаты','WhatsApp рассылки','Программа лояльности','Аналитика и отчёты'] },
+    { name: 'Про', price: '549', popular: false, period: 'в месяц', features: ['Всё из тарифа Бизнес','Несколько филиалов','Онлайн запись','Приоритетная поддержка','Индивидуальные модули'] },
+  ],
+  popularBadge: 'Популярный',
+  setupNote: 'Единоразовая плата за установку и настройку — ',
+  setupNote2: '. Мы приедем, всё настроим и обучим вашу команду.',
+  testiLabel: 'Отзывы',
+  testiH2a: 'Что говорят',
+  testiH2b: 'наши клиенты',
+  testiSub: 'Реальные владельцы бизнеса о работе с Trinity',
+  reviews: [
+    { text: 'Раньше вела всё в тетрадке и постоянно теряла клиентов. Теперь система сама напоминает через WhatsApp — пропусков стало в разы меньше.', name: 'Анета', role: 'Владелица салона Beautymania', avatar: 'А' },
+    { text: 'Влад приехал, всё настроил за один день. Теперь я вижу кто мой лучший клиент и сколько денег приносит каждая услуга. Это меняет всё.', name: 'Ксения', role: 'Владелица Hair Rehab', avatar: 'К' },
+  ],
+  ctaH2a: 'Готовы навести порядок',
+  ctaH2b: 'в своём бизнесе?',
+  ctaSub: 'Напишите нам — покажем систему вживую. Без обязательств.',
+  ctaWA: 'Написать в WhatsApp →',
+  ctaPrice: 'Посмотреть тарифы',
+  footerLinks: ['Возможности','Тарифы','Поддержка','Контакты'],
+  footerCopy: '© 2025 Amber Solutions. Все права защищены.',
+  choosePlan: 'Выбрать →',
 }
 
-interface LandingPlan {
-  key: string
-  name_he: string
-  name_ru: string
-  subtitle_he: string | null
-  subtitle_ru: string | null
-  price_he: string
-  price_ru: string
-  period_he: string | null
-  period_ru: string | null
-  badge_he: string | null
-  badge_ru: string | null
-  color: string
-  features_he: string[]
-  features_ru: string[]
-  cta_he: string
-  cta_ru: string
-  is_active: boolean
+const HE: LangData = {
+  dir: 'rtl',
+  langBtn: 'Русский',
+  navFeatures: 'יכולות',
+  navPricing: 'תמחור',
+  navHow: 'איך זה עובד',
+  navCta: 'כניסה →',
+  badge: 'מערכת ניהול עסקים · ישראל',
+  h1a: 'העסק שלך ראוי',
+  h1b: 'למערכת חכמה',
+  heroSub: 'Trinity CRM — כל מה שעסק קטן צריך: לקוחות, תורים, מלאי, אנליטיקה ותזכורות דרך WhatsApp. מקום אחד — סדר מלא.',
+  ctaPrimary: 'נסה בחינם →',
+  ctaSecondary: 'ראה יכולות',
+  stat1n: '90', stat1u: '%', stat1l: 'פתיחת הודעות WhatsApp',
+  stat2n: '5', stat2u: 'דק', stat2l: 'להפעיל את המערכת',
+  stat3n: '0', stat3u: '₪', stat3l: 'עמלות נסתרות',
+  marqueeItems: ['סלוני יופי','קליניקות קוסמטיקה','חנויות רהיטים','חנויות פרחים','מרפאות','סטודיואים לצילום','מוסכים','קליניקות וטרינריה'],
+  probLabel: 'מוכר?',
+  probH2a: 'העסק גדל,',
+  probH2b: 'אבל הבלגן לא קטן',
+  probSub: 'רוב בעלי העסקים נתקלים באותן בעיות בדיוק כל יום',
+  problems: [
+    { icon: '📋', title: 'רשומות אובדות', text: 'מחברת, הערות בטלפון, ראש — לקוחות נופלים בין הכיסאות ולא חוזרים' },
+    { icon: '📵', title: 'SMS אף אחד לא קורא', text: 'שלחת תזכורת — הלקוח לא הגיע. כי SMS פותחים 3 מתוך 10. WhatsApp — 9 מתוך 10' },
+    { icon: '📊', title: 'לא ברור מה עובד', text: 'מי הלקוח הכי טוב? מה מביא יותר כסף? בלי מערכת — רק ניחושים' },
+  ],
+  featLabel: 'יכולות',
+  featH2a: 'כל מה שצריך —',
+  featH2b: 'במקום אחד',
+  featSub: 'בלי כפתורים מיותרים. רק מה שמשתמשים בו כל יום',
+  features: [
+    { icon: '👥', title: 'בסיס לקוחות', text: 'כל ההיסטוריה של כל לקוח: ביקורים, העדפות, הוצאות, הערות. הכל בפרופיל אחד.', tag: 'תמיד בהישג יד' },
+    { icon: '📅', title: 'יומן תורים', text: 'לוח שנה נוח עם תזכורות. לקוח נרשם — המערכת תזכיר לו דרך WhatsApp.', tag: 'תזכורות אוטו' },
+    { icon: '💬', title: 'שיווק WhatsApp', text: 'שלח מבצעים, ברכות ותזכורות ישירות ל-WhatsApp. שיעור פתיחה 90%.', tag: 'בלעדי Trinity' },
+    { icon: '📦', title: 'מלאי וחומרים', text: 'עקוב אחרי מלאי. המערכת תזכיר מתי להזמין. ניכוי אוטומטי במכירה.', tag: 'ניהול חכם' },
+    { icon: '💰', title: 'מכירות ותשלומים', text: 'רשום תשלומים, ראה חובות, עקוב אחרי הכנסות. תמונה מלאה לכל תקופה.', tag: 'שקיפות' },
+    { icon: '📈', title: 'אנליטיקה', text: 'הכנסות ליום, לחודש, לשנה. הלקוחות הטובים. השירותים הרווחיים. בלחיצת כפתור.', tag: 'החלטות מבוססות נתונים' },
+  ],
+  howLabel: 'איך זה עובד',
+  howH2a: 'הפעלה תוך',
+  howH2b: 'יום אחד',
+  howSub: 'אנחנו מגיעים, מגדירים, מלמדים. אתה פשוט מתחיל לעבוד.',
+  steps: [
+    { n: '1', title: 'פגישה ודמו', text: 'מראים את המערכת בחיים, עונים על כל השאלות. ללא התחייבות.' },
+    { n: '2', title: 'הגדרה', text: 'מגיעים ומגדירים הכל לפי העסק שלך. מעבירים נתונים קיימים.' },
+    { n: '3', title: 'הדרכה', text: 'מסבירים איך להשתמש. אתה והעובדים שלך מוכנים בכמה שעות.' },
+    { n: '4', title: 'עובד', text: 'אנחנו בקשר. כל שאלה — כתוב. המערכת מתעדכנת אוטומטית.' },
+  ],
+  priceLabel: 'תמחור',
+  priceH2a: 'מחירים הוגנים.',
+  priceH2b: 'ללא הפתעות.',
+  priceSub: 'משלמים רק על מה שמשתמשים בו. ללא עמלות נסתרות.',
+  plans: [
+    { name: 'התחלתי', price: '199', popular: false, period: 'לחודש', features: ['בסיס לקוחות','יומן תורים','תזכורות WhatsApp','היסטוריית ביקורים','תמיכה'] },
+    { name: 'עסקי', price: '349', popular: true, period: 'לחודש', features: ['הכל מהתוכנית ההתחלתית','מלאי וחומרים','מכירות ותשלומים','שיווק WhatsApp','תוכנית נאמנות','אנליטיקה ודוחות'] },
+    { name: 'פרו', price: '549', popular: false, period: 'לחודש', features: ['הכל מהתוכנית העסקית','מספר סניפים','הזמנה אונליין','תמיכה מועדפת','מודולים אישיים'] },
+  ],
+  popularBadge: 'פופולרי',
+  setupNote: 'תשלום חד פעמי להתקנה והגדרה — ',
+  setupNote2: '. נגיע, נגדיר הכל ונלמד את הצוות שלך.',
+  testiLabel: 'המלצות',
+  testiH2a: 'מה אומרים',
+  testiH2b: 'הלקוחות שלנו',
+  testiSub: 'בעלי עסקים אמיתיים על העבודה עם Trinity',
+  reviews: [
+    { text: 'קודם ניהלתי הכל במחברת ואיבדתי לקוחות כל הזמן. עכשיו המערכת מזכירה דרך WhatsApp — הרבה פחות היעדרויות.', name: 'אנטה', role: 'בעלת סלון Beautymania', avatar: 'א' },
+    { text: 'ולד הגיע, הגדיר הכל ביום אחד. עכשיו אני רואה מי הלקוח הכי טוב שלי וכמה כסף מביא כל שירות. זה משנה הכל.', name: 'קסניה', role: 'בעלת Hair Rehab', avatar: 'ק' },
+  ],
+  ctaH2a: 'מוכן לסדר',
+  ctaH2b: 'בעסק שלך?',
+  ctaSub: 'כתוב לנו — נראה את המערכת בחיים. ללא התחייבות.',
+  ctaWA: 'כתוב ב-WhatsApp →',
+  ctaPrice: 'ראה תמחור',
+  footerLinks: ['יכולות','תמחור','תמיכה','צור קשר'],
+  footerCopy: '© 2025 Amber Solutions. כל הזכויות שמורות.',
+  choosePlan: 'בחר →',
 }
 
-const COLOR_HEADER: Record<string, string> = {
-  gray: 'bg-gray-100',
-  blue: 'bg-blue-600',
-  amber: 'bg-amber-500',
-  purple: 'bg-purple-700',
-  green: 'bg-green-600',
-  red: 'bg-red-600',
-}
-const COLOR_RING: Record<string, string> = {
-  gray: 'ring-gray-400',
-  blue: 'ring-blue-500',
-  amber: 'ring-amber-500',
-  purple: 'ring-purple-500',
-  green: 'ring-green-500',
-  red: 'ring-red-500',
-}
-const COLOR_TEXT: Record<string, string> = {
-  gray: 'text-gray-900',
-  blue: 'text-white',
-  amber: 'text-white',
-  purple: 'text-white',
-  green: 'text-white',
-  red: 'text-white',
-}
-
-// Default plans shown if API is unavailable
-const DEFAULT_PLANS: LandingPlan[] = [
-  { key: 'basic',      name_he: 'בסיסי',          name_ru: 'Base',             subtitle_he: 'Solo',   subtitle_ru: 'Solo',   price_he: '₪199', price_ru: '₪199', period_he: '/חודש', period_ru: '/мес', badge_he: null, badge_ru: null, color: 'gray',   features_he: ['לקוחות', 'ביקורים / רשומות', 'יומן ומשימות', 'מלאי'],                   features_ru: ['Клиенты', 'Визиты / Записи', 'Дневник и задачи', 'Склад'],                                      cta_he: 'להירשם', cta_ru: 'Оформить', is_active: true },
-  { key: 'pro',        name_he: 'פרו',             name_ru: 'Pro',              subtitle_he: 'Studio', subtitle_ru: 'Studio', price_he: '₪249', price_ru: '₪249', period_he: '/חודש', period_ru: '/мес', badge_he: 'מומלץ', badge_ru: 'Рекомендован', color: 'blue',  features_he: ['הכל מ-Base', 'הזמנה אונליין', 'סטטיסטיקה ודוחות', 'SMS והתראות'],       features_ru: ['Всё из Base', 'Онлайн-запись', 'Статистика и отчёты', 'SMS и напоминания'],                   cta_he: 'להירשם', cta_ru: 'Оформить', is_active: true },
-  { key: 'enterprise', name_he: 'ארגוני',          name_ru: 'Enterprise',       subtitle_he: 'Chain',  subtitle_ru: 'Chain',  price_he: '₪499', price_ru: '₪499', period_he: '/חודש', period_ru: '/мес', badge_he: null, badge_ru: null, color: 'amber',  features_he: ['הכל מ-Base ו-Pro', 'סניפים', 'תוכנית נאמנות', 'עד 5 עובדים כלולים'],   features_ru: ['Всё из Base и Pro', 'Филиалы', 'Программа лояльности', 'До 5 сотрудников включено'],          cta_he: 'להירשם', cta_ru: 'Оформить', is_active: true },
-  { key: 'custom',     name_he: 'הרכבה אישית',     name_ru: 'Инд. настройка',   subtitle_he: null,     subtitle_ru: null,     price_he: 'לפי בחירה', price_ru: 'По выбору', period_he: null, period_ru: null, badge_he: null, badge_ru: null, color: 'purple', features_he: ['בחרו מודולים לפי הצורך', 'קונפיגורציה אישית', 'תמיכה בעדיפות', 'הנחה 15% על 5+ מודולים'], features_ru: ['Выберите нужные модули', 'Индивидуальная конфигурация', 'Приоритетная поддержка', 'Скидка 15% на 5+ модулей'], cta_he: 'להירשם', cta_ru: 'Оформить', is_active: true },
-]
-
-// Plan keys that show module selection (custom/individual)
-const CUSTOM_PLAN_KEYS = ['custom', 'individual', 'modules', 'custom_modules']
-
+// ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function LandingPage() {
-  const [language, setLanguage] = useState<'he' | 'ru'>('he')
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [lang, setLang] = useState<'ru' | 'he'>('ru')
   const [scrolled, setScrolled] = useState(false)
-  const [showScrollTop, setShowScrollTop] = useState(false)
-  const [orderModalOpen, setOrderModalOpen] = useState(false)
-  const [contactModalOpen, setContactModalOpen] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState('')
-  const [showToast, setShowToast] = useState(false)
-  const [toastMessage, setToastMessage] = useState('')
-  const [toastType, setToastType] = useState<'success' | 'error'>('success')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [landingPlans, setLandingPlans] = useState<LandingPlan[] | null>(null)
-  const [landingScreenshots, setLandingScreenshots] = useState<{slot:number;url:string;alt_he:string;alt_ru:string}[]>([
-    {slot:1,url:'/screenshot-1.jpg',alt_he:'צילום מסך 1',alt_ru:'Скриншот 1'},
-    {slot:2,url:'/screenshot-2.jpg',alt_he:'צילום מסך 2',alt_ru:'Скриншот 2'},
-    {slot:3,url:'/screenshot-3.jpg',alt_he:'צילום מסך 3',alt_ru:'Скриншот 3'},
-    {slot:4,url:'/screenshot-4.jpg',alt_he:'צילום מסך 4',alt_ru:'Скриншот 4'},
-  ])
-  const [demoModalOpen, setDemoModalOpen] = useState(false)
-  const [demoModalPlan, setDemoModalPlan] = useState('')
-  const [demoModalPlanKey, setDemoModalPlanKey] = useState('')
-  const t = translations[language]
-  const dir = language === 'he' ? 'rtl' : 'ltr'
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [demoOpen, setDemoOpen] = useState(false)
+  const [demoPlan, setDemoPlan] = useState('')
+  const t = lang === 'ru' ? RU : HE
 
-  // Load pricing config from DB (plans + screenshots)
   useEffect(() => {
-    fetch('/api/admin/pricing-config')
-      .then(r => { if (!r.ok) throw new Error('fetch failed'); return r.json() })
-      .then(d => {
-        const plans = (d.landing_plans || []).filter((p: LandingPlan) => p.is_active)
-        setLandingPlans(plans.length > 0 ? plans : DEFAULT_PLANS)
-        if (d.landing_screenshots?.length > 0) {
-          setLandingScreenshots(d.landing_screenshots)
+    const fn = () => setScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', fn, { passive: true })
+    return () => window.removeEventListener('scroll', fn)
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('dir', t.dir)
+    document.documentElement.setAttribute('lang', lang)
+  }, [lang, t.dir])
+
+  // Фикс белого пространства под футером — Tailwind base делает html белым
+  useEffect(() => {
+    const prev = document.documentElement.style.background
+    document.documentElement.style.background = '#1E2D4A'
+    document.body.style.background = '#FDFAF5'
+    document.body.style.margin = '0'
+    document.body.style.padding = '0'
+    return () => {
+      document.documentElement.style.background = prev
+    }
+  }, [])
+
+  useEffect(() => {
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const el = e.target as HTMLElement
+          el.style.opacity = '1'
+          el.style.transform = 'translateY(0)'
         }
       })
-      .catch(() => setLandingPlans(DEFAULT_PLANS))
-  }, [])
-
-  // Handle scroll for header background and scroll-to-top button
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50)
-      setShowScrollTop(window.scrollY > 300)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-  
-  // Scroll to top function
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    })
-  }
-
-  // Intersection Observer for scroll animations
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('animate-in')
-          }
-        })
-      },
-      {
-        threshold: 0.1,
-        rootMargin: '0px 0px -100px 0px',
-      }
-    )
-
-    const elements = document.querySelectorAll('.fade-in-section')
-    elements.forEach((el) => observer.observe(el))
-
-    return () => observer.disconnect()
-  }, [])
-
-  // Update document direction
-  useEffect(() => {
-    document.documentElement.setAttribute('dir', dir)
-    document.documentElement.setAttribute('lang', language)
-  }, [dir, language])
-
-  // Handle order modal — now opens DemoRegisterModal
-  const openOrderModal = (planName: string, planKey?: string) => {
-    setDemoModalPlan(planName)
-    setDemoModalPlanKey(planKey || '')
-    setDemoModalOpen(true)
-  }
-
-  const handleSubmitOrder = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const orderData = {
-      plan: selectedPlan,
-      name: formData.get('name'),
-      email: formData.get('email'),
-      phone: formData.get('phone'),
-      business: formData.get('business'),
-      category: formData.get('category'),
-      timestamp: new Date().toISOString(),
-    }
-    
-    // Save to localStorage
-    const orders = JSON.parse(localStorage.getItem('landing-orders') || '[]')
-    orders.push(orderData)
-    localStorage.setItem('landing-orders', JSON.stringify(orders))
-    
-    // Close modal and show toast
-    setOrderModalOpen(false)
-    setToastMessage(t.orderModal.successMessage)
-    setShowToast(true)
-    setTimeout(() => setShowToast(false), 3000)
-  }
-
-  // Handle contact modal
-  const openContactModal = () => {
-    setContactModalOpen(true)
-  }
-
-  const handleSubmitContact = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    
-    if (isSubmitting) return
-    
-    setIsSubmitting(true)
-    
-    try {
-      const formData = new FormData(e.currentTarget)
-      const contactData = {
-        name: formData.get('name') as string,
-        email: formData.get('email') as string,
-        phone: formData.get('phone') as string,
-        message: formData.get('message') as string,
-      }
-      
-      // Send to API
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(contactData),
+    }, { threshold: 0.1 })
+    document.querySelectorAll<HTMLElement>('.feature-card,.problem-card,.plan,.testi-card,.step')
+      .forEach(el => {
+        el.style.opacity = '0'
+        el.style.transform = 'translateY(32px)'
+        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease'
+        obs.observe(el)
       })
-      
-      const result = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(result.errorHe || result.error || 'שגיאה בשליחת ההודעה')
-      }
-      
-      // Success
-      // Reset form safely (check if still mounted)
-      try {
-        e.currentTarget?.reset()
-      } catch (err) {
-        // Form might be unmounted, ignore error
-      }
-      
-      setContactModalOpen(false)
-      setToastType('success')
-      setToastMessage(result.message || 'ההודעה נשלחה בהצלחה!')
-      setShowToast(true)
-      setTimeout(() => setShowToast(false), 3000)
-    } catch (error: any) {
-      console.error('[Contact Form] Error:', error)
-      setToastType('error')
-      setToastMessage(error.message || 'שגיאה בשליחת ההודעה')
-      setShowToast(true)
-      setTimeout(() => setShowToast(false), 3000)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+    return () => obs.disconnect()
+  }, [lang])
 
   return (
-    <div className={`min-h-screen font-sans ${dir === 'rtl' ? 'rtl' : 'ltr'}`} dir={dir}>
-      {/* Navigation */}
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? 'bg-white shadow-md'
-            : 'bg-transparent'
-        }`}
-      >
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 gap-8">
-            {/* Logo */}
-            <div className="flex items-center gap-3" style={{ flexShrink: 0, paddingRight: '40px' }}>
-              <img
-                src="/logo.png"
-                alt="Amber Solutions Logo"
-                className="w-10 h-10 md:w-12 md:h-12 object-contain"
-              />
-              {/* Hide text on mobile, show on desktop */}
-              <span 
-                className={`hidden md:block text-lg whitespace-nowrap transition-colors ${scrolled ? 'text-blue-900' : 'text-white'}`}
-                style={{ 
-                  fontFamily: language === 'he' ? 'Assistant, system-ui, sans-serif' : 'Inter, system-ui, sans-serif',
-                  fontWeight: 500
-                }}
-              >
-                Amber Solutions Systems
-              </span>
-            </div>
+    <div dir={t.dir}>
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Lora:wght@400;500;600&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        :root {
+          --cream: #FDFAF5; --cream-dark: #F5F0E8; --cream-mid: #EDE7D8;
+          --amber: #D97706; --amber-light: #F59E0B; --amber-pale: #FEF3C7;
+          --amber-glow: rgba(217,119,6,0.12); --navy: #1E2D4A; --navy-mid: #2D3E5C;
+          --text: #1A1A2E; --text-mid: #4A5568; --text-light: #8896A8;
+          --white: #FFFFFF; --border: rgba(217,119,6,0.15);
+          --shadow-sm: 0 2px 12px rgba(30,45,74,0.06);
+          --shadow-md: 0 8px 32px rgba(30,45,74,0.10);
+          --shadow-lg: 0 20px 60px rgba(30,45,74,0.14);
+        }
+        body { background:var(--cream); color:var(--text); font-family:'Manrope',system-ui,sans-serif; overflow-x:hidden; line-height:1.65; }
+        ::-webkit-scrollbar { width:5px; }
+        ::-webkit-scrollbar-track { background:var(--cream); }
+        ::-webkit-scrollbar-thumb { background:var(--amber-light); border-radius:3px; }
+        nav { position:fixed; top:0; left:0; right:0; z-index:100; display:flex; align-items:center; justify-content:space-between; padding:18px 60px; background:rgba(253,250,245,0.88); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); transition:box-shadow 0.3s; }
+        nav.scrolled { box-shadow:var(--shadow-sm); }
+        .logo { display:flex; align-items:center; gap:10px; font-family:'Lora',serif; font-size:22px; font-weight:600; color:var(--navy); text-decoration:none; letter-spacing:-0.3px; }
+        .logo-img-wrap { width:40px; height:40px; border-radius:50%; overflow:hidden; background:#000; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+        .logo-img-wrap img { width:100%; height:100%; object-fit:cover; mix-blend-mode:lighten; display:block; }
+        .nav-links { display:flex; align-items:center; gap:36px; }
+        .nav-links a { color:var(--text-mid); text-decoration:none; font-size:15px; font-weight:500; transition:color 0.2s; }
+        .nav-links a:hover { color:var(--amber); }
+        .nav-right { display:flex; align-items:center; gap:12px; }
+        .btn-nav { background:var(--navy); color:white; padding:10px 24px; border-radius:10px; font-size:14px; font-weight:600; text-decoration:none; transition:all 0.2s; box-shadow:var(--shadow-sm); }
+        .btn-nav:hover { background:var(--navy-mid); transform:translateY(-1px); box-shadow:var(--shadow-md); }
+        .btn-lang { background:transparent; border:1.5px solid var(--border); border-radius:8px; padding:7px 14px; cursor:pointer; font-size:13px; font-weight:600; color:var(--navy); transition:all 0.2s; font-family:inherit; }
+        .btn-lang:hover { border-color:var(--amber); color:var(--amber); }
+        .burger { display:none; background:none; border:none; cursor:pointer; color:var(--navy); padding:4px; }
+        .mobile-menu { display:none; position:fixed; top:72px; left:0; right:0; z-index:99; background:rgba(253,250,245,0.98); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); padding:20px 24px; flex-direction:column; gap:20px; }
+        .mobile-menu.open { display:flex; }
+        .mobile-menu a { color:var(--text-mid); text-decoration:none; font-size:16px; font-weight:500; }
+        .mobile-menu .btn-nav { text-align:center; }
+      `}</style>
+      <style jsx global>{`
+        .hero { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:120px 60px 80px; position:relative; text-align:center; overflow:hidden; }
+        .hero-bg { position:absolute; inset:0; z-index:0; background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(245,158,11,0.08) 0%,transparent 70%),radial-gradient(ellipse 40% 40% at 80% 80%,rgba(30,45,74,0.04) 0%,transparent 60%); }
+        .shape { position:absolute; border-radius:50%; background:linear-gradient(135deg,rgba(245,158,11,0.07),rgba(217,119,6,0.04)); pointer-events:none; animation:float ease-in-out infinite; }
+        .s1 { width:400px; height:400px; top:-100px; right:-80px; animation-duration:12s; }
+        .s2 { width:200px; height:200px; bottom:15%; left:5%; animation-duration:9s; animation-delay:-4s; }
+        .s3 { width:120px; height:120px; top:30%; left:8%; animation-duration:7s; animation-delay:-2s; }
+        @keyframes float { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-20px) rotate(3deg)} }
+        .hero-inner { position:relative; z-index:1; max-width:820px; }
+        .hero-badge { display:inline-flex; align-items:center; gap:8px; background:var(--amber-pale); border:1px solid rgba(217,119,6,0.25); border-radius:100px; padding:7px 18px; margin-bottom:36px; font-size:13px; font-weight:600; color:var(--amber); animation:fadeUp 0.6s ease both; }
+        .badge-dot { width:7px; height:7px; border-radius:50%; background:var(--amber-light); animation:pulse 2s ease infinite; display:inline-block; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.4)} }
+        h1 { font-family:'Lora',serif; font-size:clamp(40px,6vw,72px); font-weight:600; line-height:1.12; letter-spacing:-1.5px; color:var(--navy); margin-bottom:28px; animation:fadeUp 0.6s 0.1s ease both; }
+        h1 em { font-style:normal; background:linear-gradient(135deg,var(--amber) 0%,var(--amber-light) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .hero-sub { font-size:clamp(17px,2vw,21px); color:var(--text-mid); font-weight:400; max-width:580px; margin:0 auto 48px; line-height:1.7; animation:fadeUp 0.6s 0.2s ease both; }
+        .hero-cta { display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; animation:fadeUp 0.6s 0.3s ease both; }
+        .btn-primary { background:linear-gradient(135deg,var(--amber) 0%,var(--amber-light) 100%); color:white; padding:16px 36px; border-radius:14px; font-size:16px; font-weight:700; text-decoration:none; box-shadow:0 6px 24px rgba(217,119,6,0.35); transition:all 0.25s; display:inline-flex; align-items:center; gap:8px; }
+        .btn-primary:hover { transform:translateY(-2px); box-shadow:0 10px 32px rgba(217,119,6,0.45); }
+        .btn-secondary { background:transparent; color:var(--navy); padding:16px 28px; border-radius:14px; font-size:16px; font-weight:600; text-decoration:none; border:1.5px solid var(--border); transition:all 0.25s; display:inline-flex; align-items:center; gap:8px; }
+        .btn-secondary:hover { border-color:var(--amber); color:var(--amber); background:var(--amber-glow); }
+        .hero-stats { display:flex; align-items:center; justify-content:center; gap:48px; margin-top:72px; padding-top:48px; border-top:1px solid var(--border); animation:fadeUp 0.6s 0.4s ease both; }
+        .stat-item { text-align:center; }
+        .stat-num { font-family:'Lora',serif; font-size:36px; font-weight:600; color:var(--navy); letter-spacing:-1px; display:block; }
+        .stat-num span { color:var(--amber); }
+        .stat-label { font-size:13px; color:var(--text-light); font-weight:500; margin-top:4px; }
+        .stat-divider { width:1px; height:48px; background:var(--border); }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+        .marquee-wrap { background:var(--navy); padding:18px 0; overflow:hidden; border-top:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05); }
+        .marquee-track { display:flex; gap:0; white-space:nowrap; animation:marquee 28s linear infinite; }
+        .marquee-track:hover { animation-play-state:paused; }
+        .marquee-item { display:inline-flex; align-items:center; gap:12px; padding:0 36px; color:rgba(255,255,255,0.55); font-size:13px; font-weight:500; }
+        .marquee-dot { color:var(--amber-light); font-size:18px; }
+        @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+      `}</style>
+      <style jsx global>{`
+        section { padding:100px 60px; }
+        .section-label { display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--amber); margin-bottom:20px; }
+        .section-label::before { content:''; width:24px; height:2px; background:var(--amber); border-radius:2px; }
+        h2 { font-family:'Lora',serif; font-size:clamp(32px,4vw,52px); font-weight:600; line-height:1.15; letter-spacing:-1px; color:var(--navy); margin-bottom:20px; }
+        h2 em { font-style:normal; color:var(--amber); }
+        .section-sub { font-size:18px; color:var(--text-mid); max-width:560px; line-height:1.7; margin-bottom:64px; }
+        .problem { background:var(--navy); color:white; }
+        .problem h2 { color:white; }
+        .problem .section-label { color:var(--amber-light); }
+        .problem .section-label::before { background:var(--amber-light); }
+        .problem .section-sub { color:rgba(255,255,255,0.6); }
+        .problem-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; max-width:1100px; margin:0 auto; }
+        .problem-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:36px 32px; transition:all 0.3s; position:relative; overflow:hidden; }
+        .problem-card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(217,119,6,0.06) 0%,transparent 60%); opacity:0; transition:opacity 0.3s; }
+        .problem-card:hover { border-color:rgba(217,119,6,0.3); transform:translateY(-4px); }
+        .problem-card:hover::before { opacity:1; }
+        .problem-icon { font-size:36px; margin-bottom:20px; display:block; }
+        .problem-card h3 { font-size:18px; font-weight:700; color:white; margin-bottom:12px; }
+        .problem-card p { font-size:15px; color:rgba(255,255,255,0.5); line-height:1.65; }
+        .features { background:var(--cream); }
+        .features-center { text-align:center; }
+        .features-center .section-sub { margin:0 auto 72px; }
+        .features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; max-width:1100px; margin:0 auto; }
+        .feature-card { background:var(--white); border:1px solid var(--border); border-radius:24px; padding:40px 36px; transition:all 0.3s; position:relative; overflow:hidden; }
+        .feature-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--amber),var(--amber-light)); transform:scaleX(0); transform-origin:left; transition:transform 0.3s; }
+        .feature-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-6px); border-color:rgba(217,119,6,0.25); }
+        .feature-card:hover::after { transform:scaleX(1); }
+        .feature-icon { width:56px; height:56px; border-radius:16px; background:var(--amber-pale); display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:24px; transition:all 0.3s; }
+        .feature-card:hover .feature-icon { background:var(--amber); }
+        .feature-card h3 { font-size:19px; font-weight:700; color:var(--navy); margin-bottom:12px; }
+        .feature-card p { font-size:15px; color:var(--text-mid); line-height:1.65; }
+        .feature-tag { display:inline-block; margin-top:20px; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--amber); background:var(--amber-pale); padding:4px 12px; border-radius:100px; }
+      `}</style>
+      <style jsx global>{`
+        .how { background:var(--cream-dark); }
+        .how-inner { max-width:1100px; margin:0 auto; }
+        .steps { display:grid; grid-template-columns:repeat(4,1fr); gap:0; position:relative; }
+        .steps::before { content:''; position:absolute; top:36px; left:12%; right:12%; height:2px; background:linear-gradient(90deg,var(--amber),var(--amber-light),var(--amber)); opacity:0.25; }
+        .step { text-align:center; padding:0 20px; }
+        .step-num { width:72px; height:72px; border-radius:50%; background:white; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; margin:0 auto 28px; font-family:'Lora',serif; font-size:22px; font-weight:600; color:var(--navy); box-shadow:var(--shadow-sm); position:relative; z-index:1; transition:all 0.3s; }
+        .step:hover .step-num { background:var(--amber); color:white; border-color:var(--amber); box-shadow:0 8px 24px rgba(217,119,6,0.35); }
+        .step h3 { font-size:17px; font-weight:700; color:var(--navy); margin-bottom:10px; }
+        .step p { font-size:14px; color:var(--text-mid); line-height:1.6; }
+        .pricing { background:var(--cream); }
+        .pricing-center { text-align:center; }
+        .pricing-center .section-sub { margin:0 auto 72px; }
+        .plans { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; max-width:1000px; margin:0 auto; }
+        .plan { background:white; border:1.5px solid var(--border); border-radius:28px; padding:44px 36px; position:relative; transition:all 0.3s; }
+        .plan:hover { box-shadow:var(--shadow-lg); transform:translateY(-6px); }
+        .plan.popular { border-color:var(--amber); background:var(--navy); transform:scale(1.04); box-shadow:var(--shadow-lg); }
+        .plan.popular:hover { transform:scale(1.04) translateY(-6px); }
+        .popular-badge { position:absolute; top:-14px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,var(--amber),var(--amber-light)); color:white; font-size:11px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; padding:6px 20px; border-radius:100px; box-shadow:0 4px 14px rgba(217,119,6,0.4); white-space:nowrap; }
+        .plan-name { font-size:13px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--amber); margin-bottom:16px; }
+        .plan.popular .plan-name { color:var(--amber-light); }
+        .plan-price { font-family:'Lora',serif; font-size:52px; font-weight:600; color:var(--navy); line-height:1; margin-bottom:6px; letter-spacing:-2px; }
+        .plan.popular .plan-price { color:white; }
+        .plan-price sup { font-size:22px; font-weight:600; vertical-align:top; margin-top:10px; }
+        .plan-period { font-size:14px; color:var(--text-light); margin-bottom:32px; }
+        .plan.popular .plan-period { color:rgba(255,255,255,0.45); }
+        .plan-divider { height:1px; background:var(--border); margin-bottom:28px; }
+        .plan.popular .plan-divider { background:rgba(255,255,255,0.1); }
+        .plan-features { list-style:none; margin-bottom:36px; }
+        .plan-features li { display:flex; align-items:flex-start; gap:12px; font-size:14px; color:var(--text-mid); padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.04); }
+        .plan.popular .plan-features li { color:rgba(255,255,255,0.7); border-color:rgba(255,255,255,0.06); }
+        .plan-features li:last-child { border-bottom:none; }
+        .check { width:20px; height:20px; border-radius:6px; background:var(--amber-pale); color:var(--amber); display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; margin-top:1px; }
+        .plan.popular .check { background:rgba(245,158,11,0.2); color:var(--amber-light); }
+        .btn-plan { display:block; text-align:center; padding:15px; border-radius:14px; font-size:15px; font-weight:700; text-decoration:none; transition:all 0.25s; cursor:pointer; width:100%; font-family:inherit; }
+        .btn-plan-outline { border:1.5px solid var(--border); color:var(--navy); background:transparent; }
+        .btn-plan-outline:hover { border-color:var(--amber); color:var(--amber); background:var(--amber-glow); }
+        .btn-plan-fill { background:linear-gradient(135deg,var(--amber),var(--amber-light)); color:white; border:none; box-shadow:0 6px 20px rgba(217,119,6,0.4); }
+        .btn-plan-fill:hover { box-shadow:0 10px 30px rgba(217,119,6,0.5); transform:translateY(-2px); }
+        .setup-note { text-align:center; margin-top:40px; font-size:14px; color:var(--text-light); }
+        .setup-note strong { color:var(--navy); }
+        .testimonials { background:var(--cream-dark); }
+        .testi-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:24px; max-width:900px; margin:0 auto; }
+        .testi-card { background:white; border:1px solid var(--border); border-radius:24px; padding:36px 40px; transition:all 0.3s; }
+        .testi-card:hover { box-shadow:var(--shadow-md); transform:translateY(-4px); }
+        .testi-quote { font-family:'Lora',serif; font-size:40px; color:var(--amber-light); line-height:1; margin-bottom:16px; }
+        .testi-text { font-size:16px; color:var(--text-mid); line-height:1.7; margin-bottom:28px; font-style:italic; }
+        .testi-author { display:flex; align-items:center; gap:14px; }
+        .testi-avatar { width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,var(--amber),var(--amber-light)); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:white; flex-shrink:0; }
+        .testi-name { font-size:15px; font-weight:700; color:var(--navy); }
+        .testi-role { font-size:13px; color:var(--text-light); }
+        .testi-stars { margin-left:auto; color:var(--amber-light); font-size:14px; letter-spacing:1px; }
+        .cta-section { background:var(--navy); text-align:center; padding:120px 60px; position:relative; overflow:hidden; }
+        .cta-bg { position:absolute; inset:0; background:radial-gradient(ellipse 60% 60% at 50% 50%,rgba(245,158,11,0.08) 0%,transparent 70%); }
+        .cta-section h2 { color:white; position:relative; z-index:1; margin:0 auto 20px; max-width:700px; }
+        .cta-section p { color:rgba(255,255,255,0.55); font-size:18px; margin-bottom:48px; position:relative; z-index:1; }
+        .cta-section .hero-cta { position:relative; z-index:1; }
+        .btn-white { background:white; color:var(--navy); padding:16px 36px; border-radius:14px; font-size:16px; font-weight:700; text-decoration:none; box-shadow:0 6px 24px rgba(0,0,0,0.2); transition:all 0.25s; display:inline-flex; align-items:center; gap:8px; }
+        .btn-white:hover { transform:translateY(-2px); box-shadow:0 10px 36px rgba(0,0,0,0.3); }
+        footer { background:var(--navy); border-top:1px solid rgba(255,255,255,0.06); padding:60px; color:rgba(255,255,255,0.4); }
+        .footer-inner { max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; }
+        .footer-logo { display:flex; align-items:center; gap:10px; }
+        .footer-logo-wrap { width:32px; height:32px; border-radius:50%; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; }
+        .footer-logo-wrap img { width:100%; height:100%; object-fit:cover; mix-blend-mode:lighten; display:block; }
+        .footer-logo span { font-family:'Lora',serif; color:rgba(255,255,255,0.7); font-size:18px; }
+        .footer-links { display:flex; gap:32px; }
+        .footer-links a { color:rgba(255,255,255,0.4); text-decoration:none; font-size:14px; transition:color 0.2s; }
+        .footer-links a:hover { color:var(--amber-light); }
+        .footer-copy { font-size:13px; }
+        @media (max-width:900px) {
+          nav { padding:16px 24px; }
+          .nav-links { display:none; }
+          .btn-nav.desktop-only { display:none; }
+          .burger { display:block; }
+          section { padding:72px 24px; }
+          .hero { padding:100px 24px 60px; }
+          .problem-grid,.features-grid,.steps,.plans { grid-template-columns:1fr; }
+          .testi-grid { grid-template-columns:1fr; }
+          .hero-stats { gap:24px; flex-wrap:wrap; }
+          .stat-divider { display:none; }
+          .plan.popular { transform:scale(1); }
+          .plan.popular:hover { transform:translateY(-6px); }
+          .footer-inner { flex-direction:column; gap:24px; text-align:center; }
+          .footer-links { flex-wrap:wrap; justify-content:center; }
+          .steps::before { display:none; }
+        }
+      `}</style>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-8" style={{ fontFamily: language === 'he' ? 'Assistant, system-ui, sans-serif' : 'Inter, system-ui, sans-serif' }}>
-              <a
-                href="#about"
-                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
-                style={{ fontWeight: 500 }}
-              >
-                {t.nav.about}
-              </a>
-              <a
-                href="#services"
-                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
-                style={{ fontWeight: 500 }}
-              >
-                {t.nav.services}
-              </a>
-              <a
-                href="#pricing"
-                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
-                style={{ fontWeight: 500 }}
-              >
-                {t.nav.pricing}
-              </a>
-              <a
-                href="#gallery"
-                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
-                style={{ fontWeight: 500 }}
-              >
-                {t.nav.gallery}
-              </a>
-              <a
-                href="#reviews"
-                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
-                style={{ fontWeight: 500 }}
-              >
-                {t.nav.reviews}
-              </a>
-              <a
-                href="#contact"
-                className={`font-medium transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white/90 hover:text-white'}`}
-                style={{ fontWeight: 500 }}
-              >
-                {t.nav.contact}
-              </a>
-              <a
-                href="#download"
-                className={`font-medium transition-colors flex items-center gap-1 ${scrolled ? 'text-blue-600 hover:text-blue-800' : 'text-amber-300 hover:text-amber-200'}`}
-                style={{ fontWeight: 600 }}
-              >
-                <Download size={15} />
-                {t.nav.download}
-              </a>
-            </div>
-
-            {/* Language Switcher & Login */}
-            <div className="flex items-center gap-2 md:gap-4" style={{ flexShrink: 0 }}>
-              {/* Prism login button - compact on mobile */}
-              <div className="hidden md:block">
-                <PrismButton href="/login">
-                  {language === 'he' ? 'כניסה למערכת' : 'Войти в систему'}
-                </PrismButton>
-              </div>
-              
-              {/* Compact button for mobile */}
-              <div className="md:hidden">
-                <PrismButton href="/login" mobile>
-                  {language === 'he' ? 'כניסה' : 'Вход'}
-                </PrismButton>
-              </div>
-              
-              {/* Language switcher - compact on mobile */}
-              <button
-                onClick={() => setLanguage(language === 'he' ? 'ru' : 'he')}
-                className={`px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm font-medium border rounded-md transition-colors ${
-                  scrolled
-                    ? 'text-gray-700 hover:text-blue-900 border-gray-300 hover:border-blue-900'
-                    : 'text-white border-white/30 hover:border-white hover:bg-white/10'
-                }`}
-              >
-                {/* Short text on mobile */}
-                <span className="md:hidden">{language === 'he' ? 'RU' : 'HE'}</span>
-                <span className="hidden md:inline">{language === 'he' ? 'Русский' : 'עברית'}</span>
-              </button>
-
-              {/* Mobile menu button */}
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className={`md:hidden p-2 transition-colors ${
-                  scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'
-                }`}
-              >
-                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
-            </div>
+      {/* NAV */}
+      <nav id="nav" className={scrolled ? 'scrolled' : ''}>
+        <a href="#" className="logo">
+          <div className="logo-img-wrap">
+            <img src="/trinity-logo.png" alt="Trinity CRM" />
           </div>
-
-          {/* Mobile Navigation */}
-          {mobileMenuOpen && (
-            <div className={`md:hidden py-4 border-t ${scrolled ? 'border-gray-200' : 'border-white/20'}`}>
-              <div className="flex flex-col gap-4">
-                <a
-                  href="#about"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
-                >
-                  {t.nav.about}
-                </a>
-                <a
-                  href="#services"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
-                >
-                  {t.nav.services}
-                </a>
-                <a
-                  href="#pricing"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
-                >
-                  {t.nav.pricing}
-                </a>
-                <a
-                  href="#gallery"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
-                >
-                  {t.nav.gallery}
-                </a>
-                <a
-                  href="#reviews"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
-                >
-                  {t.nav.reviews}
-                </a>
-                <a
-                  href="#contact"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`transition-colors ${scrolled ? 'text-gray-700 hover:text-blue-900' : 'text-white hover:text-white/80'}`}
-                >
-                  {t.nav.contact}
-                </a>
-                <a
-                  href="#download"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`transition-colors flex items-center gap-2 font-semibold ${scrolled ? 'text-blue-600' : 'text-amber-300'}`}
-                >
-                  <Download size={16} />
-                  {t.nav.download}
-                </a>
-              </div>
-            </div>
-          )}
+          Trinity CRM
+        </a>
+        <div className="nav-links">
+          <a href="#features">{t.navFeatures}</a>
+          <a href="#pricing">{t.navPricing}</a>
+          <a href="#how">{t.navHow}</a>
+        </div>
+        <div className="nav-right">
+          <button className="btn-lang" onClick={() => setLang(lang === 'ru' ? 'he' : 'ru')}>{t.langBtn}</button>
+          <a href="/login" className="btn-nav desktop-only">{t.navCta}</a>
+          <button className="burger" onClick={() => setMobileOpen(o => !o)} aria-label="Menu">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              {mobileOpen
+                ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
+                : <><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></>
+              }
+            </svg>
+          </button>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section
-        className="relative min-h-screen flex items-center justify-center pt-16 overflow-hidden"
-        style={{
-          background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)',
-        }}
-      >
-        {/* Background Pattern - Neural Grid */}
-        <div
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage: `
-              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px),
-              linear-gradient(180deg, rgba(255,255,255,0.1) 1px, transparent 1px),
-              radial-gradient(circle at 20% 30%, rgba(255,191,0,0.15) 0px, transparent 300px),
-              radial-gradient(circle at 80% 70%, rgba(255,107,53,0.15) 0px, transparent 300px)
-            `,
-            backgroundSize: '60px 60px, 60px 60px, 100% 100%, 100% 100%',
-          }}
-        ></div>
+      {/* MOBILE MENU */}
+      <div className={`mobile-menu${mobileOpen ? ' open' : ''}`}>
+        <a href="#features" onClick={() => setMobileOpen(false)}>{t.navFeatures}</a>
+        <a href="#pricing"  onClick={() => setMobileOpen(false)}>{t.navPricing}</a>
+        <a href="#how"      onClick={() => setMobileOpen(false)}>{t.navHow}</a>
+        <a href="/login"  onClick={() => setMobileOpen(false)} className="btn-nav">{t.navCta}</a>
+      </div>
 
-        {/* Subtle Diagonal Lines */}
-        <div 
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `repeating-linear-gradient(
-              45deg,
-              transparent,
-              transparent 40px,
-              rgba(255,255,255,0.5) 40px,
-              rgba(255,255,255,0.5) 42px
-            )`
-          }}
-        ></div>
-
-        {/* Floating Shapes */}
-        <div className="absolute top-20 left-10 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute top-40 right-20 w-40 h-40 bg-blue-500/10 rounded-lg blur-3xl animate-float-delay"></div>
-        <div className="absolute bottom-32 left-1/4 w-36 h-36 bg-purple-500/10 rounded-full blur-3xl animate-float-delay-2"></div>
-        <div className="absolute bottom-20 right-1/3 w-28 h-28 bg-green-500/10 rounded-lg blur-3xl animate-float"></div>
-
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center relative z-10">
-          <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-white mb-6 animate-slide-up">
-            {t.hero.title}
-          </h1>
-          <p className="text-xl sm:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto animate-slide-up-delay">
-            {t.hero.subtitle}
-          </p>
-          <div className="animate-slide-up-delay-2">
-            <a
-              href="#pricing"
-              className="inline-flex items-center gap-2 px-10 py-5 bg-amber-500 text-white rounded-lg font-semibold text-lg transition-all transform hover:scale-105 hover:shadow-amber"
-            >
-              {t.hero.cta}
-              <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
-            </a>
-            <p className="text-sm text-gray-400 mt-4">{t.hero.disclaimer}</p>
+      {/* HERO */}
+      <section className="hero">
+        <div className="hero-bg"></div>
+        <div className="shape s1"></div>
+        <div className="shape s2"></div>
+        <div className="shape s3"></div>
+        <div className="hero-inner">
+          <div className="hero-badge">
+            <span className="badge-dot"></span>
+            {t.badge}
           </div>
-        </div>
-
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce z-10">
-          <div className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center">
-            <div className="w-1 h-3 bg-white/50 rounded-full mt-2"></div>
+          <h1>{t.h1a}<br /><em>{t.h1b}</em></h1>
+          <p className="hero-sub">{t.heroSub}</p>
+          <div className="hero-cta">
+            <a href="#pricing" className="btn-primary">{t.ctaPrimary}</a>
+            <a href="#features" className="btn-secondary">{t.ctaSecondary}</a>
           </div>
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section id="about" className={`bg-gradient-to-br from-gray-50 to-white fade-in-section ${language === 'ru' ? 'py-24 mt-8' : 'py-20'}`}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className={`text-3xl sm:text-4xl font-bold text-gray-900 text-center ${language === 'ru' ? 'mb-20' : 'mb-16'}`}>
-            {t.about.title}
-          </h2>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
-            {/* Company Info Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-8 border-t-4 border-blue-500">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Monitor className="w-6 h-6 text-blue-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">{t.about.company}</h3>
-              </div>
-              <p className="text-xl font-semibold text-blue-600 mb-4">
-                {t.about.companyName}
-              </p>
-              <div className="border-t border-gray-200 pt-4">
-                <p className="text-sm font-semibold text-gray-500 mb-2">{t.about.field}</p>
-                <p className="text-gray-700 leading-relaxed">
-                  {t.about.fieldDescription}
-                </p>
-              </div>
+          <div className="hero-stats">
+            <div className="stat-item">
+              <span className="stat-num">{t.stat1n}<span>{t.stat1u}</span></span>
+              <div className="stat-label">{t.stat1l}</div>
             </div>
-
-            {/* Who We Are Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-8 border-t-4 border-amber-500">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
-                  <Globe className="w-6 h-6 text-amber-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">{t.about.whoWeAre}</h3>
-              </div>
-              <p className="text-gray-700 leading-relaxed">
-                {t.about.whoWeAreText}
-              </p>
+            <div className="stat-divider"></div>
+            <div className="stat-item">
+              <span className="stat-num">{t.stat2n}<span>{t.stat2u}</span></span>
+              <div className="stat-label">{t.stat2l}</div>
             </div>
-          </div>
-
-          {/* Why Trinity */}
-          <div className="bg-gradient-to-br from-blue-900 to-indigo-900 rounded-2xl shadow-2xl p-8 lg:p-12 text-white">
-            <h3 className="text-2xl sm:text-3xl font-bold mb-8 text-center">
-              {t.about.whyTitle}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {t.about.whyItems.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-3 bg-white/10 backdrop-blur-sm rounded-lg p-4 hover:bg-white/20 transition-colors"
-                >
-                  <div className="flex-shrink-0 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center mt-0.5">
-                    <ChevronRight size={16} className={dir === 'rtl' ? 'rotate-180' : ''} />
-                  </div>
-                  <p className="text-white/90 leading-relaxed">{item}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Contact Info */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {/* WhatsApp Button */}
-            <a
-              href="https://wa.me/972544858586"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-green-50 rounded-xl p-6 text-center border-2 border-green-200 hover:border-green-400 hover:shadow-lg transition-all duration-300 group"
-            >
-              <MessageCircle className="w-12 h-12 text-green-600 mx-auto mb-3 group-hover:scale-110 transition-transform" />
-              <button className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-all shadow-md hover:shadow-xl animate-pulse">
-                {language === 'he' ? 'דברו איתנו' : 'Написать нам'}
-              </button>
-            </a>
-
-            {/* Email Button - Open Contact Modal */}
-            <button
-              onClick={() => setContactModalOpen(true)}
-              className="bg-blue-50 rounded-xl p-6 text-center border-2 border-blue-200 hover:border-blue-400 hover:shadow-lg transition-all duration-300 group"
-            >
-              <Mail className="w-12 h-12 text-blue-600 mx-auto mb-3 group-hover:scale-110 transition-transform" />
-              <div className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-xl inline-block">
-                {language === 'he' ? 'שלחו הודעה' : 'Отправить сообщение'}
-              </div>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Why CRM Section */}
-      <section className="py-20 bg-gray-50 fade-in-section">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
-            {t.whyCrm.title}
-          </h2>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            {/* Left Column - Article */}
-            <div className="bg-white rounded-xl shadow-md p-8">
-              <p className="text-lg text-gray-700 leading-relaxed">
-                {t.whyCrm.article}
-              </p>
-            </div>
-
-            {/* Right Column - Stats */}
-            <div className="space-y-6">
-              {t.whyCrm.stats.map((stat, index) => (
-                <div
-                  key={index}
-                  className="bg-white rounded-xl shadow-md p-6 border-l-4 border-amber-500"
-                >
-                  <div className="text-4xl font-bold text-amber-600 mb-2">
-                    {stat.value}
-                  </div>
-                  <p className="text-gray-700 leading-relaxed">{stat.label}</p>
-                </div>
-              ))}
+            <div className="stat-divider"></div>
+            <div className="stat-item">
+              <span className="stat-num">{t.stat3n}<span>{t.stat3u}</span></span>
+              <div className="stat-label">{t.stat3l}</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Services Section */}
-      <section id="services" className="py-20 bg-white fade-in-section">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
-            {t.services.title}
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Service Card 1 - CRM */}
-            <div className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="w-14 h-14 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                <Monitor className="w-7 h-7 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                {t.services.items[0].title}
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                {t.services.items[0].description}
-              </p>
-            </div>
-
-            {/* Service Card 2 - Bots */}
-            <div className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="w-14 h-14 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                <Bot className="w-7 h-7 text-green-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                {t.services.items[1].title}
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                {t.services.items[1].description}
-              </p>
-            </div>
-
-            {/* Service Card 3 - Websites */}
-            <div className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="w-14 h-14 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                <Globe className="w-7 h-7 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                {t.services.items[2].title}
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                {t.services.items[2].description}
-              </p>
-            </div>
-
-            {/* Service Card 4 - Software */}
-            <div className="bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-              <div className="w-14 h-14 bg-amber-100 rounded-lg flex items-center justify-center mb-4">
-                <Code className="w-7 h-7 text-amber-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                {t.services.items[3].title}
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                {t.services.items[3].description}
-              </p>
-            </div>
-          </div>
+      {/* MARQUEE */}
+      <div className="marquee-wrap">
+        <div className="marquee-track">
+          {[...t.marqueeItems, ...t.marqueeItems].map((item, i) => (
+            <span key={i} className="marquee-item">
+              <span className="marquee-dot">◆</span> {item}
+            </span>
+          ))}
         </div>
-      </section>
+      </div>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-white fade-in-section">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-4">
-            {t.pricing.title}
-          </h2>
-          <p className="text-xl text-amber-600 text-center mb-16 font-semibold">
-            {t.pricing.subtitle}
-          </p>
-
-          {/* Skeleton while loading */}
-          {!landingPlans && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[0,1,2].map(i => (
-                <div key={i} className={`rounded-3xl bg-gray-100 animate-pulse h-96 ${i===1?'md:scale-105':''}`} />
-              ))}
-            </div>
-          )}
-
-          {/* Real plan cards from DB */}
-          {landingPlans && (
-            <div className={`grid grid-cols-1 gap-6 ${
-              landingPlans.length === 4 ? 'md:grid-cols-2 xl:grid-cols-4' :
-              landingPlans.length === 3 ? 'md:grid-cols-3' :
-              landingPlans.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1 max-w-sm mx-auto'
-            }`}>
-              {landingPlans.map((plan) => {
-                const badge = language === 'he' ? plan.badge_he : plan.badge_ru
-                const features = language === 'he' ? plan.features_he : plan.features_ru
-                const isHighlighted = !!badge
-
-                // Color mappings
-                const gradients: Record<string, string> = {
-                  gray:   'from-gray-600 to-gray-800',
-                  blue:   'from-blue-500 to-blue-700',
-                  amber:  'from-amber-400 to-orange-500',
-                  purple: 'from-purple-500 to-purple-700',
-                  green:  'from-green-500 to-green-700',
-                  red:    'from-red-500 to-red-700',
-                }
-                const glows: Record<string, string> = {
-                  gray:   'hover:shadow-[0_20px_60px_rgba(100,100,100,0.3)]',
-                  blue:   'hover:shadow-[0_20px_60px_rgba(59,130,246,0.4)]',
-                  amber:  'hover:shadow-[0_20px_60px_rgba(245,158,11,0.4)]',
-                  purple: 'hover:shadow-[0_20px_60px_rgba(168,85,247,0.4)]',
-                  green:  'hover:shadow-[0_20px_60px_rgba(34,197,94,0.4)]',
-                  red:    'hover:shadow-[0_20px_60px_rgba(239,68,68,0.4)]',
-                }
-                const badgeColors: Record<string, string> = {
-                  gray:   'bg-gray-500',
-                  blue:   'bg-blue-500',
-                  amber:  'bg-amber-500',
-                  purple: 'bg-purple-500',
-                  green:  'bg-green-500',
-                  red:    'bg-red-500',
-                }
-                const ctaStyles: Record<string, string> = {
-                  gray:   'bg-gray-100 hover:bg-gray-200 text-gray-800',
-                  blue:   'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-md hover:shadow-lg',
-                  amber:  'bg-white hover:bg-gray-50 text-amber-700',
-                  purple: 'bg-white hover:bg-gray-50 text-purple-700',
-                  green:  'bg-white hover:bg-gray-50 text-green-700',
-                  red:    'bg-white hover:bg-gray-50 text-red-700',
-                }
-                const headerGrad = gradients[plan.color] ?? gradients.gray
-                const glowClass  = glows[plan.color] ?? glows.gray
-                const badgeBg    = badgeColors[plan.color] ?? badgeColors.gray
-                const ctaStyle   = isHighlighted ? (ctaStyles[plan.color] ?? ctaStyles.blue) : ctaStyles.gray
-
-                return (
-                  <div
-                    key={plan.key}
-                    className={`relative group flex flex-col rounded-3xl overflow-hidden shadow-lg transition-all duration-500 hover:-translate-y-2 ${glowClass} ${
-                      isHighlighted ? 'ring-2 ring-amber-400/60 md:scale-105 z-10' : 'bg-white'
-                    }`}
-                  >
-                    {/* Badge */}
-                    {badge && (
-                      <div className="absolute -top-px left-1/2 -translate-x-1/2 z-20">
-                        <span className={`inline-block ${badgeBg} text-white text-xs font-bold px-4 py-1 rounded-b-xl shadow-md`}>
-                          {badge}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Gradient header */}
-                    <div className={`relative bg-gradient-to-br ${headerGrad} px-6 pt-8 pb-6 overflow-hidden`}>
-                      {/* Shimmer effect */}
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-out" />
-                      </div>
-                      {/* Floating orb */}
-                      <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-white/10 blur-xl" />
-                      <div className="absolute -bottom-2 -left-2 w-16 h-16 rounded-full bg-black/10 blur-lg" />
-
-                      <div className="relative z-10">
-                        <h3 className="text-2xl font-bold text-white leading-tight">
-                          {language === 'he' ? plan.name_he : plan.name_ru}
-                        </h3>
-                        {(language === 'he' ? plan.subtitle_he : plan.subtitle_ru) && (
-                          <p className="text-white/60 text-sm mt-0.5">
-                            {language === 'he' ? plan.subtitle_he : plan.subtitle_ru}
-                          </p>
-                        )}
-                        <div className="flex items-end gap-1 mt-4">
-                          <span className="text-3xl font-extrabold text-white">
-                            {language === 'he' ? plan.price_he : plan.price_ru}
-                          </span>
-                          {(language === 'he' ? plan.period_he : plan.period_ru) && (
-                            <span className="text-white/60 text-sm mb-1">
-                              {language === 'he' ? plan.period_he : plan.period_ru}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Features */}
-                    <div className="flex-1 bg-white px-6 py-5 flex flex-col gap-4">
-                      <ul className="space-y-2.5 flex-1">
-                        {features.map((f, fi) => (
-                          <li key={fi} className="flex items-start gap-2.5 text-sm text-gray-700 group/item">
-                            <span className="flex-shrink-0 w-4 h-4 mt-0.5 rounded-full bg-green-100 flex items-center justify-center transition-transform duration-200 group-hover/item:scale-110">
-                              <svg className="w-2.5 h-2.5 text-green-600" fill="none" viewBox="0 0 10 10">
-                                <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            </span>
-                            <span>{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-
-                      {/* CTA Button */}
-                      <button
-                        onClick={() => openOrderModal(language === 'he' ? plan.name_he : plan.name_ru, plan.key)}
-                        className={`w-full py-3 px-4 rounded-2xl font-bold text-sm transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] ${ctaStyle}`}
-                      >
-                        {language === 'he' ? plan.cta_he : plan.cta_ru}
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Gallery Section */}
-      <section id="gallery" className="py-20 bg-gray-50 fade-in-section">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
-            {t.gallery.title}
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {landingScreenshots.map((shot) => (
-              <div key={shot.slot} className="group relative overflow-hidden rounded-xl shadow-lg border-2 border-gray-200">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={shot.url}
-                  alt={language === 'he' ? shot.alt_he : shot.alt_ru}
-                  className="w-full h-auto transition-transform duration-300 group-hover:scale-105"
-                  loading={shot.slot <= 2 ? 'eager' : 'lazy'}
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
+      {/* PROBLEM */}
+      <section className="problem">
+        <div style={{maxWidth:'1100px',margin:'0 auto',textAlign:'center'}}>
+          <div className="section-label">{t.probLabel}</div>
+          <h2>{t.probH2a}<br /><em style={{color:'#F59E0B'}}>{t.probH2b}</em></h2>
+          <p className="section-sub" style={{margin:'0 auto 64px'}}>{t.probSub}</p>
+          <div className="problem-grid">
+            {t.problems.map((p, i) => (
+              <div key={i} className="problem-card">
+                <span className="problem-icon">{p.icon}</span>
+                <h3>{p.title}</h3>
+                <p>{p.text}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Reviews Section */}
-      <section id="reviews" className="py-20 bg-white fade-in-section">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 text-center mb-16">
-            {t.reviews.title}
-          </h2>
-
-          <div className="relative max-h-[600px] overflow-hidden">
-            <div className="reviews-scroll space-y-6">
-              {/* First set of reviews */}
-              {t.reviews.items.map((review, index) => (
-                <div
-                  key={`review-1-${index}`}
-                  className="bg-white rounded-xl shadow-md p-6 mx-auto max-w-2xl"
-                >
-                  <p className="text-gray-700 text-lg leading-relaxed mb-4">
-                    "{review.text}"
-                  </p>
-                  <p className="text-amber-600 font-semibold">— {review.author}</p>
-                </div>
-              ))}
-              {/* Duplicate set for seamless loop */}
-              {t.reviews.items.map((review, index) => (
-                <div
-                  key={`review-2-${index}`}
-                  className="bg-white rounded-xl shadow-md p-6 mx-auto max-w-2xl"
-                >
-                  <p className="text-gray-700 text-lg leading-relaxed mb-4">
-                    "{review.text}"
-                  </p>
-                  <p className="text-amber-600 font-semibold">— {review.author}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Gradient overlays */}
-            <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white to-transparent pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+      {/* FEATURES */}
+      <section className="features" id="features">
+        <div className="features-center" style={{maxWidth:'1100px',margin:'0 auto'}}>
+          <div className="section-label">{t.featLabel}</div>
+          <h2>{t.featH2a}<br /><em>{t.featH2b}</em></h2>
+          <p className="section-sub">{t.featSub}</p>
+          <div className="features-grid">
+            {t.features.map((f, i) => (
+              <div key={i} className="feature-card">
+                <div className="feature-icon">{f.icon}</div>
+                <h3>{f.title}</h3>
+                <p>{f.text}</p>
+                <span className="feature-tag">{f.tag}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Download Section */}
-      <section id="download" className="py-20 bg-gradient-to-br from-indigo-50 to-blue-50 fade-in-section">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
-              <Download className="w-4 h-4" />
-              {t.download.badge}
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{t.download.title}</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">{t.download.subtitle}</p>
-          </div>
-
-          <InstallCards language={language} t={t} />
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section
-        id="contact"
-        className="py-20 fade-in-section"
-        style={{
-          background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)',
-        }}
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
-            {t.cta.title}
-          </h2>
-          <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
-            {t.cta.subtitle}
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            {/* WhatsApp Button */}
-            <a
-              href="https://wa.me/972544858586"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-amber-500 text-white rounded-lg font-semibold text-lg transition-all transform hover:scale-105 hover:shadow-amber"
-            >
-              {t.cta.whatsapp}
-              <ChevronRight size={20} className={dir === 'rtl' ? 'rotate-180' : ''} />
-            </a>
-
-            {/* Email Button */}
-            <button
-              onClick={openContactModal}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 text-white rounded-lg font-semibold border-2 border-white/30 hover:bg-white/20 transition-all"
-            >
-              <Mail size={20} />
-              {t.cta.email}
-            </button>
+      {/* HOW IT WORKS */}
+      <section className="how" id="how">
+        <div className="how-inner">
+          <div className="section-label">{t.howLabel}</div>
+          <h2>{t.howH2a} <em>{t.howH2b}</em></h2>
+          <p className="section-sub">{t.howSub}</p>
+          <div className="steps">
+            {t.steps.map((s, i) => (
+              <div key={i} className="step">
+                <div className="step-num">{s.n}</div>
+                <h3>{s.title}</h3>
+                <p>{s.text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Demo Register Modal — открывается при нажатии на кнопку плана */}
-      {demoModalOpen && (
-        <DemoRegisterModal
-          lang={language}
-          planName={demoModalPlan}
-          planKey={demoModalPlanKey}
-          onClose={() => setDemoModalOpen(false)}
-        />
-      )}
-
-      {/* Order Modal (legacy — kept for other uses) */}
-      {orderModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"
-          onClick={() => setOrderModalOpen(false)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-scale-in max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6">
-              {/* Header with Close Button */}
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900">
-                    {t.orderModal.title} {selectedPlan}
-                  </h3>
-                  {t.orderModal.badge && (
-                    <span className="inline-block mt-2 px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-semibold">
-                      {t.orderModal.badge}
-                    </span>
-                  )}
-                </div>
+      {/* PRICING */}
+      <section className="pricing" id="pricing">
+        <div className="pricing-center" style={{maxWidth:'1100px',margin:'0 auto'}}>
+          <div className="section-label">{t.priceLabel}</div>
+          <h2>{t.priceH2a}<br /><em>{t.priceH2b}</em></h2>
+          <p className="section-sub">{t.priceSub}</p>
+          <div className="plans">
+            {t.plans.map((plan, i) => (
+              <div key={i} className={`plan${plan.popular ? ' popular' : ''}`}>
+                {plan.popular && <div className="popular-badge">{t.popularBadge}</div>}
+                <div className="plan-name">{plan.name}</div>
+                <div className="plan-price"><sup>₪</sup>{plan.price}</div>
+                <div className="plan-period">{plan.period}</div>
+                <div className="plan-divider"></div>
+                <ul className="plan-features">
+                  {plan.features.map((f, j) => (
+                    <li key={j}><span className="check">✓</span> {f}</li>
+                  ))}
+                </ul>
                 <button
-                  onClick={() => setOrderModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className={`btn-plan ${plan.popular ? 'btn-plan-fill' : 'btn-plan-outline'}`}
+                  onClick={() => { setDemoPlan(plan.name); setDemoOpen(true) }}
                 >
-                  <X size={24} />
+                  {t.choosePlan}
                 </button>
               </div>
-
-              <form onSubmit={handleSubmitOrder} className="space-y-4 mt-6">
-                {/* Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.orderModal.nameLabel} *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.orderModal.emailLabel} *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Phone */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.orderModal.phoneLabel} *
-                  </label>
-                  <input
-                    type="tel"
-                    pattern="[0-9+\-() ]*"
-                    name="phone"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Business Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.orderModal.businessLabel} *
-                  </label>
-                  <input
-                    type="text"
-                    name="business"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Category */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.orderModal.categoryLabel} *
-                  </label>
-                  <select
-                    name="category"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  >
-                    <option value="">{t.orderModal.categoryPlaceholder}</option>
-                    {t.orderModal.categories.map((cat, index) => (
-                      <option key={index} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setOrderModalOpen(false)}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-                  >
-                    {t.orderModal.cancel}
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition-colors"
-                  >
-                    {t.orderModal.submit}
-                  </button>
-                </div>
-              </form>
-            </div>
+            ))}
           </div>
+          <p className="setup-note">{t.setupNote}<strong>₪500</strong>{t.setupNote2}</p>
         </div>
-      )}
+      </section>
 
-      {/* Contact Modal */}
-      {contactModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"
-          onClick={() => setContactModalOpen(false)}
-        >
-          <div
-            id="contact-form"
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-scale-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6">
-              {/* Header with Close Button */}
-              <div className="flex justify-between items-start mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">
-                  {t.contactModal.title}
-                </h3>
-                <button
-                  onClick={() => setContactModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <form onSubmit={handleSubmitContact} className="space-y-4">
-                {/* Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.contactModal.nameLabel} *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.contactModal.emailLabel} *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Phone */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {language === 'he' ? 'טלפון' : 'Телефон'} *
-                  </label>
-                  <input
-                    type="tel"
-                    pattern="[0-9+\-() ]*"
-                    name="phone"
-                    required
-                    placeholder="05X-XXX-XXXX"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Business Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.contactModal.businessLabel} *
-                  </label>
-                  <input
-                    type="text"
-                    name="business"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Message */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t.contactModal.messageLabel} *
-                  </label>
-                  <textarea
-                    name="message"
-                    required
-                    rows={4}
-                    placeholder={t.contactModal.messagePlaceholder}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
-                  />
-                </div>
-
-                {/* Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setContactModalOpen(false)}
-                    disabled={isSubmitting}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {t.contactModal.cancel}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        {language === 'he' ? 'שולח...' : 'Отправка...'}
-                      </>
-                    ) : (
-                      t.contactModal.submit
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toast Notification */}
-      {showToast && (
-        <div className={`fixed bottom-8 right-8 ${toastType === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white px-6 py-4 rounded-lg shadow-lg animate-slide-up z-50 max-w-sm`}>
-          {toastMessage}
-        </div>
-      )}
-
-      {/* Footer */}
-      <footer className="bg-[#0F172A] text-white py-12 border-t border-white/10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* 3 Sections Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            
-            {/* Section 1: Contact (слева для RTL = справа визуально) */}
-            <div>
-              <h3 className="font-bold text-lg mb-4">{t.footer.contact.title}</h3>
-              <div className="space-y-2 text-gray-300 text-sm">
-                <p className="font-semibold text-white">Amber Solutions Systems</p>
-                <p>{t.footer.contact.address}</p>
-                <p>{t.footer.contact.phone}</p>
-                <p>{t.footer.contact.email}</p>
-              </div>
-            </div>
-
-            {/* Section 2: Legal Links (центр) */}
-            <div>
-              <h3 className="font-bold text-lg mb-4">{t.footer.links.title}</h3>
-              <div className="space-y-2">
-                <a 
-                  href="/terms" 
-                  className="block text-gray-300 hover:text-amber-400 transition-colors text-sm"
-                >
-                  {t.footer.links.terms}
-                </a>
-                <a 
-                  href="/policy" 
-                  className="block text-gray-300 hover:text-amber-400 transition-colors text-sm"
-                >
-                  {t.footer.links.policy}
-                </a>
-              </div>
-            </div>
-
-            {/* Section 3: Payment Methods (справа для RTL = слева визуально) */}
-            <div>
-              <h3 className="font-bold text-lg mb-4">{t.footer.payment.title}</h3>
-              <div className="flex flex-wrap gap-2 mb-4 items-center">
-                {[
-                  { src: '/payment-logos/visa.svg',       alt: 'Visa',        bg: 'bg-white',                           px: 'px-3 py-2'   },
-                  { src: '/payment-logos/mastercard.svg', alt: 'Mastercard',  bg: 'bg-white',                           px: 'px-2 py-1.5' },
-                  { src: '/payment-logos/bit.svg',        alt: 'Bit',         bg: 'bg-white',                           px: 'px-2 py-1.5' },
-                  { src: '/payment-logos/apple-pay.svg',  alt: 'Apple Pay',   bg: 'bg-black',                           px: 'px-3 py-1.5' },
-                  { src: '/payment-logos/google-pay.svg', alt: 'Google Pay',  bg: 'bg-white border border-gray-200',    px: 'px-2 py-1.5' },
-                ].map(({ src, alt, bg, px }) => (
-                  <div key={alt} className={`${bg} ${px} rounded-md flex items-center justify-center`} style={{ height: 32, minWidth: 48 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt={alt} className="h-5 w-auto object-contain" />
+      {/* TESTIMONIALS */}
+      <section className="testimonials">
+        <div style={{maxWidth:'1100px',margin:'0 auto'}}>
+          <div className="section-label">{t.testiLabel}</div>
+          <h2>{t.testiH2a}<br /><em>{t.testiH2b}</em></h2>
+          <p className="section-sub" style={{marginBottom:'56px'}}>{t.testiSub}</p>
+          <div className="testi-grid">
+            {t.reviews.map((r, i) => (
+              <div key={i} className="testi-card">
+                <div className="testi-quote">"</div>
+                <p className="testi-text">{r.text}</p>
+                <div className="testi-author">
+                  <div className="testi-avatar">{r.avatar}</div>
+                  <div>
+                    <div className="testi-name">{r.name}</div>
+                    <div className="testi-role">{r.role}</div>
                   </div>
-                ))}
+                  <div className="testi-stars">★★★★★</div>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-green-400 text-sm">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                </svg>
-                <span>{t.footer.payment.secure}</span>
-              </div>
-            </div>
+            ))}
           </div>
+        </div>
+      </section>
 
-          {/* Bottom Copyright */}
-          <div className="border-t border-white/10 pt-6 text-center text-sm text-gray-400">
-            {t.footer.copyright}
+      {/* CTA */}
+      <section className="cta-section">
+        <div className="cta-bg"></div>
+        <h2>{t.ctaH2a}<br />{t.ctaH2b}</h2>
+        <p>{t.ctaSub}</p>
+        <div className="hero-cta">
+          <a href="https://wa.me/972544858586" className="btn-white">{t.ctaWA}</a>
+          <a href="#pricing" className="btn-secondary" style={{color:'rgba(255,255,255,0.6)',borderColor:'rgba(255,255,255,0.15)'}}>{t.ctaPrice}</a>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer>
+        <div className="footer-inner">
+          <div className="footer-logo">
+            <div className="footer-logo-wrap">
+              <img src="/trinity-logo.png" alt="Trinity CRM" />
+            </div>
+            <span>Trinity CRM</span>
           </div>
+          <div className="footer-links">
+            {t.footerLinks.map((l, i) => <a key={i} href="#">{l}</a>)}
+          </div>
+          <div className="footer-copy">{t.footerCopy}</div>
         </div>
       </footer>
 
-      {/* Global Styles for Animations */}
-      <style jsx global>{`
-        /* Smooth scroll */
-        html {
-          scroll-behavior: smooth;
-        }
-
-        .fade-in-section {
-          opacity: 0;
-          transform: translateY(30px);
-          transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-        }
-
-        .fade-in-section.animate-in {
-          opacity: 1;
-          transform: translateY(0);
-        }
-
-        .animate-slide-up {
-          animation: slideUp 1s ease-out;
-        }
-
-        .animate-slide-up-delay {
-          animation: slideUp 1s ease-out 0.2s both;
-        }
-
-        .animate-slide-up-delay-2 {
-          animation: slideUp 1s ease-out 0.4s both;
-        }
-
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(50px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .shadow-amber {
-          box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
-        }
-
-        /* Floating shapes animation */
-        .animate-float {
-          animation: float 6s ease-in-out infinite;
-        }
-
-        .animate-float-delay {
-          animation: float 7s ease-in-out infinite 1s;
-        }
-
-        .animate-float-delay-2 {
-          animation: float 8s ease-in-out infinite 2s;
-        }
-
-        @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0) rotate(0deg);
-          }
-          50% {
-            transform: translateY(-30px) rotate(5deg);
-          }
-        }
-
-        /* Modal animations */
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-out;
-        }
-
-        .animate-scale-in {
-          animation: scaleIn 0.3s ease-out;
-        }
-
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-
-        @keyframes scaleIn {
-          from {
-            opacity: 0;
-            transform: scale(0.9);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-
-        /* Reviews auto-scroll animation */
-        .reviews-scroll {
-          animation: scrollReviews 30s linear infinite;
-        }
-
-        .reviews-scroll:hover {
-          animation-play-state: paused;
-        }
-
-        @keyframes scrollReviews {
-          0% {
-            transform: translateY(0);
-          }
-          100% {
-            transform: translateY(-50%);
-          }
-        }
-
-        /* Pulse animation for floating button */
-        .animate-pulse-slow {
-          animation: pulseSlow 3s ease-in-out infinite;
-        }
-
-        @keyframes pulseSlow {
-          0%,
-          100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.9;
-            transform: scale(1.02);
-          }
-        }
-
-        html[dir='rtl'] {
-          direction: rtl;
-        }
-
-        html[dir='ltr'] {
-          direction: ltr;
-        }
-      `}</style>
-
-      {/* Scroll to Top Button */}
-      {showScrollTop && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-20 md:bottom-6 left-6 z-50 w-12 h-12 bg-amber-500 hover:bg-amber-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 animate-fade-in"
-          aria-label="Scroll to top"
-        >
-          <ChevronUp className="w-6 h-6" />
-        </button>
+      {/* DEMO MODAL */}
+      {demoOpen && (
+        <DemoRegisterModal
+          lang={lang}
+          planName={demoPlan}
+          planKey={demoPlan.toLowerCase()}
+          onClose={() => setDemoOpen(false)}
+        />
       )}
     </div>
   )

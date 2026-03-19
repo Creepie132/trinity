@@ -6,8 +6,10 @@
  * без конфликта с серверным layout.tsx.
  *
  * Эти компоненты грузятся ПОСЛЕ первого рендера — не блокируют LCP.
+ * На /landing — не рендерим ничего (landing изолирован, ModalManager не нужен).
  */
 import dynamic from 'next/dynamic'
+import { usePathname } from 'next/navigation'
 
 const ConditionalChatWidget = dynamic(
   () => import('@/components/ConditionalChatWidget'),
@@ -40,6 +42,11 @@ const UpdateBanner = dynamic(
 )
 
 export function ClientProviders() {
+  const pathname = usePathname()
+
+  // Landing страница изолирована — не подключаем CRM-виджеты
+  if (pathname === '/landing') return null
+
   return (
     <>
       <UpdateBanner />

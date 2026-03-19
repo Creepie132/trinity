@@ -27,12 +27,12 @@ export function BottomSheet({ isOpen, onClose, children }: BottomSheetProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 md:hidden"
+        className="fixed inset-0 bg-black/50 z-[9000] md:hidden"
         onClick={onClose}
       />
-      
+
       {/* Sheet */}
-      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden animate-slide-up">
+      <div className="fixed inset-x-0 bottom-0 z-[9001] md:hidden animate-slide-up">
         <div className="bg-background rounded-t-3xl shadow-2xl max-h-[90vh] overflow-auto">
           {/* Handle */}
           <div className="flex justify-center pt-3 pb-2">

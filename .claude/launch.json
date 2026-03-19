@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Trinity CRM (dev)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["F:/Amber_solutions_Kira/Trinity/node_modules/next/dist/bin/next", "dev"],
+      "port": 3000
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalWrapperProps {
   isOpen: boolean;
@@ -9,31 +10,38 @@ interface ModalWrapperProps {
 }
 
 export default function ModalWrapper({ isOpen, onClose, children }: ModalWrapperProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
     }
 
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/50 p-4"
       onClick={onClose}
     >
       <div
-        className="relative bg-white dark:bg-gray-900 rounded-lg max-h-[90vh] w-full max-w-2xl overflow-hidden"
+        className="relative bg-white dark:bg-gray-900 rounded-lg max-h-[90vh] w-full max-w-2xl overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -14,6 +14,7 @@ export interface Features {
   hasBranches: boolean
   hasSubscriptions: boolean
   hasBooking: boolean
+  hasWhatsapp: boolean
   // Legacy aliases (для совместимости со старым кодом)
   hasSms: boolean
   hasStatistics: boolean
@@ -30,8 +31,6 @@ export interface Features {
 
 export function useFeatures(): Features {
   const { data: organization, isLoading: orgLoading } = useOrganization()
-  // adminLoading НЕ блокирует рендер — /api/admin/check медленный и нужен только
-  // для показа пункта "Панель управления". Обычные пункты меню не должны его ждать.
   const { data: isAdmin } = useIsAdmin()
 
   const emptyFeatures: Features = {
@@ -45,6 +44,7 @@ export function useFeatures(): Features {
     hasBranches: false,
     hasSubscriptions: false,
     hasBooking: false,
+    hasWhatsapp: false,
     hasSms: false,
     hasStatistics: false,
     hasReports: false,
@@ -71,6 +71,7 @@ export function useFeatures(): Features {
       hasBranches: true,
       hasSubscriptions: true,
       hasBooking: true,
+      hasWhatsapp: true,
       hasSms: true,
       hasStatistics: true,
       hasReports: true,
@@ -89,9 +90,6 @@ export function useFeatures(): Features {
 
   const modules = (organization.features as any)?.modules
   const status = organization.subscription_status
-
-  // Новые 3 статуса: active, inactive, demo
-  // Legacy поддержка: manual → active, trial → demo
   const isActive = status === 'active' || status === 'manual' || status === 'demo' || status === 'trial'
 
   if (modules) {
@@ -106,6 +104,7 @@ export function useFeatures(): Features {
       hasBranches:      modules.branches      ?? organization.branches_enabled ?? false,
       hasSubscriptions: modules.subscriptions ?? false,
       hasBooking:       modules.booking       ?? false,
+      hasWhatsapp:      modules.whatsapp      ?? false,
       // Legacy aliases
       hasSms:        false,
       hasStatistics: modules.analytics ?? false,
@@ -131,6 +130,7 @@ export function useFeatures(): Features {
     hasBranches:      organization.branches_enabled ?? false,
     hasSubscriptions: false,
     hasBooking:       false,
+    hasWhatsapp:      false,
     hasSms:           false,
     hasStatistics:    false,
     hasReports:       false,

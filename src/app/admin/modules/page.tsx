@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -35,7 +35,7 @@ interface OrgData {
 }
 
 // Модули которые показываем в матрице (основные)
-const KEY_MODULES = ['clients', 'visits', 'diary', 'payments', 'inventory', 'booking', 'subscriptions', 'sms', 'statistics', 'loyalty']
+const KEY_MODULES = ['clients', 'visits', 'diary', 'payments', 'inventory', 'booking', 'subscriptions', 'sms', 'statistics', 'loyalty', 'whatsapp']
 
 export default function AdminModulesPage() {
   const { language } = useLanguage()
@@ -296,3 +296,4 @@ export default function AdminModulesPage() {
     </div>
   )
 }
+

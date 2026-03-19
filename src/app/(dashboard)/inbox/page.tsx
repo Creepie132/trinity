@@ -1,7 +1,9 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { useFeatures } from '@/hooks/useFeatures'
 import {
   MessageCircle, Search, Send, UserPlus, Calendar,
   CheckCheck, Clock, X, Phone, Sparkles, Inbox, ChevronLeft,
@@ -96,6 +98,16 @@ export default function InboxPage() {
   const [creatingChat, setCreatingChat] = useState(false)
   // Mobile: sidebar open/close when chat is selected
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+
+  // ── Feature guard ──────────────────────────────────────────────────────────
+  const features = useFeatures()
+  const router = useRouter()
+  useEffect(() => {
+    if (!features.isLoading && !features.hasWhatsapp) {
+      router.replace('/dashboard')
+    }
+  }, [features.isLoading, features.hasWhatsapp, router])
+  // ──────────────────────────────────────────────────────────────────────────
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -721,3 +733,5 @@ export default function InboxPage() {
     </div>
   )
 }
+
+

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -22,7 +22,7 @@ const baseNavigation = [
   { name_he: 'כספים', name_ru: 'Финансы', href: '/finances', icon: PiggyBank, requireFeature: 'finances' },
   { name_he: 'מלאי', name_ru: 'Склад', href: '/inventory', icon: Package, requireFeature: 'inventory' },
   { name_he: 'יומן', name_ru: 'Дневник', href: '/diary', icon: BookOpen, requireFeature: 'diary' },
-  { name_he: 'וואטסאפ', name_ru: 'WhatsApp', href: '/inbox', icon: MessageCircle, requireFeature: null },
+  { name_he: 'וואטסאפ', name_ru: 'WhatsApp', href: '/inbox', icon: MessageCircle, requireFeature: 'whatsapp' },
   { name_he: 'אנליטיקה', name_ru: 'Аналитика', href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
   { name_he: 'הגדרות', name_ru: 'Настройки', href: '/settings', icon: Settings, requireFeature: null },
 ]
@@ -66,6 +66,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
       reports: features.hasReports,
       subscriptions: features.hasSubscriptions,
       booking: features.hasBooking,
+      whatsapp: features.hasWhatsapp,
       loyalty: features.hasLoyalty,
       sales: features.hasSales,
     }
@@ -165,3 +166,5 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
     </div>
   )
 }
+
+

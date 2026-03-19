@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -46,7 +46,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     { name: meetingMode.t.visits, href: '/visits', icon: Calendar, requireFeature: 'visits' },
     { name: language === 'he' ? 'מכירות' : 'Продажи', href: '/sales', icon: ShoppingBag, requireFeature: 'sales' },
     { name: getModuleName('diary'), href: '/diary', icon: BookOpen, requireFeature: 'diary' },
-    { name: language === 'he' ? 'וואטסאפ' : 'WhatsApp', href: '/inbox', icon: MessageCircle, requireFeature: null },
+    { name: language === 'he' ? 'וואטסאפ' : 'WhatsApp', href: '/inbox', icon: MessageCircle, requireFeature: 'whatsapp' },
     { name: getModuleName('inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
     { name: getModuleName('payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: language === 'he' ? 'כספים' : 'Финансы', href: '/finances', icon: PiggyBank, requireFeature: 'finances' },
@@ -78,6 +78,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       'reports': features.hasReports,
       'subscriptions': features.hasSubscriptions,
       'booking': features.hasBooking,
+      'whatsapp': features.hasWhatsapp,
       'loyalty': features.hasLoyalty,
       'sales': features.hasSales,
       'finances': features.hasPayments,
@@ -165,3 +166,4 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     </Sheet>
   )
 }
+

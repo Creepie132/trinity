@@ -65,12 +65,28 @@ function DialogContent({
         ref={containerRef}
         data-slot="dialog-content"
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border px-6 pt-0 pb-6 shadow-lg duration-200 outline-none sm:max-w-lg max-h-[calc(100dvh-32px)] overflow-y-auto",
+          // Base
+          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200 outline-none",
+          "fixed z-50 w-full shadow-lg border overflow-y-auto",
+          // Mobile: bottom-sheet (anchor to bottom, full width, rounded top)
+          "bottom-0 inset-x-0 max-h-[92dvh] rounded-t-2xl rounded-b-none",
+          "data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4",
+          // Desktop: classic centered dialog
+          "md:bottom-auto md:inset-x-auto md:rounded-lg",
+          "md:top-[50%] md:left-[50%] md:-translate-x-1/2 md:-translate-y-1/2",
+          "md:max-w-lg md:max-w-[calc(100%-2rem)] md:max-h-[calc(100dvh-32px)]",
+          "md:data-[state=open]:zoom-in-95 md:data-[state=closed]:zoom-out-95",
+          "md:data-[state=open]:slide-in-from-bottom-0 md:data-[state=closed]:slide-out-to-bottom-0",
+          "px-6 pt-0 pb-6 gap-4 grid",
           className
         )}
         {...props}
       >
-        {/* Drag handle — только на десктопе (md+), скрыт на мобиле */}
+        {/* Mobile swipe indicator */}
+        <div className="md:hidden flex justify-center pt-3 pb-1 -mx-6">
+          <div className="w-10 h-1 rounded-full bg-gray-300" />
+        </div>
+        {/* Drag handle — desktop only */}
         <div
           ref={handleRef}
           className="hidden md:flex items-center justify-center h-6 -mx-6 mb-0 mt-2 cursor-grab active:cursor-grabbing rounded-t-lg select-none group"

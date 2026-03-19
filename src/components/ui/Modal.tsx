@@ -150,11 +150,10 @@ export function Modal({
           // Anchor to the bottom edge, span full width, slide-up feel via max-h.
           'bottom-0 inset-x-0 max-h-[92dvh] rounded-t-2xl rounded-b-none',
           // ── Desktop (≥md): classic centered dialog ──────────────────────────
-          // Reset the mobile anchoring, then center with the translate trick.
-          // left/top/transform are set here via CSS classes — the drag hook
-          // overrides them with inline styles on drag, and resetPosition()
-          // clears inline styles so these classes take effect again on reopen.
-          'md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2',
+          // ВАЖНО: явно сбрасываем bottom/left/right чтобы не конфликтовало с мобильным bottom-0.
+          // md:inset-auto не всегда побеждает bottom-0 из-за порядка CSS в Tailwind —
+          // поэтому прописываем md:bottom-auto md:left-auto md:right-auto явно.
+          'md:bottom-auto md:left-1/2 md:right-auto md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2',
           'md:rounded-2xl md:max-h-[calc(100dvh-32px)]',
           !width && sizeClasses[size],
           pinned_ && 'ring-2 ring-orange-400/60',

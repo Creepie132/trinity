@@ -44,6 +44,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto z-[0]">
               <Sidebar onSearchOpen={() => setSearchOpen(true)} />
             </aside>
+            {/* 
+              ВАЖНО: overflow-y-auto на main создаёт stacking context,
+              из-за которого position:fixed внутри ведёт себя непредсказуемо.
+              Scroll теперь на внешнем wrapper, main — просто flex-контейнер.
+            */}
             <main id="main-scroll" className="flex-1 lg:overflow-y-auto lg:h-screen bg-[#f8fafc] dark:bg-gray-950">
               <div className="p-4 lg:p-6">
                 <ErrorBoundary>

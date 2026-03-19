@@ -58,7 +58,16 @@ export function Modal({
   const modalId = idRef.current
 
   const [mounted, setMounted] = useState(false)
-  useEffect(() => { setMounted(true) }, [])
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    const mq = window.matchMedia('(min-width: 768px)')
+    setIsDesktop(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   const { pin, unpin, isPinned, bringToFront, pinned, maxPinned } = usePinnedModals()
   const pinned_ = isPinned(modalId)
@@ -134,40 +143,33 @@ export function Modal({
         />
       )}
 
-      {/* Modal — позиционируется абсолютно через left/top 50% + translate(-50%,-50%) */}
-      {/* Drag hook меняет left и top напрямую */}
+      {/* Modal */}
       <div
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalId)}
         className={cn(
-          // Base — always applied
           'fixed w-full bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
-          // Animation: opacity-only fade. Transform-based enter animations
-          // (zoom-in-95, slide-in-from-bottom) conflict with the centering
-          // transform on desktop, so we use a clean fade for all breakpoints.
           'animate-in fade-in-0 duration-200',
-          // ── Mobile (<md): bottom-sheet ──────────────────────────────────────
-          // Anchor to the bottom edge, span full width, slide-up feel via max-h.
+          // Mobile (<768px): bottom-sheet
           'bottom-0 inset-x-0 max-h-[92dvh] rounded-t-2xl rounded-b-none',
-          // ── Desktop (≥md): classic centered dialog ──────────────────────────
-          // ВАЖНО: явно сбрасываем bottom/left/right чтобы не конфликтовало с мобильным bottom-0.
-          // md:inset-auto не всегда побеждает bottom-0 из-за порядка CSS в Tailwind —
-          // поэтому прописываем md:bottom-auto md:left-auto md:right-auto явно.
-          'md:bottom-auto md:left-1/2 md:right-auto md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2',
-          'md:rounded-2xl md:max-h-[calc(100dvh-32px)]',
+          // Desktop (≥768px): сбрасываем mobile классы, позиционирование через data-attribute + CSS
+          'md:bottom-auto md:left-auto md:right-auto md:top-auto md:rounded-2xl md:max-h-[calc(100dvh-32px)]',
           !width && sizeClasses[size],
           pinned_ && 'ring-2 ring-orange-400/60',
           className
         )}
+        data-desktop={isDesktop ? 'true' : undefined}
         style={{
           zIndex,
-          // maxWidth: only when an explicit `width` prop is provided (desktop).
-          // Responsive width on desktop comes from sizeClasses above (max-w-*).
-          maxWidth: width ? `min(${width}, calc(100vw - 32px))` : undefined,
-          // left / top / transform / maxHeight are handled by Tailwind classes.
-          // The drag hook writes inline left/top/transform during drag (overriding
-          // the CSS classes). resetPosition() clears them after close so the
-          // responsive classes are back in control on the next open.
+          // Desktop: center via inline style — 100% надёжно, не зависит от CSS cascade
+          ...(isDesktop && !pinnedData ? {
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            maxWidth: width ? `min(${width}, calc(100vw - 32px))` : undefined,
+          } : {
+            maxWidth: width ? `min(${width}, calc(100vw - 32px))` : undefined,
+          }),
         }}
         role="dialog"
         aria-modal={!pinned_}

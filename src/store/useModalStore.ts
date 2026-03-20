@@ -7,6 +7,8 @@ export type ModalType =
   | 'client-edit'
   | 'client-delete'
   | 'client-sale'
+  | 'client-gallery'
+  | 'client-documents'
   // Visits
   | 'visit-create'
   | 'visit-edit'

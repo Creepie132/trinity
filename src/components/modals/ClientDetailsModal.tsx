@@ -2,7 +2,7 @@
 
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
-import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight } from 'lucide-react'
+import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -51,6 +51,8 @@ export function ClientDetailsModal() {
       information: 'מידע',
       visits: 'ביקורים',
       totalPaid: 'סה"כ שולם',
+      gallery: 'גלריה',
+      documents: 'מסמכים',
       notes: 'הערות',
       createdAt: 'תאריך יצירה',
       edit: 'ערוך',
@@ -66,6 +68,8 @@ export function ClientDetailsModal() {
       information: 'Информация',
       visits: 'Визитов',
       totalPaid: 'Всего оплачено',
+      gallery: 'Галерея',
+      documents: 'Документы',
       notes: 'Заметки',
       createdAt: 'Дата создания',
       edit: 'Редактировать',
@@ -81,6 +85,8 @@ export function ClientDetailsModal() {
       information: 'Information',
       visits: 'Visits',
       totalPaid: 'Total Paid',
+      gallery: 'Gallery',
+      documents: 'Documents',
       notes: 'Notes',
       createdAt: 'Date Created',
       edit: 'Edit',
@@ -314,7 +320,7 @@ export function ClientDetailsModal() {
           </div>
         </div>
 
-        {/* Статистика — два числа рядом */}
+        {/* Статистика — четыре числа 2x2 */}
         <div className="grid grid-cols-2 gap-3 mb-5">
           <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl text-center">
             <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{visitsCount}</p>
@@ -324,6 +330,24 @@ export function ClientDetailsModal() {
             <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">₪{Number(totalPaid).toLocaleString()}</p>
             <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-0.5">{text.totalPaid}</p>
           </div>
+          <button
+            onClick={() => openModal('client-gallery', { client, locale })}
+            className="p-4 bg-violet-50 dark:bg-violet-900/20 rounded-2xl text-center hover:bg-violet-100 dark:hover:bg-violet-900/30 transition active:scale-95 cursor-pointer"
+          >
+            <div className="flex justify-center mb-1">
+              <Images className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+            </div>
+            <p className="text-xs text-violet-500 dark:text-violet-400">{text.gallery}</p>
+          </button>
+          <button
+            onClick={() => openModal('client-documents', { client, locale })}
+            className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-2xl text-center hover:bg-orange-100 dark:hover:bg-orange-900/30 transition active:scale-95 cursor-pointer"
+          >
+            <div className="flex justify-center mb-1">
+              <FileText className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <p className="text-xs text-orange-500 dark:text-orange-400">{text.documents}</p>
+          </button>
         </div>
 
         {/* Секция "Информация" */}

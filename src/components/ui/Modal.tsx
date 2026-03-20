@@ -148,12 +148,12 @@ export function Modal({
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalId)}
         className={cn(
-          'fixed w-full bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
+          'fixed bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
           'animate-in fade-in-0 duration-200',
-          // Mobile (<768px): bottom-sheet
-          'bottom-0 inset-x-0 max-h-[92dvh] rounded-t-2xl rounded-b-none',
-          // Desktop (≥768px): сбрасываем mobile классы, позиционирование через data-attribute + CSS
-          'md:bottom-auto md:left-auto md:right-auto md:top-auto md:rounded-2xl md:max-h-[calc(100dvh-32px)]',
+          // Mobile (<768px): centered overlay
+          'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-32px)] max-h-[92dvh] rounded-2xl',
+          // Desktop (≥768px): сбрасываем mobile классы, позиционирование через inline style
+          'md:w-auto md:rounded-2xl md:max-h-[calc(100dvh-32px)]',
           !width && sizeClasses[size],
           pinned_ && 'ring-2 ring-orange-400/60',
           className

@@ -14,7 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Users, Calendar, FileText, CheckCircle2, Clock, Scissors, MapPin } from 'lucide-react'
+import { Users, Calendar, FileText, CheckCircle2, Clock, Scissors, MapPin, Hash } from 'lucide-react'
 import { ClientSearch } from '@/components/ui/ClientSearch'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,6 +84,7 @@ export function CreateVisitDialog({
     time: preselectedTime || getDefaultTime(),
     duration: 60,
     price: '',
+    quantity: 1,
     notes: '',
     city: '',
     address: '',
@@ -135,7 +136,7 @@ export function CreateVisitDialog({
     setFormData({
       clientId: '', serviceId: '', service: '',
       date: getDefaultDate(), time: getDefaultTime(),
-      duration: 60, price: '', notes: '', city: '', address: '',
+      duration: 60, price: '', quantity: 1, notes: '', city: '', address: '',
     })
   }
 
@@ -162,6 +163,7 @@ export function CreateVisitDialog({
           time: formData.time,
           duration: meetingMode.isMeetingMode ? null : formData.duration,
           price: meetingMode.isMeetingMode ? '0' : formData.price,
+          quantity: formData.quantity,
           notes: notesData,
         }),
       })
@@ -242,21 +244,44 @@ export function CreateVisitDialog({
               <Scissors className="w-3.5 h-3.5 text-indigo-500" />
               {t('visits.service')} *
             </Label>
-            <Select value={formData.serviceId} onValueChange={handleServiceChange}>
-              <SelectTrigger className="h-11">
-                <SelectValue placeholder={t('visits.selectService')} />
-              </SelectTrigger>
-              <SelectContent>
-                {services.map((svc: any) => {
-                  const name = language === 'he' ? svc.name : (svc.name_ru || svc.name)
-                  return (
-                    <SelectItem key={svc.id} value={svc.id}>
-                      {name}{svc.price ? ` — ₪${svc.price}` : ''}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2 items-start">
+              {/* Service — 75% */}
+              <div className="flex-[3]">
+                <Select value={formData.serviceId} onValueChange={handleServiceChange}>
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder={t('visits.selectService')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((svc: any) => {
+                      const name = language === 'he' ? svc.name : (svc.name_ru || svc.name)
+                      return (
+                        <SelectItem key={svc.id} value={svc.id}>
+                          {name}{svc.price ? ` — ₪${svc.price}` : ''}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Quantity — 25% */}
+              <div className="flex-[1] space-y-0">
+                <Label className="font-semibold text-gray-700 flex items-center gap-1 text-xs mb-1">
+                  <Hash className="w-3 h-3 text-indigo-500" />
+                  {language === 'he' ? 'כמות' : 'Кол-во'}
+                </Label>
+                <input
+                  type="number"
+                  min={1}
+                  max={999}
+                  value={formData.quantity}
+                  onChange={e => {
+                    const val = Math.max(1, Math.min(999, parseInt(e.target.value) || 1))
+                    setFormData(p => ({ ...p, quantity: val }))
+                  }}
+                  className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-center font-semibold"
+                />
+              </div>
+            </div>
           </div>
           {/* Client preview chip */}
           {selectedClient && (
@@ -379,7 +404,14 @@ export function CreateVisitDialog({
               {svcName && (
                 <div className="flex items-center gap-2">
                   <Scissors className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                  <span>{svcName}{formData.price ? ` — ₪${formData.price}` : ''}</span>
+                  <span>
+                    {svcName}{formData.price ? ` — ₪${formData.price}` : ''}
+                    {formData.quantity > 1 && (
+                      <span className="ml-1.5 px-1.5 py-0.5 bg-indigo-200 text-indigo-700 rounded text-xs font-bold">
+                        ×{formData.quantity}
+                      </span>
+                    )}
+                  </span>
                 </div>
               )}
               <div className="flex items-center gap-2">

@@ -20,6 +20,7 @@ export const createVisitSchema = z.object({
   time: z.string().min(1),
   duration: z.coerce.number().int().max(480).optional().nullable(),
   price: z.string().min(1), // Приходит как строка
+  quantity: z.coerce.number().int().min(1, 'Количество не может быть меньше 1').max(999).default(1),
   notes: z.string().max(2000).optional().or(z.literal("")),
 })
 

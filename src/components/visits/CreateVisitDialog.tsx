@@ -244,43 +244,35 @@ export function CreateVisitDialog({
               <Scissors className="w-3.5 h-3.5 text-indigo-500" />
               {t('visits.service')} *
             </Label>
-            <div className="flex gap-2 items-start">
+            <div className="grid grid-cols-[3fr_1fr] gap-2">
               {/* Service — 75% */}
-              <div className="flex-[3]">
-                <Select value={formData.serviceId} onValueChange={handleServiceChange}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder={t('visits.selectService')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services.map((svc: any) => {
-                      const name = language === 'he' ? svc.name : (svc.name_ru || svc.name)
-                      return (
-                        <SelectItem key={svc.id} value={svc.id}>
-                          {name}{svc.price ? ` — ₪${svc.price}` : ''}
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={formData.serviceId} onValueChange={handleServiceChange}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder={t('visits.selectService')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((svc: any) => {
+                    const name = language === 'he' ? svc.name : (svc.name_ru || svc.name)
+                    return (
+                      <SelectItem key={svc.id} value={svc.id}>
+                        {name}{svc.price ? ` — ₪${svc.price}` : ''}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
               {/* Quantity — 25% */}
-              <div className="flex-[1] space-y-0">
-                <Label className="font-semibold text-gray-700 flex items-center gap-1 text-xs mb-1">
-                  <Hash className="w-3 h-3 text-indigo-500" />
-                  {language === 'he' ? 'כמות' : 'Кол-во'}
-                </Label>
-                <input
-                  type="number"
-                  min={1}
-                  max={999}
-                  value={formData.quantity}
-                  onChange={e => {
-                    const val = Math.max(1, Math.min(999, parseInt(e.target.value) || 1))
-                    setFormData(p => ({ ...p, quantity: val }))
-                  }}
-                  className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-center font-semibold"
-                />
-              </div>
+              <input
+                type="number"
+                min={1}
+                max={999}
+                value={formData.quantity}
+                onChange={e => {
+                  const val = Math.max(1, Math.min(999, parseInt(e.target.value) || 1))
+                  setFormData(p => ({ ...p, quantity: val }))
+                }}
+                className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-center font-semibold"
+              />
             </div>
           </div>
           {/* Client preview chip */}

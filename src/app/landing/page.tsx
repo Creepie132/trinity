@@ -299,7 +299,6 @@ export default function LandingPage() {
   return (
     <div dir={t.dir} className="page-root">
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Lora:wght@400;500;600&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
         :root {

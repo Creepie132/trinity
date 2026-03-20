@@ -244,24 +244,26 @@ export function CreateVisitDialog({
               <Scissors className="w-3.5 h-3.5 text-indigo-500" />
               {t('visits.service')} *
             </Label>
-            <div className="grid grid-cols-[3fr_1fr] gap-2">
-              {/* Service — 75% */}
-              <Select value={formData.serviceId} onValueChange={handleServiceChange}>
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder={t('visits.selectService')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.map((svc: any) => {
-                    const name = language === 'he' ? svc.name : (svc.name_ru || svc.name)
-                    return (
-                      <SelectItem key={svc.id} value={svc.id}>
-                        {name}{svc.price ? ` — ₪${svc.price}` : ''}
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
-              {/* Quantity — 25% */}
+            <div className="flex items-center gap-2">
+              {/* Service — flex-1 */}
+              <div className="flex-1">
+                <Select value={formData.serviceId} onValueChange={handleServiceChange}>
+                  <SelectTrigger className="h-11 w-full">
+                    <SelectValue placeholder={t('visits.selectService')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((svc: any) => {
+                      const name = language === 'he' ? svc.name : (svc.name_ru || svc.name)
+                      return (
+                        <SelectItem key={svc.id} value={svc.id}>
+                          {name}{svc.price ? ` — ₪${svc.price}` : ''}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Quantity — фиксированная ширина, такая же высота */}
               <input
                 type="number"
                 min={1}
@@ -271,7 +273,7 @@ export function CreateVisitDialog({
                   const val = Math.max(1, Math.min(999, parseInt(e.target.value) || 1))
                   setFormData(p => ({ ...p, quantity: val }))
                 }}
-                className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-center font-semibold"
+                className="h-11 w-16 rounded-md border border-input bg-background px-2 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-center font-semibold shrink-0"
               />
             </div>
           </div>

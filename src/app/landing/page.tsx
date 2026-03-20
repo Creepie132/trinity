@@ -313,7 +313,7 @@ export default function LandingPage() {
           --shadow-lg: 0 20px 60px rgba(30,45,74,0.14);
         }
         body { background:var(--cream); color:var(--text); font-family:'Manrope',system-ui,sans-serif; overflow-x:hidden; line-height:1.65; }
-        .page-root { min-height:100vh; display:flex; flex-direction:column; }
+        .page-root { min-height:100dvh; display:flex; flex-direction:column; }
         ::-webkit-scrollbar { width:5px; }
         ::-webkit-scrollbar-track { background:var(--cream); }
         ::-webkit-scrollbar-thumb { background:var(--amber-light); border-radius:3px; }

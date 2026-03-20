@@ -607,7 +607,14 @@ export default function LandingPage() {
       <nav id="nav" className={scrolled ? 'scrolled' : ''}>
         <a href="#" className="logo">
           <div className="logo-img-wrap">
-            <img src="/trinity-logo.png" alt="Trinity CRM" />
+            <img
+              src="/trinity-logo-80.webp"
+              alt="Trinity CRM"
+              width={40}
+              height={40}
+              loading="eager"
+              fetchPriority="high"
+            />
           </div>
           Trinity CRM
         </a>
@@ -832,7 +839,7 @@ export default function LandingPage() {
         <div className="footer-inner">
           <div className="footer-logo">
             <div className="footer-logo-wrap">
-              <img src="/trinity-logo.png" alt="Trinity CRM" />
+              <img src="/trinity-logo-80.webp" alt="Trinity CRM" width={32} height={32} loading="lazy" />
             </div>
             <span>Trinity CRM</span>
           </div>

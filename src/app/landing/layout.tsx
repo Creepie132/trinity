@@ -1,65 +1,158 @@
 /**
  * Landing layout — изолирован от RootLayout.
  * Не подключает ClientProviders / ModalManager / ChatWidget.
+ *
+ * FOUC Fix strategy:
+ * 1. Critical CSS инлайново в <head> через <style> — применяется до JS
+ * 2. Google Fonts через <link rel="preconnect"> + preload stylesheet
+ * 3. Логотип — оптимизированный WebP 80px (5 КБ вместо 235 КБ PNG)
+ * 4. Opacity trick: body{opacity:0} → 1 через микроскрипт после загрузки стилей
  */
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Trinity CRM — Система управления для вашего бизнеса',
-  description: 'Trinity CRM — всё что нужно малому бизнесу.',
+  description: 'Trinity — нервная система вашего бизнеса. Клиенты, записи, аналитика и WhatsApp-напоминания в одном месте.',
   icons: { icon: '/trinity-logo.png' },
+  openGraph: {
+    title: 'Trinity CRM',
+    description: 'Система управления для малого бизнеса · Израиль',
+    images: ['/trinity-logo.png'],
+  },
 }
+
+const CRITICAL_CSS = `
+  /* === RESET === */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  /* === CSS VARIABLES === */
+  :root {
+    --cream: #FDFAF5; --cream-dark: #F5F0E8; --cream-mid: #EDE7D8;
+    --amber: #D97706; --amber-light: #F59E0B; --amber-pale: #FEF3C7;
+    --amber-glow: rgba(217,119,6,0.12); --navy: #1E2D4A; --navy-mid: #2D3E5C;
+    --text: #1A1A2E; --text-mid: #4A5568; --text-light: #8896A8;
+    --white: #FFFFFF; --border: rgba(217,119,6,0.15);
+    --gutter: clamp(20px,5vw,80px);
+    --shadow-sm: 0 2px 12px rgba(30,45,74,0.06);
+    --shadow-md: 0 8px 32px rgba(30,45,74,0.10);
+    --shadow-lg: 0 20px 60px rgba(30,45,74,0.14);
+  }
+
+  /* === BODY — фон сразу, без мигания белым === */
+  html, body { min-height: unset !important; height: auto !important; }
+  body {
+    background: #FDFAF5;
+    color: #1A1A2E;
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    line-height: 1.65;
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    /* Opacity trick: тело скрыто до готовности CSS */
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  body.css-ready { opacity: 1; }
+  .page-root { display: contents; }
+
+  /* === NAV — фиксированная высота сразу === */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px clamp(20px,4vw,60px);
+    height: 72px;
+    background: rgba(253,250,245,0.88);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(217,119,6,0.15);
+  }
+
+  /* === LOGO — фиксированные размеры, резервирует место === */
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 22px; font-weight: 600; color: #1E2D4A;
+    text-decoration: none; letter-spacing: -0.3px;
+  }
+  .logo-img-wrap {
+    width: 40px; height: 40px; min-width: 40px;
+    border-radius: 50%; overflow: hidden;
+    background: #000;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-img-wrap img {
+    width: 40px; height: 40px;
+    object-fit: cover;
+    mix-blend-mode: lighten;
+    display: block;
+  }
+
+  /* === HERO === */
+  .hero {
+    min-height: 100dvh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: clamp(72px,8vw,120px) clamp(20px,5vw,80px) clamp(28px,4vw,60px);
+    text-align: center; overflow: hidden; position: relative;
+  }
+
+  /* === TYPOGRAPHY — шрифты с fallback === */
+  h1 {
+    font-family: 'Lora', Georgia, serif;
+    font-size: clamp(32px,5vw,64px);
+    font-weight: 600; line-height: 1.12;
+    letter-spacing: -1.5px; color: #1E2D4A;
+    margin-bottom: clamp(12px,2vw,24px);
+  }
+  h2 {
+    font-family: 'Lora', Georgia, serif;
+    font-size: clamp(28px,4vw,52px);
+    font-weight: 600; line-height: 1.15;
+    letter-spacing: -1px; color: #1E2D4A;
+    margin-bottom: 20px;
+  }
+`
 
 export default function LandingLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <style>{`
-        html, body { min-height: unset !important; height: auto !important; }
+    <html lang="ru" dir="ltr">
+      <head>
+        {/* 1. Critical CSS — инлайново, применяется до JS и до загрузки шрифтов */}
+        <style dangerouslySetInnerHTML={{ __html: CRITICAL_CSS }} />
 
-        /* ── Critical above-the-fold styles — loaded before JS hydration ── */
-        @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Lora:wght@400;500;600&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; }
-        :root {
-          --cream: #FDFAF5; --cream-dark: #F5F0E8; --cream-mid: #EDE7D8;
-          --amber: #D97706; --amber-light: #F59E0B; --amber-pale: #FEF3C7;
-          --amber-glow: rgba(217,119,6,0.12); --navy: #1E2D4A; --navy-mid: #2D3E5C;
-          --text: #1A1A2E; --text-mid: #4A5568; --text-light: #8896A8;
-          --white: #FFFFFF; --border: rgba(217,119,6,0.15);
-          --space-xs: clamp(8px,1vw,12px); --space-sm: clamp(12px,2vw,20px);
-          --space-md: clamp(20px,3vw,36px); --space-lg: clamp(36px,5vw,64px);
-          --space-xl: clamp(56px,7vw,100px); --space-2xl: clamp(72px,9vw,140px);
-          --container: 1440px; --container-inner: 1100px;
-          --gutter: clamp(20px,5vw,80px);
-          --shadow-sm: 0 2px 12px rgba(30,45,74,0.06);
-          --shadow-md: 0 8px 32px rgba(30,45,74,0.10);
-          --shadow-lg: 0 20px 60px rgba(30,45,74,0.14);
-        }
-        body {
-          background: var(--cream); color: var(--text);
-          font-family: 'Manrope', system-ui, sans-serif;
-          overflow-x: hidden; line-height: 1.65;
-          display: flex; flex-direction: column; min-height: 100dvh;
-        }
-        .page-root { display: contents; }
-        nav {
-          position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 18px clamp(20px,4vw,60px);
-          background: rgba(253,250,245,0.88); backdrop-filter: blur(16px);
-          border-bottom: 1px solid var(--border); transition: box-shadow 0.3s;
-        }
-        .logo { display:flex; align-items:center; gap:10px; font-family:'Lora',serif; font-size:22px; font-weight:600; color:var(--navy); text-decoration:none; letter-spacing:-0.3px; }
-        .hero {
-          min-height: 100dvh; display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
-          padding: clamp(72px,8vw,120px) var(--gutter) clamp(28px,4vw,60px);
-          position: relative; text-align: center; overflow: hidden;
-        }
-        h1 { font-family:'Lora',serif; font-size:clamp(32px,5vw,64px); font-weight:600; line-height:1.12; letter-spacing:-1.5px; color:var(--navy); margin-bottom:clamp(12px,2vw,24px); }
-        h2 { font-family:'Lora',serif; font-size:clamp(28px,4vw,52px); font-weight:600; line-height:1.15; letter-spacing:-1px; color:var(--navy); margin-bottom:20px; }
-      `}</style>
-      {children}
-    </>
+        {/* 2. Preconnect — DNS + TLS handshake для Google Fonts заранее */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+
+        {/* 3. Preload логотипа — браузер скачает его в первую очередь */}
+        <link rel="preload" href="/trinity-logo-80.webp" as="image" type="image/webp" />
+
+        {/* 4. Google Fonts с font-display=swap — текст не прыгает */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Lora:wght@400;500;600&display=swap"
+          rel="stylesheet"
+        />
+
+        {/* 5. Opacity trick — показываем body только когда стили готовы */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            function showBody() {
+              document.body && document.body.classList.add('css-ready');
+            }
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', showBody);
+            } else {
+              showBody();
+            }
+            // Failsafe: через 300ms показываем в любом случае
+            setTimeout(showBody, 300);
+          })();
+        `}} />
+      </head>
+      <body>
+        {children}
+      </body>
+    </html>
   )
 }

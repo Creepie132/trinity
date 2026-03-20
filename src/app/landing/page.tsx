@@ -337,14 +337,14 @@ export default function LandingPage() {
         .mobile-menu .btn-nav { text-align:center; }
       `}</style>
       <style jsx global>{`
-        .hero { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:120px 60px 80px; position:relative; text-align:center; overflow:hidden; }
+        .hero { min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 60px; position:relative; text-align:center; overflow:hidden; }
         .hero-bg { position:absolute; inset:0; z-index:0; background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(245,158,11,0.08) 0%,transparent 70%),radial-gradient(ellipse 40% 40% at 80% 80%,rgba(30,45,74,0.04) 0%,transparent 60%); }
         .shape { position:absolute; border-radius:50%; background:linear-gradient(135deg,rgba(245,158,11,0.07),rgba(217,119,6,0.04)); pointer-events:none; animation:float ease-in-out infinite; }
         .s1 { width:400px; height:400px; top:-100px; right:-80px; animation-duration:12s; }
         .s2 { width:200px; height:200px; bottom:15%; left:5%; animation-duration:9s; animation-delay:-4s; }
         .s3 { width:120px; height:120px; top:30%; left:8%; animation-duration:7s; animation-delay:-2s; }
         @keyframes float { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-20px) rotate(3deg)} }
-        .hero-inner { position:relative; z-index:1; max-width:820px; }
+        .hero-inner { position:relative; z-index:1; max-width:820px; width:100%; display:flex; flex-direction:column; align-items:center; }
         .hero-badge { display:inline-flex; align-items:center; gap:8px; background:var(--amber-pale); border:1px solid rgba(217,119,6,0.25); border-radius:100px; padding:7px 18px; margin-bottom:36px; font-size:13px; font-weight:600; color:var(--amber); animation:fadeUp 0.6s ease both; }
         .badge-dot { width:7px; height:7px; border-radius:50%; background:var(--amber-light); animation:pulse 2s ease infinite; display:inline-block; }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.4)} }
@@ -490,7 +490,7 @@ export default function LandingPage() {
           .btn-nav.desktop-only { display:none; }
           .burger { display:block; }
           section { padding:72px 24px; }
-          .hero { padding:100px 24px 60px; }
+          .hero { padding:80px 24px 40px; }
           .problem-grid,.features-grid,.steps,.plans { grid-template-columns:1fr; }
           .testi-grid { grid-template-columns:1fr; }
           .hero-stats { gap:24px; flex-wrap:wrap; }

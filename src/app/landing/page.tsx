@@ -46,10 +46,11 @@ type LangData = {
   priceH2a: string
   priceH2b: string
   priceSub: string
-  plans: { name: string; price: string; popular: boolean; period: string; features: string[] }[]
+  plans: { name: string; price: string; popular: boolean; period: string; useCase: string; features: string[] }[]
   popularBadge: string
   setupNote: string
   setupNote2: string
+  setupNote3: string
   testiLabel: string
   testiH2a: string
   testiH2b: string
@@ -128,13 +129,14 @@ const RU: LangData = {
   priceH2b: 'Без сюрпризов.',
   priceSub: 'Платите только за то что используете. Никаких скрытых комиссий.',
   plans: [
-    { name: 'Старт', price: '199', popular: false, period: 'в месяц', features: ['База клиентов','Дневник записей','WhatsApp напоминания','История визитов','Поддержка'] },
-    { name: 'Бизнес', price: '349', popular: true, period: 'в месяц', features: ['Всё из тарифа Старт','Склад и материалы','Продажи и оплаты','WhatsApp рассылки','Программа лояльности','Аналитика и отчёты'] },
-    { name: 'Про', price: '549', popular: false, period: 'в месяц', features: ['Всё из тарифа Бизнес','Несколько филиалов','Онлайн запись','Приоритетная поддержка','Индивидуальные модули'] },
+    { name: 'Основа', price: '199', popular: false, period: 'в месяц', useCase: 'Для тех, кто только начинает наводить порядок', features: ['База клиентов','Дневник записей','WhatsApp напоминания','История визитов','Поддержка'] },
+    { name: 'Рост', price: '399', popular: true, period: 'в месяц', useCase: 'Для тех, кто хочет понимать что приносит деньги', features: ['Всё из тарифа Основа','Склад и материалы','Продажи и оплаты','WhatsApp рассылки','Программа лояльности','Аналитика и отчёты'] },
+    { name: 'Сеть', price: '549', popular: false, period: 'в месяц', useCase: 'Для нескольких точек или большой команды', features: ['Всё из тарифа Рост','Несколько филиалов','Онлайн запись','Приоритетная поддержка','Индивидуальные модули'] },
   ],
   popularBadge: 'Популярный',
-  setupNote: 'Единоразовая плата за установку и настройку — ',
-  setupNote2: '. Мы приедем, всё настроим и обучим вашу команду.',
+  setupNote: 'Настройка: самостоятельно — бесплатно · онлайн (Zoom) — ',
+  setupNote2: ' · выезд к вам — ',
+  setupNote3: '',
   testiLabel: 'Отзывы',
   testiH2a: 'Что говорят',
   testiH2b: 'наши клиенты',
@@ -216,13 +218,14 @@ const HE: LangData = {
   priceH2b: 'ללא הפתעות.',
   priceSub: 'משלמים רק על מה שמשתמשים בו. ללא עמלות נסתרות.',
   plans: [
-    { name: 'התחלתי', price: '199', popular: false, period: 'לחודש', features: ['בסיס לקוחות','יומן תורים','תזכורות WhatsApp','היסטוריית ביקורים','תמיכה'] },
-    { name: 'עסקי', price: '349', popular: true, period: 'לחודש', features: ['הכל מהתוכנית ההתחלתית','מלאי וחומרים','מכירות ותשלומים','שיווק WhatsApp','תוכנית נאמנות','אנליטיקה ודוחות'] },
-    { name: 'פרו', price: '549', popular: false, period: 'לחודש', features: ['הכל מהתוכנית העסקית','מספר סניפים','הזמנה אונליין','תמיכה מועדפת','מודולים אישיים'] },
+    { name: 'בסיס', price: '199', popular: false, period: 'לחודש', useCase: 'למי שמתחיל לעשות סדר בעסק', features: ['בסיס לקוחות','יומן תורים','תזכורות WhatsApp','היסטוריית ביקורים','תמיכה'] },
+    { name: 'צמיחה', price: '399', popular: true, period: 'לחודש', useCase: 'למי שרוצה להבין מה מביא כסף', features: ['הכל מתוכנית הבסיס','מלאי וחומרים','מכירות ותשלומים','שיווק WhatsApp','תוכנית נאמנות','אנליטיקה ודוחות'] },
+    { name: 'רשת', price: '549', popular: false, period: 'לחודש', useCase: 'למספר סניפים או צוות גדול', features: ['הכל מתוכנית הצמיחה','מספר סניפים','הזמנה אונליין','תמיכה מועדפת','מודולים אישיים'] },
   ],
   popularBadge: 'פופולרי',
-  setupNote: 'תשלום חד פעמי להתקנה והגדרה — ',
-  setupNote2: '. נגיע, נגדיר הכל ונלמד את הצוות שלך.',
+  setupNote: 'הגדרה: בעצמך — חינם · אונליין (Zoom) — ',
+  setupNote2: ' · ביקור אצלך — ',
+  setupNote3: '',
   testiLabel: 'המלצות',
   testiH2a: 'מה אומרים',
   testiH2b: 'הלקוחות שלנו',
@@ -425,8 +428,10 @@ export default function LandingPage() {
         .plan-price { font-family:'Lora',serif; font-size:52px; font-weight:600; color:var(--navy); line-height:1; margin-bottom:6px; letter-spacing:-2px; }
         .plan.popular .plan-price { color:white; }
         .plan-price sup { font-size:22px; font-weight:600; vertical-align:top; margin-top:10px; }
-        .plan-period { font-size:14px; color:var(--text-light); margin-bottom:32px; }
+        .plan-period { font-size:14px; color:var(--text-light); margin-bottom:12px; }
+        .plan-usecase { font-size:13px; color:var(--text-light); font-style:italic; margin-bottom:24px; line-height:1.5; min-height:38px; }
         .plan.popular .plan-period { color:rgba(255,255,255,0.45); }
+        .plan.popular .plan-usecase { color:rgba(255,255,255,0.45); }
         .plan-divider { height:1px; background:var(--border); margin-bottom:28px; }
         .plan.popular .plan-divider { background:rgba(255,255,255,0.1); }
         .plan-features { list-style:none; margin-bottom:36px; }
@@ -666,6 +671,7 @@ export default function LandingPage() {
                 <div className="plan-name">{plan.name}</div>
                 <div className="plan-price"><sup>₪</sup>{plan.price}</div>
                 <div className="plan-period">{plan.period}</div>
+                <div className="plan-usecase">{plan.useCase}</div>
                 <div className="plan-divider"></div>
                 <ul className="plan-features">
                   {plan.features.map((f, j) => (
@@ -681,7 +687,7 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-          <p className="setup-note">{t.setupNote}<strong>₪500</strong>{t.setupNote2}</p>
+          <p className="setup-note">{t.setupNote}<strong>₪250</strong>{t.setupNote2}<strong>₪500</strong></p>
         </div>
       </section>
 

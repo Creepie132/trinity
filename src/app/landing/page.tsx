@@ -373,7 +373,7 @@ export default function LandingPage() {
         .hero {
           min-height: 100dvh; display: flex; flex-direction: column;
           align-items: center; justify-content: center;
-          padding: clamp(100px,12vw,160px) var(--gutter) clamp(40px,5vw,80px);
+          padding: clamp(72px,8vw,120px) var(--gutter) clamp(28px,4vw,60px);
           position: relative; text-align: center; overflow: hidden;
         }
         .hero-bg { position:absolute; inset:0; z-index:0; background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(245,158,11,0.08) 0%,transparent 70%),radial-gradient(ellipse 40% 40% at 80% 80%,rgba(30,45,74,0.04) 0%,transparent 60%); }
@@ -388,18 +388,18 @@ export default function LandingPage() {
         .s3 { width:clamp(60px,8vw,120px); height:clamp(60px,8vw,120px); top:30%; left:8%; animation-duration:7s; animation-delay:-2s; }
         @keyframes float { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-20px) rotate(3deg)} }
         .hero-inner { position:relative; z-index:1; max-width:820px; width:100%; display:flex; flex-direction:column; align-items:center; }
-        .hero-badge { display:inline-flex; align-items:center; gap:8px; background:var(--amber-pale); border:1px solid rgba(217,119,6,0.25); border-radius:100px; padding:7px 18px; margin-bottom:clamp(20px,3vw,36px); font-size:13px; font-weight:600; color:var(--amber); animation:fadeUp 0.6s ease both; }
+        .hero-badge { display:inline-flex; align-items:center; gap:8px; background:var(--amber-pale); border:1px solid rgba(217,119,6,0.25); border-radius:100px; padding:7px 18px; margin-bottom:clamp(14px,2vw,28px); font-size:13px; font-weight:600; color:var(--amber); animation:fadeUp 0.6s ease both; }
         .badge-dot { width:7px; height:7px; border-radius:50%; background:var(--amber-light); animation:pulse 2s ease infinite; display:inline-block; }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.4)} }
-        h1 { font-family:'Lora',serif; font-size:clamp(36px,6vw,72px); font-weight:600; line-height:1.12; letter-spacing:-1.5px; color:var(--navy); margin-bottom:clamp(16px,2.5vw,28px); animation:fadeUp 0.6s 0.1s ease both; }
+        h1 { font-family:'Lora',serif; font-size:clamp(32px,5vw,64px); font-weight:600; line-height:1.12; letter-spacing:-1.5px; color:var(--navy); margin-bottom:clamp(12px,2vw,24px); animation:fadeUp 0.6s 0.1s ease both; }
         h1 em { font-style:normal; background:linear-gradient(135deg,var(--amber) 0%,var(--amber-light) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-        .hero-sub { font-size:clamp(16px,2vw,21px); color:var(--text-mid); font-weight:400; max-width:580px; margin:0 auto clamp(28px,4vw,48px); line-height:1.7; animation:fadeUp 0.6s 0.2s ease both; }
+        .hero-sub { font-size:clamp(15px,1.8vw,20px); color:var(--text-mid); font-weight:400; max-width:580px; margin:0 auto clamp(20px,3vw,40px); line-height:1.7; animation:fadeUp 0.6s 0.2s ease both; }
         .hero-cta { display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; animation:fadeUp 0.6s 0.3s ease both; }
         .btn-primary { background:linear-gradient(135deg,var(--amber) 0%,var(--amber-light) 100%); color:white; padding:clamp(12px,1.5vw,16px) clamp(24px,3vw,36px); border-radius:14px; font-size:clamp(14px,1.5vw,16px); font-weight:700; text-decoration:none; box-shadow:0 6px 24px rgba(217,119,6,0.35); transition:all 0.25s; display:inline-flex; align-items:center; gap:8px; }
         .btn-primary:hover { transform:translateY(-2px); box-shadow:0 10px 32px rgba(217,119,6,0.45); }
         .btn-secondary { background:transparent; color:var(--navy); padding:clamp(12px,1.5vw,16px) clamp(20px,2.5vw,28px); border-radius:14px; font-size:clamp(14px,1.5vw,16px); font-weight:600; text-decoration:none; border:1.5px solid var(--border); transition:all 0.25s; display:inline-flex; align-items:center; gap:8px; }
         .btn-secondary:hover { border-color:var(--amber); color:var(--amber); background:var(--amber-glow); }
-        .hero-stats { display:flex; align-items:center; justify-content:center; gap:clamp(20px,5vw,48px); margin-top:clamp(40px,6vw,72px); padding-top:clamp(24px,4vw,48px); border-top:1px solid var(--border); animation:fadeUp 0.6s 0.4s ease both; flex-wrap:wrap; }
+        .hero-stats { display:flex; align-items:center; justify-content:center; gap:clamp(16px,4vw,48px); margin-top:clamp(24px,4vw,56px); padding-top:clamp(16px,3vw,40px); border-top:1px solid var(--border); animation:fadeUp 0.6s 0.4s ease both; flex-wrap:wrap; }
         .stat-item { text-align:center; }
         .stat-num { font-family:'Lora',serif; font-size:clamp(28px,4vw,36px); font-weight:600; color:var(--navy); letter-spacing:-1px; display:block; }
         .stat-num span { color:var(--amber); }
@@ -580,6 +580,25 @@ export default function LandingPage() {
         /* Ultrawide: 1800px+ */
         @media (min-width:1800px) {
           section:not([aria-label]) { padding: var(--space-2xl) var(--gutter); }
+        }
+        /* Short screens: ноутбуки ≤ 800px высоты */
+        @media (max-height:800px) {
+          nav { padding: 12px clamp(20px,4vw,60px); }
+          .hero { padding-top: clamp(60px,8vh,80px); padding-bottom: clamp(16px,3vh,32px); gap: 0; }
+          .hero-badge { margin-bottom: 12px; padding: 5px 14px; font-size: 12px; }
+          h1 { font-size: clamp(28px,4.5vw,52px); margin-bottom: 10px; line-height: 1.1; }
+          .hero-sub { font-size: clamp(14px,1.5vw,17px); margin-bottom: 16px; }
+          .hero-cta { gap: 10px; }
+          .btn-primary, .btn-secondary { padding: 12px 24px; font-size: 14px; }
+          .hero-stats { margin-top: 16px; padding-top: 14px; gap: 20px; }
+          .stat-num { font-size: clamp(22px,3vw,28px); }
+        }
+        /* Very short screens: ≤ 650px высоты */
+        @media (max-height:650px) {
+          h1 { font-size: clamp(24px,3.5vw,40px); }
+          .hero-sub { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+          .hero-stats { margin-top: 10px; padding-top: 10px; }
+          .stat-label { display: none; }
         }
       `}</style>
 

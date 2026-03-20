@@ -642,10 +642,10 @@ export default function LandingPage() {
 
       {/* TRUST & SECURITY */}
       <section className="trust-section">
-        <div style={{maxWidth:'1100px',margin:'0 auto',textAlign:'center'}}>
+        <div style={{maxWidth:'1100px',margin:'0 auto'}}>
           <div className="section-label">{t.trustLabel}</div>
           <h2>{t.trustH2a}<br /><em>{t.trustH2b}</em></h2>
-          <p className="section-sub" style={{margin:'0 auto 64px'}}>{t.trustSub}</p>
+          <p className="section-sub" style={{marginBottom:'64px'}}>{t.trustSub}</p>
           <div className="trust-grid">
             {t.trustItems.map((item, i) => (
               <div key={i} className="trust-card">

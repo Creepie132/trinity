@@ -32,6 +32,11 @@ type LangData = {
   featH2b: string
   featSub: string
   features: { icon: string; title: string; text: string; tag: string }[]
+  trustLabel: string
+  trustH2a: string
+  trustH2b: string
+  trustSub: string
+  trustItems: { icon: string; title: string; text: string }[]
   howLabel: string
   howH2a: string
   howH2b: string
@@ -97,6 +102,16 @@ const RU: LangData = {
     { icon: '📦', title: 'Склад и материалы', text: 'Следите за остатками. Система напомнит когда пора заказывать. Автосписание при продаже.', tag: 'Умный учёт' },
     { icon: '💰', title: 'Продажи и оплаты', text: 'Фиксируйте платежи, видите долги, следите за выручкой. Полная картина за любой период.', tag: 'Прозрачность' },
     { icon: '📈', title: 'Аналитика', text: 'Доход за день, месяц, год. Лучшие клиенты. Самые прибыльные услуги. Нажатием кнопки.', tag: 'Решения на данных' },
+  ],
+  trustLabel: 'Безопасность',
+  trustH2a: 'Ваши данные —',
+  trustH2b: 'только ваши',
+  trustSub: 'Доверяете нам клиентскую базу — мы относимся к этому серьёзно.',
+  trustItems: [
+    { icon: '🔐', title: 'Шифрование SSL/TLS', text: 'Все данные передаются по защищённому протоколу. Никто не перехватит.' },
+    { icon: '💾', title: 'Ежедневные бэкапы', text: 'Автоматическое резервное копирование каждый день. Данные не пропадут.' },
+    { icon: '🇮🇱', title: 'Соответствие стандартам', text: 'Работаем в соответствии с израильским законом о защите персональных данных (Privacy Protection Authority).' },
+    { icon: '🚫', title: 'Никакой рекламы', text: 'Ваша клиентская база не передаётся третьим лицам и не используется для рекламы. Никогда.' },
   ],
   howLabel: 'Как это работает',
   howH2a: 'Запуск за',
@@ -175,6 +190,16 @@ const HE: LangData = {
     { icon: '📦', title: 'מלאי וחומרים', text: 'עקוב אחרי מלאי. המערכת תזכיר מתי להזמין. ניכוי אוטומטי במכירה.', tag: 'ניהול חכם' },
     { icon: '💰', title: 'מכירות ותשלומים', text: 'רשום תשלומים, ראה חובות, עקוב אחרי הכנסות. תמונה מלאה לכל תקופה.', tag: 'שקיפות' },
     { icon: '📈', title: 'אנליטיקה', text: 'הכנסות ליום, לחודש, לשנה. הלקוחות הטובים. השירותים הרווחיים. בלחיצת כפתור.', tag: 'החלטות מבוססות נתונים' },
+  ],
+  trustLabel: 'אבטחה',
+  trustH2a: 'המידע שלך —',
+  trustH2b: 'רק שלך',
+  trustSub: 'אתה סומך עלינו עם בסיס הלקוחות שלך — אנחנו לוקחים את זה ברצינות.',
+  trustItems: [
+    { icon: '🔐', title: 'הצפנת SSL/TLS', text: 'כל הנתונים מועברים בפרוטוקול מאובטח. אף אחד לא יוכל ליירט.' },
+    { icon: '💾', title: 'גיבויים יומיים', text: 'גיבוי אוטומטי כל יום. הנתונים שלך לא ייעלמו לעולם.' },
+    { icon: '🇮🇱', title: 'עמידה בתקנים', text: 'פועלים בהתאם לחוק הגנת הפרטיות הישראלי (רשות הגנת הפרטיות).' },
+    { icon: '🚫', title: 'ללא פרסום', text: 'בסיס הלקוחות שלך לא מועבר לצד שלישי ולא משמש לפרסום. לעולם לא.' },
   ],
   howLabel: 'איך זה עובד',
   howH2a: 'הפעלה תוך',
@@ -258,7 +283,7 @@ export default function LandingPage() {
         }
       })
     }, { threshold: 0.1 })
-    document.querySelectorAll<HTMLElement>('.feature-card,.problem-card,.plan,.testi-card,.step')
+    document.querySelectorAll<HTMLElement>('.feature-card,.problem-card,.plan,.testi-card,.step,.trust-card')
       .forEach(el => {
         el.style.opacity = '0'
         el.style.transform = 'translateY(32px)'
@@ -435,6 +460,15 @@ export default function LandingPage() {
         .cta-section .hero-cta { position:relative; z-index:1; }
         .btn-white { background:white; color:var(--navy); padding:16px 36px; border-radius:14px; font-size:16px; font-weight:700; text-decoration:none; box-shadow:0 6px 24px rgba(0,0,0,0.2); transition:all 0.25s; display:inline-flex; align-items:center; gap:8px; }
         .btn-white:hover { transform:translateY(-2px); box-shadow:0 10px 36px rgba(0,0,0,0.3); }
+        .trust-section { background:var(--cream-dark); }
+        .trust-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; max-width:1100px; margin:0 auto; }
+        .trust-card { background:white; border:1px solid var(--border); border-radius:20px; padding:32px 24px; text-align:center; transition:all 0.3s; }
+        .trust-card:hover { box-shadow:var(--shadow-md); transform:translateY(-4px); border-color:rgba(217,119,6,0.25); }
+        .trust-icon { font-size:40px; margin-bottom:16px; display:block; }
+        .trust-card h3 { font-size:16px; font-weight:700; color:var(--navy); margin-bottom:10px; }
+        .trust-card p { font-size:14px; color:var(--text-mid); line-height:1.6; }
+        @media (max-width:900px) { .trust-grid { grid-template-columns:repeat(2,1fr); } }
+        @media (max-width:500px) { .trust-grid { grid-template-columns:1fr; } }
         footer { background:var(--navy); border-top:1px solid rgba(255,255,255,0.06); padding:60px; color:rgba(255,255,255,0.4); margin-top:auto; }
         .footer-inner { max-width:1100px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; }
         .footer-logo { display:flex; align-items:center; gap:10px; }
@@ -595,6 +629,24 @@ export default function LandingPage() {
                 <div className="step-num">{s.n}</div>
                 <h3>{s.title}</h3>
                 <p>{s.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TRUST & SECURITY */}
+      <section className="trust-section">
+        <div style={{maxWidth:'1100px',margin:'0 auto',textAlign:'center'}}>
+          <div className="section-label">{t.trustLabel}</div>
+          <h2>{t.trustH2a}<br /><em>{t.trustH2b}</em></h2>
+          <p className="section-sub" style={{margin:'0 auto 64px'}}>{t.trustSub}</p>
+          <div className="trust-grid">
+            {t.trustItems.map((item, i) => (
+              <div key={i} className="trust-card">
+                <div className="trust-icon">{item.icon}</div>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
               </div>
             ))}
           </div>

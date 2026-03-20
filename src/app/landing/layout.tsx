@@ -7,6 +7,12 @@
  * 2. Google Fonts через <link rel="preconnect"> + preload stylesheet
  * 3. Логотип — оптимизированный WebP 80px (5 КБ вместо 235 КБ PNG)
  * 4. Opacity trick: body{opacity:0} → 1 через микроскрипт после загрузки стилей
+ *
+ * Heebo (иврит RTL):
+ * - Variable Font: один файл покрывает все веса 100–900
+ * - Применяется ТОЛЬКО к [dir="rtl"] — кириллица не затронута
+ * - letter-spacing: normal (иврит не любит разрядку)
+ * - line-height: 1.55 (глифы Heebo чуть крупнее)
  */
 import type { Metadata } from 'next'
 
@@ -96,7 +102,7 @@ const CRITICAL_CSS = `
     text-align: center; overflow: hidden; position: relative;
   }
 
-  /* === TYPOGRAPHY — шрифты с fallback === */
+  /* === TYPOGRAPHY LTR (RU) — шрифты с fallback === */
   h1 {
     font-family: 'Lora', Georgia, serif;
     font-size: clamp(32px,5vw,64px);
@@ -110,6 +116,94 @@ const CRITICAL_CSS = `
     font-weight: 600; line-height: 1.15;
     letter-spacing: -1px; color: #1E2D4A;
     margin-bottom: 20px;
+  }
+
+  /* ================================================================
+     HEEBO — RTL/Hebrew typography
+     Селективно: ТОЛЬКО [dir="rtl"], кириллица не затронута.
+     Variable Font: один запрос покрывает все веса 300-700.
+     ================================================================ */
+
+  /* Базовый шрифт для всего RTL-контейнера */
+  [dir="rtl"] {
+    font-family: 'Heebo', sans-serif;
+    font-weight: 400;
+    line-height: 1.55;         /* глифы Heebo чуть крупнее кириллицы */
+    letter-spacing: normal;    /* иврит не любит разрядку */
+  }
+
+  /* Заголовки RTL */
+  [dir="rtl"] h1 {
+    font-family: 'Heebo', sans-serif;
+    font-weight: 700;
+    line-height: 1.15;         /* заголовки компактнее */
+    letter-spacing: normal;
+  }
+  [dir="rtl"] h2 {
+    font-family: 'Heebo', sans-serif;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: normal;
+  }
+  [dir="rtl"] h3 {
+    font-family: 'Heebo', sans-serif;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: normal;
+  }
+
+  /* Основной текст и описания */
+  [dir="rtl"] p,
+  [dir="rtl"] .section-sub,
+  [dir="rtl"] .hero-sub,
+  [dir="rtl"] .plan-usecase,
+  [dir="rtl"] .testi-text {
+    font-weight: 400;
+    line-height: 1.65;
+    letter-spacing: normal;
+  }
+
+  /* Второстепенные подписи — stat labels, meta-текст */
+  [dir="rtl"] .stat-label,
+  [dir="rtl"] .plan-period,
+  [dir="rtl"] .testi-role,
+  [dir="rtl"] .feature-tag,
+  [dir="rtl"] .section-label {
+    font-weight: 300;
+    letter-spacing: 0.01em;    /* минимальная разрядка для мелкого текста */
+  }
+
+  /* Цифры в блоке статистики — читабельность через tabular-nums */
+  [dir="rtl"] .stat-num {
+    font-family: 'Heebo', sans-serif;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: normal;
+  }
+
+  /* Кнопки в RTL — увеличенный padding, иврит короче визуально */
+  [dir="rtl"] .btn-primary,
+  [dir="rtl"] .btn-secondary,
+  [dir="rtl"] .btn-nav,
+  [dir="rtl"] .btn-plan,
+  [dir="rtl"] .btn-white {
+    font-family: 'Heebo', sans-serif;
+    font-weight: 600;
+    letter-spacing: normal;
+    padding-inline: clamp(28px,3.5vw,44px); /* шире чем LTR */
+  }
+
+  /* Nav links RTL */
+  [dir="rtl"] .nav-links a,
+  [dir="rtl"] .logo {
+    font-family: 'Heebo', sans-serif;
+    letter-spacing: normal;
+  }
+
+  /* Logo в RTL — убираем кернинг для иврита */
+  [dir="rtl"] .logo {
+    font-weight: 700;
+    font-size: 21px; /* чуть меньше — Heebo визуально крупнее */
   }
 `
 
@@ -128,9 +222,15 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
         <link rel="preload" href="/trinity-logo-80.webp" as="image" type="image/webp" />
 
         {/* 4. Google Fonts с font-display=swap — текст не прыгает */}
+        {/*
+          Шрифты:
+          - Manrope + Lora: кириллица (LTR, RU)
+          - Heebo: иврит (RTL, HE) — Variable Font wght@300..700
+            Один файл вместо четырёх = меньше запросов, быстрее в Ашкелоне и ТА
+        */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Lora:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Lora:wght@400;500;600&family=Heebo:wght@300..700&display=swap"
           rel="stylesheet"
         />
 

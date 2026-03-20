@@ -371,7 +371,7 @@ export default function LandingPage() {
         @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
       `}</style>
       <style jsx global>{`
-        section { padding:100px 60px; }
+        section:not([aria-label]) { padding:100px 60px; }
         .section-label { display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--amber); margin-bottom:20px; }
         .section-label::before { content:''; width:24px; height:2px; background:var(--amber); border-radius:2px; }
         h2 { font-family:'Lora',serif; font-size:clamp(32px,4vw,52px); font-weight:600; line-height:1.15; letter-spacing:-1px; color:var(--navy); margin-bottom:20px; }

@@ -3,7 +3,7 @@
 import { useState, useCallback, memo } from 'react'
 import Modal from '@/components/ui/Modal'
 import { useQueryClient } from '@tanstack/react-query'
-import { Save, Upload } from 'lucide-react'
+import { Save, Upload, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
 
@@ -15,7 +15,7 @@ interface EditClientSheetProps {
   locale: 'he' | 'ru'
 }
 
-type FieldKey = 'first_name' | 'last_name' | 'phone' | 'email' | 'address' | 'city' | 'notes'
+type FieldKey = 'first_name' | 'last_name' | 'phone' | 'email' | 'address' | 'city' | 'notes' | 'description'
 
 const PHONE_RE = /^[\d\s\-+()]{7,20}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -88,7 +88,9 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     address:    client?.address    || '',
     city:       client?.city       || '',
     notes:      client?.notes      || '',
+    description: client?.description || '',
   })
+  const [showDescription, setShowDescription] = useState(!!(client?.description))
   const [errors, setErrors]   = useState<Record<string, string>>({})
   const [shaking, setShaking] = useState<Record<string, boolean>>({})
   const [avatarFile, setAvatarFile]       = useState<File | null>(null)
@@ -98,10 +100,12 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
   const l = locale === 'he' ? {
     title: 'עריכת לקוח', firstName: 'שם פרטי', lastName: 'שם משפחה',
     email: 'אימייל', phone: 'טלפון', address: 'כתובת', city: 'עיר', notes: 'הערות',
+    description: 'תיאור',
     save: 'שמור', saving: 'שומר...', cancel: 'ביטול', photo: 'שנה תמונה',
   } : {
     title: 'Редактирование клиента', firstName: 'Имя', lastName: 'Фамилия',
     email: 'Email', phone: 'Телефон', address: 'Адрес', city: 'Город', notes: 'Заметки',
+    description: 'Описание',
     save: 'Сохранить', saving: 'Сохранение...', cancel: 'Отмена', photo: 'Изменить фото',
   }
 
@@ -215,10 +219,36 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
 
       {/* Fields — all props passed explicitly, no nested component definitions */}
       <div className="space-y-3">
-        <Field field="first_name" label={l.firstName} required
-          value={form.first_name} error={errors.first_name} shaking={shaking.first_name} onChange={handleChange} />
-        <Field field="last_name"  label={l.lastName}
-          value={form.last_name}  error={errors.last_name}  shaking={shaking.last_name}  onChange={handleChange} />
+        {/* Имя + кнопка Описание в одной строке */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{l.firstName} / {l.lastName}</span>
+            <button
+              type="button"
+              onClick={() => setShowDescription(v => !v)}
+              className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${
+                showDescription
+                  ? 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-300 text-indigo-600'
+                  : 'border-border text-muted-foreground hover:border-indigo-300 hover:text-indigo-600'
+              }`}
+            >
+              <FileText size={13} />
+              {l.description}
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Field field="first_name" label="" required
+              value={form.first_name} error={errors.first_name} shaking={shaking.first_name} onChange={handleChange} />
+            <Field field="last_name" label=""
+              value={form.last_name} error={errors.last_name} shaking={shaking.last_name} onChange={handleChange} />
+          </div>
+        </div>
+
+        {showDescription && (
+          <Field field="description" label={l.description} multiline
+            value={form.description} error={errors.description} shaking={shaking.description} onChange={handleChange} />
+        )}
+
         <Field field="phone" label={l.phone} type="tel" dir="ltr"
           value={form.phone}  error={errors.phone}  shaking={shaking.phone}  onChange={handleChange} />
         <Field field="email" label={l.email} type="email" dir="ltr"

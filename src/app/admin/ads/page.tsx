@@ -299,12 +299,12 @@ function BannerUploader({ value, onChange, uploading, setUploading, s }: {
 // ─── Wizard Dialog ────────────────────────────────────────────────────────────
 
 interface CampaignForm {
-  advertiser_name: string; banner_url: string; link_url: string
-  target_categories: string[]; start_date: string; end_date: string
+  advertiser_name: string; banner_url: string; click_url: string
+  target_modules: string[]; start_date: string; end_date: string
 }
 const EMPTY_FORM: CampaignForm = {
-  advertiser_name: '', banner_url: '', link_url: '',
-  target_categories: [], start_date: '', end_date: '',
+  advertiser_name: '', banner_url: '', click_url: '',
+  target_modules: [], start_date: '', end_date: '',
 }
 
 function CreateCampaignWizard({ open, onClose, s, lang }: {
@@ -316,13 +316,13 @@ function CreateCampaignWizard({ open, onClose, s, lang }: {
   const createCampaign = useCreateAdCampaign()
 
   const update = (key: keyof CampaignForm, val: any) => setForm(f => ({ ...f, [key]: val }))
-  const toggleCat = (cat: string) => update('target_categories',
-    form.target_categories.includes(cat)
-      ? form.target_categories.filter(c => c !== cat)
-      : [...form.target_categories, cat]
+  const toggleCat = (cat: string) => update('target_modules',
+    form.target_modules.includes(cat)
+      ? form.target_modules.filter(c => c !== cat)
+      : [...form.target_modules, cat]
   )
   const canProceed = () => {
-    if (step === 1) return form.advertiser_name.trim().length > 0 && form.link_url.trim().length > 0
+    if (step === 1) return form.advertiser_name.trim().length > 0 && form.click_url.trim().length > 0
     if (step === 2) return form.banner_url.length > 0
     if (step === 3) return !!form.start_date && !!form.end_date
     return false
@@ -370,8 +370,8 @@ function CreateCampaignWizard({ open, onClose, s, lang }: {
                   <Link2 className="w-3.5 h-3.5 text-indigo-500" />
                   {s.targetLink} *
                 </Label>
-                <Input type="url" value={form.link_url}
-                  onChange={e => update('link_url', e.target.value)}
+                <Input type="url" value={form.click_url}
+                  onChange={e => update('click_url', e.target.value)}
                   placeholder={s.linkPlaceholder}
                   className="h-11 border-gray-200 focus:border-indigo-400" dir="ltr"
                 />
@@ -418,7 +418,7 @@ function CreateCampaignWizard({ open, onClose, s, lang }: {
                 <p className="text-xs text-gray-400">{s.categoriesHint}</p>
                 <div className="grid grid-cols-3 gap-2">
                   {CATEGORIES.map(cat => {
-                    const isSelected = form.target_categories.includes(cat.value)
+                    const isSelected = form.target_modules.includes(cat.value)
                     return (
                       <button key={cat.value} type="button" onClick={() => toggleCat(cat.value)}
                         className={`px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all duration-150 text-right
@@ -452,7 +452,7 @@ function CreateCampaignWizard({ open, onClose, s, lang }: {
                   <div className="text-xs text-emerald-700 space-y-0.5">
                     <p>• {s.advertiser}: <strong>{form.advertiser_name}</strong></p>
                     <p>• {s.period}: {form.start_date} → {form.end_date}</p>
-                    <p>• {s.categories}: {form.target_categories.length === 0 ? s.allClients : form.target_categories.join(', ')}</p>
+                    <p>• {s.categories}: {form.target_modules.length === 0 ? s.allClients : form.target_modules.join(', ')}</p>
                   </div>
                 </div>
               )}
@@ -509,15 +509,13 @@ function AdsPageContent() {
   const handleDelete = (id: string, name: string) => {
     if (confirm(`${s.deleteConfirm} "${name}"?`)) deleteCampaign.mutate(id)
   }
-  const ctr = (clicks: number, imp: number) =>
-    imp === 0 ? '0.00' : ((clicks / imp) * 100).toFixed(2)
 
   const getStatus = (c: AdCampaign) => {
     const now = new Date()
-    if (!c.is_active)               return { label: s.statusInactive,  icon: XCircle,       color: 'text-gray-400' }
-    if (now < new Date(c.start_date)) return { label: s.statusScheduled, icon: Clock,         color: 'text-amber-600' }
-    if (now > new Date(c.end_date))   return { label: s.statusExpired,   icon: XCircle,       color: 'text-gray-400' }
-    return                                   { label: s.statusActive,    icon: CheckCircle2,  color: 'text-emerald-600' }
+    if (!c.is_active)                                      return { label: s.statusInactive,  icon: XCircle,       color: 'text-gray-400' }
+    if (c.start_date && now < new Date(c.start_date))     return { label: s.statusScheduled, icon: Clock,         color: 'text-amber-600' }
+    if (c.end_date   && now > new Date(c.end_date))       return { label: s.statusExpired,   icon: XCircle,       color: 'text-gray-400' }
+    return                                                        { label: s.statusActive,    icon: CheckCircle2,  color: 'text-emerald-600' }
   }
 
   if (error) {
@@ -602,19 +600,14 @@ function AdsPageContent() {
                         <img src={c.banner_url} alt="" className="w-16 h-10 object-cover rounded-lg border shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-800 truncate">{c.advertiser_name}</p>
-                          <p className="text-xs text-gray-400 truncate">{c.link_url}</p>
+                          <p className="text-xs text-gray-400 truncate">{c.click_url}</p>
                         </div>
                         <div className={`flex items-center gap-1 text-xs font-medium ${st.color}`}>
                           <SI className="w-3 h-3" />{st.label}
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span className="flex items-center gap-1"><MousePointerClick className="w-3 h-3" />{c.clicks}</span>
-                        <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{c.impressions}</span>
-                        <span className="font-semibold text-purple-600">{ctr(c.clicks, c.impressions)}%</span>
-                      </div>
                       <div className="flex items-center gap-2">
-                        <Switch checked={c.is_active} onCheckedChange={v => handleToggle(c.id, v)} />
+                        <Switch checked={!!c.is_active} onCheckedChange={v => handleToggle(c.id, v)} />
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, c.advertiser_name)} className="mr-auto">
                           <Trash className="w-4 h-4 text-red-400" />
                         </Button>
@@ -629,7 +622,7 @@ function AdsPageContent() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50/50">
-                      {[s.colAdvertiser, s.colBanner, s.colCategories, s.colDates, s.colClicks, s.colImpressions, 'CTR', s.colStatus, s.colActions].map(h => (
+                      {[s.colAdvertiser, s.colBanner, s.colCategories, s.colDates, s.colStatus, s.colActions].map(h => (
                         <TableHead key={h} className="text-right font-semibold">{h}</TableHead>
                       ))}
                     </TableRow>
@@ -641,29 +634,26 @@ function AdsPageContent() {
                         <TableRow key={c.id} className="hover:bg-gray-50/50 transition-colors">
                           <TableCell>
                             <p className="font-semibold text-gray-800">{c.advertiser_name}</p>
-                            <a href={c.link_url} target="_blank" rel="noopener noreferrer"
+                            <a href={c.click_url ?? '#'} target="_blank" rel="noopener noreferrer"
                               className="text-xs text-indigo-500 hover:underline flex items-center gap-0.5 mt-0.5">
-                              {c.link_url.replace(/^https?:\/\//, '').slice(0, 28)}<ExternalLink className="w-2.5 h-2.5" />
+                              {(c.click_url ?? '').replace(/^https?:\/\//, '').slice(0, 28)}<ExternalLink className="w-2.5 h-2.5" />
                             </a>
                           </TableCell>
                           <TableCell>
                             <img src={c.banner_url} alt="" className="w-20 h-12 object-cover rounded-lg border shadow-sm" />
                           </TableCell>
                           <TableCell>
-                            {c.target_categories.length === 0
+                            {!c.target_modules || c.target_modules.length === 0
                               ? <Badge variant="outline" className="text-xs">{s.allTargets}</Badge>
                               : <div className="flex flex-wrap gap-1">
-                                  {c.target_categories.map(cat => <Badge key={cat} variant="secondary" className="text-xs">{cat}</Badge>)}
+                                  {c.target_modules.map(cat => <Badge key={cat} variant="secondary" className="text-xs">{cat}</Badge>)}
                                 </div>
                             }
                           </TableCell>
                           <TableCell>
-                            <p className="text-sm text-gray-600">{format(new Date(c.start_date), 'dd/MM/yy')}</p>
-                            <p className="text-xs text-gray-400">{s.until} {format(new Date(c.end_date), 'dd/MM/yy')}</p>
+                            <p className="text-sm text-gray-600">{c.start_date ? format(new Date(c.start_date), 'dd/MM/yy') : '—'}</p>
+                            <p className="text-xs text-gray-400">{s.until} {c.end_date ? format(new Date(c.end_date), 'dd/MM/yy') : '—'}</p>
                           </TableCell>
-                          <TableCell><span className="font-semibold text-blue-600 flex items-center gap-1"><MousePointerClick className="w-3.5 h-3.5" />{c.clicks}</span></TableCell>
-                          <TableCell><span className="text-gray-600 flex items-center gap-1"><Eye className="w-3.5 h-3.5 text-gray-400" />{c.impressions}</span></TableCell>
-                          <TableCell><span className="font-bold text-purple-600">{ctr(c.clicks, c.impressions)}%</span></TableCell>
                           <TableCell>
                             <div className={`flex items-center gap-1.5 text-sm font-medium ${st.color}`}>
                               <SI className="w-3.5 h-3.5" />{st.label}
@@ -671,7 +661,7 @@ function AdsPageContent() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <Switch checked={c.is_active} onCheckedChange={v => handleToggle(c.id, v)} />
+                              <Switch checked={!!c.is_active} onCheckedChange={v => handleToggle(c.id, v)} />
                               <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id, c.advertiser_name)} className="hover:bg-red-50">
                                 <Trash className="w-4 h-4 text-red-400" />
                               </Button>

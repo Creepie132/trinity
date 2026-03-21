@@ -110,9 +110,11 @@ export async function GET(request: NextRequest) {
 
     // ── Process Funnel ────────────────────────────────────────
     // Group deal counts by stage
+    type StageShape = { name: string; color: string; is_won: boolean; is_lost: boolean; position: number }
     const stageCounts: Record<string, { name: string; color: string; count: number; position: number }> = {}
     for (const deal of funnelRes.data ?? []) {
-      const s = deal.stage as { name: string; color: string; is_won: boolean; is_lost: boolean; position: number } | null
+      const raw = deal.stage
+      const s: StageShape | null = Array.isArray(raw) ? (raw[0] as StageShape ?? null) : (raw as unknown as StageShape | null)
       if (!s || s.is_won || s.is_lost) continue
       const key = deal.stage_id
       if (!stageCounts[key]) {

@@ -54,6 +54,7 @@ export function ClientDetailsModal() {
       gallery: 'גלריה',
       documents: 'מסמכים',
       notes: 'הערות',
+      description: 'תיאור',
       createdAt: 'תאריך יצירה',
       edit: 'ערוך',
       sale: 'עסקה',
@@ -71,6 +72,7 @@ export function ClientDetailsModal() {
       gallery: 'Галерея',
       documents: 'Документы',
       notes: 'Заметки',
+      description: 'Описание',
       createdAt: 'Дата создания',
       edit: 'Редактировать',
       sale: 'Продажа',
@@ -88,6 +90,7 @@ export function ClientDetailsModal() {
       gallery: 'Gallery',
       documents: 'Documents',
       notes: 'Notes',
+      description: 'Description',
       createdAt: 'Date Created',
       edit: 'Edit',
       sale: 'Sale',
@@ -397,6 +400,18 @@ export function ClientDetailsModal() {
             </h3>
             <div className="px-3 py-2.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-xl">
               <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{client.notes}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Описание — только если есть */}
+        {client.description && (
+          <div className={client.notes ? 'mt-4' : ''}>
+            <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-2 tracking-widest uppercase">
+              {text.description}
+            </h3>
+            <div className="px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-xl">
+              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{client.description}</p>
             </div>
           </div>
         )}

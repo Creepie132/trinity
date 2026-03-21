@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       for (const word of words) {
         const term = `%${word}%`
         query = query.or(
-          `first_name.ilike.${term},last_name.ilike.${term},phone.ilike.${term},email.ilike.${term}`
+          `first_name.ilike.${term},last_name.ilike.${term},phone.ilike.${term},email.ilike.${term},description.ilike.${term}`
         )
       }
     }

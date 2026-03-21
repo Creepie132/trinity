@@ -1,0 +1,4 @@
+remote: This repository moved. Please use the new location:        
+remote:   https://github.com/Creepie132/trinity.git        
+To https://github.com/Creepie132/Trinity.git
+   198a23c..9ac182b  main -> main

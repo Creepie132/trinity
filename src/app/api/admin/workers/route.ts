@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
     await applyPermissions(supabaseAdmin, orgId, userId, permissions)
 
     // --- Audit log (non-blocking, non-critical) ---
-    authSupabase
+    void authSupabase
       .from('audit_log')
       .insert({
         org_id: orgId,
@@ -199,8 +199,6 @@ export async function POST(request: NextRequest) {
           permissions_set: (Object.keys(permissions) as PermKey[]).filter((k) => permissions[k]),
         },
       })
-      .then(() => {})
-      .catch(() => {})
 
     return NextResponse.json({
       success: true,

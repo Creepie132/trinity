@@ -20,64 +20,30 @@ export function CampaignDetailsSheet({ campaign, open, onOpenChange }: CampaignD
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'sent':
-        return (
-          <Badge className="bg-green-500 text-white">
-            <CheckCircle className="w-3 h-3 ml-1" />
-            נשלח
-          </Badge>
-        )
-      case 'delivered':
-        return (
-          <Badge className="bg-blue-500 text-white">
-            <CheckCircle className="w-3 h-3 ml-1" />
-            נמסר
-          </Badge>
-        )
-      case 'failed':
-        return (
-          <Badge variant="destructive">
-            <XCircle className="w-3 h-3 ml-1" />
-            נכשל
-          </Badge>
-        )
-      case 'pending':
-        return (
-          <Badge variant="secondary">
-            <Clock className="w-3 h-3 ml-1" />
-            ממתין
-          </Badge>
-        )
-      default:
-        return <Badge variant="secondary">{status}</Badge>
+      case 'sent':      return <Badge className="bg-green-500 text-white"><CheckCircle className="w-3 h-3 ml-1" />נשלח</Badge>
+      case 'delivered': return <Badge className="bg-blue-500 text-white"><CheckCircle className="w-3 h-3 ml-1" />נמסר</Badge>
+      case 'failed':    return <Badge variant="destructive"><XCircle className="w-3 h-3 ml-1" />נכשל</Badge>
+      case 'pending':   return <Badge variant="secondary"><Clock className="w-3 h-3 ml-1" />ממתין</Badge>
+      default:          return <Badge variant="secondary">{status}</Badge>
     }
   }
 
-  const getCampaignStatusBadge = (status: string) => {
+  const getCampaignStatusBadge = (status: string | null) => {
     switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-500 text-white">הושלם</Badge>
-      case 'sending':
-        return <Badge className="bg-blue-500 text-white">שולח</Badge>
-      case 'failed':
-        return <Badge variant="destructive">נכשל</Badge>
-      case 'draft':
-        return <Badge variant="secondary">טיוטה</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
+      case 'completed': return <Badge className="bg-green-500 text-white">הושלם</Badge>
+      case 'sending':   return <Badge className="bg-blue-500 text-white">שולח</Badge>
+      case 'failed':    return <Badge variant="destructive">נכשל</Badge>
+      case 'draft':     return <Badge variant="secondary">טיוטה</Badge>
+      default:          return <Badge variant="secondary">{status ?? '—'}</Badge>
     }
   }
 
-  const getFilterTypeLabel = (type: string) => {
+  const getFilterTypeLabel = (type: string, filterValue?: string | null) => {
     switch (type) {
-      case 'all':
-        return 'כל הלקוחות'
-      case 'single':
-        return 'לקוח בודד'
-      case 'inactive_days':
-        return `לקוחות לא פעילים (${campaign.filter_value} ימים)`
-      default:
-        return type
+      case 'all':           return 'כל הלקוחות'
+      case 'single':        return 'לקוח בודד'
+      case 'inactive_days': return `לקוחות לא פעילים (${filterValue ?? '?'} ימים)`
+      default:              return type
     }
   }
 
@@ -95,19 +61,18 @@ export function CampaignDetailsSheet({ campaign, open, onOpenChange }: CampaignD
             <span className="text-sm text-gray-600 dark:text-gray-400">סטטוס:</span>
             {getCampaignStatusBadge(campaign.status)}
           </div>
-
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600 dark:text-gray-400">סוג רסלה:</span>
-            <span className="font-medium text-gray-900 dark:text-gray-100">{getFilterTypeLabel(campaign.filter_type)}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">סוג רשימה:</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">
+              {getFilterTypeLabel(campaign.filter_type, campaign.filter_value)}
+            </span>
           </div>
-
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600 dark:text-gray-400">תאריך יצירה:</span>
             <span className="font-medium text-gray-900 dark:text-gray-100">
-              {format(new Date(campaign.created_at), 'dd/MM/yyyy HH:mm')}
+              {campaign.created_at ? format(new Date(campaign.created_at), 'dd/MM/yyyy HH:mm') : '—'}
             </span>
           </div>
-
           {campaign.sent_at && (
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600 dark:text-gray-400">תאריך שליחה:</span>
@@ -121,20 +86,20 @@ export function CampaignDetailsSheet({ campaign, open, onOpenChange }: CampaignD
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{campaign.recipients_count}</div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{campaign.recipients_count ?? 0}</div>
             <div className="text-xs text-gray-600 dark:text-gray-400">מקבלים</div>
           </div>
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-100 dark:border-green-800">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{campaign.sent_count}</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{campaign.sent_count ?? 0}</div>
             <div className="text-xs text-gray-600 dark:text-gray-400">נשלחו</div>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border border-red-100 dark:border-red-800">
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{campaign.failed_count}</div>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{campaign.failed_count ?? 0}</div>
             <div className="text-xs text-gray-600 dark:text-gray-400">נכשלו</div>
           </div>
         </div>
 
-        {/* Message */}
+        {/* Message Content */}
         <div>
           <h3 className="font-semibold mb-2 flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <MessageSquare className="w-4 h-4" />
@@ -147,24 +112,23 @@ export function CampaignDetailsSheet({ campaign, open, onOpenChange }: CampaignD
 
         {/* Messages List */}
         <div>
-          <h3 className="font-semibold mb-3 text-gray-900 dark:text-gray-100">פירוט הודעות ({messages?.length || 0})</h3>
+          <h3 className="font-semibold mb-3 text-gray-900 dark:text-gray-100">
+            פירוט הודעות ({messages?.length ?? 0})
+          </h3>
           {messages && messages.length > 0 ? (
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {messages.map((msg: any) => (
-                <div 
-                  key={msg.id} 
-                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl"
-                >
+                <div key={msg.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-xl">
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {msg.clients ? `${msg.clients.first_name} ${msg.clients.last_name}` : '-'}
+                      {msg.clients ? `${msg.clients.first_name} ${msg.clients.last_name}` : '—'}
                     </p>
                     <p className="text-xs font-mono text-gray-500">{msg.phone}</p>
                   </div>
                   <div className="text-right">
                     {getStatusBadge(msg.status)}
                     <p className="text-xs text-gray-400 mt-1">
-                      {msg.sent_at ? format(new Date(msg.sent_at), 'dd/MM HH:mm') : '-'}
+                      {msg.sent_at ? format(new Date(msg.sent_at), 'dd/MM HH:mm') : '—'}
                     </p>
                   </div>
                 </div>

@@ -1,16 +1,20 @@
+
+> trinity@0.1.0 build
+> next build
+
 ▲ Next.js 16.1.6 (Turbopack)
 - Environments: .env.local
 
   Creating an optimized production build ...
-✓ Compiled successfully in 15.6s
+✓ Compiled successfully in 17.9s
   Running TypeScript ...
   Collecting page data using 11 workers ...
-  Generating static pages using 11 workers (0/151) ...
-  Generating static pages using 11 workers (37/151) 
+  Generating static pages using 11 workers (0/158) ...
+  Generating static pages using 11 workers (39/158) 
 ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
-  Generating static pages using 11 workers (75/151) 
-  Generating static pages using 11 workers (113/151) 
-✓ Generating static pages using 11 workers (151/151) in 600.8ms
+  Generating static pages using 11 workers (78/158) 
+  Generating static pages using 11 workers (118/158) 
+✓ Generating static pages using 11 workers (158/158) in 742.3ms
   Finalizing page optimization ...
 
 Route (app)
@@ -64,6 +68,7 @@ Route (app)
 ├ ƒ /api/admin/subscription-payment
 ├ ƒ /api/admin/subscriptions-list
 ├ ƒ /api/admin/support
+├ ƒ /api/admin/workers
 ├ ƒ /api/ads/active
 ├ ƒ /api/ads/click
 ├ ƒ /api/ads/impression
@@ -83,6 +88,7 @@ Route (app)
 ├ ƒ /api/clients/count
 ├ ƒ /api/clients/import
 ├ ƒ /api/clients/summary
+├ ƒ /api/communication-log
 ├ ƒ /api/contact
 ├ ƒ /api/cron/archive-tasks
 ├ ƒ /api/cron/billing
@@ -100,6 +106,9 @@ Route (app)
 ├ ƒ /api/dashboard/today
 ├ ƒ /api/dashboard/top-services
 ├ ƒ /api/dashboard/visits-chart
+├ ƒ /api/deals
+├ ƒ /api/deals/[id]
+├ ƒ /api/deals/[id]/stage
 ├ ƒ /api/demo/activate
 ├ ƒ /api/demo/create-payment-link
 ├ ƒ /api/demo/notify-admin
@@ -180,6 +189,8 @@ Route (app)
 ├ ƒ /api/webhooks/tranzila
 ├ ƒ /api/webhooks/whapi
 ├ ƒ /api/work-shifts
+├ ƒ /api/worker/dashboard
+├ ƒ /api/worker/pipeline
 ├ ƒ /audit
 ├ ○ /blocked
 ├ ƒ /book/[slug]
@@ -238,7 +249,9 @@ Route (app)
 ├ ○ /subscription-success
 ├ ○ /terms
 ├ ○ /unauthorized
-└ ƒ /visits
+├ ƒ /visits
+├ ƒ /worker
+└ ƒ /worker/pipeline
 
 
 ƒ Proxy (Middleware)
@@ -246,4 +259,3 @@ Route (app)
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
 
-BUILD_SUCCESS  

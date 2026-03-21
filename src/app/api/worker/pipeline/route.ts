@@ -12,8 +12,9 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, orgId } = await getAuthContext(request)
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+    const { user, orgId } = auth
 
     const supabase = createSupabaseServiceClient()
     const { searchParams } = new URL(request.url)
@@ -76,8 +77,9 @@ export async function GET(request: NextRequest) {
     const filteredDeals = filterTag
       ? (allDeals ?? []).filter(d =>
           d.tags?.some(
-            (t: { tag: { name: string } }) =>
-              t.tag?.name?.toLowerCase() === filterTag.toLowerCase()
+            (t: { tag: { id: any; name: any; color: any }[] }) =>
+              (Array.isArray(t.tag) ? t.tag[0]?.name : (t.tag as any)?.name)
+                ?.toLowerCase() === filterTag.toLowerCase()
           )
         )
       : (allDeals ?? [])

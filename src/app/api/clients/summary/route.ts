@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     // Build clients query
     let clientsQ = service
       .from('clients')
-      .select('id, first_name, last_name, phone, email, notes, created_at, org_id', { count: 'exact' })
+      .select('id, first_name, last_name, phone, email, notes, description, created_at, org_id', { count: 'exact' })
       .in('org_id', orgIds)
       .order('created_at', { ascending: false })
       .range(from, to)
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
       const words = search.split(/\s+/).filter(Boolean)
       for (const word of words) {
         clientsQ = clientsQ.or(
-          `first_name.ilike.%${word}%,last_name.ilike.%${word}%,phone.ilike.%${word}%,email.ilike.%${word}%`
+          `first_name.ilike.%${word}%,last_name.ilike.%${word}%,phone.ilike.%${word}%,email.ilike.%${word}%,description.ilike.%${word}%`
         )
       }
     }

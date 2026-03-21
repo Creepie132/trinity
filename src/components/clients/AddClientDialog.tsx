@@ -9,7 +9,7 @@ import { useAddClient, useClients } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
-import { RefreshCw, Loader2, User } from 'lucide-react'
+import { RefreshCw, Loader2, User, FileText } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
 interface AddClientDialogProps {
@@ -34,7 +34,9 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
     city: '',
     date_of_birth: '',
     notes: '',
+    description: '',
   })
+  const [showDescription, setShowDescription] = useState(false)
 
   const addClient = useAddClient()
 
@@ -60,6 +62,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
         city: formData.city || null,
         date_of_birth: formData.date_of_birth || null,
         notes: formData.notes || null,
+        description: formData.description || null,
       })
 
       await queryClient.invalidateQueries({ queryKey: ['clients'] })
@@ -74,7 +77,9 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
         city: '',
         date_of_birth: '',
         notes: '',
+        description: '',
       })
+      setShowDescription(false)
 
       onOpenChange(false)
 
@@ -159,33 +164,64 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
         </div>
 
         {/* Имя и фамилия */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              {t('clients.firstName')} / {t('clients.lastName')}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowDescription(v => !v)}
+              className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${
+                showDescription
+                  ? 'bg-indigo-50 border-indigo-300 text-indigo-600'
+                  : 'border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              {language === 'he' ? 'תיאור' : 'Описание'}
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Input
+                id="first_name"
+                value={formData.first_name}
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                placeholder={t('clients.firstName')}
+                required
+                autoFocus
+              />
+            </div>
+            <div>
+              <Input
+                id="last_name"
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                placeholder={t('clients.lastName')}
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Поле описания — показывается по кнопке */}
+        {showDescription && (
           <div>
-            <Label htmlFor="first_name" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-              {t('clients.firstName')} *
+            <Label htmlFor="description" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+              {language === 'he' ? 'תיאור' : 'Описание'}
             </Label>
-            <Input
-              id="first_name"
-              value={formData.first_name}
-              onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-              className="mt-1"
-              required
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={2}
+              className="mt-1 resize-none"
+              placeholder={language === 'he' ? 'תיאור הלקוח...' : 'Описание клиента...'}
               autoFocus
             />
           </div>
-          <div>
-            <Label htmlFor="last_name" className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-              {t('clients.lastName')} *
-            </Label>
-            <Input
-              id="last_name"
-              value={formData.last_name}
-              onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-              className="mt-1"
-              required
-            />
-          </div>
-        </div>
+        )}
 
         {/* Телефон — главное поле */}
         <div>

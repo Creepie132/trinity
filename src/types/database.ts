@@ -1687,32 +1687,50 @@ export type Database = {
         Row: {
           content: string
           created_at: string | null
+          failed_count: number | null
+          filter_type: string
+          filter_value: string | null
           id: string
+          message: string
+          name: string
           org_id: string
           recipients_count: number | null
           sent_at: string | null
+          sent_count: number | null
           status: string | null
           title: string
           updated_at: string | null
         }
         Insert: {
-          content: string
+          content?: string
           created_at?: string | null
+          failed_count?: number | null
+          filter_type: string
+          filter_value?: string | null
           id?: string
+          message: string
+          name: string
           org_id: string
           recipients_count?: number | null
           sent_at?: string | null
+          sent_count?: number | null
           status?: string | null
-          title: string
+          title?: string
           updated_at?: string | null
         }
         Update: {
           content?: string
           created_at?: string | null
+          failed_count?: number | null
+          filter_type?: string
+          filter_value?: string | null
           id?: string
+          message?: string
+          name?: string
           org_id?: string
           recipients_count?: number | null
           sent_at?: string | null
+          sent_count?: number | null
           status?: string | null
           title?: string
           updated_at?: string | null
@@ -2459,9 +2477,6 @@ export type CommType = 'call' | 'whatsapp' | 'email' | 'sms' | 'meeting' | 'note
 // Client base type
 export type Client = Tables<'clients'>
 
-// Ad campaign type
-export type AdCampaign = Tables<'ad_campaigns'>
-
 // Client summary — shape returned by GET /api/clients/summary
 // Includes a subset of client fields + aggregated visit/payment stats
 export type ClientSummary = {
@@ -2478,3 +2493,13 @@ export type ClientSummary = {
   last_visit:   string | null
   total_paid:   number
 }
+
+// Ad campaign type
+export type AdCampaign   = Tables<'ad_campaigns'>
+
+// SMS types
+export type SmsCampaign  = Tables<'sms_campaigns'>
+export type SmsMessage   = Tables<'sms_messages'>
+
+// Payment type
+export type Payment      = Tables<'payments'>

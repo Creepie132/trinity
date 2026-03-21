@@ -42,8 +42,9 @@ async function writeAudit(params: {
 // Returns deals visible to the current user (own or all based on permissions)
 export async function GET(request: NextRequest) {
   try {
-    const { user, orgId } = await getAuthContext(request)
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+    const { user, orgId } = auth
 
     const supabase = createSupabaseServiceClient()
     const { searchParams } = new URL(request.url)
@@ -106,8 +107,9 @@ export async function GET(request: NextRequest) {
 // Create a new deal
 export async function POST(request: NextRequest) {
   try {
-    const { user, orgId } = await getAuthContext(request)
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+    const { user, orgId } = auth
 
     const body = await request.json()
     const {

@@ -685,8 +685,8 @@ export function useCreateAdCampaign() {
     mutationFn: async (data: {
       advertiser_name: string
       banner_url: string
-      link_url: string
-      target_categories: string[]
+      click_url: string
+      target_modules: string[]
       start_date: string
       end_date: string
     }) => {

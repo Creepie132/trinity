@@ -2,15 +2,14 @@
 - Environments: .env.local
 
   Creating an optimized production build ...
-✓ Compiled successfully in 15.6s
+✓ Compiled successfully in 17.4s
   Running TypeScript ...
   Collecting page data using 11 workers ...
   Generating static pages using 11 workers (0/151) ...
   Generating static pages using 11 workers (37/151) 
-⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
   Generating static pages using 11 workers (75/151) 
   Generating static pages using 11 workers (113/151) 
-✓ Generating static pages using 11 workers (151/151) in 600.8ms
+✓ Generating static pages using 11 workers (151/151) in 664.9ms
   Finalizing page optimization ...
 
 Route (app)
@@ -246,4 +245,3 @@ Route (app)
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
 
-BUILD_SUCCESS  

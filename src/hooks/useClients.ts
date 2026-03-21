@@ -70,7 +70,7 @@ export function useAddClient() {
   const { isLoading } = useAuth()
 
   return useMutation({
-    mutationFn: async (client: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'org_id'>) => {
+    mutationFn: async (client: Pick<Client, 'first_name' | 'last_name' | 'phone'> & Partial<Omit<Client, 'id' | 'created_at' | 'updated_at' | 'org_id'>>) => {
       if (isLoading) {
         throw new Error('אנא המתן, הנתונים נטענים...')
       }

@@ -66,7 +66,7 @@ export function ClientSearch({
         .from('clients')
         .select('id, first_name, last_name, phone')
         .eq('org_id', orgId)
-        .or(`first_name.ilike.%${debouncedQuery}%,last_name.ilike.%${debouncedQuery}%,phone.ilike.%${debouncedQuery}%`)
+        .or(`first_name.ilike.%${debouncedQuery}%,last_name.ilike.%${debouncedQuery}%,phone.ilike.%${debouncedQuery}%,description.ilike.%${debouncedQuery}%`)
         .limit(5);
 
       if (error) {

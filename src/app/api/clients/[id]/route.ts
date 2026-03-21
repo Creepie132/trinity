@@ -12,7 +12,7 @@ export async function PUT(
 
   const { id } = await params
   const body = await request.json()
-  const { phone, email, address, notes } = body
+  const { phone, email, address, city, date_of_birth, notes, description, avatar_url } = body
 
   const name = body.name || `${body.first_name || ''} ${body.last_name || ''}`.trim()
   if (!name) {
@@ -27,7 +27,11 @@ export async function PUT(
       phone: phone || null,
       email: email || null,
       address: address || null,
+      city: city || null,
+      date_of_birth: date_of_birth || null,
       notes: notes || null,
+      description: description || null,
+      avatar_url: avatar_url || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

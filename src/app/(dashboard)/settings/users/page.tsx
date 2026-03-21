@@ -18,7 +18,9 @@ import {
   Clock,
   ChevronDown,
   Building2,
+  Briefcase,
 } from 'lucide-react'
+import AddWorkerWizard from '@/components/settings/AddWorkerWizard'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { useBranches } from '@/hooks/useBranches'
@@ -121,6 +123,7 @@ export default function UsersSettingsPage() {
   const isRtl = locale === 'he'
 
   const [showInviteForm, setShowInviteForm] = useState(false)
+  const [showWorkerWizard, setShowWorkerWizard] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'owner' | 'moderator' | 'user'>('user')
   const [inviteTargetOrgId, setInviteTargetOrgId] = useState<string>('')
@@ -475,7 +478,18 @@ export default function UsersSettingsPage() {
         </div>
       )}
 
-      {/* Invite button */}
+      {/* Add Worker wizard button — creates user immediately with permissions */}
+      {permissions.canManageUsers && !showInviteForm && (
+        <button
+          onClick={() => setShowWorkerWizard(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white transition-all text-sm font-semibold shadow-sm"
+        >
+          <Briefcase className="w-4 h-4" />
+          {locale === 'he' ? 'הוסף עובד חדש' : 'Добавить продажника'}
+        </button>
+      )}
+
+      {/* Invite button — classic email invite (user_id assigned on first login) */}
       {permissions.canManageUsers && !showInviteForm && (
         <button
           onClick={() => setShowInviteForm(true)}
@@ -492,6 +506,17 @@ export default function UsersSettingsPage() {
           {t.noPermission}
         </div>
       )}
+
+      {/* Add Worker Wizard */}
+      <AddWorkerWizard
+        open={showWorkerWizard}
+        onClose={() => setShowWorkerWizard(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['org-team'] })
+          setShowWorkerWizard(false)
+        }}
+        lang={locale as 'he' | 'ru'}
+      />
     </div>
   )
 }

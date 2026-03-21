@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, BarChart3, Shield, Home, LogOut, Calendar, Settings, BookOpen, Package, UserPlus, CalendarPlus, ShoppingCart, ShoppingBag, PiggyBank, MessageCircle } from 'lucide-react'
+import { Users, CreditCard, BarChart3, Briefcase, Shield, Home, LogOut, Calendar, Settings, BookOpen, Package, UserPlus, CalendarPlus, ShoppingCart, ShoppingBag, PiggyBank, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -24,6 +24,7 @@ const baseNavigation = [
   { name_he: 'יומן', name_ru: 'Дневник', href: '/diary', icon: BookOpen, requireFeature: 'diary' },
   { name_he: 'וואטסאפ', name_ru: 'WhatsApp', href: '/inbox', icon: MessageCircle, requireFeature: 'whatsapp' },
   { name_he: 'אנליטיקה', name_ru: 'Аналитика', href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
+  { name_he: 'כרטיס עובד', name_ru: 'Кабинет', href: '/worker', icon: Briefcase, requireFeature: null },
   { name_he: 'הגדרות', name_ru: 'Настройки', href: '/settings', icon: Settings, requireFeature: null },
 ]
 

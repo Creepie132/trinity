@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, BarChart3, Shield, Home, LogOut, Settings, Calendar, Package, BookOpen, ShoppingBag, PiggyBank, MessageCircle } from 'lucide-react'
+import { Users, CreditCard, BarChart3, Briefcase, Shield, Home, LogOut, Settings, Calendar, Package, BookOpen, ShoppingBag, PiggyBank, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -43,7 +43,8 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: t('nav.finances'), href: '/finances', icon: PiggyBank, requireFeature: 'finances' },
     { name: t('nav.analytics'), href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
-    { name: t('nav.settings'), href: '/settings', icon: Settings, requireFeature: null },
+    { name: t('nav.worker'), href: '/worker', icon: Briefcase, requireFeature: null },
+  { name: t('nav.settings'), href: '/settings', icon: Settings, requireFeature: null },
   ]
 
   const onLogout = async () => {

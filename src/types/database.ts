@@ -2459,6 +2459,9 @@ export type CommType = 'call' | 'whatsapp' | 'email' | 'sms' | 'meeting' | 'note
 // Client base type
 export type Client = Tables<'clients'>
 
+// Ad campaign type
+export type AdCampaign = Tables<'ad_campaigns'>
+
 // Client summary — shape returned by GET /api/clients/summary
 // Includes a subset of client fields + aggregated visit/payment stats
 export type ClientSummary = {

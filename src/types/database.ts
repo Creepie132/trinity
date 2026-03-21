@@ -2455,3 +2455,23 @@ export type CallStatus    = 'completed' | 'missed' | 'busy' | 'failed'
 
 // Communication types
 export type CommType = 'call' | 'whatsapp' | 'email' | 'sms' | 'meeting' | 'note'
+
+// Client base type
+export type Client = Tables<'clients'>
+
+// Client summary — shape returned by GET /api/clients/summary
+// Includes a subset of client fields + aggregated visit/payment stats
+export type ClientSummary = {
+  id:           string
+  first_name:   string
+  last_name:    string
+  phone:        string
+  email:        string | null
+  notes:        string | null
+  description:  string | null
+  created_at:   string
+  org_id:       string
+  total_visits: number
+  last_visit:   string | null
+  total_paid:   number
+}

@@ -3,9 +3,10 @@
 @tailwind utilities;
 
 /* Hebrew font support — prevents "hieroglyphs" when language is Hebrew */
-:lang(he),
-[lang="he"],
-[dir="rtl"] {
+html[lang="he"] body,
+html[dir="rtl"] body,
+html[lang="he"] body *,
+html[dir="rtl"] body * {
   font-family: var(--font-assistant), 'Assistant', 'Arial Hebrew', Arial, sans-serif;
 }
 

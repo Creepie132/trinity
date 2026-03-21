@@ -31,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="he" dir="rtl" className="light">
+    <html lang="he" dir="rtl" className="light" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="preconnect" href="https://tjryzcqvsavtllahjyrj.supabase.co" />
@@ -42,7 +42,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Trinity" />
       </head>
-      <body className={`${inter.className} ${assistant.variable} font-sans`}>
+      <body className={`${inter.className} ${assistant.variable} font-sans`} suppressHydrationWarning>
         <QueryProvider>
           <LanguageProvider>
             {children}

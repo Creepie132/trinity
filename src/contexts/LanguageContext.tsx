@@ -1822,17 +1822,23 @@ const translations: Record<Language, Record<string, string>> = {
   },
 }
 
+// Read language synchronously before first render to avoid hydration mismatch
+function getInitialLanguage(): Language {
+  if (typeof window === 'undefined') return 'he'
+  try {
+    const saved = localStorage.getItem('trinity-language') as Language
+    if (saved === 'he' || saved === 'ru') return saved
+  } catch {}
+  return 'he'
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('he')
+  const [language, setLanguageState] = useState<Language>(getInitialLanguage)
 
   useEffect(() => {
-    // Load language from localStorage
-    const saved = localStorage.getItem('trinity-language') as Language
-    if (saved && (saved === 'he' || saved === 'ru')) {
-      setLanguageState(saved)
-      applyLanguage(saved)
-    }
-  }, [])
+    // Sync html attributes on mount (SSR renders with 'he' default)
+    applyLanguage(language)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)

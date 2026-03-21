@@ -3,16 +3,14 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, MessageSquare, BarChart3, Shield, Gift, Home, LogOut, Settings, Calendar, Package, BookOpen, ShoppingBag, PiggyBank, MessageCircle } from 'lucide-react'
+import { Users, CreditCard, BarChart3, Shield, Home, LogOut, Settings, Calendar, Package, BookOpen, ShoppingBag, PiggyBank, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLowStockProducts } from '@/hooks/useProducts'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
-import { useOrganization } from '@/hooks/useOrganization'
 import { useDemoMode } from '@/hooks/useDemoMode'
-import { MODULES } from '@/lib/modules-config'
 import { BranchSwitcher } from '@/components/BranchSwitcher'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
@@ -29,28 +27,22 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const { data: isAdmin } = useIsAdmin()
   const features = useFeatures()
   const { data: lowStockProducts } = useLowStockProducts()
-  const { t, language, dir } = useLanguage()
+  const { t } = useLanguage()
   const meetingMode = useMeetingMode()
   const { isDemo } = useDemoMode()
   const sidebarSide = 'right'
 
-  const getModuleName = (moduleKey: string) => {
-    const module = MODULES.find(m => m.key === moduleKey)
-    if (!module) return ''
-    return language === 'he' ? module.name_he : module.name_ru
-  }
-
   const baseNavigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
-    { name: getModuleName('clients'), href: '/clients', icon: Users, requireFeature: 'clients' },
+    { name: t('nav.clients'), href: '/clients', icon: Users, requireFeature: 'clients' },
     { name: meetingMode.t.visits, href: '/visits', icon: Calendar, requireFeature: 'visits' },
-    { name: language === 'he' ? 'מכירות' : 'Продажи', href: '/sales', icon: ShoppingBag, requireFeature: 'sales' },
-    { name: getModuleName('diary'), href: '/diary', icon: BookOpen, requireFeature: 'diary' },
-    { name: language === 'he' ? 'וואטסאפ' : 'WhatsApp', href: '/inbox', icon: MessageCircle, requireFeature: 'whatsapp' },
-    { name: getModuleName('inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
-    { name: getModuleName('payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
-    { name: language === 'he' ? 'כספים' : 'Финансы', href: '/finances', icon: PiggyBank, requireFeature: 'finances' },
-    { name: language === 'he' ? 'אנליטיקה' : 'Аналитика', href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
+    { name: t('nav.sales'), href: '/sales', icon: ShoppingBag, requireFeature: 'sales' },
+    { name: t('nav.diary'), href: '/diary', icon: BookOpen, requireFeature: 'diary' },
+    { name: t('nav.whatsapp'), href: '/inbox', icon: MessageCircle, requireFeature: 'whatsapp' },
+    { name: t('nav.inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
+    { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
+    { name: t('nav.finances'), href: '/finances', icon: PiggyBank, requireFeature: 'finances' },
+    { name: t('nav.analytics'), href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
     { name: t('nav.settings'), href: '/settings', icon: Settings, requireFeature: null },
   ]
 

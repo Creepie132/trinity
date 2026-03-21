@@ -120,6 +120,15 @@ export default async function DashboardPage() {
   }
   if (!orgId) redirect('/unauthorized')
 
+  // Продажник Trinity → кабинет вместо дашборда
+  const service = createSupabaseServiceClient()
+  const { data: adminRecord } = await service
+    .from('admin_users')
+    .select('is_sales_agent')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (adminRecord?.is_sales_agent) redirect('/worker')
+
   // Активный филиал — источник истины из БД
   const activeOrgId = await getActiveOrgId(user.id, orgId)
 

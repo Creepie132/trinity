@@ -2,11 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Hebrew font support — prevents "hieroglyphs" when language is Hebrew */
-html[lang="he"] body,
-html[dir="rtl"] body,
-html[lang="he"] body *,
-html[dir="rtl"] body * {
+/* Hebrew font — Assistant loaded via --font-assistant CSS variable on <body> */
+:lang(he),
+[lang="he"] *,
+[dir="rtl"] * {
   font-family: var(--font-assistant), 'Assistant', 'Arial Hebrew', Arial, sans-serif;
 }
 

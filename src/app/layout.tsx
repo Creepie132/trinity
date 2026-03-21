@@ -42,7 +42,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Trinity" />
       </head>
-      <body className={`${inter.className} ${assistant.variable} font-sans`} suppressHydrationWarning>
+      <body className={`${inter.variable} ${assistant.variable} ${assistant.className} font-sans`} suppressHydrationWarning>
         <QueryProvider>
           <LanguageProvider>
             {children}

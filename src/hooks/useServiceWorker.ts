@@ -1,28 +1,72 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
+/**
+ * Trinity CRM — Auto-update Service Worker
+ *
+ * При обнаружении нового SW:
+ * 1. Если пользователь НЕ активен (скрытая вкладка) — обновляем немедленно
+ * 2. Если пользователь активен — ждём, пока он перейдёт на другую вкладку
+ *    или открывает приложение снова (visibilitychange)
+ *
+ * Пользователь никогда не видит баннер — обновление происходит само.
+ */
 export function useServiceWorker() {
-  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null)
-  const [updateAvailable, setUpdateAvailable] = useState(false)
-
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!('serviceWorker' in navigator)) return
 
+    let waitingWorker: ServiceWorker | null = null
+
+    // Применяем обновление — заставляем новый SW взять управление и перезагружаем
+    const applyUpdate = () => {
+      if (!waitingWorker) return
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' })
+    }
+
+    // Слушаем смену контроллера (новый SW активировался) → перезагружаем страницу
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload()
+    })
+
     navigator.serviceWorker
       .register('/sw.js')
       .then((registration) => {
-        // Check for updates every time page loads
+        // Проверяем обновление при каждом монтировании
         registration.update()
 
-        // New SW is already waiting to activate
-        if (registration.waiting) {
-          setWaitingWorker(registration.waiting)
-          setUpdateAvailable(true)
+        const handleWaiting = (worker: ServiceWorker) => {
+          waitingWorker = worker
+
+          // Если вкладка скрыта (пользователь свернул/переключился) — обновляем сразу
+          if (document.visibilityState === 'hidden') {
+            applyUpdate()
+            return
+          }
+
+          // Иначе — обновляем при следующем скрытии вкладки (уход из приложения)
+          const onVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+              document.removeEventListener('visibilitychange', onVisibilityChange)
+              applyUpdate()
+            }
+          }
+          document.addEventListener('visibilitychange', onVisibilityChange)
+
+          // Страховка: если пользователь так и не скрыл вкладку — обновляем через 60 сек
+          setTimeout(() => {
+            document.removeEventListener('visibilitychange', onVisibilityChange)
+            applyUpdate()
+          }, 60_000)
         }
 
-        // SW found during update check
+        // Новый SW уже ждёт (был установлен ранее)
+        if (registration.waiting) {
+          handleWaiting(registration.waiting)
+        }
+
+        // Новый SW найден в процессе работы
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing
           if (!newWorker) return
@@ -32,8 +76,7 @@ export function useServiceWorker() {
               newWorker.state === 'installed' &&
               navigator.serviceWorker.controller
             ) {
-              setWaitingWorker(newWorker)
-              setUpdateAvailable(true)
+              handleWaiting(newWorker)
             }
           })
         })
@@ -43,12 +86,6 @@ export function useServiceWorker() {
       })
   }, [])
 
-  const applyUpdate = () => {
-    if (!waitingWorker) return
-    waitingWorker.postMessage({ type: 'SKIP_WAITING' })
-    setUpdateAvailable(false)
-    window.location.reload()
-  }
-
-  return { updateAvailable, applyUpdate }
+  // Хук больше не возвращает updateAvailable — обновление автоматическое
+  return {}
 }

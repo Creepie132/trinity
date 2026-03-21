@@ -5,90 +5,88 @@ import { useRouter } from 'next/navigation'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { toast } from 'sonner'
 
-interface SalesAgent {
+interface Agent {
   user_id: string
   email: string
   full_name: string | null
-  is_sales_agent: boolean
   created_at: string
-}
-
-interface OrgUser {
-  user_id: string
-  email: string
-  role: string
-  avatar_url: string | null
 }
 
 export default function SalesAgentsPage() {
   const router = useRouter()
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin()
 
-  const [agents,   setAgents]   = useState<SalesAgent[]>([])
-  const [orgUsers, setOrgUsers] = useState<OrgUser[]>([])
-  const [loading,  setLoading]  = useState(true)
-  const [saving,   setSaving]   = useState<string | null>(null)
-  const [search,   setSearch]   = useState('')
+  const [agents,  setAgents]  = useState<Agent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [email,   setEmail]   = useState('')
+  const [name,    setName]    = useState('')
+  const [sending, setSending] = useState(false)
+  const [removing, setRemoving] = useState<string | null>(null)
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) router.replace('/dashboard')
   }, [isAdmin, adminLoading, router])
 
-  const loadData = useCallback(async () => {
+  const loadAgents = useCallback(async () => {
     setLoading(true)
     try {
-      const [agentsRes, usersRes] = await Promise.all([
-        fetch('/api/admin/sales-agents'),
-        fetch('/api/admin/invitations'),  // список всех admin_users
-      ])
-      if (agentsRes.ok) {
-        const d = await agentsRes.json()
-        setAgents(d.agents ?? [])
-      }
-      // Загружаем список admin_users напрямую
-      const adminsRes = await fetch('/api/admin/sales-agents/all')
-      if (adminsRes.ok) {
-        const d = await adminsRes.json()
-        setOrgUsers(d.users ?? [])
-      }
-    } catch (e) {
-      toast.error('Ошибка загрузки данных')
+      const res = await fetch('/api/admin/sales-agents')
+      if (res.ok) setAgents((await res.json()).agents ?? [])
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadAgents() }, [loadAgents])
 
-  const toggle = async (user: OrgUser, makeAgent: boolean) => {
-    setSaving(user.user_id)
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email.trim()) return
+    setSending(true)
     try {
       const res = await fetch('/api/admin/sales-agents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: user.user_id,
-          email: user.email,
-          is_sales_agent: makeAgent,
-        }),
+        body: JSON.stringify({ email: email.trim(), full_name: name.trim() || undefined }),
       })
-      if (!res.ok) throw new Error((await res.json()).error)
-      toast.success(makeAgent ? `✅ ${user.email} — назначен продажником` : `🗑 ${user.email} — снят с роли`)
-      await loadData()
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      if (data.status === 'invited') {
+        toast.success(`📧 Приглашение отправлено на ${email.trim()}`)
+      } else {
+        toast.success(`✅ Флаг продажника установлен для ${email.trim()}`)
+      }
+      setEmail('')
+      setName('')
+      await loadAgents()
     } catch (e: any) {
       toast.error(`Ошибка: ${e.message}`)
     } finally {
-      setSaving(null)
+      setSending(false)
     }
   }
 
-  const agentIds = new Set(agents.map(a => a.user_id))
+  const handleRemove = async (agent: Agent) => {
+    if (!confirm(`Снять роль продажника с ${agent.email}?`)) return
+    setRemoving(agent.user_id)
+    try {
+      const res = await fetch('/api/admin/sales-agents', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: agent.user_id }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      toast.success(`Роль снята с ${agent.email}`)
+      await loadAgents()
+    } catch (e: any) {
+      toast.error(`Ошибка: ${e.message}`)
+    } finally {
+      setRemoving(null)
+    }
+  }
 
-  const filtered = orgUsers.filter(u =>
-    !search || u.email.toLowerCase().includes(search.toLowerCase())
-  )
-
-  if (adminLoading || loading) {
+  if (adminLoading) {
     return (
       <div className="p-8 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
@@ -97,106 +95,113 @@ export default function SalesAgentsPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-6 max-w-2xl mx-auto space-y-6">
 
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">🧑‍💼 Продажники Trinity</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Пользователи с этим флагом при входе видят <strong>Кабинет продажника</strong> вместо дашборда руководителя.
+          Введите email — человек получит письмо со ссылкой для входа.<br />
+          После регистрации он будет автоматически попадать в <strong>Кабинет продажника</strong>.
         </p>
       </div>
 
-      {/* Active agents */}
-      {agents.length > 0 && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4">
-          <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-3">
-            Активные продажники ({agents.length})
-          </p>
-          <div className="space-y-2">
+      {/* Invite form */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5">
+        <p className="text-sm font-semibold text-gray-700 mb-4">Пригласить нового продажника</p>
+        <form onSubmit={handleInvite} className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="sales@example.com"
+              required
+              className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Имя (необязательно)</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Имя Фамилия"
+              className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={sending || !email.trim()}
+            className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+          >
+            {sending ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Отправка...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Отправить приглашение
+              </>
+            )}
+          </button>
+        </form>
+        <p className="text-xs text-gray-400 mt-3 text-center">
+          Письмо придёт от Supabase Auth — пользователь установит пароль и войдёт в кабинет
+        </p>
+      </div>
+
+      {/* Active agents list */}
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <p className="text-sm font-semibold text-gray-700">Активные продажники</p>
+          {!loading && (
+            <span className="text-xs px-2 py-0.5 bg-indigo-50 text-indigo-600 font-semibold rounded-full">
+              {agents.length}
+            </span>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="py-10 flex justify-center">
+            <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : agents.length === 0 ? (
+          <div className="py-12 text-center text-gray-400 text-sm">
+            Продажников пока нет — пригласите первого ☝️
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
             {agents.map(a => (
-              <div key={a.user_id} className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5 border border-indigo-100">
+              <div key={a.user_id} className="flex items-center justify-between px-5 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600">
-                    {(a.full_name ?? a.email)[0].toUpperCase()}
+                  <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600">
+                    {(a.full_name || a.email)[0].toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{a.full_name ?? a.email}</p>
+                    <p className="text-sm font-semibold text-gray-900">{a.full_name || a.email}</p>
                     <p className="text-xs text-gray-400">{a.email}</p>
                   </div>
                 </div>
                 <button
-                  onClick={() => toggle({ user_id: a.user_id, email: a.email, role: 'user', avatar_url: null }, false)}
-                  disabled={saving === a.user_id}
-                  className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                  onClick={() => handleRemove(a)}
+                  disabled={removing === a.user_id}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
                 >
-                  {saving === a.user_id ? '...' : 'Снять роль'}
+                  {removing === a.user_id ? '...' : 'Снять роль'}
                 </button>
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Search + list */}
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-          <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-          </svg>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Поиск по email..."
-            className="flex-1 text-sm outline-none bg-transparent placeholder-gray-400"
-          />
-        </div>
-
-        {filtered.length === 0 ? (
-          <div className="py-12 text-center text-gray-400 text-sm">Пользователи не найдены</div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {filtered.map(u => {
-              const isAgent = agentIds.has(u.user_id)
-              return (
-                <div key={u.user_id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-500">
-                      {u.email[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{u.email}</p>
-                      <p className="text-xs text-gray-400 capitalize">{u.role}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isAgent && (
-                      <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-semibold">
-                        Продажник ✓
-                      </span>
-                    )}
-                    <button
-                      onClick={() => toggle(u, !isAgent)}
-                      disabled={saving === u.user_id}
-                      className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors disabled:opacity-40 ${
-                        isAgent
-                          ? 'border border-gray-200 text-gray-600 hover:bg-gray-100'
-                          : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                      }`}
-                    >
-                      {saving === u.user_id ? '...' : isAgent ? 'Снять' : 'Назначить'}
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
         )}
       </div>
 
-      <p className="text-xs text-gray-400 text-center">
-        Изменения вступают в силу при следующем входе пользователя в систему.
-      </p>
     </div>
   )
 }

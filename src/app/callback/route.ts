@@ -74,14 +74,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 1) Check if admin
+  // 1) Check if admin or sales agent
   const { data: admin } = await supabase
     .from('admin_users')
-    .select('email')
+    .select('email, is_sales_agent')
     .eq('user_id', user.id)
     .maybeSingle()
 
   if (admin) {
+    // Продажник Trinity → сразу в кабинет
+    if (admin.is_sales_agent) {
+      return NextResponse.redirect(`${origin}/worker`)
+    }
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 

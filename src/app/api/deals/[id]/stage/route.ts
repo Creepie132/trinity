@@ -10,17 +10,17 @@ function getIp(req: NextRequest): string {
   )
 }
 
-// PATCH /api/deals/[id]/stage
-// Drag-and-drop: move a deal to a different stage
+// PATCH /api/deals/[id]/stage — drag-and-drop stage change
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user, orgId } = await getAuthContext(request)
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    const { user, orgId } = auth
 
-    const dealId = params.id
+    const { id: dealId } = await params
     if (!dealId) return NextResponse.json({ error: 'Deal id missing' }, { status: 400 })
 
     const body = await request.json()

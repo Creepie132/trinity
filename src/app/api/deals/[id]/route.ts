@@ -13,11 +13,14 @@ function getIp(req: NextRequest): string {
 // ─── GET /api/deals/[id] ─────────────────────────────────────────────────────
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user, orgId } = await getAuthContext(request)
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    const { user, orgId } = auth
+
+    const { id } = await params
 
     const supabase = createSupabaseServiceClient()
 
@@ -29,7 +32,7 @@ export async function GET(
         client:clients(id, first_name, last_name, phone, email, social_links, client_tags),
         tags:deal_tag_assignments(tag:deal_tags(id, name, color))
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', orgId)
       .maybeSingle()
 
@@ -53,7 +56,7 @@ export async function GET(
     const { data: commLog } = await supabase
       .from('communication_log')
       .select('id, type, direction, summary, happened_at, user_id, duration_seconds, metadata')
-      .eq('deal_id', params.id)
+      .eq('deal_id', id)
       .eq('org_id', orgId)
       .order('happened_at', { ascending: false })
       .limit(50)
@@ -66,14 +69,16 @@ export async function GET(
 }
 
 // ─── PATCH /api/deals/[id] ───────────────────────────────────────────────────
-// Edit deal fields. Enforces: if closing as lost, rejection_reason is required.
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user, orgId } = await getAuthContext(request)
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    const { user, orgId } = auth
+
+    const { id } = await params
 
     const supabase = createSupabaseServiceClient()
 
@@ -81,7 +86,7 @@ export async function PATCH(
     const { data: existing } = await supabase
       .from('deals')
       .select('id, org_id, assigned_to, stage_id, title, amount')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', orgId)
       .maybeSingle()
 
@@ -110,10 +115,10 @@ export async function PATCH(
       stage_id,
       rejection_reason,
       rejection_category,
-      tag_ids,            // optional — replaces all tags if provided
+      tag_ids,
     } = body
 
-    // ── Business rule: if moving to a LOST stage, rejection_reason is required
+    // Business rule: if moving to a LOST stage, rejection_reason is required
     if (stage_id && stage_id !== existing.stage_id) {
       const { data: targetStage } = await supabase
         .from('deal_stages')
@@ -141,7 +146,7 @@ export async function PATCH(
       }
     }
 
-    // Validate reassignment target is in same org (if provided)
+    // Validate reassignment target is in same org
     if (assigned_to) {
       const { data: targetUser } = await supabase
         .from('org_users').select('user_id')
@@ -166,13 +171,13 @@ export async function PATCH(
     if (rejection_category !== undefined)  patch.rejection_category  = rejection_category
     patch.last_contact_at = new Date().toISOString()
 
-    if (Object.keys(patch).length === 1) // only last_contact_at = nothing meaningful changed
+    if (Object.keys(patch).length === 1)
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
 
     const { data: updated, error } = await supabase
       .from('deals')
       .update(patch)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('org_id', orgId)
       .select()
       .single()
@@ -182,10 +187,10 @@ export async function PATCH(
 
     // Replace tags if provided
     if (Array.isArray(tag_ids)) {
-      await supabase.from('deal_tag_assignments').delete().eq('deal_id', params.id)
+      await supabase.from('deal_tag_assignments').delete().eq('deal_id', id)
       if (tag_ids.length > 0) {
         await supabase.from('deal_tag_assignments')
-          .insert(tag_ids.map((tag_id: string) => ({ deal_id: params.id, tag_id })))
+          .insert(tag_ids.map((tag_id: string) => ({ deal_id: id, tag_id })))
       }
     }
 
@@ -196,12 +201,8 @@ export async function PATCH(
       user_email:  user.email ?? '',
       action:      'update',
       entity_type: 'deal',
-      entity_id:   params.id,
-      old_data:    {
-        title:    existing.title,
-        amount:   existing.amount,
-        stage_id: existing.stage_id,
-      },
+      entity_id:   id,
+      old_data:    { title: existing.title, amount: existing.amount, stage_id: existing.stage_id },
       new_data:    patch,
       ip_address:  getIp(request),
     })
@@ -214,14 +215,16 @@ export async function PATCH(
 }
 
 // ─── DELETE /api/deals/[id] ──────────────────────────────────────────────────
-// Admin only — hard delete
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user, orgId } = await getAuthContext(request)
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
+    const { user, orgId } = auth
+
+    const { id } = await params
 
     const supabase = createSupabaseServiceClient()
 
@@ -232,7 +235,6 @@ export async function DELETE(
     if (orgUser?.role !== 'admin' && orgUser?.role !== 'owner')
       return NextResponse.json({ error: 'Forbidden — admin only' }, { status: 403 })
 
-    // Also check can_delete_deals permission for non-owner admins
     const { data: perms } = await supabase
       .from('staff_permissions').select('can_delete_deals')
       .eq('org_id', orgId).eq('user_id', user.id).maybeSingle()
@@ -241,12 +243,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden — delete not permitted' }, { status: 403 })
 
     const { data: existing } = await supabase
-      .from('deals').select('title, amount').eq('id', params.id).eq('org_id', orgId).maybeSingle()
+      .from('deals').select('title, amount').eq('id', id).eq('org_id', orgId).maybeSingle()
 
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const { error } = await supabase
-      .from('deals').delete().eq('id', params.id).eq('org_id', orgId)
+      .from('deals').delete().eq('id', id).eq('org_id', orgId)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -256,7 +258,7 @@ export async function DELETE(
       user_email:  user.email ?? '',
       action:      'delete',
       entity_type: 'deal',
-      entity_id:   params.id,
+      entity_id:   id,
       old_data:    existing,
       ip_address:  getIp(request),
     })

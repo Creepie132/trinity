@@ -513,6 +513,12 @@ export default function AdminOrganizationsPage() {
 
   const [impersonating, setImpersonating] = useState<string | null>(null)
 
+  const [addUserOpen,  setAddUserOpen]  = useState(false)
+  const [addUserOrg,   setAddUserOrg]   = useState<Organization | null>(null)
+  const [addUserEmail, setAddUserEmail] = useState('')
+  const [addUserRole,  setAddUserRole]  = useState<'user' | 'moderator'>('user')
+  const [addUserSending, setAddUserSending] = useState(false)
+
   useEffect(() => { loadData() }, [])
 
   const loadData = async () => {
@@ -721,6 +727,50 @@ export default function AdminOrganizationsPage() {
     finally { setInviteSending(false) }
   }
 
+  const openAddUser = (org: Organization) => {
+    setAddUserOrg(org)
+    setAddUserEmail('')
+    setAddUserRole('user')
+    setSelectedOrg(null)
+    setAddUserOpen(true)
+  }
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!addUserOrg || !addUserEmail.trim()) return
+    setAddUserSending(true)
+    try {
+      const res = await fetch('/api/org/invite-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          org_id: addUserOrg.id,
+          email:  addUserEmail.trim().toLowerCase(),
+          role:   addUserRole,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (data.existing) {
+          toast.error(l ? 'המשתמש כבר קיים בארגון' : 'Пользователь уже в организации')
+        } else {
+          throw new Error(data.error)
+        }
+        return
+      }
+      toast.success(l
+        ? `נשלח אימייל ל-${addUserEmail}`
+        : `Приглашение отправлено на ${addUserEmail}`
+      )
+      setAddUserOpen(false)
+      setAddUserEmail('')
+    } catch (err: any) {
+      toast.error(err.message || (l ? 'שגיאה' : 'Ошибка'))
+    } finally {
+      setAddUserSending(false)
+    }
+  }
+
   // ─── Org Detail Panel ─────────────────────────────────────────────────────
 
   const renderOrgDetail = (org: Organization) => {
@@ -865,6 +915,10 @@ export default function AdminOrganizationsPage() {
           <button onClick={() => { setEditOrg(org); setEditOpen(true); setSelectedOrg(null) }}
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors">
             <Pencil className="w-4 h-4" />{l ? 'ערוך' : 'Редактировать'}
+          </button>
+          <button onClick={() => openAddUser(org)}
+            className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-teal-50 text-teal-700 text-sm font-medium hover:bg-teal-100 border border-teal-200 transition-colors col-span-2">
+            <Users className="w-4 h-4" />{l ? 'הוסף משתמש לארגון' : 'Добавить пользователя'}
           </button>
           {/* Delete button */}
           <button onClick={() => { setDeleteOrg(org); setDeleteOpen(true); setSelectedOrg(null) }}
@@ -1051,6 +1105,65 @@ export default function AdminOrganizationsPage() {
             <p className="text-xs text-blue-600 bg-blue-50 rounded-lg p-3">💡 {l ? 'הקישור יישלח לאימייל הבעלים.' : 'Ссылка отправится на email владельца.'}</p>
           </div>
         )}
+      </Modal>
+
+      {/* ── Add User to Org Modal ── */}
+      <Modal
+        open={addUserOpen}
+        onClose={() => setAddUserOpen(false)}
+        title={l ? 'הוסף משתמש לארגון' : 'Добавить пользователя'}
+        subtitle={addUserOrg?.display_name || addUserOrg?.name}
+        size="sm"
+      >
+        <form onSubmit={handleAddUser} className="space-y-4">
+          <div>
+            <Label>Email *</Label>
+            <input
+              type="email"
+              value={addUserEmail}
+              onChange={e => setAddUserEmail(e.target.value)}
+              placeholder="user@example.com"
+              required
+              autoFocus
+              className="w-full mt-1 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-400"
+            />
+            <p className="text-xs text-gray-400 mt-1.5">
+              {l
+                ? 'המשתמש יקבל אימייל וייכנס לארגון בהתחברות'
+                : 'Пользователь получит приглашение и войдёт в организацию при первом входе'
+              }
+            </p>
+          </div>
+          <div>
+            <Label>{l ? 'תפקיד' : 'Роль'}</Label>
+            <select
+              value={addUserRole}
+              onChange={e => setAddUserRole(e.target.value as 'user' | 'moderator')}
+              className="w-full mt-1 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-400"
+            >
+              <option value="user">{l ? 'עובד רגיל' : 'Обычный сотрудник'}</option>
+              <option value="moderator">{l ? 'מנהל' : 'Менеджер'}</option>
+            </select>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setAddUserOpen(false)}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              {l ? 'ביטול' : 'Отмена'}
+            </button>
+            <button
+              type="submit"
+              disabled={addUserSending || !addUserEmail.trim()}
+              className="flex-[1.5] py-2.5 rounded-xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+            >
+              {addUserSending
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <><Send className="w-4 h-4" />{l ? 'שלח הזמנה' : 'Отправить'}</>}
+            </button>
+          </div>
+        </form>
       </Modal>
 
       {/* ── Invite Modal ── */}

@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hebrew font support — prevents "hieroglyphs" when language is Hebrew */
+:lang(he),
+[lang="he"],
+[dir="rtl"] {
+  font-family: var(--font-assistant), 'Assistant', 'Arial Hebrew', Arial, sans-serif;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

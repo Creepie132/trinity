@@ -2,11 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Hebrew font — Assistant loaded via --font-assistant CSS variable on <body> */
+/* Hebrew font — force Assistant for all RTL/Hebrew content */
 :lang(he),
 [lang="he"] *,
 [dir="rtl"] * {
-  font-family: var(--font-assistant), 'Assistant', 'Arial Hebrew', Arial, sans-serif;
+  font-family: var(--font-assistant), 'Assistant', 'Arial Hebrew', Arial, sans-serif !important;
 }
 
 @layer base {

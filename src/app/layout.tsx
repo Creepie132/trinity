@@ -33,7 +33,6 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" className="light" suppressHydrationWarning>
       <head>
-        <meta charSet="utf-8" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="preconnect" href="https://tjryzcqvsavtllahjyrj.supabase.co" />
         <link rel="dns-prefetch" href="https://tjryzcqvsavtllahjyrj.supabase.co" />

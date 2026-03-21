@@ -1,0 +1,73 @@
+<!-- Trinity CRM — Invite Email Template -->
+<!-- Вставить в: Supabase Dashboard → Authentication → Email Templates → Invite user -->
+<!-- Subject: Приглашение в Trinity CRM -->
+
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f0f2f8;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f8;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#1a237e 0%,#283593 60%,#3949ab 100%);border-radius:16px 16px 0 0;padding:36px 40px 32px;text-align:center;">
+              <div style="color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">Trinity CRM</div>
+              <div style="color:rgba(255,255,255,0.6);font-size:13px;margin-top:4px;">by Amber Solutions</div>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background:#ffffff;padding:40px 40px 32px;border-radius:0 0 16px 16px;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+              <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#1a1a2e;">
+                Добро пожаловать в Trinity CRM 👋
+              </h1>
+              <p style="margin:0 0 28px;font-size:15px;color:#555;line-height:1.7;">
+                Вас пригласили в систему управления бизнесом <strong>Trinity CRM</strong>.<br>
+                Нажмите кнопку ниже, чтобы принять приглашение и установить пароль.
+              </p>
+
+              <!-- CTA -->
+              <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 32px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{ .ConfirmationURL }}"
+                      style="display:inline-block;background:linear-gradient(135deg,#3949ab,#1a237e);color:#ffffff;text-decoration:none;padding:16px 48px;border-radius:12px;font-size:16px;font-weight:600;box-shadow:0 4px 16px rgba(57,73,171,0.4);">
+                      Принять приглашение →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Fallback link -->
+              <table cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 28px;">
+                <tr>
+                  <td style="background:#f5f7ff;border-left:4px solid #3949ab;border-radius:0 8px 8px 0;padding:14px 16px;">
+                    <p style="margin:0;font-size:13px;color:#555;line-height:1.6;">
+                      🔗 Если кнопка не работает — скопируйте ссылку:<br>
+                      <span style="color:#3949ab;word-break:break-all;font-size:12px;">{{ .ConfirmationURL }}</span>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <hr style="border:none;border-top:1px solid #eee;margin:0 0 20px;">
+              <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">
+                Trinity CRM · Amber Solutions Systems ·
+                <a href="https://ambersol.co.il" style="color:#3949ab;text-decoration:none;">ambersol.co.il</a>
+              </p>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

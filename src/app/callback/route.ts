@@ -75,15 +75,38 @@ export async function GET(request: NextRequest) {
   }
 
   // 1) Check if admin or sales agent
-  const { data: admin } = await supabase
+  // Проверяем по user_id (уже зарегистрированный) ИЛИ по email (первый вход по инвайту)
+  let adminRecord = null
+
+  const { data: adminById } = await supabaseAdmin
     .from('admin_users')
-    .select('email, is_sales_agent')
+    .select('user_id, email, is_sales_agent')
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (admin) {
+  if (adminById) {
+    adminRecord = adminById
+  } else if (user.email) {
+    // Первый вход: ищем по email (user_id ещё не был привязан)
+    const { data: adminByEmail } = await supabaseAdmin
+      .from('admin_users')
+      .select('user_id, email, is_sales_agent')
+      .eq('email', user.email.toLowerCase())
+      .maybeSingle()
+
+    if (adminByEmail) {
+      // Привязываем user_id к записи
+      await supabaseAdmin
+        .from('admin_users')
+        .update({ user_id: user.id })
+        .eq('email', user.email.toLowerCase())
+      adminRecord = { ...adminByEmail, user_id: user.id }
+    }
+  }
+
+  if (adminRecord) {
     // Продажник Trinity → сразу в кабинет
-    if (admin.is_sales_agent) {
+    if (adminRecord.is_sales_agent) {
       return NextResponse.redirect(`${origin}/worker`)
     }
     return NextResponse.redirect(`${origin}/dashboard`)

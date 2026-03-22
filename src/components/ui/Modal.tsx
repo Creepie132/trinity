@@ -24,6 +24,12 @@ interface ModalProps {
   dir?: 'rtl' | 'ltr'
   modalId?: string
   pinTitle?: string
+  /**
+   * When true: drag handle becomes a transparent overlay (no white bar),
+   * close/pin buttons float over the content as white icons.
+   * Use when children start with a dark/colored header.
+   */
+  darkHeader?: boolean
 }
 
 const sizeClasses = {
@@ -53,6 +59,7 @@ export function Modal({
   dir = 'rtl',
   modalId: modalIdProp,
   pinTitle,
+  darkHeader = false,
 }: ModalProps) {
   const idRef = useRef<string>(modalIdProp || `modal-${++idCounter}`)
   const modalId = idRef.current
@@ -75,8 +82,6 @@ export function Modal({
 
   const pinnedData = pinned.find(p => p.id === modalId)
 
-  // Восстанавливаем позицию из store при монтировании закреплённого окна
-  // pinnedData.x/y — смещение от центра viewport → конвертируем в px от края
   useEffect(() => {
     if (pinnedData && containerRef.current) {
       const left = window.innerWidth / 2 + pinnedData.x
@@ -133,7 +138,7 @@ export function Modal({
 
   return createPortal(
     <>
-      {/* Backdrop — только когда незакреплено */}
+      {/* Backdrop */}
       {!pinned_ && (
         <div
           className="fixed inset-0 bg-black/50"
@@ -143,16 +148,14 @@ export function Modal({
         />
       )}
 
-      {/* Modal */}
+      {/* Modal container */}
       <div
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalId)}
         className={cn(
           'fixed bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
           'animate-in fade-in-0 duration-200',
-          // Mobile (<768px): centered overlay
           'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-32px)] max-h-[92dvh] rounded-2xl',
-          // Desktop (≥768px): сбрасываем mobile классы, позиционирование через inline style
           'md:w-auto md:rounded-2xl md:max-h-[calc(100dvh-32px)]',
           !width && sizeClasses[size],
           pinned_ && 'ring-2 ring-orange-400/60',
@@ -161,7 +164,6 @@ export function Modal({
         data-desktop={isDesktop ? 'true' : undefined}
         style={{
           zIndex,
-          // Desktop: center via inline style — 100% надёжно, не зависит от CSS cascade
           ...(isDesktop && !pinnedData ? {
             left: '50%',
             top: '50%',
@@ -176,53 +178,103 @@ export function Modal({
         aria-labelledby={title ? 'modal-title' : undefined}
         dir={dir}
       >
-        {/* Drag handle */}
-        <div
-          ref={handleRef}
-          className="hidden md:flex items-center justify-center h-5 rounded-t-2xl cursor-grab active:cursor-grabbing select-none group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-        >
-          <GripHorizontal className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors" />
-        </div>
-
-        {/* Header */}
-        {(title || showCloseButton) && (
-          <div className="flex items-start justify-between px-5 pb-0 pt-1">
-            <div className="flex-1 min-w-0 pt-1">
-              {title && (
-                <h2 id="modal-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight">
-                  {title}
-                </h2>
-              )}
-              {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>}
-            </div>
-            <div className="flex items-center gap-1 -mt-1 -mr-1">
+        {darkHeader ? (
+          /* ── Dark header mode ────────────────────────────────────────────
+             Drag handle is a transparent zone over the dark header.
+             Close/Pin buttons float as white icons in the top corner.
+          ─────────────────────────────────────────────────────────────── */
+          <div className="relative flex-1 flex flex-col min-h-0 overflow-hidden rounded-2xl">
+            {/* Transparent drag zone — sits over the dark header */}
+            <div
+              ref={handleRef}
+              className="hidden md:block absolute inset-x-0 top-0 h-8 cursor-grab active:cursor-grabbing select-none z-10"
+              style={{ background: 'transparent' }}
+            />
+            {/* Floating close / pin — white icons, top corner */}
+            <div
+              className="absolute top-2.5 z-20 flex items-center gap-0.5"
+              style={{ [dir === 'rtl' ? 'left' : 'right']: '10px' }}
+            >
               <button
                 onClick={handlePin}
-                title={pinned_ ? 'Открепить' : (pinned.length >= maxPinned ? 'Максимум 3 окна' : 'Закрепить')}
+                title={pinned_ ? 'Открепить' : 'Закрепить'}
                 className={cn(
                   'hidden md:flex p-1.5 rounded-full transition-colors',
                   pinned_
-                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-500 hover:bg-orange-200'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-300 hover:text-gray-500'
+                    ? 'bg-orange-400/30 text-orange-200 hover:bg-orange-400/50'
+                    : 'text-white/40 hover:text-white/90 hover:bg-white/20'
                 )}
               >
                 {pinned_ ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
               </button>
               {showCloseButton && (
-                <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Close">
-                  <X className="w-5 h-5 text-gray-400" />
+                <button
+                  onClick={onClose}
+                  className="p-1.5 rounded-full transition-colors text-white/60 hover:text-white hover:bg-white/20"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
                 </button>
               )}
             </div>
+
+            {/* Scrollable content */}
+            <div className={cn('flex-1 overflow-y-auto', contentClassName)}>
+              {children}
+            </div>
           </div>
+        ) : (
+          /* ── Normal (light) mode ─────────────────────────────────────── */
+          <>
+            {/* Drag handle */}
+            <div
+              ref={handleRef}
+              className="hidden md:flex items-center justify-center h-5 rounded-t-2xl cursor-grab active:cursor-grabbing select-none group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+            >
+              <GripHorizontal className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 transition-colors" />
+            </div>
+
+            {/* Title header */}
+            {(title || showCloseButton) && (
+              <div className="flex items-start justify-between px-5 pb-0 pt-1">
+                <div className="flex-1 min-w-0 pt-1">
+                  {title && (
+                    <h2 id="modal-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight">
+                      {title}
+                    </h2>
+                  )}
+                  {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>}
+                </div>
+                <div className="flex items-center gap-1 -mt-1 -mr-1">
+                  <button
+                    onClick={handlePin}
+                    title={pinned_ ? 'Открепить' : (pinned.length >= maxPinned ? 'Максимум 3 окна' : 'Закрепить')}
+                    className={cn(
+                      'hidden md:flex p-1.5 rounded-full transition-colors',
+                      pinned_
+                        ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-500 hover:bg-orange-200'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-300 hover:text-gray-500'
+                    )}
+                  >
+                    {pinned_ ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                  </button>
+                  {showCloseButton && (
+                    <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Close">
+                      <X className="w-5 h-5 text-gray-400" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Content */}
+            <div className={cn('flex-1 overflow-y-auto p-5', footer && 'pb-3', contentClassName)}>
+              {children}
+            </div>
+          </>
         )}
 
-        {/* Content */}
-        <div className={cn('flex-1 overflow-y-auto p-5', footer && 'pb-3', contentClassName)}>
-          {children}
-        </div>
-
-        {/* Footer — flex item, всегда внизу модалки */}
+        {/* Footer — always outside the dark/normal split */}
         {footer && (
           <div className="flex-shrink-0 p-5 pt-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-b-2xl">
             {footer}

@@ -129,6 +129,7 @@ export function ClientDetailsModal() {
         open={isOpen}
         onClose={() => closeModal('client-details')}
         showCloseButton={true}
+        darkHeader={true}
         width="640px"
         dir={isHe ? 'rtl' : 'ltr'}
         contentClassName="!p-0"
@@ -169,10 +170,8 @@ export function ClientDetailsModal() {
           </div>
         }
       >
-        {/* ── Dark header ──────────────────────────────────────────────────── */}
+        {/* ── Dark header ─────────────────────────────────────────────── */}
         <div style={{ background: '#0f172a', borderRadius: '16px 16px 0 0' }}>
-
-          {/* Top: avatar + name + status */}
           <div className="flex items-center gap-4 px-6 pt-6 pb-4">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shrink-0"
               style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}>
@@ -183,15 +182,11 @@ export function ClientDetailsModal() {
               {client.phone && (
                 <a href={`tel:${client.phone}`} dir="ltr"
                   className="text-slate-400 text-sm hover:text-white flex items-center gap-1.5 mt-0.5 w-fit transition-colors">
-                  <Phone className="w-3.5 h-3.5" />
-                  {client.phone}
+                  <Phone className="w-3.5 h-3.5" />{client.phone}
                 </a>
               )}
-              {client.email && (
-                <p className="text-slate-500 text-xs mt-0.5 truncate">{client.email}</p>
-              )}
+              {client.email && <p className="text-slate-500 text-xs mt-0.5 truncate">{client.email}</p>}
             </div>
-            {/* Active badge */}
             <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full"
               style={{ background: 'rgba(52,211,153,0.15)', border: '0.5px solid rgba(52,211,153,0.3)' }}>
               <div className="w-2 h-2 rounded-full" style={{ background: '#34d399' }} />
@@ -199,62 +194,38 @@ export function ClientDetailsModal() {
             </div>
           </div>
 
-          {/* Stats row — divider lines */}
           <div className="grid grid-cols-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-            {/* Paid */}
             <div className="flex flex-col items-center py-4 px-2 text-center"
               style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
-              <span className="text-xl font-bold" style={{ color: '#a78bfa' }}>
-                ₪{Number(totalPaid).toLocaleString()}
-              </span>
-              <span className="text-[10px] font-semibold mt-1 uppercase tracking-wider" style={{ color: '#64748b' }}>
-                {t.totalPaid}
-              </span>
+              <span className="text-xl font-bold" style={{ color: '#a78bfa' }}>₪{Number(totalPaid).toLocaleString()}</span>
+              <span className="text-[10px] font-semibold mt-1 uppercase tracking-wider" style={{ color: '#64748b' }}>{t.totalPaid}</span>
             </div>
-
-            {/* Visits */}
             <div className="flex flex-col items-center py-4 px-2 text-center"
               style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
-              <span className="text-xl font-bold" style={{ color: '#60a5fa' }}>
-                {visitsCount}
-              </span>
-              <span className="text-[10px] font-semibold mt-1 uppercase tracking-wider" style={{ color: '#64748b' }}>
-                {t.visits}
-              </span>
+              <span className="text-xl font-bold" style={{ color: '#60a5fa' }}>{visitsCount}</span>
+              <span className="text-[10px] font-semibold mt-1 uppercase tracking-wider" style={{ color: '#64748b' }}>{t.visits}</span>
             </div>
-
-            {/* Gallery */}
-            <button
-              onClick={() => openModal('client-gallery', { client, locale })}
+            <button onClick={() => openModal('client-gallery', { client, locale })}
               className="flex flex-col items-center py-4 px-2 text-center transition-colors"
               style={{ borderRight: '1px solid rgba(255,255,255,0.07)', background: 'transparent' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <Images className="w-5 h-5 mb-1" style={{ color: '#a78bfa' }} />
-              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>
-                {t.gallery}
-              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>{t.gallery}</span>
             </button>
-
-            {/* Documents */}
-            <button
-              onClick={() => openModal('client-documents', { client, locale })}
+            <button onClick={() => openModal('client-documents', { client, locale })}
               className="flex flex-col items-center py-4 px-2 text-center transition-colors"
               style={{ background: 'transparent' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <FileText className="w-5 h-5 mb-1" style={{ color: '#60a5fa' }} />
-              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>
-                {t.documents}
-              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>{t.documents}</span>
             </button>
           </div>
         </div>
 
-        {/* ── Light body ───────────────────────────────────────────────────── */}
+        {/* ── Light body ───────────────────────────────────────────────── */}
         <div className="px-6 py-5 space-y-4">
-
-          {/* Info fields — 2 columns */}
           {(client.email || client.address || client.date_of_birth || client.created_at) && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">{t.information}</p>
@@ -292,8 +263,6 @@ export function ClientDetailsModal() {
               </div>
             </div>
           )}
-
-          {/* Notes */}
           {client.notes && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">{t.notes}</p>
@@ -302,8 +271,6 @@ export function ClientDetailsModal() {
               </div>
             </div>
           )}
-
-          {/* Description */}
           {client.description && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">{t.description}</p>
@@ -315,7 +282,6 @@ export function ClientDetailsModal() {
         </div>
       </Modal>
 
-      {/* GDPR */}
       <GdprDeleteDialog
         open={showGdprDialog}
         onOpenChange={setShowGdprDialog}
@@ -324,7 +290,6 @@ export function ClientDetailsModal() {
         locale={locale as 'he'|'ru'}
       />
 
-      {/* WA / Product Picker */}
       {showPicker && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-end justify-center"
           style={{ animation: 'fadeInOverlay 0.2s ease' }}
@@ -343,11 +308,9 @@ export function ClientDetailsModal() {
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
               <div>
                 <p className="font-semibold text-base">
-                  {pickerType==='visit' ? (isHe?'📅 בחר ביקור':'📅 Выберите визит') : (isHe?'🛍️ בחר מוצר':'🛍️ Выберите товар')}
+                  {pickerType==='visit'?(isHe?'📅 בחר ביקור':'📅 Выберите визит'):(isHe?'🛍️ בחר מוצר':'🛍️ Выберите товар')}
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {isHe ? 'יוכנס לתבנית WhatsApp' : 'Будет вставлено в шаблон'}
-                </p>
+                <p className="text-xs text-gray-400 mt-0.5">{isHe?'יוכנס לתבנית WhatsApp':'Будет вставлено в шаблон'}</p>
               </div>
               <button onClick={() => setShowPicker(false)}
                 className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition">
@@ -356,30 +319,23 @@ export function ClientDetailsModal() {
             </div>
             <div className="px-3 py-3 max-h-72 overflow-y-auto">
               {pickerLoading ? (
-                <div className="space-y-2">
-                  {[1,2,3].map(i => <div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse"/>)}
-                </div>
+                <div className="space-y-2">{[1,2,3].map(i=><div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse"/>)}</div>
               ) : pickerItems.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-3xl mb-2">🗓️</p>
-                  <p className="text-sm text-gray-400">{isHe?'אין פריטים':'Нет элементов'}</p>
-                </div>
+                <div className="text-center py-8"><p className="text-3xl mb-2">🗓️</p><p className="text-sm text-gray-400">{isHe?'אין פריטים':'Нет элементов'}</p></div>
               ) : (
                 <div className="space-y-1.5">
-                  {pickerItems.map((item: any, idx: number) => {
+                  {pickerItems.map((item: any) => {
                     const dateStr = new Date(item.scheduled_at||item.created_at).toLocaleDateString(isHe?'he-IL':'ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'})
-                    const timeStr = item.scheduled_at ? new Date(item.scheduled_at).toLocaleTimeString(isHe?'he-IL':'ru-RU',{hour:'2-digit',minute:'2-digit'}) : null
+                    const timeStr = item.scheduled_at?new Date(item.scheduled_at).toLocaleTimeString(isHe?'he-IL':'ru-RU',{hour:'2-digit',minute:'2-digit'}):null
                     return (
-                      <button key={item.id} onClick={() => handlePickerSelect(item)}
+                      <button key={item.id} onClick={()=>handlePickerSelect(item)}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-emerald-50 active:scale-[0.98] transition-all text-start group">
                         <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0 text-emerald-600 font-bold text-sm">
-                          {pickerType==='visit' ? timeStr?.split(':')[0]||'—' : '📦'}
+                          {pickerType==='visit'?timeStr?.split(':')[0]||'—':'📦'}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate">
-                            {pickerType==='visit' ? `${dateStr}${timeStr?` · ${timeStr}`:''}` : item.name}
-                          </p>
-                          {pickerType==='product'&&item.price && <p className="text-xs text-gray-400">₪{item.price}</p>}
+                          <p className="text-sm font-semibold truncate">{pickerType==='visit'?`${dateStr}${timeStr?` · ${timeStr}`:''}`:item.name}</p>
+                          {pickerType==='product'&&item.price&&<p className="text-xs text-gray-400">₪{item.price}</p>}
                         </div>
                         <ChevronRight size={16} className="text-gray-300 group-hover:text-emerald-500 transition-colors shrink-0"/>
                       </button>

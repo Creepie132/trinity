@@ -38,6 +38,8 @@ interface Task {
   is_read: boolean
   created_at: string
   updated_at: string
+  accept_status?: 'pending' | 'accepted' | 'rejected' | null
+  rejection_reason?: string | null
   client?: { id: string; name?: string; first_name?: string; last_name?: string; phone?: string } | null
 }
 

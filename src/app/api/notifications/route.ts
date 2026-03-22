@@ -31,6 +31,34 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Обогащаем task_assigned уведомления актуальным статусом из таблицы tasks
+  const taskNotifs = (notifications || []).filter(
+    n => n.type === 'task_assigned' && n.reference_id
+  )
+  if (taskNotifs.length > 0) {
+    const taskIds = taskNotifs.map(n => n.reference_id as string)
+    const { data: tasks } = await supabase
+      .from('tasks')
+      .select('id, accept_status, rejection_reason')
+      .in('id', taskIds)
+
+    if (tasks && tasks.length > 0) {
+      const taskMap = Object.fromEntries(tasks.map(t => [t.id, t]))
+      const enriched = (notifications || []).map(n => {
+        if (n.type === 'task_assigned' && n.reference_id && taskMap[n.reference_id]) {
+          const t = taskMap[n.reference_id]
+          return {
+            ...n,
+            task_accept_status:    t.accept_status    ?? null,
+            task_rejection_reason: t.rejection_reason ?? null,
+          }
+        }
+        return n
+      })
+      return NextResponse.json(enriched)
+    }
+  }
+
   return NextResponse.json(notifications)
 }
 

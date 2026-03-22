@@ -43,6 +43,10 @@ interface Notification {
   mention_rejection_reason?: string | null
   sender_id?: string | null
   sender_name?: string | null
+  // task accept fields
+  task_accept_status?: 'pending' | 'accepted' | 'rejected' | null
+  task_rejection_reason?: string | null
+  reference_id?: string | null
 }
 
 interface NotificationBellProps {
@@ -251,6 +255,109 @@ function MentionActions({
   )
 }
 
+// ── TaskAcceptActions — Принять / Отклонить задачу ───────────────────────────
+function TaskAcceptActions({
+  notif, locale,
+  onRespond,
+}: {
+  notif: Notification
+  locale: 'he' | 'ru'
+  onRespond: (notifId: string, taskId: string, action: 'accepted' | 'rejected', reason?: string) => void
+}) {
+  const [mode, setMode] = useState<'buttons' | 'rejecting'>('buttons')
+  const [reason, setReason] = useState('')
+  const [loading, setLoading] = useState(false)
+  const isHe = locale === 'he'
+
+  if (notif.task_accept_status === 'accepted') {
+    return (
+      <div className="mt-2 ms-5 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
+        <Check className="w-3.5 h-3.5" />
+        {isHe ? 'קיבלת' : 'Вы приняли задачу'}
+      </div>
+    )
+  }
+  if (notif.task_accept_status === 'rejected') {
+    return (
+      <div className="mt-2 ms-5 text-xs text-red-500 font-semibold flex items-center gap-1.5">
+        <X className="w-3.5 h-3.5" />
+        {isHe ? 'דחית' : 'Вы отклонили'}
+        {notif.task_rejection_reason && (
+          <span className="text-gray-400 font-normal">— {notif.task_rejection_reason}</span>
+        )}
+      </div>
+    )
+  }
+
+  const taskId = notif.reference_id
+  if (!taskId) return null
+
+  const handleAccept = () => {
+    setLoading(true)
+    onRespond(notif.id, taskId, 'accepted')
+  }
+
+  const handleReject = () => {
+    if (!reason.trim()) return
+    setLoading(true)
+    onRespond(notif.id, taskId, 'rejected', reason.trim())
+  }
+
+  if (mode === 'rejecting') {
+    return (
+      <div className="mt-2 ms-5 space-y-2">
+        <textarea
+          autoFocus
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          rows={2}
+          placeholder={isHe ? 'כתוב סיבת דחייה...' : 'Напиши причину отклонения...'}
+          className="w-full text-xs border border-red-200 focus:border-red-400 rounded-xl px-3 py-2 outline-none resize-none bg-red-50 placeholder:text-red-300"
+          dir={isHe ? 'rtl' : 'ltr'}
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={handleReject}
+            disabled={!reason.trim() || loading}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 disabled:opacity-40 transition-all"
+          >
+            {loading
+              ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              : <X className="w-3 h-3" />}
+            {isHe ? 'שלח דחייה' : 'Отклонить'}
+          </button>
+          <button
+            onClick={() => { setMode('buttons'); setReason('') }}
+            className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-all"
+          >
+            {isHe ? 'ביטול' : 'Отмена'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-2 ms-5 flex gap-2">
+      <button
+        onClick={handleAccept}
+        disabled={loading}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-all disabled:opacity-40"
+      >
+        <Check className="w-3.5 h-3.5" />
+        {isHe ? '✅ קבל' : '✅ Принять'}
+      </button>
+      <button
+        onClick={() => setMode('rejecting')}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-bold hover:bg-red-100 transition-all"
+      >
+        <X className="w-3.5 h-3.5" />
+        {isHe ? '❌ דחה' : '❌ Отклонить'}
+      </button>
+    </div>
+  )
+}
+
 export function NotificationBell({ locale }: NotificationBellProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -309,6 +416,30 @@ export function NotificationBell({ locale }: NotificationBellProps) {
       setNotifications(prev => prev.map(n =>
         n.id === notifId
           ? { ...n, mention_status: action, mention_rejection_reason: reason ?? null, is_read: true }
+          : n
+      ))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (e) { console.error(e) }
+  }
+
+  // ── Task accept respond ──────────────────────────────────────────────────────
+  async function handleTaskRespond(
+    notifId: string,
+    taskId: string,
+    action: 'accepted' | 'rejected',
+    reason?: string
+  ) {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, rejection_reason: reason }),
+      })
+      if (!res.ok) { console.error(await res.json()); return }
+      // Обновляем локальный стейт уведомления
+      setNotifications(prev => prev.map(n =>
+        n.id === notifId
+          ? { ...n, task_accept_status: action, task_rejection_reason: reason ?? null, is_read: true }
           : n
       ))
       setUnreadCount(prev => Math.max(0, prev - 1))
@@ -431,6 +562,11 @@ export function NotificationBell({ locale }: NotificationBellProps) {
         {/* ── Mention — Accept / Reject ────────────────────────────────── */}
         {n.type === 'mention' && (
           <MentionActions notif={n} locale={locale} onRespond={handleMentionRespond} />
+        )}
+
+        {/* ── Task assigned — Accept / Reject ─────────────────────────── */}
+        {n.type === 'task_assigned' && (
+          <TaskAcceptActions notif={n} locale={locale} onRespond={handleTaskRespond} />
         )}
 
         {/* ── Other action types ───────────────────────────────────────── */}

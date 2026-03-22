@@ -7,6 +7,9 @@ import { queuePushNotification } from '@/lib/push-notify'
  * POST /api/tasks/[id]/respond
  * Исполнитель принимает или отклоняет назначенную задачу.
  * body: { action: 'accepted' | 'rejected', rejection_reason?: string }
+ *
+ * Использует только queuePushNotification для уведомлений —
+ * он уже пишет в notifications таблицу (прямой insert не нужен, иначе дубли).
  */
 export async function POST(
   request: NextRequest,
@@ -76,43 +79,30 @@ export async function POST(
       user.email?.split('@')[0] ||
       ''
 
-    // Уведомить создателя задачи
+    // Уведомить создателя задачи — только через queuePushNotification
+    // (он пишет в notifications + ставит push_sent: false для cron)
     if (task.created_by && task.created_by !== user.id) {
-      const notifPayload =
-        action === 'accepted'
-          ? {
-              org_id:       task.org_id,
-              user_id:      task.created_by,
-              type:         'task_accepted',
-              title:        `✅ ${assigneeName} принял задачу`,
-              body:         task.title,
-              link:         `/diary?task=${id}`,
-              reference_id: id,
-              is_read:      false,
-            }
-          : {
-              org_id:       task.org_id,
-              user_id:      task.created_by,
-              type:         'task_rejected',
-              title:        `❌ ${assigneeName} отклонил задачу`,
-              body:         `${task.title}\nПричина: ${rejection_reason!.trim()}`,
-              link:         `/diary?task=${id}`,
-              reference_id: id,
-              is_read:      false,
-            }
-
-      await supabase.from('notifications').insert(notifPayload)
-
-      // Push
-      await queuePushNotification({
-        org_id:       task.org_id,
-        user_id:      task.created_by,
-        type:         notifPayload.type,
-        title:        notifPayload.title,
-        body:         notifPayload.body,
-        link:         notifPayload.link,
-        reference_id: id,
-      })
+      if (action === 'accepted') {
+        await queuePushNotification({
+          org_id:       task.org_id,
+          user_id:      task.created_by,
+          type:         'task_accepted',
+          title:        `✅ ${assigneeName} принял(а) задачу`,
+          body:         task.title,
+          link:         `/diary?task=${id}`,
+          reference_id: id,
+        })
+      } else {
+        await queuePushNotification({
+          org_id:       task.org_id,
+          user_id:      task.created_by,
+          type:         'task_rejected',
+          title:        `❌ ${assigneeName} отклонил(а) задачу`,
+          body:         `${task.title}\nПричина: ${rejection_reason!.trim()}`,
+          link:         `/diary?task=${id}`,
+          reference_id: id,
+        })
+      }
     }
 
     return NextResponse.json({ ok: true, action })

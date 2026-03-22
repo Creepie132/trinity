@@ -103,21 +103,15 @@ export async function PUT(
     body.assigned_to &&
     body.assigned_to !== user.id
   ) {
-    await supabase.from('notifications').insert({
-      org_id: orgId,
-      user_id: body.assigned_to,
-      type: 'task_assigned',
-      title: 'הוקצתה לך משימה',
-      body: `${taskTitle}${currentUserName ? ` — הוקצה על ידי ${currentUserName}` : ''}`,
-      link: `/diary?task=${id}`,
-      reference_id: id,
-    })
+    // queuePushNotification уже пишет в notifications — один insert
     await queuePushNotification({
       org_id: orgId,
       user_id: body.assigned_to,
       type: 'task_assigned',
-      title: '✅ הוקצתה לך משימה',
-      body: `${taskTitle}${currentUserName ? ` מ-${currentUserName}` : ''}`,
+      title: currentUserName
+        ? `✅ ${currentUserName} назначил(а) вам задачу`
+        : '✅ הוקצתה לך משימה',
+      body: taskTitle,
       link: `/diary?task=${id}`,
       reference_id: id,
     })
@@ -125,21 +119,15 @@ export async function PUT(
 
   // Если задача завершена — уведомление создателю (если создатель ≠ исполнитель)
   if (isCompletingNow && existingTask.created_by && existingTask.created_by !== user.id) {
-    await supabase.from('notifications').insert({
-      org_id: orgId,
-      user_id: existingTask.created_by,
-      type: 'task_completed',
-      title: 'משימה הושלמה',
-      body: `${taskTitle}${currentUserName ? ` — הושלמה על ידי ${currentUserName}` : ''}`,
-      link: `/diary?task=${id}`,
-      reference_id: id,
-    })
+    // queuePushNotification уже пишет в notifications — один insert
     await queuePushNotification({
       org_id: orgId,
       user_id: existingTask.created_by,
       type: 'task_completed',
-      title: '✅ משימה הושלמה',
-      body: `${taskTitle}${currentUserName ? ` על ידי ${currentUserName}` : ''}`,
+      title: currentUserName
+        ? `✅ ${currentUserName} завершил(а) задачу`
+        : '✅ משימה הושלמה',
+      body: taskTitle,
       link: `/diary?task=${id}`,
       reference_id: id,
     })

@@ -105,22 +105,15 @@ export async function POST(request: NextRequest) {
     ''
 
   if (assigned_to && assigned_to !== user.id) {
-    await supabase.from('notifications').insert({
-      org_id: orgId,
-      user_id: assigned_to,
-      type: 'task_assigned',
-      title: 'הוקצתה לך משימה',
-      body: `${title.trim()}${creatorName ? ` — הוקצה על ידי ${creatorName}` : ''}`,
-      link: `/diary?task=${task.id}`,
-      reference_id: task.id,
-    })
-    // Push notification
+    // queuePushNotification уже пишет в notifications — НЕ нужен отдельный insert
     await queuePushNotification({
       org_id: orgId,
       user_id: assigned_to,
       type: 'task_assigned',
-      title: '✅ הוקצתה לך משימה',
-      body: `${title.trim()}${creatorName ? ` מ-${creatorName}` : ''}`,
+      title: creatorName
+        ? `✅ ${creatorName} назначил(а) вам задачу`
+        : '✅ הוקצתה לך משימה',
+      body: title.trim(),
       link: `/diary?task=${task.id}`,
       reference_id: task.id,
     })

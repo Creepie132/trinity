@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 // GET /api/notifications - список уведомлений для текущего пользователя
 export async function GET(request: NextRequest) {
@@ -37,7 +38,9 @@ export async function GET(request: NextRequest) {
   )
   if (taskNotifs.length > 0) {
     const taskIds = taskNotifs.map(n => n.reference_id as string)
-    const { data: tasks } = await supabase
+    // Используем service client — RLS tasks может не пропустить assigned_to пользователя
+    const serviceClient = createSupabaseServiceClient()
+    const { data: tasks } = await serviceClient
       .from('tasks')
       .select('id, accept_status, rejection_reason')
       .in('id', taskIds)

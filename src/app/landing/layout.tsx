@@ -56,11 +56,7 @@ const CRITICAL_CSS = `
     display: flex;
     flex-direction: column;
     min-height: 100dvh;
-    /* Opacity trick: тело скрыто до готовности CSS */
-    opacity: 0;
-    transition: opacity 0.15s ease;
   }
-  body.css-ready { opacity: 1; }
   .page-root { display: contents; }
 
   /* === NAV — фиксированная высота сразу === */
@@ -234,21 +230,7 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
           rel="stylesheet"
         />
 
-        {/* 5. Opacity trick — показываем body только когда стили готовы */}
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            function showBody() {
-              document.body && document.body.classList.add('css-ready');
-            }
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', showBody);
-            } else {
-              showBody();
-            }
-            // Failsafe: через 300ms показываем в любом случае
-            setTimeout(showBody, 300);
-          })();
-        `}} />
+
       </head>
       <body>
         {children}

@@ -334,68 +334,6 @@ function LeadSourcesWidget({ sources, t }: { sources: LeadSource[]; t: typeof T[
   )
 }
 
-// ── Kira AI Summary ───────────────────────────────────────────────────────────
-function KiraWidget({ data, t, lang }: { data: StatsData; t: typeof T['ru']; lang: string }) {
-  const [summary, setSummary] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-
-  const generateSummary = async () => {
-    setLoading(true)
-    try {
-      const payload = {
-        kpi: data.kpi,
-        forecast: data.forecast,
-        leadSources: data.leadSources,
-        topWorker: [...data.workerStats].sort((a, b) => b.conversion - a.conversion)[0],
-        bottlenecksCount: data.bottlenecks.length,
-        anomaliesCount: data.activityLog.filter((e: any) => e.anomaly).length,
-        period: data.period,
-        lang,
-      }
-
-      const res = await fetch('/api/owner/kira-summary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (res.ok) {
-        const json = await res.json()
-        setSummary(json.summary)
-      } else {
-        setSummary(lang === 'he' ? 'שגיאה בטעינת הסיכום' : 'Ошибка загрузки сводки')
-      }
-    } catch {
-      setSummary(lang === 'he' ? 'שגיאה בחיבור' : 'Ошибка соединения')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="rounded-2xl overflow-hidden border border-purple-100 shadow-md">
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-3 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-lg">🤖</div>
-        <p className="font-bold text-white text-sm">{t.kiраTitle}</p>
-      </div>
-      <div className="p-4 bg-white min-h-[80px]">
-        {loading ? (
-          <div className="flex items-center gap-2 text-purple-500 text-sm animate-pulse">
-            <span>⏳</span><span>{t.kiraLoading}</span>
-          </div>
-        ) : summary ? (
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{summary}</p>
-        ) : (
-          <button onClick={generateSummary}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold shadow-md hover:opacity-90 transition-all">
-            {t.kiraBtn}
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function OwnerOfficePage() {
   const { role } = useAuth()
@@ -550,9 +488,6 @@ export default function OwnerOfficePage() {
                   <LeadSourcesWidget sources={data.leadSources} t={t}/>
                 </Section>
               </div>
-
-              {/* Kira AI */}
-              <KiraWidget data={data} t={t} lang={language}/>
 
               {/* Bar chart */}
               <Section icon="📊" title={t.revenueChart}>

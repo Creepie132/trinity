@@ -183,15 +183,10 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
   )
 }
 
-// ─── DashboardShell ───────────────────────────────────────────────────────────
-
-export function DashboardShell({
-  children,
-  workerMode = false,
-}: {
-  children: React.ReactNode
-  workerMode?: boolean
-}) {
+// ─── Inner shell — читает язык и расставляет панели ──────────────────────────
+function DashboardInner({ children }: { children: React.ReactNode }) {
+  const { language } = useLanguage()
+  const isRTL = language === 'he'
   const [searchOpen, setSearchOpen] = useState(false)
   const { show: showLangPicker, handleSelect: handleLangSelect } = useDemoLanguagePicker()
 
@@ -206,8 +201,46 @@ export function DashboardShell({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Worker mode: glassmorphism sidebar + BranchProvider for RLS
-  // ClientProviders подключён — нужен для ModalManager (карточка клиента, etc.)
+  return (
+    <WaNotificationProvider>
+      {showLangPicker && <DemoLanguagePicker onSelect={handleLangSelect}/>}
+      <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-gray-950 flex flex-col">
+        <DemoBannerGlobal/>
+        <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
+        {/* dir на flex-контейнере управляет порядком колонок без JS */}
+        <div className="flex-1 lg:flex lg:h-screen lg:overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+          {/* Левый сайдбар — всегда первым в DOM, dir переворачивает его */}
+          <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto z-[0]"
+            style={{ order: 0 }}>
+            <Sidebar onSearchOpen={() => setSearchOpen(true)} />
+          </aside>
+          {/* Основной контент */}
+          <main id="main-scroll" className="flex-1 lg:overflow-y-auto lg:h-screen bg-[#f8fafc] dark:bg-gray-950"
+            style={{ order: isRTL ? 1 : 1, direction: 'ltr' }}>
+            <div className="p-4 lg:p-6">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </div>
+          </main>
+          {/* RightPanel — сам управляет своим order через useLanguage */}
+          <RightPanel />
+        </div>
+      </div>
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      <ImpersonationBanner />
+      <PinnedModalsTray />
+      <ClientProviders />
+    </WaNotificationProvider>
+  )
+}
+
+// ─── DashboardShell — публичный экспорт ──────────────────────────────────────
+export function DashboardShell({
+  children,
+  workerMode = false,
+}: {
+  children: React.ReactNode
+  workerMode?: boolean
+}) {
   if (workerMode) {
     return (
       <AuthProvider>
@@ -226,28 +259,11 @@ export function DashboardShell({
   return (
     <AuthProvider>
       <BranchProvider>
-        <WaNotificationProvider>
-        {showLangPicker && <DemoLanguagePicker onSelect={handleLangSelect}/>}
-        <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-gray-950 flex flex-col">
-          <DemoBannerGlobal/>
-          <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
-          <div className="flex-1 lg:flex lg:h-screen lg:overflow-hidden">
-            <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto z-[0]">
-              <Sidebar onSearchOpen={() => setSearchOpen(true)} />
-            </aside>
-            <main id="main-scroll" className="flex-1 lg:overflow-y-auto lg:h-screen bg-[#f8fafc] dark:bg-gray-950">
-              <div className="p-4 lg:p-6">
-                <ErrorBoundary>{children}</ErrorBoundary>
-              </div>
-            </main>
-            <RightPanel />
-          </div>
-        </div>
-        <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-        <ImpersonationBanner />
-        <PinnedModalsTray />
-        <ClientProviders />
-        </WaNotificationProvider>
+        <LanguageProvider>
+          <DashboardInner>
+            {children}
+          </DashboardInner>
+        </LanguageProvider>
       </BranchProvider>
     </AuthProvider>
   )

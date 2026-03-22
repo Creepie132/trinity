@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Sparkles, Megaphone, Bell, ExternalLink } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useKiraRealtime } from '@/hooks/useKiraRealtime'
+import { useLanguage } from '@/contexts/LanguageContext'
 import type { KiraWaveState } from '@/components/kira/KiraWave'
 const KiraWave = dynamic(() => import('@/components/kira/KiraWave').then(m => ({ default: m.KiraWave })), { ssr: false })
 
@@ -201,17 +202,30 @@ function KiraBlock() {
 }
 
 
-// ─── Главная правая панель ────────────────────────────────────────────────────
+// ─── Главная правая/левая панель ──────────────────────────────────────────────
 export function RightPanel() {
+  const { language } = useLanguage()
+  const isRTL = language === 'he'
+
+  // В иврите (RTL) панель — слева, после основного контента в flex-row-reverse
+  // В русском (LTR) — справа (обычный порядок)
+  // Реализация: border меняется, порядок управляется через order в DashboardShell
+  const borderClass = isRTL
+    ? 'border-r border-gray-100 dark:border-slate-800'
+    : 'border-l border-gray-100 dark:border-slate-800'
+
+  const titleLabel = isRTL ? 'עדכונים' : 'Обновления'
+
   return (
-    <aside className="hidden xl:flex xl:flex-col xl:w-72 xl:flex-shrink-0 sticky top-0 h-screen overflow-y-auto border-l border-gray-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 z-[0]">
+    <aside className={`hidden xl:flex xl:flex-col xl:w-72 xl:flex-shrink-0 sticky top-0 h-screen overflow-y-auto ${borderClass} bg-white/80 dark:bg-slate-900/80 z-[0]`}
+      style={{ order: isRTL ? -1 : 1 }}>
       <div className="flex flex-col h-full p-4 gap-4">
 
         {/* Заголовок */}
         <div className="flex items-center gap-2 pt-2">
           <div className="w-1.5 h-5 rounded-full bg-gradient-to-b from-indigo-500 to-purple-500" />
           <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            Обновления
+            {titleLabel}
           </h2>
         </div>
 

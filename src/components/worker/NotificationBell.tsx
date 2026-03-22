@@ -1,16 +1,20 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Check, X } from 'lucide-react'
 
 interface Notification {
-  id:         string
-  type:       string
-  title:      string
-  body:       string | null
-  link:       string | null
-  is_read:    boolean
-  created_at: string
-  priority:   string | null
+  id:                   string
+  type:                 string
+  title:                string
+  body:                 string | null
+  link:                 string | null
+  is_read:              boolean
+  created_at:           string
+  priority:             string | null
+  reference_id?:        string | null
+  task_accept_status?:  'pending' | 'accepted' | 'rejected' | null
+  task_rejection_reason?: string | null
 }
 
 function timeAgo(iso: string, lang: string): string {
@@ -33,6 +37,109 @@ function typeIcon(type: string): string {
   if (type.includes('assign'))  return '👤'
   if (type.includes('mention')) return '📣'
   return '🔔'
+}
+
+// ── TaskAcceptActions ────────────────────────────────────────────────────────
+function TaskAcceptActions({
+  notif, lang,
+  onRespond,
+}: {
+  notif: Notification
+  lang: string
+  onRespond: (notifId: string, taskId: string, action: 'accepted' | 'rejected', reason?: string) => void
+}) {
+  const [mode, setMode]     = useState<'buttons' | 'rejecting'>('buttons')
+  const [reason, setReason] = useState('')
+  const [loading, setLoading] = useState(false)
+  const isHe = lang === 'he'
+
+  if (notif.task_accept_status === 'accepted') {
+    return (
+      <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
+        <Check className="w-3.5 h-3.5" />
+        {isHe ? 'קיבלת' : 'Вы приняли задачу'}
+      </div>
+    )
+  }
+  if (notif.task_accept_status === 'rejected') {
+    return (
+      <div className="mt-2 text-xs text-red-500 font-semibold flex items-center gap-1.5 flex-wrap">
+        <X className="w-3.5 h-3.5" />
+        {isHe ? 'דחית' : 'Вы отклонили'}
+        {notif.task_rejection_reason && (
+          <span className="text-gray-400 font-normal">— {notif.task_rejection_reason}</span>
+        )}
+      </div>
+    )
+  }
+
+  const taskId = notif.reference_id
+  if (!taskId) return null
+
+  const handleAccept = () => {
+    setLoading(true)
+    onRespond(notif.id, taskId, 'accepted')
+  }
+
+  const handleReject = () => {
+    if (!reason.trim()) return
+    setLoading(true)
+    onRespond(notif.id, taskId, 'rejected', reason.trim())
+  }
+
+  if (mode === 'rejecting') {
+    return (
+      <div className="mt-2 space-y-2">
+        <textarea
+          autoFocus
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          rows={2}
+          placeholder={isHe ? 'כתוב סיבת דחייה...' : 'Напиши причину отклонения...'}
+          className="w-full text-xs border border-red-200 focus:border-red-400 rounded-xl px-3 py-2 outline-none resize-none bg-red-50 placeholder:text-red-300"
+          dir={isHe ? 'rtl' : 'ltr'}
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={handleReject}
+            disabled={!reason.trim() || loading}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 disabled:opacity-40 transition-all"
+          >
+            {loading
+              ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              : <X className="w-3 h-3" />}
+            {isHe ? 'שלח דחייה' : 'Отклонить'}
+          </button>
+          <button
+            onClick={() => { setMode('buttons'); setReason('') }}
+            className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-all"
+          >
+            {isHe ? 'ביטול' : 'Отмена'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-2 flex gap-2">
+      <button
+        onClick={handleAccept}
+        disabled={loading}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-all disabled:opacity-40"
+      >
+        <Check className="w-3.5 h-3.5" />
+        {isHe ? '✅ קבל' : '✅ Принять'}
+      </button>
+      <button
+        onClick={() => setMode('rejecting')}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-bold hover:bg-red-100 transition-all"
+      >
+        <X className="w-3.5 h-3.5" />
+        {isHe ? '❌ דחה' : '❌ Отклонить'}
+      </button>
+    </div>
+  )
 }
 
 export function NotificationBell({ lang }: { lang: string }) {
@@ -60,7 +167,7 @@ export function NotificationBell({ lang }: { lang: string }) {
 
   useEffect(() => {
     load()
-    const id = setInterval(load, 60_000)
+    const id = setInterval(load, 30_000)
     return () => clearInterval(id)
   }, [load])
 
@@ -86,6 +193,28 @@ export function NotificationBell({ lang }: { lang: string }) {
     }
   }
 
+  // ── Task accept/reject handler ──────────────────────────────────────────────
+  const handleTaskRespond = async (
+    notifId: string,
+    taskId: string,
+    action: 'accepted' | 'rejected',
+    reason?: string
+  ) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, rejection_reason: reason }),
+      })
+      if (!res.ok) { console.error(await res.json()); return }
+      setData(prev => prev.map(n =>
+        n.id === notifId
+          ? { ...n, task_accept_status: action, task_rejection_reason: reason ?? null }
+          : n
+      ))
+    } catch (e) { console.error(e) }
+  }
+
   return (
     <div className="relative" ref={dropRef}>
       {/* Bell button */}
@@ -106,7 +235,7 @@ export function NotificationBell({ lang }: { lang: string }) {
         )}
       </button>
 
-      {/* Dropdown — fixed position to avoid overflow clipping in sidebars */}
+      {/* Dropdown */}
       {open && (
         <div
           className="fixed z-[9999] w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
@@ -114,9 +243,7 @@ export function NotificationBell({ lang }: { lang: string }) {
           style={(() => {
             if (!buttonRef.current) return { top: 60, right: 16 }
             const rect = buttonRef.current.getBoundingClientRect()
-            const spaceRight = window.innerWidth - rect.right
-            const spaceLeft  = rect.left
-            // Prefer opening to the left of the button (since it's in right sidebar)
+            const spaceLeft = rect.left
             if (spaceLeft >= 320) {
               return { top: rect.bottom + 8, right: window.innerWidth - rect.right }
             }
@@ -146,7 +273,7 @@ export function NotificationBell({ lang }: { lang: string }) {
           </div>
 
           {/* List */}
-          <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+          <div className="max-h-[70vh] overflow-y-auto divide-y divide-gray-50">
             {data.length === 0 ? (
               <div className="flex flex-col items-center py-10 gap-2 text-gray-400">
                 <span className="text-3xl">🎉</span>
@@ -156,7 +283,7 @@ export function NotificationBell({ lang }: { lang: string }) {
               data.map(n => (
                 <div
                   key={n.id}
-                  className={`px-4 py-3 flex gap-3 hover:bg-gray-50 transition-colors cursor-default ${
+                  className={`px-4 py-3 flex gap-3 hover:bg-gray-50 transition-colors ${
                     !n.is_read ? 'bg-indigo-50/50' : ''
                   }`}
                 >
@@ -176,6 +303,14 @@ export function NotificationBell({ lang }: { lang: string }) {
                         </span>
                       )}
                     </p>
+                    {/* Кнопки принять/отклонить для задач */}
+                    {n.type === 'task_assigned' && (
+                      <TaskAcceptActions
+                        notif={n}
+                        lang={lang}
+                        onRespond={handleTaskRespond}
+                      />
+                    )}
                   </div>
                   {!n.is_read && (
                     <div className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-indigo-500" />

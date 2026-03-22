@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getWorkerAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
-// GET  /api/worker/notifications   — list last 20 notifications
+// GET  /api/worker/notifications   — list last 20 notifications (с enrichment задач)
 // PATCH /api/worker/notifications  — mark all as read
 
 export async function GET() {
@@ -15,16 +15,46 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('notifications')
-      .select('id, type, title, body, link, is_read, created_at, priority')
+      .select('id, type, title, body, link, is_read, created_at, priority, reference_id')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const unread = (data ?? []).filter(n => !n.is_read).length
+    const notifications = data ?? []
+    const unread = notifications.filter(n => !n.is_read).length
 
-    return NextResponse.json({ notifications: data ?? [], unread })
+    // Обогащаем task_assigned — подтягиваем accept_status + rejection_reason из tasks
+    const taskNotifs = notifications.filter(
+      n => n.type === 'task_assigned' && n.reference_id
+    )
+
+    if (taskNotifs.length > 0) {
+      const taskIds = taskNotifs.map(n => n.reference_id as string)
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('id, accept_status, rejection_reason')
+        .in('id', taskIds)
+
+      if (tasks && tasks.length > 0) {
+        const taskMap = Object.fromEntries(tasks.map(t => [t.id, t]))
+        const enriched = notifications.map(n => {
+          if (n.type === 'task_assigned' && n.reference_id && taskMap[n.reference_id]) {
+            const t = taskMap[n.reference_id]
+            return {
+              ...n,
+              task_accept_status:    t.accept_status    ?? null,
+              task_rejection_reason: t.rejection_reason ?? null,
+            }
+          }
+          return n
+        })
+        return NextResponse.json({ notifications: enriched, unread })
+      }
+    }
+
+    return NextResponse.json({ notifications, unread })
   } catch (err) {
     console.error('[GET /api/worker/notifications]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

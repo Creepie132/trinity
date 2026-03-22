@@ -18,6 +18,25 @@ export default async function DashboardLayout({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Продажники Trinity не привязаны к org — проверяем отдельно
+  const service = createSupabaseServiceClient()
+  const { data: adminRow } = await service
+    .from('admin_users')
+    .select('is_sales_agent')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (adminRow?.is_sales_agent) {
+    // Продажник — пропускаем org-проверку, рендерим layout без sidebar
+    return (
+      <HydrationBoundary state={dehydrate(new QueryClient())}>
+        <DashboardShell workerMode>
+          {children}
+        </DashboardShell>
+      </HydrationBoundary>
+    )
+  }
+
   // org_id из JWT, fallback на таблицу
   let orgId = user.app_metadata?.org_id as string | undefined
   if (!orgId) {
@@ -31,8 +50,6 @@ export default async function DashboardLayout({
   const activeOrgId = await getActiveOrgId(user.id, orgId)
 
   // Prefetch организации + первая страница клиентов — всё параллельно
-  const service = createSupabaseServiceClient()
-
   const [{ data: organization }] = await Promise.all([
     service.from('organizations').select('*').eq('id', activeOrgId).single(),
   ])

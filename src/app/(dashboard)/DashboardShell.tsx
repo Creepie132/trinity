@@ -15,7 +15,7 @@ import { DemoLanguagePicker, useDemoLanguagePicker } from '@/components/demo/Dem
 import { WaNotificationProvider } from '@/components/wa/WaNotificationProvider'
 import { ClientProviders } from '@/components/providers/ClientProviders'
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({ children, workerMode = false }: { children: React.ReactNode; workerMode?: boolean }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const { show: showLangPicker, handleSelect: handleLangSelect } = useDemoLanguagePicker()
 
@@ -29,6 +29,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  // Кабинет продажника — чистый layout без Sidebar и MобильногоHeader
+  if (workerMode) {
+    return (
+      <AuthProvider>
+        <div className="min-h-[100dvh] bg-[#f8fafc]">
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
+        </div>
+      </AuthProvider>
+    )
+  }
 
   return (
     <AuthProvider>

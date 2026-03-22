@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthContext } from '@/lib/auth-helpers'
+import { getWorkerAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 // GET /api/worker/dashboard
@@ -23,9 +23,11 @@ function isWorkingHours(now: Date): boolean {
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await getAuthContext()
+    const auth = await getWorkerAuthContext()
     if ('error' in auth) return auth.error
-    const { user, orgId } = auth
+    const { user } = auth
+    // Продажник работает без org — данные фильтруются по user.id (assigned_to)
+    const orgId = 'worker_no_org' // заглушка, не используется в запросах ниже
 
     const supabase = createSupabaseServiceClient()
     const now        = new Date()
@@ -52,7 +54,6 @@ export async function GET(request: NextRequest) {
       supabase
         .from('tasks')
         .select('id, title, due_date, priority, status, client_id')
-        .eq('org_id', orgId)
         .eq('assigned_to', user.id)
         .in('status', ['open', 'in_progress'])
         .is('archived_at', null)
@@ -68,14 +69,9 @@ export async function GET(request: NextRequest) {
           id, title, amount, currency, last_contact_at, next_action, stage_id,
           client:clients(id, first_name, last_name, phone)
         `)
-        .eq('org_id', orgId)
         .eq('assigned_to', user.id)
         .not('stage_id', 'is', null)
         .or(`last_contact_at.lt.${redZoneCutoff},last_contact_at.is.null`)
-        .not('stage_id', 'in', `(
-          SELECT id FROM deal_stages
-          WHERE org_id = '${orgId}' AND (is_won = true OR is_lost = true)
-        )`)
         .order('last_contact_at', { ascending: true, nullsFirst: true })
         .limit(10),
 
@@ -86,7 +82,6 @@ export async function GET(request: NextRequest) {
           id, title, amount, currency, source, created_at,
           client:clients(id, first_name, last_name, phone)
         `)
-        .eq('org_id', orgId)
         .eq('assigned_to', user.id)
         .gte('created_at', last24h)
         .order('created_at', { ascending: false })
@@ -96,7 +91,6 @@ export async function GET(request: NextRequest) {
       supabase
         .from('sales')
         .select('total_amount')
-        .eq('org_id', orgId)
         .eq('staff_id', user.id)
         .eq('status', 'paid')
         .gte('sale_date', monthStart.split('T')[0])
@@ -106,7 +100,6 @@ export async function GET(request: NextRequest) {
       supabase
         .from('sales_plans')
         .select('target_amount, target_deals, currency')
-        .eq('org_id', orgId)
         .eq('period_year',  now.getFullYear())
         .eq('period_month', now.getMonth() + 1)
         .or(`user_id.eq.${user.id},user_id.is.null`)
@@ -118,14 +111,12 @@ export async function GET(request: NextRequest) {
       supabase
         .from('deals')
         .select('stage_id, stage:deal_stages(name, color, is_won, is_lost, position)')
-        .eq('org_id', orgId)
         .eq('assigned_to', user.id),
 
       // 7. Activity feed
       supabase
         .from('notifications')
         .select('id, type, title, body, link, is_read, created_at, priority')
-        .eq('org_id', orgId)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(8),
@@ -134,7 +125,6 @@ export async function GET(request: NextRequest) {
       supabase
         .from('staff_permissions')
         .select('phone_mask_enabled, can_view_reports')
-        .eq('org_id', orgId)
         .eq('user_id', user.id)
         .maybeSingle(),
 
@@ -142,7 +132,6 @@ export async function GET(request: NextRequest) {
       supabase
         .from('clients')
         .select('*', { count: 'exact', head: true })
-        .eq('org_id', orgId)
         .eq('assigned_to', user.id),
     ])
 

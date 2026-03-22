@@ -3,6 +3,7 @@ import { getActiveOrgId } from './get-active-org'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { createSupabaseBrowserClient } from './supabase-browser'
+import { createSupabaseServiceClient } from './supabase-service'
 import { NextRequest, NextResponse } from 'next/server'
 
 type Role = "owner" | "moderator" | "user"
@@ -281,6 +282,54 @@ export async function requireAdmin(): Promise<{ userId: string; email: string }>
   }
 
   return { userId: user.id, email: adminUser.email }
+}
+
+// ============================================
+// Worker Auth Context — для продажников Trinity
+// Не требует org_id — только валидную сессию + is_sales_agent
+// ============================================
+
+export interface WorkerAuthContext {
+  user: User
+  isSalesAgent: boolean
+  supabase: SupabaseClient
+}
+
+export async function getWorkerAuthContext(): Promise<WorkerAuthContext | AuthError> {
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  }
+
+  // Проверяем is_sales_agent через service role
+  const service = createSupabaseServiceClient()
+  const { data: adminRow } = await service
+    .from('admin_users')
+    .select('is_sales_agent')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!adminRow?.is_sales_agent) {
+    return { error: NextResponse.json({ error: 'Sales agent access required' }, { status: 403 }) }
+  }
+
+  return { user, isSalesAgent: true, supabase: supabase as unknown as SupabaseClient }
 }
 
 // Хелпер для обработки ошибок в API

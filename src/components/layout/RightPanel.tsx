@@ -207,9 +207,9 @@ export function RightPanel() {
   const { language } = useLanguage()
   const isRTL = language === 'he'
 
-  // В иврите (RTL) панель — слева, после основного контента в flex-row-reverse
-  // В русском (LTR) — справа (обычный порядок)
-  // Реализация: border меняется, порядок управляется через order в DashboardShell
+  // В иврите (RTL) панель — слева (flex dir=rtl ставит её первой из конца)
+  // В русском (LTR) — справа (обычный flex порядок)
+  // border меняется в зависимости от стороны
   const borderClass = isRTL
     ? 'border-r border-gray-100 dark:border-slate-800'
     : 'border-l border-gray-100 dark:border-slate-800'
@@ -217,8 +217,7 @@ export function RightPanel() {
   const titleLabel = isRTL ? 'עדכונים' : 'Обновления'
 
   return (
-    <aside className={`hidden xl:flex xl:flex-col xl:w-72 xl:flex-shrink-0 sticky top-0 h-screen overflow-y-auto ${borderClass} bg-white/80 dark:bg-slate-900/80 z-[0]`}
-      style={{ order: isRTL ? -1 : 1 }}>
+    <aside className={`hidden xl:flex xl:flex-col xl:w-72 xl:flex-shrink-0 sticky top-0 h-screen overflow-y-auto ${borderClass} bg-white/80 dark:bg-slate-900/80 z-[0]`}>
       <div className="flex flex-col h-full p-4 gap-4">
 
         {/* Заголовок */}

@@ -216,19 +216,18 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
         {/* dir на flex-контейнере управляет порядком колонок без JS */}
         <div className="flex-1 lg:flex lg:h-screen lg:overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
-          {/* Левый сайдбар — всегда первым в DOM, dir переворачивает его */}
-          <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto z-[0]"
-            style={{ order: 0 }}>
+          {/* Навигационный сайдбар — в RTL (dir=rtl) flex автоматически ставит его справа */}
+          <aside className="hidden lg:block lg:w-72 lg:flex-shrink-0 sticky top-0 h-screen overflow-y-auto z-[0]">
             <Sidebar onSearchOpen={() => setSearchOpen(true)} />
           </aside>
           {/* Основной контент */}
           <main id="main-scroll" className="flex-1 lg:overflow-y-auto lg:h-screen bg-[#f8fafc] dark:bg-gray-950"
-            style={{ order: isRTL ? 1 : 1, direction: 'ltr' }}>
+            style={{ direction: 'ltr' }}>
             <div className="p-4 lg:p-6">
               <ErrorBoundary>{children}</ErrorBoundary>
             </div>
           </main>
-          {/* RightPanel — сам управляет своим order через useLanguage */}
+          {/* RightPanel — в RTL (dir=rtl) flex ставит его слева автоматически */}
           <RightPanel />
         </div>
       </div>

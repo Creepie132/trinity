@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query'
 import dynamic from 'next/dynamic'
 const OnboardingWizard = dynamic(() => import('@/components/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })), { ssr: false })
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { DashboardAutoTour } from '@/components/demo/DashboardAutoTour'
 
 interface DashboardContentProps { orgId: string }
 
@@ -312,6 +313,9 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
       {onboardingData?.showOnboarding && orgId && (
         <OnboardingWizard open={true} organizationName={onboardingData.organizationName} />
       )}
+
+      {/* Авто-тур для демо-витрины — запускается по localStorage-флагу */}
+      <DashboardAutoTour />
     </>
   )
 }

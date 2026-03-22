@@ -55,7 +55,7 @@ export default function SalesAgentsPage() {
       if (data.status === 'invited') {
         toast.success(`📧 Приглашение отправлено на ${email.trim()}`)
       } else {
-        toast.success(`✅ Флаг продажника установлен для ${email.trim()}`)
+        toast.success(`✅ ${email.trim()} — флаг продажника установлен, ссылка для входа отправлена на почту`)
       }
       setEmail('')
       setName('')

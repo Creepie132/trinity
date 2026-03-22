@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       inviteError.message?.toLowerCase().includes('already')
 
     if (alreadyExists) {
-      // Пользователь уже существует — просто ставим флаг без повторного инвайта
+      // Пользователь уже существует — ищем его и ставим флаг
       const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
       const found = listData?.users?.find((u: { email?: string }) => u.email === normalizedEmail)
 
@@ -64,10 +64,50 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
       }
 
+      // Ставим флаг продажника
       await supabase.from('admin_users').upsert(
         { user_id: found.id, email: normalizedEmail, full_name: full_name ?? found.user_metadata?.full_name ?? '', is_sales_agent: true },
         { onConflict: 'user_id' }
       )
+
+      // Генерируем новую ссылку для входа и отправляем письмо повторно
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ambersol.co.il'
+      try {
+        const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+          type: 'magiclink',
+          email: normalizedEmail,
+          options: { redirectTo: `${appUrl}/auth/callback?next=/worker` },
+        })
+
+        if (!linkError && linkData?.properties?.action_link) {
+          const RESEND_API_KEY = process.env.RESEND_API_KEY
+          if (RESEND_API_KEY) {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                from: 'Trinity CRM <noreply@send.ambersol.co.il>',
+                to: normalizedEmail,
+                subject: 'Ваш доступ в Trinity CRM | Trinity CRM גישה שלך',
+                html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+                  <div style="text-align:center;padding:20px;background:linear-gradient(135deg,#1B2A4A,#2d4a7a);border-radius:12px;margin-bottom:24px">
+                    <h1 style="color:#fff;margin:0">Trinity CRM</h1>
+                    <p style="color:#C8922A;margin:4px 0 0">Кабинет продажника</p>
+                  </div>
+                  <p style="color:#334155">Ваш доступ в кабинет продажника готов. Нажмите кнопку ниже для входа:</p>
+                  <div style="text-align:center;margin:32px 0">
+                    <a href="${linkData.properties.action_link}" style="background:#C8922A;color:white;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px">Войти в кабинет →</a>
+                  </div>
+                  <p style="color:#94A3B8;font-size:12px;text-align:center">Ссылка действительна 24 часа · Amber Solutions © 2025</p>
+                </div>`,
+              }),
+            })
+          }
+        }
+      } catch (e) {
+        // Не критично — флаг уже поставлен
+        console.error('[sales-agents] generateLink error:', e)
+      }
 
       return NextResponse.json({ success: true, status: 'flag_set', email: normalizedEmail })
     }

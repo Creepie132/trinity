@@ -16,12 +16,12 @@ export default function SalesAgentsPage() {
   const router = useRouter()
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin()
 
-  const [agents,  setAgents]  = useState<Agent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [email,   setEmail]   = useState('')
-  const [name,    setName]    = useState('')
-  const [sending, setSending] = useState(false)
-  const [removing, setRemoving] = useState<string | null>(null)
+  const [agents,   setAgents]   = useState<Agent[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [email,    setEmail]    = useState('')
+  const [name,     setName]     = useState('')
+  const [sending,  setSending]  = useState(false)
+  const [actingOn, setActingOn] = useState<string | null>(null)
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) router.replace('/dashboard')
@@ -60,16 +60,17 @@ export default function SalesAgentsPage() {
       setEmail('')
       setName('')
       await loadAgents()
-    } catch (e: any) {
-      toast.error(`Ошибка: ${e.message}`)
+    } catch (e: unknown) {
+      toast.error(`Ошибка: ${e instanceof Error ? e.message : 'Неизвестная ошибка'}`)
     } finally {
       setSending(false)
     }
   }
 
-  const handleRemove = async (agent: Agent) => {
-    if (!confirm(`Снять роль продажника с ${agent.email}?`)) return
-    setRemoving(agent.user_id)
+  // Снять роль (без удаления из auth)
+  const handleRemoveRole = async (agent: Agent) => {
+    if (!confirm(`Снять роль продажника с ${agent.email}?\nПользователь останется в системе, но потеряет доступ к кабинету продажника.`)) return
+    setActingOn(agent.user_id)
     try {
       const res = await fetch('/api/admin/sales-agents', {
         method: 'DELETE',
@@ -79,10 +80,30 @@ export default function SalesAgentsPage() {
       if (!res.ok) throw new Error((await res.json()).error)
       toast.success(`Роль снята с ${agent.email}`)
       await loadAgents()
-    } catch (e: any) {
-      toast.error(`Ошибка: ${e.message}`)
+    } catch (e: unknown) {
+      toast.error(`Ошибка: ${e instanceof Error ? e.message : 'Неизвестная ошибка'}`)
     } finally {
-      setRemoving(null)
+      setActingOn(null)
+    }
+  }
+
+  // Полное удаление из Auth + admin_users
+  const handleDeleteFromAuth = async (agent: Agent) => {
+    if (!confirm(`⚠️ Полностью удалить ${agent.email} из системы?\n\nПользователь будет удалён из Supabase Auth — ему придётся регистрироваться заново.\n\nЭто действие необратимо.`)) return
+    setActingOn(agent.user_id)
+    try {
+      const res = await fetch('/api/admin/sales-agents', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: agent.user_id, delete_from_auth: true }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      toast.success(`🗑 ${agent.email} удалён из системы`)
+      await loadAgents()
+    } catch (e: unknown) {
+      toast.error(`Ошибка: ${e instanceof Error ? e.message : 'Неизвестная ошибка'}`)
+    } finally {
+      setActingOn(null)
     }
   }
 
@@ -153,7 +174,7 @@ export default function SalesAgentsPage() {
           </button>
         </form>
         <p className="text-xs text-gray-400 mt-3 text-center">
-          Письмо придёт от Supabase Auth — пользователь установит пароль и войдёт в кабинет
+          Письмо придёт от Trinity CRM — пользователь войдёт в кабинет продажника
         </p>
       </div>
 
@@ -179,23 +200,39 @@ export default function SalesAgentsPage() {
         ) : (
           <div className="divide-y divide-gray-50">
             {agents.map(a => (
-              <div key={a.user_id} className="flex items-center justify-between px-5 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600">
+              <div key={a.user_id} className="flex items-center justify-between px-5 py-3 gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 shrink-0 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600">
                     {(a.full_name || a.email)[0].toUpperCase()}
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{a.full_name || a.email}</p>
-                    <p className="text-xs text-gray-400">{a.email}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{a.full_name || a.email}</p>
+                    <p className="text-xs text-gray-400 truncate">{a.email}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleRemove(a)}
-                  disabled={removing === a.user_id}
-                  className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
-                >
-                  {removing === a.user_id ? '...' : 'Снять роль'}
-                </button>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Снять роль */}
+                  <button
+                    onClick={() => handleRemoveRole(a)}
+                    disabled={actingOn === a.user_id}
+                    title="Снять роль продажника (пользователь останется в системе)"
+                    className="text-xs px-3 py-1.5 rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-50 transition-colors disabled:opacity-40 whitespace-nowrap"
+                  >
+                    {actingOn === a.user_id ? '...' : 'Снять роль'}
+                  </button>
+
+                  {/* Удалить из auth */}
+                  <button
+                    onClick={() => handleDeleteFromAuth(a)}
+                    disabled={actingOn === a.user_id}
+                    title="Полностью удалить пользователя из системы"
+                    className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40 whitespace-nowrap"
+                  >
+                    {actingOn === a.user_id ? '...' : '🗑 Удалить'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

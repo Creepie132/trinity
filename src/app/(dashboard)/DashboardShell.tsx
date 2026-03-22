@@ -135,7 +135,7 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile bottom nav — 4 main items */}
+      {/* Mobile bottom nav */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-t border-white/40 shadow-2xl">
         <div className="flex items-center justify-around px-2 py-2">
           {WORKER_NAV.slice(0, 4).map(item => {
@@ -190,6 +190,7 @@ export function DashboardShell({
   }, [])
 
   // Worker mode: glassmorphism sidebar + BranchProvider for RLS
+  // ClientProviders подключён — нужен для ModalManager (карточка клиента, etc.)
   if (workerMode) {
     return (
       <AuthProvider>
@@ -198,6 +199,7 @@ export function DashboardShell({
             <WorkerShell>
               {children}
             </WorkerShell>
+            <ClientProviders />
           </LanguageProvider>
         </BranchProvider>
       </AuthProvider>

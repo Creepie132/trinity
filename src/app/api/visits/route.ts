@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     const isMeetingMode = orgData?.features?.meeting_mode === true
     console.log('[API /api/visits POST] Meeting mode:', isMeetingMode)
 
-    const { clientId, service, serviceId, date, time, duration, price, quantity, notes } = data
+    const { clientId, service, serviceId, date, time, duration, price, quantity, notes, event_type, meeting_link } = data
 
     if (!clientId) {
       return NextResponse.json({ error: 'חסר מזהה לקוח' }, { status: 400 })
@@ -113,6 +113,8 @@ export async function POST(request: NextRequest) {
       notes: notes || null,
       status: 'scheduled',
       staff_user_id: user.id,
+      event_type: event_type || 'visit',
+      meeting_link: meeting_link || null,
     }
 
     if (serviceId) {

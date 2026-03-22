@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Users, Calendar, FileText, CheckCircle2, Clock, Scissors, MapPin } from 'lucide-react'
+import { Users, Calendar, FileText, CheckCircle2, Clock, Scissors, MapPin, Video, Link } from 'lucide-react'
 import { ClientSearch } from '@/components/ui/ClientSearch'
 
 // ─── Israeli cities list ──────────────────────────────────────────────────────
@@ -161,6 +161,7 @@ export function CreateVisitDialog({
     notes: '',
     city: '',
     address: '',
+    meeting_link: '',
   })
 
   useEffect(() => {
@@ -208,7 +209,7 @@ export function CreateVisitDialog({
     setFormData({
       clientId: '', serviceId: '', service: '',
       date: getDefaultDate(), time: getDefaultTime(),
-      duration: 60, price: '', quantity: 1, notes: '', city: '', address: '',
+      duration: 60, price: '', quantity: 1, notes: '', city: '', address: '', meeting_link: '',
     })
   }
 
@@ -237,6 +238,8 @@ export function CreateVisitDialog({
           price: isAppointment ? '0' : formData.price,
           quantity: formData.quantity,
           notes: notesData,
+          event_type: isAppointment ? 'meeting' : 'visit',
+          meeting_link: isAppointment ? (formData.meeting_link || null) : null,
         }),
       })
       const data = await response.json()
@@ -464,6 +467,21 @@ export function CreateVisitDialog({
                   <span>⚠️</span>
                   כתובת בעברית בלבד
                 </p>
+              </div>
+              {/* Meeting link — optional */}
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-gray-700 flex items-center gap-1.5">
+                  <Video className="w-3.5 h-3.5 text-indigo-500" />
+                  {language === 'he' ? 'קישור לפגישה' : 'Ссылка на встречу'}
+                  <span className="text-xs font-normal text-gray-400">({language === 'he' ? 'אופציונלי' : 'необязательно'})</span>
+                </Label>
+                <Input
+                  value={formData.meeting_link}
+                  onChange={e => setFormData(p => ({ ...p, meeting_link: e.target.value }))}
+                  className="h-11"
+                  placeholder="https://zoom.us/j/... или Google Meet"
+                  type="url"
+                />
               </div>
             </div>
           ) : (

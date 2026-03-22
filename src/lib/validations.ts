@@ -22,6 +22,8 @@ export const createVisitSchema = z.object({
   price: z.string().min(1), // Приходит как строка
   quantity: z.coerce.number().int().min(1, 'Количество не может быть меньше 1').max(999).default(1),
   notes: z.string().max(2000).optional().or(z.literal("")),
+  event_type: z.enum(['visit', 'meeting']).default('visit'),
+  meeting_link: z.string().url().optional().or(z.literal("")).nullable(),
 })
 
 // Платежи

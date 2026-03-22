@@ -3,7 +3,7 @@
 import {
   Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock,
   Calendar, Scissors, FileText, History, ArrowLeft, Download,
-  Package, ChevronRight, Loader2, CheckCircle, Play,
+  Package, ChevronRight, Loader2, CheckCircle, Play, MapPin, Video, Navigation, ExternalLink,
 } from 'lucide-react'
 import { useVisitServices, useRemoveVisitService } from '@/hooks/useVisitServices'
 import { useQueryClient } from '@tanstack/react-query'
@@ -205,7 +205,13 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             {getInitials(clientName)}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate">{clientName}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate">{clientName}</h2>
+              {visit.event_type === 'meeting'
+                ? <span title={isHe ? 'פגישה' : 'Встреча'}><Video className="w-4 h-4 text-emerald-500 flex-shrink-0" /></span>
+                : <span title={isHe ? 'ביקור' : 'Визит'}><MapPin className="w-4 h-4 text-blue-500 flex-shrink-0" /></span>
+              }
+            </div>
             {clientPhone && <p className="text-sm text-gray-400 mt-0.5">{clientPhone}</p>}
           </div>
           <span className={`text-xs px-3 py-1.5 rounded-full font-medium border flex items-center gap-1.5 flex-shrink-0 ${statusCfg.cls}`}>
@@ -277,6 +283,53 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             </div>
           </div>
         )}
+
+        {/* ── Meeting link ── */}
+        {visit.event_type === 'meeting' && visit.meeting_link && (
+          <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-xl px-4 py-3">
+            <Video className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-0.5 font-medium">
+                {isHe ? 'קישור לפגישה' : 'Ссылка на встречу'}
+              </p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300 truncate">{visit.meeting_link}</p>
+            </div>
+            <button
+              onClick={() => window.open(visit.meeting_link!, '_blank')}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex-shrink-0"
+            >
+              <ExternalLink className="w-3 h-3" />
+              {isHe ? 'הצטרף' : 'Войти'}
+            </button>
+          </div>
+        )}
+
+        {/* ── Visit address / navigation ── */}
+        {visit.event_type !== 'meeting' && visit.notes && (() => {
+          const lines = visit.notes.split('\n')
+          const addrLine = lines.find((l: string) => l.startsWith('Адрес:') || l.startsWith('כתובת:'))
+          const cityLine = lines.find((l: string) => l.startsWith('Город:') || l.startsWith('עיר:'))
+          const location = [cityLine?.split(': ')[1], addrLine?.split(': ')[1]].filter(Boolean).join(', ')
+          if (!location) return null
+          return (
+            <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl px-4 py-3">
+              <MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-blue-600 dark:text-blue-400 mb-0.5 font-medium" dir="rtl">
+                  {isHe ? 'כתובת' : 'Адрес'}
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 truncate" dir="rtl">{location}</p>
+              </div>
+              <button
+                onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(location)}`, '_blank')}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors flex-shrink-0"
+              >
+                <Navigation className="w-3 h-3" />
+                {isHe ? 'נווט' : 'Навигация'}
+              </button>
+            </div>
+          )
+        })()}
 
         {lastVisitDate && (
           <button onClick={onShowHistory} className="w-full flex items-center gap-3 bg-gray-50 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl px-4 py-3 transition-colors group">

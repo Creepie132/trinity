@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { Button } from '@/components/ui/button'
 import {
   ChevronLeft, ChevronRight, X, Plus,
-  Calendar, LayoutGrid, Clock, User
+  Calendar, LayoutGrid, Clock, User, MapPin, Video
 } from 'lucide-react'
 import {
   format,
@@ -102,6 +102,12 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
     if (visit.services?.name) return visit.services.name
     return visit.service_type || ''
   }
+
+  // Цвет акцента и иконка по типу события
+  const getEventAccent = (visit: any): string =>
+    visit.event_type === 'meeting' ? '#10b981' : getServiceColor(visit.service_type)
+
+  const isMeetingVisit = (visit: any): boolean => visit.event_type === 'meeting'
 
   // ── Week dates ──────────────────────────────────────────────────────────
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 })
@@ -246,11 +252,12 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
               </div>
             ) : (
               selectedDayVisits.map((visit) => {
-                const color = getServiceColor(visit.service_type)
+                const color = getEventAccent(visit)
                 const clientName = getClientName(visit)
                 const serviceName = getServiceName(visit)
                 const time = format(new Date(visit.scheduled_at), 'HH:mm')
                 const dur = visit.services?.duration_minutes || visit.duration_minutes || 0
+                const isMeeting = isMeetingVisit(visit)
                 return (
                   <div
                     key={visit.id}
@@ -261,9 +268,12 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                     <div className="flex-1 px-2.5 py-2 min-w-0">
                       <div className="flex items-center justify-between gap-1">
                         <p className="font-semibold text-xs text-gray-900 dark:text-gray-100 truncate">{clientName || '—'}</p>
-                        {(visit.price || 0) > 0 && (
-                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex-shrink-0">₪{visit.price}</span>
-                        )}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {(visit.price || 0) > 0 && (
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">₪{visit.price}</span>
+                          )}
+                          <span style={{ color }}>{isMeeting ? <Video size={10} /> : <MapPin size={10} />}</span>
+                        </div>
                       </div>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
                         <span className="font-bold" style={{ color }}>{time}</span>
@@ -493,13 +503,14 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
 
                       {/* Visit blocks */}
                       {dayVisits.map((visit, vi) => {
-                        const color = getServiceColor(visit.service_type)
+                        const color = getEventAccent(visit)
                         const top = getVisitTopOffset(visit)
                         const height = getVisitHeight(visit)
                         const clientName = getClientName(visit)
                         const time = format(new Date(visit.scheduled_at), 'HH:mm')
                         const serviceName = getServiceName(visit)
                         const isInProgress = visit.status === 'in_progress'
+                        const isMeeting = isMeetingVisit(visit)
                         return (
                           <div
                             key={visit.id}
@@ -514,10 +525,15 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                             }}
                           >
                             <div className="px-1.5 py-1 h-full flex flex-col justify-start overflow-hidden">
-                              <p className="text-[10px] font-bold leading-tight truncate" style={{ color }}>
-                                {time}
-                                {isInProgress && <span className="ms-1 inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
-                              </p>
+                              <div className="flex items-center gap-0.5">
+                                <p className="text-[10px] font-bold leading-tight" style={{ color }}>
+                                  {time}
+                                  {isInProgress && <span className="ms-1 inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
+                                </p>
+                                <span style={{ color }} className="flex-shrink-0 ms-0.5">
+                                  {isMeeting ? <Video size={8} /> : <MapPin size={8} />}
+                                </span>
+                              </div>
                               {height > 36 && (
                                 <p className="text-[10px] font-semibold leading-tight truncate text-gray-800 dark:text-gray-200">
                                   {clientName || '—'}
@@ -583,10 +599,11 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
 
                     <div className="space-y-0.5">
                       {dayVisits.slice(0, 3).map((visit) => {
-                        const color = getServiceColor(visit.service_type)
+                        const color = getEventAccent(visit)
                         const name = getClientName(visit)
                         const time = format(new Date(visit.scheduled_at), 'HH:mm')
                         const firstName = name.split(' ')[0]
+                        const isMeeting = isMeetingVisit(visit)
                         return (
                           <div
                             key={visit.id}
@@ -594,6 +611,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                             className="rounded-md text-white leading-none px-1.5 py-0.5 truncate flex items-center gap-1 hover:opacity-90 transition"
                             style={{ backgroundColor: color, fontSize: '10px' }}
                           >
+                            {isMeeting ? <Video size={8} className="flex-shrink-0" /> : <MapPin size={8} className="flex-shrink-0" />}
                             <span className="font-bold opacity-90">{time}</span>
                             {firstName && <span className="font-medium">{firstName}</span>}
                           </div>
@@ -625,9 +643,10 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
             </div>
             <div className="p-3 space-y-2">
               {selectedDayVisits.map((visit) => {
-                const color = getServiceColor(visit.service_type)
+                const color = getEventAccent(visit)
                 const clientName = getClientName(visit)
                 const time = format(new Date(visit.scheduled_at), 'HH:mm')
+                const isMeeting = isMeetingVisit(visit)
                 return (
                   <div
                     key={visit.id}
@@ -637,7 +656,10 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                     <div className="w-1 flex-shrink-0" style={{ backgroundColor: color }} />
                     <div className="flex-1 px-3 py-2.5 flex items-center justify-between gap-2">
                       <div>
-                        <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{clientName || '—'}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{clientName || '—'}</p>
+                          <span style={{ color }}>{isMeeting ? <Video size={11} /> : <MapPin size={11} />}</span>
+                        </div>
                         <p className="text-xs text-gray-400"><span className="font-bold" style={{ color }}>{time}</span></p>
                       </div>
                       {(visit.price || 0) > 0 && (

@@ -34,7 +34,9 @@ export interface Visit {
   price?: number
   status: string
   notes?: string | null
-  source?: string // Source of visit: 'manual', 'online_booking', etc.
+  source?: string
+  event_type?: 'visit' | 'meeting' // visit = офлайн, meeting = онлайн/видеозвонок
+  meeting_link?: string | null     // Zoom/Google Meet URL
   staff_user_id?: string // Staff member who created the visit
   created_at?: string
   updated_at?: string

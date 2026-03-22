@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePipeline, PipelineDeal, PipelineStage } from '@/hooks/usePipeline'
 
+// ─── Utils ────────────────────────────────────────────────────────────────────
+
 function timeAgo(dateStr: string, lang: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000), hours = Math.floor(diff / 3600000), days = Math.floor(diff / 86400000)
@@ -14,80 +16,161 @@ function timeAgo(dateStr: string, lang: string): string {
   return isHe ? `לפני ${days} ימים` : `${days} дн назад`
 }
 
-const AV = ['from-purple-400 to-indigo-500','from-emerald-400 to-teal-500','from-amber-400 to-orange-500','from-pink-400 to-rose-500','from-blue-400 to-cyan-500','from-violet-400 to-purple-500']
-const avColor = (n: string) => AV[n.charCodeAt(0) % AV.length]
-const initials = (f: string, l: string) => ((f[0]??'')+(l[0]??'')).toUpperCase()
-const fmt = (n: number) => new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:0}).format(n)
+const AVATAR_GRADIENTS = [
+  ['#8B5CF6','#6366F1'], ['#10B981','#0D9488'], ['#F59E0B','#EF4444'],
+  ['#EC4899','#F43F5E'], ['#3B82F6','#06B6D4'], ['#8B5CF6','#A855F7'],
+]
+const avGrad = (name: string) => AVATAR_GRADIENTS[name.charCodeAt(0) % AVATAR_GRADIENTS.length]
+const initials = (f: string, l: string) => ((f[0] ?? '') + (l[0] ?? '')).toUpperCase()
+const fmt = (n: number) => new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 }).format(n)
+
+// ─── Rejection Modal ──────────────────────────────────────────────────────────
 
 const REJECTION_CATS = [
-  {value:'price',he:'מחיר',ru:'Цена'},{value:'competitor',he:'מתחרה',ru:'Конкурент'},
-  {value:'timing',he:'תזמון',ru:'Не время'},{value:'no_need',he:'אין צורך',ru:'Нет потребности'},{value:'other',he:'אחר',ru:'Другое'},
+  { value: 'price',      he: 'מחיר',    ru: 'Цена'            },
+  { value: 'competitor', he: 'מתחרה',   ru: 'Конкурент'       },
+  { value: 'timing',     he: 'תזמון',   ru: 'Не время'        },
+  { value: 'no_need',    he: 'אין צורך', ru: 'Нет потребности' },
+  { value: 'other',      he: 'אחר',     ru: 'Другое'          },
 ]
 
-function RejectionModal({open,lang,onConfirm,onCancel}:{open:boolean;lang:string;onConfirm:(r:string,c:string)=>void;onCancel:()=>void}) {
-  const [reason,setReason]=useState(''), [category,setCategory]=useState('other')
-  const isHe=lang==='he'
-  if(!open) return null
+function RejectionModal({ open, lang, onConfirm, onCancel }: {
+  open: boolean; lang: string
+  onConfirm: (r: string, c: string) => void
+  onCancel: () => void
+}) {
+  const [reason, setReason] = useState('')
+  const [category, setCategory] = useState('other')
+  const isHe = lang === 'he'
+  if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-4 border border-white/60 animate-in fade-in zoom-in-95 duration-200" dir={isHe?'rtl':'ltr'}>
-        <div className="flex items-center gap-3"><span className="text-2xl">❌</span><h2 className="text-lg font-bold">{isHe?'סיבת סגירה':'Причина закрытия'}</h2></div>
-        <select value={category} onChange={e=>setCategory(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none">
-          {REJECTION_CATS.map(c=><option key={c.value} value={c.value}>{isHe?c.he:c.ru}</option>)}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md">
+      <div className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-4 border border-white/60
+                      animate-in fade-in zoom-in-95 duration-200" dir={isHe ? 'rtl' : 'ltr'}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center text-xl">❌</div>
+          <h2 className="text-lg font-bold text-gray-900">{isHe ? 'סיבת סגירה' : 'Причина закрытия'}</h2>
+        </div>
+        <select value={category} onChange={e => setCategory(e.target.value)}
+          className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm outline-none focus:border-red-400 bg-white/80 transition-colors">
+          {REJECTION_CATS.map(c => <option key={c.value} value={c.value}>{isHe ? c.he : c.ru}</option>)}
         </select>
-        <textarea value={reason} onChange={e=>setReason(e.target.value)} rows={3} placeholder={isHe?'מה קרה?':'Что пошло не так?'} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none resize-none"/>
+        <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3}
+          placeholder={isHe ? 'מה קרה?' : 'Что пошло не так?'}
+          className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm outline-none focus:border-red-400 resize-none bg-white/80 transition-colors" />
         <div className="flex gap-3 justify-end">
-          <button onClick={onCancel} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl">{isHe?'ביטול':'Отмена'}</button>
-          <button onClick={()=>reason.trim()&&onConfirm(reason.trim(),category)} disabled={!reason.trim()} className="px-4 py-2 text-sm bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-40">{isHe?'אשר':'Подтвердить'}</button>
+          <button onClick={onCancel}
+            className="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all">
+            {isHe ? 'ביטול' : 'Отмена'}
+          </button>
+          <button onClick={() => reason.trim() && onConfirm(reason.trim(), category)}
+            disabled={!reason.trim()}
+            className="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-red-500 to-red-600 rounded-2xl hover:shadow-lg hover:shadow-red-200 disabled:opacity-40 transition-all">
+            {isHe ? 'אשר סגירה' : 'Подтвердить'}
+          </button>
         </div>
       </div>
     </div>
   )
 }
 
-function IncomeModal({open,lang,dealTitle,clientName,onConfirm,onSkip}:{open:boolean;lang:string;dealTitle:string;clientName:string;onConfirm:(d:number,f:number)=>Promise<void>;onSkip:()=>void}) {
-  const [dealAmt,setDealAmt]=useState(''), [fee,setFee]=useState(''), [loading,setLoading]=useState(false), [error,setError]=useState<string|null>(null)
-  const isHe=lang==='he', feeNum=parseFloat(fee)||0, commission=Math.round(feeNum*0.3*100)/100, isValid=feeNum>0&&feeNum<=99999
-  const f2=(n:number)=>new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:0}).format(n)
-  const handleConfirm=async()=>{
-    if(!isValid||loading) return
+// ─── Income Modal ─────────────────────────────────────────────────────────────
+
+function IncomeModal({ open, lang, dealTitle, clientName, onConfirm, onSkip }: {
+  open: boolean; lang: string; dealTitle: string; clientName: string
+  onConfirm: (d: number, f: number) => Promise<void>
+  onSkip: () => void
+}) {
+  const [dealAmt, setDealAmt] = useState('')
+  const [fee, setFee] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const isHe = lang === 'he'
+  const feeNum = parseFloat(fee) || 0
+  const commission = Math.round(feeNum * 0.3 * 100) / 100
+  const isValid = feeNum > 0 && feeNum <= 99999
+
+  const handleConfirm = async () => {
+    if (!isValid || loading) return
     setLoading(true); setError(null)
-    try { await onConfirm(parseFloat(dealAmt)||0, feeNum); setDealAmt(''); setFee('') }
-    catch(e){setError(e instanceof Error?e.message:'Error')}
-    finally{setLoading(false)}
+    try { await onConfirm(parseFloat(dealAmt) || 0, feeNum); setDealAmt(''); setFee('') }
+    catch (e) { setError(e instanceof Error ? e.message : 'Error') }
+    finally { setLoading(false) }
   }
-  if(!open) return null
+
+  if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-white/60 animate-in fade-in zoom-in-95 duration-200" dir={isHe?'rtl':'ltr'}>
-        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 px-6 py-5 text-white">
-          <div className="flex items-center gap-3"><span className="text-3xl">🎉</span><div><h2 className="text-lg font-bold">{isHe?'עסקה נסגרה!':'Сделка закрыта!'}</h2><p className="text-emerald-100 text-xs">{clientName} · {dealTitle}</p></div></div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md">
+      <div className="bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-white/60
+                      animate-in fade-in zoom-in-95 duration-200" dir={isHe ? 'rtl' : 'ltr'}>
+        {/* Header */}
+        <div className="relative bg-gradient-to-br from-emerald-500 via-emerald-500 to-teal-500 px-6 py-6 text-white overflow-hidden">
+          <div className="absolute inset-0 opacity-20" style={{
+            backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 60%)'
+          }} />
+          <div className="relative flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl shadow-lg">
+              🎉
+            </div>
+            <div>
+              <h2 className="text-xl font-black">{isHe ? 'עסקה נסגרה!' : 'Сделка закрыта!'}</h2>
+              <p className="text-emerald-100 text-sm mt-0.5 truncate max-w-[220px]">{clientName} · {dealTitle}</p>
+            </div>
+          </div>
         </div>
         <div className="px-6 py-5 space-y-4">
+          {/* Deal amount */}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">{isHe?'סכום העסקה (₪)':'Сумма сделки (₪)'}</label>
-            <div className="relative"><span className="absolute inset-y-0 start-3 flex items-center text-gray-400 text-sm">₪</span>
-              <input type="number" value={dealAmt} onChange={e=>setDealAmt(e.target.value)} placeholder="0" min={0} dir="ltr" className="w-full border-2 border-gray-200 focus:border-emerald-400 rounded-xl ps-8 pe-4 py-2.5 text-base font-bold outline-none"/>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+              {isHe ? 'סכום העסקה' : 'Сумма сделки'}
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 start-4 flex items-center text-gray-400 font-bold">₪</span>
+              <input type="number" value={dealAmt} onChange={e => setDealAmt(e.target.value)}
+                placeholder="0" min={0} dir="ltr"
+                className="w-full border-2 border-gray-100 focus:border-emerald-400 rounded-2xl ps-10 pe-4 py-3 text-lg font-black outline-none transition-all bg-gray-50/80 focus:bg-white" />
             </div>
           </div>
+          {/* Setup fee */}
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">{isHe?'עלות הקמה (₪) *':'Стоимость подключения (₪) *'}</label>
-            <div className="relative"><span className="absolute inset-y-0 start-3 flex items-center text-gray-400 text-sm">₪</span>
-              <input type="number" value={fee} onChange={e=>setFee(e.target.value)} placeholder="0" min={0} max={99999} dir="ltr" className="w-full border-2 border-gray-200 focus:border-emerald-400 rounded-xl ps-8 pe-4 py-2.5 text-base font-bold outline-none"/>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+              {isHe ? 'עלות הקמה *' : 'Стоимость подключения *'}
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 start-4 flex items-center text-gray-400 font-bold">₪</span>
+              <input type="number" value={fee} onChange={e => setFee(e.target.value)}
+                placeholder="0" min={0} max={99999} dir="ltr"
+                className="w-full border-2 border-gray-100 focus:border-emerald-400 rounded-2xl ps-10 pe-4 py-3 text-lg font-black outline-none transition-all bg-gray-50/80 focus:bg-white" />
             </div>
           </div>
-          <div className={`rounded-xl p-3.5 border-2 ${isValid?'bg-emerald-50 border-emerald-200':'bg-gray-50 border-gray-200'}`}>
+          {/* Commission preview */}
+          <div className={`rounded-2xl p-4 border-2 transition-all duration-300 ${isValid ? 'bg-emerald-50 border-emerald-200' : 'bg-gray-50 border-gray-100'}`}>
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500">{isHe?'העמלה שלי (30%):':'Моя комиссия (30%):'}</span>
-              <span className={`text-xl font-black ${isValid?'text-emerald-600':'text-gray-400'}`}>{isValid?f2(commission):'—'}</span>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{isHe ? 'העמלה שלי (30%)' : 'Моя комиссия (30%)'}</p>
+                <p className={`text-3xl font-black mt-1 transition-all ${isValid ? 'text-emerald-600' : 'text-gray-300'}`}>
+                  {isValid ? fmt(commission) : '—'}
+                </p>
+              </div>
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-all ${isValid ? 'bg-emerald-500 shadow-lg shadow-emerald-200' : 'bg-gray-200'}`}>
+                💰
+              </div>
             </div>
           </div>
-          {error&&<p className="text-sm text-red-500 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
-          <div className="flex gap-3">
-            <button onClick={onSkip} className="flex-1 py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl">{isHe?'דלג':'Пропустить'}</button>
-            <button onClick={handleConfirm} disabled={!isValid||loading} className="flex-1 py-2.5 text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl disabled:opacity-40 flex items-center justify-center gap-2 shadow-md shadow-emerald-200">
-              {loading?<svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>:<span>💰</span>}
-              {isHe?'שמור עמלה':'Сохранить'}
+          {error && <p className="text-sm text-red-500 bg-red-50 rounded-2xl px-4 py-3">{error}</p>}
+          <div className="flex gap-3 pb-1">
+            <button onClick={onSkip}
+              className="flex-1 py-3 text-sm font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all">
+              {isHe ? 'דלג' : 'Пропустить'}
+            </button>
+            <button onClick={handleConfirm} disabled={!isValid || loading}
+              className="flex-[2] py-3 text-sm font-black text-white bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl
+                         hover:shadow-xl hover:shadow-emerald-200/60 disabled:opacity-40 disabled:cursor-not-allowed
+                         transition-all flex items-center justify-center gap-2 active:scale-[0.97]">
+              {loading
+                ? <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                : null}
+              {isHe ? 'שמור עמלה' : 'Сохранить комиссию'}
             </button>
           </div>
         </div>
@@ -96,151 +179,368 @@ function IncomeModal({open,lang,dealTitle,clientName,onConfirm,onSkip}:{open:boo
   )
 }
 
-function DealCard({deal,lang,onDragStart}:{deal:PipelineDeal;lang:string;onDragStart:(id:string)=>void}) {
-  const isHe=lang==='he', c=deal.client
-  const name=c?`${c.first_name} ${c.last_name}`.trim():(isHe?'לקוח לא ידוע':'Неизвестно')
-  const color=avColor(name), isOverdue=deal.next_action_date&&new Date(deal.next_action_date)<new Date()
-  const lastTouch=deal.last_contact_at?timeAgo(deal.last_contact_at,lang):null
+// ─── Deal Card ────────────────────────────────────────────────────────────────
+
+function DealCard({ deal, lang, onDragStart, index }: {
+  deal: PipelineDeal; lang: string
+  onDragStart: (id: string) => void
+  index: number
+}) {
+  const isHe = lang === 'he'
+  const c = deal.client
+  const name = c ? `${c.first_name} ${c.last_name}`.trim() : (isHe ? 'לקוח לא ידוע' : 'Неизвестно')
+  const [g1, g2] = avGrad(name)
+  const isOverdue = deal.next_action_date && new Date(deal.next_action_date) < new Date()
+  const lastTouch = deal.last_contact_at ? timeAgo(deal.last_contact_at, lang) : null
+
   return (
-    <div draggable onDragStart={()=>onDragStart(deal.id)}
-      className="group rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 shadow-sm hover:shadow-lg hover:shadow-indigo-100/50 hover:border-indigo-200/60 transition-all duration-200 cursor-grab active:cursor-grabbing active:scale-[0.98] select-none p-3.5 space-y-3">
-      <div className="flex items-start gap-2.5">
-        <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm`}>
-          {initials(c?.first_name??'?', c?.last_name??'')}
+    <div
+      draggable
+      onDragStart={() => onDragStart(deal.id)}
+      className="group relative rounded-2xl bg-white/80 backdrop-blur-sm border border-white/70
+                 shadow-md hover:shadow-xl hover:shadow-indigo-100/60
+                 hover:border-indigo-200/70 hover:-translate-y-0.5
+                 transition-all duration-300 cursor-grab active:cursor-grabbing
+                 active:scale-[0.97] active:shadow-lg select-none p-4"
+      style={{ animationDelay: `${index * 50}ms` }}
+    >
+      {/* Subtle gradient overlay on hover */}
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-50/0 to-indigo-50/0 group-hover:from-indigo-50/30 group-hover:to-purple-50/20 transition-all duration-300 pointer-events-none" />
+
+      {/* Top row: avatar + name + amount */}
+      <div className="relative flex items-start gap-3 mb-3">
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black shrink-0 shadow-md"
+          style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}
+        >
+          {initials(c?.first_name ?? '?', c?.last_name ?? '')}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-gray-900 truncate">{name}</p>
-          <p className="text-xs text-gray-500 truncate mt-0.5">{deal.title}</p>
+          <p className="text-sm font-bold text-gray-900 truncate leading-tight">{name}</p>
+          <p className="text-xs text-gray-500 truncate mt-0.5 font-medium">{deal.title}</p>
         </div>
-        {deal.amount>0&&<span className="shrink-0 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{fmt(deal.amount)}</span>}
+        {deal.amount > 0 && (
+          <span className="shrink-0 text-xs font-black text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-xl">
+            {fmt(deal.amount)}
+          </span>
+        )}
       </div>
-      {deal.tags.length>0&&<div className="flex flex-wrap gap-1">{deal.tags.map(({tag})=><span key={tag.id} className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white" style={{backgroundColor:tag.color}}>{tag.name}</span>)}</div>}
-      <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-gray-100/80">
-        {lastTouch&&<span>{lastTouch}</span>}
-        {deal.next_action&&<span className={`font-semibold truncate max-w-[60%] ${isOverdue?'text-red-500':'text-indigo-500'}`}>{deal.next_action}</span>}
+
+      {/* Tags */}
+      {deal.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {deal.tags.map(({ tag }) => (
+            <span key={tag.id}
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white shadow-sm"
+              style={{ backgroundColor: tag.color }}>
+              {tag.name}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between text-[11px] pt-2.5 border-t border-gray-100">
+        {lastTouch && (
+          <span className="text-gray-400 font-medium flex items-center gap-1">
+            <span className="w-1 h-1 rounded-full bg-gray-300 inline-block" />
+            {lastTouch}
+          </span>
+        )}
+        {deal.next_action && (
+          <span className={`font-bold truncate max-w-[60%] flex items-center gap-1 ${isOverdue ? 'text-red-500' : 'text-indigo-500'}`}>
+            {isOverdue ? '⚠️' : '→'}
+            {deal.next_action}
+          </span>
+        )}
+      </div>
+
+      {/* Drag handle indicator */}
+      <div className="absolute top-3 end-3 opacity-0 group-hover:opacity-30 transition-opacity">
+        <svg className="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="9" cy="7" r="1.5"/><circle cx="15" cy="7" r="1.5"/>
+          <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+          <circle cx="9" cy="17" r="1.5"/><circle cx="15" cy="17" r="1.5"/>
+        </svg>
       </div>
     </div>
   )
 }
 
-function StageColumn({stage,lang,stageName,draggingId,onDragStart,onDrop}:{stage:PipelineStage;lang:string;stageName:(s:PipelineStage)=>string;draggingId:string|null;onDragStart:(d:string,s:string)=>void;onDrop:(t:string)=>void}) {
-  const [isDragOver,setIsDragOver]=useState(false)
-  const isHe=lang==='he'
+// ─── Stage Column ─────────────────────────────────────────────────────────────
+
+function StageColumn({ stage, lang, stageName, draggingId, onDragStart, onDrop }: {
+  stage: PipelineStage; lang: string
+  stageName: (s: PipelineStage) => string
+  draggingId: string | null
+  onDragStart: (dealId: string, stageId: string) => void
+  onDrop: (toStageId: string) => void
+}) {
+  const [isDragOver, setIsDragOver] = useState(false)
+  const isHe = lang === 'he'
+
+  // Parse stage color for glow effect
+  const col = stage.color
+
   return (
-    <div className="flex flex-col min-w-[290px] max-w-[290px]"
-      onDragOver={e=>{e.preventDefault();setIsDragOver(true)}} onDragLeave={()=>setIsDragOver(false)}
-      onDrop={()=>{setIsDragOver(false);onDrop(stage.id)}}>
-      <div className="rounded-2xl px-4 py-3 mb-3 flex items-center justify-between bg-white/60 backdrop-blur-sm border border-white/50 shadow-sm" style={{borderTop:`3px solid ${stage.color}`}}>
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:stage.color}}/>
-          <span className="text-sm font-bold text-gray-800">{stageName(stage)}</span>
-          <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{stage.deals_count}</span>
+    <div
+      className="flex flex-col min-w-[300px] max-w-[300px]"
+      onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={() => { setIsDragOver(false); onDrop(stage.id) }}
+    >
+      {/* Column header */}
+      <div
+        className="rounded-2xl px-4 py-3.5 mb-3 bg-white/70 backdrop-blur-sm border border-white/60 shadow-md transition-all duration-300"
+        style={{ borderTop: `3px solid ${col}` }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-50" style={{ backgroundColor: col }} />
+              <span className="relative inline-flex rounded-full h-3 w-3" style={{ backgroundColor: col }} />
+            </div>
+            <span className="text-sm font-black text-gray-800">{stageName(stage)}</span>
+            <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
+              {stage.deals_count}
+            </span>
+          </div>
+          {stage.total_amount > 0 && (
+            <span className="text-xs font-black text-gray-600 bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-xl">
+              {fmt(stage.total_amount)}
+            </span>
+          )}
         </div>
-        {stage.total_amount>0&&<span className="text-xs font-bold text-gray-600">₪{stage.total_amount.toLocaleString()}</span>}
       </div>
-      <div className={`flex-1 space-y-2.5 rounded-2xl p-2 min-h-[150px] transition-all duration-200 ${isDragOver&&draggingId?'bg-indigo-100/60 border-2 border-dashed border-indigo-300 scale-[1.01]':'bg-white/20'}`}>
-        {stage.deals.map(deal=><DealCard key={deal.id} deal={deal} lang={lang} onDragStart={id=>onDragStart(id,stage.id)}/>)}
-        {stage.deals.length===0&&!isDragOver&&(
-          <div className="flex flex-col items-center justify-center h-24 gap-2"><span className="text-2xl opacity-30">📭</span><span className="text-xs text-gray-400">{isHe?'אין עסקאות':'Нет сделок'}</span></div>
+
+      {/* Drop zone */}
+      <div
+        className={`flex-1 space-y-2.5 rounded-2xl p-2.5 min-h-[200px] transition-all duration-300 ${
+          isDragOver && draggingId
+            ? 'bg-indigo-100/70 border-2 border-dashed border-indigo-400/70 scale-[1.01] shadow-inner'
+            : 'bg-white/20'
+        }`}
+      >
+        {stage.deals.map((deal, i) => (
+          <DealCard key={deal.id} deal={deal} lang={lang} index={i}
+            onDragStart={id => onDragStart(id, stage.id)} />
+        ))}
+        {stage.deals.length === 0 && !isDragOver && (
+          <div className="flex flex-col items-center justify-center h-32 gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/60 flex items-center justify-center">
+              <span className="text-xl opacity-30">📭</span>
+            </div>
+            <span className="text-xs text-gray-400 font-medium">
+              {isHe ? 'אין עסקאות' : 'Нет сделок'}
+            </span>
+          </div>
+        )}
+        {isDragOver && draggingId && (
+          <div className="flex items-center justify-center h-16 rounded-xl border-2 border-dashed border-indigo-400/50">
+            <span className="text-xs font-bold text-indigo-500">
+              {isHe ? 'שחרר כאן ↓' : 'Отпусти здесь ↓'}
+            </span>
+          </div>
         )}
       </div>
     </div>
   )
 }
 
+// ─── Loading Skeleton ─────────────────────────────────────────────────────────
+
+function PipelineSkeleton() {
+  return (
+    <div className="flex gap-4 px-5 py-5">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="min-w-[300px] space-y-3">
+          <div className="h-14 rounded-2xl bg-white/60 animate-pulse" />
+          {[1, 2].map(j => (
+            <div key={j} className="h-24 rounded-2xl bg-white/40 animate-pulse" style={{ animationDelay: `${j * 150}ms` }} />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function WorkerPipelinePage() {
-  const {language}=useLanguage(), isHe=language==='he'
-  const {stages,loading,error,filterTag,setFilterTag,includeClosed,setIncludeClosed,load,moveDeal,stageName}=usePipeline()
-  const draggingDealId=useRef<string|null>(null), draggingStageId=useRef<string|null>(null)
-  const [draggingId,setDraggingId]=useState<string|null>(null)
-  const [moveError,setMoveError]=useState<string|null>(null)
-  const [feeSuccess,setFeeSuccess]=useState<number|null>(null)
-  const [rejectionTarget,setRejectionTarget]=useState<{dealId:string;fromStageId:string;toStageId:string}|null>(null)
-  const [incomeTarget,setIncomeTarget]=useState<{dealId:string;fromStageId:string;toStageId:string;dealTitle:string;clientName:string}|null>(null)
+  const { language } = useLanguage()
+  const isHe = language === 'he'
+  const { stages, loading, error, filterTag, setFilterTag, includeClosed, setIncludeClosed, load, moveDeal, stageName } = usePipeline()
 
-  useEffect(()=>{load({tag:filterTag??undefined,include_closed:includeClosed})},[load,filterTag,includeClosed])
+  const draggingDealId  = useRef<string | null>(null)
+  const draggingStageId = useRef<string | null>(null)
+  const [draggingId,   setDraggingId]   = useState<string | null>(null)
+  const [moveError,    setMoveError]    = useState<string | null>(null)
+  const [feeSuccess,   setFeeSuccess]   = useState<number | null>(null)
+  const [rejectionTarget, setRejectionTarget] = useState<{ dealId: string; fromStageId: string; toStageId: string } | null>(null)
+  const [incomeTarget,    setIncomeTarget]    = useState<{ dealId: string; fromStageId: string; toStageId: string; dealTitle: string; clientName: string } | null>(null)
 
-  const allTags=Array.from(new Map(stages.flatMap(s=>s.deals.flatMap(d=>d.tags.map(t=>[t.tag.id,t.tag])))).values())
+  useEffect(() => { load({ tag: filterTag ?? undefined, include_closed: includeClosed }) }, [load, filterTag, includeClosed])
 
-  const handleDragStart=useCallback((dealId:string,stageId:string)=>{
-    draggingDealId.current=dealId; draggingStageId.current=stageId; setDraggingId(dealId)
-  },[])
+  const allTags = Array.from(new Map(stages.flatMap(s => s.deals.flatMap(d => d.tags.map(t => [t.tag.id, t.tag])))).values())
 
-  const handleDrop=useCallback((toStageId:string)=>{
-    const dealId=draggingDealId.current, fromStageId=draggingStageId.current
-    setDraggingId(null); draggingDealId.current=null; draggingStageId.current=null
-    if(!dealId||!fromStageId||fromStageId===toStageId) return
-    const toStage=stages.find(s=>s.id===toStageId), fromStage=stages.find(s=>s.id===fromStageId)
-    const deal=fromStage?.deals.find(d=>d.id===dealId)
-    if(toStage?.is_lost){setRejectionTarget({dealId,fromStageId,toStageId});return}
-    if(toStage?.is_won){
-      const clientName=deal?.client?`${deal.client.first_name} ${deal.client.last_name}`.trim():(isHe?'לקוח':'Клиент')
-      moveDeal(dealId,fromStageId,toStageId).then(r=>{if(!r.ok)setMoveError(r.error??'Error')})
-      setIncomeTarget({dealId,fromStageId,toStageId,dealTitle:deal?.title??'',clientName}); return
+  const handleDragStart = useCallback((dealId: string, stageId: string) => {
+    draggingDealId.current = dealId; draggingStageId.current = stageId; setDraggingId(dealId)
+  }, [])
+
+  const handleDrop = useCallback((toStageId: string) => {
+    const dealId = draggingDealId.current, fromStageId = draggingStageId.current
+    setDraggingId(null); draggingDealId.current = null; draggingStageId.current = null
+    if (!dealId || !fromStageId || fromStageId === toStageId) return
+    const toStage = stages.find(s => s.id === toStageId)
+    const fromStage = stages.find(s => s.id === fromStageId)
+    const deal = fromStage?.deals.find(d => d.id === dealId)
+    if (toStage?.is_lost) { setRejectionTarget({ dealId, fromStageId, toStageId }); return }
+    if (toStage?.is_won) {
+      const clientName = deal?.client ? `${deal.client.first_name} ${deal.client.last_name}`.trim() : (isHe ? 'לקוח' : 'Клиент')
+      moveDeal(dealId, fromStageId, toStageId).then(r => { if (!r.ok) setMoveError(r.error ?? 'Error') })
+      setIncomeTarget({ dealId, fromStageId, toStageId, dealTitle: deal?.title ?? '', clientName }); return
     }
-    moveDeal(dealId,fromStageId,toStageId).then(r=>{if(!r.ok)setMoveError(r.error??'Error')})
-  },[stages,moveDeal,isHe])
+    moveDeal(dealId, fromStageId, toStageId).then(r => { if (!r.ok) setMoveError(r.error ?? 'Error') })
+  }, [stages, moveDeal, isHe])
 
-  const handleRejectionConfirm=useCallback((reason:string,category:string)=>{
-    if(!rejectionTarget) return
-    const {dealId,fromStageId,toStageId}=rejectionTarget; setRejectionTarget(null)
-    moveDeal(dealId,fromStageId,toStageId,{rejection_reason:reason,rejection_category:category}).then(r=>{if(!r.ok)setMoveError(r.error??'Error')})
-  },[rejectionTarget,moveDeal])
+  const handleRejectionConfirm = useCallback((reason: string, category: string) => {
+    if (!rejectionTarget) return
+    const { dealId, fromStageId, toStageId } = rejectionTarget; setRejectionTarget(null)
+    moveDeal(dealId, fromStageId, toStageId, { rejection_reason: reason, rejection_category: category }).then(r => { if (!r.ok) setMoveError(r.error ?? 'Error') })
+  }, [rejectionTarget, moveDeal])
 
-  const handleIncomeConfirm=useCallback(async(_:number,setupFee:number)=>{
-    if(!incomeTarget) return
-    const res=await fetch('/api/worker/pipeline/complete-deal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deal_id:incomeTarget.dealId,setup_fee:setupFee})})
-    const data=await res.json()
-    if(!res.ok) throw new Error(data.error??'Failed')
-    setIncomeTarget(null); setFeeSuccess(data.commission_amount); setTimeout(()=>setFeeSuccess(null),4000)
-  },[incomeTarget])
+  const handleIncomeConfirm = useCallback(async (_: number, setupFee: number) => {
+    if (!incomeTarget) return
+    const res = await fetch('/api/worker/pipeline/complete-deal', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deal_id: incomeTarget.dealId, setup_fee: setupFee }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error ?? 'Failed')
+    setIncomeTarget(null); setFeeSuccess(data.commission_amount); setTimeout(() => setFeeSuccess(null), 5000)
+  }, [incomeTarget])
+
+  const totalDeals = stages.reduce((s, st) => s + st.deals_count, 0)
+  const totalAmount = stages.reduce((s, st) => s + st.total_amount, 0)
 
   return (
-    <div className="flex flex-col h-full" dir="rtl">
-      {/* Header */}
-      <div className="shrink-0 px-5 py-4 flex items-center justify-between bg-white/40 backdrop-blur-sm border-b border-white/40">
-        <div>
-          <h1 className="text-xl font-black text-gray-900">{isHe?'פייפליין שלי':'Мой пайплайн'}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{isHe?'גרור עסקאות בין שלבים':'Перетаскивай сделки между этапами'}</p>
+    <div className="flex flex-col h-full bg-gradient-to-br from-slate-100 via-blue-50/40 to-indigo-50/30 min-h-screen" dir="rtl">
+
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div className="shrink-0 px-5 pt-5 pb-4">
+        {/* Title + stats */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+              {isHe ? 'פייפליין שלי' : 'Мой пайплайн'}
+            </h1>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-sm text-gray-500">
+                {isHe ? `${totalDeals} עסקאות` : `${totalDeals} сделок`}
+              </span>
+              {totalAmount > 0 && (
+                <>
+                  <span className="text-gray-300">·</span>
+                  <span className="text-sm font-bold text-emerald-600">{fmt(totalAmount)}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Refresh */}
+            <button onClick={() => load({ tag: filterTag ?? undefined, include_closed: includeClosed })}
+              disabled={loading}
+              className="p-2.5 rounded-2xl bg-white/70 backdrop-blur-sm border border-white/60 text-gray-500 hover:text-gray-700 shadow-sm hover:shadow-md transition-all disabled:opacity-40 active:scale-95">
+              <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {/* Filter bar */}
         <div className="flex items-center gap-2 flex-wrap">
-          {allTags.length>0&&<>
-            <button onClick={()=>setFilterTag(null)} className={`text-xs px-3 py-1.5 rounded-full border transition-all ${!filterTag?'bg-indigo-600 text-white border-indigo-600':'bg-white/70 text-gray-600 border-gray-200'}`}>{isHe?'הכל':'Все'}</button>
-            {allTags.map(tag=><button key={tag.id} onClick={()=>setFilterTag(filterTag===tag.name?null:tag.name)} className="text-xs px-3 py-1.5 rounded-full border transition-all"
-              style={{backgroundColor:filterTag===tag.name?tag.color:tag.color+'22',borderColor:tag.color,color:filterTag===tag.name?'white':tag.color}}>{tag.name}</button>)}
-          </>}
-          <button onClick={()=>setIncludeClosed(v=>!v)} className={`text-xs px-3 py-1.5 rounded-full border transition-all ${includeClosed?'bg-gray-800 text-white border-gray-800':'bg-white/70 text-gray-600 border-gray-200'}`}>
-            {isHe?(includeClosed?'הסתר סגורים':'הצג סגורים'):(includeClosed?'Скрыть':'Закрытые')}
+          {/* Closed toggle */}
+          <button onClick={() => setIncludeClosed(v => !v)}
+            className={`text-xs font-bold px-3.5 py-2 rounded-2xl border transition-all ${
+              includeClosed
+                ? 'bg-gray-800 text-white border-gray-800 shadow-md'
+                : 'bg-white/70 backdrop-blur-sm text-gray-600 border-white/60 hover:border-gray-300 shadow-sm'
+            }`}>
+            {isHe ? (includeClosed ? 'הסתר סגורים' : 'הצג סגורים') : (includeClosed ? 'Скрыть закрытые' : 'Закрытые')}
           </button>
-          <button onClick={()=>load({tag:filterTag??undefined,include_closed:includeClosed})} disabled={loading} className="p-2 rounded-xl bg-white/70 border border-gray-200 hover:border-indigo-300 disabled:opacity-40">
-            <svg className={`w-4 h-4 text-gray-600 ${loading?'animate-spin':''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          </button>
+
+          {/* Tag filters */}
+          {allTags.length > 0 && (
+            <>
+              <div className="w-px h-5 bg-gray-200 mx-1" />
+              <button onClick={() => setFilterTag(null)}
+                className={`text-xs font-bold px-3.5 py-2 rounded-2xl border transition-all ${
+                  !filterTag
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200/50'
+                    : 'bg-white/70 backdrop-blur-sm text-gray-600 border-white/60 hover:border-indigo-300 shadow-sm'
+                }`}>
+                {isHe ? 'הכל' : 'Все'}
+              </button>
+              {allTags.map(tag => (
+                <button key={tag.id}
+                  onClick={() => setFilterTag(filterTag === tag.name ? null : tag.name)}
+                  className="text-xs font-bold px-3.5 py-2 rounded-2xl border transition-all shadow-sm hover:shadow-md"
+                  style={{
+                    backgroundColor: filterTag === tag.name ? tag.color : tag.color + '18',
+                    borderColor: filterTag === tag.name ? tag.color : tag.color + '44',
+                    color: filterTag === tag.name ? 'white' : tag.color,
+                  }}>
+                  {tag.name}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </div>
 
-      {feeSuccess!==null&&(
-        <div className="mx-5 mt-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 text-emerald-700 text-sm animate-in fade-in slide-in-from-top duration-300">
-          <span className="text-xl">💰</span><span className="font-bold">{isHe?`עמלה נרשמה: ₪${feeSuccess.toLocaleString()}`:`Комиссия: ₪${feeSuccess.toLocaleString()}`}</span>
-        </div>
-      )}
-      {(error||moveError)&&(
-        <div className="mx-5 mt-3 px-4 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl flex items-center justify-between">
-          <span>{error??moveError}</span>
-          <button onClick={()=>setMoveError(null)} className="ms-3 text-red-400 hover:text-red-600">✕</button>
+      {/* ── Commission toast ──────────────────────────────────────────── */}
+      {feeSuccess !== null && (
+        <div className="mx-5 mb-3 px-5 py-3.5 bg-emerald-500 rounded-2xl flex items-center gap-3 text-white shadow-xl shadow-emerald-200/60 animate-in slide-in-from-top fade-in duration-300">
+          <span className="text-2xl">💰</span>
+          <div>
+            <p className="font-black text-sm">{isHe ? 'עמלה נרשמה!' : 'Комиссия зафиксирована!'}</p>
+            <p className="text-emerald-100 text-xs">{fmt(feeSuccess)} {isHe ? 'יתווסף לסיכום החודשי' : 'добавлено к итогу месяца'}</p>
+          </div>
+          <button onClick={() => setFeeSuccess(null)} className="ms-auto text-white/70 hover:text-white">✕</button>
         </div>
       )}
 
-      {loading&&stages.length===0
-        ? <div className="flex-1 flex items-center justify-center"><div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"/></div>
-        : <div className="flex-1 overflow-x-auto px-5 py-5">
-          <div className="flex gap-4 h-full" style={{minWidth:`${stages.length*308}px`}}>
-            {stages.map(stage=><StageColumn key={stage.id} stage={stage} lang={language} stageName={stageName} draggingId={draggingId} onDragStart={handleDragStart} onDrop={handleDrop}/>)}
+      {/* ── Error ────────────────────────────────────────────────────── */}
+      {(error || moveError) && (
+        <div className="mx-5 mb-3 px-4 py-3 bg-red-50/80 backdrop-blur-sm border border-red-200 text-red-700 text-sm rounded-2xl flex items-center justify-between shadow-sm">
+          <span className="font-medium">{error ?? moveError}</span>
+          <button onClick={() => setMoveError(null)} className="ms-3 text-red-400 hover:text-red-600 text-lg leading-none">✕</button>
+        </div>
+      )}
+
+      {/* ── Board ────────────────────────────────────────────────────── */}
+      {loading && stages.length === 0 ? (
+        <PipelineSkeleton />
+      ) : (
+        <div className="flex-1 overflow-x-auto px-5 pb-6">
+          <div className="flex gap-4 min-h-full" style={{ minWidth: `${stages.length * 316}px` }}>
+            {stages.map(stage => (
+              <StageColumn key={stage.id} stage={stage} lang={language}
+                stageName={stageName} draggingId={draggingId}
+                onDragStart={handleDragStart} onDrop={handleDrop} />
+            ))}
           </div>
         </div>
-      }
+      )}
 
-      <RejectionModal open={!!rejectionTarget} lang={language} onConfirm={handleRejectionConfirm} onCancel={()=>setRejectionTarget(null)}/>
-      <IncomeModal open={!!incomeTarget} lang={language} dealTitle={incomeTarget?.dealTitle??''} clientName={incomeTarget?.clientName??''} onConfirm={handleIncomeConfirm} onSkip={()=>setIncomeTarget(null)}/>
+      {/* Modals */}
+      <RejectionModal open={!!rejectionTarget} lang={language}
+        onConfirm={handleRejectionConfirm} onCancel={() => setRejectionTarget(null)} />
+      <IncomeModal open={!!incomeTarget} lang={language}
+        dealTitle={incomeTarget?.dealTitle ?? ''} clientName={incomeTarget?.clientName ?? ''}
+        onConfirm={handleIncomeConfirm} onSkip={() => setIncomeTarget(null)} />
     </div>
   )
 }

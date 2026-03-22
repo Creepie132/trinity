@@ -38,6 +38,11 @@ interface Notification {
   priority?: 'normal' | 'high' | 'urgent'
   created_at: string
   metadata?: NotificationMetadata
+  // mention fields
+  mention_status?: 'pending' | 'accepted' | 'rejected' | null
+  mention_rejection_reason?: string | null
+  sender_id?: string | null
+  sender_name?: string | null
 }
 
 interface NotificationBellProps {
@@ -57,18 +62,16 @@ const translations = {
   },
 }
 
-// AudioContext singleton — создаётся после первого клика пользователя (обходит autoplay policy)
+// AudioContext singleton
 let _audioCtx: AudioContext | null = null
 let _audioBuffer: AudioBuffer | null = null
 let _audioUnlocked = false
 
-// Разблокируем AudioContext при любом клике (вызывается один раз)
 function unlockAudio() {
   if (_audioUnlocked) return
   _audioUnlocked = true
   try {
     _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    // Прогружаем буфер заранее
     fetch('/sounds/Notification.mp3')
       .then(r => r.arrayBuffer())
       .then(buf => _audioCtx!.decodeAudioData(buf))
@@ -77,7 +80,6 @@ function unlockAudio() {
   } catch {}
 }
 
-// Вешаем разблокировку на первый клик в документе
 if (typeof window !== 'undefined') {
   window.addEventListener('click', unlockAudio, { once: true })
   window.addEventListener('touchstart', unlockAudio, { once: true })
@@ -85,7 +87,6 @@ if (typeof window !== 'undefined') {
 }
 
 function playNotificationSound() {
-  // Метод 1: AudioContext (предпочтительный — работает в фоне)
   if (_audioCtx && _audioBuffer) {
     try {
       if (_audioCtx.state === 'suspended') _audioCtx.resume()
@@ -99,7 +100,6 @@ function playNotificationSound() {
       return
     } catch {}
   }
-  // Метод 2: fallback — обычный Audio (может быть заблокирован браузером)
   try {
     const audio = new Audio('/sounds/Notification.mp3')
     audio.volume = 0.6
@@ -109,7 +109,6 @@ function playNotificationSound() {
 }
 
 // ── Swipeable notification item ──────────────────────────────────────────────
-// Свайп влево открывает красную зону с корзиной. Ещё свайп — dismiss с анимацией.
 interface SwipeableItemProps {
   onDelete: () => void
   children: React.ReactNode
@@ -124,105 +123,133 @@ function SwipeableNotificationItem({ onDelete, children, isRead }: SwipeableItem
   const [translateX, setTranslateX] = useState(0)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const REVEAL_THRESHOLD = 72   // px — сколько тянуть чтобы появилась кнопка
-  const DELETE_THRESHOLD = 140  // px — автодисмисс
+  const REVEAL_THRESHOLD = 72
+  const DELETE_THRESHOLD = 140
 
-  function onTouchStart(e: React.TouchEvent) {
-    startXRef.current = e.touches[0].clientX
-    currentXRef.current = 0
-    isDraggingRef.current = true
-  }
-
-  function onTouchMove(e: React.TouchEvent) {
-    if (!isDraggingRef.current) return
-    const dx = e.touches[0].clientX - startXRef.current
-    // Только влево (отрицательный)
-    const clamped = Math.min(0, dx)
-    currentXRef.current = clamped
-    setTranslateX(clamped)
-  }
-
+  function onTouchStart(e: React.TouchEvent) { startXRef.current = e.touches[0].clientX; currentXRef.current = 0; isDraggingRef.current = true }
+  function onTouchMove(e: React.TouchEvent) { if (!isDraggingRef.current) return; const dx = e.touches[0].clientX - startXRef.current; const clamped = Math.min(0, dx); currentXRef.current = clamped; setTranslateX(clamped) }
   function onTouchEnd() {
-    if (!isDraggingRef.current) return
-    isDraggingRef.current = false
+    if (!isDraggingRef.current) return; isDraggingRef.current = false
     const dx = currentXRef.current
-
-    if (dx < -DELETE_THRESHOLD) {
-      // Свайп достаточно далеко — удаляем
-      dismiss()
-    } else if (dx < -REVEAL_THRESHOLD / 2) {
-      // Показываем кнопку удаления
-      setTranslateX(-REVEAL_THRESHOLD)
-    } else {
-      // Возвращаем на место
-      setTranslateX(0)
-    }
+    if (dx < -DELETE_THRESHOLD) dismiss()
+    else if (dx < -REVEAL_THRESHOLD / 2) setTranslateX(-REVEAL_THRESHOLD)
+    else setTranslateX(0)
   }
 
   function dismiss() {
-    setIsDeleting(true)
-    // Анимируем полностью влево, потом схлопываем высоту
-    setTranslateX(-400)
-    setTimeout(() => {
-      onDelete()
-    }, 300)
+    setIsDeleting(true); setTranslateX(-400)
+    setTimeout(() => onDelete(), 300)
   }
 
-  if (isDeleting) {
-    return (
-      <div
-        style={{
-          overflow: 'hidden',
-          maxHeight: 0,
-          transition: 'max-height 0.25s ease',
-        }}
-      />
-    )
-  }
+  if (isDeleting) return <div style={{ overflow: 'hidden', maxHeight: 0, transition: 'max-height 0.25s ease' }} />
 
-  // Насыщенность красного фона пропорциональна свайпу
   const revealRatio = Math.min(1, Math.abs(translateX) / REVEAL_THRESHOLD)
   const bgOpacity = Math.round(revealRatio * 255).toString(16).padStart(2, '0')
 
   return (
-    <div
-      ref={containerRef}
-      className="relative overflow-hidden rounded-xl"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
-      {/* Красный фон — появляется по мере свайпа */}
-      <div
-        className="absolute inset-0 flex items-center justify-end pr-4 rounded-xl"
-        style={{ backgroundColor: `#ef4444${bgOpacity}` }}
-      >
-        <button
-          onPointerDown={(e) => { e.stopPropagation(); dismiss() }}
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-red-600 text-white shadow-md active:scale-90 transition-transform"
-        >
+    <div ref={containerRef} className="relative overflow-hidden rounded-xl" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      <div className="absolute inset-0 flex items-center justify-end pr-4 rounded-xl" style={{ backgroundColor: `#ef4444${bgOpacity}` }}>
+        <button onPointerDown={(e) => { e.stopPropagation(); dismiss() }} className="flex items-center justify-center w-10 h-10 rounded-full bg-red-600 text-white shadow-md active:scale-90 transition-transform">
           <Trash2 className="w-5 h-5" />
         </button>
       </div>
-
-      {/* Контент карточки */}
-      <div
-        className={`relative transition-transform ${
-          !isRead
-            ? 'bg-indigo-50/60 dark:bg-indigo-900/10'
-            : 'bg-white dark:bg-gray-900'
-        }`}
-        style={{
-          transform: `translateX(${translateX}px)`,
-          transition: isDraggingRef.current ? 'none' : 'transform 0.3s cubic-bezier(0.32,0.72,0,1)',
-        }}
-      >
+      <div className={`relative transition-transform ${!isRead ? 'bg-indigo-50/60 dark:bg-indigo-900/10' : 'bg-white dark:bg-gray-900'}`}
+        style={{ transform: `translateX(${translateX}px)`, transition: isDraggingRef.current ? 'none' : 'transform 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
         {children}
       </div>
     </div>
   )
 }
-// ── End SwipeableNotificationItem ────────────────────────────────────────────
+
+// ── MentionActions — inline Accept/Reject UI ─────────────────────────────────
+function MentionActions({
+  notif, locale,
+  onRespond
+}: {
+  notif: Notification
+  locale: 'he' | 'ru'
+  onRespond: (id: string, action: 'accepted' | 'rejected', reason?: string) => void
+}) {
+  const [mode, setMode] = useState<'buttons' | 'rejecting'>('buttons')
+  const [reason, setReason] = useState('')
+  const [loading, setLoading] = useState(false)
+  const isHe = locale === 'he'
+
+  if (notif.mention_status === 'accepted') {
+    return (
+      <div className="mt-2 ms-5 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
+        <Check className="w-3.5 h-3.5" />
+        {isHe ? 'קיבלת' : 'Вы приняли'}
+      </div>
+    )
+  }
+  if (notif.mention_status === 'rejected') {
+    return (
+      <div className="mt-2 ms-5 text-xs text-red-500 font-semibold flex items-center gap-1.5">
+        <X className="w-3.5 h-3.5" />
+        {isHe ? 'דחית' : 'Вы отклонили'}
+        {notif.mention_rejection_reason && (
+          <span className="text-gray-400 font-normal">— {notif.mention_rejection_reason}</span>
+        )}
+      </div>
+    )
+  }
+
+  const handleAccept = async () => {
+    setLoading(true)
+    onRespond(notif.id, 'accepted')
+  }
+
+  const handleReject = async () => {
+    if (!reason.trim()) return
+    setLoading(true)
+    onRespond(notif.id, 'rejected', reason.trim())
+  }
+
+  if (mode === 'rejecting') {
+    return (
+      <div className="mt-2 ms-5 space-y-2">
+        <textarea
+          autoFocus
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          rows={2}
+          placeholder={isHe ? 'כתוב סיבת דחייה...' : 'Напиши причину отклонения...'}
+          className="w-full text-xs border border-red-200 focus:border-red-400 rounded-xl px-3 py-2 outline-none resize-none bg-red-50 placeholder:text-red-300"
+          dir={isHe ? 'rtl' : 'ltr'}
+        />
+        <div className="flex gap-2">
+          <button onClick={handleReject} disabled={!reason.trim() || loading}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 disabled:opacity-40 transition-all">
+            {loading
+              ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              : <X className="w-3 h-3" />}
+            {isHe ? 'שלח דחייה' : 'Отклонить'}
+          </button>
+          <button onClick={() => { setMode('buttons'); setReason('') }}
+            className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-all">
+            {isHe ? 'ביטול' : 'Отмена'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-2 ms-5 flex gap-2">
+      <button onClick={handleAccept} disabled={loading}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-all disabled:opacity-40">
+        <Check className="w-3.5 h-3.5" />
+        {isHe ? '✅ קבל' : '✅ Принять'}
+      </button>
+      <button onClick={() => setMode('rejecting')}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-bold hover:bg-red-100 transition-all">
+        <X className="w-3.5 h-3.5" />
+        {isHe ? '❌ דחה' : '❌ Отклонить'}
+      </button>
+    </div>
+  )
+}
 
 export function NotificationBell({ locale }: NotificationBellProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -249,38 +276,43 @@ export function NotificationBell({ locale }: NotificationBellProps) {
         setNotifications(data)
         setUnreadCount(data.filter(n => !n.is_read).length)
       }
-    } catch (e) {
-      console.error(e)
-    }
+    } catch (e) { console.error(e) }
   }, [])
 
   async function markAllRead() {
     try {
-      await fetch('/api/notifications', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ all: true }),
-      })
+      await fetch('/api/notifications', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ all: true }) })
       setUnreadCount(0)
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
-    } catch (e) {
-      console.error(e)
-    }
+    } catch (e) { console.error(e) }
   }
 
   async function deleteNotification(id: string) {
-    // Оптимистично убираем из UI
     setNotifications(prev => {
       const notif = prev.find(n => n.id === id)
       if (notif && !notif.is_read) setUnreadCount(c => Math.max(0, c - 1))
       return prev.filter(n => n.id !== id)
     })
-    // Удаляем в БД
+    try { await fetch(`/api/notifications?id=${id}`, { method: 'DELETE' }) } catch (e) { console.error(e) }
+  }
+
+  // ── Mention respond ─────────────────────────────────────────────────────────
+  async function handleMentionRespond(notifId: string, action: 'accepted' | 'rejected', reason?: string) {
     try {
-      await fetch(`/api/notifications?id=${id}`, { method: 'DELETE' })
-    } catch (e) {
-      console.error(e)
-    }
+      const res = await fetch('/api/worker/mention-respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notification_id: notifId, action, rejection_reason: reason }),
+      })
+      if (!res.ok) { console.error(await res.json()); return }
+      // Update local state
+      setNotifications(prev => prev.map(n =>
+        n.id === notifId
+          ? { ...n, mention_status: action, mention_rejection_reason: reason ?? null, is_read: true }
+          : n
+      ))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (e) { console.error(e) }
   }
 
   useEffect(() => {
@@ -289,20 +321,14 @@ export function NotificationBell({ locale }: NotificationBellProps) {
     return () => clearInterval(interval)
   }, [fetchNotifications])
 
-  // Realtime subscription
+  // Realtime
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
-
     supabase.auth.getUser().then(({ data }) => {
       const userId = data?.user?.id ?? null
       if (!userId) return
-
-      channel = supabase
-        .channel(`notifications:${userId}`)
-        .on('postgres_changes', {
-          event: 'INSERT', schema: 'public', table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        }, (payload) => {
+      channel = supabase.channel(`notifications:${userId}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload) => {
           const newNotif = payload.new as Notification
           setNotifications(prev => [newNotif, ...prev])
           setUnreadCount(prev => prev + 1)
@@ -310,10 +336,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
         })
         .subscribe()
     })
-
-    return () => {
-      if (channel) supabase.removeChannel(channel)
-    }
+    return () => { if (channel) supabase.removeChannel(channel) }
   }, [])
 
   async function rejectInvitation(notifId: string, userId: string, orgId: string) {
@@ -361,17 +384,17 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   }
 
   function handleOpen() {
-    unlockAudio() // гарантируем что AudioContext создан после клика
+    unlockAudio()
     setIsOpen(true)
     if (unreadCount > 0) markAllRead()
   }
 
-  // Карточка одного уведомления (контент без swipe-обёртки)
   function renderNotifContent(n: Notification) {
     const typeIcon: Record<string, string> = {
       access_invitation: '👥', access_request: '🔑', transfer_request: '📦',
       transfer_result: '✅', payment: '💳', visit: '📅', task: '✅', system: 'ℹ️',
       client_registered: '🆕', demo_order_submitted: '🛒', demo_abandoned: '⚠️',
+      mention: '📣', mention_accepted: '✅', mention_rejected: '❌',
     }
     const icon = typeIcon[n.type] || '🔔'
     const isUrgent = n.priority === 'urgent'
@@ -379,35 +402,38 @@ export function NotificationBell({ locale }: NotificationBellProps) {
 
     return (
       <div className={`rounded-xl border p-3 transition-all ${
-        isUrgent
-          ? 'bg-red-50 border-red-300 animate-pulse'
-          : isHigh
-          ? 'bg-orange-50 border-orange-200'
-          : !n.is_read
-          ? 'bg-indigo-50/60 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800/30'
-          : 'border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+        isUrgent ? 'bg-red-50 border-red-300 animate-pulse'
+        : isHigh  ? 'bg-orange-50 border-orange-200'
+        : !n.is_read ? 'bg-indigo-50/60 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800/30'
+        : 'border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'
       }`}>
-        <a href={n.type === 'access_invitation' ? '#' : (n.link || '#')}>
+        <a href={n.type === 'access_invitation' || n.type === 'mention' ? '#' : (n.link || '#')}>
           <div className="flex items-start gap-3">
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0 ${
               isUrgent ? 'bg-red-100' : isHigh ? 'bg-orange-100' : !n.is_read ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-gray-100 dark:bg-gray-800'
             }`}>{icon}</div>
             <div className="flex-1 min-w-0">
               <p className={`text-sm leading-snug ${
-                isUrgent ? 'font-bold text-red-700' : isHigh ? 'font-semibold text-orange-700' :
-                !n.is_read ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'
-              }`}>
-                {n.title}
-              </p>
+                isUrgent ? 'font-bold text-red-700'
+                : isHigh  ? 'font-semibold text-orange-700'
+                : !n.is_read ? 'font-semibold text-gray-900 dark:text-gray-100'
+                : 'text-gray-700 dark:text-gray-300'
+              }`}>{n.title}</p>
               {n.body && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 whitespace-pre-line line-clamp-3">{n.body}</p>}
               <p className="text-xs text-gray-400 mt-1">
                 {new Date(n.created_at).toLocaleString(locale === 'he' ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
-            {!n.is_read && <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${isUrgent ? 'bg-red-500 animate-ping' : isHigh ? 'bg-orange-500' : 'bg-indigo-500'}`}/>}
+            {!n.is_read && <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${isUrgent ? 'bg-red-500 animate-ping' : isHigh ? 'bg-orange-500' : 'bg-indigo-500'}`} />}
           </div>
         </a>
 
+        {/* ── Mention — Accept / Reject ────────────────────────────────── */}
+        {n.type === 'mention' && (
+          <MentionActions notif={n} locale={locale} onRespond={handleMentionRespond} />
+        )}
+
+        {/* ── Other action types ───────────────────────────────────────── */}
         {n.type === 'transfer_request' && n.metadata?.transfer_request_id && (
           <div className="mt-2 ms-5 flex flex-wrap gap-1.5">
             <button onClick={() => handleTransferAction(n.id, n.metadata!.transfer_request_id!, 'approved')} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-100 transition-colors"><Check className="w-3 h-3" />{locale === 'he' ? 'אשר' : 'Одобрить'}</button>
@@ -443,12 +469,8 @@ export function NotificationBell({ locale }: NotificationBellProps) {
 
         {n.type === 'client_registered' && n.link && (
           <div className="mt-2 ms-5">
-            <a
-              href={n.link}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors border border-amber-200 dark:border-amber-800/40"
-            >
-              <span>👤</span>
-              {locale === 'he' ? 'פתח כרטיס לקוח' : 'Открыть карточку'}
+            <a href={n.link} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors border border-amber-200 dark:border-amber-800/40">
+              <span>👤</span>{locale === 'he' ? 'פתח כרטיס לקוח' : 'Открыть карточку'}
             </a>
           </div>
         )}
@@ -468,11 +490,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
       ) : (
         <div className="space-y-1.5 p-1">
           {notifications.map((n) => (
-            <SwipeableNotificationItem
-              key={n.id}
-              isRead={n.is_read}
-              onDelete={() => deleteNotification(n.id)}
-            >
+            <SwipeableNotificationItem key={n.id} isRead={n.is_read} onDelete={() => deleteNotification(n.id)}>
               {renderNotifContent(n)}
             </SwipeableNotificationItem>
           ))}
@@ -484,21 +502,14 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   return (
     <>
       <div className="relative" ref={bellRef}>
-        <TrinityNotificationIcon
-          hasNotification={unreadCount > 0}
-          unreadCount={unreadCount}
-          onClick={handleOpen}
-          size={22}
-        />
+        <TrinityNotificationIcon hasNotification={unreadCount > 0} unreadCount={unreadCount} onClick={handleOpen} size={22} />
 
-        {/* Mobile — bottom sheet */}
         {isMobile && (
           <TrinityBottomDrawer isOpen={isOpen} onClose={() => setIsOpen(false)} title={l.title}>
             {notifications.length > 0 && (
               <div className="flex justify-end px-1 pb-2">
                 <button onClick={markAllRead} className="flex items-center gap-1.5 text-xs text-primary hover:underline">
-                  <CheckCheck className="w-3.5 h-3.5" />
-                  {l.markRead}
+                  <CheckCheck className="w-3.5 h-3.5" />{l.markRead}
                 </button>
               </div>
             )}
@@ -506,18 +517,15 @@ export function NotificationBell({ locale }: NotificationBellProps) {
           </TrinityBottomDrawer>
         )}
 
-        {/* Desktop — dropdown через portal */}
         {!isMobile && isOpen && typeof document !== 'undefined' && createPortal(
           <>
             <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setIsOpen(false)} />
-            <div
-              className="fixed bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 flex flex-col overflow-hidden"
+            <div className="fixed bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 flex flex-col overflow-hidden"
               style={{
                 zIndex: 9999, width: '420px', maxHeight: '80vh',
                 top: (() => { if (!bellRef.current) return '70px'; const r = bellRef.current.getBoundingClientRect(); return `${r.bottom + 8}px` })(),
                 left: (() => { if (!bellRef.current) return '20px'; const r = bellRef.current.getBoundingClientRect(); return `${Math.max(8, Math.min(r.left, window.innerWidth - 428))}px` })(),
-              }}
-            >
+              }}>
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700">
                 <div className="flex items-center gap-2">
                   <Bell className="w-5 h-5 text-indigo-500" />

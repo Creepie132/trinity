@@ -5,8 +5,8 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 const ORG_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
 
 // POST /api/worker/mention-notify
-// Called when a worker writes @mention in a quick note.
-// Creates a notification for the mentioned user.
+// Called when worker writes @mention in a quick note.
+// Creates a notification for the mentioned user with accept/reject actions.
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +21,6 @@ export async function POST(request: NextRequest) {
 
     const { mentioned_user_id, note_text, worker_name } = body
 
-    // Don't notify yourself
     if (mentioned_user_id === user.id) {
       return NextResponse.json({ ok: true, skipped: true })
     }
@@ -36,30 +35,38 @@ export async function POST(request: NextRequest) {
       .eq('org_id', ORG_ID)
       .single()
 
-    if (!orgUser) {
-      return NextResponse.json({ error: 'User not in org' }, { status: 403 })
-    }
+    if (!orgUser) return NextResponse.json({ error: 'User not in org' }, { status: 403 })
 
-    const truncated = note_text.length > 120
-      ? note_text.slice(0, 117) + '...'
-      : note_text
+    // Get worker full name
+    const { data: workerOrg } = await supabase
+      .from('org_users')
+      .select('email')
+      .eq('user_id', user.id)
+      .single()
 
-    const { error } = await supabase.from('notifications').insert({
-      org_id:   ORG_ID,
-      user_id:  mentioned_user_id,
-      type:     'mention',
-      title:    `📣 ${worker_name ?? 'עובד'} הזכיר אותך בהערה`,
-      body:     truncated,
-      priority: 'high',
-      is_read:  false,
-    })
+    const senderName = worker_name || workerOrg?.email?.split('@')[0] || 'עובד'
+    const truncated  = note_text.length > 200 ? note_text.slice(0, 197) + '...' : note_text
 
-    if (error) {
-      console.error('[mention-notify]', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    const { data: notif, error } = await supabase
+      .from('notifications')
+      .insert({
+        org_id:          ORG_ID,
+        user_id:         mentioned_user_id,
+        type:            'mention',
+        title:           `📣 ${senderName} הזכיר אותך בהערה`,
+        body:            truncated,
+        priority:        'high',
+        is_read:         false,
+        mention_status:  'pending',
+        sender_id:       user.id,
+        sender_name:     senderName,
+      })
+      .select('id')
+      .single()
 
-    return NextResponse.json({ ok: true })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    return NextResponse.json({ ok: true, notification_id: notif?.id })
   } catch (err) {
     console.error('[POST /api/worker/mention-notify]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -6,6 +6,7 @@ import { createServerClient } from '@supabase/ssr'
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const code = searchParams.get('code')
+  const nextParam = searchParams.get('next') || ''
   const origin = request.nextUrl.origin
   const cookieStore = await cookies()
 
@@ -110,6 +111,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/worker`)
     }
     return NextResponse.redirect(`${origin}/dashboard`)
+  }
+
+  // Если в ссылке был next=/worker — значит это инвайт продажника
+  // Даже если запись в admin_users ещё не найдена — проверяем по email напрямую
+  if (nextParam.startsWith('/worker') && user.email) {
+    const { data: salesCheck } = await supabaseAdmin
+      .from('admin_users')
+      .select('user_id, is_sales_agent')
+      .eq('email', user.email.toLowerCase())
+      .eq('is_sales_agent', true)
+      .maybeSingle()
+
+    if (salesCheck) {
+      // Привязываем user_id если ещё не привязан
+      if (!salesCheck.user_id || salesCheck.user_id !== user.id) {
+        await supabaseAdmin
+          .from('admin_users')
+          .update({ user_id: user.id })
+          .eq('email', user.email.toLowerCase())
+      }
+      return NextResponse.redirect(`${origin}/worker`)
+    }
   }
 
   // 2) Check if user is a member of any organization (owner or invited staff)

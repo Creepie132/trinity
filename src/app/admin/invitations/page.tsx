@@ -1,17 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
-import { Mail, Copy, Send, RefreshCw, Loader2, Trash2 } from 'lucide-react'
+import { Mail, Copy, Trash2 } from 'lucide-react'
 import { ResponsiveDataView } from '@/components/ui/ResponsiveDataView'
 
 interface Invitation {
@@ -26,15 +20,10 @@ interface Invitation {
 }
 
 export default function AdminInvitationsPage() {
-  const router = useRouter()
   const { language } = useLanguage()
-  const supabase = createSupabaseBrowserClient()
 
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
-  const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
 
   const translations = {
     he: {
@@ -117,57 +106,6 @@ export default function AdminInvitationsPage() {
     }
   }
 
-  const handleSendInvitation = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!email) {
-      toast.error(t.emailRequired)
-      return
-    }
-
-    setSending(true)
-
-    try {
-      const response = await fetch('/api/admin/invitations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, message: message || null }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to send invitation')
-      }
-
-      const data = await response.json()
-
-      // Show warning if user already exists
-      if (data.warning && data.message) {
-        toast.info(data.message, {
-          duration: 8000,
-        })
-      } else {
-        toast.success(`${t.successSent} ${email}`)
-      }
-      
-      // Show invite URL
-      if (data.inviteUrl) {
-        toast.info(`${t.inviteUrl} ${data.inviteUrl}`, {
-          duration: 10000,
-        })
-      }
-
-      setEmail('')
-      setMessage('')
-      loadInvitations()
-    } catch (error: any) {
-      console.error('Error sending invitation:', error)
-      toast.error(error.message || 'Failed to send invitation')
-    } finally {
-      setSending(false)
-    }
-  }
-
   const copyInviteLink = (token: string) => {
     const APP_URL = window.location.origin
     const inviteUrl = `${APP_URL}/invite/${token}`
@@ -176,7 +114,6 @@ export default function AdminInvitationsPage() {
   }
 
   const resendInvitation = async (invitation: Invitation) => {
-    setSending(true)
     try {
       const response = await fetch('/api/admin/invitations', {
         method: 'POST',
@@ -194,8 +131,6 @@ export default function AdminInvitationsPage() {
     } catch (error) {
       console.error('Error resending:', error)
       toast.error('Failed to resend invitation')
-    } finally {
-      setSending(false)
     }
   }
 
@@ -260,56 +195,6 @@ export default function AdminInvitationsPage() {
         <Mail className="w-8 h-8 text-amber-600" />
         <h1 className="text-2xl md:text-3xl font-bold">{t.title}</h1>
       </div>
-
-      {/* Send Invitation Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Send className="w-5 h-5" />
-            {t.sendInvitation}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSendInvitation} className="space-y-4">
-            <div>
-              <Label htmlFor="email">{t.email} *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="user@example.com"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="message">{t.message}</Label>
-              <Textarea
-                id="message"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder={t.messagePlaceholder}
-                rows={3}
-              />
-            </div>
-
-            <Button type="submit" disabled={sending}>
-              {sending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {t.sending}
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  {t.send}
-                </>
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
 
       {/* Invitations List */}
       <Card>

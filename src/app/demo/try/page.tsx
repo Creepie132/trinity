@@ -24,9 +24,9 @@ export default function DemoTryPage() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // /callback уже зарегистрирован в Supabase Redirect URLs
-        // ?next=/demo/activate — сигнал для /callback что это demo-вход
-        redirectTo: `${window.location.origin}/callback?next=/demo/activate`,
+        // Направляем прямо на /demo/callback/google — обработчик demo-потока
+        // Этот URL должен быть в Supabase → Auth → Redirect URLs
+        redirectTo: `${window.location.origin}/demo/callback/google`,
         queryParams: { prompt: 'select_account' },
       },
     })

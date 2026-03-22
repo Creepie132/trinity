@@ -10,9 +10,10 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
-    const { orgId, orgRole } = auth
+    const { orgId, orgRole, isAdmin } = auth
 
-    if (orgRole !== 'owner') {
+    // Allow: owner role OR system admin (is_admin in JWT)
+    if (orgRole !== 'owner' && !isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

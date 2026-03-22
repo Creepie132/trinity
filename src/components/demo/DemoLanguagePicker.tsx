@@ -29,19 +29,21 @@ export function DemoLanguagePicker({ onSelect }: Props) {
           <p className="text-gray-700 font-semibold mb-6">בחר שפה / Выберите язык</p>
 
           <div className="space-y-3">
+            {/* Hebrew — RTL layout: text on left (visual), flag on right */}
             <button onClick={() => onSelect('he')}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group hover:scale-[1.02] active:scale-[0.98]">
-              <span className="text-3xl">🇮🇱</span>
-              <div className="text-right flex-1">
+              className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200">
+              <div className="text-right flex-1" dir="rtl">
                 <p className="font-bold text-gray-900 text-lg">עברית</p>
                 <p className="text-sm text-gray-500">ממשק בעברית עם נתונים בעברית</p>
               </div>
+              <span className="text-3xl leading-none flex-shrink-0">🇮🇱</span>
             </button>
 
+            {/* Russian — LTR layout: flag on left, text on right */}
             <button onClick={() => onSelect('ru')}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group hover:scale-[1.02] active:scale-[0.98]">
-              <span className="text-3xl">🇷🇺</span>
-              <div className="text-left flex-1">
+              className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-200">
+              <span className="text-3xl leading-none flex-shrink-0">🇷🇺</span>
+              <div className="text-left flex-1" dir="ltr">
                 <p className="font-bold text-gray-900 text-lg">Русский</p>
                 <p className="text-sm text-gray-500">Интерфейс и данные на русском</p>
               </div>
@@ -86,24 +88,31 @@ export function useDemoLanguagePicker() {
         if (!(org?.features as any)?.is_demo) return
         setIsDemo(true)
         langPickerOrgId.current = orgId
-        // Show picker if no lang chosen yet for this demo org
+        // Show picker if no lang chosen yet — check both specific and fallback keys
         const key = `demo_lang_${orgId}`
-        if (!localStorage.getItem(key)) setShow(true)
+        const alreadyChosen = localStorage.getItem(key) || localStorage.getItem('demo_lang_selected')
+        if (!alreadyChosen) setShow(true)
       } catch {}
     }
     check()
   }, [])
 
   const handleSelect = async (lang: 'he' | 'ru') => {
-    // Mark as chosen — use the SAME key we check in the condition above
-    const key = `demo_lang_${langPickerOrgId.current}`
-    localStorage.setItem(key, lang)
+    // Save lang with REAL orgId — wait until it's available
+    // If orgId still empty (race condition), use a fallback universal key
+    const orgId = langPickerOrgId.current
+    if (orgId) {
+      localStorage.setItem(`demo_lang_${orgId}`, lang)
+    }
+    // Always write to universal demo key as fallback
+    localStorage.setItem('demo_lang_selected', lang)
     // Set the app language (key LanguageContext reads)
     localStorage.setItem('trinity-language', lang)
     setShow(false)
-    // Need a moment for LanguageContext to pick up new value, then reload
-    window.location.reload()
+    // Small delay so setShow(false) renders before reload
+    setTimeout(() => window.location.reload(), 50)
   }
 
+  // Show if demo AND (orgId-specific key not set OR fallback not set)
   return { show: show && isDemo, handleSelect }
 }

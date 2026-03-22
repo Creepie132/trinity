@@ -19,6 +19,7 @@ import { ClientProviders } from '@/components/providers/ClientProviders'
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext'
 import { NotificationBell } from '@/components/worker/NotificationBell'
 import { NewLeadModal } from '@/components/worker/NewLeadModal'
+import { useAuth } from '@/hooks/useAuth'
 
 // ─── Worker nav items ─────────────────────────────────────────────────────────
 
@@ -64,9 +65,26 @@ const WORKER_NAV = [
 
 function WorkerShell({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage()
+  const { role } = useAuth()
   const pathname = usePathname()
   const isHe = language === 'he'
+  const isOwner = role === 'owner'
   const [newLeadOpen, setNewLeadOpen] = useState(false)
+
+  // Кабинет — только для owner при наличии workers (проверяем на стороне API)
+  const officeNav = isOwner ? [{
+    href: '/worker/office', exact: false,
+    label_he: 'קבינט', label_ru: 'Кабинет',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+    ),
+    isOwnerOnly: true,
+  }] : []
+
+  const navItems = [...WORKER_NAV, ...officeNav]
 
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50/30 to-indigo-50/20" dir="rtl">
@@ -104,13 +122,16 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-          {WORKER_NAV.map(item => {
+          {navItems.map(item => {
             const isActive = item.exact
               ? pathname === item.href
               : pathname.startsWith(item.href)
             return (
               <Link key={item.href} href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${'isOwnerOnly' in item && item.isOwnerOnly
+                    ? isOwner ? '' : 'hidden'
+                    : ''
+                } ${
                   isActive
                     ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-200/50'
                     : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
@@ -138,7 +159,7 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
       {/* Mobile bottom nav */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-t border-white/40 shadow-2xl">
         <div className="flex items-center justify-around px-2 py-2">
-          {WORKER_NAV.slice(0, 4).map(item => {
+          {navItems.slice(0, isOwner ? 4 : 4).map(item => {
             const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
             return (
               <Link key={item.href} href={item.href}

@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useRouter } from 'next/navigation'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts'
 
 interface KPI {
   totalRevenue: number; totalCommission: number; netProfit: number
   conversionRate: number; totalDeals: number; wonDeals: number
+  deltaRevenue: number; deltaCommission: number; deltaNetProfit: number
 }
 interface FunnelStage {
   id: string; name: string; name_he: string; color: string
@@ -18,7 +19,13 @@ interface WorkerStat {
   user_id: string; email: string; active_deals: number
   won_deals: number; total_revenue: number; commission: number
   conversion: number; total_deals: number
+  wa_pulse: number; avg_response_min: number | null; value_per_lead: number
 }
+interface Forecast {
+  forecastRevenue: number; pipelineValue: number
+  pipelineDeals: number; avgConversionPct: number
+}
+interface LeadSource { name: string; count: number }
 interface Bottleneck {
   id: string; title: string; amount: number; stage_name: string
   days_stuck: number; worker_email: string
@@ -27,10 +34,16 @@ interface ActivityEntry {
   id: string; action: string; user_email: string
   old_data: any; new_data: any; created_at: string
 }
+interface AnomalyEntry extends ActivityEntry { anomaly: string | null; ip_address?: string }
 interface StatsData {
   hasWorkers: boolean; period: string
-  kpi: KPI; funnel: FunnelStage[]; workerStats: WorkerStat[]
-  bottlenecks: Bottleneck[]; activityLog: ActivityEntry[]
+  kpi: KPI
+  forecast: Forecast
+  leadSources: LeadSource[]
+  funnel: FunnelStage[]
+  workerStats: WorkerStat[]
+  bottlenecks: Bottleneck[]
+  activityLog: AnomalyEntry[]
 }
 type Period = 'today' | 'week' | 'month'
 type TabKey = 'overview' | 'workers' | 'bottlenecks' | 'log'
@@ -50,12 +63,25 @@ const T = {
     leaderboard: 'Таблица лидеров', leaderboardSub: 'Показатели за период',
     worker: 'Продавец', activeDeals: 'Акт.', wonDeals: 'Закр.',
     totalRevenue: 'Выручка', commission: 'Комиссия', conversionPct: 'Conv.',
+    waPulse: 'WA сегодня', responseTime: 'Время ответа', valuePerLead: 'Средний чек',
+    minutes: 'мин', noResponseData: '—',
     bottlenecksTitle: 'Зависшие сделки', bottlenecksSub: 'Стадия не менялась > 3 дней',
     noBottlenecks: 'Зависших сделок нет — всё движется!',
-    days: 'дн.', logTitle: 'Журнал изменений', logSub: 'Смена стадий и сумм в реальном времени',
+    days: 'дн.', logTitle: 'Журнал изменений', logSub: 'Смена стадий, сумм и аномалии безопасности',
     noLog: 'Нет активности за период', noWorkers: 'Нет активных работников',
     noWorkersSub: 'Добавьте работников в организацию',
-    stageChange: 'Смена стадии', feeChange: 'Комиссия',
+    stageChange: 'Смена стадии', feeChange: 'Изменение комиссии',
+    anomalyFeeClose: '⚠️ Изменение суммы после закрытия сделки',
+    anomalyDelete: '🚨 Удаление записи',
+    anomalyUnauth: '🔴 Попытка несанкционированного доступа',
+    forecastTitle: 'Прогноз доходов', forecastSub: 'Ожидаемая выручка к концу периода',
+    forecastRevenue: 'Прогноз выручки', pipelineValue: 'В воронке',
+    pipelineDeals: 'сделок в работе', conversionUsed: 'конверсия',
+    leadSources: 'Источники лидов', leadSourcesSub: 'Откуда приходят клиенты',
+    vsLastPeriod: 'vs прошлый период',
+    kiраTitle: 'Kira AI — Сводка дня',
+    kiraLoading: 'Kira анализирует данные...',
+    kiraBtn: '✨ Спросить Kiру',
     allTime: 'Все данные',
   },
   he: {
@@ -72,12 +98,25 @@ const T = {
     leaderboard: 'לוח מוביל', leaderboardSub: 'ביצועים לפי תקופה',
     worker: 'עובד', activeDeals: 'פעיל', wonDeals: 'סגור',
     totalRevenue: 'הכנסות', commission: 'עמלה', conversionPct: 'המרה',
+    waPulse: 'WA היום', responseTime: 'זמן תגובה', valuePerLead: 'ממוצע לעסקה',
+    minutes: 'דק׳', noResponseData: '—',
     bottlenecksTitle: 'עסקאות תקועות', bottlenecksSub: 'לא עברו שלב מעל 3 ימים',
     noBottlenecks: 'אין עסקאות תקועות — הכל זז!',
-    days: 'ימים', logTitle: 'יומן שינויים', logSub: 'שינויי שלב וסכומים',
+    days: 'ימים', logTitle: 'יומן שינויים', logSub: 'שינויי שלב, סכומים ואנומליות אבטחה',
     noLog: 'אין פעולות לתקופה זו', noWorkers: 'אין עובדים פעילים',
     noWorkersSub: 'הוסף עובדים לארגון',
-    stageChange: 'שינוי שלב', feeChange: 'עמלה',
+    stageChange: 'שינוי שלב', feeChange: 'שינוי עמלה',
+    anomalyFeeClose: '⚠️ שינוי סכום לאחר סגירת עסקה',
+    anomalyDelete: '🚨 מחיקת רשומה',
+    anomalyUnauth: '🔴 ניסיון גישה לא מורשה',
+    forecastTitle: 'תחזית הכנסות', forecastSub: 'הכנסה צפויה עד סוף התקופה',
+    forecastRevenue: 'תחזית', pipelineValue: 'בצינור',
+    pipelineDeals: 'עסקאות פעילות', conversionUsed: 'המרה',
+    leadSources: 'מקורות לידים', leadSourcesSub: 'מאיפה מגיעים הלקוחות',
+    vsLastPeriod: 'לעומת תקופה קודמת',
+    kiраTitle: 'Kira AI — סיכום יומי',
+    kiraLoading: 'Kira מנתחת נתונים...',
+    kiraBtn: '✨ שאל את Kira',
     allTime: 'כל הנתונים',
   },
 }
@@ -107,9 +146,9 @@ function useCountUp(target: number, duration = 1200) {
 }
 
 // ── KPI Card with animation ───────────────────────────────────────────────────
-function KpiCard({ label, value, rawValue, sub, gradient, icon, delay = 0 }: {
+function KpiCard({ label, value, rawValue, sub, gradient, icon, delay = 0, delta, deltaLabel }: {
   label: string; value: string; rawValue: number; sub?: string
-  gradient: string; icon: string; delay?: number
+  gradient: string; icon: string; delay?: number; delta?: number; deltaLabel?: string
 }) {
   const [visible, setVisible] = useState(false)
   const animated = useCountUp(visible ? rawValue : 0)
@@ -124,16 +163,12 @@ function KpiCard({ label, value, rawValue, sub, gradient, icon, delay = 0 }: {
   return (
     <div className={`relative overflow-hidden rounded-2xl p-5 bg-white border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
       style={{ transition: `opacity 0.4s ease ${delay}ms, transform 0.4s ease ${delay}ms, box-shadow 0.2s` }}>
-      {/* Gradient accent top */}
       <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradient} rounded-t-2xl`}/>
-      {/* Icon */}
       <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-2xl shadow-lg mb-4`}>{icon}</div>
-      {/* Value */}
       <p className="text-2xl font-black text-gray-900 leading-none tabular-nums">{displayValue}</p>
       <p className="text-xs font-semibold text-gray-500 mt-1.5 uppercase tracking-wide">{label}</p>
       {sub && <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>}
-      {/* Subtle bg pattern */}
-      <div className="absolute -bottom-3 -right-3 w-16 h-16 rounded-full bg-gradient-to-br opacity-5" style={{ background: 'currentColor' }}/>
+      {delta !== undefined && deltaLabel && <DeltaBadge delta={delta} label={deltaLabel}/>}
     </div>
   )
 }
@@ -190,6 +225,173 @@ function Section({ icon, title, sub, children }: { icon: string; title: string; 
         </div>
       </div>
       <div className="p-5">{children}</div>
+    </div>
+  )
+}
+
+// ── Delta badge ───────────────────────────────────────────────────────────────
+function DeltaBadge({ delta, label }: { delta: number; label: string }) {
+  if (delta === 0) return null
+  const up = delta > 0
+  return (
+    <div className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full mt-1 ${
+      up ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+    }`}>
+      <span>{up ? '▲' : '▼'}</span>
+      <span>{Math.abs(delta)}%</span>
+      <span className="font-normal text-[10px] opacity-70">{label}</span>
+    </div>
+  )
+}
+
+// ── Forecast widget ───────────────────────────────────────────────────────────
+function ForecastWidget({ forecast, t, lang }: { forecast: Forecast; t: typeof T['ru']; lang: string }) {
+  const fmtL = (n: number) => new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 }).format(n)
+  const pct = forecast.forecastRevenue > 0
+    ? Math.min(100, Math.round((forecast.forecastRevenue - forecast.pipelineValue * (forecast.avgConversionPct / 100)) / forecast.forecastRevenue * 100))
+    : 0
+
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 p-5 text-white shadow-lg">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center text-xl">🔮</div>
+        <div>
+          <p className="font-bold text-sm">{t.forecastTitle}</p>
+          <p className="text-xs text-indigo-200">{t.forecastSub}</p>
+        </div>
+      </div>
+      <p className="text-3xl font-black tabular-nums mb-1">{fmtL(forecast.forecastRevenue)}</p>
+      {/* Progress bar: current vs forecast */}
+      <div className="h-2 bg-white/20 rounded-full overflow-hidden mb-3">
+        <div className="h-full bg-white/80 rounded-full transition-all duration-700" style={{ width: `${pct}%` }}/>
+      </div>
+      <div className="flex items-center gap-4 text-xs text-indigo-200">
+        <span>📦 {t.pipelineValue}: {fmtL(forecast.pipelineValue)}</span>
+        <span>🎯 {forecast.pipelineDeals} {t.pipelineDeals}</span>
+        <span>📈 {forecast.avgConversionPct}% {t.conversionUsed}</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Lead Sources Donut ────────────────────────────────────────────────────────
+const SOURCE_COLORS: Record<string, string> = {
+  instagram: '#e1306c', whatsapp: '#25d366', direct: '#6366f1',
+  website: '#0ea5e9', facebook: '#1877f2', other: '#9ca3af',
+}
+const SOURCE_ICONS: Record<string, string> = {
+  instagram: '📸', whatsapp: '💬', direct: '🤝', website: '🌐', facebook: '👥', other: '📡',
+}
+
+function LeadSourcesWidget({ sources, t }: { sources: LeadSource[]; t: typeof T['ru'] }) {
+  const total = sources.reduce((s, x) => s + x.count, 0)
+  const chartData = sources.map(s => ({
+    name: s.name,
+    value: s.count,
+    fill: SOURCE_COLORS[s.name.toLowerCase()] || '#6366f1',
+  }))
+
+  if (!sources.length) return (
+    <div className="flex flex-col items-center py-8 gap-2 text-gray-400">
+      <span className="text-3xl">📊</span>
+      <p className="text-sm">{t.noData}</p>
+    </div>
+  )
+
+  return (
+    <div className="flex flex-col md:flex-row items-center gap-4">
+      <ResponsiveContainer width={160} height={160}>
+        <PieChart>
+          <Pie data={chartData} dataKey="value" cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3}>
+            {chartData.map((entry, i) => <Cell key={i} fill={entry.fill}/>)}
+          </Pie>
+          <Tooltip formatter={(v: any, name: any) => [v, name]}
+            contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}/>
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="flex-1 space-y-2 min-w-0">
+        {sources.map(s => {
+          const pct = total > 0 ? Math.round((s.count / total) * 100) : 0
+          const color = SOURCE_COLORS[s.name.toLowerCase()] || '#6366f1'
+          const icon  = SOURCE_ICONS[s.name.toLowerCase()] || '📡'
+          return (
+            <div key={s.name} className="flex items-center gap-2.5">
+              <span className="text-base">{icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-0.5">
+                  <span className="text-xs font-semibold text-gray-700 capitalize">{s.name}</span>
+                  <span className="text-xs font-bold text-gray-500">{s.count} ({pct}%)</span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }}/>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Kira AI Summary ───────────────────────────────────────────────────────────
+function KiraWidget({ data, t, lang }: { data: StatsData; t: typeof T['ru']; lang: string }) {
+  const [summary, setSummary] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const generateSummary = async () => {
+    setLoading(true)
+    try {
+      const payload = {
+        kpi: data.kpi,
+        forecast: data.forecast,
+        leadSources: data.leadSources,
+        topWorker: [...data.workerStats].sort((a, b) => b.conversion - a.conversion)[0],
+        bottlenecksCount: data.bottlenecks.length,
+        anomaliesCount: data.activityLog.filter((e: any) => e.anomaly).length,
+        period: data.period,
+        lang,
+      }
+
+      const res = await fetch('/api/owner/kira-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (res.ok) {
+        const json = await res.json()
+        setSummary(json.summary)
+      } else {
+        setSummary(lang === 'he' ? 'שגיאה בטעינת הסיכום' : 'Ошибка загрузки сводки')
+      }
+    } catch {
+      setSummary(lang === 'he' ? 'שגיאה בחיבור' : 'Ошибка соединения')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-purple-100 shadow-md">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-3 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-lg">🤖</div>
+        <p className="font-bold text-white text-sm">{t.kiраTitle}</p>
+      </div>
+      <div className="p-4 bg-white min-h-[80px]">
+        {loading ? (
+          <div className="flex items-center gap-2 text-purple-500 text-sm animate-pulse">
+            <span>⏳</span><span>{t.kiraLoading}</span>
+          </div>
+        ) : summary ? (
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{summary}</p>
+        ) : (
+          <button onClick={generateSummary}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold shadow-md hover:opacity-90 transition-all">
+            {t.kiraBtn}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -307,13 +509,16 @@ export default function OwnerOfficePage() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard icon="💰" label={t.revenue} gradient="from-emerald-500 to-teal-600"
                   rawValue={data.kpi.totalRevenue} value={fmt(data.kpi.totalRevenue)}
-                  sub={`${data.kpi.wonDeals} ${t.closedDeals}`} delay={0}/>
+                  sub={`${data.kpi.wonDeals} ${t.closedDeals}`} delay={0}
+                  delta={data.kpi.deltaRevenue} deltaLabel={t.vsLastPeriod}/>
                 <KpiCard icon="🤝" label={t.commissions} gradient="from-amber-500 to-orange-600"
                   rawValue={data.kpi.totalCommission} value={fmt(data.kpi.totalCommission)}
-                  sub={t.fromSetupFees} delay={100}/>
+                  sub={t.fromSetupFees} delay={100}
+                  delta={data.kpi.deltaCommission} deltaLabel={t.vsLastPeriod}/>
                 <KpiCard icon="📈" label={t.netProfit} gradient="from-indigo-500 to-purple-600"
                   rawValue={data.kpi.netProfit} value={fmt(data.kpi.netProfit)}
-                  sub={t.afterCommissions} delay={200}/>
+                  sub={t.afterCommissions} delay={200}
+                  delta={data.kpi.deltaNetProfit} deltaLabel={t.vsLastPeriod}/>
                 <KpiCard icon="🎯" label={t.conversion} gradient="from-pink-500 to-rose-600"
                   rawValue={data.kpi.conversionRate} value={`${data.kpi.conversionRate}%`}
                   sub={`${t.fromDeals} ${data.kpi.totalDeals} сделок`} delay={300}/>
@@ -337,6 +542,17 @@ export default function OwnerOfficePage() {
               <Section icon="🔽" title={t.funnel} sub={t.funnelSub}>
                 <FunnelViz data={data.funnel} lang={language}/>
               </Section>
+
+              {/* Forecast + Lead Sources side by side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <ForecastWidget forecast={data.forecast} t={t} lang={language}/>
+                <Section icon="📡" title={t.leadSources} sub={t.leadSourcesSub}>
+                  <LeadSourcesWidget sources={data.leadSources} t={t}/>
+                </Section>
+              </div>
+
+              {/* Kira AI */}
+              <KiraWidget data={data} t={t} lang={language}/>
 
               {/* Bar chart */}
               <Section icon="📊" title={t.revenueChart}>
@@ -372,10 +588,10 @@ export default function OwnerOfficePage() {
           {tab === 'workers' && (
             <Section icon="👥" title={t.leaderboard} sub={t.leaderboardSub}>
               <div className="overflow-x-auto -mx-5 px-5">
-                <table className="w-full text-sm min-w-[540px]" dir={isRTL ? 'rtl' : 'ltr'}>
+                <table className="w-full text-sm min-w-[700px]" dir={isRTL ? 'rtl' : 'ltr'}>
                   <thead>
                     <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                      {[t.worker, t.activeDeals, t.wonDeals, t.totalRevenue, t.commission, t.conversionPct].map(h => (
+                      {[t.worker, t.activeDeals, t.wonDeals, t.totalRevenue, t.commission, t.conversionPct, t.waPulse, t.responseTime, t.valuePerLead].map(h => (
                         <th key={h} className="pb-3 text-start font-semibold">{h}</th>
                       ))}
                     </tr>
@@ -409,6 +625,21 @@ export default function OwnerOfficePage() {
                             <span className={`text-xs font-bold ${w.conversion >= 50 ? 'text-emerald-600' : w.conversion >= 25 ? 'text-amber-600' : 'text-gray-500'}`}>{w.conversion}%</span>
                           </div>
                         </td>
+                        {/* Extended metrics */}
+                        <td className="py-3.5">
+                          <span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${w.wa_pulse > 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
+                            💬 {w.wa_pulse}
+                          </span>
+                        </td>
+                        <td className="py-3.5">
+                          {w.avg_response_min !== null
+                            ? <span className={`text-xs font-bold ${w.avg_response_min <= 30 ? 'text-emerald-600' : w.avg_response_min <= 120 ? 'text-amber-600' : 'text-red-500'}`}>
+                                {w.avg_response_min} {t.minutes}
+                              </span>
+                            : <span className="text-xs text-gray-300">{t.noResponseData}</span>
+                          }
+                        </td>
+                        <td className="py-3.5 font-semibold text-gray-700">{w.value_per_lead > 0 ? fmt(w.value_per_lead) : t.noResponseData}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -460,18 +691,44 @@ export default function OwnerOfficePage() {
                   {data.activityLog.map((e, i) => {
                     const isSetupFee = e.new_data?.setup_fee !== undefined
                     const isStage    = e.new_data?.stage_id  !== undefined
+                    const anomaly    = (e as any).anomaly as string | null
+
+                    // Anomaly styling
+                    const anomalyBg = anomaly === 'fee_after_close'
+                      ? 'bg-red-50 border-l-4 border-red-400'
+                      : anomaly === 'deletion'
+                        ? 'bg-red-100 border-l-4 border-red-600'
+                        : anomaly === 'unauthorized_access'
+                          ? 'bg-red-200 border-l-4 border-red-700'
+                          : ''
+
+                    const anomalyLabel = anomaly === 'fee_after_close'
+                      ? t.anomalyFeeClose
+                      : anomaly === 'deletion'
+                        ? t.anomalyDelete
+                        : anomaly === 'unauthorized_access'
+                          ? t.anomalyUnauth
+                          : null
+
                     return (
-                      <div key={e.id} className={`flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors ${i > 0 ? 'border-t border-gray-50' : ''}`}>
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0 mt-0.5 ${isSetupFee ? 'bg-amber-50' : 'bg-indigo-50'}`}>
-                          {isSetupFee ? '💰' : isStage ? '🔄' : '✏️'}
+                      <div key={e.id} className={`flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors ${i > 0 ? 'border-t border-gray-50' : ''} ${anomalyBg}`}>
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0 mt-0.5 ${
+                          anomaly ? 'bg-red-100' : isSetupFee ? 'bg-amber-50' : 'bg-indigo-50'
+                        }`}>
+                          {anomaly === 'deletion' ? '🗑️' : anomaly === 'unauthorized_access' ? '🔴' : isSetupFee ? '💰' : isStage ? '🔄' : '✏️'}
                         </div>
                         <div className="flex-1 min-w-0">
+                          {anomalyLabel && (
+                            <p className="text-xs font-bold text-red-600 mb-0.5">{anomalyLabel}</p>
+                          )}
                           <p className="text-sm font-semibold text-gray-800">
                             {isSetupFee
                               ? `${t.feeChange}: ${fmt(Number(e.old_data?.setup_fee ?? 0))} → ${fmt(Number(e.new_data?.setup_fee ?? 0))}`
                               : isStage ? t.stageChange : e.action}
                           </p>
-                          <p className="text-xs text-gray-400 mt-0.5">{e.user_email?.split('@')[0]}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{e.user_email?.split('@')[0]}
+                            {(e as any).ip_address && <span className="ms-2 text-gray-300">· {(e as any).ip_address}</span>}
+                          </p>
                         </div>
                         <p className="text-[11px] text-gray-400 shrink-0 tabular-nums">
                           {new Date(e.created_at).toLocaleString(language === 'he' ? 'he-IL' : 'ru-RU', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}

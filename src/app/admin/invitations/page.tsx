@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
-import { Mail, Copy, Send, RefreshCw, Loader2 } from 'lucide-react'
+import { Mail, Copy, Send, RefreshCw, Loader2, Trash2 } from 'lucide-react'
 import { ResponsiveDataView } from '@/components/ui/ResponsiveDataView'
 
 interface Invitation {
@@ -53,6 +53,9 @@ export default function AdminInvitationsPage() {
       copyLink: 'העתק קישור',
       resend: 'שלח שוב',
       inviteAgain: 'הזמן מחדש',
+      deleteInvitation: 'מחק הזמנה',
+      deleteConfirm: 'למחוק את ההזמנה?',
+      deleted: 'ההזמנה נמחקה',
       statuses: {
         pending: 'ממתין',
         accepted: 'התקבל',
@@ -79,6 +82,9 @@ export default function AdminInvitationsPage() {
       copyLink: 'Скопировать ссылку',
       resend: 'Отправить повторно',
       inviteAgain: 'Пригласить заново',
+      deleteInvitation: 'Удалить',
+      deleteConfirm: 'Удалить приглашение?',
+      deleted: 'Приглашение удалено',
       statuses: {
         pending: 'Ожидает',
         accepted: 'Принято',
@@ -190,6 +196,21 @@ export default function AdminInvitationsPage() {
       toast.error('Failed to resend invitation')
     } finally {
       setSending(false)
+    }
+  }
+
+  const deleteInvitation = async (invitation: Invitation) => {
+    if (!confirm(t.deleteConfirm)) return
+    try {
+      const response = await fetch(`/api/admin/invitations?id=${invitation.id}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) throw new Error('Failed to delete')
+      toast.success(t.deleted)
+      loadInvitations()
+    } catch (error) {
+      console.error('Error deleting invitation:', error)
+      toast.error('Failed to delete invitation')
     }
   }
 
@@ -371,6 +392,12 @@ export default function AdminInvitationsPage() {
                 actions.push({
                   label: t.inviteAgain,
                   onClick: () => resendInvitation(row),
+                })
+              }
+              if (row.status !== 'accepted') {
+                actions.push({
+                  label: t.deleteInvitation,
+                  onClick: () => deleteInvitation(row),
                 })
               }
               return actions

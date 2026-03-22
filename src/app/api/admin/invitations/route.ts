@@ -194,6 +194,37 @@ export async function POST(request: NextRequest) {
   })
 }
 
+export async function DELETE(request: NextRequest) {
+  const auth = await getAdminAuthContext()
+  if ('error' in auth) return auth.error
+
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 })
+
+  // Only allow deletion of non-accepted invitations
+  const { data: inv } = await supabaseAdmin
+    .from('invitations')
+    .select('id, status')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (!inv) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (inv.status === 'accepted') {
+    return NextResponse.json({ error: 'Cannot delete accepted invitation' }, { status: 400 })
+  }
+
+  const { error } = await supabaseAdmin
+    .from('invitations')
+    .delete()
+    .eq('id', id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ success: true })
+}
+
 export async function GET(request: NextRequest) {
   // Verify admin access via JWT claims
   const auth = await getAdminAuthContext()

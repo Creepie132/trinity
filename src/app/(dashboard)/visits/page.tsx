@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import {
   Plus, Search, Calendar, CalendarDays, List,
   ChevronDown, ChevronUp, Clock, TrendingUp,
-  Play, CheckCircle, X, Pencil
+  Play, CheckCircle, X, Pencil, MapPin, Video
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -553,6 +553,7 @@ export default function VisitsPage() {
                       <th className="text-start py-2.5 px-4 font-medium text-gray-400 dark:text-gray-500 text-xs">{isHe ? 'לקוח' : 'Клиент'}</th>
                       <th className="text-start py-2.5 px-4 font-medium text-gray-400 dark:text-gray-500 text-xs">{isHe ? 'תאריך · שעה' : 'Дата · Время'}</th>
                       <th className="text-start py-2.5 px-4 font-medium text-gray-400 dark:text-gray-500 text-xs">{isHe ? 'שירות' : 'Услуга'}</th>
+                      <th className="text-start py-2.5 px-4 font-medium text-gray-400 dark:text-gray-500 text-xs">{isHe ? 'סוג' : 'Тип'}</th>
                       <th className="text-start py-2.5 px-4 font-medium text-gray-400 dark:text-gray-500 text-xs">{isHe ? 'סטטוס' : 'Статус'}</th>
                       <th className="text-end py-2.5 px-4 font-medium text-gray-400 dark:text-gray-500 text-xs">{isHe ? 'מחיר' : 'Цена'}</th>
                       <th className="py-2.5 px-4" />
@@ -599,6 +600,19 @@ export default function VisitsPage() {
                             )}
                             {dur > 0 && (
                               <span className="ml-2 text-xs text-gray-400">{dur} {isHe ? "ד'" : 'мин'}</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            {visit.event_type === 'meeting' ? (
+                              <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                <Video className="w-3 h-3" />
+                                {isHe ? 'פגישה' : 'Встреча'}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                <MapPin className="w-3 h-3" />
+                                {isHe ? 'ביקור' : 'Визит'}
+                              </span>
                             )}
                           </td>
                           <td className="py-3 px-4">
@@ -702,6 +716,19 @@ export default function VisitsPage() {
                             {dur > 0 && <span className="ml-2 text-xs text-gray-400">{dur} {isHe ? "ד'" : 'мин'}</span>}
                           </td>
                           <td className="py-3 px-4">
+                            {visit.event_type === 'meeting' ? (
+                              <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                <Video className="w-3 h-3" />
+                                {isHe ? 'פגישה' : 'Встреча'}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                <MapPin className="w-3 h-3" />
+                                {isHe ? 'ביקור' : 'Визит'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
                             <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
                               {isHe ? 'הושלם' : 'Завершён'}
                             </span>
@@ -756,6 +783,19 @@ export default function VisitsPage() {
                             </td>
                             <td className="py-3 px-4 text-gray-500 dark:text-gray-400">
                               {svc && <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500">{svc}</span>}
+                            </td>
+                            <td className="py-3 px-4">
+                              {visit.event_type === 'meeting' ? (
+                                <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500">
+                                  <Video className="w-3 h-3" />
+                                  {isHe ? 'פגישה' : 'Встреча'}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500">
+                                  <MapPin className="w-3 h-3" />
+                                  {isHe ? 'ביקור' : 'Визит'}
+                                </span>
+                              )}
                             </td>
                             <td className="py-3 px-4">
                               <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500">

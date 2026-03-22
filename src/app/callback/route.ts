@@ -141,6 +141,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // ── Demo flow: /demo/try passes ?next=/demo/activate ─────────────────────
+  // Redirect to /demo/callback/google which shows progress UI + calls API
+  if (nextParam === '/demo/activate') {
+    return NextResponse.redirect(`${origin}/demo/callback/google`)
+  }
+
   // 2) Check if user is a member of any organization (owner or invited staff)
   // Use admin client to bypass RLS and see the just-linked row
   const { data: anyOrg } = await supabaseAdmin

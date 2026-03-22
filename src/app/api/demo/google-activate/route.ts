@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       id: orgId,
       name: orgName,
       plan: 'pro',
+      subscription_status: 'demo',
       features: {
         is_demo: true,
         is_demo_public: true,

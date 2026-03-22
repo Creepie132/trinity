@@ -238,10 +238,15 @@ export default function DemoRegisterModal({ lang, planName, planKey, onClose }: 
     : [he ? 'פרטים' : 'Данные', he ? 'תשלום' : 'Оплата']
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 modal-backdrop-enter" onClick={handleClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 modal-backdrop-enter"
+      onMouseDown={e => { if (e.target === e.currentTarget) handleClose() }}
+    >
       <div ref={containerRef} dir={dir}
         className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto modal-card-enter"
-        onClick={e => e.stopPropagation()}>
+        onMouseDown={e => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
+      >
 
         {/* Header */}
         <div className="bg-gradient-to-r from-slate-900 to-blue-900 px-7 pt-7 pb-5">

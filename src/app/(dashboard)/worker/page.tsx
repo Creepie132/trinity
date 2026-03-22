@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import Link from 'next/link'
+import { CommissionWidget } from '@/components/worker/CommissionWidget'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,16 +37,16 @@ interface ActivityItem {
 }
 
 interface DashboardData {
-  burning_tasks: BurningTask[]
-  red_zone_deals: RedZoneDeal[]
-  new_leads: NewLead[]
-  kpi: KpiData
-  funnel: FunnelStage[]
+  burning_tasks:    BurningTask[]
+  red_zone_deals:   RedZoneDeal[]
+  new_leads:        NewLead[]
+  kpi:              KpiData
+  funnel:           FunnelStage[]
   my_clients_count: number
-  my_active_deals: number
-  activity_feed: ActivityItem[]
+  my_active_deals:  number
+  activity_feed:    ActivityItem[]
   is_working_hours: boolean
-  settings: { phone_mask_enabled: boolean; can_view_reports: boolean }
+  settings:         { phone_mask_enabled: boolean; can_view_reports: boolean }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -58,28 +59,10 @@ function monthName(month: number, lang: string) {
   return new Date(2024, month - 1, 1).toLocaleString(lang === 'he' ? 'he-IL' : 'ru-RU', { month: 'long' })
 }
 
-function timeAgo(iso: string, lang: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const mins  = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days  = Math.floor(diff / 86400000)
-  if (lang === 'he') {
-    if (mins < 1)   return 'עכשיו'
-    if (mins < 60)  return `לפני ${mins} דק'`
-    if (hours < 24) return `לפני ${hours} ש'`
-    return `לפני ${days} ימים`
-  }
-  if (mins < 1)   return 'только что'
-  if (mins < 60)  return `${mins} мин назад`
-  if (hours < 24) return `${hours} ч назад`
-  return `${days} дн назад`
-}
-
-function waLink(phone: string, text?: string): string {
+function waLink(phone: string): string {
   const clean = phone.replace(/\D/g, '')
-  const num = clean.startsWith('0') ? '972' + clean.slice(1) : clean
-  const msg = text ? encodeURIComponent(text) : ''
-  return `https://wa.me/${num}${msg ? `?text=${msg}` : ''}`
+  const num   = clean.startsWith('0') ? '972' + clean.slice(1) : clean
+  return `https://wa.me/${num}`
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -118,7 +101,7 @@ function QuickActions({ lang }: { lang: string }) {
     {
       label: isHe ? 'ליד חדש' : 'Новый лид',
       icon: (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
       ),
@@ -128,7 +111,7 @@ function QuickActions({ lang }: { lang: string }) {
     {
       label: isHe ? 'הערה מהירה' : 'Быстрая заметка',
       icon: (
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
@@ -139,7 +122,7 @@ function QuickActions({ lang }: { lang: string }) {
     {
       label: isHe ? 'שלח תבנית WA' : 'Шаблон WA',
       icon: (
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
           <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.523 5.845L.057 23.054a.75.75 0 00.916.916l5.209-1.466A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.963 0-3.8-.5-5.403-1.378l-.386-.217-4.003 1.126 1.126-4.003-.217-.386A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
         </svg>
@@ -159,7 +142,7 @@ function QuickActions({ lang }: { lang: string }) {
             href={a.href}
             target="_blank"
             rel="noopener noreferrer"
-            className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl text-xs font-semibold transition-all shadow-sm ${a.color}`}
+            className={`flex flex-col items-center gap-2 px-3 py-4 rounded-xl text-xs font-bold transition-all shadow-sm ${a.color}`}
           >
             {a.icon}
             <span className="text-center leading-tight">{a.label}</span>
@@ -168,7 +151,7 @@ function QuickActions({ lang }: { lang: string }) {
           <Link
             key={a.label}
             href={a.href}
-            className={`flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl text-xs font-semibold transition-all shadow-sm ${a.color}`}
+            className={`flex flex-col items-center gap-2 px-3 py-4 rounded-xl text-xs font-bold transition-all shadow-sm ${a.color}`}
           >
             {a.icon}
             <span className="text-center leading-tight">{a.label}</span>
@@ -188,13 +171,9 @@ function RedZoneCard({ deal, lang, maskPhone }: {
   const clientName = deal.client
     ? `${deal.client.first_name} ${deal.client.last_name}`.trim()
     : (isHe ? 'לא מוגדר' : 'Не указан')
-
   const phone = deal.client?.phone ?? ''
-  const displayPhone = maskPhone && phone
-    ? phone.slice(0, -4).replace(/./g, '•') + phone.slice(-4)
-    : phone
+  const mins  = deal.minutes_silent
 
-  const mins = deal.minutes_silent
   const silentLabel = mins == null
     ? (isHe ? 'אין מגע' : 'Без касания')
     : mins < 60
@@ -202,13 +181,11 @@ function RedZoneCard({ deal, lang, maskPhone }: {
       : (isHe ? `${Math.floor(mins / 60)} ש'` : `${Math.floor(mins / 60)} ч`)
 
   return (
-    <div className="relative flex items-start gap-3 p-3 rounded-xl border-2 border-red-200 bg-red-50/60 hover:bg-red-50 transition-colors group">
-      {/* Pulse indicator */}
+    <div className="relative flex items-start gap-3 p-3 rounded-xl border-2 border-red-200 bg-red-50/60 hover:bg-red-50 transition-colors">
       <span className="relative mt-1 shrink-0 flex h-2.5 w-2.5">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
       </span>
-
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900 truncate">{clientName}</p>
         <p className="text-xs text-gray-500 truncate">{deal.title}</p>
@@ -216,7 +193,6 @@ function RedZoneCard({ deal, lang, maskPhone }: {
           <p className="text-xs text-indigo-600 truncate mt-0.5">{deal.next_action}</p>
         )}
       </div>
-
       <div className="flex flex-col items-end gap-1.5 shrink-0">
         <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
           {silentLabel}
@@ -227,7 +203,6 @@ function RedZoneCard({ deal, lang, maskPhone }: {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-colors"
-            onClick={e => e.stopPropagation()}
           >
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
@@ -252,18 +227,14 @@ function NewLeadCard({ lead, lang }: { lead: NewLead; lang: string }) {
 
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl border border-indigo-100 bg-indigo-50/40 hover:bg-indigo-50 transition-colors">
-      <span className="shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-base">
-        🎯
-      </span>
+      <span className="shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-base">🎯</span>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900 truncate">{clientName}</p>
         <p className="text-xs text-gray-500 truncate">{lead.title}</p>
       </div>
       <div className="flex flex-col items-end gap-1.5 shrink-0">
         {lead.amount > 0 && (
-          <span className="text-xs font-bold text-indigo-600">
-            {fmt(lead.amount, lead.currency)}
-          </span>
+          <span className="text-xs font-bold text-indigo-600">{fmt(lead.amount, lead.currency)}</span>
         )}
         {phone && (
           <a
@@ -356,10 +327,7 @@ function CompactFunnel({ stages, lang }: { stages: FunnelStage[]; lang: string }
               backgroundColor: s.color,
             }}
           />
-          <span
-            className="text-[9px] text-gray-400 truncate w-full text-center"
-            title={s.name}
-          >
+          <span className="text-[9px] text-gray-400 truncate w-full text-center" title={s.name}>
             {s.name.length > 6 ? s.name.slice(0, 5) + '…' : s.name}
           </span>
         </div>
@@ -452,7 +420,7 @@ export default function WorkerDashboardPage() {
       {data && (
         <div className="space-y-3">
 
-          {/* Row 1: Stats */}
+          {/* Row 1: KPI Cards */}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="bg-indigo-50 rounded-2xl px-4 py-3 flex flex-col gap-0.5">
               <span className="text-2xl font-bold text-indigo-600">{data.my_active_deals}</span>
@@ -538,11 +506,12 @@ export default function WorkerDashboardPage() {
             </Widget>
           )}
 
-          {/* Row 3: KPI + Funnel */}
-          <div className="grid gap-3 md:grid-cols-2">
+          {/* Row 3: KPI + Funnel + Commission */}
+          <div className="grid gap-3 md:grid-cols-3">
             <Widget title={isHe ? '📊 ביצועים חודשיים' : '📊 Выполнение плана'}>
               <KpiBar kpi={data.kpi} lang={language} />
             </Widget>
+
             <Widget
               title={isHe ? '📈 מפת הוורקה' : '📈 Карта воронки'}
               action={
@@ -553,6 +522,9 @@ export default function WorkerDashboardPage() {
             >
               <CompactFunnel stages={data.funnel} lang={language} />
             </Widget>
+
+            {/* 💰 Commission widget — NEW */}
+            <CommissionWidget lang={language} />
           </div>
 
         </div>

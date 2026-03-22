@@ -4,28 +4,30 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePipeline, PipelineDeal, PipelineStage } from '@/hooks/usePipeline'
-// Lightweight relative-time helper (no external dependency)
+import { SetupFeeModal } from '@/components/worker/SetupFeeModal'
+
+// Lightweight relative-time helper
 function timeAgo(dateStr: string, lang: string): string {
   const diff  = Date.now() - new Date(dateStr).getTime()
   const mins  = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days  = Math.floor(diff / 86400000)
   const isHe  = lang === 'he'
-  if (mins < 2)   return isHe ? 'עכשיו'            : 'только что'
-  if (mins < 60)  return isHe ? `לפני ${mins} ד'`  : `${mins} мин. назад`
-  if (hours < 24) return isHe ? `לפני ${hours} ש'` : `${hours} ч. назад`
+  if (mins < 2)   return isHe ? 'עכשיו'             : 'только что'
+  if (mins < 60)  return isHe ? `לפני ${mins} ד'`   : `${mins} мин. назад`
+  if (hours < 24) return isHe ? `לפני ${hours} ש'`  : `${hours} ч. назад`
   if (days < 30)  return isHe ? `לפני ${days} ימים` : `${days} дн. назад`
   return new Date(dateStr).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU')
 }
 
-// ─── Rejection modal ─────────────────────────────────────────────────────────
+// ─── Rejection modal ──────────────────────────────────────────────────────────
 
 const REJECTION_CATEGORIES = [
-  { value: 'price',       label_ru: 'Цена',         label_he: 'מחיר'           },
-  { value: 'competitor',  label_ru: 'Конкурент',     label_he: 'מתחרה'          },
-  { value: 'timing',      label_ru: 'Не подходит время', label_he: 'תזמון'      },
-  { value: 'no_need',     label_ru: 'Нет потребности',   label_he: 'אין צורך'   },
-  { value: 'other',       label_ru: 'Другое',        label_he: 'אחר'            },
+  { value: 'price',      label_ru: 'Цена',              label_he: 'מחיר'       },
+  { value: 'competitor', label_ru: 'Конкурент',          label_he: 'מתחרה'      },
+  { value: 'timing',     label_ru: 'Не подходит время',  label_he: 'תזמון'      },
+  { value: 'no_need',    label_ru: 'Нет потребности',    label_he: 'אין צורך'   },
+  { value: 'other',      label_ru: 'Другое',             label_he: 'אחר'        },
 ]
 
 function RejectionModal({
@@ -43,14 +45,17 @@ function RejectionModal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 space-y-4"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200"
         dir={isHe ? 'rtl' : 'ltr'}
       >
-        <h2 className="text-lg font-semibold text-gray-900">
-          {isHe ? 'סיבת סגירה' : 'Причина закрытия'}
-        </h2>
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">❌</span>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {isHe ? 'סיבת סגירה' : 'Причина закрытия'}
+          </h2>
+        </div>
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
@@ -59,7 +64,7 @@ function RejectionModal({
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             {REJECTION_CATEGORIES.map(c => (
               <option key={c.value} value={c.value}>
@@ -78,21 +83,21 @@ function RejectionModal({
             onChange={e => setReason(e.target.value)}
             rows={3}
             placeholder={isHe ? 'מה קרה?' : 'Что пошло не так?'}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
           />
         </div>
 
         <div className="flex gap-3 justify-end pt-2">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
           >
             {isHe ? 'ביטול' : 'Отмена'}
           </button>
           <button
             onClick={() => reason.trim() && onConfirm(reason.trim(), category)}
             disabled={!reason.trim()}
-            className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 text-sm bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {isHe ? 'אשר סגירה' : 'Подтвердить закрытие'}
           </button>
@@ -102,11 +107,10 @@ function RejectionModal({
   )
 }
 
-// ─── Deal card ───────────────────────────────────────────────────────────────
+// ─── Deal card ────────────────────────────────────────────────────────────────
 
 function DealCard({
-  deal, lang,
-  onDragStart,
+  deal, lang, onDragStart,
 }: {
   deal: PipelineDeal
   lang: string
@@ -116,36 +120,28 @@ function DealCard({
   const clientName = deal.client
     ? `${deal.client.first_name} ${deal.client.last_name}`.trim()
     : (isHe ? 'לקוח לא ידוע' : 'Клиент не указан')
-
-  const lastContact = deal.last_contact_at
-    ? timeAgo(deal.last_contact_at, lang)
-    : null
-
-  const isOverdue = deal.next_action_date
-    && new Date(deal.next_action_date) < new Date()
+  const lastContact = deal.last_contact_at ? timeAgo(deal.last_contact_at, lang) : null
+  const isOverdue   = deal.next_action_date && new Date(deal.next_action_date) < new Date()
 
   return (
     <div
       draggable
       onDragStart={() => onDragStart(deal.id)}
-      className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm cursor-grab active:cursor-grabbing hover:border-indigo-300 hover:shadow-md transition-all select-none space-y-2"
+      className="group bg-white rounded-xl border border-gray-200 p-3 shadow-sm cursor-grab active:cursor-grabbing hover:border-indigo-300 hover:shadow-md transition-all select-none space-y-2"
     >
-      {/* Client name + amount */}
       <div className="flex items-start justify-between gap-2">
-        <span className="text-sm font-medium text-gray-900 leading-tight line-clamp-2">
+        <span className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2">
           {clientName}
         </span>
         {deal.amount > 0 && (
-          <span className="shrink-0 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+          <span className="shrink-0 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
             ₪{Number(deal.amount).toLocaleString()}
           </span>
         )}
       </div>
 
-      {/* Deal title */}
       <p className="text-xs text-gray-500 line-clamp-1">{deal.title}</p>
 
-      {/* Tags */}
       {deal.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {deal.tags.map(({ tag }) => (
@@ -160,7 +156,6 @@ function DealCard({
         </div>
       )}
 
-      {/* Footer: last contact + next action */}
       <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-gray-100">
         {lastContact && <span>{lastContact}</span>}
         {deal.next_action && (
@@ -179,10 +174,10 @@ function StageColumn({
   stage, lang, stageName, draggingId,
   onDragStart, onDrop,
 }: {
-  stage:      PipelineStage
-  lang:       string
-  stageName:  (s: PipelineStage) => string
-  draggingId: string | null
+  stage:       PipelineStage
+  lang:        string
+  stageName:   (s: PipelineStage) => string
+  draggingId:  string | null
   onDragStart: (dealId: string, stageId: string) => void
   onDrop:      (toStageId: string) => void
 }) {
@@ -203,13 +198,13 @@ function StageColumn({
       >
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
-          <span className="text-sm font-semibold text-gray-800">{stageName(stage)}</span>
-          <span className="text-xs font-medium text-gray-500 bg-white/70 px-1.5 py-0.5 rounded-full">
+          <span className="text-sm font-bold text-gray-800">{stageName(stage)}</span>
+          <span className="text-xs font-semibold text-gray-500 bg-white/80 px-1.5 py-0.5 rounded-full">
             {stage.deals_count}
           </span>
         </div>
         {stage.total_amount > 0 && (
-          <span className="text-xs font-semibold text-gray-600">
+          <span className="text-xs font-bold text-gray-600">
             ₪{stage.total_amount.toLocaleString()}
           </span>
         )}
@@ -217,9 +212,9 @@ function StageColumn({
 
       {/* Drop zone */}
       <div
-        className={`flex-1 space-y-2 rounded-xl p-2 min-h-[120px] transition-colors ${
+        className={`flex-1 space-y-2 rounded-xl p-2 min-h-[120px] transition-all ${
           isDragOver && draggingId
-            ? 'bg-indigo-50 border-2 border-dashed border-indigo-300'
+            ? 'bg-indigo-50 border-2 border-dashed border-indigo-300 scale-[1.01]'
             : 'bg-gray-50/50'
         }`}
       >
@@ -243,7 +238,7 @@ function StageColumn({
   )
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PipelinePage() {
   const { language }  = useLanguage()
@@ -260,19 +255,24 @@ export default function PipelinePage() {
   const draggingStageId = useRef<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
 
-  // Rejection modal state
+  // Rejection modal
   const [rejectionTarget, setRejectionTarget] = useState<{
     dealId: string; fromStageId: string; toStageId: string
   } | null>(null)
 
-  const [moveError, setMoveError] = useState<string | null>(null)
+  // Setup fee modal (triggered when moving to won stage)
+  const [setupFeeTarget, setSetupFeeTarget] = useState<{
+    dealId: string; fromStageId: string; toStageId: string
+    dealTitle: string; clientName: string
+  } | null>(null)
 
-  // Initial load
+  const [moveError, setMoveError] = useState<string | null>(null)
+  const [feeSuccess, setFeeSuccess] = useState<{ commission: number } | null>(null)
+
   useEffect(() => {
     load({ tag: filterTag ?? undefined, include_closed: includeClosed })
   }, [load, filterTag, includeClosed])
 
-  // Collect all unique tags across all deals for the filter bar
   const allTags = Array.from(
     new Map(
       stages.flatMap(s => s.deals.flatMap(d => d.tags.map(t => [t.tag.id, t.tag])))
@@ -294,17 +294,37 @@ export default function PipelinePage() {
 
     if (!dealId || !fromStageId || fromStageId === toStageId) return
 
-    // Check if target is the "lost" stage
-    const toStage = stages.find(s => s.id === toStageId)
+    const toStage   = stages.find(s => s.id === toStageId)
+    const fromStage = stages.find(s => s.id === fromStageId)
+    const deal      = fromStage?.deals.find(d => d.id === dealId)
+
+    // Lost stage → rejection modal
     if (toStage?.is_lost) {
       setRejectionTarget({ dealId, fromStageId, toStageId })
+      return
+    }
+
+    // Won stage → setup fee modal
+    if (toStage?.is_won) {
+      const clientName = deal?.client
+        ? `${deal.client.first_name} ${deal.client.last_name}`.trim()
+        : (isHe ? 'לקוח' : 'Клиент')
+      setSetupFeeTarget({
+        dealId, fromStageId, toStageId,
+        dealTitle:  deal?.title ?? '',
+        clientName,
+      })
+      // First move the deal, then prompt for fee
+      moveDeal(dealId, fromStageId, toStageId).then(result => {
+        if (!result.ok) setMoveError(result.error ?? 'Move failed')
+      })
       return
     }
 
     moveDeal(dealId, fromStageId, toStageId).then(result => {
       if (!result.ok) setMoveError(result.error ?? 'Move failed')
     })
-  }, [stages, moveDeal])
+  }, [stages, moveDeal, isHe])
 
   const handleRejectionConfirm = useCallback((reason: string, category: string) => {
     if (!rejectionTarget) return
@@ -318,10 +338,24 @@ export default function PipelinePage() {
     })
   }, [rejectionTarget, moveDeal])
 
+  const handleSetupFeeConfirm = useCallback(async (setupFee: number, notes: string) => {
+    if (!setupFeeTarget) return
+    const res = await fetch('/api/worker/pipeline/complete-deal', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ deal_id: setupFeeTarget.dealId, setup_fee: setupFee, notes }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error ?? 'Failed')
+    setSetupFeeTarget(null)
+    setFeeSuccess({ commission: data.commission_amount })
+    setTimeout(() => setFeeSuccess(null), 4000)
+  }, [setupFeeTarget])
+
   return (
     <div className="flex flex-col h-full" dir={isHe ? 'rtl' : 'ltr'}>
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white shrink-0">
         <div>
           <h1 className="text-xl font-bold text-gray-900">
@@ -332,8 +366,7 @@ export default function PipelinePage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Back to dashboard */}
+        <div className="flex items-center gap-3 flex-wrap">
           <Link
             href="/worker"
             className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl border border-gray-200 hover:border-gray-300 shadow-sm transition-all"
@@ -344,7 +377,7 @@ export default function PipelinePage() {
             </svg>
             {isHe ? 'לוח בקרה' : 'Кабинет'}
           </Link>
-          {/* Tag filter */}
+
           {allTags.length > 0 && (
             <div className="flex items-center gap-1 flex-wrap">
               <button
@@ -374,7 +407,6 @@ export default function PipelinePage() {
             </div>
           )}
 
-          {/* Toggle closed stages */}
           <button
             onClick={() => setIncludeClosed(v => !v)}
             className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
@@ -388,7 +420,6 @@ export default function PipelinePage() {
               : (includeClosed ? 'Скрыть закрытые' : 'Показать закрытые')}
           </button>
 
-          {/* Refresh */}
           <button
             onClick={() => load({ tag: filterTag ?? undefined, include_closed: includeClosed })}
             disabled={loading}
@@ -404,15 +435,27 @@ export default function PipelinePage() {
         </div>
       </div>
 
-      {/* ── Error banner ─────────────────────────────────────────────────── */}
-      {(error || moveError) && (
-        <div className="mx-6 mt-3 px-4 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg flex items-center justify-between">
-          <span>{error ?? moveError}</span>
-          <button onClick={() => { setMoveError(null) }} className="ml-4 text-red-500 hover:text-red-700">✕</button>
+      {/* ── Commission success toast ─────────────────────────────────────────── */}
+      {feeSuccess && (
+        <div className="mx-6 mt-3 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top duration-300">
+          <span className="text-xl">💰</span>
+          <span className="font-semibold">
+            {isHe
+              ? `עמלה נרשמה: ₪${feeSuccess.commission.toLocaleString()}`
+              : `Комиссия зафиксирована: ₪${feeSuccess.commission.toLocaleString()}`}
+          </span>
         </div>
       )}
 
-      {/* ── Board ────────────────────────────────────────────────────────── */}
+      {/* ── Error banner ─────────────────────────────────────────────────────── */}
+      {(error || moveError) && (
+        <div className="mx-6 mt-3 px-4 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl flex items-center justify-between">
+          <span>{error ?? moveError}</span>
+          <button onClick={() => setMoveError(null)} className="ms-4 text-red-500 hover:text-red-700">✕</button>
+        </div>
+      )}
+
+      {/* ── Board ────────────────────────────────────────────────────────────── */}
       {loading && stages.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
@@ -435,12 +478,22 @@ export default function PipelinePage() {
         </div>
       )}
 
-      {/* ── Rejection modal ───────────────────────────────────────────────── */}
+      {/* ── Rejection modal ───────────────────────────────────────────────────── */}
       <RejectionModal
         open={!!rejectionTarget}
         lang={language}
         onConfirm={handleRejectionConfirm}
         onCancel={() => setRejectionTarget(null)}
+      />
+
+      {/* ── Setup Fee modal (won stage) ───────────────────────────────────────── */}
+      <SetupFeeModal
+        open={!!setupFeeTarget}
+        lang={language}
+        dealTitle={setupFeeTarget?.dealTitle ?? ''}
+        clientName={setupFeeTarget?.clientName ?? ''}
+        onConfirm={handleSetupFeeConfirm}
+        onSkip={() => setSetupFeeTarget(null)}
       />
     </div>
   )

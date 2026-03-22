@@ -176,7 +176,7 @@ export default function AnalyticsPage() {
   const PIE_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-4 md:p-6" dir={isHe ? 'rtl' : 'ltr'}>
+    <div id="demo-step-analytics" className="min-h-screen bg-[#f8fafc] p-4 md:p-6" dir={isHe ? 'rtl' : 'ltr'}>
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">

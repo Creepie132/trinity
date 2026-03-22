@@ -30,7 +30,6 @@ interface StatsData {
   avgCheck: { value: number; change: number }
 }
 
-// ─── CountUp hook ──────────────────────────────────────────────────────────────
 function useCountUp(target: number, duration = 1200) {
   const [value, setValue] = useState(0)
   const prev = useRef(0)
@@ -52,7 +51,6 @@ function useCountUp(target: number, duration = 1200) {
   return value
 }
 
-// ─── Low Stock Alert ──────────────────────────────────────────────────────────
 function LowStockAlert({ locale }: { locale: string }) {
   const { data: products = [] } = useProducts()
   const l = locale === 'he'
@@ -66,9 +64,7 @@ function LowStockAlert({ locale }: { locale: string }) {
         <AlertTriangle size={16} className="text-amber-600" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-amber-800">
-          {l ? `⚠️ ${total} מוצרים מסתיימים!` : `⚠️ ${total} товаров заканчивается!`}
-        </p>
+        <p className="text-sm font-semibold text-amber-800">{l ? `⚠️ ${total} מוצרים מסתיימים!` : `⚠️ ${total} товаров заканчивается!`}</p>
         <p className="text-xs text-amber-600 truncate">
           {lowStock.slice(0, 3).map((p: any) => p.name).join(', ')}
           {total > 3 ? (l ? ` ועוד ${total - 3}...` : ` и ещё ${total - 3}...`) : ''}
@@ -79,7 +75,6 @@ function LowStockAlert({ locale }: { locale: string }) {
   )
 }
 
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
 interface KpiCardProps {
   title: string; value: number; prefix?: string
   icon: ReactNode; gradient: string; iconBg: string
@@ -109,7 +104,6 @@ function KpiCard({ title, value, prefix = '', icon, gradient, iconBg, delay = 0,
   )
 }
 
-// ─── Activity Strip ───────────────────────────────────────────────────────────
 function ActivityStrip({ visitsToday, visitsDone, tasksOpen, tasksUrgent, revenueToday, locale }: {
   visitsToday: number; visitsDone: number; tasksOpen: number
   tasksUrgent: number; revenueToday: number; locale: string
@@ -136,7 +130,6 @@ function ActivityStrip({ visitsToday, visitsDone, tasksOpen, tasksUrgent, revenu
   )
 }
 
-// ─── Greeting ─────────────────────────────────────────────────────────────────
 function GreetingHeader({ ownerName, todayVisitsCount, locale }: { ownerName: string; todayVisitsCount: number; locale: string }) {
   const l = locale === 'he'
   const hour = new Date().getHours()
@@ -167,22 +160,15 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   const { activeOrgId } = useBranch()
   const { orgId: authOrgId } = useAuth()
 
-  // ВАЖНО: _orgIdProp — activeOrgId с сервера (источник истины при первом рендере).
-  // activeOrgId из useBranch() может быть null пока BranchContext не инициализирован.
-  // Используем _orgIdProp как приоритет — он совпадает с ключом в HydrationBoundary cache.
-  // После инициализации BranchContext activeOrgId возьмёт управление (смена филиала).
   const orgId = _orgIdProp || activeOrgId || authOrgId
-  // Для демо-аккаунтов данные статичные — используем долгий кеш чтобы не было лагов
   const [isDemoMode, setIsDemoMode] = useState(false)
   const STALE_STATS    = isDemoMode ? 10 * 60_000 : 2 * 60_000
   const STALE_VISITS   = isDemoMode ? 10 * 60_000 : 60_000
   const STALE_REVENUE  = isDemoMode ? 15 * 60_000 : 5 * 60_000
   const STALE_TASKS    = isDemoMode ? 10 * 60_000 : 60_000
   const supabase = createSupabaseBrowserClient()
-
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
 
-  // ── 1. Onboarding check ───────────────────────────────────────────────────
   const { data: onboardingData } = useQuery({
     queryKey: ['onboarding-check', orgId],
     enabled: !!orgId,
@@ -199,19 +185,16 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
     },
   })
 
-  // Включаем демо-режим кеша как только знаем что это демо
   useEffect(() => {
     if ((onboardingData as any)?.isDemoOrg) setIsDemoMode(true)
   }, [(onboardingData as any)?.isDemoOrg])
 
-  // ── 2. KPI stats — server-side aggregated, no raw data transfer ───────────
   const { data: stats, isLoading: statsLoading } = useQuery<StatsData>({
     queryKey: ['dashboard-stats', orgId],
     enabled: !!orgId,
     staleTime: STALE_STATS,
     gcTime: STALE_STATS * 2,
     retry: false,
-    // placeholderData: keepPreviousData — не мигаем при refetch
     placeholderData: (prev) => prev,
     queryFn: async () => {
       const res = await fetch(`/api/dashboard/stats?org_id=${orgId}`)
@@ -220,7 +203,6 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
     },
   })
 
-  // ── 3. Today's visits ─────────────────────────────────────────────────────
   const { data: todayVisits = [] } = useQuery({
     queryKey: ['dashboard-today', orgId],
     enabled: !!orgId,
@@ -234,7 +216,6 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
     },
   })
 
-  // ── 4. Revenue chart — 7 days, server-aggregated ──────────────────────────
   const { data: revenueData = [] } = useQuery({
     queryKey: ['dashboard-revenue', orgId],
     enabled: !!orgId,
@@ -248,7 +229,6 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
     },
   })
 
-  // ── 5. Today's tasks — only today's open tasks ────────────────────────────
   const { data: todayTasksRaw = [] } = useQuery({
     queryKey: ['dashboard-tasks', orgId],
     enabled: !!orgId,
@@ -262,7 +242,6 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
     },
   })
 
-  // Filter today's tasks on client — lightweight op on already-small dataset
   const todayStart = new Date(); todayStart.setHours(0,0,0,0)
   const todayEnd = new Date(); todayEnd.setHours(23,59,59,999)
   const todayTasks = (todayTasksRaw as any[]).filter((t: any) => {
@@ -278,8 +257,6 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
 
   const revenueToday = (revenueData as any[])[(revenueData as any[]).length - 1]?.amount || 0
 
-  // Показываем скелетон только если нет данных вообще (не при refetch)
-  // Если данные пришли с сервера через HydrationBoundary — stats уже есть, скелетон не нужен
   if (statsLoading && !stats) {
     return (
       <div className="p-4 md:p-6">
@@ -297,7 +274,8 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
 
   return (
     <>
-      <div className="p-4 md:p-6">
+      {/* ▼ id="demo-step-dashboard" — якорь для тура driver.js */}
+      <div id="demo-step-dashboard" className="p-4 md:p-6">
         <GreetingHeader ownerName={onboardingData?.ownerName || ''} todayVisitsCount={todayVisits.length} locale={locale} />
         <ActivityStrip visitsToday={todayVisits.length} visitsDone={(todayVisits as any[]).filter((v: any) => v.status === 'completed').length} tasksOpen={todayTasks.length} tasksUrgent={todayTasks.filter((t: any) => t.priority === 'urgent').length} revenueToday={revenueToday} locale={locale} />
         <LowStockAlert locale={locale} />

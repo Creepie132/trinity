@@ -98,7 +98,7 @@ export default function SettingsPage() {
   })
 
   return (
-    <div className="space-y-6">
+    <div id="demo-step-settings" className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">

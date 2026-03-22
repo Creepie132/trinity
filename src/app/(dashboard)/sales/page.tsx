@@ -217,7 +217,7 @@ export default function SalesPage() {
   }, [])
 
   return (
-    <div dir={dir} className="space-y-5 min-h-screen">
+    <div id="demo-step-pipeline" dir={dir} className="space-y-5 min-h-screen">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3"

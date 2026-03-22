@@ -78,7 +78,7 @@ export default function FinancesPage() {
 
   return (
     <>
-    <div className="max-w-3xl mx-auto space-y-5" dir={dir}>
+    <div id="demo-step-income" className="max-w-3xl mx-auto space-y-5" dir={dir}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

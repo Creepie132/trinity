@@ -195,7 +195,7 @@ function ScriptCard({ item }: { item: typeof SCRIPTS_HE[0] }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function WorkerKnowledgePage() {
-  const { language } = useLanguage()
+  const { language, dir } = useLanguage()
   const isHe = language === 'he'
   const [tab, setTab] = useState<'objections' | 'scripts' | 'tips'>('objections')
 
@@ -204,7 +204,7 @@ export default function WorkerKnowledgePage() {
   const tips       = isHe ? TIPS_HE       : TIPS_RU
 
   return (
-    <div className="min-h-full p-4 lg:p-6 space-y-5" dir="rtl">
+    <div className="min-h-full p-4 lg:p-6 space-y-5" dir={dir}>
 
       {/* Header */}
       <div>

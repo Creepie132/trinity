@@ -44,7 +44,7 @@ const AV = ['from-purple-400 to-indigo-500','from-emerald-400 to-teal-500','from
 function avColor(name: string) { return AV[name.charCodeAt(0) % AV.length] }
 
 export default function WorkerReportsPage() {
-  const { language } = useLanguage()
+  const { language, dir } = useLanguage()
   const isHe = language === 'he'
   const [data, setData] = useState<ReportsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -86,7 +86,7 @@ export default function WorkerReportsPage() {
   const trend = data?.percent_change == null ? null : data.percent_change >= 0 ? 'up' : 'down'
 
   return (
-    <div className="min-h-full p-4 lg:p-6 space-y-5" dir="rtl">
+    <div className="min-h-full p-4 lg:p-6 space-y-5" dir={dir}>
 
       {/* Header */}
       <div className="flex items-start justify-between">

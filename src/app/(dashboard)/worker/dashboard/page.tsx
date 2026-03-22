@@ -97,7 +97,7 @@ function GlassWidget({ title, children, action, className = '' }: { title: strin
 }
 
 export default function WorkerDashboardPage() {
-  const { language } = useLanguage()
+  const { language, dir } = useLanguage()
   const isHe = language === 'he'
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -128,7 +128,7 @@ export default function WorkerDashboardPage() {
     : `Привет! ${now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}`
 
   return (
-    <div className="min-h-full p-4 lg:p-6 space-y-5" dir="rtl">
+    <div className="min-h-full p-4 lg:p-6 space-y-5" dir={dir}>
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

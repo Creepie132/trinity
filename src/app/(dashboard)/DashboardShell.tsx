@@ -83,8 +83,10 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
     isOwner ? !('workerOnly' in item && item.workerOnly) : true
   )
 
+  const dir = language === 'he' ? 'rtl' : 'ltr'
+
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50/30 to-indigo-50/20" dir="rtl">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50/30 to-indigo-50/20" dir={dir}>
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 shrink-0 h-full bg-white/70 backdrop-blur-2xl border-l border-white/50 shadow-xl z-20">
         {/* Logo */}

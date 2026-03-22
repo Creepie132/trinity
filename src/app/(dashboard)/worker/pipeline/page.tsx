@@ -327,7 +327,7 @@ function PipelineSkeleton() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function WorkerPipelinePage() {
-  const { language } = useLanguage()
+  const { language, dir } = useLanguage()
   const isHe = language === 'he'
   const { stages, loading, error, filterTag, setFilterTag, includeClosed, setIncludeClosed, load, moveDeal, stageName } = usePipeline()
 
@@ -385,7 +385,7 @@ export default function WorkerPipelinePage() {
   const totalAmount = stages.reduce((s, st) => s + st.total_amount, 0)
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-slate-100 via-blue-50/40 to-indigo-50/30 min-h-screen" dir="rtl">
+    <div className="flex flex-col h-full bg-gradient-to-br from-slate-100 via-blue-50/40 to-indigo-50/30 min-h-screen" dir={dir}>
 
       {/* Header */}
       <div className="shrink-0 px-5 pt-5 pb-4">

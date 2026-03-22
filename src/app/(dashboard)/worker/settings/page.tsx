@@ -257,11 +257,11 @@ function NotificationsSection({ isHe }: { isHe: boolean }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function WorkerSettingsPage() {
-  const { language } = useLanguage()
+  const { language, dir } = useLanguage()
   const isHe = language === 'he'
 
   return (
-    <div className="min-h-full p-4 lg:p-6 space-y-5" dir="rtl">
+    <div className="min-h-full p-4 lg:p-6 space-y-5" dir={dir}>
       {/* Header */}
       <div>
         <h1 className="text-xl font-black text-gray-900">

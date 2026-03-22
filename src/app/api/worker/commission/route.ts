@@ -1,12 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getWorkerAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 // GET /api/worker/commission
-// Returns monthly commission summary for the current worker
-// Response: { month_total_fee, month_commission, count, prev_month_commission, percent_change }
+// Returns monthly + all-time commission summary
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const auth = await getWorkerAuthContext()
     if ('error' in auth) return auth.error
@@ -19,7 +18,7 @@ export async function GET(request: NextRequest) {
     const prevStart  = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
     const prevEnd    = monthStart
 
-    const [currRes, prevRes] = await Promise.all([
+    const [currRes, prevRes, totalRes] = await Promise.all([
       supabase
         .from('revenue_logs')
         .select('setup_fee, commission_amount')
@@ -33,14 +32,22 @@ export async function GET(request: NextRequest) {
         .eq('worker_id', user.id)
         .gte('entered_at', prevStart)
         .lt('entered_at', prevEnd),
+
+      supabase
+        .from('revenue_logs')
+        .select('setup_fee, commission_amount')
+        .eq('worker_id', user.id),
     ])
 
-    const curr = currRes.data ?? []
-    const prev = prevRes.data ?? []
+    const curr  = currRes.data  ?? []
+    const prev  = prevRes.data  ?? []
+    const total = totalRes.data ?? []
 
     const monthFee        = curr.reduce((s, r) => s + Number(r.setup_fee ?? 0), 0)
     const monthCommission = curr.reduce((s, r) => s + Number(r.commission_amount ?? 0), 0)
     const prevCommission  = prev.reduce((s, r) => s + Number(r.commission_amount ?? 0), 0)
+    const totalFee        = total.reduce((s, r) => s + Number(r.setup_fee ?? 0), 0)
+    const totalCommission = total.reduce((s, r) => s + Number(r.commission_amount ?? 0), 0)
 
     const percentChange = prevCommission > 0
       ? Math.round(((monthCommission - prevCommission) / prevCommission) * 100)
@@ -52,7 +59,10 @@ export async function GET(request: NextRequest) {
       count:                curr.length,
       prev_month_commission: Math.round(prevCommission * 100) / 100,
       percent_change:       percentChange,
-      period: { year: now.getFullYear(), month: now.getMonth() + 1 },
+      total_fee:            Math.round(totalFee * 100) / 100,
+      total_commission:     Math.round(totalCommission * 100) / 100,
+      total_count:          total.length,
+      period:               { year: now.getFullYear(), month: now.getMonth() + 1 },
     })
   } catch (err) {
     console.error('[GET /api/worker/commission]', err)

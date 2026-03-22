@@ -20,7 +20,7 @@ import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext'
 import { NotificationBell } from '@/components/worker/NotificationBell'
 import { NewLeadModal } from '@/components/worker/NewLeadModal'
 
-// ─── Worker nav items (used on all routes when workerMode) ────────────────────
+// ─── Worker nav items ─────────────────────────────────────────────────────────
 
 const WORKER_NAV = [
   {
@@ -45,22 +45,22 @@ const WORKER_NAV = [
   },
   {
     href: '/inbox', exact: false,
-    label_he: 'תקשורת', label_ru: 'Коммуникация',
+    label_he: 'תקשורת WA', label_ru: 'WhatsApp',
     icon: (<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>),
   },
   {
-    href: '/analytics', exact: false,
-    label_he: 'דוחות', label_ru: 'Отчёты',
-    icon: (<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>),
+    href: '/worker/reports', exact: false,
+    label_he: 'דוח הכנסות', label_ru: 'Мои доходы',
+    icon: (<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>),
   },
   {
-    href: '#kb', exact: false,
+    href: '/worker/knowledge', exact: false,
     label_he: 'מאגר ידע', label_ru: 'База знаний',
     icon: (<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>),
   },
 ]
 
-// ─── Worker Shell (sidebar + content for all routes) ─────────────────────────
+// ─── Worker Shell ─────────────────────────────────────────────────────────────
 
 function WorkerShell({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage()
@@ -107,7 +107,7 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
           {WORKER_NAV.map(item => {
             const isActive = item.exact
               ? pathname === item.href
-              : pathname.startsWith(item.href) && item.href !== '#kb'
+              : pathname.startsWith(item.href)
             return (
               <Link key={item.href} href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${
@@ -135,7 +135,7 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile bottom nav — 4 main items */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-t border-white/40 shadow-2xl">
         <div className="flex items-center justify-around px-2 py-2">
           {WORKER_NAV.slice(0, 4).map(item => {
@@ -154,9 +154,7 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto h-full pb-20 lg:pb-0">
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
+        <ErrorBoundary>{children}</ErrorBoundary>
       </main>
 
       <NewLeadModal
@@ -191,7 +189,7 @@ export function DashboardShell({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // ── Worker mode: собственный glassmorphism Sidebar + BranchProvider (для RLS) ──
+  // Worker mode: glassmorphism sidebar + BranchProvider for RLS
   if (workerMode) {
     return (
       <AuthProvider>
@@ -206,13 +204,11 @@ export function DashboardShell({
     )
   }
 
-  // ── Обычный режим ──────────────────────────────────────────────────────────
   return (
     <AuthProvider>
       <BranchProvider>
         <WaNotificationProvider>
         {showLangPicker && <DemoLanguagePicker onSelect={handleLangSelect}/>}
-
         <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-gray-950 flex flex-col">
           <DemoBannerGlobal/>
           <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
@@ -222,9 +218,7 @@ export function DashboardShell({
             </aside>
             <main id="main-scroll" className="flex-1 lg:overflow-y-auto lg:h-screen bg-[#f8fafc] dark:bg-gray-950">
               <div className="p-4 lg:p-6">
-                <ErrorBoundary>
-                  {children}
-                </ErrorBoundary>
+                <ErrorBoundary>{children}</ErrorBoundary>
               </div>
             </main>
             <RightPanel />

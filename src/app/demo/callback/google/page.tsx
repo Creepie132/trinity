@@ -8,9 +8,13 @@
  *   2. Пользователь выбирает язык → сохраняем в localStorage
  *   3. Запускаем авторизацию + активацию demo-org
  *   4. Redirect → /dashboard
+ *
+ * FIX: Убран status из useEffect deps — устраняет race condition,
+ *      при котором cleanup вызывал cancelled=true в середине async run().
+ *      Теперь используем useRef-флаг для запуска одного потока.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Sparkles, Loader2 } from 'lucide-react'
@@ -72,56 +76,81 @@ export default function DemoGoogleCallbackPage() {
   const [status, setStatus] = useState<Status>('lang_pick')
   const [errorMsg, setErrorMsg] = useState('')
 
+  // Ref-флаг: гарантирует что run() запускается ровно один раз
+  const hasStarted = useRef(false)
+
+  const runActivation = useCallback(async () => {
+    // Защита от двойного запуска (StrictMode / быстрый ре-рендер)
+    if (hasStarted.current) return
+    hasStarted.current = true
+
+    try {
+      // Шаг 1: Проверяем сессию
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+      if (sessionError || !session?.user) {
+        // Ждём SIGNED_IN event (до 10 сек)
+        await new Promise<void>((resolve, reject) => {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+            if (event === 'SIGNED_IN' && s?.user) { subscription.unsubscribe(); resolve() }
+          })
+          setTimeout(() => { subscription.unsubscribe(); reject(new Error('Auth timeout')) }, 10000)
+        })
+      }
+
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) throw new Error('Не удалось получить пользователя')
+
+      // Шаг 2: Создание организации
+      setStatus('creating')
+      await new Promise(r => setTimeout(r, 400))
+
+      // Шаг 3: Seed данных
+      setStatus('seeding')
+      const res = await fetch('/api/demo/google-activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.id,
+          email: user.email,
+          name: user.user_metadata?.full_name || user.email,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Ошибка активации')
+
+      // Шаг 4: Готово
+      setStatus('done')
+      if (data.is_new) {
+        try { localStorage.setItem('trinity_demo_start_tour', '1') } catch {}
+      }
+      await new Promise(r => setTimeout(r, 700))
+      router.push('/dashboard')
+
+    } catch (err: any) {
+      setStatus('error')
+      setErrorMsg(err.message || 'Неизвестная ошибка')
+    }
+  }, [supabase, router])
+
   const handleLangSelect = (lang: 'he' | 'ru') => {
     try {
       localStorage.setItem('trinity-language', lang)
       localStorage.setItem('demo_lang_selected', lang)
     } catch {}
+    // Ставим статус и сразу запускаем поток — без useEffect-зависимостей
     setStatus('authenticating')
   }
 
+  // Запускаем активацию когда статус перешёл в 'authenticating'
+  // ВАЖНО: [] — пустые deps, чтобы cleanup НЕ убивал cancelled-флаг при смене статуса
   useEffect(() => {
-    if (status !== 'authenticating') return
-    let cancelled = false
-
-    const run = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        if (cancelled) return
-        if (sessionError || !session?.user) {
-          await new Promise<void>((resolve, reject) => {
-            const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
-              if (event === 'SIGNED_IN' && s?.user) { subscription.unsubscribe(); resolve() }
-            })
-            setTimeout(() => { subscription.unsubscribe(); reject(new Error('Auth timeout')) }, 10000)
-          })
-        }
-        if (cancelled) return
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
-        if (userError || !user) throw new Error('Не удалось получить пользователя')
-        setStatus('creating')
-        await new Promise(r => setTimeout(r, 400))
-        if (cancelled) return
-        setStatus('seeding')
-        const res = await fetch('/api/demo/google-activate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: user.id, email: user.email, name: user.user_metadata?.full_name || user.email }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Ошибка активации')
-        if (cancelled) return
-        setStatus('done')
-        if (data.is_new) { try { localStorage.setItem('trinity_demo_start_tour', '1') } catch {} }
-        await new Promise(r => setTimeout(r, 700))
-        if (!cancelled) router.push('/dashboard')
-      } catch (err: any) {
-        if (!cancelled) { setStatus('error'); setErrorMsg(err.message || 'Неизвестная ошибка') }
-      }
+    if (status === 'authenticating') {
+      runActivation()
     }
-    run()
-    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status])
+
 
   const progressMap: Partial<Record<Status, number>> = {
     authenticating: 20, creating: 50, seeding: 75, done: 100,

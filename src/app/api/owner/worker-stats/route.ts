@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ hasWorkers: false })
     }
 
-    // ── 2. Deals ──────────────────────────────────────────────────────────────
+    // ── 2. Deals — ALL deals for org (no date filter, period applies to log only) ──
     const { data: deals } = await supabase
       .from('deals')
       .select(`
@@ -50,7 +50,6 @@ export async function GET(request: NextRequest) {
         stage:deal_stages(id, name, name_he, color, position, is_won, is_lost)
       `)
       .eq('org_id', orgId)
-      .gte('created_at', sinceIso)
 
     const allDeals = (deals ?? []) as any[]
 
@@ -116,12 +115,13 @@ export async function GET(request: NextRequest) {
       .sort((a: any, b: any) => b.days_stuck - a.days_stuck)
       .slice(0, 20)
 
-    // ── 7. Activity log — audit_log таблица ───────────────────────────────────
+    // ── 7. Activity log — фильтр по периоду ──────────────────────────────────
     const { data: actLog } = await supabase
       .from('audit_log')
       .select('id, action, entity_type, entity_id, user_email, old_data, new_data, created_at')
       .eq('org_id', orgId)
       .eq('entity_type', 'deal')
+      .gte('created_at', sinceIso)
       .order('created_at', { ascending: false })
       .limit(40)
 

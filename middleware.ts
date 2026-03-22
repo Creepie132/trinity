@@ -109,6 +109,10 @@ export async function middleware(req: NextRequest) {
   // ── 6. Admin routes — skip subscription check ────────────────────────────
   if (pathname.startsWith('/admin')) return response
 
+  // ── 6b. Worker (sales agent) routes — skip org/subscription check ─────────
+  // Продажники не привязаны к org — пропускаем если есть сессия
+  if (pathname.startsWith('/worker')) return response
+
   // ── 7. Subscription / access check — page routes only ────────────────────
   try {
     // is_admin from JWT app_metadata — NO DB query, reads from token

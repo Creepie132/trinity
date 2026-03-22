@@ -26,21 +26,23 @@ function timeAgo(iso: string, lang: string): string {
 }
 
 function typeIcon(type: string): string {
-  if (type.includes('task'))   return '📋'
-  if (type.includes('deal'))   return '💼'
-  if (type.includes('lead'))   return '🎯'
-  if (type.includes('alert'))  return '⚠️'
-  if (type.includes('assign')) return '👤'
+  if (type.includes('task'))    return '📋'
+  if (type.includes('deal'))    return '💼'
+  if (type.includes('lead'))    return '🎯'
+  if (type.includes('alert'))   return '⚠️'
+  if (type.includes('assign'))  return '👤'
+  if (type.includes('mention')) return '📣'
   return '🔔'
 }
 
 export function NotificationBell({ lang }: { lang: string }) {
   const isHe = lang === 'he'
-  const [open,   setOpen]   = useState(false)
-  const [data,   setData]   = useState<Notification[]>([])
-  const [unread, setUnread] = useState(0)
+  const [open,    setOpen]    = useState(false)
+  const [data,    setData]    = useState<Notification[]>([])
+  const [unread,  setUnread]  = useState(0)
   const [loading, setLoading] = useState(false)
-  const dropRef = useRef<HTMLDivElement>(null)
+  const dropRef   = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -56,7 +58,6 @@ export function NotificationBell({ lang }: { lang: string }) {
     }
   }, [])
 
-  // Poll every 60s
   useEffect(() => {
     load()
     const id = setInterval(load, 60_000)
@@ -76,9 +77,9 @@ export function NotificationBell({ lang }: { lang: string }) {
   }, [open])
 
   const handleOpen = async () => {
-    setOpen(v => !v)
-    if (!open && unread > 0) {
-      // Mark all read optimistically
+    const willOpen = !open
+    setOpen(willOpen)
+    if (willOpen && unread > 0) {
       setUnread(0)
       setData(d => d.map(n => ({ ...n, is_read: true })))
       await fetch('/api/worker/notifications', { method: 'PATCH' })
@@ -89,8 +90,9 @@ export function NotificationBell({ lang }: { lang: string }) {
     <div className="relative" ref={dropRef}>
       {/* Bell button */}
       <button
+        ref={buttonRef}
         onClick={handleOpen}
-        className="relative p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-all"
+        className="relative p-2 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-all"
         aria-label={isHe ? 'התראות' : 'Уведомления'}
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -104,27 +106,43 @@ export function NotificationBell({ lang }: { lang: string }) {
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown — fixed position to avoid overflow clipping in sidebars */}
       {open && (
         <div
-          className={`absolute ${isHe ? 'left-0' : 'right-0'} top-12 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
+          className="fixed z-[9999] w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
           dir={isHe ? 'rtl' : 'ltr'}
+          style={(() => {
+            if (!buttonRef.current) return { top: 60, right: 16 }
+            const rect = buttonRef.current.getBoundingClientRect()
+            const spaceRight = window.innerWidth - rect.right
+            const spaceLeft  = rect.left
+            // Prefer opening to the left of the button (since it's in right sidebar)
+            if (spaceLeft >= 320) {
+              return { top: rect.bottom + 8, right: window.innerWidth - rect.right }
+            }
+            return { top: rect.bottom + 8, left: Math.max(8, rect.left - 320 + rect.width) }
+          })()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <span className="text-sm font-bold text-gray-800">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-slate-900">
+            <span className="text-sm font-bold text-white">
               {isHe ? '🔔 התראות' : '🔔 Уведомления'}
             </span>
-            <button
-              onClick={load}
-              disabled={loading}
-              className="p-1 rounded-lg text-gray-400 hover:text-gray-600 disabled:opacity-40"
-            >
-              <svg className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              {unread === 0 && data.length > 0 && (
+                <span className="text-[10px] text-slate-400">{isHe ? 'הכל נקרא' : 'Все прочитаны'}</span>
+              )}
+              <button
+                onClick={load}
+                disabled={loading}
+                className="p-1 rounded-lg text-slate-400 hover:text-white disabled:opacity-40 transition-colors"
+              >
+                <svg className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* List */}
@@ -139,7 +157,7 @@ export function NotificationBell({ lang }: { lang: string }) {
                 <div
                   key={n.id}
                   className={`px-4 py-3 flex gap-3 hover:bg-gray-50 transition-colors cursor-default ${
-                    !n.is_read ? 'bg-indigo-50/40' : ''
+                    !n.is_read ? 'bg-indigo-50/50' : ''
                   }`}
                 >
                   <span className="text-xl shrink-0 mt-0.5">{typeIcon(n.type)}</span>

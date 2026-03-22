@@ -1,80 +1,56 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
 import { TrinitySearchDropdown } from '@/components/ui/TrinitySearch'
-import { Phone, MessageCircle, X, Loader2, Plus } from 'lucide-react'
+import { Phone, MessageCircle, Loader2, Plus } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { getClientName } from '@/lib/client-utils'
 import { useLanguage } from '@/contexts/LanguageContext'
 
-interface OrgUser {
-  user_id: string
-  full_name: string
-  role: string
-  email?: string
-}
-
-interface Client {
-  id: string
-  first_name?: string
-  last_name?: string
-  name?: string
-  phone: string
-  email: string
-}
-
+interface OrgUser  { user_id: string; full_name: string; role: string; email?: string }
+interface Client   { id: string; first_name?: string; last_name?: string; name?: string; phone: string; email: string }
 type Priority = 'low' | 'normal' | 'high' | 'urgent'
 
-const t = {
-  he: {
-    title: 'כותרת', priority: 'עדיפות', low: 'נמוכה', normal: 'רגילה', high: 'גבוהה', urgent: 'דחופה',
-    dueDate: 'תאריך יעד', dueTime: 'שעה', assignee: 'הקצה לעובד', noColleagues: 'אין עובדים נוספים',
-    client: 'לקוח', phone: 'טלפון', email: 'אימייל', description: 'תיאור',
-    newTask: 'משימה חדשה', editTask: 'עריכת משימה', save: 'צור משימה', saveEdit: 'שמור שינויים',
-    cancel: 'ביטול', searchClient: 'חיפוש לקוח...', searchUser: 'חיפוש עובד...',
-  },
-  ru: {
-    title: 'Заголовок', priority: 'Приоритет', low: 'Низкий', normal: 'Обычный', high: 'Высокий', urgent: 'Срочный',
-    dueDate: 'Дедлайн', dueTime: 'Время', assignee: 'Назначить', noColleagues: 'Нет коллег',
-    client: 'Клиент', phone: 'Телефон', email: 'Email', description: 'Описание',
-    newTask: 'Новая задача', editTask: 'Редактирование задачи', save: 'Создать задачу', saveEdit: 'Сохранить изменения',
-    cancel: 'Отмена', searchClient: 'Поиск клиента...', searchUser: 'Поиск сотрудника...',
-  },
+const PRIORITY_CFG = {
+  low:    { he: 'נמוכה',  ru: 'Низкий',   dot: '#94a3b8', bg: 'bg-slate-100', ring: 'ring-slate-400' },
+  normal: { he: 'רגילה',  ru: 'Обычный',  dot: '#3b82f6', bg: 'bg-blue-100',  ring: 'ring-blue-400'  },
+  high:   { he: 'גבוהה',  ru: 'Высокий',  dot: '#f59e0b', bg: 'bg-amber-100', ring: 'ring-amber-400' },
+  urgent: { he: 'דחופה',  ru: 'Срочный',  dot: '#ef4444', bg: 'bg-red-100',   ring: 'ring-red-400'   },
 }
+
+const inp = "w-full px-4 py-2.5 rounded-xl border border-gray-100 bg-slate-50 text-sm focus:outline-none focus:border-indigo-300 focus:bg-white transition-all"
+const lbl = "block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5"
 
 export function CreateTaskModal() {
   const { isModalOpen, closeModal, getModalData } = useModalStore()
   const { user } = useAuth()
   const { language } = useLanguage()
 
-  const isOpen = isModalOpen('task-create')
-  const data = getModalData('task-create')
-  const prefill = data?.prefill
-  const editTask = data?.editTask
-  const isEditMode = !!editTask
-  const onCreated = data?.onCreated || (() => {})
+  const isOpen     = isModalOpen('task-create')
+  const data       = getModalData('task-create')
+  const prefill    = data?.prefill
+  const editTask   = data?.editTask
+  const isEdit     = !!editTask
+  const onCreated  = data?.onCreated || (() => {})
+  const locale     = language as 'he' | 'ru'
+  const isRTL      = locale === 'he'
 
-  const locale = language as 'he' | 'ru'
-  const isRTL = locale === 'he'
-  const labels = t[locale]
-
-  const [title, setTitle] = useState('')
-  const [priority, setPriority] = useState<Priority>('normal')
-  const [dueDate, setDueDate] = useState('')
-  const [dueTime, setDueTime] = useState('')
-  const [assignedTo, setAssignedTo] = useState<string | null>(null)
-  const [clientId, setClientId] = useState<string | null>(null)
-  const [contactPhone, setContactPhone] = useState('')
-  const [contactEmail, setContactEmail] = useState('')
-  const [description, setDescription] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [reminder, setReminder] = useState(false)
-  const [orgUsers, setOrgUsers] = useState<OrgUser[]>([])
-  const [clients, setClients] = useState<Client[]>([])
+  const [title,         setTitle]         = useState('')
+  const [priority,      setPriority]      = useState<Priority>('normal')
+  const [dueDate,       setDueDate]       = useState('')
+  const [dueTime,       setDueTime]       = useState('')
+  const [assignedTo,    setAssignedTo]    = useState<string | null>(null)
+  const [clientId,      setClientId]      = useState<string | null>(null)
+  const [contactPhone,  setContactPhone]  = useState('')
+  const [description,   setDescription]   = useState('')
+  const [saving,        setSaving]        = useState(false)
+  const [reminder,      setReminder]      = useState(false)
+  const [orgUsers,      setOrgUsers]      = useState<OrgUser[]>([])
+  const [clients,       setClients]       = useState<Client[]>([])
   const [selectedClientName, setSelectedClientName] = useState('')
-  const [selectedUserName, setSelectedUserName] = useState('')
+  const [selectedUserName,   setSelectedUserName]   = useState('')
 
   useEffect(() => {
     if (isOpen) {
@@ -82,8 +58,7 @@ export function CreateTaskModal() {
       if (editTask) {
         setTitle(editTask.title || ''); setDescription(editTask.description || '')
         setPriority(editTask.priority || 'normal'); setClientId(editTask.client_id || null)
-        setContactPhone(editTask.contact_phone || ''); setContactEmail(editTask.contact_email || '')
-        setAssignedTo(editTask.assigned_to || null)
+        setContactPhone(editTask.contact_phone || ''); setAssignedTo(editTask.assigned_to || null)
         if (editTask.due_date) {
           const dt = new Date(editTask.due_date)
           setDueDate(dt.toISOString().split('T')[0]); setDueTime(dt.toTimeString().slice(0, 5))
@@ -100,22 +75,18 @@ export function CreateTaskModal() {
     try { const r = await fetch('/api/org-users'); if (r.ok) setOrgUsers(await r.json()) } catch {}
   }
   async function loadClients() {
-    try {
-      const r = await fetch('/api/clients')
-      if (r.ok) { const d = await r.json(); setClients(Array.isArray(d) ? d : d?.data || []) }
-    } catch {}
+    try { const r = await fetch('/api/clients'); if (r.ok) { const d = await r.json(); setClients(Array.isArray(d) ? d : d?.data || []) } } catch {}
   }
 
-  function handleClientSelect(client: Client) {
-    setClientId(client.id); setSelectedClientName(getClientName(client))
-    if (client.phone) setContactPhone(client.phone)
-    if (client.email) setContactEmail(client.email)
+  function handleClientSelect(c: Client) {
+    setClientId(c.id); setSelectedClientName(getClientName(c))
+    if (c.phone) setContactPhone(c.phone)
   }
   function handleUserSelect(u: OrgUser) { setAssignedTo(u.user_id); setSelectedUserName(u.full_name) }
 
   function handleClose() {
     setTitle(''); setPriority('normal'); setDueDate(''); setDueTime('')
-    setAssignedTo(null); setClientId(null); setContactPhone(''); setContactEmail('')
+    setAssignedTo(null); setClientId(null); setContactPhone('')
     setDescription(''); setSelectedClientName(''); setSelectedUserName(''); setReminder(false)
     closeModal('task-create')
   }
@@ -127,119 +98,163 @@ export function CreateTaskModal() {
     }
     setSaving(true)
     try {
-      let due_date = null
-      if (dueDate) due_date = new Date(`${dueDate}T${dueTime || '00:00'}`).toISOString()
-      const body = { title: title.trim(), description: description.trim() || null, priority, due_date, assigned_to: assignedTo, client_id: clientId, contact_phone: contactPhone || null, contact_email: contactEmail || null, reminder }
-      const url = isEditMode ? `/api/tasks/${editTask.id}` : '/api/tasks'
-      const r = await fetch(url, { method: isEditMode ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const due_date = dueDate ? new Date(`${dueDate}T${dueTime || '00:00'}`).toISOString() : null
+      const body = { title: title.trim(), description: description.trim() || null, priority, due_date, assigned_to: assignedTo, client_id: clientId, contact_phone: contactPhone || null, reminder }
+      const url = isEdit ? `/api/tasks/${editTask.id}` : '/api/tasks'
+      const r = await fetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (!r.ok) { const d = await r.json(); alert(d.error || 'Ошибка'); return }
       onCreated(); handleClose()
     } catch { alert('Ошибка') } finally { setSaving(false) }
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const priorityButtons: Array<{ key: Priority; label: string; bg: string; text: string }> = [
-    { key: 'low',    label: labels.low,    bg: 'bg-gray-100 dark:bg-gray-800',        text: 'text-gray-700 dark:text-gray-300' },
-    { key: 'normal', label: labels.normal, bg: 'bg-blue-100 dark:bg-blue-900/30',     text: 'text-blue-700 dark:text-blue-400' },
-    { key: 'high',   label: labels.high,   bg: 'bg-amber-100 dark:bg-amber-900/30',   text: 'text-amber-700 dark:text-amber-400' },
-    { key: 'urgent', label: labels.urgent, bg: 'bg-red-100 dark:bg-red-900/30',       text: 'text-red-700 dark:text-red-400' },
-  ]
-  const inp = "w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+  const pcfg = PRIORITY_CFG[priority]
+  const isHe = locale === 'he'
 
   return (
-    <Modal open={isOpen} onClose={handleClose} title={isEditMode ? labels.editTask : labels.newTask} width="580px"
+    <Modal
+      open={isOpen}
+      onClose={handleClose}
+      darkHeader={true}
+      width="560px"
       footer={
         <div className="flex gap-2">
-          <button onClick={handleClose} className="flex-1 min-h-[44px] py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition">{labels.cancel}</button>
-          <button onClick={handleSubmit} disabled={saving} className="flex-[1.5] min-h-[44px] py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:opacity-50">
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin" />{locale === 'he' ? 'שומר...' : 'Сохранение...'}</> : <>{!isEditMode && <Plus className="w-4 h-4" />}{isEditMode ? labels.saveEdit : labels.save}</>}
+          <button onClick={handleClose}
+            className="flex-1 min-h-[44px] py-2.5 rounded-2xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition">
+            {isHe ? 'ביטול' : 'Отмена'}
+          </button>
+          <button onClick={handleSubmit} disabled={saving}
+            className="flex-[2] min-h-[44px] py-2.5 rounded-2xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-indigo-200">
+            {saving
+              ? <><Loader2 className="w-4 h-4 animate-spin" />{isHe ? 'שומר...' : 'Сохранение...'}</>
+              : <>{!isEdit && <Plus className="w-4 h-4" />}{isEdit ? (isHe ? 'שמור שינויים' : 'Сохранить') : (isHe ? 'צור משימה' : 'Создать задачу')}</>}
           </button>
         </div>
       }
     >
-      <div className="space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
-        {/* Title */}
-        <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{labels.title} <span className="text-red-500">*</span></label>
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)} className={inp} dir={isRTL ? 'rtl' : 'ltr'} autoFocus />
-        </div>
+      {/* ── Dark header ─────────────────────────────────────────────────── */}
+      <div style={{ background: '#0f172a', borderRadius: '16px 16px 0 0' }}>
+        <div className="px-6 pt-6 pb-5" dir={isRTL ? 'rtl' : 'ltr'}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-2xl"
+              style={{ background: `linear-gradient(135deg, #4f46e5, #7c3aed)` }}>
+              {isEdit ? '✏️' : '📋'}
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-white">
+                {isEdit ? (isHe ? 'עריכת משימה' : 'Редактировать задачу') : (isHe ? 'משימה חדשה' : 'Новая задача')}
+              </h2>
+              <p className="text-slate-400 text-xs mt-0.5">
+                {isHe ? 'הוסף פרטים למשימה' : 'Заполните детали задачи'}
+              </p>
+            </div>
+          </div>
 
-        {/* Priority */}
-        <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-2 block">{labels.priority}</label>
-          <div className="grid grid-cols-4 gap-2">
-            {priorityButtons.map(btn => (
-              <button key={btn.key} type="button" onClick={() => setPriority(btn.key)}
-                className={`px-3 py-2 rounded-xl text-xs font-medium transition ${priority === btn.key ? `${btn.bg} ${btn.text} ring-2 ring-offset-1 ring-current` : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100'}`}>
-                {btn.label}
+          {/* Title input — in header */}
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            autoFocus
+            placeholder={isHe ? 'כותרת המשימה *' : 'Заголовок задачи *'}
+            dir={isRTL ? 'rtl' : 'ltr'}
+            className="w-full px-4 py-3 rounded-2xl text-white font-semibold text-base outline-none placeholder:text-slate-500 transition-all"
+            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
+            onFocus={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)' }}
+            onBlur={e  => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
+          />
+
+          {/* Priority row — in header */}
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            {(Object.entries(PRIORITY_CFG) as [Priority, typeof PRIORITY_CFG.low][]).map(([key, cfg]) => (
+              <button key={key} type="button" onClick={() => setPriority(key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  priority === key
+                    ? 'bg-white text-slate-900 shadow-md'
+                    : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
+                }`}>
+                <div className="w-2 h-2 rounded-full" style={{ background: cfg.dot }} />
+                {isHe ? cfg.he : cfg.ru}
               </button>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Due Date & Time */}
+      {/* ── Light body ───────────────────────────────────────────────────── */}
+      <div className="px-6 py-5 space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
+
+        {/* Date + Time */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{labels.dueDate}</label>
+            <label className={lbl}>{isHe ? 'תאריך יעד' : 'Дедлайн'}</label>
             <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} min={today} className={inp} dir="ltr" />
           </div>
           <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{labels.dueTime}</label>
-            <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} disabled={!dueDate} className={`${inp} disabled:opacity-40 disabled:cursor-not-allowed`} dir="ltr" />
+            <label className={lbl}>{isHe ? 'שעה' : 'Время'}</label>
+            <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} disabled={!dueDate} className={`${inp} disabled:opacity-40`} dir="ltr" />
           </div>
         </div>
 
         {/* Reminder */}
-        <div className="flex items-center gap-3">
-          <input type="checkbox" id="task-reminder" checked={reminder} onChange={e => setReminder(e.target.checked)} className="w-4 h-4 accent-indigo-600 cursor-pointer" />
-          <label htmlFor="task-reminder" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-            {locale === 'he' ? '🔔 תזכורת (2 שעות לפני)' : '🔔 Напоминание (за 2 часа до)'}
-          </label>
-        </div>
+        <label className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 border border-gray-100 cursor-pointer hover:bg-indigo-50 hover:border-indigo-100 transition-all">
+          <input type="checkbox" checked={reminder} onChange={e => setReminder(e.target.checked)} className="w-4 h-4 accent-indigo-600" />
+          <span className="text-sm text-gray-700 font-medium">
+            {isHe ? '🔔 תזכורת (2 שעות לפני)' : '🔔 Напоминание (за 2 часа до)'}
+          </span>
+        </label>
 
         {/* Assignee */}
         <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{labels.assignee}</label>
+          <label className={lbl}>{isHe ? 'הקצה לעובד' : 'Назначить'}</label>
           {orgUsers.length === 0
-            ? <div className="px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-400 text-sm">{labels.noColleagues}</div>
-            : <TrinitySearchDropdown data={orgUsers} searchKeys={['full_name', 'email']} minChars={0} placeholder={labels.searchUser} onSelect={handleUserSelect}
-                renderItem={(u) => { const c = ['bg-blue-500','bg-purple-500','bg-emerald-500','bg-amber-500','bg-rose-500'][(u.full_name||'').charCodeAt(0)%5]; return <div className="flex items-center gap-2.5"><div className={`w-8 h-8 rounded-full ${c} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>{(u.full_name||u.email||'?')[0].toUpperCase()}</div><div><p className="font-medium text-sm">{u.full_name||u.email}</p><p className="text-xs text-gray-500 capitalize">{u.role}</p></div></div> }}
-                locale={locale} />
+            ? <div className="px-4 py-3 rounded-xl bg-slate-50 text-gray-400 text-sm">{isHe ? 'אין עובדים נוספים' : 'Нет коллег'}</div>
+            : <TrinitySearchDropdown data={orgUsers} searchKeys={['full_name','email']} minChars={0}
+                placeholder={isHe ? 'חיפוש עובד...' : 'Поиск сотрудника...'} onSelect={handleUserSelect}
+                renderItem={(u) => {
+                  const c = ['bg-indigo-500','bg-purple-500','bg-emerald-500','bg-amber-500','bg-rose-500'][(u.full_name||'').charCodeAt(0)%5]
+                  return <div className="flex items-center gap-2.5"><div className={`w-8 h-8 rounded-full ${c} flex items-center justify-center text-white text-xs font-bold shrink-0`}>{(u.full_name||u.email||'?')[0].toUpperCase()}</div><div><p className="font-semibold text-sm">{u.full_name||u.email}</p><p className="text-xs text-gray-500 capitalize">{u.role}</p></div></div>
+                }}
+                locale={locale}
+              />
           }
-          {selectedUserName && <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 px-1">{locale === 'he' ? 'נבחר' : 'Выбрано'}: {selectedUserName}</p>}
+          {selectedUserName && <p className="text-xs text-indigo-600 mt-1 px-1">✓ {selectedUserName}</p>}
         </div>
 
         {/* Client */}
         <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{labels.client}</label>
-          <TrinitySearchDropdown data={clients} searchKeys={['first_name','last_name','phone']} minChars={2} placeholder={labels.searchClient} onSelect={handleClientSelect}
-            renderItem={(c) => <div><p className="font-medium text-sm">{getClientName(c)}</p>{c.phone && <p className="text-xs text-gray-500">{c.phone}</p>}</div>}
-            locale={locale} />
-          {selectedClientName && <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 px-1">{locale === 'he' ? 'נבחר' : 'Выбрано'}: {selectedClientName}</p>}
+          <label className={lbl}>{isHe ? 'לקוח' : 'Клиент'}</label>
+          <TrinitySearchDropdown data={clients} searchKeys={['first_name','last_name','phone']} minChars={2}
+            placeholder={isHe ? 'חיפוש לקוח...' : 'Поиск клиента...'} onSelect={handleClientSelect}
+            renderItem={(c) => <div><p className="font-semibold text-sm">{getClientName(c)}</p>{c.phone && <p className="text-xs text-gray-500">{c.phone}</p>}</div>}
+            locale={locale}
+          />
+          {selectedClientName && <p className="text-xs text-indigo-600 mt-1 px-1">✓ {selectedClientName}</p>}
         </div>
 
         {/* Phone */}
         <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{labels.phone}</label>
+          <label className={lbl}>{isHe ? 'טלפון' : 'Телефон'}</label>
           <div className="flex gap-2">
             <input type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} className={`${inp} flex-1`} dir="ltr" />
             {contactPhone && <>
-              <button type="button" onClick={() => window.location.href = `tel:${contactPhone}`} className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 flex items-center justify-center transition"><Phone className="w-4 h-4" /></button>
-              <button type="button" onClick={() => window.open(`https://wa.me/${contactPhone.replace(/[^0-9]/g,'')}`, '_blank')} className="w-12 h-12 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 flex items-center justify-center transition"><MessageCircle className="w-4 h-4" /></button>
+              <button type="button" onClick={() => window.location.href = `tel:${contactPhone}`}
+                className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition shrink-0">
+                <Phone className="w-4 h-4" />
+              </button>
+              <button type="button" onClick={() => window.open(`https://wa.me/${contactPhone.replace(/[^0-9]/g,'')}`, '_blank')}
+                className="w-11 h-11 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 flex items-center justify-center transition shrink-0">
+                <MessageCircle className="w-4 h-4" />
+              </button>
             </>}
           </div>
         </div>
 
-        {/* Email */}
-        <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{labels.email}</label>
-          <input type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} className={inp} dir="ltr" />
-        </div>
-
         {/* Description */}
         <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{labels.description}</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className={`${inp} resize-none max-h-[150px] overflow-y-auto`} dir={isRTL ? 'rtl' : 'ltr'} />
+          <label className={lbl}>{isHe ? 'תיאור' : 'Описание'}</label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3}
+            className={`${inp} resize-none`} dir={isRTL ? 'rtl' : 'ltr'} />
         </div>
       </div>
     </Modal>

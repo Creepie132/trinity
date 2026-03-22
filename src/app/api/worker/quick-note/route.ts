@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getWorkerAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
-// POST /api/worker/quick-note   — create note
-// GET  /api/worker/quick-note   — list last 20 notes for this worker
-
 const ORG_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
 
 export async function GET() {
@@ -17,17 +14,12 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('worker_notes')
-      .select(`
-        id, text, created_at,
-        deal:deals(id, title),
-        client:clients(id, first_name, last_name)
-      `)
+      .select(`id, text, created_at, deal:deals(id, title), client:clients(id, first_name, last_name)`)
       .eq('worker_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
     return NextResponse.json({ notes: data ?? [] })
   } catch (err) {
     console.error('[GET /api/worker/quick-note]', err)
@@ -44,43 +36,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null)
     if (!body) return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
 
-    const { text, deal_id, client_id } = body as {
-      text: unknown; deal_id?: unknown; client_id?: unknown
-    }
+    const { text, deal_id, client_id } = body as { text: unknown; deal_id?: unknown; client_id?: unknown }
 
-    if (typeof text !== 'string' || text.trim().length < 1) {
-      return NextResponse.json({ error: 'text is required' }, { status: 400 })
-    }
-    if (text.trim().length > 1000) {
-      return NextResponse.json({ error: 'text max 1000 chars' }, { status: 400 })
-    }
+    if (typeof text !== 'string' || text.trim().length < 1) return NextResponse.json({ error: 'text required' }, { status: 400 })
+    if (text.trim().length > 1000) return NextResponse.json({ error: 'text max 1000' }, { status: 400 })
 
     const supabase = createSupabaseServiceClient()
 
-    // Validate deal ownership if provided
+    // Get worker name for mention notifications
+    const { data: orgUser } = await supabase
+      .from('org_users')
+      .select('email')
+      .eq('user_id', user.id)
+      .single()
+
+    const worker_name = orgUser?.email?.split('@')[0] ?? 'Worker'
+
     if (typeof deal_id === 'string' && deal_id) {
-      const { data: deal } = await supabase
-        .from('deals')
-        .select('id, assigned_to')
-        .eq('id', deal_id)
-        .eq('org_id', ORG_ID)
-        .single()
-
-      if (!deal || deal.assigned_to !== user.id) {
-        return NextResponse.json({ error: 'Deal not found or not yours' }, { status: 403 })
-      }
-
-      // Update deal's next_action
-      await supabase
-        .from('deals')
-        .update({
-          next_action:     text.trim(),
-          last_contact_at: new Date().toISOString(),
-        })
-        .eq('id', deal_id)
+      const { data: deal } = await supabase.from('deals').select('id, assigned_to').eq('id', deal_id).eq('org_id', ORG_ID).single()
+      if (!deal || deal.assigned_to !== user.id) return NextResponse.json({ error: 'Deal not found or not yours' }, { status: 403 })
+      await supabase.from('deals').update({ next_action: text.trim(), last_contact_at: new Date().toISOString() }).eq('id', deal_id)
     }
 
-    // Save to worker_notes
     const { data: note, error: noteErr } = await supabase
       .from('worker_notes')
       .insert({
@@ -93,12 +70,9 @@ export async function POST(request: NextRequest) {
       .select('id, text, created_at')
       .single()
 
-    if (noteErr) {
-      console.error('[quick-note] insert:', noteErr)
-      return NextResponse.json({ error: 'Failed to save note' }, { status: 500 })
-    }
+    if (noteErr) return NextResponse.json({ error: 'Failed to save note' }, { status: 500 })
 
-    return NextResponse.json({ ok: true, note })
+    return NextResponse.json({ ok: true, note, worker_name })
   } catch (err) {
     console.error('[POST /api/worker/quick-note]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

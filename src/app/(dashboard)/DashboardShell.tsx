@@ -72,25 +72,11 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
   const isOwner = role === 'owner'
   const [newLeadOpen, setNewLeadOpen] = useState(false)
 
-  // Кабинет — только для owner при наличии workers (проверяем на стороне API)
-  const officeNav = isOwner ? [{
-    href: '/worker/office', exact: false,
-    label_he: 'קבינט', label_ru: 'Кабинет',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-      </svg>
-    ),
-    isOwnerOnly: true,
-  }] : []
-
-  // owner видит только Кабинет (без дашборда продавца)
-  // worker видит только дашборд (без кабинета)
-  const navItems = [
-    ...WORKER_NAV.filter(item => isOwner ? !('workerOnly' in item && item.workerOnly) : true),
-    ...officeNav,
-  ]
+  // worker видит только свои пункты, owner не нужен Кабинет в workerShell
+  // (owner попадает сюда только если намеренно перешёл в /worker/dashboard)
+  const navItems = WORKER_NAV.filter(item =>
+    isOwner ? !('workerOnly' in item && item.workerOnly) : true
+  )
 
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50/30 to-indigo-50/20" dir="rtl">

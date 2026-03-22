@@ -147,7 +147,7 @@ export default function OwnerOfficePage() {
 
   // Owner-only guard
   useEffect(() => {
-    if (role && role !== 'owner') router.replace('/worker')
+    if (role && role !== 'owner') router.replace('/worker/dashboard')
   }, [role, router])
 
   const load = useCallback(async () => {

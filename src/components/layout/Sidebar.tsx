@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { BranchSwitcher } from '@/components/BranchSwitcher'
 import { useModalStore } from '@/store/useModalStore'
+import { useHasWorkers } from '@/hooks/useHasWorkers'
 
 const baseNavigation = [
   { name_he: 'דשבורד', name_ru: 'Дашборд', href: '/dashboard', icon: Home, requireFeature: null },
@@ -24,7 +25,6 @@ const baseNavigation = [
   { name_he: 'יומן', name_ru: 'Дневник', href: '/diary', icon: BookOpen, requireFeature: 'diary' },
   { name_he: 'וואטסאפ', name_ru: 'WhatsApp', href: '/inbox', icon: MessageCircle, requireFeature: 'whatsapp' },
   { name_he: 'אנליטיקה', name_ru: 'Аналитика', href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
-  { name_he: 'כרטיס עובד', name_ru: 'Кабинет', href: '/worker', icon: Briefcase, requireFeature: null },
   { name_he: 'הגדרות', name_ru: 'Настройки', href: '/settings', icon: Settings, requireFeature: null },
 ]
 
@@ -38,13 +38,17 @@ interface SidebarProps { onSearchOpen?: () => void }
 export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const pathname = usePathname()
   const router = useRouter()
-  const { signOut } = useAuth()
+  const { signOut, role } = useAuth()
   const { data: isAdmin } = useIsAdmin()
+  const { data: hasWorkers } = useHasWorkers()
   const features = useFeatures()
   const { language } = useLanguage()
   const { openModal } = useModalStore()
   const t = translations[language]
   const locale = language === 'he' ? 'he' : 'ru'
+
+  // Кабинет руководителя — только owner с активными workers
+  const showOffice = role === 'owner' && hasWorkers === true
 
   const onLogout = async () => {
     await signOut()
@@ -139,6 +143,31 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
             </Link>
           )
         })}
+
+        {/* Кабинет руководителя — только owner + есть workers */}
+        {showOffice && (
+          <>
+            <Separator className="my-2 bg-gray-200 dark:bg-slate-700" />
+            <Link href="/office"
+              className={cn(
+                'flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group',
+                pathname.startsWith('/office')
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30 scale-[1.02]'
+                  : 'text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:shadow-md active:scale-[0.98] border border-indigo-100 dark:border-indigo-800/40'
+              )}>
+              <div className={cn('p-1.5 rounded-lg transition-colors',
+                pathname.startsWith('/office') ? 'bg-white/20' : 'bg-indigo-100 dark:bg-indigo-900/30')}>
+                <Briefcase className={cn('w-5 h-5 flex-shrink-0',
+                  pathname.startsWith('/office') ? 'text-white' : 'text-indigo-600 dark:text-indigo-400')} />
+              </div>
+              <span className="flex-1 font-semibold">
+                {language === 'he' ? '🏢 קבינט מנהל' : '🏢 Кабинет'}
+              </span>
+              {pathname.startsWith('/office') && <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />}
+            </Link>
+          </>
+        )}
+
         {isAdmin && (
           <>
             <Separator className="my-4 bg-gray-200 dark:bg-slate-700" />

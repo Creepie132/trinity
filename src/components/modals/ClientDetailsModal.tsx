@@ -10,11 +10,15 @@ import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 import { useOrgTemplates } from '@/hooks/useOrgTemplates'
 import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-utils'
 
-const AVATAR_GRADIENTS = [
-  ['#8B5CF6','#6366F1'], ['#10B981','#0D9488'], ['#F59E0B','#EF4444'],
-  ['#EC4899','#F43F5E'], ['#3B82F6','#06B6D4'], ['#8B5CF6','#A855F7'],
+const AVATAR_GRADIENTS: [string, string][] = [
+  ['#818cf8', '#a78bfa'],
+  ['#34d399', '#0d9488'],
+  ['#fbbf24', '#f97316'],
+  ['#f472b6', '#ec4899'],
+  ['#60a5fa', '#38bdf8'],
+  ['#a78bfa', '#818cf8'],
 ]
-function avGrad(name: string) {
+function avGrad(name: string): [string, string] {
   return AVATAR_GRADIENTS[name.charCodeAt(0) % AVATAR_GRADIENTS.length]
 }
 
@@ -38,29 +42,27 @@ export function ClientDetailsModal() {
   const clientName = getClientName(client)
   const initials   = getClientInitials(client)
   const [g1, g2]   = avGrad(clientName || '?')
+  const isHe       = locale === 'he'
 
   const visitsCount = client.visits_count || client.total_visits || 0
   const totalPaid   = client.total_paid   || 0
-  const isHe        = locale === 'he'
 
-  // ─── Labels ────────────────────────────────────────────────────────────────
   const T = {
-    he: { information:'מידע', visits:'ביקורים', totalPaid:'סה"כ שולם', gallery:'גלריה', documents:'מסמכים',
+    he: { information:'מידע', visits:'ביקורים', totalPaid:'שולם', gallery:'גלריה', documents:'מסמכים',
           notes:'הערות', description:'תיאור', createdAt:'תאריך יצירה', edit:'ערוך', sale:'עסקה',
           delete:'מחק', active:'פעיל', call:'התקשר', whatsapp:'WhatsApp', sms:'SMS',
-          address:'כתובת', birthday:'יום הולדת' },
-    ru: { information:'Информация', visits:'Визитов', totalPaid:'Всего оплачено', gallery:'Галерея',
+          address:'כתובת', birthday:'יום הולדת', open:'פתח' },
+    ru: { information:'Информация', visits:'Визитов', totalPaid:'Оплачено', gallery:'Галерея',
           documents:'Документы', notes:'Заметки', description:'Описание', createdAt:'Дата создания',
           edit:'Редактировать', sale:'Продажа', delete:'Удалить', active:'Активен',
-          call:'Позвонить', whatsapp:'WhatsApp', sms:'SMS', address:'Адрес', birthday:'День рождения' },
-    en:  { information:'Information', visits:'Visits', totalPaid:'Total Paid', gallery:'Gallery',
+          call:'Позвонить', whatsapp:'WhatsApp', sms:'SMS', address:'Адрес', birthday:'День рождения', open:'Открыть' },
+    en:  { information:'Information', visits:'Visits', totalPaid:'Paid', gallery:'Gallery',
           documents:'Documents', notes:'Notes', description:'Description', createdAt:'Created',
           edit:'Edit', sale:'Sale', delete:'Delete', active:'Active',
-          call:'Call', whatsapp:'WhatsApp', sms:'SMS', address:'Address', birthday:'Birthday' },
+          call:'Call', whatsapp:'WhatsApp', sms:'SMS', address:'Address', birthday:'Birthday', open:'Open' },
   }
   const t = T[locale as keyof typeof T] || T.he
 
-  // ─── Actions ───────────────────────────────────────────────────────────────
   const handleEditClick   = () => { closeModal('client-details'); openModal('client-edit',  { client, locale }) }
   const handleSaleClick   = () => { closeModal('client-details'); openModal('client-sale',  { client, locale }) }
   const handleCall        = () => { if (client.phone) window.location.href = `tel:${client.phone}` }
@@ -121,37 +123,32 @@ export function ClientDetailsModal() {
     openWhatsAppWithVars(pendingVars)
   }
 
-  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <>
       <Modal
         open={isOpen}
         onClose={() => closeModal('client-details')}
         showCloseButton={true}
-        width="660px"
+        width="640px"
         dir={isHe ? 'rtl' : 'ltr'}
         contentClassName="!p-0"
         footer={
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            {/* Edit */}
             <button onClick={handleEditClick}
               className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl bg-indigo-50 hover:bg-indigo-100 transition-all active:scale-95">
               <Pencil className="w-5 h-5 text-indigo-600" />
               <span className="text-[11px] font-semibold text-indigo-700">{t.edit}</span>
             </button>
-            {/* Sale */}
             <button onClick={handleSaleClick}
               className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl bg-amber-50 hover:bg-amber-100 transition-all active:scale-95">
               <ShoppingCart className="w-5 h-5 text-amber-600" />
               <span className="text-[11px] font-semibold text-amber-700">{t.sale}</span>
             </button>
-            {/* Delete */}
             <button onClick={handleDeleteClick}
               className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl bg-red-50 hover:bg-red-100 transition-all active:scale-95">
               <Trash2 className="w-5 h-5 text-red-600" />
               <span className="text-[11px] font-semibold text-red-700">{t.delete}</span>
             </button>
-            {/* Call */}
             {client.phone && <>
               <button onClick={handleCall}
                 className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl bg-blue-50 hover:bg-blue-100 transition-all active:scale-95">
@@ -172,79 +169,104 @@ export function ClientDetailsModal() {
           </div>
         }
       >
-        {/* ── Gradient header ──────────────────────────────────────────────── */}
-        <div className="relative overflow-hidden rounded-t-2xl"
-          style={{ background: `linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)` }}>
-          <div className="absolute inset-0 opacity-20"
-            style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 60%)' }}/>
-          <div className="relative px-6 py-6 flex items-center gap-5">
-            {/* Avatar */}
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-xl shrink-0"
+        {/* ── Dark header ──────────────────────────────────────────────────── */}
+        <div style={{ background: '#0f172a', borderRadius: '16px 16px 0 0' }}>
+
+          {/* Top: avatar + name + status */}
+          <div className="flex items-center gap-4 px-6 pt-6 pb-4">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shrink-0"
               style={{ background: `linear-gradient(135deg, ${g1}, ${g2})` }}>
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-black text-white truncate">{clientName}</h2>
+              <h2 className="text-lg font-bold text-white truncate">{clientName}</h2>
               {client.phone && (
                 <a href={`tel:${client.phone}`} dir="ltr"
-                  className="text-indigo-200 text-sm hover:text-white flex items-center gap-1.5 mt-0.5 w-fit transition-colors">
-                  <Phone className="w-3.5 h-3.5" />{client.phone}
+                  className="text-slate-400 text-sm hover:text-white flex items-center gap-1.5 mt-0.5 w-fit transition-colors">
+                  <Phone className="w-3.5 h-3.5" />
+                  {client.phone}
                 </a>
               )}
               {client.email && (
-                <p className="text-indigo-200/80 text-xs mt-0.5 truncate">{client.email}</p>
+                <p className="text-slate-500 text-xs mt-0.5 truncate">{client.email}</p>
               )}
             </div>
-            {/* Status badge */}
-            <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-white/20 backdrop-blur-sm rounded-full">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"/>
-              <span className="text-white text-xs font-semibold">{t.active}</span>
+            {/* Active badge */}
+            <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+              style={{ background: 'rgba(52,211,153,0.15)', border: '0.5px solid rgba(52,211,153,0.3)' }}>
+              <div className="w-2 h-2 rounded-full" style={{ background: '#34d399' }} />
+              <span className="text-xs font-semibold" style={{ color: '#34d399' }}>{t.active}</span>
             </div>
           </div>
 
-          {/* Stats row */}
-          <div className="relative px-6 pb-5 grid grid-cols-4 gap-3">
-            {/* Visits */}
-            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center">
-              <p className="text-2xl font-black text-white">{visitsCount}</p>
-              <p className="text-indigo-200 text-[10px] font-semibold mt-0.5 uppercase tracking-wide">{t.visits}</p>
-            </div>
+          {/* Stats row — divider lines */}
+          <div className="grid grid-cols-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
             {/* Paid */}
-            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center">
-              <p className="text-2xl font-black text-white">₪{Number(totalPaid).toLocaleString()}</p>
-              <p className="text-indigo-200 text-[10px] font-semibold mt-0.5 uppercase tracking-wide">{t.totalPaid}</p>
+            <div className="flex flex-col items-center py-4 px-2 text-center"
+              style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+              <span className="text-xl font-bold" style={{ color: '#a78bfa' }}>
+                ₪{Number(totalPaid).toLocaleString()}
+              </span>
+              <span className="text-[10px] font-semibold mt-1 uppercase tracking-wider" style={{ color: '#64748b' }}>
+                {t.totalPaid}
+              </span>
             </div>
+
+            {/* Visits */}
+            <div className="flex flex-col items-center py-4 px-2 text-center"
+              style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
+              <span className="text-xl font-bold" style={{ color: '#60a5fa' }}>
+                {visitsCount}
+              </span>
+              <span className="text-[10px] font-semibold mt-1 uppercase tracking-wider" style={{ color: '#64748b' }}>
+                {t.visits}
+              </span>
+            </div>
+
             {/* Gallery */}
-            <button onClick={() => openModal('client-gallery', { client, locale })}
-              className="bg-white/15 backdrop-blur-sm hover:bg-white/25 rounded-2xl p-3 text-center transition-all active:scale-95 cursor-pointer">
-              <div className="flex justify-center mb-1"><Images className="w-5 h-5 text-white"/></div>
-              <p className="text-indigo-200 text-[10px] font-semibold uppercase tracking-wide">{t.gallery}</p>
+            <button
+              onClick={() => openModal('client-gallery', { client, locale })}
+              className="flex flex-col items-center py-4 px-2 text-center transition-colors"
+              style={{ borderRight: '1px solid rgba(255,255,255,0.07)', background: 'transparent' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <Images className="w-5 h-5 mb-1" style={{ color: '#a78bfa' }} />
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>
+                {t.gallery}
+              </span>
             </button>
+
             {/* Documents */}
-            <button onClick={() => openModal('client-documents', { client, locale })}
-              className="bg-white/15 backdrop-blur-sm hover:bg-white/25 rounded-2xl p-3 text-center transition-all active:scale-95 cursor-pointer">
-              <div className="flex justify-center mb-1"><FileText className="w-5 h-5 text-white"/></div>
-              <p className="text-indigo-200 text-[10px] font-semibold uppercase tracking-wide">{t.documents}</p>
+            <button
+              onClick={() => openModal('client-documents', { client, locale })}
+              className="flex flex-col items-center py-4 px-2 text-center transition-colors"
+              style={{ background: 'transparent' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <FileText className="w-5 h-5 mb-1" style={{ color: '#60a5fa' }} />
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>
+                {t.documents}
+              </span>
             </button>
           </div>
         </div>
 
-        {/* ── Body ─────────────────────────────────────────────────────────── */}
-        <div className="px-6 py-5 space-y-5">
+        {/* ── Light body ───────────────────────────────────────────────────── */}
+        <div className="px-6 py-5 space-y-4">
 
-          {/* Info fields */}
+          {/* Info fields — 2 columns */}
           {(client.email || client.address || client.date_of_birth || client.created_at) && (
             <div>
-              <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">{t.information}</h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">{t.information}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {client.email && (
-                  <div className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-2xl">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 rounded-xl">
                     <span className="text-xs text-gray-400 font-medium">Email</span>
                     <span className="text-sm font-semibold text-gray-800 truncate ms-3">{client.email}</span>
                   </div>
                 )}
-                {client.address && (
-                  <div className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-2xl">
+                {(client.address || client.city) && (
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 rounded-xl">
                     <span className="text-xs text-gray-400 font-medium">{t.address}</span>
                     <span className="text-sm font-semibold text-gray-800 truncate ms-3">
                       {[client.address, client.city].filter(Boolean).join(', ')}
@@ -252,7 +274,7 @@ export function ClientDetailsModal() {
                   </div>
                 )}
                 {client.date_of_birth && (
-                  <div className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-2xl">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 rounded-xl">
                     <span className="text-xs text-gray-400 font-medium">{t.birthday}</span>
                     <span className="text-sm font-semibold text-gray-800">
                       {new Date(client.date_of_birth).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU')}
@@ -260,7 +282,7 @@ export function ClientDetailsModal() {
                   </div>
                 )}
                 {client.created_at && (
-                  <div className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-2xl">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 rounded-xl">
                     <span className="text-xs text-gray-400 font-medium">{t.createdAt}</span>
                     <span className="text-sm font-semibold text-gray-800">
                       {new Date(client.created_at).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU')}
@@ -274,7 +296,7 @@ export function ClientDetailsModal() {
           {/* Notes */}
           {client.notes && (
             <div>
-              <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">{t.notes}</h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">{t.notes}</p>
               <div className="px-4 py-3 bg-amber-50 border border-amber-100 rounded-2xl">
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{client.notes}</p>
               </div>
@@ -284,7 +306,7 @@ export function ClientDetailsModal() {
           {/* Description */}
           {client.description && (
             <div>
-              <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">{t.description}</h3>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">{t.description}</p>
               <div className="px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-2xl">
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{client.description}</p>
               </div>
@@ -293,7 +315,7 @@ export function ClientDetailsModal() {
         </div>
       </Modal>
 
-      {/* GDPR Delete Dialog */}
+      {/* GDPR */}
       <GdprDeleteDialog
         open={showGdprDialog}
         onOpenChange={setShowGdprDialog}
@@ -302,14 +324,14 @@ export function ClientDetailsModal() {
         locale={locale as 'he'|'ru'}
       />
 
-      {/* Picker bottom sheet */}
+      {/* WA / Product Picker */}
       {showPicker && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-end justify-center"
           style={{ animation: 'fadeInOverlay 0.2s ease' }}
           onClick={() => setShowPicker(false)}>
           <style>{`
-            @keyframes fadeInOverlay { from{opacity:0}to{opacity:1} }
-            @keyframes slideUpSheet { from{transform:translateY(100%)}to{transform:translateY(0)} }
+            @keyframes fadeInOverlay{from{opacity:0}to{opacity:1}}
+            @keyframes slideUpSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
           `}</style>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div className="relative z-10 bg-white rounded-t-3xl shadow-2xl w-full max-w-lg"
@@ -327,7 +349,8 @@ export function ClientDetailsModal() {
                   {isHe ? 'יוכנס לתבנית WhatsApp' : 'Будет вставлено в шаблон'}
                 </p>
               </div>
-              <button onClick={() => setShowPicker(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition">
+              <button onClick={() => setShowPicker(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition">
                 <X size={16} />
               </button>
             </div>

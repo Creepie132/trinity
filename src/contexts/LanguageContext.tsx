@@ -1860,8 +1860,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const applyLanguage = (lang: Language) => {
     const dir = lang === 'he' ? 'rtl' : 'ltr'
-    document.documentElement.setAttribute('lang', lang)
-    document.documentElement.setAttribute('dir', dir)
+    const html = document.documentElement
+    html.setAttribute('lang', lang)
+    html.setAttribute('dir', dir)
+    // Swap font class: Hebrew → Assistant, Russian → Inter
+    if (lang === 'he') {
+      html.classList.remove('font-inter')
+      html.classList.add('font-assistant')
+    } else {
+      html.classList.remove('font-assistant')
+      html.classList.add('font-inter')
+    }
   }
 
   const t = (key: string, vars?: Record<string, any>): string => {

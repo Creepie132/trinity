@@ -31,6 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // suppressHydrationWarning — LanguageContext меняет lang/dir на клиенте при старте
     <html lang="he" dir="rtl" className="light" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
@@ -42,7 +43,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Trinity" />
       </head>
-      <body className={`${inter.variable} ${assistant.variable} ${assistant.className} font-sans`} suppressHydrationWarning>
+      <body className={`${inter.variable} ${assistant.variable} font-sans`} suppressHydrationWarning>
         <QueryProvider>
           <LanguageProvider>
             {children}
@@ -58,10 +59,10 @@ export default function RootLayout({
                 },
                 classNames: {
                   toast: 'backdrop-blur-sm bg-opacity-95',
-                  error: 'bg-red-50 dark:bg-red-900 border-red-200 dark:border-red-800',
-                  success: 'bg-green-50 dark:bg-green-900 border-green-200 dark:border-green-800',
-                  warning: 'bg-yellow-50 dark:bg-yellow-900 border-yellow-200 dark:border-green-800',
-                  info: 'bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-800',
+                  error: 'bg-red-50 border-red-200',
+                  success: 'bg-green-50 border-green-200',
+                  warning: 'bg-yellow-50 border-yellow-200',
+                  info: 'bg-blue-50 border-blue-200',
                 }
               }}
             />

@@ -221,9 +221,9 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
             <Sidebar onSearchOpen={() => setSearchOpen(true)} />
           </aside>
           {/* Основной контент */}
-          <main id="main-scroll" className="flex-1 lg:overflow-y-auto lg:h-screen bg-[#f8fafc] dark:bg-gray-950"
-            style={{ direction: 'ltr' }}>
-            <div className="p-4 lg:p-6">
+          <main id="main-scroll" className="flex-1 lg:overflow-y-auto lg:h-screen bg-[#f8fafc] dark:bg-gray-950">
+            {/* direction:ltr на контенте — текст не зеркалится, скроллбар управляется CSS */}
+            <div className="p-4 lg:p-6" style={{ direction: 'ltr' }}>
               <ErrorBoundary>{children}</ErrorBoundary>
             </div>
           </main>

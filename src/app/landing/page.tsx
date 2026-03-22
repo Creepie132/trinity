@@ -659,7 +659,7 @@ export default function LandingPage() {
           <h1>{t.h1a}<br /><em>{t.h1b}</em></h1>
           <p className="hero-sub">{t.heroSub}</p>
           <div className="hero-cta">
-            <a href="#pricing" className="btn-primary">{t.ctaPrimary}</a>
+            <a href="/demo/try" className="btn-primary">{t.ctaPrimary}</a>
             <a href="#features" className="btn-secondary">{t.ctaSecondary}</a>
           </div>
           <div className="hero-stats">

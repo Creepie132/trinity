@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { CommissionWidget }  from '@/components/worker/CommissionWidget'
 import { NewLeadModal }      from '@/components/worker/NewLeadModal'
 import { NotificationBell } from '@/components/worker/NotificationBell'
+import { QuickNoteModal }   from '@/components/worker/QuickNoteModal'
+import { WaTemplateModal }  from '@/components/worker/WaTemplateModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,12 +99,43 @@ function Widget({ title, action, children, className = '' }: {
 
 // ─── Quick Actions ────────────────────────────────────────────────────────────
 
-function QuickActions({ lang, onNewLead }: { lang: string; onNewLead: () => void }) {
+function QuickActions({
+  lang, onNewLead, onQuickNote, onWaTemplate,
+}: {
+  lang: string
+  onNewLead:    () => void
+  onQuickNote:  () => void
+  onWaTemplate: () => void
+}) {
   const isHe = lang === 'he'
 
   return (
     <div className="grid grid-cols-3 gap-2">
-      {/* New lead — opens modal */}
+      {/* Отправить шаблон WA */}
+      <button
+        onClick={onWaTemplate}
+        className="flex flex-col items-center gap-2 px-3 py-4 rounded-xl text-xs font-bold transition-all shadow-sm bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-200"
+      >
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.523 5.845L.057 23.054a.75.75 0 00.916.916l5.209-1.466A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.963 0-3.8-.5-5.403-1.378l-.386-.217-4.003 1.126 1.126-4.003-.217-.386A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
+        </svg>
+        <span className="text-center leading-tight">{isHe ? 'שלח תבנית WA' : 'Шаблон WA'}</span>
+      </button>
+
+      {/* Быстрая заметка */}
+      <button
+        onClick={onQuickNote}
+        className="flex flex-col items-center gap-2 px-3 py-4 rounded-xl text-xs font-bold transition-all shadow-sm bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+        <span className="text-center leading-tight">{isHe ? 'הערה מהירה' : 'Быстрая заметка'}</span>
+      </button>
+
+      {/* Новый лид */}
       <button
         onClick={onNewLead}
         className="flex flex-col items-center gap-2 px-3 py-4 rounded-xl text-xs font-bold transition-all shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200"
@@ -112,32 +145,6 @@ function QuickActions({ lang, onNewLead }: { lang: string; onNewLead: () => void
         </svg>
         <span className="text-center leading-tight">{isHe ? 'ליד חדש' : 'Новый лид'}</span>
       </button>
-
-      {/* Quick note */}
-      <Link
-        href="/worker/pipeline"
-        className="flex flex-col items-center gap-2 px-3 py-4 rounded-xl text-xs font-bold transition-all shadow-sm bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
-      >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-        <span className="text-center leading-tight">{isHe ? 'הערה מהירה' : 'Быстрая заметка'}</span>
-      </Link>
-
-      {/* WhatsApp template */}
-      <a
-        href="https://wa.me/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex flex-col items-center gap-2 px-3 py-4 rounded-xl text-xs font-bold transition-all shadow-sm bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-200"
-      >
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.523 5.845L.057 23.054a.75.75 0 00.916.916l5.209-1.466A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.963 0-3.8-.5-5.403-1.378l-.386-.217-4.003 1.126 1.126-4.003-.217-.386A9.953 9.953 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
-        </svg>
-        <span className="text-center leading-tight">{isHe ? 'שלח תבנית WA' : 'Шаблон WA'}</span>
-      </a>
     </div>
   )
 }
@@ -217,12 +224,8 @@ function NewLeadCard({ lead, lang }: { lead: NewLead; lang: string }) {
           <span className="text-xs font-bold text-indigo-600">{fmt(lead.amount, lead.currency)}</span>
         )}
         {phone && (
-          <a
-            href={waLink(phone)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-semibold rounded-lg transition-colors"
-          >
+          <a href={waLink(phone)} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-semibold rounded-lg transition-colors">
             WA
           </a>
         )}
@@ -244,13 +247,9 @@ function TaskRow({ task, lang }: { task: BurningTask; lang: string }) {
         <p className="text-sm font-medium text-gray-800 truncate">{task.title}</p>
       </div>
       <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
-        task.urgency === 'overdue'
-          ? 'bg-red-50 text-red-600'
-          : 'bg-amber-50 text-amber-600'
+        task.urgency === 'overdue' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
       }`}>
-        {task.urgency === 'overdue'
-          ? (isHe ? 'פג' : 'Просроч.')
-          : (isHe ? 'היום' : 'Сегодня')}
+        {task.urgency === 'overdue' ? (isHe ? 'פג' : 'Просроч.') : (isHe ? 'היום' : 'Сегодня')}
       </span>
     </li>
   )
@@ -302,10 +301,7 @@ function CompactFunnel({ stages, lang }: { stages: FunnelStage[]; lang: string }
           <span className="text-[10px] font-bold text-gray-700">{s.count}</span>
           <div
             className="w-full rounded-t-sm transition-all duration-500"
-            style={{
-              height: `${Math.max(4, Math.round((s.count / max) * 32))}px`,
-              backgroundColor: s.color,
-            }}
+            style={{ height: `${Math.max(4, Math.round((s.count / max) * 32))}px`, backgroundColor: s.color }}
           />
           <span className="text-[9px] text-gray-400 truncate w-full text-center" title={s.name}>
             {s.name.length > 6 ? s.name.slice(0, 5) + '…' : s.name}
@@ -322,10 +318,12 @@ export default function WorkerDashboardPage() {
   const { language } = useLanguage()
   const isHe = language === 'he'
 
-  const [data,         setData]         = useState<DashboardData | null>(null)
-  const [loading,      setLoading]      = useState(true)
-  const [error,        setError]        = useState<string | null>(null)
-  const [newLeadOpen,  setNewLeadOpen]  = useState(false)
+  const [data,           setData]           = useState<DashboardData | null>(null)
+  const [loading,        setLoading]        = useState(true)
+  const [error,          setError]          = useState<string | null>(null)
+  const [newLeadOpen,    setNewLeadOpen]    = useState(false)
+  const [quickNoteOpen,  setQuickNoteOpen]  = useState(false)
+  const [waTemplateOpen, setWaTemplateOpen] = useState(false)
 
   const fetchDashboard = useCallback(async () => {
     setLoading(true); setError(null)
@@ -351,7 +349,7 @@ export default function WorkerDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-3 md:p-5" dir={isHe ? 'rtl' : 'ltr'}>
 
-      {/* Header */}
+      {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900">
@@ -365,10 +363,7 @@ export default function WorkerDashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* 🔔 Notifications bell */}
           <NotificationBell lang={language} />
-
-          {/* Pipeline shortcut */}
           <Link
             href="/worker/pipeline"
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm shadow-indigo-200 transition-all"
@@ -379,8 +374,6 @@ export default function WorkerDashboardPage() {
             </svg>
             {isHe ? 'פייפליין' : 'Пайплайн'}
           </Link>
-
-          {/* Refresh */}
           <button
             onClick={fetchDashboard} disabled={loading}
             className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-40"
@@ -428,9 +421,14 @@ export default function WorkerDashboardPage() {
             </div>
           </div>
 
-          {/* Quick Actions — "Новый лид" теперь открывает модал */}
+          {/* Quick Actions */}
           <Widget title={isHe ? '⚡ פעולות מהירות' : '⚡ Быстрые действия'}>
-            <QuickActions lang={language} onNewLead={() => setNewLeadOpen(true)} />
+            <QuickActions
+              lang={language}
+              onNewLead={    () => setNewLeadOpen(true)}
+              onQuickNote={  () => setQuickNoteOpen(true)}
+              onWaTemplate={ () => setWaTemplateOpen(true)}
+            />
           </Widget>
 
           {/* Row 2: Red Zone + Tasks */}
@@ -499,7 +497,6 @@ export default function WorkerDashboardPage() {
             <Widget title={isHe ? '📊 ביצועים חודשיים' : '📊 Выполнение плана'}>
               <KpiBar kpi={data.kpi} lang={language} />
             </Widget>
-
             <Widget
               title={isHe ? '📈 מפת הוורקה' : '📈 Карта воронки'}
               action={
@@ -510,19 +507,28 @@ export default function WorkerDashboardPage() {
             >
               <CompactFunnel stages={data.funnel} lang={language} />
             </Widget>
-
             <CommissionWidget lang={language} />
           </div>
 
         </div>
       )}
 
-      {/* ── New Lead Modal ─────────────────────────────────────────────────────── */}
+      {/* ── Modals ───────────────────────────────────────────────────────────── */}
       <NewLeadModal
         open={newLeadOpen}
         lang={language}
         onClose={() => setNewLeadOpen(false)}
         onCreated={fetchDashboard}
+      />
+      <QuickNoteModal
+        open={quickNoteOpen}
+        lang={language}
+        onClose={() => setQuickNoteOpen(false)}
+      />
+      <WaTemplateModal
+        open={waTemplateOpen}
+        lang={language}
+        onClose={() => setWaTemplateOpen(false)}
       />
     </div>
   )

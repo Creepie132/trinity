@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
-// GET — список активных продажников
+// ─── GET — список активных продажников ────────────────────────────────────────
 export async function GET() {
   const auth = await getAdminAuthContext()
   if ('error' in auth) return auth.error
@@ -18,7 +18,73 @@ export async function GET() {
   return NextResponse.json({ agents: data ?? [] })
 }
 
-// POST — пригласить нового продажника по email
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+async function sendInviteEmail(
+  to: string,
+  inviteLink: string,
+  appUrl: string
+): Promise<void> {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY
+  if (!RESEND_API_KEY) {
+    console.warn('[sales-agents] RESEND_API_KEY not set — email not sent')
+    return
+  }
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Trinity CRM <noreply@send.ambersol.co.il>',
+      to,
+      subject: 'Приглашение в Trinity CRM — Кабинет продажника',
+      html: `
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+  <div style="text-align:center;padding:20px;background:linear-gradient(135deg,#1B2A4A,#2d4a7a);border-radius:12px;margin-bottom:24px">
+    <h1 style="color:#fff;margin:0;font-size:26px">Trinity CRM</h1>
+    <p style="color:#C8922A;margin:6px 0 0;font-size:14px">Кабинет продажника</p>
+  </div>
+  <p style="color:#334155;font-size:16px;line-height:1.6">
+    Привет! Вас пригласили в <strong>Кабинет продажника Trinity CRM</strong>.
+  </p>
+  <p style="color:#334155;font-size:16px;line-height:1.6">
+    Нажмите кнопку ниже, чтобы принять приглашение и создать аккаунт:
+  </p>
+  <div style="text-align:center;margin:32px 0">
+    <a href="${inviteLink}"
+       style="background:#C8922A;color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;display:inline-block">
+      Принять приглашение →
+    </a>
+  </div>
+  <p style="color:#64748B;font-size:13px">
+    Ссылка действительна 24 часа. Если вы не ожидали это письмо — просто проигнорируйте его.
+  </p>
+  <p style="color:#94A3B8;font-size:12px;text-align:center;margin-top:30px">
+    Amber Solutions © 2025 · Trinity CRM
+  </p>
+</div>`,
+    }),
+  })
+
+  const body = await res.json().catch(() => null)
+  if (!res.ok) {
+    console.error('[sales-agents] Resend error:', res.status, body)
+    throw new Error(`Resend error ${res.status}: ${body?.message ?? 'unknown'}`)
+  }
+  console.log('[sales-agents] Invite email sent via Resend, id:', body?.id)
+}
+
+// ─── POST — пригласить нового продажника ──────────────────────────────────────
+//
+// Стратегия: generateLink(type='invite') генерирует ссылку БЕЗ отправки письма
+// через Supabase SMTP (= нет rate limit). Письмо шлём сами через Resend.
+//
+// Если пользователь уже существует — ставим флаг is_sales_agent и шлём magic link
+// через Resend без вызова Supabase SMTP.
+//
 export async function POST(request: NextRequest) {
   const auth = await getAdminAuthContext()
   if ('error' in auth) return auth.error
@@ -38,97 +104,68 @@ export async function POST(request: NextRequest) {
   const supabase = createSupabaseServiceClient()
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ambersol.co.il'
 
-  const { data: inviteData, error: inviteError } =
-    await supabase.auth.admin.inviteUserByEmail(normalizedEmail, {
+  // ── Check if user already exists ──────────────────────────────────────────
+  const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+  const existingUser = listData?.users?.find(
+    (u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail
+  )
+
+  if (existingUser) {
+    // User exists — set sales agent flag + send magic link via Resend
+    await supabase.from('admin_users').upsert(
+      {
+        user_id: existingUser.id,
+        email: normalizedEmail,
+        full_name: full_name?.trim() || existingUser.user_metadata?.full_name || normalizedEmail.split('@')[0],
+        is_sales_agent: true,
+      },
+      { onConflict: 'user_id' }
+    )
+
+    // Generate magic link WITHOUT sending via Supabase SMTP
+    const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: normalizedEmail,
+      options: { redirectTo: `${appUrl}/callback?next=/worker` },
+    })
+
+    if (linkErr || !linkData?.properties?.action_link) {
+      console.error('[sales-agents] generateLink error:', linkErr?.message)
+      return NextResponse.json({ error: 'Не удалось сгенерировать ссылку входа' }, { status: 500 })
+    }
+
+    try {
+      await sendInviteEmail(normalizedEmail, linkData.properties.action_link, appUrl)
+    } catch (e) {
+      console.error('[sales-agents] sendInviteEmail failed:', e)
+      // Non-fatal: flag is set, link was generated; just email delivery failed
+    }
+
+    return NextResponse.json({ success: true, status: 'flag_set', email: normalizedEmail })
+  }
+
+  // ── New user — generate invite link WITHOUT Supabase SMTP ─────────────────
+  // generateLink(type='invite') creates user + returns action_link, does NOT send email
+  const { data: inviteLink, error: inviteErr } = await supabase.auth.admin.generateLink({
+    type: 'invite',
+    email: normalizedEmail,
+    options: {
       data: {
         full_name: full_name?.trim() || normalizedEmail.split('@')[0],
         is_sales_agent: true,
       },
       redirectTo: `${appUrl}/callback?next=/worker`,
-    })
+    },
+  })
 
-  if (inviteError) {
-    const alreadyExists =
-      inviteError.status === 422 ||
-      inviteError.message?.toLowerCase().includes('already')
-
-    if (alreadyExists) {
-      const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-      const found = listData?.users?.find((u: { email?: string }) => u.email === normalizedEmail)
-
-      if (!found) {
-        return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 })
-      }
-
-      await supabase.from('admin_users').upsert(
-        { user_id: found.id, email: normalizedEmail, full_name: full_name ?? found.user_metadata?.full_name ?? '', is_sales_agent: true },
-        { onConflict: 'user_id' }
-      )
-
-      const RESEND_API_KEY = process.env.RESEND_API_KEY
-      if (RESEND_API_KEY) {
-        try {
-          const resendRes = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              from: 'Trinity CRM <noreply@send.ambersol.co.il>',
-              to: normalizedEmail,
-              subject: 'Доступ в Trinity CRM — Кабинет продажника',
-              html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
-                <div style="text-align:center;padding:20px;background:linear-gradient(135deg,#1B2A4A,#2d4a7a);border-radius:12px;margin-bottom:24px">
-                  <h1 style="color:#fff;margin:0;font-size:26px">Trinity CRM</h1>
-                  <p style="color:#C8922A;margin:6px 0 0;font-size:14px">Кабинет продажника</p>
-                </div>
-                <p style="color:#334155;font-size:16px;line-height:1.6">Привет! Вам открыт доступ в <strong>Кабинет продажника Trinity CRM</strong>.</p>
-                <p style="color:#334155;font-size:16px;line-height:1.6">Войдите по кнопке ниже, используя этот email:</p>
-                <p style="color:#1B2A4A;font-weight:bold;font-size:16px">${normalizedEmail}</p>
-                <div style="text-align:center;margin:32px 0">
-                  <a href="${appUrl}/login" style="background:#C8922A;color:white;padding:14px 40px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;display:inline-block">Войти в кабинет →</a>
-                </div>
-                <p style="color:#64748B;font-size:14px">После входа вы автоматически попадёте в кабинет продажника.</p>
-                <p style="color:#94A3B8;font-size:12px;text-align:center;margin-top:30px">Amber Solutions © 2025 · Trinity CRM</p>
-              </div>`,
-            }),
-          })
-          const resendBody = await resendRes.json().catch(() => null)
-          if (!resendRes.ok) {
-            console.error('[sales-agents] resend error:', resendRes.status, resendBody)
-          } else {
-            console.log('[sales-agents] resend ok, id:', resendBody?.id)
-          }
-        } catch (e) {
-          console.error('[sales-agents] resend exception:', e)
-        }
-      } else {
-        console.warn('[sales-agents] RESEND_API_KEY not set — falling back to Supabase generateLink')
-        try {
-          const { error: linkError } = await supabase.auth.admin.generateLink({
-            type: 'magiclink',
-            email: normalizedEmail,
-            options: { redirectTo: `${appUrl}/auth/callback?next=/worker` },
-          })
-          if (linkError) {
-            console.error('[sales-agents] generateLink error:', linkError.message)
-          } else {
-            console.log('[sales-agents] magic link sent via Supabase SMTP to:', normalizedEmail)
-          }
-        } catch (e) {
-          console.error('[sales-agents] generateLink exception:', e)
-        }
-      }
-
-      return NextResponse.json({ success: true, status: 'flag_set', email: normalizedEmail })
-    }
-
-    return NextResponse.json({ error: inviteError.message }, { status: 500 })
+  if (inviteErr || !inviteLink?.user?.id || !inviteLink?.properties?.action_link) {
+    console.error('[sales-agents] generateLink invite error:', inviteErr?.message)
+    return NextResponse.json({ error: inviteErr?.message ?? 'Failed to generate invite link' }, { status: 500 })
   }
 
-  const userId = inviteData?.user?.id
-  if (!userId) {
-    return NextResponse.json({ error: 'Не удалось создать пользователя' }, { status: 500 })
-  }
+  const userId = inviteLink.user.id
 
+  // Save to admin_users
   await supabase.from('admin_users').upsert(
     {
       user_id: userId,
@@ -138,6 +175,14 @@ export async function POST(request: NextRequest) {
     },
     { onConflict: 'user_id' }
   )
+
+  // Send invite email via Resend (not Supabase SMTP)
+  try {
+    await sendInviteEmail(normalizedEmail, inviteLink.properties.action_link, appUrl)
+  } catch (e) {
+    console.error('[sales-agents] sendInviteEmail failed:', e)
+    // Non-fatal: user created, link generated, just email failed
+  }
 
   void supabase.from('audit_log').insert({
     org_id: null,
@@ -151,8 +196,8 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ success: true, status: 'invited', email: normalizedEmail })
 }
 
-// DELETE — снять роль ИЛИ полностью удалить из auth
-// Body: { user_id, delete_from_auth?: boolean }
+
+// ─── DELETE — снять роль ИЛИ полностью удалить из auth ────────────────────────
 export async function DELETE(request: NextRequest) {
   const auth = await getAdminAuthContext()
   if ('error' in auth) return auth.error
@@ -163,7 +208,6 @@ export async function DELETE(request: NextRequest) {
   const supabase = createSupabaseServiceClient()
 
   if (delete_from_auth) {
-    // Полное удаление из Supabase Auth + admin_users
     const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(user_id)
     if (deleteAuthError) {
       return NextResponse.json({ error: deleteAuthError.message }, { status: 500 })
@@ -181,7 +225,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true, status: 'deleted' })
   }
 
-  // Просто снять флаг
+  // Снять флаг
   const { error } = await supabase
     .from('admin_users')
     .update({ is_sales_agent: false })

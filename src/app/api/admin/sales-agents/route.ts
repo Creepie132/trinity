@@ -38,7 +38,7 @@ async function sendInviteEmail(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'Trinity CRM <noreply@send.ambersol.co.il>',
+      from: 'Trinity CRM <noreply@ambersol.co.il>',
       to,
       subject: 'Приглашение в Trinity CRM — Кабинет продажника',
       html: `

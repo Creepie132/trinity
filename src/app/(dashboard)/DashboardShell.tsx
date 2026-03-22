@@ -149,6 +149,13 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
               </Link>
             )
           })}
+          {/* Колокольчик уведомлений — всегда последним */}
+          <div className="flex flex-col items-center gap-1 px-3 py-1.5">
+            <NotificationBell lang={language} />
+            <span className="text-[9px] font-semibold text-gray-400 truncate">
+              {isHe ? 'התראות' : 'Оповещ.'}
+            </span>
+          </div>
         </div>
       </nav>
 

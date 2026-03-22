@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, X } from 'lucide-react'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 interface Notification {
   id:                   string
@@ -169,6 +170,29 @@ export function NotificationBell({ lang }: { lang: string }) {
     load()
     const id = setInterval(load, 30_000)
     return () => clearInterval(id)
+  }, [load])
+
+  // Realtime — мгновенные уведомления без задержки
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    supabase.auth.getUser().then(({ data }) => {
+      const userId = data?.user?.id ?? null
+      if (!userId) return
+      channel = supabase
+        .channel(`worker-notifications:${userId}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        }, () => {
+          // Перезагружаем все уведомления чтобы получить enriched данные
+          load()
+        })
+        .subscribe()
+    })
+    return () => { if (channel) supabase.removeChannel(channel) }
   }, [load])
 
   // Close on outside click

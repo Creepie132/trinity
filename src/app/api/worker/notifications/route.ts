@@ -17,6 +17,8 @@ export async function GET() {
       .from('notifications')
       .select('id, type, title, body, link, is_read, created_at, priority, reference_id')
       .eq('user_id', user.id)
+      // Не показывать отложенные напоминания (scheduled_at > now())
+      .or('scheduled_at.is.null,scheduled_at.lte.' + new Date().toISOString())
       .order('created_at', { ascending: false })
       .limit(20)
 

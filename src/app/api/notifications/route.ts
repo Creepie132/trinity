@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
     .from('notifications')
     .select('*')
     .eq('user_id', user.id)
+    // Не показывать отложенные напоминания (scheduled_at ещё не наступил)
+    .or('scheduled_at.is.null,scheduled_at.lte.' + new Date().toISOString())
     .order('created_at', { ascending: false })
     .limit(50)
 

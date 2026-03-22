@@ -6,15 +6,15 @@
 - Environments: .env.local
 
   Creating an optimized production build ...
-✓ Compiled successfully in 17.9s
+✓ Compiled successfully in 16.1s
   Running TypeScript ...
   Collecting page data using 11 workers ...
-  Generating static pages using 11 workers (0/158) ...
-  Generating static pages using 11 workers (39/158) 
+  Generating static pages using 11 workers (0/161) ...
+  Generating static pages using 11 workers (40/161) 
+  Generating static pages using 11 workers (80/161) 
 ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
-  Generating static pages using 11 workers (78/158) 
-  Generating static pages using 11 workers (118/158) 
-✓ Generating static pages using 11 workers (158/158) in 742.3ms
+  Generating static pages using 11 workers (120/161) 
+✓ Generating static pages using 11 workers (161/161) in 645.4ms
   Finalizing page optimization ...
 
 Route (app)
@@ -32,6 +32,7 @@ Route (app)
 ├ ○ /admin/organizations
 ├ ○ /admin/plans
 ├ ○ /admin/plans-editor
+├ ○ /admin/sales-agents
 ├ ○ /admin/settings
 ├ ○ /admin/settings/pricing
 ├ ○ /admin/subscriptions
@@ -63,6 +64,8 @@ Route (app)
 ├ ƒ /api/admin/plans
 ├ ƒ /api/admin/pricing-config
 ├ ƒ /api/admin/profile
+├ ƒ /api/admin/sales-agents
+├ ƒ /api/admin/sales-agents/all
 ├ ƒ /api/admin/seed-test-data
 ├ ƒ /api/admin/set-active-org
 ├ ƒ /api/admin/subscription-payment

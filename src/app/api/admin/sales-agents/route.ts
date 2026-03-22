@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         full_name: full_name?.trim() || normalizedEmail.split('@')[0],
         is_sales_agent: true,
       },
-      redirectTo: `${appUrl}/auth/callback?next=/worker`,
+      redirectTo: `${appUrl}/callback?next=/worker`,
     })
 
   if (inviteError) {

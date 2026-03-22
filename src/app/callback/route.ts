@@ -106,9 +106,15 @@ export async function GET(request: NextRequest) {
   }
 
   if (adminRecord) {
-    // Продажник Trinity → сразу в кабинет
+    // Продажник Trinity → онбординг (если не прошёл) или сразу в кабинет
     if (adminRecord.is_sales_agent) {
-      return NextResponse.redirect(`${origin}/worker`)
+      const { data: agentRow } = await supabaseAdmin
+        .from('admin_users')
+        .select('sales_onboarding_completed')
+        .eq('user_id', adminRecord.user_id)
+        .maybeSingle()
+      const onboardingDone = agentRow?.sales_onboarding_completed === true
+      return NextResponse.redirect(`${origin}${onboardingDone ? '/worker' : '/worker/onboarding'}`)
     }
     return NextResponse.redirect(`${origin}/dashboard`)
   }
@@ -118,20 +124,20 @@ export async function GET(request: NextRequest) {
   if (nextParam.startsWith('/worker') && user.email) {
     const { data: salesCheck } = await supabaseAdmin
       .from('admin_users')
-      .select('user_id, is_sales_agent')
+      .select('user_id, is_sales_agent, sales_onboarding_completed')
       .eq('email', user.email.toLowerCase())
       .eq('is_sales_agent', true)
       .maybeSingle()
 
     if (salesCheck) {
-      // Привязываем user_id если ещё не привязан
       if (!salesCheck.user_id || salesCheck.user_id !== user.id) {
         await supabaseAdmin
           .from('admin_users')
           .update({ user_id: user.id })
           .eq('email', user.email.toLowerCase())
       }
-      return NextResponse.redirect(`${origin}/worker`)
+      const onboardingDone = salesCheck.sales_onboarding_completed === true
+      return NextResponse.redirect(`${origin}${onboardingDone ? '/worker' : '/worker/onboarding'}`)
     }
   }
 

@@ -2,12 +2,38 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getWorkerAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
-// POST /api/worker/quick-note
-// Body: { text: string, deal_id?: string, client_id?: string }
-// Saves a quick note as a notification/activity for the worker's own record.
-// Also updates the deal's next_action field if deal_id provided.
+// POST /api/worker/quick-note   — create note
+// GET  /api/worker/quick-note   — list last 20 notes for this worker
 
 const ORG_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+
+export async function GET() {
+  try {
+    const auth = await getWorkerAuthContext()
+    if ('error' in auth) return auth.error
+    const { user } = auth
+
+    const supabase = createSupabaseServiceClient()
+
+    const { data, error } = await supabase
+      .from('worker_notes')
+      .select(`
+        id, text, created_at,
+        deal:deals(id, title),
+        client:clients(id, first_name, last_name)
+      `)
+      .eq('worker_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    return NextResponse.json({ notes: data ?? [] })
+  } catch (err) {
+    console.error('[GET /api/worker/quick-note]', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,7 +70,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Deal not found or not yours' }, { status: 403 })
       }
 
-      // Update deal's next_action as the note text
+      // Update deal's next_action
       await supabase
         .from('deals')
         .update({
@@ -54,21 +80,25 @@ export async function POST(request: NextRequest) {
         .eq('id', deal_id)
     }
 
-    // Save as a self-notification (type: 'note') for history
-    await supabase
-      .from('notifications')
+    // Save to worker_notes
+    const { data: note, error: noteErr } = await supabase
+      .from('worker_notes')
       .insert({
-        org_id:     ORG_ID,
-        user_id:    user.id,
-        type:       'note',
-        title:      '📝 ' + text.trim().slice(0, 80),
-        body:       text.trim(),
-        is_read:    false,
-        priority:   'normal',
-        reference_id: typeof deal_id === 'string' ? deal_id : undefined,
+        worker_id: user.id,
+        org_id:    ORG_ID,
+        text:      text.trim(),
+        deal_id:   typeof deal_id   === 'string' && deal_id   ? deal_id   : null,
+        client_id: typeof client_id === 'string' && client_id ? client_id : null,
       })
+      .select('id, text, created_at')
+      .single()
 
-    return NextResponse.json({ ok: true })
+    if (noteErr) {
+      console.error('[quick-note] insert:', noteErr)
+      return NextResponse.json({ error: 'Failed to save note' }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, note })
   } catch (err) {
     console.error('[POST /api/worker/quick-note]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

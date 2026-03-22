@@ -27,6 +27,7 @@ const WORKER_NAV = [
   {
     href: '/worker/dashboard', exact: true,
     label_he: 'לוח בקרה', label_ru: 'Дашборд',
+    workerOnly: true,  // скрыт для owner — у него есть Кабинет
     icon: (<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>),
   },
   {
@@ -84,9 +85,12 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
     isOwnerOnly: true,
   }] : []
 
-  // Для owner: "Дашборд" показываем как первый пункт тоже (его личный воркер-дашборд)
-  // Кабинет идёт следующим
-  const navItems = [...WORKER_NAV, ...officeNav]
+  // owner видит только Кабинет (без дашборда продавца)
+  // worker видит только дашборд (без кабинета)
+  const navItems = [
+    ...WORKER_NAV.filter(item => isOwner ? !('workerOnly' in item && item.workerOnly) : true),
+    ...officeNav,
+  ]
 
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50/30 to-indigo-50/20" dir="rtl">
@@ -130,10 +134,7 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
               : pathname.startsWith(item.href)
             return (
               <Link key={item.href} href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${'isOwnerOnly' in item && item.isOwnerOnly
-                    ? isOwner ? '' : 'hidden'
-                    : ''
-                } ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${
                   isActive
                     ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-200/50'
                     : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'

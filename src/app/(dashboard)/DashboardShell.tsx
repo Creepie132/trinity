@@ -14,8 +14,15 @@ import { DemoBannerGlobal } from '@/components/demo/DemoBannerGlobal'
 import { DemoLanguagePicker, useDemoLanguagePicker } from '@/components/demo/DemoLanguagePicker'
 import { WaNotificationProvider } from '@/components/wa/WaNotificationProvider'
 import { ClientProviders } from '@/components/providers/ClientProviders'
+import { LanguageProvider } from '@/contexts/LanguageContext'
 
-export function DashboardShell({ children, workerMode = false }: { children: React.ReactNode; workerMode?: boolean }) {
+export function DashboardShell({
+  children,
+  workerMode = false,
+}: {
+  children: React.ReactNode
+  workerMode?: boolean
+}) {
   const [searchOpen, setSearchOpen] = useState(false)
   const { show: showLangPicker, handleSelect: handleLangSelect } = useDemoLanguagePicker()
 
@@ -30,15 +37,18 @@ export function DashboardShell({ children, workerMode = false }: { children: Rea
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Кабинет продажника — чистый layout без Sidebar и MобильногоHeader
+  // Кабинет продажника — layout без основного Sidebar и MobileHeader.
+  // Собственный Sidebar воркера рендерится внутри (workspace)/layout.tsx
   if (workerMode) {
     return (
       <AuthProvider>
-        <div className="min-h-[100dvh] bg-[#f8fafc]">
-          <ErrorBoundary>
-            {children}
-          </ErrorBoundary>
-        </div>
+        <LanguageProvider>
+          <div className="min-h-[100dvh]">
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
+          </div>
+        </LanguageProvider>
       </AuthProvider>
     )
   }
@@ -47,11 +57,9 @@ export function DashboardShell({ children, workerMode = false }: { children: Rea
     <AuthProvider>
       <BranchProvider>
         <WaNotificationProvider>
-        {/* Demo: language picker (first visit only) */}
         {showLangPicker && <DemoLanguagePicker onSelect={handleLangSelect}/>}
 
         <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-gray-950 flex flex-col">
-          {/* Demo: top sticky banner on every page */}
           <DemoBannerGlobal/>
           <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
           <div className="flex-1 lg:flex lg:h-screen lg:overflow-hidden">

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthContext } from '@/lib/auth-helpers'
+import { getWorkerAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 // GET /api/worker/pipeline
@@ -12,9 +12,9 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await getAuthContext(request)
+    const auth = await getWorkerAuthContext()
     if ('error' in auth) return auth.error
-    const { user, orgId } = auth
+    const { user } = auth
 
     const supabase = createSupabaseServiceClient()
     const { searchParams } = new URL(request.url)
@@ -22,18 +22,11 @@ export async function GET(request: NextRequest) {
     const filterAssigned = searchParams.get('assigned_to')
     const includeClosed  = searchParams.get('include_closed') === '1'
 
-    // Resolve permissions once
-    const [{ data: perms }, { data: orgUser }] = await Promise.all([
-      supabase.from('staff_permissions')
-        .select('can_view_all_clients')
-        .eq('org_id', orgId).eq('user_id', user.id).maybeSingle(),
-      supabase.from('org_users')
-        .select('role')
-        .eq('org_id', orgId).eq('user_id', user.id).maybeSingle(),
-    ])
+    // Продажник работает в org Amber Solutions
+    const orgId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
 
-    const isAdmin   = orgUser?.role === 'admin' || orgUser?.role === 'owner'
-    const canSeeAll = isAdmin || perms?.can_view_all_clients === true
+    // Продажник не admin и не может видеть все сделки — только свои
+    const canSeeAll = false
 
     // ── 1. Load all stages ────────────────────────────────────────────────────
     const { data: stages, error: stagesErr } = await supabase

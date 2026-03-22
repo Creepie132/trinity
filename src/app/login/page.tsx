@@ -16,31 +16,45 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
 
-  // FIX: Clear stale supabase cookies on login page load
+  // Handle Supabase invite/magic-link tokens delivered via URL hash (#access_token=...).
+  // The browser never sends the hash to the server, so we must handle it client-side.
   useEffect(() => {
-    const clearStaleCookies = () => {
-      // Get all cookies
-      const cookies = document.cookie.split(';')
-      
-      // Clear all supabase-related cookies
-      cookies.forEach((cookie) => {
-        const cookieName = cookie.split('=')[0].trim()
-        if (cookieName.startsWith('sb-') || cookieName.includes('supabase')) {
-          // Delete cookie by setting expiry to past
-          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
-          console.log('[login] Cleared stale cookie:', cookieName)
-        }
-      })
+    const hash = window.location.hash
+    if (!hash) return
+
+    const params = new URLSearchParams(hash.slice(1)) // strip leading '#'
+    const accessToken  = params.get('access_token')
+    const refreshToken = params.get('refresh_token')
+    const type         = params.get('type') // 'invite' | 'magiclink' | 'recovery'
+
+    if (accessToken && refreshToken && (type === 'invite' || type === 'magiclink' || type === 'recovery')) {
+      console.log('[login] Detected hash token, type:', type)
+      // Establish session from tokens
+      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+        .then(({ error }) => {
+          if (error) {
+            console.error('[login] setSession error:', error.message)
+            return
+          }
+          // Redirect to callback so role-based routing logic runs
+          window.location.href = '/callback?next=/worker'
+        })
+      return
     }
 
-    clearStaleCookies()
+    // FIX: Clear stale supabase cookies on login page load
+    const cookies = document.cookie.split(';')
+    cookies.forEach((cookie) => {
+      const cookieName = cookie.split('=')[0].trim()
+      if (cookieName.startsWith('sb-') || cookieName.includes('supabase')) {
+        document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+      }
+    })
 
     // Check for invitation token in URL
-    const params = new URLSearchParams(window.location.search)
-    const invitationToken = params.get('invitation')
-    
+    const qParams = new URLSearchParams(window.location.search)
+    const invitationToken = qParams.get('invitation')
     if (invitationToken) {
-      console.log('[login] Found invitation token, saving to localStorage:', invitationToken)
       localStorage.setItem('invitation_token', invitationToken)
     }
   }, [])

@@ -70,12 +70,12 @@ export async function POST(request: NextRequest) {
         { onConflict: 'user_id' }
       )
 
-      // Отправляем письмо через Resend напрямую — без generateLink
+      // Отправляем письмо: Resend (приоритет) или Supabase generateLink (fallback)
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ambersol.co.il'
       const RESEND_API_KEY = process.env.RESEND_API_KEY
       if (RESEND_API_KEY) {
         try {
-          await fetch('https://api.resend.com/emails', {
+          const resendRes = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -98,8 +98,31 @@ export async function POST(request: NextRequest) {
               </div>`,
             }),
           })
+          const resendBody = await resendRes.json().catch(() => null)
+          if (!resendRes.ok) {
+            console.error('[sales-agents] resend error:', resendRes.status, resendBody)
+          } else {
+            console.log('[sales-agents] resend ok, id:', resendBody?.id)
+          }
         } catch (e) {
-          console.error('[sales-agents] resend error:', e)
+          console.error('[sales-agents] resend exception:', e)
+        }
+      } else {
+        // Fallback: Supabase generateLink — отправит magic link через встроенный SMTP
+        console.warn('[sales-agents] RESEND_API_KEY not set — falling back to Supabase generateLink')
+        try {
+          const { error: linkError } = await supabase.auth.admin.generateLink({
+            type: 'magiclink',
+            email: normalizedEmail,
+            options: { redirectTo: `${appUrl}/auth/callback?next=/worker` },
+          })
+          if (linkError) {
+            console.error('[sales-agents] generateLink error:', linkError.message)
+          } else {
+            console.log('[sales-agents] magic link sent via Supabase SMTP to:', normalizedEmail)
+          }
+        } catch (e) {
+          console.error('[sales-agents] generateLink exception:', e)
         }
       }
 

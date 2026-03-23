@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useProducts } from '@/hooks/useProducts'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/hooks/useOrganization'
@@ -655,12 +656,54 @@ export function SaleModal() {
       <Modal
         open={isOpen}
         onClose={handleClose}
-        title={text.title}
-        subtitle={clientName}
-        width="600px"
+        darkHeader
+        width="640px"
         className="max-w-[95vw]"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
+        <TrinityModalShell
+          icon={<ShoppingCart />}
+          title={text.title}
+          subtitle={clientName}
+          dir={isRTL ? 'rtl' : 'ltr'}
+          sidebarExtra={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button
+                onClick={handleCompleteSale}
+                disabled={isProcessing || total <= 0 || !client?.id}
+                style={{
+                  padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: (isProcessing || total <= 0 || !client?.id) ? 'rgba(255,255,255,0.15)' : 'var(--trinity-accent, #4a6fa5)',
+                  color: '#fff', fontSize: 13, fontWeight: 600,
+                  opacity: (isProcessing || total <= 0 || !client?.id) ? 0.5 : 1,
+                }}
+              >
+                {isProcessing ? text.processing : `✓ ${text.pay}`}
+              </button>
+              {preloadedItems.length > 0 ? (
+                <button
+                  onClick={() => setShowProposalPanel(!showProposalPanel)}
+                  style={{
+                    padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.25)',
+                    background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer',
+                  }}
+                >
+                  📋 {text.proposal}
+                </button>
+              ) : (
+                <button
+                  onClick={() => setStep('cart')}
+                  style={{
+                    padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.2)',
+                    background: 'transparent', color: 'rgba(255,255,255,0.55)', fontSize: 13, cursor: 'pointer',
+                  }}
+                >
+                  ← {text.back}
+                </button>
+              )}
+            </div>
+          }
+        >
         <div className="space-y-6">
           {/* Client Info */}
           <div>
@@ -745,34 +788,6 @@ export function SaleModal() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex gap-3 mt-6 pt-4 border-t">
-          {/* Back: if preloaded items, just close; otherwise back to cart */}
-          {preloadedItems.length > 0 ? (
-            <button
-              onClick={() => setShowProposalPanel(!showProposalPanel)}
-              className="flex-1 py-3 rounded-xl border-2 border-amber-400 text-amber-600 font-medium hover:bg-amber-50 transition text-sm"
-            >
-              📋 {text.proposal}
-            </button>
-          ) : (
-            <button
-              onClick={() => setStep('cart')}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-300 hover:bg-gray-50 transition"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              {text.back}
-            </button>
-          )}
-          <button
-            onClick={handleCompleteSale}
-            disabled={isProcessing || total <= 0 || !client?.id}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50 font-semibold"
-          >
-            {isProcessing ? text.processing : `✓ ${text.pay}`}
-          </button>
-        </div>
-
         {/* Proposal panel in checkout */}
         {showProposalPanel && (
           <div className="mt-3 p-4 border border-gray-200 rounded-xl space-y-2">
@@ -790,6 +805,7 @@ export function SaleModal() {
             </button>
           </div>
         )}
+        </TrinityModalShell>
       </Modal>
     )
   }
@@ -800,12 +816,64 @@ export function SaleModal() {
     <Modal
       open={isOpen}
       onClose={handleClose}
-      title={text.title}
-      subtitle={client ? clientName : (locale === 'he' ? 'בחר לקוח' : 'Выберите клиента')}
-      width="800px"
+      darkHeader
+      width="860px"
       className="max-w-[95vw]"
       dir={isRTL ? 'rtl' : 'ltr'}
     >
+      <TrinityModalShell
+        icon={<ShoppingCart />}
+        title={text.title}
+        subtitle={client ? clientName : (locale === 'he' ? 'בחר לקוח' : 'Выберите клиента')}
+        dir={isRTL ? 'rtl' : 'ltr'}
+        sidebarExtra={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              onClick={() => setStep('checkout')}
+              disabled={cart.length === 0 || !client?.id}
+              style={{
+                padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: (cart.length === 0 || !client?.id) ? 'rgba(255,255,255,0.15)' : 'var(--trinity-accent, #4a6fa5)',
+                color: '#fff', fontSize: 13, fontWeight: 600,
+                opacity: (cart.length === 0 || !client?.id) ? 0.5 : 1,
+              }}
+            >
+              {text.checkout}
+            </button>
+            <button
+              onClick={handleSaveDraft}
+              disabled={cart.length === 0}
+              style={{
+                padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.25)',
+                background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer',
+                opacity: cart.length === 0 ? 0.4 : 1,
+              }}
+            >
+              {text.save}
+            </button>
+            <button
+              onClick={() => setShowProposalPanel(!showProposalPanel)}
+              disabled={cart.length === 0}
+              style={{
+                padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.2)',
+                background: 'transparent', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer',
+                opacity: cart.length === 0 ? 0.4 : 1,
+              }}
+            >
+              📋 {text.proposal}
+            </button>
+            <button
+              onClick={handleClose}
+              style={{
+                padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.15)',
+                background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer',
+              }}
+            >
+              {text.cancel}
+            </button>
+          </div>
+        }
+      >
       {/* Client search (for inventory mode — no pre-selected client) */}
       {!data?.client && (
         <div className="mb-4 relative">
@@ -1084,37 +1152,7 @@ export function SaleModal() {
           )}
         </div>
       </div>
-
-      {/* Footer Buttons */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-6 pt-4 border-t">
-        <button
-          onClick={() => setStep('checkout')}
-          disabled={cart.length === 0 || !client?.id}
-          className="py-3 rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm"
-        >
-          {text.checkout}
-        </button>
-        <button
-          onClick={handleSaveDraft}
-          disabled={cart.length === 0}
-          className="py-3 rounded-xl border border-gray-300 font-medium hover:bg-gray-50 disabled:opacity-50 transition text-sm"
-        >
-          {text.save}
-        </button>
-        <button
-          onClick={() => setShowProposalPanel(!showProposalPanel)}
-          disabled={cart.length === 0}
-          className="py-3 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 disabled:opacity-50 transition text-sm"
-        >
-          {text.proposal}
-        </button>
-        <button
-          onClick={handleClose}
-          className="py-3 rounded-xl border border-gray-300 font-medium hover:bg-gray-50 transition text-sm"
-        >
-          {text.cancel}
-        </button>
-      </div>
+      </TrinityModalShell>
     </Modal>
 
     {/* Product Catalog Modal */}

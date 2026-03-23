@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -9,7 +10,7 @@ import { useAddClient, useClients } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
-import { RefreshCw, Loader2, User, FileText, Paintbrush } from 'lucide-react'
+import { RefreshCw, Loader2, User, FileText, Paintbrush, UserPlus } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
 interface AddClientDialogProps {
@@ -105,29 +106,44 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
     <Modal
       open={open}
       onClose={() => onOpenChange(false)}
-      title={language === 'he' ? 'לקוח חדש' : 'Новый клиент'}
-      width="500px"
+      darkHeader
+      width="680px"
       dir={language === 'he' ? 'rtl' : 'ltr'}
-      footer={
-        <div className="flex gap-2 justify-end">
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            onClick={() => handleSubmit()}
-            disabled={isSubmitDisabled}
-            className="px-5 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {addClient.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-            {authLoading ? t('common.loading') : addClient.isPending ? t('common.saving') : t('common.save')}
-          </button>
-        </div>
-      }
     >
+      <TrinityModalShell
+        icon={<UserPlus />}
+        title={language === 'he' ? 'לקוח חדש' : 'Новый клиент'}
+        subtitle={language === 'he' ? 'מלא את פרטי הלקוח' : 'Заполните данные клиента'}
+        dir={language === 'he' ? 'rtl' : 'ltr'}
+        sidebarExtra={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              onClick={() => handleSubmit()}
+              disabled={isSubmitDisabled}
+              style={{
+                padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: isSubmitDisabled ? 'rgba(255,255,255,0.15)' : 'var(--trinity-accent, #4a6fa5)',
+                color: '#fff', fontSize: 13, fontWeight: 600,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                opacity: isSubmitDisabled ? 0.5 : 1,
+              }}
+            >
+              {addClient.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              {authLoading ? t('common.loading') : addClient.isPending ? t('common.saving') : t('common.save')}
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              style={{
+                padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.2)',
+                background: 'transparent', color: 'rgba(255,255,255,0.55)', fontSize: 13, cursor: 'pointer',
+              }}
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        }
+      >
       {/* DEMO limit warning */}
       {isDemo && (
         <div className="space-y-2 mb-4">
@@ -368,6 +384,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
           </div>
         )}
       </form>
+      </TrinityModalShell>
     </Modal>
   )
 }

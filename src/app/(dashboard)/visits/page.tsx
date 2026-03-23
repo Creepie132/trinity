@@ -409,6 +409,9 @@ export default function VisitsPage() {
           onVisitClick={(visit) => setSelectedVisit(visit)}
           onDateClick={(date) => {
             setSelectedVisit(null)
+            if (isDemo) {
+              if (activeVisits.length >= 3 || totalCount >= 15) { setDemoLimitOpen(true); return }
+            }
             const dateStr = date.toISOString().split('T')[0]
             const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
             openModal('visit-create', {
@@ -956,7 +959,10 @@ export default function VisitsPage() {
 
       {/* ── Mobile FAB ── */}
       <button
-        onClick={() => openModal('visit-create')}
+        onClick={() => {
+          if (isDemo && (activeVisits.length >= 3 || totalCount >= 15)) { setDemoLimitOpen(true); return }
+          openModal('visit-create')
+        }}
         className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-theme-primary text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50"
         aria-label={meetingMode.t.newVisit}
       >
@@ -1034,6 +1040,7 @@ export default function VisitsPage() {
             </div>
             <button
               onClick={() => {
+                if (isDemo && (activeVisits.length >= 3 || totalCount >= 15)) { setDemoLimitOpen(true); return }
                 const next = new Date(); next.setDate(next.getDate() + 14)
                 setReceiptVisit(null)
                 setCreateVisitPrefill({ clientId: receiptVisit.client_id, clientName: receiptVisit.clientName, date: next.toISOString().split('T')[0] })

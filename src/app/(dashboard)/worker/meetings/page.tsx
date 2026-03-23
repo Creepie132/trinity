@@ -90,7 +90,8 @@ const emptyForm = (): FormData => ({
 })
 
 // ─── Client Search Input ──────────────────────────────────────────────────────
-function ClientSearchInput({ value, clientId, onChange, clients, lang, className }: {
+// Серверный поиск через /api/clients?search= — ищет по всей базе организации
+function ClientSearchInput({ value, clientId, onChange, clients: _clients, lang, className }: {
   value: string; clientId: string
   onChange: (id: string, name: string) => void
   clients: Client[]; lang: Lang; className?: string
@@ -98,13 +99,10 @@ function ClientSearchInput({ value, clientId, onChange, clients, lang, className
   const t = tr[lang]
   const [query, setQuery] = useState(value)
   const [open, setOpen] = useState(false)
+  const [results, setResults] = useState<Client[]>([])
+  const [searching, setSearching] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-
-  const filtered = query.length >= 2
-    ? clients.filter(c =>
-        `${c.first_name} ${c.last_name} ${c.phone ?? ''}`.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 8)
-    : []
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => { setQuery(value) }, [value])
 
@@ -114,11 +112,28 @@ function ClientSearchInput({ value, clientId, onChange, clients, lang, className
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
+  // Серверный поиск с дебаунсом 300ms
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    if (query.length < 2) { setResults([]); return }
+    timerRef.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(`/api/clients?search=${encodeURIComponent(query)}&limit=10`)
+        if (!res.ok) return
+        const json = await res.json()
+        const list: Client[] = json.clients ?? json.data ?? []
+        setResults(list)
+      } catch { /* ignore */ } finally { setSearching(false) }
+    }, 300)
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [query])
+
   const handleSelect = (c: Client) => {
     const name = `${c.first_name} ${c.last_name}`
     setQuery(name); setOpen(false); onChange(c.id, name)
   }
-  const handleClear = () => { setQuery(''); setOpen(false); onChange('', '') }
+  const handleClear = () => { setQuery(''); setOpen(false); onChange('', ''); setResults([]) }
 
   return (
     <div ref={ref} className="relative">
@@ -137,25 +152,28 @@ function ClientSearchInput({ value, clientId, onChange, clients, lang, className
           </button>
         )}
       </div>
-      {open && filtered.length > 0 && (
+      {open && query.length >= 2 && (
         <div className="absolute top-full start-0 end-0 z-30 mt-1 bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden">
-          {filtered.map(c => (
-            <button key={c.id} type="button" onClick={() => handleSelect(c)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-indigo-50 transition-colors text-start border-b border-gray-50 last:border-0">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-indigo-600 text-xs font-bold shrink-0">
-                {c.first_name[0]}{c.last_name[0]}
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">{c.first_name} {c.last_name}</p>
-                {c.phone && <p className="text-xs text-gray-400">{c.phone}</p>}
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-      {open && query.length >= 2 && filtered.length === 0 && (
-        <div className="absolute top-full start-0 end-0 z-30 mt-1 bg-white rounded-xl border border-gray-200 shadow-xl px-4 py-3 text-sm text-gray-400">
-          {lang === 'he' ? 'לא נמצא' : 'Не найдено'}
+          {searching ? (
+            <div className="px-4 py-3 text-sm text-gray-400">{lang === 'he' ? 'טוען...' : 'Поиск...'}</div>
+          ) : results.length > 0 ? (
+            results.map(c => (
+              <button key={c.id} type="button" onClick={() => handleSelect(c)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-indigo-50 transition-colors text-start border-b border-gray-50 last:border-0">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-indigo-600 text-xs font-bold shrink-0">
+                  {c.first_name[0]}{c.last_name[0]}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{c.first_name} {c.last_name}</p>
+                  {c.phone && <p className="text-xs text-gray-400">{c.phone}</p>}
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="px-4 py-3 text-sm text-gray-400 text-center">
+              {lang === 'he' ? 'לא נמצא' : 'Не найдено'}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -520,16 +538,7 @@ export default function WorkerMeetingsPage() {
     staleTime: 30_000,
   })
 
-  const { data: clientsData } = useQuery({
-    queryKey: ['worker-clients-list'],
-    queryFn: async () => {
-      const res = await fetch('/api/clients?limit=200')
-      if (!res.ok) return { clients: [] }
-      return res.json()
-    },
-    staleTime: 60_000,
-  })
-  const clients: Client[] = clientsData?.clients ?? clientsData?.data ?? []
+  const clients: Client[] = []  // поиск серверный — локальный список не нужен
 
   const toISO = (date: string, time: string) => `${date}T${time || '00:00'}:00`
   const buildBody = (form: FormData) => ({

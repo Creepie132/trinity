@@ -139,10 +139,9 @@ export function WorkerOnboarding({ onComplete }: Props) {
   if (phase === 'loading') {
     return (
       <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-[#1a237e] via-[#283593] to-[#3949ab] flex flex-col items-center justify-center gap-4">
-        <div className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center">
-          <svg viewBox="0 0 24 24" className="w-10 h-10" fill="none">
-            <polygon points="12,2 22,20 2,20" fill="#C8922A" opacity="0.95"/>
-          </svg>
+        <div className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/trinity-logo.png" alt="Trinity" className="w-12 h-12 object-contain" />
         </div>
         <p className="text-white font-bold text-lg">Trinity CRM</p>
         <div className="flex gap-1.5 mt-2">

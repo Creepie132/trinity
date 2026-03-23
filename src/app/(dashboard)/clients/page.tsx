@@ -4,20 +4,18 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Eye, Upload, Users, Phone, Calendar, TrendingUp, MessageCircle, Filter } from 'lucide-react'
+import { Plus, Search, Eye, Users, Phone, Calendar, TrendingUp, MessageCircle, Filter } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { useQueryClient } from '@tanstack/react-query'
 import { ClientSummary } from '@/types/database'
 import { useModalStore } from '@/store/useModalStore'
 import { format, differenceInDays } from 'date-fns'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoSectionBanner } from '@/components/demo/DemoSectionBanner'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
-import { ExportButton } from '@/components/ExportButton'
 import { ClientCard } from '@/components/clients/ClientCard'
 import { DraftSaleIndicator } from '@/components/clients/DraftSaleIndicator'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -159,13 +157,6 @@ export default function ClientsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <ExportButton type="clients" />
-          <Link href="/clients/import">
-            <Button variant="outline" className="hidden md:flex gap-2">
-              <Upload className="w-4 h-4" />
-              Импорт из Excel
-            </Button>
-          </Link>
           <Button 
             onClick={() => {
               if (isDemo && clientCount >= 10) { setDemoLimitOpen(true); return }

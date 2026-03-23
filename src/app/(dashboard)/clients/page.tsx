@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Eye, Upload, Users, Phone, Calendar, TrendingUp, MessageCircle } from 'lucide-react'
+import { Plus, Search, Eye, Upload, Users, Phone, Calendar, TrendingUp, MessageCircle, Filter } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { useQueryClient } from '@tanstack/react-query'
 import { ClientSummary } from '@/types/database'
@@ -65,6 +65,7 @@ export default function ClientsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
   const [draftClients, setDraftClients] = useState<Set<string>>(new Set())
+  const [noVisitToday, setNoVisitToday] = useState(false)
 
   const { openModal } = useModalStore()
 
@@ -119,6 +120,11 @@ export default function ClientsPage() {
   }, [])
 
   // Check organization status and feature access
+  // Фильтрация "без визита сегодня" — клиентская, по already-loaded данным
+  const today = new Date().toISOString().slice(0, 10)
+  const displayedClients = noVisitToday
+    ? clients.filter(c => !c.last_visit || c.last_visit.slice(0, 10) !== today)
+    : clients
   useEffect(() => {
     if (!features.isLoading) {
       if (!features.isActive) {
@@ -349,6 +355,26 @@ export default function ClientsPage() {
         </div>
       )}
 
+      {/* Mobile - фильтр-чип "без визита сегодня" */}
+      <div className="md:hidden flex items-center gap-2 pb-1">
+        <button
+          onClick={() => setNoVisitToday(v => !v)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+            noVisitToday
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200/50'
+              : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300'
+          }`}
+        >
+          <Filter className="w-3 h-3" />
+          {language === 'he' ? 'ללא ביקור היום' : 'Без визита сегодня'}
+        </button>
+        {noVisitToday && (
+          <span className="text-xs text-indigo-500 font-medium">
+            {displayedClients.length} {language === 'he' ? 'לקוחות' : 'клиентов'}
+          </span>
+        )}
+      </div>
+
       {/* Mobile - ClientCard */}
       <div className="md:hidden space-y-2">
         {/* Skeleton — показывается пока данные грузятся */}
@@ -365,8 +391,8 @@ export default function ClientsPage() {
               </div>
             ))}
           </div>
-        ) : paginatedClients && paginatedClients.length > 0 ? (
-          paginatedClients.map((client) => (
+        ) : displayedClients && displayedClients.length > 0 ? (
+          displayedClients.map((client) => (
             <ClientCard
               key={client.id}
               client={{
@@ -389,9 +415,17 @@ export default function ClientsPage() {
         ) : (
           <EmptyState
             icon={<Users size={28} />}
-            title={language === 'he' ? 'אין לקוחות עדיין' : 'Клиентов пока нет'}
-            description={language === 'he' ? 'הוסף את הלקוח הראשון שלך' : 'Добавьте первого клиента'}
-            action={{
+            title={
+              noVisitToday
+                ? (language === 'he' ? 'כולם ביקרו היום 🎉' : 'Все уже были сегодня 🎉')
+                : (language === 'he' ? 'אין לקוחות עדיין' : 'Клиентов пока нет')
+            }
+            description={
+              noVisitToday
+                ? (language === 'he' ? 'כל הלקוחות כבר ביקרו היום' : 'Все клиенты уже посетили вас сегодня')
+                : (language === 'he' ? 'הוסף את הלקוח הראשון שלך' : 'Добавьте первого клиента')
+            }
+            action={noVisitToday ? undefined : {
               label: language === 'he' ? 'הוסף לקוח' : 'Добавить',
               onClick: () => {
                 if (isDemo && clientCount >= 10) { setDemoLimitOpen(true); return }
@@ -440,10 +474,14 @@ export default function ClientsPage() {
       </div>
 
       {/* Mobile FAB (Floating Action Button) */}
+      {/* Mobile FAB — RTL-aware: end-6 = right в LTR, left в RTL */}
       <button
-        onClick={() => openModal('client-add')}
+        onClick={() => {
+          if (isDemo && clientCount >= 10) { setDemoLimitOpen(true); return }
+          openModal('client-add')
+        }}
         disabled={isDemo && clientCount >= 10}
-        className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-theme-primary text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="md:hidden fixed bottom-6 end-6 w-14 h-14 rounded-full shadow-xl shadow-indigo-300/40 flex items-center justify-center active:scale-95 transition-all z-50 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-br from-indigo-600 to-indigo-500 text-white hover:shadow-2xl hover:shadow-indigo-300/60"
         aria-label={t('clients.addNew')}
       >
         <Plus className="w-6 h-6" />

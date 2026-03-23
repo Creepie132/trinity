@@ -66,10 +66,18 @@ export async function POST(request: NextRequest) {
     const auth = await getAuthContext()
     if ('error' in auth) return auth.error
 
-    const { user, orgId, orgRole, supabase: authSupabase } = auth
+    const { user, orgId, supabase: authSupabase } = auth
 
-    // Only owners can add workers
-    if (orgRole !== 'owner') {
+    // Only owners can add workers — читаем роль из БД напрямую (не из JWT)
+    const supabaseAdminCheck = createSupabaseServiceClient()
+    const { data: requesterRow } = await supabaseAdminCheck
+      .from('org_users')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('org_id', orgId)
+      .maybeSingle()
+
+    if (requesterRow?.role !== 'owner') {
       return NextResponse.json({ error: 'Owner only' }, { status: 403 })
     }
 

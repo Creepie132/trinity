@@ -36,10 +36,16 @@ export async function POST(request: NextRequest) {
 
     // 3. Create organization
     const orgId = crypto.randomUUID()
+    // Demo org: активна 30 дней, потом переходит в 'expired'
+    const trialExpiry = new Date()
+    trialExpiry.setDate(trialExpiry.getDate() + 30)
+
     const { error: orgError } = await service.from('organizations').insert({
       id: orgId,
       name: reg.business_name,
       plan: 'pro',
+      subscription_status: 'demo',
+      subscription_expires_at: trialExpiry.toISOString(),
       features: {
         modules: modulesFeatures,
         payments: modulesFeatures.payments,

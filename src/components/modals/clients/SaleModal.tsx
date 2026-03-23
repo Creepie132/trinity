@@ -583,12 +583,31 @@ export function SaleModal() {
       <Modal
         open={isOpen}
         onClose={handleClose}
-        title={locale === 'he' ? 'קישור לתשלום' : 'Ссылка на оплату'}
-        subtitle={clientName}
-        width="500px"
+        darkHeader
+        width="860px"
         className="max-w-[95vw]"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
+        <TrinityModalShell
+          icon={<ShoppingCart />}
+          title={locale === 'he' ? 'קישור לתשלום' : 'Ссылка на оплату'}
+          subtitle={clientName}
+          dir={isRTL ? 'rtl' : 'ltr'}
+          sidebarExtra={
+            <button
+              onClick={handleClose}
+              style={{
+                padding: '9px 14px', borderRadius: 10,
+                border: '0.5px solid rgba(255,255,255,0.2)',
+                background: 'transparent',
+                color: 'rgba(255,255,255,0.55)',
+                fontSize: 13, cursor: 'pointer',
+              }}
+            >
+              {locale === 'he' ? 'סגור' : 'Закрыть'}
+            </button>
+          }
+        >
         <div className="space-y-6">
           {/* Amount */}
           <div className="text-center p-6 bg-green-50 dark:bg-green-900/20 rounded-xl">
@@ -636,16 +655,7 @@ export function SaleModal() {
             <p>{locale === 'he' ? 'התשלום יעודכן אוטומטית לאחר השלמת העסקה' : 'Платёж обновится автоматически после оплаты'}</p>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="flex gap-3 mt-6 pt-4 border-t">
-          <button
-            onClick={handleClose}
-            className="flex-1 py-3 rounded-xl border border-gray-300 font-medium hover:bg-gray-50 transition"
-          >
-            {locale === 'he' ? 'סגור' : 'Закрыть'}
-          </button>
-        </div>
+        </TrinityModalShell>
       </Modal>
     )
   }
@@ -657,7 +667,7 @@ export function SaleModal() {
         open={isOpen}
         onClose={handleClose}
         darkHeader
-        width="640px"
+        width="860px"
         className="max-w-[95vw]"
         dir={isRTL ? 'rtl' : 'ltr'}
       >

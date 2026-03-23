@@ -114,13 +114,21 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/worker')) return response
 
   // ── 6c-manager. Manager role — только /worker/* ───────────────────────────
-  // Роль manager: доступ ТОЛЬКО к /worker/dashboard, всё остальное — редирект
-  const orgRole = session.user.app_metadata?.org_role as string | undefined
-  if (orgRole === 'manager') {
-    if (!pathname.startsWith('/worker')) {
+  // app_metadata.org_role НЕ заполняется автоматически, поэтому читаем из БД.
+  // Один лёгкий запрос — только role, без join.
+  try {
+    const { data: orgRow } = await supabase
+      .from('org_users')
+      .select('role')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+
+    if (orgRow?.role === 'manager') {
+      // manager видит ТОЛЬКО /worker/* — любой другой путь → редирект
       return NextResponse.redirect(new URL('/worker/dashboard', req.url))
     }
-    return response
+  } catch {
+    // Не блокируем при ошибке
   }
 
   // ── 6c. /inbox — ТОЛЬКО для системного администратора (is_admin) ──────────

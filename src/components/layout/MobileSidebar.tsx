@@ -14,6 +14,7 @@ import { useDemoMode } from '@/hooks/useDemoMode'
 import { BranchSwitcher } from '@/components/BranchSwitcher'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
+import { useHasWorkers } from '@/hooks/useHasWorkers'
 
 interface MobileSidebarProps {
   isOpen: boolean
@@ -23,14 +24,17 @@ interface MobileSidebarProps {
 export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const { signOut } = useAuth()
+  const { signOut, role } = useAuth()
   const { data: isAdmin } = useIsAdmin()
   const features = useFeatures()
   const { data: lowStockProducts } = useLowStockProducts()
   const { t } = useLanguage()
   const meetingMode = useMeetingMode()
   const { isDemo } = useDemoMode()
+  const { data: hasWorkers } = useHasWorkers()
   const sidebarSide = 'right'
+  const isOwner = role === 'owner'
+  const showOffice = isOwner && hasWorkers !== false
 
   const baseNavigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
@@ -140,6 +144,26 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   </div>
                   <span className="flex-1 text-purple-700 dark:text-purple-300 font-semibold">{t('nav.admin')}</span>
                   <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                </Link>
+              </>
+            )}
+            {showOffice && (
+              <>
+                <Separator className="my-2 bg-gray-200 dark:bg-slate-700" />
+                <Link href="/office" onClick={onClose}
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group',
+                    pathname.startsWith('/office')
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30 scale-[1.02]'
+                      : 'text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:shadow-md active:scale-[0.98] border border-indigo-100 dark:border-indigo-800/40'
+                  )}>
+                  <div className={cn('p-1.5 rounded-lg transition-colors',
+                    pathname.startsWith('/office') ? 'bg-white/20' : 'bg-indigo-100 dark:bg-indigo-900/30')}>
+                    <Briefcase className={cn('w-5 h-5 flex-shrink-0',
+                      pathname.startsWith('/office') ? 'text-white' : 'text-indigo-600 dark:text-indigo-400')} />
+                  </div>
+                  <span className="flex-1 font-semibold">🏢 Кабинет</span>
+                  {pathname.startsWith('/office') && <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />}
                 </Link>
               </>
             )}

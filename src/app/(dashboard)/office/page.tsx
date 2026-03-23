@@ -198,13 +198,13 @@ function KpiCard({ label, value, rawValue, sub, gradient, icon, delay = 0, delta
       : String(animated)
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl p-5 bg-white border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+    <div className={`relative overflow-hidden rounded-2xl p-3 md:p-5 bg-white border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
       style={{ transition: `opacity 0.4s ease ${delay}ms, transform 0.4s ease ${delay}ms, box-shadow 0.2s` }}>
       <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradient} rounded-t-2xl`}/>
-      <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-2xl shadow-lg mb-4`}>{icon}</div>
-      <p className="text-2xl font-black text-gray-900 leading-none tabular-nums">{displayValue}</p>
-      <p className="text-xs font-semibold text-gray-500 mt-1.5 uppercase tracking-wide">{label}</p>
-      {sub && <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>}
+      <div className={`w-9 h-9 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-lg md:text-2xl shadow-lg mb-3`}>{icon}</div>
+      <p className="text-lg md:text-2xl font-black text-gray-900 leading-none tabular-nums">{displayValue}</p>
+      <p className="text-[10px] md:text-xs font-semibold text-gray-500 mt-1 uppercase tracking-wide">{label}</p>
+      {sub && <p className="text-[10px] md:text-[11px] text-gray-400 mt-0.5">{sub}</p>}
       {delta !== undefined && deltaLabel && <DeltaBadge delta={delta} label={deltaLabel}/>}
     </div>
   )
@@ -429,7 +429,7 @@ export default function OwnerOfficePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50/80 p-4 md:p-6" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-gray-50/80 p-3 md:p-6" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Background refresh indicator */}
       {refreshing && (
         <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-indigo-100 overflow-hidden">
@@ -437,25 +437,25 @@ export default function OwnerOfficePage() {
         </div>
       )}
       {/* ── Header ── */}
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center text-white text-2xl shadow-lg">🏢</div>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center text-white text-xl md:text-2xl shadow-lg">🏢</div>
           <div>
-            <h1 className="text-xl md:text-2xl font-black text-gray-900">{t.title}</h1>
-            <p className="text-sm text-gray-400 mt-0.5">{t.sub}</p>
+            <h1 className="text-lg md:text-2xl font-black text-gray-900 leading-tight">{t.title}</h1>
+            <p className="text-xs text-gray-400 mt-0.5">{t.sub}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex gap-1 p-1 rounded-xl bg-white border border-gray-200 shadow-sm">
             {periods.map(p => (
               <button key={p.key} onClick={() => setPeriod(p.key)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all ${
                   period === p.key ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-800'
                 }`}>{p.label}</button>
             ))}
           </div>
           <button onClick={() => load(false)} disabled={loading || refreshing}
-            className="w-9 h-9 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:border-indigo-300 transition-all disabled:opacity-40">
+            className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:border-indigo-300 transition-all disabled:opacity-40">
             <svg className={`w-4 h-4 ${(loading || refreshing) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
@@ -463,11 +463,11 @@ export default function OwnerOfficePage() {
         </div>
       </div>
 
-      {/* ── Tabs ── */}
-      <div className="flex gap-1 p-1 rounded-2xl bg-white border border-gray-200 shadow-sm mb-6 w-fit overflow-x-auto">
+      {/* ── Tabs — horizontal scroll on mobile ── */}
+      <div className="flex gap-1 p-1 rounded-2xl bg-white border border-gray-200 shadow-sm mb-4 overflow-x-auto scrollbar-none">
         {tabs.map(tb => (
           <button key={tb.key} onClick={() => setTab(tb.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+            className={`px-3 py-2 rounded-xl text-xs md:text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
               tab === tb.key ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
             }`}>{tb.label}</button>
         ))}
@@ -579,7 +579,8 @@ export default function OwnerOfficePage() {
           {/* ────── TAB: WORKERS ────── */}
           {tab === 'workers' && (
             <Section icon="👥" title={t.leaderboard} sub={t.leaderboardSub}>
-              <div className="overflow-x-auto -mx-5 px-5">
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto -mx-5 px-5">
                 <table className="w-full text-sm min-w-[700px]" dir={isRTL ? 'rtl' : 'ltr'}>
                   <thead>
                     <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
@@ -601,12 +602,8 @@ export default function OwnerOfficePage() {
                             {i === 0 && data.workerStats.length > 1 && <span className="ms-1">🏆</span>}
                           </div>
                         </td>
-                        <td className="py-3.5">
-                          <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-sm">{w.active_deals}</span>
-                        </td>
-                        <td className="py-3.5">
-                          <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-sm">{w.won_deals}</span>
-                        </td>
+                        <td className="py-3.5"><span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-sm">{w.active_deals}</span></td>
+                        <td className="py-3.5"><span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-sm">{w.won_deals}</span></td>
                         <td className="py-3.5 font-bold text-gray-900">{fmt(w.total_revenue)}</td>
                         <td className="py-3.5 text-amber-600 font-semibold">{fmt(w.commission)}</td>
                         <td className="py-3.5">
@@ -617,19 +614,11 @@ export default function OwnerOfficePage() {
                             <span className={`text-xs font-bold ${w.conversion >= 50 ? 'text-emerald-600' : w.conversion >= 25 ? 'text-amber-600' : 'text-gray-500'}`}>{w.conversion}%</span>
                           </div>
                         </td>
-                        {/* Extended metrics */}
-                        <td className="py-3.5">
-                          <span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${w.wa_pulse > 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
-                            💬 {w.wa_pulse}
-                          </span>
-                        </td>
+                        <td className="py-3.5"><span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${w.wa_pulse > 0 ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>💬 {w.wa_pulse}</span></td>
                         <td className="py-3.5">
                           {w.avg_response_min !== null
-                            ? <span className={`text-xs font-bold ${w.avg_response_min <= 30 ? 'text-emerald-600' : w.avg_response_min <= 120 ? 'text-amber-600' : 'text-red-500'}`}>
-                                {w.avg_response_min} {t.minutes}
-                              </span>
-                            : <span className="text-xs text-gray-300">{t.noResponseData}</span>
-                          }
+                            ? <span className={`text-xs font-bold ${w.avg_response_min <= 30 ? 'text-emerald-600' : w.avg_response_min <= 120 ? 'text-amber-600' : 'text-red-500'}`}>{w.avg_response_min} {t.minutes}</span>
+                            : <span className="text-xs text-gray-300">{t.noResponseData}</span>}
                         </td>
                         <td className="py-3.5 font-semibold text-gray-700">{w.value_per_lead > 0 ? fmt(w.value_per_lead) : t.noResponseData}</td>
                         <td className="py-3.5"><OnlineBadge last_seen_at={w.last_seen_at} /></td>
@@ -637,6 +626,53 @@ export default function OwnerOfficePage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+              {/* Mobile cards */}
+              <div className="md:hidden space-y-3">
+                {[...data.workerStats].sort((a,b) => b.total_deals - a.total_deals).map((w,i) => (
+                  <div key={w.user_id} className="rounded-xl border border-gray-100 bg-gray-50/60 p-3 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${avColor(w.email)} flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm`}>{initials(w.email)}</div>
+                        <div>
+                          <p className="font-bold text-gray-900 text-sm">{w.email.split('@')[0]} {i === 0 && data.workerStats.length > 1 ? '🏆' : ''}</p>
+                          <p className="text-[10px] text-gray-400 truncate max-w-[160px]">{w.email}</p>
+                        </div>
+                      </div>
+                      <OnlineBadge last_seen_at={w.last_seen_at} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-lg bg-white border border-gray-100 p-2 text-center">
+                        <p className="text-base font-black text-indigo-600">{w.active_deals}</p>
+                        <p className="text-[9px] text-gray-400 uppercase tracking-wide">{t.activeDeals}</p>
+                      </div>
+                      <div className="rounded-lg bg-white border border-gray-100 p-2 text-center">
+                        <p className="text-base font-black text-emerald-600">{w.won_deals}</p>
+                        <p className="text-[9px] text-gray-400 uppercase tracking-wide">{t.wonDeals}</p>
+                      </div>
+                      <div className="rounded-lg bg-white border border-gray-100 p-2 text-center">
+                        <p className="text-base font-black text-amber-600">{w.conversion}%</p>
+                        <p className="text-[9px] text-gray-400 uppercase tracking-wide">{t.conversionPct}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <div>
+                        <span className="text-gray-400">{t.totalRevenue}: </span>
+                        <span className="font-bold text-gray-900">{fmt(w.total_revenue)}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">{t.commission}: </span>
+                        <span className="font-semibold text-amber-600">{fmt(w.commission)}</span>
+                      </div>
+                    </div>
+                    {w.wa_pulse > 0 && (
+                      <div className="text-xs text-gray-500">
+                        💬 WA: <span className="font-semibold text-green-600">{w.wa_pulse}</span>
+                        {w.avg_response_min !== null && <span className="ms-2">⏱ {w.avg_response_min} {t.minutes}</span>}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </Section>
           )}

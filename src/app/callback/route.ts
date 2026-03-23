@@ -157,12 +157,7 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
 
   if (anyOrg || wasLinked) {
-    // Роль manager (продажник внутри орга) → только /worker/dashboard
-    const role = anyOrg?.role
-    if (role === 'manager') {
-      return NextResponse.redirect(`${origin}/worker/dashboard`)
-    }
-    // Все остальные (owner, moderator, user) → обычный dashboard
+    // User belongs to an org (owner, moderator, or invited staff) → go to dashboard
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 

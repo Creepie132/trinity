@@ -48,6 +48,8 @@ export async function GET(request: NextRequest) {
       activityRes,
       permRes,
       clientsCountRes,
+      todayMeetingsRes,
+      todayTasksRes,
     ] = await Promise.all([
 
       // 1. Burning tasks: просроченные + на сегодня
@@ -133,6 +135,28 @@ export async function GET(request: NextRequest) {
         .from('clients')
         .select('*', { count: 'exact', head: true })
         .eq('assigned_to', user.id),
+
+      // 10. Встречи на сегодня
+      supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('assigned_to', user.id)
+        .eq('task_type', 'meeting')
+        .in('status', ['open', 'in_progress'])
+        .is('archived_at', null)
+        .gte('due_date', todayStart)
+        .lt('due_date',  todayEnd),
+
+      // 11. Задачи на сегодня
+      supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('assigned_to', user.id)
+        .neq('task_type', 'meeting')
+        .in('status', ['open', 'in_progress'])
+        .is('archived_at', null)
+        .gte('due_date', todayStart)
+        .lt('due_date',  todayEnd),
     ])
 
     // ── KPI ────────────────────────────────────────────────────
@@ -193,6 +217,8 @@ export async function GET(request: NextRequest) {
       funnel,
       my_clients_count: clientsCountRes.count ?? 0,
       my_active_deals:  myActiveDeals,
+      today_meetings:   todayMeetingsRes.count ?? 0,
+      today_tasks:      todayTasksRes.count ?? 0,
       activity_feed:    activityRes.data ?? [],
       is_working_hours: isWorkingHours(now),
       settings: {

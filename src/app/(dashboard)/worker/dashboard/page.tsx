@@ -27,6 +27,7 @@ interface DashboardData {
   burning_tasks: BurningTask[]; red_zone_deals: RedZoneDeal[]
   new_leads: NewLead[]; kpi: KpiData; funnel: FunnelStage[]
   my_clients_count: number; my_active_deals: number
+  today_meetings: number; today_tasks: number
   is_working_hours: boolean; settings: { phone_mask_enabled: boolean }
 }
 
@@ -146,7 +147,7 @@ export default function WorkerDashboardPage() {
       {error && <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-2 text-sm text-red-600">{error}</div>}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <KpiCard value={data?.my_active_deals ?? 0} label={isHe ? 'עסקאות פעילות' : 'Активных сделок'}
           color="bg-gradient-to-br from-indigo-500 to-indigo-600" glow="hover:shadow-indigo-100/60"
           icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>}/>
@@ -156,9 +157,15 @@ export default function WorkerDashboardPage() {
         <KpiCard value={data?.my_clients_count ?? 0} label={isHe ? 'לקוחות שלי' : 'Моих клиентов'}
           color="bg-gradient-to-br from-emerald-400 to-emerald-500" glow="hover:shadow-emerald-100/60"
           icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}/>
-        <KpiCard value={data?.burning_tasks.length ?? 0} label={isHe ? 'משימות פעילות' : 'Активных задач'}
+        <KpiCard value={data?.burning_tasks.length ?? 0} label={isHe ? 'משימות דחופות' : 'Срочных задач'}
           color="bg-gradient-to-br from-amber-400 to-amber-500" glow="hover:shadow-amber-100/60"
           icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>}/>
+        <KpiCard value={data?.today_meetings ?? 0} label={isHe ? 'פגישות היום' : 'Встреч сегодня'}
+          color="bg-gradient-to-br from-violet-500 to-purple-600" glow="hover:shadow-violet-100/60"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>}/>
+        <KpiCard value={data?.today_tasks ?? 0} label={isHe ? 'משימות היום' : 'Задач сегодня'}
+          color="bg-gradient-to-br from-cyan-500 to-sky-600" glow="hover:shadow-cyan-100/60"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
       </div>
 
       {/* Quick Actions */}

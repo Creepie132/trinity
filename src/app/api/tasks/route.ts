@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
       .from('tasks')
       .select('*')
       .eq('org_id', orgId)
+      .neq('task_type', 'meeting')   // встречи — отдельный модуль
       .is('archived_at', null)
       .order('created_at', { ascending: false })
 

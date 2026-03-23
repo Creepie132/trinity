@@ -34,35 +34,65 @@ export interface WizardModalProps {
 }
 
 const SIZE_MAP: Record<string, string> = {
-  sm:  'clamp(320px, 90vw, 480px)',
-  md:  'clamp(320px, 85vw, 560px)',
-  lg:  'clamp(320px, 80vw, 720px)',
-  xl:  'clamp(320px, 80vw, 860px)',
+  sm:  'clamp(380px, 85vw, 520px)',
+  md:  'clamp(420px, 85vw, 680px)',
+  lg:  'clamp(460px, 85vw, 820px)',
+  xl:  'clamp(480px, 85vw, 960px)',
 }
 
-function StepIndicator({ steps, current }: { steps: WizardStep[]; current: number }) {
+// ── Vertical step list in sidebar ──────────────────────────────────────────
+function SidebarSteps({ steps, current }: { steps: WizardStep[]; current: number }) {
   return (
-    <div className="flex items-center justify-center gap-0">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {steps.map((step, idx) => {
         const id = idx + 1
-        const isActive = id === current
         const isDone = id < current
+        const isActive = id === current
         const Icon = step.icon
         return (
-          <div key={id} className="flex items-center">
-            <div className="flex flex-col items-center gap-1.5">
-              <div className={cn(
-                'w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-2',
-                isDone ? 'bg-white/20 border-white/60' : isActive ? 'bg-white/25 border-white shadow-lg' : 'bg-white/5 border-white/20',
-              )}>
-                {isDone ? <CheckCircle2 className="w-5 h-5 text-white" /> : <Icon className={cn('w-4 h-4', isActive ? 'text-white' : 'text-white/40')} />}
+          <div key={id} style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '9px 10px', borderRadius: 10,
+              background: isActive ? 'var(--trinity-accent-bg, rgba(74,111,165,0.25))' : 'transparent',
+              transition: 'background 0.2s',
+            }}>
+              {/* Icon circle */}
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isDone
+                  ? 'rgba(255,255,255,0.15)'
+                  : isActive
+                  ? 'var(--trinity-accent, #4a6fa5)'
+                  : 'rgba(255,255,255,0.06)',
+                border: isActive ? 'none' : '1.5px solid rgba(255,255,255,0.15)',
+              }}>
+                {isDone
+                  ? <CheckCircle2 style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.7)' }} />
+                  : <Icon style={{ width: 14, height: 14, color: isActive ? '#fff' : 'rgba(255,255,255,0.35)' }} />
+                }
               </div>
-              <span className={cn('text-[10px] font-medium tracking-wide whitespace-nowrap', isActive ? 'text-white opacity-100' : isDone ? 'text-white/70' : 'text-white/35')}>
+              {/* Label */}
+              <span style={{
+                fontSize: 12, fontWeight: isActive ? 600 : 400, lineHeight: 1.3,
+                color: isActive
+                  ? 'var(--trinity-accent-text, #7aa8e0)'
+                  : isDone
+                  ? 'rgba(255,255,255,0.6)'
+                  : 'rgba(255,255,255,0.3)',
+              }}>
                 {step.label}
               </span>
             </div>
+            {/* Connector line */}
             {idx < steps.length - 1 && (
-              <div className={cn('w-10 h-0.5 mb-5 mx-1 rounded-full transition-all duration-500', isDone ? 'bg-white/60' : 'bg-white/15')} />
+              <div style={{
+                width: 1.5, height: 16, marginLeft: 25,
+                background: idx < current - 1
+                  ? 'rgba(255,255,255,0.25)'
+                  : 'rgba(255,255,255,0.1)',
+              }} />
             )}
           </div>
         )
@@ -71,14 +101,22 @@ function StepIndicator({ steps, current }: { steps: WizardStep[]; current: numbe
   )
 }
 
+// ── Dot progress ─────────────────────────────────────────────────────────────
 function DotProgress({ total, current }: { total: number; current: number }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       {Array.from({ length: total }).map((_, i) => (
         <div key={i}
-          className={cn('rounded-full transition-all duration-300',
-            i + 1 === current ? 'w-5 h-2' : i + 1 < current ? 'w-2 h-2 bg-emerald-400' : 'w-2 h-2 bg-gray-200')}
-          style={i + 1 === current ? { background: 'var(--trinity-accent, #4a6fa5)' } : undefined}
+          style={{
+            borderRadius: 999, transition: 'all 0.3s',
+            width: i + 1 === current ? 20 : 8,
+            height: 8,
+            background: i + 1 === current
+              ? 'var(--trinity-accent, #4a6fa5)'
+              : i + 1 < current
+              ? 'rgba(100,200,120,0.7)'
+              : 'rgba(0,0,0,0.12)',
+          }}
         />
       ))}
     </div>
@@ -107,77 +145,154 @@ export function WizardModal({
 
   return createPortal(
     <>
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[8999]" onClick={onClose} aria-hidden="true" />
-      <div dir={dir} role="dialog" aria-modal="true"
-        className={cn(
-          'fixed z-[9000] flex flex-col rounded-2xl shadow-2xl overflow-hidden',
-          'animate-in fade-in-0 zoom-in-95 duration-200',
-          'max-h-[calc(100dvh-32px)]',
-          'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
-        )}
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[8999]"
+        onClick={onClose} aria-hidden="true" />
+
+      {/* Modal */}
+      <div
+        dir={dir}
+        role="dialog"
+        aria-modal="true"
+        className="fixed z-[9000] flex flex-col rounded-2xl shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200 max-h-[calc(100dvh-32px)] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
         style={{
-          // Фиксированная ширина — контент не диктует размер контейнера
           width: '95%',
           maxWidth: SIZE_MAP[size] || SIZE_MAP.md,
           marginInline: 'auto',
           overflowWrap: 'break-word',
-        }}>
+          // Sidebar layout: dark left + white right
+          display: 'grid',
+          gridTemplateColumns: '168px minmax(0, 1fr)',
+          gridTemplateRows: '1fr auto',
+        }}
+      >
 
-        {/* ── Header ── */}
-        <div className="px-5 pt-4 pb-5 flex-shrink-0" style={{ background: 'var(--trinity-sidebar-bg, #1a237e)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <polygon points="8,1.5 13.5,4.75 13.5,11.25 8,14.5 2.5,11.25 2.5,4.75" fill="none" stroke="rgba(255,200,80,0.8)" strokeWidth="1.2"/>
-                  <circle cx="8" cy="8" r="3" fill="rgba(255,180,0,0.7)"/>
-                </svg>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-white font-bold text-sm">{logoLabel}</span>
-                {logoBadge && (
-                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                    {logoBadge}
-                  </span>
-                )}
-              </div>
+        {/* ── Sidebar (col 1, rows 1+2) ── */}
+        <div
+          style={{
+            gridColumn: 1,
+            gridRow: '1 / 3',
+            background: 'var(--trinity-sidebar-bg, #1e2533)',
+            paddingBlock: '24px 20px',
+            paddingInline: 14,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0,
+            minWidth: 0,
+            overflow: 'hidden',
+            borderRadius: dir === 'rtl' ? '0 16px 16px 0' : '16px 0 0 16px',
+          }}
+        >
+          {/* Logo row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+              background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <polygon points="8,1.5 13.5,4.75 13.5,11.25 8,14.5 2.5,11.25 2.5,4.75"
+                  fill="none" stroke="rgba(255,200,80,0.8)" strokeWidth="1.2"/>
+                <circle cx="8" cy="8" r="3" fill="rgba(255,180,0,0.7)"/>
+              </svg>
             </div>
-            <button onClick={onClose}
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
-              <X className="w-4 h-4 text-white" />
-            </button>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{logoLabel}</span>
+            {logoBadge && (
+              <span style={{
+                fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 999,
+                background: 'rgba(251,191,36,0.2)', color: 'rgb(251,191,36)',
+                border: '1px solid rgba(251,191,36,0.3)',
+              }}>{logoBadge}</span>
+            )}
           </div>
-          <h2 className="text-white text-lg font-bold mb-4">{title}</h2>
-          <StepIndicator steps={steps} current={currentStep} />
+
+          {/* Title */}
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', margin: '0 0 18px', lineHeight: 1.3 }}>
+            {title}
+          </p>
+
+          {/* Vertical steps */}
+          <SidebarSteps steps={steps} current={currentStep} />
         </div>
 
-        {/* ── Content ── */}
-        <div className="flex-1 overflow-y-auto bg-white dark:bg-gray-950 px-6 py-5">
+        {/* ── Content area (col 2, row 1) ── */}
+        <div
+          style={{
+            gridColumn: 2,
+            gridRow: 1,
+            background: 'var(--trinity-content-bg, #f8f9fc)',
+            paddingBlock: '20px 12px',
+            paddingInline: 20,
+            overflowY: 'auto',
+            minWidth: 0,
+            minHeight: 320,
+            borderRadius: dir === 'rtl' ? '16px 0 0 0' : '0 16px 0 0',
+            position: 'relative',
+          }}
+        >
+          {/* Close button — floating top corner */}
+          <button
+            onClick={onClose}
+            style={{
+              position: 'absolute', top: 12,
+              [dir === 'rtl' ? 'left' : 'right']: 12,
+              width: 28, height: 28, borderRadius: '50%',
+              background: 'rgba(0,0,0,0.07)', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', zIndex: 10,
+            }}
+          >
+            <X style={{ width: 14, height: 14, color: '#666' }} />
+          </button>
+
           {children}
         </div>
 
-        {/* ── Footer ── */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-950">
-          <Button variant="ghost" onClick={currentStep === 1 ? onClose : onBack} className="text-gray-500 hover:text-gray-700">
+        {/* ── Footer (col 2, row 2) ── */}
+        <div
+          style={{
+            gridColumn: 2,
+            gridRow: 2,
+            background: 'var(--trinity-content-bg, #f8f9fc)',
+            paddingBlock: '12px 16px',
+            paddingInline: 20,
+            borderTop: '0.5px solid rgba(0,0,0,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            borderRadius: dir === 'rtl' ? '0 0 0 16px' : '0 0 16px 0',
+            minWidth: 0,
+          }}
+        >
+          <Button variant="ghost"
+            onClick={currentStep === 1 ? onClose : onBack}
+            className="text-gray-500 hover:text-gray-700 text-sm">
             {currentStep === 1 ? cancelLabel : backLabel}
           </Button>
+
           <DotProgress total={steps.length} current={currentStep} />
+
           {isLastStep ? (
-            <Button onClick={onSubmit} disabled={!canProceed || isSubmitting}
-              className="gap-2 min-w-[120px] text-white"
-              style={{ background: 'var(--trinity-accent, #2d6a4f)' }}>
+            <Button
+              onClick={onSubmit}
+              disabled={!canProceed || isSubmitting}
+              className="gap-2 min-w-[110px] text-white text-sm"
+              style={{ background: 'var(--trinity-accent, #4a6fa5)' }}
+            >
               {isSubmitting
-                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />...</>
-                : <><CheckCircle2 className="w-4 h-4" />{submitLabel}</>}
+                ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"/>...</>
+                : <><CheckCircle2 className="w-3.5 h-3.5" />{submitLabel}</>}
             </Button>
           ) : (
-            <Button onClick={onNext} disabled={!canProceed}
-              className="text-white"
-              style={{ background: 'var(--trinity-accent, #3949ab)' }}>
+            <Button
+              onClick={onNext}
+              disabled={!canProceed}
+              className="text-white text-sm"
+              style={{ background: 'var(--trinity-accent, #4a6fa5)' }}
+            >
               {nextLabel}
             </Button>
           )}
         </div>
+
       </div>
     </>,
     document.body

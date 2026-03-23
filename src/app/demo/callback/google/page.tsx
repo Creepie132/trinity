@@ -119,6 +119,14 @@ export default function DemoGoogleCallbackPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Ошибка активации')
 
+      // Обновляем сессию — JWT должен содержать новый org_id из app_metadata
+      // Это критично: middleware читает org_id из токена; без refresh попадём на access-pending
+      try {
+        await supabase.auth.refreshSession()
+      } catch (refreshErr) {
+        console.warn('[demo-callback] session refresh failed (non-critical):', refreshErr)
+      }
+
       // Шаг 4: Готово
       setStatus('done')
       if (data.is_new) {

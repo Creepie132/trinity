@@ -66,22 +66,28 @@ export async function POST(request: NextRequest) {
 
     const email = user.email || `${user.id}@demo.trinity`
 
-    try {
-      await service.from('org_users').upsert(
-        { user_id: user.id, org_id: orgId, email, role: 'owner' },
-        { onConflict: 'user_id,org_id' }
-      )
-    } catch (e) { console.error('[google-activate] org_users upsert:', e) }
+    // org_users — КРИТИЧНО: без этой записи middleware не найдёт org и отправит на access-pending
+    const { error: ouError } = await service.from('org_users').upsert(
+      { user_id: user.id, org_id: orgId, email, role: 'owner' },
+      { onConflict: 'user_id,org_id' }
+    )
+    if (ouError) {
+      console.error('[google-activate] org_users upsert FAILED:', ouError)
+      // Критическая ошибка — без org_users middleware не пропустит пользователя
+      return NextResponse.json({ error: 'Failed to link user to org: ' + ouError.message }, { status: 500 })
+    }
 
-    try {
-      await service.from('user_active_branch').upsert(
-        { user_id: user.id, active_org_id: orgId }, { onConflict: 'user_id' }
-      )
-    } catch (e) { console.error('[google-activate] user_active_branch upsert:', e) }
+    // user_active_branch — некритично, но логируем
+    const { error: uabError } = await service.from('user_active_branch').upsert(
+      { user_id: user.id, active_org_id: orgId }, { onConflict: 'user_id' }
+    )
+    if (uabError) console.error('[google-activate] user_active_branch upsert:', uabError)
 
-    await service.auth.admin.updateUserById(user.id, {
+    // Обновляем JWT app_metadata — middleware читает org_id из токена (быстрый путь)
+    const { error: jwtError } = await service.auth.admin.updateUserById(user.id, {
       app_metadata: { org_id: orgId },
-    }).catch(e => console.error('[google-activate] updateUserById:', e))
+    })
+    if (jwtError) console.error('[google-activate] updateUserById:', jwtError)
 
     const seedResult = await seedDemoData(service, orgId, user.id)
     if (!seedResult.ok) console.warn('[google-activate] seed partial failure:', seedResult.error)

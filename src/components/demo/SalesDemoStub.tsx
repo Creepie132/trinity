@@ -1,0 +1,194 @@
+'use client'
+
+/**
+ * SalesDemoStub — заглушка для /sales в демо-режиме.
+ * Показывает описание модуля, план цен и кнопку связи в WhatsApp.
+ */
+
+import { MessageCircle, Check, Zap, Star, Building2 } from 'lucide-react'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { useState, useEffect } from 'react'
+
+const WA_LINK = 'https://wa.me/972544858586'
+
+const T = {
+  ru: {
+    title: 'Модуль продаж Trinity',
+    desc: 'Фиксируйте все продажи товаров и услуг в одном месте. Автоматические отчёты, статистика и история по каждому клиенту.',
+    features: ['История всех сделок', 'Привязка к клиенту', 'Статусы оплаты', 'Импорт из Excel', 'Аналитика по месяцам', 'Чеки и счета'],
+    plansTitle: 'Тарифные планы',
+    plans: [
+      {
+        name: 'Старт',
+        price: '₪199',
+        period: '/мес',
+        icon: Zap,
+        color: 'from-blue-500 to-cyan-500',
+        badge: null,
+        features: ['До 3 сотрудников', 'CRM-клиенты', 'Визиты и записи', 'WhatsApp-напоминания', 'Базовая аналитика'],
+      },
+      {
+        name: 'Бизнес',
+        price: '₪349',
+        period: '/мес',
+        icon: Star,
+        color: 'from-amber-500 to-orange-500',
+        badge: 'Популярный',
+        features: ['До 10 сотрудников', 'Модуль продаж', 'Инвентарь / склад', 'SMS-кампании', 'Расширенная аналитика', 'Лояльность и бонусы'],
+      },
+      {
+        name: 'Про',
+        price: '₪549',
+        period: '/мес',
+        icon: Building2,
+        color: 'from-violet-500 to-purple-600',
+        badge: null,
+        features: ['Неограничено сотрудников', 'Несколько филиалов', 'Интеграция с Green Invoice', 'Приоритетная поддержка', 'Белый лейбл (API)'],
+      },
+    ],
+    cta: 'Написать в WhatsApp',
+    sub: 'Влад ответит в течение нескольких минут',
+  },
+  he: {
+    title: 'מודול מכירות Trinity',
+    desc: 'תעד את כל מכירות המוצרים והשירותים במקום אחד. דוחות אוטומטיים, סטטיסטיקה והיסטוריה לכל לקוח.',
+    features: ['היסטוריית מכירות', 'קישור ללקוח', 'סטטוסי תשלום', 'ייבוא מ-Excel', 'ניתוח חודשי', 'קבלות וחשבוניות'],
+    plansTitle: 'תוכניות מחיר',
+    plans: [
+      {
+        name: 'סטארט',
+        price: '₪199',
+        period: '/חודש',
+        icon: Zap,
+        color: 'from-blue-500 to-cyan-500',
+        badge: null,
+        features: ['עד 3 עובדים', 'לקוחות CRM', 'ביקורים ותורים', 'תזכורות WhatsApp', 'ניתוח בסיסי'],
+      },
+      {
+        name: 'עסקים',
+        price: '₪349',
+        period: '/חודש',
+        icon: Star,
+        color: 'from-amber-500 to-orange-500',
+        badge: 'פופולרי',
+        features: ['עד 10 עובדים', 'מודול מכירות', 'מלאי / מחסן', 'קמפיינים SMS', 'ניתוח מורחב', 'נאמנות ובונוסים'],
+      },
+      {
+        name: 'פרו',
+        price: '₪549',
+        period: '/חודש',
+        icon: Building2,
+        color: 'from-violet-500 to-purple-600',
+        badge: null,
+        features: ['עובדים ללא הגבלה', 'מספר סניפים', 'אינטגרציה חשבונית ירוקה', 'תמיכה עדיפות', 'לייבל לבן (API)'],
+      },
+    ],
+    cta: 'כתוב לנו ב-WhatsApp',
+    sub: 'ולד יענה תוך דקות ספורות',
+  },
+}
+
+export function SalesDemoStub() {
+  const { language } = useLanguage()
+  const [shimmer, setShimmer] = useState(false)
+  const [visible, setVisible] = useState(false)
+  const isHe = language === 'he'
+  const t = T[isHe ? 'he' : 'ru']
+  const dir = isHe ? 'rtl' : 'ltr'
+
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true))
+    const id = setInterval(() => {
+      setShimmer(true)
+      setTimeout(() => setShimmer(false), 700)
+    }, 3000)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <div dir={dir} className={`min-h-screen py-8 px-4 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+      {/* ── Hero ── */}
+      <div className="text-center mb-8">
+        <div className="relative inline-block mb-4">
+          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-amber-500 to-orange-500 opacity-20 blur-2xl animate-pulse" />
+          <div className="relative w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-xl">
+            <span className="text-3xl">🛍️</span>
+          </div>
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{t.title}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed max-w-sm mx-auto">{t.desc}</p>
+      </div>
+
+      {/* ── Features grid ── */}
+      <div className="grid grid-cols-2 gap-2 mb-8 max-w-sm mx-auto">
+        {t.features.map((f, i) => (
+          <div key={i} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300">
+            <Check size={14} className="text-emerald-500 flex-shrink-0" />
+            <span>{f}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Pricing plans ── */}
+      <div className="mb-8">
+        <h2 className="text-center text-base font-semibold text-gray-800 dark:text-gray-200 mb-4">{t.plansTitle}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+          {t.plans.map((plan, i) => {
+            const Icon = plan.icon
+            const isHighlighted = !!plan.badge
+            return (
+              <div key={i}
+                className={`relative rounded-2xl border p-5 flex flex-col gap-3 transition-transform hover:-translate-y-0.5
+                  ${isHighlighted
+                    ? 'border-amber-400 shadow-amber-100 dark:shadow-amber-900/20 shadow-lg bg-white dark:bg-gray-800'
+                    : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800'}`}
+                style={{ animation: `fadeInUp 0.4s ${i * 0.1}s ease both` }}>
+                {plan.badge && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-bold px-3 py-0.5 rounded-full whitespace-nowrap">
+                    {plan.badge}
+                  </span>
+                )}
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center flex-shrink-0`}>
+                    <Icon size={18} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{plan.name}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{isHe ? 'לעסק' : 'для бизнеса'}</p>
+                  </div>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{plan.price}</span>
+                  <span className="text-sm text-gray-400">{plan.period}</span>
+                </div>
+                <ul className="space-y-1.5 flex-1">
+                  {plan.features.map((f, j) => (
+                    <li key={j} className="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-400">
+                      <Check size={12} className="text-emerald-500 mt-0.5 flex-shrink-0" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── WhatsApp CTA ── */}
+      <div className="max-w-sm mx-auto">
+        <a href={WA_LINK} target="_blank" rel="noopener noreferrer"
+          className="relative inline-flex items-center justify-center gap-3 w-full py-4 rounded-2xl font-bold text-white text-base overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
+          style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 4px 24px rgba(22,163,74,0.35)' }}>
+          <span className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${shimmer ? 'opacity-100' : 'opacity-0'}`}
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)' }} />
+          <span className="absolute inset-0 rounded-2xl border-2 border-green-300/50 animate-pulse pointer-events-none" />
+          <MessageCircle size={20} />
+          <span>{t.cta}</span>
+        </a>
+        <p className="text-xs text-gray-400 text-center mt-2">{t.sub}</p>
+        <p className="text-xs text-gray-300 dark:text-gray-600 text-center mt-1">Trinity CRM by Amber Solutions</p>
+      </div>
+    </div>
+  )
+}

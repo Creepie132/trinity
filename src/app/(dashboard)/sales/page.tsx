@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
-import { DemoStub, DemoStubConfig } from '@/components/demo/DemoStub'
+import { SalesDemoStub } from '@/components/demo/SalesDemoStub'
 import { useSales, useSaleStats, useToggleReceipt, Sale } from '@/hooks/useSales'
 import { SaleCard } from '@/components/sales/SaleCard'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
@@ -169,27 +169,13 @@ function avColor(sale: Sale) {
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
-export default function SalesPage() {
+function SalesContent() {
   const { language } = useLanguage()
-  const { isDemo } = useDemoMode()
   const locale = language === 'he' ? 'he' : 'ru'
   const dir   = locale === 'he' ? 'rtl' : 'ltr'
   const t     = T[locale]
   const months = locale === 'he' ? MONTHS_HE : MONTHS_RU
   const { openModal } = useModalStore()
-
-  const SALES_STUB: DemoStubConfig = {
-    emoji: '🛍️',
-    titleRu: 'Модуль продаж Trinity',
-    titleHe: 'מודול מכירות Trinity',
-    descRu: 'Фиксируйте все продажи товаров и услуг в одном месте.\nАвтоматические отчёты, статистика и история по каждому клиенту.',
-    descHe: 'תעד את כל מכירות המוצרים והשירותים במקום אחד.\nדוחות אוטומטיים, סטטיסטיקה והיסטוריה לכל לקוח.',
-    featuresRu: ['История всех продаж', 'Привязка к клиенту', 'Статусы оплаты', 'Импорт из Excel', 'Аналитика по месяцам', 'Чеки и счета'],
-    featuresHe: ['היסטוריית מכירות', 'קישור ללקוח', 'סטטוסי תשלום', 'ייבוא מ-Excel', 'ניתוח חודשי', 'קבלות וחשבוניות'],
-    accentColor: 'from-amber-500 to-orange-500',
-  }
-
-  if (isDemo) return <DemoStub config={SALES_STUB} />
 
   const [statusFilter, setStatusFilter]   = useState('all')
   const [methodFilter, setMethodFilter]   = useState('all')
@@ -231,8 +217,6 @@ export default function SalesPage() {
   const handleSaleClick = useCallback((sale: Sale) => {
     setSelectedSale(sale)
   }, [])
-
-  if (isDemo) return <DemoStub config={SALES_STUB} />
 
   return (
     <div id="demo-step-pipeline" dir={dir} className="space-y-5 min-h-screen">
@@ -650,4 +634,10 @@ export default function SalesPage() {
 
     </div>
   )
+}
+
+export default function SalesPage() {
+  const { isDemo } = useDemoMode()
+  if (isDemo) return <SalesDemoStub />
+  return <SalesContent />
 }

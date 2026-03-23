@@ -325,11 +325,22 @@ export async function getWorkerAuthContext(): Promise<WorkerAuthContext | AuthEr
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (!adminRow?.is_sales_agent) {
-    return { error: NextResponse.json({ error: 'Sales agent access required' }, { status: 403 }) }
+  if (adminRow?.is_sales_agent) {
+    return { user, isSalesAgent: true, supabase: supabase as unknown as SupabaseClient }
   }
 
-  return { user, isSalesAgent: true, supabase: supabase as unknown as SupabaseClient }
+  // Fallback: менеджер внутри орга (role = 'manager' в org_users)
+  const { data: orgRow } = await service
+    .from('org_users')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (orgRow?.role === 'manager') {
+    return { user, isSalesAgent: false, supabase: supabase as unknown as SupabaseClient }
+  }
+
+  return { error: NextResponse.json({ error: 'Sales agent access required' }, { status: 403 }) }
 }
 
 // Хелпер для обработки ошибок в API

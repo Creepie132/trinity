@@ -132,6 +132,7 @@ const RU: LangData = {
     { name: 'Base',         price: '199', popular: false, period: 'в месяц', useCase: 'Для тех, кто только начинает наводить порядок',    features: ['Клиенты', 'Визиты / Записи', 'Дневник и задачи', 'Склад'] },
     { name: 'Pro',          price: '249', popular: true,  period: 'в месяц', useCase: 'Для тех, кто хочет расти и зарабатывать больше',   features: ['Всё из Base', 'Онлайн-запись', 'Статистика и отчёты', 'SMS и напоминания'] },
     { name: 'Enterprise',   price: '499', popular: false, period: 'в месяц', useCase: 'Для нескольких точек или большой команды',          features: ['Всё из Base и Pro', 'Филиалы', 'Программа лояльности', 'До 5 работников включено'] },
+    { name: 'Инд. настройка', price: 'По выбору', popular: false, period: '', useCase: 'Выберите только нужные модули',                   features: ['Выбери нужные модули', 'Инд. конфигурация', 'Приоритетная поддержка', 'Скидка до 15% от 5+ модулей'] },
   ],
   popularBadge: 'Популярный',
   setupNote: 'Настройка: самостоятельно — бесплатно · онлайн (Zoom) — ',
@@ -221,6 +222,7 @@ const HE: LangData = {
     { name: 'Base',         price: '199', popular: false, period: 'לחודש', useCase: 'למי שמתחיל לעשות סדר בעסק',                features: ['לקוחות', 'ביקורים / תורים', 'יומן ומשימות', 'מלאי'] },
     { name: 'Pro',          price: '249', popular: true,  period: 'לחודש', useCase: 'למי שרוצה לצמוח ולהרוויח יותר',            features: ['הכל מ-Base', 'הזמנה אונליין', 'סטטיסטיקה ודוחות', 'SMS ותזכורות'] },
     { name: 'Enterprise',   price: '499', popular: false, period: 'לחודש', useCase: 'למספר סניפים או צוות גדול',                features: ['הכל מ-Base ו-Pro', 'סניפים', 'תוכנית נאמנות', 'עד 5 עובדים כלולים'] },
+    { name: 'אישי',         price: 'לפי בחירה', popular: false, period: '', useCase: 'בחר רק את המודולים הדרושים',             features: ['בחר מודולים נדרשים', 'קונפיגורציה אישית', 'תמיכה עדיפות', 'הנחה עד 15% מ-5+ מודולים'] },
   ],
   popularBadge: 'פופולרי',
   setupNote: 'הגדרה: בעצמך — חינם · אונליין (Zoom) — ',
@@ -465,7 +467,7 @@ export default function LandingPage() {
         .pricing { background:var(--cream); }
         .pricing-center { text-align:center; }
         .pricing-center .section-sub { margin:0 auto clamp(40px,5vw,72px); }
-        .plans { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:clamp(16px,2vw,24px); max-width:1000px; margin:0 auto; }
+        .plans { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:clamp(16px,2vw,24px); max-width:1000px; margin:0 auto; }
         .plan { background:white; border:1.5px solid var(--border); border-radius:28px; padding:clamp(28px,3vw,44px) clamp(20px,2.5vw,36px); position:relative; transition:all 0.3s; }
         .plan:hover { box-shadow:var(--shadow-lg); transform:translateY(-6px); }
         .plan.popular { border-color:var(--amber); background:var(--navy); transform:scale(1.04); box-shadow:var(--shadow-lg); }
@@ -776,7 +778,12 @@ export default function LandingPage() {
               <div key={i} className={`plan${plan.popular ? ' popular' : ''}`}>
                 {plan.popular && <div className="popular-badge">{t.popularBadge}</div>}
                 <div className="plan-name">{plan.name}</div>
-                <div className="plan-price"><sup>₪</sup>{plan.price}</div>
+                <div className="plan-price">
+                  {/^\d/.test(plan.price) ? <sup>₪</sup> : null}
+                  <span style={!/^\d/.test(plan.price) ? {fontSize:'clamp(22px,3vw,32px)',letterSpacing:'-0.5px'} : undefined}>
+                    {plan.price}
+                  </span>
+                </div>
                 <div className="plan-period">{plan.period}</div>
                 <div className="plan-usecase">{plan.useCase}</div>
                 <div className="plan-divider"></div>

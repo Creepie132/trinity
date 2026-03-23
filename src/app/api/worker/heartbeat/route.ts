@@ -27,8 +27,10 @@ export async function POST() {
     const service = createSupabaseServiceClient()
     const { error } = await service
       .from('admin_users')
-      .update({ last_seen_at: new Date().toISOString() })
-      .eq('user_id', user.id)
+      .upsert(
+        { user_id: user.id, email: user.email ?? '', last_seen_at: new Date().toISOString() },
+        { onConflict: 'user_id', ignoreDuplicates: false }
+      )
 
     if (error) {
       console.error('[heartbeat] update error:', error.message)

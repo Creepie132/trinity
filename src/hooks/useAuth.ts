@@ -8,6 +8,7 @@ type UseAuthResult = {
   orgId: string | null
   organizations: Array<{ org_id: string; org_name: string }> | null
   isAdmin: boolean
+  isSalesAgent: boolean
   role: string | null
   isLoading: boolean
   signOut: () => Promise<void>
@@ -16,6 +17,7 @@ type UseAuthResult = {
 
 let cachedOrgId: string | null = null
 let cachedIsAdmin: boolean | null = null
+let cachedIsSalesAgent: boolean | null = null
 let cachedRole: string | null = null
 let cachedOrganizations: Array<{ org_id: string; org_name: string; role: string }> | null = null
 let cachedUserId: string | null = null
@@ -25,6 +27,7 @@ export function useAuth(): UseAuthResult {
   const [orgId, setOrgId] = useState<string | null>(cachedOrgId)
   const [organizations, setOrganizations] = useState<Array<{ org_id: string; org_name: string; role: string }> | null>(cachedOrganizations)
   const [isAdmin, setIsAdmin] = useState<boolean>(cachedIsAdmin ?? false)
+  const [isSalesAgent, setIsSalesAgent] = useState<boolean>(cachedIsSalesAgent ?? false)
   const [role, setRole] = useState<string | null>(cachedRole)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -55,6 +58,7 @@ export function useAuth(): UseAuthResult {
       if (cachedUserId && cachedUserId !== user.id) {
         cachedOrgId = null
         cachedIsAdmin = null
+        cachedIsSalesAgent = null
         cachedRole = null
         cachedOrganizations = null
       }
@@ -63,11 +67,12 @@ export function useAuth(): UseAuthResult {
       // проверка admin по USER_ID
       const { data: adminRow } = await supabase
         .from('admin_users')
-        .select('email')
+        .select('email, is_sales_agent')
         .eq('user_id', user.id)
         .maybeSingle()
 
       const isAdminUser = !!adminRow
+      const isSalesAgentUser = adminRow?.is_sales_agent ?? false
 
       // получаем ВСЕ организации пользователя по USER_ID
       const { data: orgRows } = await supabase
@@ -88,6 +93,7 @@ export function useAuth(): UseAuthResult {
       }))
 
       cachedIsAdmin = isAdminUser
+      cachedIsSalesAgent = isSalesAgentUser
       cachedOrganizations = userOrganizations
 
       // Если есть кэшированная организация - проверяем что она принадлежит этому пользователю
@@ -109,6 +115,7 @@ export function useAuth(): UseAuthResult {
       cachedRole = userRole
 
       setIsAdmin(isAdminUser)
+      setIsSalesAgent(isSalesAgentUser)
       setOrganizations(userOrganizations)
       setOrgId(selectedOrgId)
       setRole(userRole)
@@ -146,6 +153,7 @@ export function useAuth(): UseAuthResult {
     orgId,
     organizations,
     isAdmin,
+    isSalesAgent,
     role,
     isLoading,
     signOut,

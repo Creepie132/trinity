@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useAuth } from '@/hooks/useAuth'
 import {
   MessageCircle, Search, Send, UserPlus, Calendar,
   CheckCheck, Clock, X, Phone, Sparkles, Inbox, ChevronLeft,
@@ -107,6 +108,15 @@ export default function InboxPage() {
       router.replace('/dashboard')
     }
   }, [features.isLoading, features.hasWhatsapp, router])
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // ── Sales agent guard ─────────────────────────────────────────────────────
+  const { isSalesAgent } = useAuth()
+  useEffect(() => {
+    if (isSalesAgent) {
+      router.replace('/worker/pipeline')
+    }
+  }, [isSalesAgent, router])
   // ──────────────────────────────────────────────────────────────────────────
 
   const messagesEndRef = useRef<HTMLDivElement>(null)

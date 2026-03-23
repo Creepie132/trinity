@@ -86,6 +86,16 @@ export async function GET(
     const paymentsCount = payments?.length || 0
     const totalRevenue = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
 
+    // 4. All-time payments stats (completed only)
+    const { data: allPayments, error: allPaymentsError } = await supabase
+      .from('payments')
+      .select('amount')
+      .eq('org_id', orgId)
+      .eq('status', 'completed')
+
+    const allTimeCount = allPayments?.length || 0
+    const allTimeRevenue = allPayments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
+
     return NextResponse.json({
       period,
       startDate: startDate.toISOString(),
@@ -95,6 +105,8 @@ export async function GET(
         visitsCount: visitsCount || 0,
         paymentsCount,
         totalRevenue,
+        allTimeCount,
+        allTimeRevenue,
       },
     })
   } catch (error: any) {

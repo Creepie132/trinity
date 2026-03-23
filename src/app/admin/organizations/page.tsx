@@ -46,6 +46,7 @@ interface AccessRequest {
 
 interface OrgStats {
   totalClients: number; visitsCount: number; paymentsCount: number; totalRevenue: number
+  allTimeCount: number; allTimeRevenue: number
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -862,6 +863,18 @@ export default function AdminOrganizationsPage() {
                 {tokenActive ? <><CheckCircle className="w-3 h-3" /> {l ? 'פעיל' : 'Активен'} *{org.tranzila_card_last4}</> : <><AlertTriangle className="w-3 h-3" /> {l ? 'פג' : 'Истёк'}</>}
               </span>
             ) : <span className="text-xs text-gray-400">{l ? 'לא' : 'Нет'}</span>}
+          </div>
+          {/* All-time transactions */}
+          <div className="flex items-center justify-between text-sm py-1.5 border-t border-gray-50 dark:border-gray-800">
+            <span className="text-gray-500">{l ? 'עסקאות (סה״כ)' : 'Транзакции (всего)'}</span>
+            {statsLoading ? (
+              <span className="w-16 h-4 bg-gray-100 rounded animate-pulse" />
+            ) : orgStats ? (
+              <span className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
+                <span className="text-xs text-gray-400">{orgStats.allTimeCount} {l ? 'עסקאות' : 'шт'}</span>
+                <span className="font-bold text-emerald-600">₪{orgStats.allTimeRevenue.toLocaleString()}</span>
+              </span>
+            ) : <span className="text-xs text-gray-400">—</span>}
           </div>
           <button onClick={() => openAutopay(org)}
             className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all mt-1

@@ -25,12 +25,13 @@ export async function POST() {
     }
 
     const service = createSupabaseServiceClient()
+    const now = new Date().toISOString()
+
+    // Update last_seen_at in org_users (all rows for this user across all orgs)
     const { error } = await service
-      .from('admin_users')
-      .upsert(
-        { user_id: user.id, email: user.email ?? '', last_seen_at: new Date().toISOString() },
-        { onConflict: 'user_id', ignoreDuplicates: false }
-      )
+      .from('org_users')
+      .update({ last_seen_at: now })
+      .eq('user_id', user.id)
 
     if (error) {
       console.error('[heartbeat] update error:', error.message)

@@ -21,6 +21,7 @@ import { NotificationBell } from '@/components/worker/NotificationBell'
 import { NewLeadModal } from '@/components/worker/NewLeadModal'
 import { WorkerOnboarding } from '@/components/worker/WorkerOnboarding'
 import { useAuth } from '@/hooks/useAuth'
+import { useHeartbeat } from '@/hooks/useHeartbeat'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 
@@ -352,6 +353,8 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   const isRTL = language === 'he'
   const [searchOpen, setSearchOpen] = useState(false)
   const { show: showLangPicker, handleSelect: handleLangSelect } = useDemoLanguagePicker()
+  // Heartbeat — tracks online presence for owner dashboard (updates org_users.last_seen_at)
+  useHeartbeat()
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

@@ -85,6 +85,15 @@ export async function DELETE(
       client: 0,
     }
 
+    // Удалить inventory_transactions (ссылаются на visits через related_visit_id)
+    if (visitIds.length > 0) {
+      const { error: itError } = await supabase
+        .from('inventory_transactions')
+        .delete()
+        .in('related_visit_id', visitIds)
+      if (itError) console.error('Error deleting inventory_transactions:', itError)
+    }
+
     // Удалить visit_services
     if (visitIds.length > 0) {
       const { error: vsError } = await supabase
@@ -133,6 +142,26 @@ export async function DELETE(
       console.error('Error deleting sms_messages:', smsError)
     } else {
       deletedCounts.sms_messages = smsMessages?.length || 0
+    }
+
+    // Удалить остальные зависимости от clients
+    const depTables = [
+      'loyalty_points',
+      'tasks',
+      'call_records',
+      'client_subscriptions',
+      'sales',
+      'outbound_queue',
+      'client_photos',
+      'wa_conversations',
+      'deals',
+      'communication_log',
+      'revenue_logs',
+      'worker_notes',
+    ]
+    for (const table of depTables) {
+      const { error: depErr } = await supabase.from(table).delete().eq('client_id', clientId)
+      if (depErr) console.error(`Error deleting ${table}:`, depErr)
     }
 
     // Удалить самого клиента

@@ -467,7 +467,7 @@ export default function LandingPage() {
         .pricing { background:var(--cream); }
         .pricing-center { text-align:center; }
         .pricing-center .section-sub { margin:0 auto clamp(40px,5vw,72px); }
-        .plans { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:clamp(16px,2vw,24px); max-width:1000px; margin:0 auto; }
+        .plans { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:clamp(16px,2vw,24px); max-width:1280px; margin:0 auto; }
         .plan { background:white; border:1.5px solid var(--border); border-radius:28px; padding:clamp(28px,3vw,44px) clamp(20px,2.5vw,36px); position:relative; transition:all 0.3s; }
         .plan:hover { box-shadow:var(--shadow-lg); transform:translateY(-6px); }
         .plan.popular { border-color:var(--amber); background:var(--navy); transform:scale(1.04); box-shadow:var(--shadow-lg); }
@@ -801,7 +801,6 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-          <p className="setup-note">{t.setupNote}<strong>₪250</strong>{t.setupNote2}<strong>₪500</strong></p>
         </div>
       </section>
 

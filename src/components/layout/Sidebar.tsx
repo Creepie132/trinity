@@ -14,7 +14,6 @@ import { BranchSwitcher } from '@/components/BranchSwitcher'
 import { useModalStore } from '@/store/useModalStore'
 import { useHasWorkers } from '@/hooks/useHasWorkers'
 import { useDemoMode } from '@/hooks/useDemoMode'
-import { DemoStub, DemoStubConfig } from '@/components/demo/DemoStub'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { useState } from 'react'
 import { useClients } from '@/hooks/useClients'
@@ -241,32 +240,8 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
 
       {/* Demo visit limit modal */}
       <DemoLimitModal open={demoVisitOpen} onClose={() => setDemoVisitOpen(false)} section="visits" />
-
-      {/* Demo sale stub modal */}
-      {demoSaleOpen && (() => {
-        const SALE_STUB: DemoStubConfig = {
-          emoji: '🛍️',
-          titleRu: 'Быстрая продажа',
-          titleHe: 'מכירה מהירה',
-          descRu: 'Оформляйте продажи товаров прямо из панели навигации.\nПривязка к клиенту, автоматический расчёт суммы и чек.',
-          descHe: 'בצע מכירות מוצרים ישירות מסרגל הניווט.\nקישור ללקוח, חישוב סכום אוטומטי וקבלה.',
-          featuresRu: ['Выбор клиента', 'Товары со склада', 'Скидки', 'Чек автоматически', 'История продаж', 'Аналитика'],
-          featuresHe: ['בחירת לקוח', 'מוצרים מהמלאי', 'הנחות', 'קבלה אוטומטית', 'היסטוריית מכירות', 'אנליטיקה'],
-          accentColor: 'from-amber-500 to-orange-500',
-        }
-        return (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={() => setDemoSaleOpen(false)}>
-            <div onClick={e => e.stopPropagation()}>
-              <DemoStub config={SALE_STUB} forceShow />
-              <button onClick={() => setDemoSaleOpen(false)}
-                className="mt-3 w-full text-center text-sm text-white/60 hover:text-white/90">
-                {language === 'he' ? 'סגור' : 'Закрыть'}
-              </button>
-            </div>
-          </div>
-        )
-      })()}
+      {/* Demo sale limit modal */}
+      <DemoLimitModal open={demoSaleOpen} onClose={() => setDemoSaleOpen(false)} section="visits" />
     </div>
   )
 }

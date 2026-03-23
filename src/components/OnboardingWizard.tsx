@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 // KiraOrb removed — replaced with lightweight SVG orb below
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Progress } from '@/components/ui/progress'
-import { Plus, Trash2, Users, Calendar, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, Users, Calendar, ExternalLink, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
-import { Phone, Mail, MapPin, Calendar, User, AlertCircle, Circle, MessageCircle, MessageSquare } from 'lucide-react'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
+import { Phone, Mail, MapPin, Calendar, User, AlertCircle, Circle, MessageCircle, MessageSquare, CheckSquare } from 'lucide-react'
 import { getClientName } from '@/lib/client-utils'
 
 interface TaskDesktopPanelProps {

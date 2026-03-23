@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Badge } from '@/components/ui/badge'
 import { useInventoryTransactions } from '@/hooks/useInventory'
 import { useDeleteProduct } from '@/hooks/useProducts'

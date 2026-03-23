@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useCareInstructions } from '@/hooks/useCareInstructions'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { FileText, MessageCircle, Mail, Send, ArrowLeft } from 'lucide-react'

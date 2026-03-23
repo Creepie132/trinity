@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
@@ -60,7 +61,16 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
           {t.close}
         </button>
       }
+    
+      darkHeader
     >
+      <TrinityModalShell
+        open={open}
+        onClose={() => onOpenChange(false)}
+        icon={<User />}
+        title={''}
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
       {authLoading || orgLoading ? (
         <div className="flex items-center justify-center h-40 gap-3 flex-col">
           <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
@@ -142,6 +152,8 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
           </button>
         </div>
       )}
+    
+      </TrinityModalShell>
     </Modal>
   )
 }

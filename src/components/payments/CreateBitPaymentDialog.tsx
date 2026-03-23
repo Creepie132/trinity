@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,7 +12,7 @@ import { toast } from 'sonner'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useRouter } from 'next/navigation'
 import { ClientSearch } from '@/components/ui/ClientSearch'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Smartphone } from 'lucide-react'
 
 interface CreateBitPaymentDialogProps {
   open: boolean

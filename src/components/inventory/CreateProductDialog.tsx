@@ -13,10 +13,11 @@ import {
 } from '@/components/ui/select'
 import { useCreateProduct } from '@/hooks/useProducts'
 import { toast } from 'sonner'
-import { Camera, Upload, X, Loader2 } from 'lucide-react'
+import { Camera, Upload, X, Loader2, PackagePlus } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { BarcodeScanner } from './BarcodeScannerLazy'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import type { CreateProductDTO } from '@/types/inventory'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { User, Mail, Phone, Building2, Shield, Loader2, Save } from 'lucide-react'

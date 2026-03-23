@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -12,7 +13,7 @@ import {
 } from '@/components/ui/select'
 import { useAllOrganizations } from '@/hooks/useAdmin'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, CreditCard } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 interface CreateOrgSubscriptionDialogProps {

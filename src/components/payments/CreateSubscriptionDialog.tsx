@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -13,7 +14,7 @@ import {
 } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, CreditCard } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { ClientSearch } from '@/components/ui/ClientSearch'
 

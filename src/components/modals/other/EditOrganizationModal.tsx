@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { Building2, Save, Loader2 } from 'lucide-react'
 import { ClientSearchInput } from '@/components/ui/ClientSearchInput'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 
 interface EditOrganizationModalProps {
   isOpen: boolean

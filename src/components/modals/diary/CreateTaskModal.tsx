@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { TrinitySearchDropdown } from '@/components/ui/TrinitySearch'
-import { Phone, MessageCircle, Loader2, Plus, MapPin, AlertCircle } from 'lucide-react'
+import { Phone, MessageCircle, Loader2, Plus, MapPin, AlertCircle, CheckSquare } from 'lucide-react'
 import { getClientName } from '@/lib/client-utils'
 import { useLanguage } from '@/contexts/LanguageContext'
 

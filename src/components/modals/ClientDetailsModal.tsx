@@ -2,7 +2,8 @@
 
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
-import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText, Paintbrush, Settings2 } from 'lucide-react'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
+import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText, Paintbrush, Settings2, User } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'

@@ -10,6 +10,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 
 interface VisitDetailModalProps {
   visit: any
@@ -630,13 +631,24 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   }
 
   return (
-    <Modal open={isOpen} onClose={onClose} title={undefined} width="480px" dir={isHe ? 'rtl' : 'ltr'} showCloseButton={viewMode === 'main'}>
+    <Modal open={isOpen} onClose={onClose} title={undefined} width="480px" dir={isHe ? 'rtl' : 'ltr'} showCloseButton={viewMode === 'main'}
+      darkHeader
+    >
+      <TrinityModalShell
+        open={isOpen}
+        onClose={onClose}
+        icon={<Calendar />}
+        title={''}
+        dir={isHe ? 'rtl' : 'ltr'}
+      >
       {viewMode === 'main'             && renderMainView()}
       {viewMode === 'instructions'     && renderInstructionsList()}
       {viewMode === 'send-instruction' && renderSendInstruction()}
       {viewMode === 'services'         && renderServices()}
       {viewMode === 'add-service'      && renderAddService()}
       {viewMode === 'add-product'      && renderAddProduct()}
+    
+      </TrinityModalShell>
     </Modal>
   )
 }

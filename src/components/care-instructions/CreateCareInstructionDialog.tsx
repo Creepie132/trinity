@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Modal from '@/components/ui/Modal';
+import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,7 +17,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useCreateCareInstruction } from '@/hooks/useCareInstructions';
 import { useServices } from '@/hooks/useServices';
 import { CreateCareInstructionDTO } from '@/types/services';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CreateCareInstructionDialogProps {

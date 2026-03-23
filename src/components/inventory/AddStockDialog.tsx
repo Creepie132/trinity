@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCreateTransaction } from '@/hooks/useInventory'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, PackagePlus } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import type { Product } from '@/types/inventory'
 
 interface AddStockDialogProps {

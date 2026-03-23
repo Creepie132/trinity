@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import Modal from '@/components/ui/Modal';
+import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCreateService } from '@/hooks/useServices';
 import { CreateServiceDTO } from '@/types/services';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CreateServiceDialogProps {

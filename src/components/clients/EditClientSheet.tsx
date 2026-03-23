@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useEffect, memo } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useQueryClient } from '@tanstack/react-query'
-import { Save, FileText, Paintbrush } from 'lucide-react'
+import { Save, FileText, Paintbrush, UserPen } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface EditClientSheetProps {
@@ -208,7 +209,16 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
           </button>
         </div>
       }
+    
+      darkHeader
     >
+      <TrinityModalShell
+        open={isOpen}
+        onClose={onClose}
+        icon={<UserPen />}
+        title={''}
+        dir={locale === 'he' ? 'rtl' : 'ltr'}
+      >
       {/* Avatar — initials only, no upload (avatar_url not in DB) */}
       <div className="flex flex-col items-center mb-6">
         <div className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl`}>
@@ -283,6 +293,8 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
         <Field field="notes" label={l.notes} multiline
           value={form.notes}   error={errors.notes}   shaking={shaking.notes}   onChange={handleChange} />
       </div>
+    
+      </TrinityModalShell>
     </Modal>
   )
 }

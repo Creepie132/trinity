@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<title>Trinity CRM — Modal Reference</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #f1f5f9; padding: 40px 24px; color: #1e293b; }
+  h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .meta { font-size: 13px; color: #64748b; margin-bottom: 40px; }
+  .section-title { font-size: 13px; font-weight: 600; text-transform: uppercase;
+                   letter-spacing: 0.6px; color: #94a3b8; margin-bottom: 16px; }
+  .themes-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 48px; }
+  .theme-chip { display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+                border-radius: 999px; border: 1.5px solid #e2e8f0; background: #fff;
+                font-size: 13px; cursor: pointer; transition: border-color .15s; }
+  .theme-chip.active { border-color: var(--accent); }
+  .theme-dot { width: 14px; height: 14px; border-radius: 50%; }
+  .modal-wrap { background: rgba(0,0,0,0.45); border-radius: 16px;
+                padding: 32px; display: flex; justify-content: center; align-items: center;
+                min-height: 460px; }
+  .modal { display: grid; grid-template-columns: 200px 1fr;
+           border-radius: 16px; overflow: hidden; width: 100%; max-width: 660px;
+           border: 1px solid rgba(0,0,0,0.15); }
+</style>
+</head>
+<body>
+
+<h1>Trinity CRM — Client Modal Reference</h1>
+<p class="meta">Canonical modal design (Concept B). Используй как референс: скинь скриншот этой страницы в чат или открой файл.</p>
+
+<p class="section-title">Тема</p>
+<div class="themes-row">
+  <div class="theme-chip active" onclick="setTheme('midnight')" id="chip-midnight">
+    <div class="theme-dot" style="background:#1e2533"></div> Midnight Slate
+  </div>
+  <div class="theme-chip" onclick="setTheme('forest')" id="chip-forest">
+    <div class="theme-dot" style="background:#1a2620"></div> Forest Night
+  </div>
+  <div class="theme-chip" onclick="setTheme('plum')" id="chip-plum">
+    <div class="theme-dot" style="background:#1f1428"></div> Deep Plum
+  </div>
+  <div class="theme-chip" onclick="setTheme('amber')" id="chip-amber">
+    <div class="theme-dot" style="background:#1f1a0e"></div> Warm Amber
+  </div>
+</div>
+
+<p class="section-title">Предпросмотр</p>
+<div class="modal-wrap">
+  <div class="modal" id="modal">
+
+    <!-- SIDEBAR -->
+    <div id="sidebar" style="padding:20px 16px; display:flex; flex-direction:column; gap:8px;">
+
+      <!-- Avatar + name -->
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+        <div id="avatar" style="width:46px; height:46px; border-radius:50%;
+             display:flex; align-items:center; justify-content:center;
+             font-size:15px; font-weight:600; color:#fff; flex-shrink:0;">КФ</div>
+        <div>
+          <p style="font-size:13px; font-weight:600; color:#fff; margin:0;">Катерина Фарбман</p>
+          <span id="badge" style="font-size:10px; padding:2px 8px; border-radius:10px;">● Активен</span>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:4px;">
+        <div style="background:rgba(255,255,255,0.08); border-radius:6px; padding:6px; text-align:center;">
+          <p style="font-size:16px; font-weight:600; color:#fff; margin:0;">0</p>
+          <p style="font-size:10px; color:rgba(255,255,255,0.4); margin:0;">визитов</p>
+        </div>
+        <div style="background:rgba(255,255,255,0.08); border-radius:6px; padding:6px; text-align:center;">
+          <p style="font-size:16px; font-weight:600; color:#fff; margin:0;">₪0</p>
+          <p style="font-size:10px; color:rgba(255,255,255,0.4); margin:0;">оплачено</p>
+        </div>
+      </div>
+
+      <div style="height:0.5px; background:rgba(255,255,255,0.1); margin:4px 0;"></div>
+
+      <!-- Nav -->
+      <div id="nav"></div>
+
+      <!-- Actions -->
+      <div style="margin-top:auto; border-top:0.5px solid rgba(255,255,255,0.1); padding-top:10px; display:flex; flex-direction:column; gap:2px;">
+        <button style="background:none; border:none; cursor:pointer; text-align:left;
+                       padding:6px 10px; border-radius:6px; font-size:12px; color:rgba(255,255,255,0.45);">✏️ Редактировать</button>
+        <button style="background:none; border:none; cursor:pointer; text-align:left;
+                       padding:6px 10px; border-radius:6px; font-size:12px; color:rgba(220,80,80,0.7);">🗑️ Удалить</button>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div id="content" style="padding:20px; display:flex; flex-direction:column; gap:14px; position:relative;">
+      <button onclick="void(0)" style="position:absolute; top:12px; right:12px; background:none; border:0.5px solid #e2e8f0;
+              width:26px; height:26px; border-radius:50%; cursor:pointer; font-size:15px; color:#94a3b8;">✕</button>
+
+      <div>
+        <p style="font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px; font-weight:600;">Контакты</p>
+        <div id="field" style="border-radius:7px; padding:9px 12px; font-size:13px;">📞 +34 697 832 319</div>
+      </div>
+
+      <div>
+        <p style="font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px; font-weight:600;">Информация</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div id="info1" style="border-radius:7px; padding:9px 12px;">
+            <p style="font-size:10px; color:#94a3b8; margin:0 0 2px;">Создан</p>
+            <p style="font-size:13px; font-weight:500; margin:0;">16.03.2026</p>
+          </div>
+          <div id="info2" style="border-radius:7px; padding:9px 12px;">
+            <p style="font-size:10px; color:#94a3b8; margin:0 0 2px;">Лояльность</p>
+            <p style="font-size:13px; font-weight:500; margin:0;">0 баллов</p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p style="font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px; font-weight:600;">Заметки</p>
+        <div id="notes" style="border-radius:7px; padding:12px 14px; font-size:13px; line-height:1.7;">
+          · Живёт в Валенсии<br>· Открыл доступ к демо 16.03–19:00<br>· Не заинтересована
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const THEMES = {
+  midnight: { sidebar:'#1e2533', accent:'#4a6fa5', accentText:'#7aa8e0', accentBg:'rgba(74,111,165,0.25)', contentBg:'#f8f9fc', fieldBg:'rgba(0,0,0,0.04)', noteBg:'#eef2f7', noteBorder:'#c8d4e3', noteText:'#2d3a4e' },
+  forest:   { sidebar:'#1a2620', accent:'#2d6a4f', accentText:'#74c69d', accentBg:'rgba(45,106,79,0.3)',   contentBg:'#f6faf7', fieldBg:'rgba(0,0,0,0.04)', noteBg:'#d8eedf', noteBorder:'#a8d5b5', noteText:'#1a3d2b' },
+  plum:     { sidebar:'#1f1428', accent:'#7c3aed', accentText:'#c084fc', accentBg:'rgba(124,58,237,0.25)', contentBg:'#faf8ff', fieldBg:'rgba(0,0,0,0.04)', noteBg:'#e9e0ff', noteBorder:'#c4b5fd', noteText:'#3b1d6e' },
+  amber:    { sidebar:'#1f1a0e', accent:'#b45309', accentText:'#fbbf24', accentBg:'rgba(180,83,9,0.3)',    contentBg:'#fffdf5', fieldBg:'rgba(0,0,0,0.04)', noteBg:'#fde68a', noteBorder:'#f59e0b', noteText:'#451a03' },
+}
+const NAV_ITEMS = ['Обзор','Визиты','Продажи','WhatsApp','Заметки','Напоминания']
+let activeNav = 0
+
+function renderNav(t) {
+  document.getElementById('nav').innerHTML = NAV_ITEMS.map((item, i) => `
+    <div onclick="selectNav(${i})" style="
+      padding:7px 10px; border-radius:6px; cursor:pointer; font-size:12px;
+      background:${i===activeNav ? t.accentBg : 'transparent'};
+      color:${i===activeNav ? t.accentText : 'rgba(255,255,255,0.4)'};
+      display:flex; align-items:center; gap:7px; margin-bottom:2px;">
+      <div style="width:5px;height:5px;border-radius:50%;
+                  background:${i===activeNav ? t.accentText : 'rgba(255,255,255,0.2)'}"></div>
+      ${item}
+    </div>`).join('')
+}
+
+function setTheme(id) {
+  const t = THEMES[id]
+  document.getElementById('sidebar').style.background = t.sidebar
+  document.getElementById('avatar').style.background = t.accent
+  document.getElementById('badge').style.background = t.accentBg
+  document.getElementById('badge').style.color = t.accentText
+  document.getElementById('content').style.background = t.contentBg
+  document.getElementById('field').style.background = t.fieldBg
+  document.getElementById('info1').style.background = t.fieldBg
+  document.getElementById('info2').style.background = t.fieldBg
+  document.getElementById('notes').style.background = t.noteBg
+  document.getElementById('notes').style.border = '0.5px solid ' + t.noteBorder
+  document.getElementById('notes').style.color = t.noteText
+  renderNav(t)
+  document.querySelectorAll('.theme-chip').forEach(c => {
+    c.classList.remove('active')
+    c.style.borderColor = '#e2e8f0'
+  })
+  const chip = document.getElementById('chip-' + id)
+  chip.classList.add('active')
+  chip.style.borderColor = t.accent
+}
+
+function selectNav(i) {
+  activeNav = i
+  const id = ['midnight','forest','plum','amber'].find(k =>
+    document.getElementById('sidebar').style.background === THEMES[k].sidebar) || 'midnight'
+  renderNav(THEMES[id])
+}
+
+setTheme('midnight')
+</script>
+</body>
+</html>

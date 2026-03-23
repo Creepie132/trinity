@@ -1,6 +1,7 @@
 'use client'
 
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Badge } from '@/components/ui/badge'
 import { useSmsMessages } from '@/hooks/useSms'
 import { SmsCampaign } from '@/types/database'

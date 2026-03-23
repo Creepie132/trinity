@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import Modal from '@/components/ui/Modal';
+import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useUpdateService, useDeleteService } from '@/hooks/useServices';
 import { Service, UpdateServiceDTO } from '@/types/services';
-import { Edit2, Trash2, Save, X, Loader2, Clock, DollarSign } from 'lucide-react';
+import { Edit2, Trash2, Save, X, Loader2, Clock, DollarSign, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ServiceDetailSheetProps {

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useBranches } from '@/hooks/useBranches'
 import { useProducts } from '@/hooks/useProducts'
 import { useAuth } from '@/contexts/AuthContext'
@@ -181,9 +182,20 @@ export function TransferRequestDialog({ open, onClose, preloadedProduct }: Trans
 
   if (branchOptions.length === 0) {
     return (
-      <Modal open={open} onClose={onClose} title={t.title} width="400px">
+      <Modal open={open} onClose={onClose} title={t.title} width="400px"
+      darkHeader
+    >
+      <TrinityModalShell
+        open={open}
+        onClose={onClose}
+        icon={<ArrowRightLeft />}
+        title={''}
+        dir={language === 'he' ? 'rtl' : 'ltr'}
+      >
         <p className="text-center text-gray-500 dark:text-gray-400 py-8">{t.noBranches}</p>
-      </Modal>
+      
+      </TrinityModalShell>
+    </Modal>
     )
   }
 

@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCreatePaymentLink } from '@/hooks/usePayments'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
-import { Loader2, Copy, ExternalLink, CheckCircle2 } from 'lucide-react'
+import { Loader2, Copy, ExternalLink, CheckCircle2, CreditCard } from 'lucide-react'
 
 interface CreatePaymentDialogProps {
   clientId: string

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
-import { Save } from 'lucide-react'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
+import { Save, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useLanguage } from '@/contexts/LanguageContext'

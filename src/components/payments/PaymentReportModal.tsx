@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useGeneratePDF } from '@/lib/pdf/use-generate-pdf'
 import { buildPaymentReportHTML, type PaymentReportData } from '@/lib/pdf/payment-report-html'
 import { toast } from 'sonner'
-import { FileText, Loader2 } from 'lucide-react'
+import { FileText, Loader2, BarChart2 } from 'lucide-react'
 
 interface Props {
   open: boolean

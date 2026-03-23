@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Input } from '@/components/ui/input'
 import { Search, User, CreditCard, Package, Loader2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'

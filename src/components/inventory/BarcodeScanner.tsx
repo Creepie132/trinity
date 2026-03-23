@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserMultiFormatReader, NotFoundException, DecodeHintType, BarcodeFormat } from '@zxing/library'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Input } from '@/components/ui/input'
-import { Camera, SwitchCamera, Keyboard } from 'lucide-react'
+import { Camera, SwitchCamera, Keyboard, ScanLine } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 interface BarcodeScannerProps {

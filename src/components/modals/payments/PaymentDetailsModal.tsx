@@ -2,7 +2,8 @@
 
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
-import { MessageCircle, MessageSquare, Download, Copy, ExternalLink } from 'lucide-react'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
+import { MessageCircle, MessageSquare, Download, Copy, ExternalLink, Receipt } from 'lucide-react'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'

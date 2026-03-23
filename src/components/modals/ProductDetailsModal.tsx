@@ -2,6 +2,7 @@
 
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Package, DollarSign, Hash, Tag, Edit, ShoppingCart, ArrowRightLeft } from 'lucide-react'
 import { useBranches } from '@/hooks/useBranches'
 import { useDemoMode } from '@/hooks/useDemoMode'

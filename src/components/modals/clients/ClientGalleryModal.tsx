@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import {
   Images, Upload, Trash2, X, ZoomIn,
   ChevronLeft, ChevronRight, Loader2, Link2, Hash, ExternalLink,

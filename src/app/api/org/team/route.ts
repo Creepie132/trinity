@@ -84,7 +84,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'email and role required' }, { status: 400 })
   }
 
-  const valid = ['owner', 'moderator', 'user']
+  const valid = ['owner', 'moderator', 'manager', 'user']
   if (!valid.includes(role)) {
     return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
   }

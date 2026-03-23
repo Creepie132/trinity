@@ -9,7 +9,8 @@ export async function POST(req: NextRequest, { params }: Params) {
   const { id } = await params
   const auth = await getAuthContext(req)
   if ('error' in auth) return auth.error
-  const { orgId } = auth
+  const { orgId, isAdmin } = auth
+  if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   let body: {
     client_id: string

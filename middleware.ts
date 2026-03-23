@@ -113,12 +113,15 @@ export async function middleware(req: NextRequest) {
   // Продажники не привязаны к org — пропускаем если есть сессия
   if (pathname.startsWith('/worker')) return response
 
-  // ── 6c. /inbox — заблокирован для sales agent ────────────────────────────
-  // is_sales_agent хранится в app_metadata (устанавливается при создании агента)
+  // ── 6c. /inbox — ТОЛЬКО для системного администратора (is_admin) ──────────
+  // Раздел доступен только владельцу платформы. Все остальные → /dashboard
   if (pathname.startsWith('/inbox')) {
-    const isSalesAgent = session.user.app_metadata?.is_sales_agent === true
-    if (isSalesAgent) {
-      return NextResponse.redirect(new URL('/worker/pipeline', req.url))
+    const isAdmin = session.user.app_metadata?.is_admin === true
+    if (!isAdmin) {
+      const isSalesAgent = session.user.app_metadata?.is_sales_agent === true
+      return NextResponse.redirect(
+        new URL(isSalesAgent ? '/worker/pipeline' : '/dashboard', req.url)
+      )
     }
   }
 

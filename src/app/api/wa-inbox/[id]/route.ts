@@ -9,7 +9,8 @@ export async function GET(req: NextRequest, { params }: Params) {
   const { id } = await params
   const auth = await getAuthContext(req)
   if ('error' in auth) return auth.error
-  const { orgId } = auth
+  const { orgId, isAdmin } = auth
+  if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const supabase = createSupabaseServiceClient()
 
   await supabase
@@ -34,7 +35,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const { id } = await params
   const auth = await getAuthContext(req)
   if ('error' in auth) return auth.error
-  const { orgId } = auth
+  const { orgId, isAdmin } = auth
+  if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   let body: { status?: string; lead_status?: string; client_id?: string | null }
   try { body = await req.json() } catch {

@@ -6,7 +6,8 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 export async function POST(req: NextRequest) {
   const auth = await getAuthContext(req)
   if ('error' in auth) return auth.error
-  const { orgId, user } = auth
+  const { orgId, user, isAdmin } = auth
+  if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   let body: { conversation_id: string; message: string }
   try { body = await req.json() } catch {

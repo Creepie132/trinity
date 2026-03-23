@@ -19,11 +19,11 @@ const translations: Record<Language, Record<string, string>> = {
     // Navigation
     'nav.dashboard': 'דשבורד',
     'nav.clients': 'לקוחות',
-    'nav.visits': 'ביקורים',
+    'nav.visits': 'יומן פגישות',
     'nav.inventory': 'מלאי',
     'nav.payments': 'תשלומים',
     'nav.sales': 'מכירות',
-    'nav.diary': 'יומן',
+    'nav.diary': 'משימות',
     'nav.whatsapp': 'וואטסאפ',
     'nav.finances': 'כספים',
     'nav.analytics': 'אנליטיקה',

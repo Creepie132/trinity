@@ -6,7 +6,12 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext(req)
   if ('error' in auth) return auth.error
-  const { orgId } = auth
+  const { orgId, isAdmin } = auth
+
+  // Inbox — только для системного администратора
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const url = req.nextUrl
   const status = url.searchParams.get('status') // new|in_progress|waiting|closed
@@ -41,7 +46,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await getAuthContext(req)
   if ('error' in auth) return auth.error
-  const { orgId } = auth
+  const { orgId, isAdmin } = auth
+
+  // Inbox — только для системного администратора
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   let body: { phone: string; contact_name?: string | null }
   try { body = await req.json() } catch {

@@ -554,7 +554,7 @@ export function ClientGalleryModal() {
             {/* Visit reference — кликабельная ссылка на визит */}
             {currentPhoto.visit_label && (
               <button
-                onClick={e => { e.stopPropagation(); if (currentPhoto.visit_id) openVisitDetail(currentPhoto.visit_id) }}
+                onClick={e => { e.stopPropagation(); if (currentPhoto.visit_id) { setLightboxIndex(null); openVisitDetail(currentPhoto.visit_id) } }}
                 disabled={visitDetailLoading}
                 className="text-violet-300 hover:text-violet-100 text-xs bg-black/50 hover:bg-black/70 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-60"
                 title={locale === 'ru' ? 'Открыть карточку визита' : 'פתח כרטיס ביקור'}

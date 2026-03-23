@@ -157,23 +157,26 @@ export function Modal({
         className={cn(
           'fixed bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
           'animate-in fade-in-0 duration-200',
-          'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-32px)] max-h-[92dvh] rounded-2xl',
-          'md:w-auto md:rounded-2xl md:max-h-[calc(100dvh-32px)]',
-          !width && sizeClasses[size],
+          'rounded-2xl overflow-hidden',
+          'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
+          'max-h-[92dvh] md:max-h-[calc(100dvh-32px)]',
           pinned_ && 'ring-2 ring-orange-400/60',
           className
         )}
         data-desktop={isDesktop ? 'true' : undefined}
         style={{
           zIndex,
-          ...(isDesktop && !pinnedData ? {
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            maxWidth: width ? `min(${width}, calc(100vw - 32px))` : undefined,
-          } : {
-            maxWidth: width ? `min(${width}, calc(100vw - 32px))` : undefined,
-          }),
+          // Фиксированная ширина — контент не диктует размер контейнера
+          width: '95%',
+          maxWidth: width
+            ? `clamp(320px, ${width}, calc(100vw - 32px))`
+            : sizeClasses[size] === 'max-w-sm'  ? 'clamp(320px, 90vw, 384px)'
+            : sizeClasses[size] === 'max-w-md'  ? 'clamp(320px, 90vw, 448px)'
+            : sizeClasses[size] === 'max-w-lg'  ? 'clamp(320px, 85vw, 512px)'
+            : sizeClasses[size] === 'max-w-xl'  ? 'clamp(320px, 85vw, 576px)'
+            : 'clamp(320px, 80vw, 896px)',
+          marginInline: 'auto',
+          overflowWrap: 'break-word',
         }}
         role="dialog"
         aria-modal={!pinned_}

@@ -33,7 +33,12 @@ export interface WizardModalProps {
   children: ReactNode
 }
 
-const SIZE_MAP = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-3xl' }
+const SIZE_MAP: Record<string, string> = {
+  sm:  'clamp(320px, 90vw, 480px)',
+  md:  'clamp(320px, 85vw, 560px)',
+  lg:  'clamp(320px, 80vw, 720px)',
+  xl:  'clamp(320px, 80vw, 860px)',
+}
 
 function StepIndicator({ steps, current }: { steps: WizardStep[]; current: number }) {
   return (
@@ -105,12 +110,18 @@ export function WizardModal({
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[8999]" onClick={onClose} aria-hidden="true" />
       <div dir={dir} role="dialog" aria-modal="true"
         className={cn(
-          'fixed z-[9000] w-full flex flex-col rounded-2xl shadow-2xl overflow-hidden',
+          'fixed z-[9000] flex flex-col rounded-2xl shadow-2xl overflow-hidden',
           'animate-in fade-in-0 zoom-in-95 duration-200',
           'max-h-[calc(100dvh-32px)]',
-          SIZE_MAP[size],
           'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
-        )}>
+        )}
+        style={{
+          // Фиксированная ширина — контент не диктует размер контейнера
+          width: '95%',
+          maxWidth: SIZE_MAP[size] || SIZE_MAP.md,
+          marginInline: 'auto',
+          overflowWrap: 'break-word',
+        }}>
 
         {/* ── Header ── */}
         <div className="px-5 pt-4 pb-5 flex-shrink-0" style={{ background: 'var(--trinity-sidebar-bg, #1a237e)' }}>

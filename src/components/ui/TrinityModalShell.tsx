@@ -49,18 +49,27 @@ export function TrinityModalShell({
 
   return (
     <div
-      style={{ display: 'grid', gridTemplateColumns: '176px 1fr', minHeight: 420 }}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '176px minmax(0, 1fr)',  // minmax(0,1fr) — контент не распирает колонку
+        minHeight: 420,
+        overflow: 'hidden',
+        overflowWrap: 'break-word',
+      }}
       dir={dir}
     >
       {/* ── Sidebar ── */}
       <div
         style={{
           background: sidebar,
-          padding: '28px 16px 20px',
+          paddingBlock: '28px 20px',
+          paddingInline: 16,
           display: 'flex',
           flexDirection: 'column',
           gap: 0,
           borderRadius: dir === 'rtl' ? '0 16px 16px 0' : '16px 0 0 16px',
+          minWidth: 0,
+          overflow: 'hidden',
         }}
       >
         {/* Icon circle */}
@@ -99,8 +108,10 @@ export function TrinityModalShell({
       <div
         style={{
           background: 'var(--trinity-content-bg, #f8f9fc)',
-          padding: '28px 20px 20px',
+          paddingBlock: '28px 20px',
+          paddingInline: 20,
           overflowY: 'auto',
+          minWidth: 0,
           borderRadius: dir === 'rtl' ? '16px 0 0 16px' : '0 16px 16px 0',
         }}
       >

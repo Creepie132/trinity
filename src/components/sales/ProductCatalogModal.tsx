@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Package } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useLanguage } from '@/contexts/LanguageContext'
 import ProductDetailModal from './ProductDetailModal'
 
@@ -57,10 +58,16 @@ export default function ProductCatalogModal({ isOpen, onClose, products, onAddPr
       <Modal
         open={isOpen && !selected}
         onClose={onClose}
-        title={t.title}
-        width="640px"
+        darkHeader
+        width="720px"
         dir={isRTL ? 'rtl' : 'ltr'}
       >
+        <TrinityModalShell
+          icon={<Package />}
+          title={t.title}
+          subtitle={`${filtered.length} ${t.products}`}
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
         <div className="relative mb-4">
           <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
           <input
@@ -120,6 +127,7 @@ export default function ProductCatalogModal({ isOpen, onClose, products, onAddPr
         <p className="text-xs text-gray-400 mt-3 text-center">
           {filtered.length} {t.products} · {t.tap}
         </p>
+        </TrinityModalShell>
       </Modal>
 
       {selected && (

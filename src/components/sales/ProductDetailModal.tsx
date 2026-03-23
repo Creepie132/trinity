@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronRight, ChevronLeft, ZoomIn, X } from 'lucide-react'
+import { ChevronRight, ChevronLeft, ZoomIn, X, Package } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 interface Product {
@@ -42,25 +43,58 @@ export default function ProductDetailModal({ isOpen, product, onAdd, onBack }: P
 
   return (
     <>
-      <Modal open={isOpen} onClose={onBack} title={product.name} width="520px" dir={isRTL ? 'rtl' : 'ltr'}>
-        <button onClick={onBack}
-          className="flex items-center gap-1 text-sm text-gray-400 hover:text-indigo-600 mb-4 transition-colors">
-          {isRTL ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          {t.back}
-        </button>
-
-        {product.image_url ? (
-          <div className="relative mb-4 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800 group cursor-zoom-in" onClick={() => setZoomed(true)}>
-            <img src={product.image_url} alt={product.name} className="w-full h-52 object-contain" />
-            <div className="absolute top-2 left-2 bg-white/80 backdrop-blur rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <ZoomIn className="w-4 h-4 text-gray-600" />
+      <Modal open={isOpen} onClose={onBack} darkHeader width="700px" dir={isRTL ? 'rtl' : 'ltr'}>
+        <TrinityModalShell
+          icon={<Package />}
+          title={product.name}
+          subtitle={`₪${price.toFixed(2)}`}
+          dir={isRTL ? 'rtl' : 'ltr'}
+          sidebarExtra={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* Фото товара в сайдбаре */}
+              {product.image_url ? (
+                <div
+                  onClick={() => setZoomed(true)}
+                  style={{
+                    borderRadius: 10, overflow: 'hidden', cursor: 'zoom-in',
+                    background: 'rgba(255,255,255,0.06)', marginBottom: 4,
+                  }}
+                >
+                  <img src={product.image_url} alt={product.name}
+                    style={{ width: '100%', height: 100, objectFit: 'cover', display: 'block' }} />
+                </div>
+              ) : (
+                <div style={{
+                  height: 80, borderRadius: 10,
+                  background: 'rgba(255,255,255,0.06)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 36, marginBottom: 4,
+                }}>📦</div>
+              )}
+              {/* Кнопка добавить */}
+              <button
+                onClick={() => onAdd(product)}
+                style={{
+                  padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: 'var(--trinity-accent, #4a6fa5)',
+                  color: '#fff', fontSize: 13, fontWeight: 600,
+                }}
+              >
+                ➕ {t.add}
+              </button>
+              <button
+                onClick={onBack}
+                style={{
+                  padding: '9px 14px', borderRadius: 10, cursor: 'pointer',
+                  border: '0.5px solid rgba(255,255,255,0.2)',
+                  background: 'transparent', color: 'rgba(255,255,255,0.55)', fontSize: 12,
+                }}
+              >
+                {isRTL ? '→' : '←'} {t.back}
+              </button>
             </div>
-          </div>
-        ) : (
-          <div className="w-full h-32 bg-gray-50 dark:bg-gray-800 rounded-xl flex items-center justify-center mb-4">
-            <span className="text-5xl">📦</span>
-          </div>
-        )}
+          }
+        >
 
         <div className="space-y-2 mb-6">
           <div className="flex items-baseline justify-between p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl">
@@ -86,17 +120,7 @@ export default function ProductDetailModal({ isOpen, product, onAdd, onBack }: P
             </div>
           )}
         </div>
-
-        <div className="flex gap-3">
-          <button onClick={() => onAdd(product)}
-            className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors text-sm flex items-center justify-center gap-2">
-            ➕ {t.add}
-          </button>
-          <button onClick={onBack}
-            className="flex-1 py-3 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm">
-            {t.cancel}
-          </button>
-        </div>
+        </TrinityModalShell>
       </Modal>
 
       {zoomed && product.image_url && (

@@ -14,6 +14,7 @@ interface ModalProps {
   subtitle?: ReactNode
   children: ReactNode
   footer?: ReactNode
+  headerActions?: ReactNode
   width?: string
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
   showCloseButton?: boolean
@@ -49,6 +50,7 @@ export function Modal({
   subtitle,
   children,
   footer,
+  headerActions,
   width,
   size = 'md',
   showCloseButton = true,
@@ -195,6 +197,9 @@ export function Modal({
               className="absolute top-2.5 z-20 flex items-center gap-0.5"
               style={{ [dir === 'rtl' ? 'left' : 'right']: '10px' }}
             >
+              {headerActions && (
+                <div className="flex items-center gap-0.5 me-0.5">{headerActions}</div>
+              )}
               <button
                 onClick={handlePin}
                 title={pinned_ ? 'Открепить' : 'Закрепить'}

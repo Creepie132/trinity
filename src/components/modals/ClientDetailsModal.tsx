@@ -2,13 +2,14 @@
 
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
-import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText, Paintbrush } from 'lucide-react'
+import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText, Paintbrush, Settings2 } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 import { useOrgTemplates } from '@/hooks/useOrgTemplates'
 import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-utils'
+import { ClientCardSettingsModal, useClientCardSettings } from '@/components/clients/ClientCardSettingsModal'
 
 const AVATAR_GRADIENTS: [string, string][] = [
   ['#818cf8', '#a78bfa'],
@@ -25,6 +26,8 @@ function avGrad(name: string): [string, string] {
 export function ClientDetailsModal() {
   const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
   const [showGdprDialog, setShowGdprDialog] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [cardSettings, saveCardSettings] = useClientCardSettings()
   const { templates } = useOrgTemplates()
 
   const [showPicker, setShowPicker]       = useState(false)
@@ -133,6 +136,15 @@ export function ClientDetailsModal() {
         width="640px"
         dir={isHe ? 'rtl' : 'ltr'}
         contentClassName="!p-0"
+        headerActions={
+          <button
+            onClick={() => setSettingsOpen(true)}
+            title={isHe ? 'הגדרות כרטיס' : 'Настройки карточки'}
+            className="p-1.5 rounded-full transition-colors text-white/40 hover:text-white/90 hover:bg-white/20"
+          >
+            <Settings2 className="w-4 h-4" />
+          </button>
+        }
         footer={
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             <button onClick={handleEditClick}
@@ -207,7 +219,7 @@ export function ClientDetailsModal() {
             </div>
             <button onClick={() => openModal('client-gallery', { client, locale })}
               className="flex flex-col items-center py-4 px-2 text-center transition-colors"
-              style={{ borderRight: '1px solid rgba(255,255,255,0.07)', background: 'transparent' }}
+              style={{ borderRight: '1px solid rgba(255,255,255,0.07)', background: 'transparent', display: cardSettings.showGallery ? undefined : 'none' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <Images className="w-5 h-5 mb-1" style={{ color: '#a78bfa' }} />
@@ -215,7 +227,7 @@ export function ClientDetailsModal() {
             </button>
             <button onClick={() => openModal('client-documents', { client, locale })}
               className="flex flex-col items-center py-4 px-2 text-center transition-colors"
-              style={{ background: 'transparent' }}
+              style={{ background: 'transparent', display: cardSettings.showDocuments ? undefined : 'none' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <FileText className="w-5 h-5 mb-1" style={{ color: '#60a5fa' }} />
@@ -279,7 +291,7 @@ export function ClientDetailsModal() {
               </div>
             </div>
           )}
-          {client.paint_code && (
+          {cardSettings.showPaintCode && client.paint_code && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">{t.paintCode}</p>
               <div className="flex items-center gap-3 px-4 py-3 bg-violet-50 border border-violet-100 rounded-2xl">
@@ -290,6 +302,14 @@ export function ClientDetailsModal() {
           )}
         </div>
       </Modal>
+
+      <ClientCardSettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={cardSettings}
+        onSave={saveCardSettings}
+        locale={locale as 'he' | 'ru'}
+      />
 
       <GdprDeleteDialog
         open={showGdprDialog}

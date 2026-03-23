@@ -70,8 +70,11 @@ function DotProgress({ total, current }: { total: number; current: number }) {
   return (
     <div className="flex items-center gap-1.5">
       {Array.from({ length: total }).map((_, i) => (
-        <div key={i} className={cn('rounded-full transition-all duration-300',
-          i + 1 === current ? 'w-5 h-2 bg-indigo-600' : i + 1 < current ? 'w-2 h-2 bg-emerald-400' : 'w-2 h-2 bg-gray-200')} />
+        <div key={i}
+          className={cn('rounded-full transition-all duration-300',
+            i + 1 === current ? 'w-5 h-2' : i + 1 < current ? 'w-2 h-2 bg-emerald-400' : 'w-2 h-2 bg-gray-200')}
+          style={i + 1 === current ? { background: 'var(--trinity-accent, #4a6fa5)' } : undefined}
+        />
       ))}
     </div>
   )
@@ -110,7 +113,7 @@ export function WizardModal({
         )}>
 
         {/* ── Header ── */}
-        <div className="bg-gradient-to-r from-[#1a237e] via-[#283593] to-[#3949ab] px-5 pt-4 pb-5 flex-shrink-0">
+        <div className="px-5 pt-4 pb-5 flex-shrink-0" style={{ background: 'var(--trinity-sidebar-bg, #1a237e)' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center">
@@ -150,13 +153,16 @@ export function WizardModal({
           <DotProgress total={steps.length} current={currentStep} />
           {isLastStep ? (
             <Button onClick={onSubmit} disabled={!canProceed || isSubmitting}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700 min-w-[120px]">
+              className="gap-2 min-w-[120px] text-white"
+              style={{ background: 'var(--trinity-accent, #2d6a4f)' }}>
               {isSubmitting
                 ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />...</>
                 : <><CheckCircle2 className="w-4 h-4" />{submitLabel}</>}
             </Button>
           ) : (
-            <Button onClick={onNext} disabled={!canProceed} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button onClick={onNext} disabled={!canProceed}
+              className="text-white"
+              style={{ background: 'var(--trinity-accent, #3949ab)' }}>
               {nextLabel}
             </Button>
           )}

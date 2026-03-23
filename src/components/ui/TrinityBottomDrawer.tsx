@@ -8,6 +8,7 @@ interface TrinityBottomDrawerProps {
   isOpen: boolean
   onClose: () => void
   title?: string
+  headerActions?: ReactNode
   children: ReactNode
   snapPoints?: (string | number)[]
 }
@@ -16,6 +17,7 @@ export function TrinityBottomDrawer({
   isOpen,
   onClose,
   title,
+  headerActions,
   children,
 }: TrinityBottomDrawerProps) {
   const y = useMotionValue(0)
@@ -128,10 +130,13 @@ export function TrinityBottomDrawer({
               <div className="w-10 h-1 rounded-full bg-muted-foreground/30 pointer-events-none" />
             </div>
 
-            {/* Title */}
-            {title && (
-              <div className="flex-shrink-0 px-6 pb-3">
-                <h3 className="text-lg font-semibold">{title}</h3>
+            {/* Title + header actions */}
+            {(title || headerActions) && (
+              <div className="flex-shrink-0 px-6 pb-3 flex items-center justify-between">
+                {title && <h3 className="text-lg font-semibold">{title}</h3>}
+                {headerActions && (
+                  <div className="flex items-center gap-1 ms-auto">{headerActions}</div>
+                )}
               </div>
             )}
 

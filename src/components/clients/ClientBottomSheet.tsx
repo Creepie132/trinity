@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, DollarSign, MessageSquare, Trash2, Phone, MessageCircle, Pencil, ArrowRight, ArrowLeft, RefreshCw, Plus, X, ChevronRight, Paintbrush } from 'lucide-react'
+import { Calendar, DollarSign, MessageSquare, Trash2, Phone, MessageCircle, Pencil, ArrowRight, ArrowLeft, RefreshCw, Plus, X, ChevronRight, Paintbrush, Settings2 } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EditClientSheet } from './EditClientSheet'
@@ -12,6 +12,7 @@ import { useOrgTemplates } from '@/hooks/useOrgTemplates'
 import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-utils'
 import { toast } from 'sonner'
 import { createPortal } from 'react-dom'
+import { ClientCardSettingsModal, useClientCardSettings } from './ClientCardSettingsModal'
 
 type Tab = 'main' | 'visits' | 'payments' | 'sms' | 'gdpr' | 'recurring'
 
@@ -76,6 +77,8 @@ export function ClientBottomSheet({
   const [subscribing, setSubscribing] = useState(false)
   const [charging, setCharging] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [cardSettings, saveCardSettings] = useClientCardSettings()
 
   useEffect(() => {
     setMounted(true)
@@ -299,9 +302,24 @@ export function ClientBottomSheet({
     )
   }
 
+  const settingsButton = (
+    <button
+      onClick={(e) => { e.stopPropagation(); setSettingsOpen(true) }}
+      className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition"
+      title={locale === 'he' ? 'הגדרות כרטיס' : 'Настройки карточки'}
+    >
+      <Settings2 size={16} />
+    </button>
+  )
+
   return (
     <>
-    <TrinityBottomDrawer isOpen={isOpen} onClose={handleClose} title={activeTab === 'main' ? clientName : undefined}>
+    <TrinityBottomDrawer
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={activeTab === 'main' ? clientName : undefined}
+      headerActions={activeTab === 'main' ? settingsButton : undefined}
+    >
       {/* ===== MAIN TAB ===== */}
       {activeTab === 'main' && (
         <>
@@ -408,7 +426,7 @@ export function ClientBottomSheet({
               <p className="text-sm">{client.notes}</p>
             </div>
           )}
-          {(client as any).paint_code && (
+          {cardSettings.showPaintCode && (client as any).paint_code && (
             <div className="flex items-center gap-3 px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800 rounded-xl">
               <Paintbrush className="w-4 h-4 text-violet-500 shrink-0" />
               <div>
@@ -633,6 +651,14 @@ export function ClientBottomSheet({
       isOpen={editOpen}
       onClose={() => setEditOpen(false)}
       onSaved={() => { onClose() }}
+      locale={locale}
+    />
+
+    <ClientCardSettingsModal
+      isOpen={settingsOpen}
+      onClose={() => setSettingsOpen(false)}
+      settings={cardSettings}
+      onSave={saveCardSettings}
       locale={locale}
     />
 

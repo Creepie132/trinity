@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Phone, MessageCircle, Mail, Pencil, Calendar, CreditCard, MessageSquare, FileText, ChevronRight, RefreshCw, PauseCircle, PlayCircle, AlertCircle, Plus } from 'lucide-react'
+import { X, Phone, MessageCircle, Mail, Pencil, Calendar, CreditCard, MessageSquare, FileText, ChevronRight, RefreshCw, PauseCircle, PlayCircle, AlertCircle, Plus, Paintbrush } from 'lucide-react'
 import { TrinityButton } from '@/components/ui/TrinityButton'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useAuth } from '@/hooks/useAuth'
@@ -50,7 +50,9 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
     address: '',
     date_of_birth: '',
     notes: '',
+    paint_code: '',
   })
+  const [hasPaintCode, setHasPaintCode] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const isRTL = locale === 'he'
@@ -82,7 +84,9 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
         address: client.address || '',
         date_of_birth: client.date_of_birth ? client.date_of_birth.split('T')[0] : '',
         notes: client.notes || '',
+        paint_code: client.paint_code || '',
       })
+      setHasPaintCode(!!(client.paint_code))
       setIsEditing(false)
     }
   }, [client])
@@ -229,7 +233,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
       const res = await fetch(`/api/clients/${client.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({ ...editForm, paint_code: hasPaintCode ? editForm.paint_code : null }),
       })
       if (res.ok) {
         const updated = await res.json()
@@ -432,6 +436,33 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
                 />
               </div>
 
+              {/* Код краски */}
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer select-none w-fit mb-1">
+                  <input
+                    type="checkbox"
+                    checked={hasPaintCode}
+                    onChange={(e) => {
+                      setHasPaintCode(e.target.checked)
+                      if (!e.target.checked) setEditForm(f => ({ ...f, paint_code: '' }))
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 accent-indigo-600"
+                  />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <Paintbrush size={12} className="text-indigo-500" />
+                    {locale === 'he' ? 'מספר צבע' : 'Код краски'}
+                  </span>
+                </label>
+                {hasPaintCode && (
+                  <input
+                    value={editForm.paint_code}
+                    onChange={(e) => setEditForm({...editForm, paint_code: e.target.value})}
+                    className="w-full py-2 px-3 rounded-lg border bg-background text-sm mt-1"
+                    placeholder={locale === 'he' ? 'הזן מספר צבע...' : 'Введите код краски...'}
+                  />
+                )}
+              </div>
+
               <div className="flex gap-2 mt-4">
                 <button
                   onClick={handleSave}
@@ -478,6 +509,15 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
                 <div className="text-sm mt-4">
                   <span className="text-muted-foreground block mb-1">{l.notesLabel}</span>
                   <p className="whitespace-pre-wrap text-sm">{client.notes}</p>
+                </div>
+              )}
+              {client.paint_code && (
+                <div className="flex justify-between items-center text-sm mt-3 py-2 px-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800">
+                  <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-medium">
+                    <Paintbrush size={14} />
+                    {locale === 'he' ? 'מספר צבע' : 'Код краски'}
+                  </span>
+                  <span className="font-bold text-indigo-700 dark:text-indigo-300">{client.paint_code}</span>
                 </div>
               )}
             </div>

@@ -473,6 +473,7 @@ export type Database = {
           loyalty_balance: number
           notes: string | null
           org_id: string
+          paint_code: string | null
           phone: string
           social_links: Json
           updated_at: string | null
@@ -492,6 +493,7 @@ export type Database = {
           loyalty_balance?: number
           notes?: string | null
           org_id: string
+          paint_code?: string | null
           phone: string
           social_links?: Json
           updated_at?: string | null
@@ -511,6 +513,7 @@ export type Database = {
           loyalty_balance?: number
           notes?: string | null
           org_id?: string
+          paint_code?: string | null
           phone?: string
           social_links?: Json
           updated_at?: string | null

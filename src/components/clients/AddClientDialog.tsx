@@ -9,7 +9,7 @@ import { useAddClient, useClients } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
-import { RefreshCw, Loader2, User, FileText } from 'lucide-react'
+import { RefreshCw, Loader2, User, FileText, Paintbrush } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
 interface AddClientDialogProps {
@@ -35,8 +35,10 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
     date_of_birth: '',
     notes: '',
     description: '',
+    paint_code: '',
   })
   const [showDescription, setShowDescription] = useState(false)
+  const [hasPaintCode, setHasPaintCode] = useState(false)
 
   const addClient = useAddClient()
 
@@ -63,6 +65,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
         date_of_birth: formData.date_of_birth || null,
         notes: formData.notes || null,
         description: formData.description || null,
+        paint_code: hasPaintCode ? (formData.paint_code || null) : null,
       })
 
       await queryClient.invalidateQueries({ queryKey: ['clients'] })
@@ -78,8 +81,10 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
         date_of_birth: '',
         notes: '',
         description: '',
+        paint_code: '',
       })
       setShowDescription(false)
+      setHasPaintCode(false)
 
       onOpenChange(false)
 
@@ -293,6 +298,34 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
               placeholder={language === 'he' ? 'תל אביב...' : 'Тель-Авив...'}
             />
           </div>
+        </div>
+
+        {/* Код краски */}
+        <div>
+          <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
+            <input
+              type="checkbox"
+              checked={hasPaintCode}
+              onChange={(e) => {
+                setHasPaintCode(e.target.checked)
+                if (!e.target.checked) setFormData(f => ({ ...f, paint_code: '' }))
+              }}
+              className="w-4 h-4 rounded border-gray-300 accent-indigo-600"
+            />
+            <span className="text-xs font-medium text-gray-600 uppercase tracking-wide flex items-center gap-1.5">
+              <Paintbrush className="w-3.5 h-3.5 text-indigo-500" />
+              {language === 'he' ? 'מספר צבע' : 'Код краски'}
+            </span>
+          </label>
+          {hasPaintCode && (
+            <Input
+              value={formData.paint_code}
+              onChange={(e) => setFormData({ ...formData, paint_code: e.target.value })}
+              placeholder={language === 'he' ? 'הזן מספר צבע...' : 'Введите код краски...'}
+              className="mt-2"
+              autoFocus
+            />
+          )}
         </div>
 
         {/* Заметки */}

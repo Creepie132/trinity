@@ -3,7 +3,7 @@
 import { useState, useCallback, memo } from 'react'
 import Modal from '@/components/ui/Modal'
 import { useQueryClient } from '@tanstack/react-query'
-import { Save, Upload, FileText } from 'lucide-react'
+import { Save, Upload, FileText, Paintbrush } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
 
@@ -15,7 +15,7 @@ interface EditClientSheetProps {
   locale: 'he' | 'ru'
 }
 
-type FieldKey = 'first_name' | 'last_name' | 'phone' | 'email' | 'address' | 'city' | 'notes' | 'description'
+type FieldKey = 'first_name' | 'last_name' | 'phone' | 'email' | 'address' | 'city' | 'notes' | 'description' | 'paint_code'
 
 const PHONE_RE = /^[\d\s\-+()]{7,20}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -89,8 +89,10 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     city:       client?.city       || '',
     notes:      client?.notes      || '',
     description: client?.description || '',
+    paint_code: client?.paint_code || '',
   })
   const [showDescription, setShowDescription] = useState(!!(client?.description))
+  const [hasPaintCode, setHasPaintCode] = useState(!!(client?.paint_code))
   const [errors, setErrors]   = useState<Record<string, string>>({})
   const [shaking, setShaking] = useState<Record<string, boolean>>({})
   const [avatarFile, setAvatarFile]       = useState<File | null>(null)
@@ -100,12 +102,12 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
   const l = locale === 'he' ? {
     title: 'עריכת לקוח', firstName: 'שם פרטי', lastName: 'שם משפחה',
     email: 'אימייל', phone: 'טלפון', address: 'כתובת', city: 'עיר', notes: 'הערות',
-    description: 'תיאור',
+    description: 'תיאור', paintCode: 'מספר צבע',
     save: 'שמור', saving: 'שומר...', cancel: 'ביטול', photo: 'שנה תמונה',
   } : {
     title: 'Редактирование клиента', firstName: 'Имя', lastName: 'Фамилия',
     email: 'Email', phone: 'Телефон', address: 'Адрес', city: 'Город', notes: 'Заметки',
-    description: 'Описание',
+    description: 'Описание', paintCode: 'Код краски',
     save: 'Сохранить', saving: 'Сохранение...', cancel: 'Отмена', photo: 'Изменить фото',
   }
 
@@ -148,7 +150,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
       const res  = await fetch(`/api/clients/${client.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, avatar_url }),
+        body: JSON.stringify({ ...form, paint_code: hasPaintCode ? form.paint_code : null, avatar_url }),
       })
       const data = await res.json()
       if (res.ok) {
@@ -257,6 +259,30 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
           value={form.address} error={errors.address} shaking={shaking.address} onChange={handleChange} />
         <Field field="city" label={l.city}
           value={form.city} error={errors.city} shaking={shaking.city} onChange={handleChange} />
+
+        {/* Код краски */}
+        <div>
+          <label className="flex items-center gap-2 cursor-pointer select-none w-fit mb-1">
+            <input
+              type="checkbox"
+              checked={hasPaintCode}
+              onChange={(e) => {
+                setHasPaintCode(e.target.checked)
+                if (!e.target.checked) handleChange('paint_code', '')
+              }}
+              className="w-4 h-4 rounded border-gray-300 accent-indigo-600"
+            />
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <Paintbrush size={13} className="text-indigo-500" />
+              {l.paintCode}
+            </span>
+          </label>
+          {hasPaintCode && (
+            <Field field="paint_code" label=""
+              value={form.paint_code} error={errors.paint_code} shaking={shaking.paint_code} onChange={handleChange} />
+          )}
+        </div>
+
         <Field field="notes" label={l.notes} multiline
           value={form.notes}   error={errors.notes}   shaking={shaking.notes}   onChange={handleChange} />
       </div>

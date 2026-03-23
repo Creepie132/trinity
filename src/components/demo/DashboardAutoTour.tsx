@@ -5,6 +5,7 @@
  *
  * Монтируется внутри DashboardContent.
  * При наличии localStorage-флага 'trinity_demo_start_tour'
+ * И только если текущая орг является demo (features.is_demo = true)
  * запускает 5-шаговый driver.js тур и сбрасывает флаг.
  *
  * Работает без DemoProvider — не требует никакого контекста.
@@ -12,6 +13,7 @@
  */
 
 import { useEffect, useRef } from 'react'
+import { useOrganization } from '@/hooks/useOrganization'
 
 const TOUR_STEPS = [
   {
@@ -63,11 +65,23 @@ const TOUR_STEPS = [
 
 export function DashboardAutoTour() {
   const started = useRef(false)
+  const { data: organization, isLoading: orgLoading } = useOrganization()
 
   useEffect(() => {
     if (started.current) return
+    // Ждём загрузки данных орга — не делаем выводов пока undefined
+    if (orgLoading) return
 
-    // Проверяем флаг
+    // Защита: тур запускается ТОЛЬКО для demo-организаций
+    // Предотвращает случайный запуск на реальных аккаунтах владельца
+    const isDemo = (organization?.features as any)?.is_demo === true
+    if (!isDemo) {
+      // Сбрасываем флаг и выходим — не беспокоим владельца
+      try { localStorage.removeItem('trinity_demo_start_tour') } catch {}
+      return
+    }
+
+    // Проверяем флаг только после подтверждения demo-статуса
     let shouldRun = false
     try {
       shouldRun = localStorage.getItem('trinity_demo_start_tour') === '1'
@@ -119,7 +133,7 @@ export function DashboardAutoTour() {
     }, 1200)
 
     return () => clearTimeout(timer)
-  }, [])
+  }, [organization])
 
   return null
 }

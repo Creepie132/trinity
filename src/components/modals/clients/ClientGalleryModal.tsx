@@ -5,10 +5,11 @@ import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
 import {
   Images, Upload, Trash2, X, ZoomIn,
-  ChevronLeft, ChevronRight, Loader2, Link2, Hash,
+  ChevronLeft, ChevronRight, Loader2, Link2, Hash, ExternalLink,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getClientName } from '@/lib/client-utils'
+import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
 
 // ─── Сжатие на клиенте ──────────────────────────────────────────────────────
 async function compressImage(file: File, maxDim = 1200, quality = 0.82): Promise<File> {
@@ -234,6 +235,9 @@ export function ClientGalleryModal() {
   const [dragOver, setDragOver] = useState(false)
   // Pending files waiting for meta confirmation
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
+  // Visit detail opened from lightbox
+  const [visitDetail, setVisitDetail] = useState<any>(null)
+  const [visitDetailLoading, setVisitDetailLoading] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -272,6 +276,23 @@ export function ClientGalleryModal() {
     if (isOpen && client?.id) { fetchPhotos(); fetchVisits() }
     else { setPhotos([]); setVisits([]) }
   }, [isOpen, client?.id, fetchPhotos, fetchVisits])
+
+  // ── Open visit detail from lightbox ──────────────────────────────────────
+  async function openVisitDetail(visitId: string) {
+    setVisitDetailLoading(true)
+    try {
+      const res = await fetch(`/api/visits/${visitId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setVisitDetail(data.visit ?? data)
+      } else {
+        toast.error(locale === 'ru' ? 'Визит не найден' : 'הביקור לא נמצא')
+      }
+    } catch {
+      toast.error(locale === 'ru' ? 'Ошибка загрузки' : 'שגיאה בטעינה')
+    }
+    setVisitDetailLoading(false)
+  }
 
   // ── File selection → show meta dialog ────────────────────────────────────
   function handleFileSelect(files: FileList | File[]) {
@@ -530,11 +551,19 @@ export function ClientGalleryModal() {
           />
 
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-            {/* Visit reference */}
+            {/* Visit reference — кликабельная ссылка на визит */}
             {currentPhoto.visit_label && (
-              <p className="text-violet-300 text-xs bg-black/50 px-3 py-1 rounded-full flex items-center gap-1.5">
-                <Link2 className="w-3 h-3" />{currentPhoto.visit_label}
-              </p>
+              <button
+                onClick={e => { e.stopPropagation(); if (currentPhoto.visit_id) openVisitDetail(currentPhoto.visit_id) }}
+                disabled={visitDetailLoading}
+                className="text-violet-300 hover:text-violet-100 text-xs bg-black/50 hover:bg-black/70 px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-60"
+                title={locale === 'ru' ? 'Открыть карточку визита' : 'פתח כרטיס ביקור'}
+              >
+                {visitDetailLoading
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <ExternalLink className="w-3 h-3" />}
+                {currentPhoto.visit_label}
+              </button>
             )}
             {/* Caption */}
             {currentPhoto.caption && (
@@ -561,6 +590,21 @@ export function ClientGalleryModal() {
             )}
           </div>
         </div>
+      )}
+      {/* Visit Detail Modal — открывается из лайтбокса по клику на visit_label */}
+      {visitDetail && (
+        <VisitDetailModal
+          visit={visitDetail}
+          isOpen={!!visitDetail}
+          onClose={() => setVisitDetail(null)}
+          locale={locale}
+          clientName={clientName}
+          clientPhone={visitDetail?.clients?.phone ?? visitDetail?.client_phone ?? ''}
+          onStart={() => {}}
+          onComplete={() => {}}
+          onCancel={() => {}}
+          onEdit={() => {}}
+        />
       )}
     </>
   )

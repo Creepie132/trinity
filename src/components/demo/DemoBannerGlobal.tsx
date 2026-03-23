@@ -107,45 +107,48 @@ function DemoTopBanner({ locale, expiresAt }: { locale: string; expiresAt: strin
       <DemoOrderModal open={orderOpen} onClose={() => setOrderOpen(false)}/>
 
       <div className={`relative overflow-hidden transition-all duration-500 ${pulse ? 'scale-y-[1.02]' : 'scale-y-100'}`}
-        style={{ background: 'linear-gradient(90deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)' }}>
+        style={{ background: 'linear-gradient(90deg, #7f1d1d 0%, #991b1b 40%, #b91c1c 60%, #991b1b 80%, #7f1d1d 100%)' }}>
         {/* Animated gradient sweep */}
-        <div className="absolute inset-0 opacity-30 pointer-events-none"
-          style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(251,191,36,0.15) 50%, transparent 100%)',
+        <div className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%)',
             animation: 'demo-sweep 4s ease-in-out infinite' }}/>
         {/* Top glow line */}
         <div className="absolute top-0 left-0 right-0 h-0.5"
-          style={{ background: 'linear-gradient(90deg, #f59e0b, #fb923c, #f59e0b)',
+          style={{ background: 'linear-gradient(90deg, #fca5a5, #f87171, #ef4444, #f87171, #fca5a5)',
             animation: 'demo-border 2s ease-in-out infinite' }}/>
 
         <div className="flex items-center gap-3 px-4 py-2 max-w-7xl mx-auto">
           {/* Icon */}
           <div className="relative flex-shrink-0">
-            <div className={`absolute inset-0 rounded-lg bg-amber-400/40 ${pulse ? 'animate-ping' : ''}`}/>
-            <div className="relative w-7 h-7 bg-amber-500 rounded-lg flex items-center justify-center">
+            <div className={`absolute inset-0 rounded-lg bg-red-300/40 ${pulse ? 'animate-ping' : ''}`}/>
+            <div className="relative w-7 h-7 bg-red-500 rounded-lg flex items-center justify-center border border-red-400">
               <Sparkles size={14} className="text-white"/>
             </div>
           </div>
 
-          {/* Text */}
+          {/* Text + limits */}
           <div className="flex items-center gap-3 flex-1 flex-wrap min-w-0">
             <span className="text-white font-bold text-sm whitespace-nowrap">
-              {l ? '🚀 מצב דמו' : '🚀 Демо режим'}
+              {l ? '⚠️ מצב דמו' : '⚠️ Демо режим'}
             </span>
-            <span className="text-xs bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium animate-pulse flex-shrink-0">
+            <span className="text-xs bg-red-400/30 text-red-100 border border-red-400/50 px-2 py-0.5 rounded-full font-medium animate-pulse flex-shrink-0">
               DEMO
             </span>
-            {timeLeft && (
-              <span className="text-xs text-white/50 flex-shrink-0">• {timeLeft}</span>
-            )}
-            <span className="text-xs text-white/40 hidden sm:inline">
-              {l ? 'הנתונים לדוגמה בלבד' : 'Данные демонстрационные'}
+            {/* Limits summary */}
+            <span className="text-xs text-red-200 hidden md:inline whitespace-nowrap">
+              {l
+                ? '10 לקוחות · 15 ביקורים · 5 מוצרים · 5 משימות'
+                : '10 клиентов · 15 визитов · 5 товаров · 5 задач'}
             </span>
+            {timeLeft && (
+              <span className="text-xs text-red-300/70 flex-shrink-0 hidden sm:inline">• {timeLeft}</span>
+            )}
           </div>
 
           {/* ── Animated CTA button ── */}
           <button onClick={() => setOrderOpen(true)}
             className="relative flex-shrink-0 flex items-center gap-2 px-4 py-1.5 rounded-xl font-bold text-xs text-white overflow-hidden transition-all duration-200 hover:scale-105 active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', boxShadow: '0 0 0 0 rgba(34,197,94,0.6)' }}>
+            style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', boxShadow: '0 2px 12px rgba(22,163,74,0.5)' }}>
             {/* Outer pulse ring */}
             <span className="absolute inset-0 rounded-xl animate-[ping_2s_ease-in-out_infinite] bg-green-400/40 pointer-events-none"/>
             {/* Shimmer sweep */}

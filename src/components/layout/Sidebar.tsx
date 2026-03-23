@@ -15,7 +15,9 @@ import { useModalStore } from '@/store/useModalStore'
 import { useHasWorkers } from '@/hooks/useHasWorkers'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoStub, DemoStubConfig } from '@/components/demo/DemoStub'
+import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { useState } from 'react'
+import { useClients } from '@/hooks/useClients'
 
 const baseNavigation = [
   { name_he: 'דשבורד', name_ru: 'Дашборд', href: '/dashboard', icon: Home, requireFeature: null },
@@ -48,7 +50,10 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const { language } = useLanguage()
   const { openModal } = useModalStore()
   const { isDemo } = useDemoMode()
+  const { data: clientsData } = useClients('', 1, 1)
+  const clientCount = clientsData?.count ?? 0
   const [demoSaleOpen, setDemoSaleOpen] = useState(false)
+  const [demoClientOpen, setDemoClientOpen] = useState(false)
   const t = translations[language]
   const locale = language === 'he' ? 'he' : 'ru'
 
@@ -98,7 +103,10 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
         </div>
         {!features.isLoading && (
           <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => openModal('client-add')}
+            <button onClick={() => {
+                if (isDemo && clientCount >= 10) { setDemoClientOpen(true); return }
+                openModal('client-add')
+              }}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all active:scale-95">
               <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">{language === 'he' ? 'לקוח' : 'Клиент'}</span>
@@ -201,6 +209,9 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
           {t.logout}
         </button>
       </div>
+
+      {/* Demo client limit modal */}
+      <DemoLimitModal open={demoClientOpen} onClose={() => setDemoClientOpen(false)} section="clients" />
 
       {/* Demo sale stub modal */}
       {demoSaleOpen && (() => {

@@ -30,7 +30,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Visit } from '@/types/visits'
-import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { ExportButton } from '@/components/ExportButton'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -183,6 +182,8 @@ export default function VisitsPage() {
       return { data: filtered, count: count || 0 }
     },
     enabled: !!orgId,
+    staleTime: 30_000,       // кеш свежий 30 сек — нет лишних refetch при переходах
+    placeholderData: (prev) => prev,  // показывает старые данные пока грузятся новые
   })
 
   const visits = visitsData?.data || []
@@ -310,8 +311,6 @@ export default function VisitsPage() {
     } catch { toast.error(t('common.error')) }
   }
 
-  if (isLoading) return <LoadingScreen />
-
   // ── label helpers ──────────────────────────────────────────────────────────
 
   const dateFilterLabel: Record<string, string> = {
@@ -328,6 +327,24 @@ export default function VisitsPage() {
   }
 
   // ── render ─────────────────────────────────────────────────────────────────
+
+  // ── inline skeleton (не перекрывает весь экран) ───────────────────────────
+  if (isLoading && !visitsData) return (
+    <div className="space-y-5 pb-20 animate-pulse">
+      <div className="flex items-center justify-between">
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32" />
+        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-36" />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+        ))}
+      </div>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+      ))}
+    </div>
+  )
 
   return (
     <div className="space-y-5 min-h-screen pb-20">

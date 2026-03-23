@@ -132,68 +132,42 @@ export async function POST(request: NextRequest) {
       .eq('id', orgId)
       .maybeSingle()
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ambersol.co.il'
+    // --- Найти или создать пользователя в auth.users ---
+    // Сначала проверяем — вдруг email уже есть (Google OAuth и т.д.)
+    const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
+    const existingAuthUser = (listData?.users ?? []).find(
+      (u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail
+    )
 
-    // --- Create auth user + send invite email ---
-    // inviteUserByEmail: creates auth.users entry + sends invite email with set-password link.
-    // If email already exists in auth.users -> returns error status 422.
-    const { data: inviteData, error: inviteError } =
-      await supabaseAdmin.auth.admin.inviteUserByEmail(normalizedEmail, {
-        data: {
+    let userId: string
+
+    if (existingAuthUser) {
+      // Пользователь уже есть — просто используем его
+      userId = existingAuthUser.id
+    } else {
+      // Создаём нового пользователя без отправки email через Supabase
+      // (email_confirm: false — пользователь войдёт через Google или сбросит пароль)
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        email_confirm: false,
+        user_metadata: {
           full_name: full_name?.trim() || normalizedEmail.split('@')[0],
         },
-        redirectTo: `${appUrl}/auth/callback`,
       })
 
-    if (inviteError) {
-      const alreadyExists =
-        inviteError.status === 422 ||
-        inviteError.message?.toLowerCase().includes('already been registered') ||
-        inviteError.message?.toLowerCase().includes('already registered')
-
-      if (!alreadyExists) {
-        console.error('[admin/workers] inviteUserByEmail failed:', inviteError.message)
-        return NextResponse.json({ error: inviteError.message }, { status: 500 })
+      if (createError || !newUser?.user?.id) {
+        console.error('[admin/workers] createUser failed:', createError?.message)
+        return NextResponse.json({ error: createError?.message ?? 'Failed to create user' }, { status: 500 })
       }
 
-      // Email уже зарегистрирован в auth.users (напр. через Google OAuth).
-      // Находим существующего пользователя и добавляем его в org_users напрямую.
-      const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
-      const existingUser = (listData?.users ?? []).find(
-        (u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail
+      userId = newUser.user.id
+
+      // Отправляем приглашение через нашу email-систему (не через Supabase SMTP)
+      const ownerName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Владелец'
+      const { sendInvitationEmail } = await import('@/lib/emails')
+      sendInvitationEmail(normalizedEmail, ownerName, org?.name || 'Trinity CRM').catch(
+        (e: Error) => console.error('[admin/workers] sendInvitationEmail failed:', e.message)
       )
-
-      if (!existingUser) {
-        return NextResponse.json({ error: 'Failed to find existing user' }, { status: 500 })
-      }
-
-      const { error: insertError } = await supabaseAdmin.from('org_users').insert({
-        org_id: orgId,
-        email: normalizedEmail,
-        role: workerRole,
-        user_id: existingUser.id,
-        joined_at: new Date().toISOString(),
-      })
-
-      if (insertError) {
-        console.error('[admin/workers] org_users insert (existing user) error:', insertError.message)
-        return NextResponse.json({ error: insertError.message }, { status: 500 })
-      }
-
-      await applyPermissions(supabaseAdmin, orgId, existingUser.id, permissions)
-
-      return NextResponse.json({
-        success: true,
-        user_id: existingUser.id,
-        email: normalizedEmail,
-        role: workerRole,
-      })
-    }
-
-    const userId = inviteData?.user?.id
-    if (!userId) {
-      console.error('[admin/workers] inviteUserByEmail returned no user id')
-      return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
     }
 
     // --- Insert into org_users (triggers fn_init_staff_on_join) ---

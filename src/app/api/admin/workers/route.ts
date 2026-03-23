@@ -142,8 +142,13 @@ export async function POST(request: NextRequest) {
     let userId: string
 
     if (existingAuthUser) {
-      // Пользователь уже есть — просто используем его
+      // Пользователь уже есть — просто используем его, но уведомляем об добавлении в орг
       userId = existingAuthUser.id
+      const ownerName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Владелец'
+      const { sendInvitationEmail } = await import('@/lib/emails')
+      sendInvitationEmail(normalizedEmail, ownerName, org?.name || 'Trinity CRM').catch(
+        (e: Error) => console.error('[admin/workers] sendInvitationEmail (existing user) failed:', e.message)
+      )
     } else {
       // Создаём нового пользователя без отправки email через Supabase
       // (email_confirm: false — пользователь войдёт через Google или сбросит пароль)

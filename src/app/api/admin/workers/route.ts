@@ -146,26 +146,48 @@ export async function POST(request: NextRequest) {
       })
 
     if (inviteError) {
-      // User already has a Supabase account -- cannot re-invite.
-      // Direct admin to use the standard "invite by email" flow instead.
       const alreadyExists =
         inviteError.status === 422 ||
-        (inviteError.message?.toLowerCase().includes('already been registered')) ||
-        (inviteError.message?.toLowerCase().includes('already registered'))
+        inviteError.message?.toLowerCase().includes('already been registered') ||
+        inviteError.message?.toLowerCase().includes('already registered')
 
-      if (alreadyExists) {
-        return NextResponse.json(
-          {
-            error: 'email_exists',
-            message:
-              'This email is already registered. Use the regular invite to add this person to the organization.',
-          },
-          { status: 409 },
-        )
+      if (!alreadyExists) {
+        console.error('[admin/workers] inviteUserByEmail failed:', inviteError.message)
+        return NextResponse.json({ error: inviteError.message }, { status: 500 })
       }
 
-      console.error('[admin/workers] inviteUserByEmail failed:', inviteError.message)
-      return NextResponse.json({ error: inviteError.message }, { status: 500 })
+      // Email уже зарегистрирован в auth.users (напр. через Google OAuth).
+      // Находим существующего пользователя и добавляем его в org_users напрямую.
+      const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
+      const existingUser = (listData?.users ?? []).find(
+        (u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail
+      )
+
+      if (!existingUser) {
+        return NextResponse.json({ error: 'Failed to find existing user' }, { status: 500 })
+      }
+
+      const { error: insertError } = await supabaseAdmin.from('org_users').insert({
+        org_id: orgId,
+        email: normalizedEmail,
+        role: workerRole,
+        user_id: existingUser.id,
+        joined_at: new Date().toISOString(),
+      })
+
+      if (insertError) {
+        console.error('[admin/workers] org_users insert (existing user) error:', insertError.message)
+        return NextResponse.json({ error: insertError.message }, { status: 500 })
+      }
+
+      await applyPermissions(supabaseAdmin, orgId, existingUser.id, permissions)
+
+      return NextResponse.json({
+        success: true,
+        user_id: existingUser.id,
+        email: normalizedEmail,
+        role: workerRole,
+      })
     }
 
     const userId = inviteData?.user?.id

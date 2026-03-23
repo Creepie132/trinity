@@ -100,15 +100,19 @@ export function CreateTaskModal() {
 
   async function loadClients() {
     try {
-      // Uses /api/clients/summary which already filters by assigned_to for workers
-      // and returns all org clients for owners
       const r = await fetch('/api/clients/summary?limit=100')
-      if (r.ok) {
-        const d = await r.json()
-        const list = d.data || d || []
-        setClients(Array.isArray(list) ? list : [])
+      const d = await r.json()
+      if (!r.ok) {
+        console.error('[CreateTaskModal] loadClients error', r.status, d)
+        return
       }
-    } catch {}
+      const list = d.data || d || []
+      const arr = Array.isArray(list) ? list : []
+      console.log('[CreateTaskModal] clients loaded:', arr.length)
+      setClients(arr)
+    } catch (e) {
+      console.error('[CreateTaskModal] loadClients exception', e)
+    }
   }
 
   function handleClientSelect(c: Client) {

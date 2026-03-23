@@ -152,7 +152,9 @@ export function TrinitySearchDropdown<T extends Record<string, any>>({
   const defaultPlaceholder = isRTL ? 'חיפוש...' : 'Поиск...'
 
   const filtered = useMemo(() => {
-    if (!query || query.length < minChars) return []
+    // minChars=0: show all when query is empty; otherwise require minChars
+    if (query.length > 0 && query.length < minChars) return []
+    if (query.length === 0) return minChars === 0 ? data.slice(0, 10) : []
 
     const q = query.toLowerCase()
     return data.filter((item) =>
@@ -198,7 +200,7 @@ export function TrinitySearchDropdown<T extends Record<string, any>>({
           setQuery(e.target.value)
           setIsOpen(true)
         }}
-        onFocus={() => query.length >= minChars && setIsOpen(true)}
+        onFocus={() => setIsOpen(true)}
         placeholder={placeholder || defaultPlaceholder}
         className={`w-full py-3 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition ${
           isRTL ? 'pr-10 pl-10' : 'pl-10 pr-10'
@@ -221,7 +223,7 @@ export function TrinitySearchDropdown<T extends Record<string, any>>({
       )}
 
       {/* Dropdown с результатами - ВВЕРХ на мобильном, ВНИЗ на десктопе */}
-      {isOpen && query.length >= minChars && (
+      {isOpen && (query.length === 0 ? minChars === 0 : query.length >= minChars) && (
         <div className="absolute z-50 w-full bg-card border rounded-xl shadow-lg max-h-60 overflow-y-auto bottom-full mb-1 md:bottom-auto md:top-full md:mb-0 md:mt-1">
           {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">

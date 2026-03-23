@@ -50,9 +50,9 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
       .range(from, to)
 
-    // Sales agent sees only their own clients
+    // Sales agent sees their own clients OR clients without assignment (unassigned pool)
     if (isSalesAgent) {
-      clientsQ = clientsQ.eq('assigned_to', user.id)
+      clientsQ = clientsQ.or(`assigned_to.eq.${user.id},assigned_to.is.null`)
     }
 
     if (search) {

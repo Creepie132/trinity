@@ -29,6 +29,7 @@ interface DealDrawerProps {
   lang: string
   onClose: () => void
   onUpdated: () => void
+  onWinDeal?: (dealId: string, dealTitle: string, clientName: string) => void
 }
 
 // ─── Source options ───────────────────────────────────────────────────────────
@@ -113,8 +114,9 @@ function Field({ label, value, onChange, type = 'text', placeholder, multiline, 
 
 // ─── Inner drawer (only mounted when dealId exists) ───────────────────────────
 
-function DrawerContent({ dealId, lang, onClose, onUpdated }: {
+function DrawerContent({ dealId, lang, onClose, onUpdated, onWinDeal }: {
   dealId: string; lang: string; onClose: () => void; onUpdated: () => void
+  onWinDeal?: (dealId: string, dealTitle: string, clientName: string) => void
 }) {
   const isHe = lang === 'he'
   const [deal, setDeal]       = useState<DealFull | null>(null)
@@ -389,6 +391,27 @@ function DrawerContent({ dealId, lang, onClose, onUpdated }: {
               </Section>
             )}
 
+            {/* Win / Lose actions */}
+            {deal && !deal.stage?.is_won && !deal.stage?.is_lost && onWinDeal && (
+              <button
+                onClick={() => {
+                  onWinDeal(deal.id, deal.title, clientName)
+                  onClose()
+                }}
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-200/60 hover:shadow-xl hover:shadow-emerald-200/80 hover:scale-[1.01] active:scale-[0.98] transition-all"
+              >
+                <span className="text-lg">🏆</span>
+                {isHe ? 'סגור עסקה כהצלחה' : 'Закрыть сделку как успех'}
+              </button>
+            )}
+
+            {deal && deal.stage?.is_won && (
+              <div className="w-full py-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-sm flex items-center justify-center gap-2">
+                <span>✅</span>
+                {isHe ? 'עסקה נסגרה בהצלחה' : 'Сделка уже закрыта успешно'}
+              </div>
+            )}
+
             <div className="rounded-2xl bg-white/40 border border-white/40 px-4 py-3 text-[11px] text-gray-400 flex items-center justify-between">
               <span>{isHe ? 'נוצר:' : 'Создан:'} {new Date(deal.created_at).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU')}</span>
               <span>{isHe ? 'עודכן:' : 'Изменён:'} {timeAgo(deal.updated_at, lang)}</span>
@@ -402,23 +425,21 @@ function DrawerContent({ dealId, lang, onClose, onUpdated }: {
 
 // ─── Public wrapper — renders nothing when dealId is null ─────────────────────
 
-export function DealDrawer({ dealId, lang, onClose, onUpdated }: DealDrawerProps) {
-  // Don't render anything at all when no deal is selected
+export function DealDrawer({ dealId, lang, onClose, onUpdated, onWinDeal }: DealDrawerProps) {
   if (!dealId) return null
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px]"
         onClick={onClose}
       />
-      {/* Drawer content — only mounted when dealId exists, so hooks are safe */}
       <DrawerContent
         dealId={dealId}
         lang={lang}
         onClose={onClose}
         onUpdated={onUpdated}
+        onWinDeal={onWinDeal}
       />
     </>
   )

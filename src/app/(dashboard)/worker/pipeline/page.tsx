@@ -381,6 +381,16 @@ export default function WorkerPipelinePage() {
     setIncomeTarget(null); setFeeSuccess(data.commission_amount); setTimeout(() => setFeeSuccess(null), 5000)
   }, [incomeTarget])
 
+  const handleWinFromDrawer = useCallback((dealId: string, dealTitle: string, clientName: string) => {
+    // Найти текущую стадию сделки
+    const fromStage = stages.find(s => s.deals.some(d => d.id === dealId))
+    const wonStage  = stages.find(s => s.is_won)
+    if (!fromStage || !wonStage) return
+    moveDeal(dealId, fromStage.id, wonStage.id).then(r => { if (!r.ok) setMoveError(r.error ?? 'Error') })
+    setIncomeTarget({ dealId, fromStageId: fromStage.id, toStageId: wonStage.id, dealTitle, clientName })
+    setSelectedDealId(null)
+  }, [stages, moveDeal])
+
   const totalDeals  = stages.reduce((s, st) => s + st.deals_count, 0)
   const totalAmount = stages.reduce((s, st) => s + st.total_amount, 0)
 
@@ -479,6 +489,7 @@ export default function WorkerPipelinePage() {
         lang={language}
         onClose={() => setSelectedDealId(null)}
         onUpdated={() => load({ tag: filterTag ?? undefined, include_closed: includeClosed })}
+        onWinDeal={handleWinFromDrawer}
       />
 
       {/* Modals */}

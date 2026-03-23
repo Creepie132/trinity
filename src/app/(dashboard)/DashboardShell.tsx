@@ -19,7 +19,10 @@ import { ClientProviders } from '@/components/providers/ClientProviders'
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext'
 import { NotificationBell } from '@/components/worker/NotificationBell'
 import { NewLeadModal } from '@/components/worker/NewLeadModal'
+import { WorkerOnboarding } from '@/components/worker/WorkerOnboarding'
 import { useAuth } from '@/hooks/useAuth'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useRouter } from 'next/navigation'
 
 // ─── Worker nav items ─────────────────────────────────────────────────────────
 
@@ -71,13 +74,39 @@ const WORKER_NAV = [
 // ─── Worker Shell ─────────────────────────────────────────────────────────────
 
 function WorkerShell({ children }: { children: React.ReactNode }) {
-  const { language } = useLanguage()
+  const { language, setLanguage } = useLanguage()
   const { role, isSalesAgent, isLoading: authLoading } = useAuth()
   const pathname = usePathname()
+  const router = useRouter()
   const isHe = language === 'he'
   const isOwner = role === 'owner'
   const [newLeadOpen, setNewLeadOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingChecked, setOnboardingChecked] = useState(false)
+
+  // Проверяем нужен ли онбординг (только для manager, не для owner/sales_agent)
+  useEffect(() => {
+    if (authLoading || isOwner || isSalesAgent) { setOnboardingChecked(true); return }
+    fetch('/api/worker/onboarding')
+      .then(r => r.json())
+      .then(data => {
+        if (!data.completed) setShowOnboarding(true)
+        setOnboardingChecked(true)
+      })
+      .catch(() => setOnboardingChecked(true))
+  }, [authLoading, isOwner, isSalesAgent])
+
+  const handleOnboardingComplete = (lang: 'ru' | 'he') => {
+    setLanguage(lang)
+    setShowOnboarding(false)
+  }
+
+  const handleLogout = async () => {
+    const supabase = createSupabaseBrowserClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   // worker видит только свои пункты, owner не нужен Кабинет в workerShell
   // (owner попадает сюда только если намеренно перешёл в /worker/dashboard)
@@ -111,7 +140,7 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
               <p className="text-[10px] text-gray-400">Amber Solutions</p>
             </div>
             <div className="ms-auto">
-              <NotificationBell lang={language} />
+              <NotificationBell lang={language} variant="dark" />
             </div>
           </div>
         </div>
@@ -148,8 +177,8 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Rocket */}
-        <div className="px-5 py-4 border-t border-gray-100/80">
+        {/* Footer: rocket + logout */}
+        <div className="px-4 py-4 border-t border-gray-100/80 space-y-2">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100">
             <span className="text-2xl">🚀</span>
             <div>
@@ -157,6 +186,15 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
               <p className="text-[10px] text-amber-600">{isHe ? 'המכירות שלך, הצמיחה שלנו' : 'Твои продажи — наш рост'}</p>
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            {isHe ? 'יציאה' : 'Выйти'}
+          </button>
         </div>
       </aside>
 
@@ -277,6 +315,15 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
               <p className="text-[10px] text-amber-600">{isHe ? 'המכירות שלך, הצמיחה שלנו' : 'Твои продажи — наш рост'}</p>
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            {isHe ? 'יציאה' : 'Выйти'}
+          </button>
         </div>
       </div>
 
@@ -296,6 +343,11 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
         onClose={() => setNewLeadOpen(false)}
         onCreated={() => setNewLeadOpen(false)}
       />
+
+      {/* Онбординг — показываем после проверки, только для менеджеров */}
+      {onboardingChecked && showOnboarding && (
+        <WorkerOnboarding onComplete={handleOnboardingComplete} />
+      )}
     </div>
   )
 }

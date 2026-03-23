@@ -143,7 +143,7 @@ function TaskAcceptActions({
   )
 }
 
-export function NotificationBell({ lang }: { lang: string }) {
+export function NotificationBell({ lang, variant = 'light' }: { lang: string; variant?: 'light' | 'dark' }) {
   const isHe = lang === 'he'
   const [open,    setOpen]    = useState(false)
   const [data,    setData]    = useState<Notification[]>([])
@@ -245,7 +245,11 @@ export function NotificationBell({ lang }: { lang: string }) {
       <button
         ref={buttonRef}
         onClick={handleOpen}
-        className="relative p-2 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-all"
+        className={`relative p-2 rounded-xl transition-all ${
+          variant === 'dark'
+            ? 'border border-gray-200/60 bg-gray-100/60 hover:bg-gray-200/60 text-gray-500 hover:text-gray-700'
+            : 'border border-white/20 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white'
+        }`}
         aria-label={isHe ? 'התראות' : 'Уведомления'}
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

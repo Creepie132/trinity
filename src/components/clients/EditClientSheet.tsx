@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, memo } from 'react'
+import { useState, useCallback, useEffect, memo } from 'react'
 import Modal from '@/components/ui/Modal'
 import { useQueryClient } from '@tanstack/react-query'
 import { Save, FileText, Paintbrush } from 'lucide-react'
@@ -97,6 +97,25 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
   const [errors, setErrors]   = useState<Record<string, string>>({})
   const [shaking, setShaking] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState(false)
+
+  // Синхронизируем форму при смене клиента (повторное открытие с другим клиентом)
+  useEffect(() => {
+    if (!client) return
+    setForm({
+      first_name:  client.first_name  || '',
+      last_name:   client.last_name   || '',
+      email:       client.email       || '',
+      phone:       client.phone       || '',
+      address:     client.address     || '',
+      city:        client.city        || '',
+      notes:       client.notes       || '',
+      description: client.description || '',
+      paint_code:  client.paint_code  || '',
+    })
+    setShowDescription(!!(client.description))
+    setHasPaintCode(!!(client.paint_code))
+    setErrors({})
+  }, [client?.id])
 
   const l = locale === 'he' ? {
     title: 'עריכת לקוח', firstName: 'שם פרטי', lastName: 'שם משפחה',

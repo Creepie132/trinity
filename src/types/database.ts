@@ -2490,6 +2490,7 @@ export type ClientSummary = {
   email:        string | null
   notes:        string | null
   description:  string | null
+  paint_code:   string | null
   created_at:   string
   org_id:       string
   total_visits: number

@@ -10,6 +10,8 @@ import { Plus, Edit2, Trash2, FileText, Download } from 'lucide-react';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { CreateCareInstructionDialog } from '@/components/care-instructions/CreateCareInstructionDialog';
 import { toast } from 'sonner';
+import { useDemoMode } from '@/hooks/useDemoMode';
+import { DemoStub, DemoStubConfig } from '@/components/demo/DemoStub';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +25,20 @@ import {
 
 export default function CareInstructionsPage() {
   const { t, language } = useLanguage();
+  const { isDemo } = useDemoMode();
+
+  const STUB: DemoStubConfig = {
+    emoji: '📋',
+    titleRu: 'Инструкции по уходу',
+    titleHe: 'הוראות טיפוח',
+    descRu: 'Прикрепляйте PDF-инструкции к услугам.\nПосле визита клиент получает персональные рекомендации по уходу — автоматически через WhatsApp.',
+    descHe: 'צרף הוראות PDF לשירותים.\nלאחר הביקור הלקוח מקבל המלצות טיפוח אישיות — אוטומטית דרך WhatsApp.',
+    featuresRu: ['PDF-инструкции', 'Привязка к услуге', 'Авто-отправка в WhatsApp', 'Шаблоны на иврите и русском', 'История отправок', 'Кастомные тексты'],
+    featuresHe: ['הוראות PDF', 'קישור לשירות', 'שליחה אוטומטית ב-WhatsApp', 'תבניות בעברית ורוסית', 'היסטוריית שליחות', 'טקסטים מותאמים'],
+    accentColor: 'from-teal-500 to-emerald-600',
+  }
+
+  if (isDemo) return <DemoStub config={STUB} />
   const { data: instructions, isLoading: instructionsLoading } = useCareInstructions();
   const { data: services } = useServices();
   const deleteInstruction = useDeleteCareInstruction();

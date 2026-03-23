@@ -16,6 +16,9 @@ import { BarcodeScanner } from '@/components/inventory/BarcodeScannerLazy'
 import { useModalStore } from '@/store/useModalStore'
 import { useBranch } from '@/contexts/BranchContext'
 import type { Product } from '@/types/inventory'
+import { useDemoMode } from '@/hooks/useDemoMode'
+import { DemoSectionBanner } from '@/components/demo/DemoSectionBanner'
+import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 
 // ─── Quick Receive Modal ──────────────────────────────────────────────────────
 interface QuickReceiveProps {
@@ -267,6 +270,8 @@ export default function InventoryPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [quickReceiveOpen, setQuickReceiveOpen] = useState(false)
+  const { isDemo } = useDemoMode()
+  const [demoLimitOpen, setDemoLimitOpen] = useState(false)
 
   const { openModal } = useModalStore()
   const { data: products = [], isLoading, refetch } = useProducts()
@@ -331,6 +336,9 @@ export default function InventoryPage() {
   return (
     <div className="bg-[#f8fafc] min-h-screen p-4 md:p-6">
 
+      {isDemo && <DemoSectionBanner section="inventory" used={products.length} />}
+      <DemoLimitModal open={demoLimitOpen} onClose={() => setDemoLimitOpen(false)} section="inventory" />
+
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2 text-slate-800">
@@ -346,7 +354,10 @@ export default function InventoryPage() {
             <PackagePlus size={16} />
             <span className="hidden sm:inline">{l ? 'קבל' : 'Приход'}</span>
           </button>
-          <button onClick={() => setCreateDialogOpen(true)}
+          <button onClick={() => {
+              if (isDemo && products.length >= 5) { setDemoLimitOpen(true); return }
+              setCreateDialogOpen(true)
+            }}
             className="px-3 py-2 rounded-2xl bg-blue-600 text-white text-sm font-medium flex items-center gap-2 hover:bg-blue-700 shadow-sm shadow-blue-200 transition-all">
             <Plus size={16} />
             <span className="hidden sm:inline">{l ? 'הוסף' : 'Добавить'}</span>

@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { toast } from 'sonner'
+import { useDemoMode } from '@/hooks/useDemoMode'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { usePushSettings, type PushSettings } from '@/hooks/usePushSettings'
 
@@ -163,6 +164,7 @@ export default function NotificationsPage() {
     return <div className="flex items-center justify-center h-64"><div className="text-gray-400">...</div></div>
   }
 
+  const { isDemo } = useDemoMode()
   const pushDenied = permissionState === 'denied'
   const pushUnsupported = permissionState === 'unsupported'
   const pushActive = permissionState === 'granted' && isSubscribed
@@ -183,6 +185,23 @@ export default function NotificationsPage() {
           </h1>
           <p className="text-gray-500 text-sm mt-0.5">
             {isHe ? 'נהל את ההתראות שלך' : 'Управляйте уведомлениями'}
+          </p>
+        </div>
+      </div>
+
+      {/* Описание раздела — всегда видно, в т.ч. в демо */}
+      <div className="rounded-2xl p-4 bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-md">
+          <Bell className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <p className="font-semibold text-gray-900 text-sm">
+            {isHe ? 'מה אפשר לקבל כאן?' : 'Что настраивается здесь?'}
+          </p>
+          <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+            {isHe
+              ? 'Push-התראות לדפדפן/מכשיר על ביקורים, תשלומים, משימות ומלאי — ועדכוני Telegram בזמן אמת. הכל ניתן להגדרה בנפרד.'
+              : 'Push-уведомления в браузер/устройство о визитах, платежах, задачах и складе — и Telegram-обновления в реальном времени. Всё настраивается по отдельности.'}
           </p>
         </div>
       </div>

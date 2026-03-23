@@ -13,6 +13,9 @@ import { useModalStore } from '@/store/useModalStore'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { TaskDetailSheet } from '@/components/diary/TaskDetailSheet'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useDemoMode } from '@/hooks/useDemoMode'
+import { DemoSectionBanner } from '@/components/demo/DemoSectionBanner'
+import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { format, isToday, isTomorrow, isPast, parseISO, type Locale } from 'date-fns'
 import { he, ru } from 'date-fns/locale'
 
@@ -399,6 +402,8 @@ export default function DiaryPage() {
   const [draggingTask, setDraggingTask] = useState<Task | null>(null)
   const [sheetTask, setSheetTask] = useState<Task | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const { isDemo } = useDemoMode()
+  const [demoLimitOpen, setDemoLimitOpen] = useState(false)
 
   const COLUMNS: KanbanColumn[] = [
     { id: 'open',        label: language === 'he' ? 'פתוח'   : 'Открытые',   color: 'bg-slate-100 dark:bg-slate-800',       accent: 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300',               icon: <Circle       size={14} className="text-slate-500" /> },
@@ -545,12 +550,25 @@ export default function DiaryPage() {
           ))}
         </div>
 
-        <button onClick={() => openModal('task-create', { onCreated: loadTasks })}
+        <button onClick={() => {
+            if (isDemo && tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled').length >= 5) {
+              setDemoLimitOpen(true); return
+            }
+            openModal('task-create', { onCreated: loadTasks })
+          }}
           className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm hover:shadow-md">
           <Plus size={15} />
           <span className="hidden sm:inline">{language === 'he' ? 'משימה חדשה' : 'Новая задача'}</span>
         </button>
       </div>
+
+      {/* DEMO banner */}
+      {isDemo && (
+        <div className="px-4 md:px-6 pt-3">
+          <DemoSectionBanner section="diary" used={tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled').length} />
+        </div>
+      )}
+      <DemoLimitModal open={demoLimitOpen} onClose={() => setDemoLimitOpen(false)} section="diary" />
 
       {/* board */}
       {tasks.length === 0 ? (

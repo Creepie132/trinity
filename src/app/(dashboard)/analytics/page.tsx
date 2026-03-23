@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useBranch } from '@/contexts/BranchContext'
+import { useDemoMode } from '@/hooks/useDemoMode'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -93,6 +94,7 @@ const Widget = ({ title, children, className = '' }: { title: string; children: 
 export default function AnalyticsPage() {
   const { activeOrgId: orgId } = useBranch()
   const { language } = useLanguage()
+  const { isDemo } = useDemoMode()
   const locale = language === 'he' ? 'he' : 'ru'
   const isHe = locale === 'he'
 
@@ -174,6 +176,109 @@ export default function AnalyticsPage() {
 
   // Pie colors
   const PIE_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444']
+
+  // ── DEMO early return ───────────────────────────────────────────────────────
+  if (isDemo) {
+    const demoKpi = [
+      { icon: Users,     label: isHe ? 'סה"כ לקוחות' : 'Всего клиентов',   value: '47',      change: 12.5, color: 'bg-indigo-500' },
+      { icon: Calendar,  label: isHe ? 'ביקורים החודש' : 'Визитов в месяце', value: '124',    change: 8.3,  color: 'bg-violet-500' },
+      { icon: DollarSign,label: isHe ? 'הכנסות החודש' : 'Выручка в месяце', value: '₪14,750', change: 6.1, color: 'bg-emerald-500' },
+      { icon: Activity,  label: isHe ? 'ממוצע לביקור' : 'Средний чек',       value: '₪119',   change: -2.4, color: 'bg-amber-500' },
+    ]
+    const demoRevenue = [
+      { day: isHe ? 'שב' : 'Пн', value: 1200 }, { day: isHe ? 'א' : 'Вт', value: 2100 },
+      { day: isHe ? 'ב' : 'Ср', value: 1800 }, { day: isHe ? 'ג' : 'Чт', value: 2600 },
+      { day: isHe ? 'ד' : 'Пт', value: 3100 }, { day: isHe ? 'ה' : 'Сб', value: 2400 },
+      { day: isHe ? 'ו' : 'Вс', value: 1550 },
+    ]
+    const demoServices = [
+      { name: isHe ? 'תספורת' : 'Стрижка', value: 42 },
+      { name: isHe ? 'צביעה' : 'Окрашивание', value: 28 },
+      { name: isHe ? 'טיפול' : 'Уход', value: 19 },
+      { name: isHe ? 'מניקור' : 'Маникюр', value: 11 },
+    ]
+    return (
+      <div className="min-h-screen bg-[#f8fafc] p-4 md:p-6 space-y-5" dir={isHe ? 'rtl' : 'ltr'}>
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-800">{isHe ? 'אנליטיקה' : 'Аналитика'}</h1>
+            <p className="text-sm text-slate-500 mt-0.5">{isHe ? 'נתוני דמו — לצורך המחשה בלבד' : 'Демо-данные — только для иллюстрации'}</p>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+            <span>⚠️</span>{isHe ? 'מצב דמו' : 'Демо-режим'}
+          </div>
+        </div>
+
+        {/* Описание модуля */}
+        <div className="rounded-2xl p-5 bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 flex items-start gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+            <BarChart2 className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="font-bold text-gray-900 text-lg">{isHe ? 'אנליטיקה עסקית חכמה' : 'Умная бизнес-аналитика'}</h2>
+            <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+              {isHe
+                ? 'מעקב אחר KPI בזמן אמת: לקוחות, הכנסות, ביקורים ושירותים מובילים. גרפים אינטראקטיביים, דוחות לפי תקופות וניתוח ביצועי צוות.'
+                : 'Отслеживайте KPI в реальном времени: клиентов, выручку, визиты и топ-услуги. Интерактивные графики, отчёты по периодам и анализ эффективности команды.'}
+            </p>
+          </div>
+        </div>
+
+        {/* KPI cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {demoKpi.map((k, i) => <KpiCard key={i} {...k} />)}
+        </div>
+
+        {/* Revenue bar chart */}
+        <Widget title={isHe ? 'הכנסות לפי יום (7 ימים)' : 'Выручка по дням (7 дней)'}>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={demoRevenue}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+              <Tooltip formatter={(v: any) => [`₪${v}`, isHe ? 'הכנסות' : 'Выручка']} />
+              <Bar dataKey="value" fill="#6366f1" radius={[6,6,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Widget>
+
+        {/* Services pie */}
+        <Widget title={isHe ? 'שירותים מובילים' : 'Топ услуги'}>
+          <div className="flex items-center gap-6">
+            <ResponsiveContainer width={160} height={160}>
+              <PieChart>
+                <Pie data={demoServices} dataKey="value" cx="50%" cy="50%" outerRadius={70} innerRadius={40}>
+                  {demoServices.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex-1 space-y-2">
+              {demoServices.map((s, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }}/>
+                  <span className="flex-1 text-slate-700">{s.name}</span>
+                  <span className="font-semibold text-slate-800">{s.value}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Widget>
+
+        {/* Features list */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {(isHe
+            ? ['KPI בזמן אמת', 'גרפי הכנסות', 'שירותים מובילים', 'ביצועי צוות', 'לקוחות חוזרים', 'ייצוא דוחות']
+            : ['KPI в реальном времени', 'Графики выручки', 'Топ-услуги', 'Эффективность команды', 'Повторные клиенты', 'Экспорт отчётов']
+          ).map((f, i) => (
+            <div key={i} className="flex items-center gap-2 bg-white rounded-xl px-3 py-2.5 text-sm text-gray-700 border border-gray-100">
+              <span className="text-green-500 font-bold">✓</span>{f}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div id="demo-step-analytics" className="min-h-screen bg-[#f8fafc] p-4 md:p-6" dir={isHe ? 'rtl' : 'ltr'}>

@@ -12,6 +12,7 @@ import { ExpenseDetailModal } from '@/components/finances/ExpenseDetailModal'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { useDemoMode } from '@/hooks/useDemoMode'
 
 const CATEGORY_META: Record<string, { label_he: string; label_ru: string; color: string; bg: string; emoji: string }> = {
   supplies:  { label_he: 'ציוד',      label_ru: 'Расходники',  color: 'text-violet-600', bg: 'bg-violet-50 dark:bg-violet-950/30', emoji: '💄' },
@@ -43,6 +44,7 @@ const translations = {
 
 export default function FinancesPage() {
   const { language } = useLanguage()
+  const { isDemo } = useDemoMode()
   const tx = translations[language === 'he' ? 'he' : 'ru']
   const dir = language === 'he' ? 'rtl' : 'ltr'
   const locale = language === 'he' ? 'he' : 'ru'
@@ -64,6 +66,95 @@ export default function FinancesPage() {
   const income = paymentsStats?.totalAmount ?? 0
   const totalExpenses = stats?.total ?? 0
   const profit = income - totalExpenses
+
+  // DEMO: фиксированные "случайные" данные для демо-режима
+  const demoIncome    = 14750
+  const demoExpenses  = 5320
+  const demoProfit    = demoIncome - demoExpenses
+  const demoChart = [
+    { month: locale === 'he' ? 'ינו' : 'Янв', income: 9200,  expenses: 3100 },
+    { month: locale === 'he' ? 'פבר' : 'Фев', income: 11400, expenses: 4200 },
+    { month: locale === 'he' ? 'מרץ' : 'Мар', income: 13800, expenses: 5000 },
+    { month: locale === 'he' ? 'אפר' : 'Апр', income: 12600, expenses: 4800 },
+    { month: locale === 'he' ? 'מאי' : 'Май', income: 14750, expenses: 5320 },
+  ]
+
+  if (isDemo) return (
+    <div dir={dir} className="max-w-3xl mx-auto space-y-5">
+      {/* Demo info banner */}
+      <div className="rounded-2xl p-5 bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+            <span className="text-2xl">🤖</span>
+          </div>
+          <div>
+            <h2 className="font-bold text-gray-900 text-lg">
+              {locale === 'he' ? 'ניהול פיננסי עם עזרת AI' : 'Финансы с AI-ассистентом'}
+            </h2>
+            <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+              {locale === 'he'
+                ? 'מודול הכספים מחשב הכנסות, הוצאות ורווח באופן אוטומטי. הכנסות מגיעות ישירות ממודול התשלומים. קירא AI מנתחת את הנתונים ומציעה המלצות לחיסכון.'
+                : 'Модуль финансов автоматически рассчитывает доходы, расходы и прибыль. Доходы поступают прямо из модуля платежей. Kira AI анализирует данные и предлагает рекомендации по оптимизации.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Demo stats */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: locale === 'he' ? 'הכנסות' : 'Доходы', value: `₪${demoIncome.toLocaleString()}`, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', icon: '📈' },
+          { label: locale === 'he' ? 'הוצאות' : 'Расходы', value: `₪${demoExpenses.toLocaleString()}`, color: 'text-red-600', bg: 'bg-red-50 border-red-100', icon: '📉' },
+          { label: locale === 'he' ? 'רווח' : 'Прибыль', value: `₪${demoProfit.toLocaleString()}`, color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100', icon: '💰' },
+        ].map((s, i) => (
+          <div key={i} className={`rounded-2xl p-4 border ${s.bg} text-center`}>
+            <p className="text-2xl mb-1">{s.icon}</p>
+            <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Demo bar chart */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+        <p className="text-sm font-semibold text-gray-700 mb-4">
+          {locale === 'he' ? 'הכנסות מול הוצאות (5 חודשים אחרונים)' : 'Доходы vs Расходы (последние 5 месяцев)'}
+        </p>
+        <div className="flex items-end gap-2 h-32">
+          {demoChart.map((d, i) => {
+            const maxVal = 16000
+            const incH = Math.round((d.income / maxVal) * 100)
+            const expH = Math.round((d.expenses / maxVal) * 100)
+            return (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div className="w-full flex items-end gap-0.5 justify-center" style={{ height: '96px' }}>
+                  <div className="w-[45%] rounded-t-md bg-emerald-400 transition-all" style={{ height: `${incH}%` }}/>
+                  <div className="w-[45%] rounded-t-md bg-red-300 transition-all" style={{ height: `${expH}%` }}/>
+                </div>
+                <span className="text-[10px] text-gray-400">{d.month}</span>
+              </div>
+            )
+          })}
+        </div>
+        <div className="flex gap-4 mt-3">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-3 h-3 rounded-sm bg-emerald-400 inline-block"/>{locale === 'he' ? 'הכנסות' : 'Доходы'}</div>
+          <div className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-3 h-3 rounded-sm bg-red-300 inline-block"/>{locale === 'he' ? 'הוצאות' : 'Расходы'}</div>
+        </div>
+      </div>
+
+      {/* Feature list */}
+      <div className="grid grid-cols-2 gap-2">
+        {(locale === 'he'
+          ? ['ניתוח AI אוטומטי', 'הוספת הוצאות ידנית', 'סריקת קבלות', 'קטגוריות הוצאות', 'דוח חודשי', 'ייצוא לאקסל']
+          : ['Авто-анализ AI', 'Ручное добавление расходов', 'Сканирование чеков', 'Категории расходов', 'Месячный отчёт', 'Экспорт в Excel']
+        ).map((f, i) => (
+          <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2.5 text-sm text-gray-700">
+            <span className="text-green-500 font-bold">✓</span>{f}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 
 
   const handleDelete = async (id: string) => {

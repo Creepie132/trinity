@@ -7,6 +7,8 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useOrgTemplates } from '@/hooks/useOrgTemplates'
 import { buildMessage } from '@/lib/message-utils'
 import { toast } from 'sonner'
+import { useDemoMode } from '@/hooks/useDemoMode'
+import { DemoStub, DemoStubConfig } from '@/components/demo/DemoStub'
 
 // ── variable tokens available in templates ────────────────────────────────────
 const VARS = [
@@ -29,7 +31,21 @@ type TemplateType = 'whatsapp' | 'sms'
 export default function MessageTemplatesPage() {
   const router = useRouter()
   const { language } = useLanguage()
+  const { isDemo } = useDemoMode()
   const isHe = language === 'he'
+
+  const STUB: DemoStubConfig = {
+    emoji: '💬',
+    titleRu: 'Шаблоны сообщений',
+    titleHe: 'תבניות הודעות',
+    descRu: 'Создавайте готовые тексты для WhatsApp и SMS.\nСистема автоматически подставляет имя клиента, дату и услугу.',
+    descHe: 'צור תבניות מוכנות ל-WhatsApp ו-SMS.\nהמערכת ממלאת אוטומטית שם לקוח, תאריך ושירות.',
+    featuresRu: ['Шаблоны WhatsApp', 'Шаблоны SMS', 'Переменные (имя, дата)', 'Авто-напоминания', 'Поздравления с ДР', 'История отправок'],
+    featuresHe: ['תבניות WhatsApp', 'תבניות SMS', 'משתנים (שם, תאריך)', 'תזכורות אוטומטיות', 'ברכות יום הולדת', 'היסטוריית שליחות'],
+    accentColor: 'from-blue-500 to-indigo-600',
+  }
+
+  if (isDemo) return <DemoStub config={STUB} />
   const dir = isHe ? 'rtl' : 'ltr'
 
   const { templates, isLoading, save, isSaving } = useOrgTemplates()

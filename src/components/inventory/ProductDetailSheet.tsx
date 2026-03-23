@@ -14,6 +14,7 @@ import type { Product } from '@/types/inventory'
 import { AddStockDialog } from './AddStockDialog'
 import { TransferRequestDialog } from './TransferRequestDialog'
 import { useModalStore } from '@/store/useModalStore'
+import { useDemoMode } from '@/hooks/useDemoMode'
 
 interface ProductDetailSheetProps {
   open: boolean
@@ -29,6 +30,7 @@ export function ProductDetailSheet({
   onEdit,
 }: ProductDetailSheetProps) {
   const { t, language } = useLanguage()
+  const { isDemo } = useDemoMode()
   const { data: transactions } = useInventoryTransactions(product?.id)
   const deleteProduct = useDeleteProduct()
   const { openModal } = useModalStore()
@@ -149,17 +151,20 @@ export function ProductDetailSheet({
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => {
+                if (isDemo) return
                 onClose()
                 openModal('client-sale', {
                   preloadedProduct: product,
                   locale: language === 'he' ? 'he' : 'ru',
                 })
               }}
-              disabled={product.quantity === 0}
-              className="py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50"
+              disabled={product.quantity === 0 || isDemo}
+              title={isDemo ? (language === 'he' ? 'לא זמין בגרסת הדמו' : 'Недоступно в демо-режиме') : undefined}
+              className="py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-400"
             >
               <ShoppingCart className="w-4 h-4" />
               {t('inventory.sell')}
+              {isDemo && <span className="text-[10px] opacity-70 ml-1">({language === 'he' ? 'לא זמין' : 'демо'})</span>}
             </button>
             <button
               onClick={() => setAddStockDialogOpen(true)}

@@ -6,11 +6,13 @@ import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
 import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, MessageSquare, Bell } from 'lucide-react'
 import Link from 'next/link'
+import { useDemoMode } from '@/hooks/useDemoMode'
 
 export default function SettingsPage() {
   const { t, language } = useLanguage()
   const permissions = usePermissions()
   const features = useFeatures()
+  const { isDemo } = useDemoMode()
 
   // Статичные описания — не грузим лишних данных только ради subtitle
   const settingsCategories = [
@@ -93,6 +95,8 @@ export default function SettingsPage() {
     if (permissions.canManageBookingSettings === false && category.id === 'booking') return false
     if (permissions.canManageUsers === false && category.id === 'users') return false
     if (permissions.canManageUsers === false && category.id === 'permissions') return false
+    // В демо скрываем "Разрешения"
+    if (isDemo && category.id === 'permissions') return false
 
     return true
   })

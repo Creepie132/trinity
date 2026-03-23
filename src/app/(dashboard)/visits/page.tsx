@@ -14,6 +14,9 @@ import { useBranch } from '@/contexts/BranchContext'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
+import { useDemoMode } from '@/hooks/useDemoMode'
+import { DemoSectionBanner } from '@/components/demo/DemoSectionBanner'
+import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
@@ -91,6 +94,8 @@ export default function VisitsPage() {
   const [newVisitNotify, setNewVisitNotify] = useState<any>(null)
   const [receiptVisit, setReceiptVisit] = useState<any>(null)
   const [createVisitPrefill, setCreateVisitPrefill] = useState<any>(null)
+  const { isDemo } = useDemoMode()
+  const [demoLimitOpen, setDemoLimitOpen] = useState(false)
 
   const loc = language === 'he' ? 'he-IL' : 'ru-RU'
   const isHe = language === 'he'
@@ -349,7 +354,13 @@ export default function VisitsPage() {
         <div className="flex gap-2">
           <ExportButton type="visits" />
           <Button
-            onClick={() => openModal('visit-create')}
+            onClick={() => {
+              if (isDemo) {
+                if (activeVisits.length >= 3) { setDemoLimitOpen(true); return }
+                if (totalCount >= 15) { setDemoLimitOpen(true); return }
+              }
+              openModal('visit-create')
+            }}
             className="hidden md:flex bg-theme-primary text-white hover:opacity-90"
           >
             <Plus className="w-4 h-4 ml-2" />
@@ -357,6 +368,15 @@ export default function VisitsPage() {
           </Button>
         </div>
       </div>
+
+      {/* DEMO banners */}
+      {isDemo && (
+        <>
+          <DemoSectionBanner section="visits_active" used={activeVisits.length} />
+          <DemoSectionBanner section="visits_total" used={totalCount} />
+        </>
+      )}
+      <DemoLimitModal open={demoLimitOpen} onClose={() => setDemoLimitOpen(false)} section="visits" />
 
       {/* ── View toggle ── */}
       <div className="flex justify-center">

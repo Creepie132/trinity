@@ -15,6 +15,8 @@ import Link from 'next/link'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
+import { DemoSectionBanner } from '@/components/demo/DemoSectionBanner'
+import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { ExportButton } from '@/components/ExportButton'
 import { ClientCard } from '@/components/clients/ClientCard'
 import { DraftSaleIndicator } from '@/components/clients/DraftSaleIndicator'
@@ -57,6 +59,7 @@ export default function ClientsPage() {
   const features = useFeatures()
   const { t, language } = useLanguage()
   const { isDemo, clientLimit } = useDemoMode()
+  const [demoLimitOpen, setDemoLimitOpen] = useState(false)
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -158,9 +161,11 @@ export default function ClientsPage() {
             </Button>
           </Link>
           <Button 
-            onClick={() => openModal('client-add')} 
-            disabled={isDemo && clientCount >= 10}
-            className="hidden md:flex bg-theme-primary text-white hover:opacity-90 disabled:opacity-50"
+            onClick={() => {
+              if (isDemo && clientCount >= 10) { setDemoLimitOpen(true); return }
+              openModal('client-add')
+            }}
+            className="hidden md:flex bg-theme-primary text-white hover:opacity-90"
           >
             <Plus className="w-4 h-4 ml-2" />
             {t('clients.addNew')}
@@ -169,21 +174,10 @@ export default function ClientsPage() {
       </div>
 
       {/* DEMO limit banner */}
-      {isDemo && clientCount >= 10 && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-center">
-          <p className="text-red-700 dark:text-red-300 text-sm font-medium mb-2">
-            {language === 'he' ? 'הגעת למגבלת הלקוחות' : 'Достигнут лимит клиентов'}
-          </p>
-          <a
-            href="https://wa.me/972544858586"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-red-600 dark:text-red-400 underline text-sm"
-          >
-            {language === 'he' ? 'שדרג עכשיו' : 'Обновить тариф'}
-          </a>
-        </div>
+      {isDemo && (
+        <DemoSectionBanner section="clients" used={clientCount} />
       )}
+      <DemoLimitModal open={demoLimitOpen} onClose={() => setDemoLimitOpen(false)} section="clients" />
 
       {/* Search */}
       <div className="relative">
@@ -399,7 +393,10 @@ export default function ClientsPage() {
             description={language === 'he' ? 'הוסף את הלקוח הראשון שלך' : 'Добавьте первого клиента'}
             action={{
               label: language === 'he' ? 'הוסף לקוח' : 'Добавить',
-              onClick: () => openModal('client-add'),
+              onClick: () => {
+                if (isDemo && clientCount >= 10) { setDemoLimitOpen(true); return }
+                openModal('client-add')
+              },
             }}
           />
         )}

@@ -23,6 +23,8 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useDemoMode } from '@/hooks/useDemoMode'
+import { DemoStub, DemoStubConfig } from '@/components/demo/DemoStub'
 
 export default function PaymentsPage() {
   const searchParams = useSearchParams()
@@ -30,7 +32,19 @@ export default function PaymentsPage() {
   const features = useFeatures()
   const { data: isAdmin } = useIsAdmin()
   const { t, language } = useLanguage()
+  const { isDemo } = useDemoMode()
   const locale = language === 'he' ? 'he' : 'ru'
+
+  const PAYMENTS_STUB: DemoStubConfig = {
+    emoji: '💳',
+    titleRu: 'Платёжный модуль Trinity',
+    titleHe: 'מודול תשלומים Trinity',
+    descRu: 'Принимайте оплату от клиентов прямо в системе.\nБыстро, безопасно, без комиссии агрегаторов.\nСтоимость подключения обговаривается индивидуально — напишите нам.',
+    descHe: 'קבל תשלומים מלקוחות ישירות במערכת.\nמהיר, בטוח, ללא עמלות מיותרות.\nעלות החיבור נקבעת בנפרד — כתבו לנו.',
+    featuresRu: ['Оплата картой онлайн', 'Bit / PayBox', 'Наличные с чеком', 'История платежей', 'Возвраты', 'Отчёты по периодам'],
+    featuresHe: ['תשלום בכרטיס אשראי', 'ביט / PayBox', 'מזומן עם קבלה', 'היסטוריית תשלומים', 'החזרים', 'דוחות לפי תקופות'],
+    accentColor: 'from-violet-500 to-purple-600',
+  }
 
   const [methodModalOpen, setMethodModalOpen] = useState(false)
   const [reportModalOpen, setReportModalOpen] = useState(false)
@@ -139,6 +153,8 @@ export default function PaymentsPage() {
     (paymentMethodFilter !== 'all' ? 1 : 0) +
     (startDate ? 1 : 0) +
     (endDate ? 1 : 0)
+
+  if (isDemo) return <DemoStub config={PAYMENTS_STUB} />
 
   return (
     <div className="space-y-5 min-h-screen" style={{ animation: 'ppFadeIn .3s ease-out both' }}>

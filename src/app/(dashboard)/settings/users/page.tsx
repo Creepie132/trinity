@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { toast } from 'sonner'
+import { useDemoMode } from '@/hooks/useDemoMode'
+import { DemoStub, DemoStubConfig } from '@/components/demo/DemoStub'
 import {
   Users,
   UserPlus,
@@ -116,7 +118,21 @@ function avatarText(member: OrgMember) {
 export default function UsersSettingsPage() {
   const { orgId, user: currentUser } = useAuth()
   const { language } = useLanguage()
+  const { isDemo } = useDemoMode()
   const permissions = usePermissions()
+
+  const STUB: DemoStubConfig = {
+    emoji: '👥',
+    titleRu: 'Управление командой',
+    titleHe: 'ניהול צוות',
+    descRu: 'Приглашайте сотрудников, назначайте роли и управляйте доступом к разделам системы.\nКаждый сотрудник видит только то, что ему разрешено.',
+    descHe: 'הזמן עובדים, הגדר תפקידים ונהל גישה לחלקים במערכת.\nכל עובד רואה רק את מה שמותר לו.',
+    featuresRu: ['Приглашение по email', 'Роли (владелец, модератор, сотрудник)', 'Управление доступом', 'Несколько филиалов', 'История активности', 'Удаление сотрудников'],
+    featuresHe: ['הזמנה במייל', 'תפקידים (בעלים, מנהל, עובד)', 'ניהול גישה', 'מספר סניפים', 'היסטוריית פעילות', 'הסרת עובדים'],
+    accentColor: 'from-indigo-500 to-violet-600',
+  }
+
+  if (isDemo) return <DemoStub config={STUB} />
   const queryClient = useQueryClient()
   const locale = language === 'he' ? 'he' : 'ru'
   const t = tr[locale]

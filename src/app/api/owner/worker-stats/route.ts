@@ -50,6 +50,13 @@ export async function GET(request: NextRequest) {
       .eq('org_id', orgId)
       .eq('role', 'user')
 
+    // Fetch last_seen_at from admin_users for online presence
+    const workerUserIds = (workers ?? []).map((w: any) => w.user_id)
+    const { data: presenceData } = await supabase
+      .from('admin_users')
+      .select('user_id, last_seen_at')
+      .in('user_id', workerUserIds.length > 0 ? workerUserIds : ['00000000-0000-0000-0000-000000000000'])
+
     if (!workers || workers.length === 0) {
       return NextResponse.json({ hasWorkers: false })
     }
@@ -180,6 +187,11 @@ export async function GET(request: NextRequest) {
     })
 
     // ── 10. Per-worker stats (extended) ───────────────────────────────────────
+    const presenceMap: Record<string, string | null> = {}
+    ;(presenceData ?? []).forEach((p: any) => {
+      presenceMap[p.user_id] = p.last_seen_at ?? null
+    })
+
     const workerStats = workers.map((w: any) => {
       const wDeals  = allDeals.filter((d: any) => d.assigned_to === w.user_id)
       const wWon    = wDeals.filter((d: any) => d.stage?.is_won)
@@ -199,9 +211,11 @@ export async function GET(request: NextRequest) {
         conversion:        wDeals.length > 0 ? Math.round((wWon.length / wDeals.length) * 100) : 0,
         total_deals:       wDeals.length,
         // Extended metrics
-        wa_pulse:          waPulseMap[w.user_id] || 0,        // WA msgs sent today
-        avg_response_min:  avgResp,                           // avg first-touch minutes (null = no data)
-        value_per_lead:    valuePL,                           // avg setup_fee per closed deal
+        wa_pulse:          waPulseMap[w.user_id] || 0,
+        avg_response_min:  avgResp,
+        value_per_lead:    valuePL,
+        // Online presence
+        last_seen_at:      presenceMap[w.user_id] ?? null,
       }
     })
 

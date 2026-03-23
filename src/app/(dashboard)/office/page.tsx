@@ -20,6 +20,43 @@ interface WorkerStat {
   won_deals: number; total_revenue: number; commission: number
   conversion: number; total_deals: number
   wa_pulse: number; avg_response_min: number | null; value_per_lead: number
+  last_seen_at: string | null
+}
+
+// Online = seen within last 60 seconds
+function getOnlineStatus(last_seen_at: string | null): 'online' | 'recent' | 'offline' {
+  if (!last_seen_at) return 'offline'
+  const diffSec = (Date.now() - new Date(last_seen_at).getTime()) / 1000
+  if (diffSec < 60) return 'online'
+  if (diffSec < 300) return 'recent' // seen within 5 min
+  return 'offline'
+}
+
+function OnlineBadge({ last_seen_at }: { last_seen_at: string | null }) {
+  const status = getOnlineStatus(last_seen_at)
+  if (status === 'online') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+        В сети
+      </span>
+    )
+  }
+  if (status === 'recent') {
+    const mins = Math.round((Date.now() - new Date(last_seen_at!).getTime()) / 60000)
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+        {mins} мин назад
+      </span>
+    )
+  }
+  if (!last_seen_at) return <span className="text-[10px] text-gray-300">—</span>
+  return (
+    <span className="text-[10px] text-gray-400">
+      {new Date(last_seen_at).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+    </span>
+  )
 }
 interface Forecast {
   forecastRevenue: number; pipelineValue: number
@@ -363,6 +400,12 @@ export default function OwnerOfficePage() {
 
   useEffect(() => { load() }, [load])
 
+  // Auto-refresh every 30s to keep online presence up-to-date
+  useEffect(() => {
+    const interval = setInterval(() => { load() }, 30_000)
+    return () => clearInterval(interval)
+  }, [load])
+
   if (role && role !== 'owner') return null
 
   const tabs: { key: TabKey; label: string }[] = [
@@ -526,7 +569,7 @@ export default function OwnerOfficePage() {
                 <table className="w-full text-sm min-w-[700px]" dir={isRTL ? 'rtl' : 'ltr'}>
                   <thead>
                     <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                      {[t.worker, t.activeDeals, t.wonDeals, t.totalRevenue, t.commission, t.conversionPct, t.waPulse, t.responseTime, t.valuePerLead].map(h => (
+                      {[t.worker, t.activeDeals, t.wonDeals, t.totalRevenue, t.commission, t.conversionPct, t.waPulse, t.responseTime, t.valuePerLead, language === 'he' ? 'סטטוס' : 'Онлайн'].map(h => (
                         <th key={h} className="pb-3 text-start font-semibold">{h}</th>
                       ))}
                     </tr>
@@ -575,6 +618,7 @@ export default function OwnerOfficePage() {
                           }
                         </td>
                         <td className="py-3.5 font-semibold text-gray-700">{w.value_per_lead > 0 ? fmt(w.value_per_lead) : t.noResponseData}</td>
+                        <td className="py-3.5"><OnlineBadge last_seen_at={w.last_seen_at} /></td>
                       </tr>
                     ))}
                   </tbody>

@@ -28,7 +28,7 @@ export async function sendInvitationEmail(
   userEmail: string,
   ownerName: string,
   orgName: string,
-  loginUrl: string = 'https://app.ambersol.co.il/login'
+  loginUrl: string = 'https://ambersol.co.il/login'
 ): Promise<boolean> {
   try {
     const resend = getResendClient()

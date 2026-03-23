@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Restrict to non-owner roles (owners are created differently)
-    const workerRole = role === 'moderator' ? 'moderator' : 'user'
+    const workerRole = role === 'moderator' ? 'moderator' : role === 'manager' ? 'manager' : 'user'
 
     const supabaseAdmin = createSupabaseServiceClient()
 

@@ -30,8 +30,10 @@ const I18N = {
     roleLabel: 'תפקיד במערכת',
     roleUser: 'עובד',
     roleModerator: 'מנהל',
+    roleManager: 'איש מכירות',
     roleUserDesc: 'גישה לעסקאות ולקוחות בלבד',
     roleModeratorDesc: 'גישה מורחבת לניהול',
+    roleManagerDesc: 'רק /worker/dashboard, ללא גישה למערכת',
     permTitle: 'הרשאות גישה',
     permSubtitle: 'ניתן לשנות בכל עת מהגדרות ההרשאות',
     permLabels: {
@@ -78,8 +80,10 @@ const I18N = {
     roleLabel: 'Роль в системе',
     roleUser: 'Сотрудник',
     roleModerator: 'Менеджер',
+    roleManager: 'Продажник',
     roleUserDesc: 'Доступ к сделкам и клиентам',
     roleModeratorDesc: 'Расширенный доступ для управления',
+    roleManagerDesc: 'Только /worker/dashboard, без доступа к системе',
     permTitle: 'Права доступа',
     permSubtitle: 'Можно изменить в любой момент в настройках прав',
     permLabels: {
@@ -157,7 +161,7 @@ export default function AddWorkerWizard({
   // Form state
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
-  const [role, setRole] = useState<'user' | 'moderator'>('user')
+  const [role, setRole] = useState<'user' | 'moderator' | 'manager'>('user')
   const [permissions, setPermissions] = useState<Record<PermKey, boolean>>({
     can_manage_deals: true,
     can_view_all_clients: false,
@@ -316,8 +320,8 @@ export default function AddWorkerWizard({
             <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 block">
               {s.roleLabel}
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {(['user', 'moderator'] as const).map((r) => (
+            <div className="grid grid-cols-3 gap-2">
+              {(['user', 'moderator', 'manager'] as const).map((r) => (
                 <button
                   key={r}
                   type="button"
@@ -337,10 +341,10 @@ export default function AddWorkerWizard({
                         : 'text-gray-700 dark:text-gray-300',
                     )}
                   >
-                    {r === 'user' ? s.roleUser : s.roleModerator}
+                    {r === 'user' ? s.roleUser : r === 'moderator' ? s.roleModerator : s.roleManager}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {r === 'user' ? s.roleUserDesc : s.roleModeratorDesc}
+                    {r === 'user' ? s.roleUserDesc : r === 'moderator' ? s.roleModeratorDesc : s.roleManagerDesc}
                   </p>
                 </button>
               ))}
@@ -414,7 +418,7 @@ export default function AddWorkerWizard({
             {fullName && <SummaryRow label={s.summaryName} value={fullName} />}
             <SummaryRow
               label={s.summaryRole}
-              value={role === 'user' ? s.roleUser : s.roleModerator}
+              value={role === 'user' ? s.roleUser : role === 'moderator' ? s.roleModerator : s.roleManager}
             />
             <div className="flex gap-3 pt-1 border-t border-gray-200 dark:border-slate-600">
               <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 w-20 flex-shrink-0 pt-0.5">

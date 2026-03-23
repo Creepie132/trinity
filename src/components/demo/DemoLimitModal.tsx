@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Sparkles, Check, MessageCircle, Zap, Star, Crown } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -67,8 +68,10 @@ export function DemoLimitModal({ open, onClose, section }: DemoLimitModalProps) 
   }, [])
 
   if (!open) return null
+  if (typeof document === 'undefined') return null
 
-  return (
+  return createPortal(
+    (
     <div className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-all duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
       style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}>
       <div className={`relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 ${visible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}`}>
@@ -138,5 +141,6 @@ export function DemoLimitModal({ open, onClose, section }: DemoLimitModalProps) 
         </div>
       </div>
     </div>
+  ), document.body
   )
 }

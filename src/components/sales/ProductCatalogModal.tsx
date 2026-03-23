@@ -67,6 +67,22 @@ export default function ProductCatalogModal({ isOpen, onClose, products, onAddPr
           title={t.title}
           subtitle={`${filtered.length} ${t.products}`}
           dir={isRTL ? 'rtl' : 'ltr'}
+          sidebarExtra={
+            <button
+              onClick={onClose}
+              style={{
+                padding: '9px 14px', borderRadius: 10,
+                border: '0.5px solid rgba(255,255,255,0.2)',
+                background: 'transparent',
+                color: 'rgba(255,255,255,0.55)',
+                fontSize: 13, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <ChevronLeft style={{ width: 14, height: 14 }} />
+              {isRTL ? 'חזרה' : 'Назад'}
+            </button>
+          }
         >
         <div className="relative mb-4">
           <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />

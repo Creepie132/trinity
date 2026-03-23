@@ -40,7 +40,7 @@ export async function sendInvitationEmail(
     await resend.emails.send({
       from: 'Trinity CRM <notifications@ambersol.co.il>',
       to: userEmail,
-      subject: `${ownerName} из ${orgName} приглашает тебя в Trinity`,
+      subject: `Trinity CRM — You have been invited by ${ownerName}`,
       headers: getEmailHeaders(),
       tags: getEmailTags('transactional'),
       html: `

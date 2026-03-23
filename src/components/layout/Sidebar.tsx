@@ -18,6 +18,9 @@ import { DemoStub, DemoStubConfig } from '@/components/demo/DemoStub'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { useState } from 'react'
 import { useClients } from '@/hooks/useClients'
+import { useQuery } from '@tanstack/react-query'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useBranch } from '@/contexts/BranchContext'
 
 const baseNavigation = [
   { name_he: 'דשבורד', name_ru: 'Дашборд', href: '/dashboard', icon: Home, requireFeature: null },
@@ -43,7 +46,7 @@ interface SidebarProps { onSearchOpen?: () => void }
 export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const pathname = usePathname()
   const router = useRouter()
-  const { signOut, role } = useAuth()
+  const { signOut, role, orgId: authOrgId } = useAuth()
   const { data: isAdmin } = useIsAdmin()
   const { data: hasWorkers } = useHasWorkers()
   const features = useFeatures()
@@ -54,6 +57,26 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const clientCount = clientsData?.count ?? 0
   const [demoSaleOpen, setDemoSaleOpen] = useState(false)
   const [demoClientOpen, setDemoClientOpen] = useState(false)
+  const [demoVisitOpen, setDemoVisitOpen] = useState(false)
+
+  // Count visits for demo limit check
+  const { activeOrgId } = useBranch()
+  const visitOrgId = activeOrgId || authOrgId
+  const { data: visitCountData } = useQuery({
+    queryKey: ['visits-count-sidebar', visitOrgId],
+    queryFn: async () => {
+      if (!visitOrgId) return 0
+      const supabase = createSupabaseBrowserClient()
+      const { count } = await supabase
+        .from('visits')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', visitOrgId)
+      return count ?? 0
+    },
+    enabled: !!visitOrgId && isDemo,
+    staleTime: 30_000,
+  })
+  const visitCount = visitCountData ?? 0
   const t = translations[language]
   const locale = language === 'he' ? 'he' : 'ru'
 
@@ -111,7 +134,10 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
               <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">{language === 'he' ? 'לקוח' : 'Клиент'}</span>
             </button>
-            <button onClick={() => openModal('visit-create')}
+            <button onClick={() => {
+                if (isDemo && visitCount >= 15) { setDemoVisitOpen(true); return }
+                openModal('visit-create')
+              }}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all active:scale-95">
               <CalendarPlus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">{language === 'he' ? 'ביקור' : 'Визит'}</span>
@@ -212,6 +238,9 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
 
       {/* Demo client limit modal */}
       <DemoLimitModal open={demoClientOpen} onClose={() => setDemoClientOpen(false)} section="clients" />
+
+      {/* Demo visit limit modal */}
+      <DemoLimitModal open={demoVisitOpen} onClose={() => setDemoVisitOpen(false)} section="visits" />
 
       {/* Demo sale stub modal */}
       {demoSaleOpen && (() => {

@@ -4,7 +4,7 @@ import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
 import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText, Paintbrush, Settings2 } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 import { useOrgTemplates } from '@/hooks/useOrgTemplates'
@@ -28,6 +28,7 @@ export function ClientDetailsModal() {
   const [showGdprDialog, setShowGdprDialog] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [cardSettings, saveCardSettings] = useClientCardSettings()
+  const [photosCount, setPhotosCount] = useState<number | null>(null)
   const { templates } = useOrgTemplates()
 
   const [showPicker, setShowPicker]       = useState(false)
@@ -38,6 +39,15 @@ export function ClientDetailsModal() {
 
   const isOpen = isModalOpen('client-details')
   const data   = getModalData('client-details')
+
+  // Загрузка счётчика фотографий при открытии
+  useEffect(() => {
+    if (!isOpen || !data?.client?.id) { setPhotosCount(null); return }
+    fetch(`/api/clients/${data.client.id}/photos`)
+      .then(r => r.ok ? r.json() : [])
+      .then(photos => setPhotosCount(Array.isArray(photos) ? photos.length : 0))
+      .catch(() => setPhotosCount(0))
+  }, [isOpen, data?.client?.id])
 
   if (!data?.client || !isOpen) return null
 
@@ -223,6 +233,9 @@ export function ClientDetailsModal() {
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
               <Images className="w-5 h-5 mb-1" style={{ color: '#a78bfa' }} />
+              {photosCount !== null && photosCount > 0 && (
+                <span className="text-xl font-bold mb-0.5" style={{ color: '#a78bfa' }}>{photosCount}</span>
+              )}
               <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#64748b' }}>{t.gallery}</span>
             </button>
             <button onClick={() => openModal('client-documents', { client, locale })}

@@ -5,11 +5,10 @@
  * Показывает описание модуля, план цен и кнопку связи в WhatsApp.
  */
 
-import { MessageCircle, Check, Zap, Star, Building2 } from 'lucide-react'
+import { MessageCircle, Check } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useState, useEffect } from 'react'
-
-const WA_LINK = 'https://wa.me/972544858586'
+import { WA_LINK, TRINITY_PLANS } from '@/lib/trinityPlans'
 
 const T = {
   ru: {
@@ -17,35 +16,6 @@ const T = {
     desc: 'Фиксируйте все продажи товаров и услуг в одном месте. Автоматические отчёты, статистика и история по каждому клиенту.',
     features: ['История всех сделок', 'Привязка к клиенту', 'Статусы оплаты', 'Импорт из Excel', 'Аналитика по месяцам', 'Чеки и счета'],
     plansTitle: 'Тарифные планы',
-    plans: [
-      {
-        name: 'Старт',
-        price: '₪199',
-        period: '/мес',
-        icon: Zap,
-        color: 'from-blue-500 to-cyan-500',
-        badge: null,
-        features: ['До 3 сотрудников', 'CRM-клиенты', 'Визиты и записи', 'WhatsApp-напоминания', 'Базовая аналитика'],
-      },
-      {
-        name: 'Бизнес',
-        price: '₪349',
-        period: '/мес',
-        icon: Star,
-        color: 'from-amber-500 to-orange-500',
-        badge: 'Популярный',
-        features: ['До 10 сотрудников', 'Модуль продаж', 'Инвентарь / склад', 'SMS-кампании', 'Расширенная аналитика', 'Лояльность и бонусы'],
-      },
-      {
-        name: 'Про',
-        price: '₪549',
-        period: '/мес',
-        icon: Building2,
-        color: 'from-violet-500 to-purple-600',
-        badge: null,
-        features: ['Неограничено сотрудников', 'Несколько филиалов', 'Интеграция с Green Invoice', 'Приоритетная поддержка', 'Белый лейбл (API)'],
-      },
-    ],
     cta: 'Написать в WhatsApp',
     sub: 'Влад ответит в течение нескольких минут',
   },
@@ -54,35 +24,6 @@ const T = {
     desc: 'תעד את כל מכירות המוצרים והשירותים במקום אחד. דוחות אוטומטיים, סטטיסטיקה והיסטוריה לכל לקוח.',
     features: ['היסטוריית מכירות', 'קישור ללקוח', 'סטטוסי תשלום', 'ייבוא מ-Excel', 'ניתוח חודשי', 'קבלות וחשבוניות'],
     plansTitle: 'תוכניות מחיר',
-    plans: [
-      {
-        name: 'סטארט',
-        price: '₪199',
-        period: '/חודש',
-        icon: Zap,
-        color: 'from-blue-500 to-cyan-500',
-        badge: null,
-        features: ['עד 3 עובדים', 'לקוחות CRM', 'ביקורים ותורים', 'תזכורות WhatsApp', 'ניתוח בסיסי'],
-      },
-      {
-        name: 'עסקים',
-        price: '₪349',
-        period: '/חודש',
-        icon: Star,
-        color: 'from-amber-500 to-orange-500',
-        badge: 'פופולרי',
-        features: ['עד 10 עובדים', 'מודול מכירות', 'מלאי / מחסן', 'קמפיינים SMS', 'ניתוח מורחב', 'נאמנות ובונוסים'],
-      },
-      {
-        name: 'פרו',
-        price: '₪549',
-        period: '/חודש',
-        icon: Building2,
-        color: 'from-violet-500 to-purple-600',
-        badge: null,
-        features: ['עובדים ללא הגבלה', 'מספר סניפים', 'אינטגרציה חשבונית ירוקה', 'תמיכה עדיפות', 'לייבל לבן (API)'],
-      },
-    ],
     cta: 'כתוב לנו ב-WhatsApp',
     sub: 'ולד יענה תוך דקות ספורות',
   },
@@ -132,37 +73,36 @@ export function SalesDemoStub() {
       {/* ── Pricing plans ── */}
       <div className="mb-8">
         <h2 className="text-center text-base font-semibold text-gray-800 dark:text-gray-200 mb-4">{t.plansTitle}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-          {t.plans.map((plan, i) => {
-            const Icon = plan.icon
-            const isHighlighted = !!plan.badge
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+          {TRINITY_PLANS.map((plan, i) => {
+            const badge = isHe ? plan.badgeHe : plan.badge
+            const name = isHe ? plan.nameHe : plan.nameRu
+            const price = isHe ? plan.priceHe : plan.price
+            const period = isHe ? plan.periodHe : plan.periodRu
+            const features = isHe ? plan.featuresHe : plan.featuresRu
             return (
               <div key={i}
                 className={`relative rounded-2xl border p-5 flex flex-col gap-3 transition-transform hover:-translate-y-0.5
-                  ${isHighlighted
-                    ? 'border-amber-400 shadow-amber-100 dark:shadow-amber-900/20 shadow-lg bg-white dark:bg-gray-800'
+                  ${badge ? 'border-amber-400 shadow-amber-100 dark:shadow-amber-900/20 shadow-lg bg-white dark:bg-gray-800'
                     : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800'}`}
-                style={{ animation: `fadeInUp 0.4s ${i * 0.1}s ease both` }}>
-                {plan.badge && (
+                style={{ animation: `fadeInUp 0.4s ${i * 0.08}s ease both` }}>
+                {badge && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-bold px-3 py-0.5 rounded-full whitespace-nowrap">
-                    {plan.badge}
+                    {badge}
                   </span>
                 )}
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center flex-shrink-0`}>
-                    <Icon size={18} className="text-white" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{plan.name}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{isHe ? 'לעסק' : 'для бизнеса'}</p>
-                  </div>
+                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center flex-shrink-0`}>
+                  <span className="text-white text-sm font-bold">{name[0]}</span>
                 </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{plan.price}</span>
-                  <span className="text-sm text-gray-400">{plan.period}</span>
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{name}</p>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{price}</span>
+                    {period && <span className="text-xs text-gray-400">{period}</span>}
+                  </div>
                 </div>
                 <ul className="space-y-1.5 flex-1">
-                  {plan.features.map((f, j) => (
+                  {features.map((f, j) => (
                     <li key={j} className="flex items-start gap-2 text-xs text-gray-600 dark:text-gray-400">
                       <Check size={12} className="text-emerald-500 mt-0.5 flex-shrink-0" />
                       <span>{f}</span>

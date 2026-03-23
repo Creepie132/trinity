@@ -4,9 +4,14 @@ import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
 import { Package, DollarSign, Hash, Tag, Edit, ShoppingCart, ArrowRightLeft } from 'lucide-react'
 import { useBranches } from '@/hooks/useBranches'
+import { useDemoMode } from '@/hooks/useDemoMode'
+import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
+import { useState } from 'react'
 
 export function ProductDetailsModal() {
   const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
+  const { isDemo } = useDemoMode()
+  const [demoSellOpen, setDemoSellOpen] = useState(false)
   
   const isOpen = isModalOpen('product-details')
   const data = getModalData('product-details')
@@ -52,6 +57,7 @@ export function ProductDetailsModal() {
   }
 
   const handleSellClick = () => {
+    if (isDemo) { setDemoSellOpen(true); return }
     closeModal('product-details')
     openModal('product-sell', { product })
   }
@@ -67,6 +73,7 @@ export function ProductDetailsModal() {
   }
 
   return (
+    <>
     <Modal
       open={isOpen}
       onClose={() => closeModal('product-details')}
@@ -169,5 +176,7 @@ export function ProductDetailsModal() {
         </div>
       </div>
     </Modal>
+    <DemoLimitModal open={demoSellOpen} onClose={() => setDemoSellOpen(false)} section="visits" />
+    </>
   )
 }

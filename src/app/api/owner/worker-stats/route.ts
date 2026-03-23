@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       .from('org_users')
       .select('user_id, email, role')
       .eq('org_id', orgId)
-      .eq('role', 'user')
+      .neq('role', 'owner')
 
     // Fetch last_seen_at from admin_users for online presence
     const workerUserIds = (workers ?? []).map((w: any) => w.user_id)

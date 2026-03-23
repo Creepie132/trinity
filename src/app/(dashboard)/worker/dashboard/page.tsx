@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { CommissionWidget } from '@/components/worker/CommissionWidget'
+import { CommissionWidget, CommissionData } from '@/components/worker/CommissionWidget'
 import { NewLeadModal } from '@/components/worker/NewLeadModal'
 import { QuickNoteModal } from '@/components/worker/QuickNoteModal'
 import { WaTemplateModal } from '@/components/worker/WaTemplateModal'
@@ -29,6 +29,7 @@ interface DashboardData {
   my_clients_count: number; my_active_deals: number
   today_meetings: number; today_tasks: number
   is_working_hours: boolean; settings: { phone_mask_enabled: boolean }
+  commission: CommissionData
 }
 
 function fmt(n: number, currency = 'ILS') {
@@ -110,7 +111,7 @@ export default function WorkerDashboardPage() {
     if (showLoader) setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/worker/dashboard', { cache: 'no-store' })
+      const res = await fetch('/api/worker/dashboard', { next: { revalidate: 30 } })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       setData(await res.json())
     } catch (e) { setError(e instanceof Error ? e.message : 'Error') }
@@ -254,7 +255,7 @@ export default function WorkerDashboardPage() {
             </div>}
         </GlassWidget>
 
-        <CommissionWidget lang={language}/>
+        <CommissionWidget lang={language} data={data?.commission ?? null} loading={loading}/>
       </div>
 
       {/* Rocket banner */}

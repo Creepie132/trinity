@@ -317,24 +317,16 @@ export async function getWorkerAuthContext(): Promise<WorkerAuthContext | AuthEr
     return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   }
 
-  // Проверяем is_sales_agent через service role
+  // Параллельная проверка: admin_users + org_users одновременно (экономит ~150ms)
   const service = createSupabaseServiceClient()
-  const { data: adminRow } = await service
-    .from('admin_users')
-    .select('is_sales_agent')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  const [{ data: adminRow }, { data: orgRow }] = await Promise.all([
+    service.from('admin_users').select('is_sales_agent').eq('user_id', user.id).maybeSingle(),
+    service.from('org_users').select('role').eq('user_id', user.id).maybeSingle(),
+  ])
 
   if (adminRow?.is_sales_agent) {
     return { user, isSalesAgent: true, supabase: supabase as unknown as SupabaseClient }
   }
-
-  // Fallback: менеджер внутри орга (role = 'manager' в org_users)
-  const { data: orgRow } = await service
-    .from('org_users')
-    .select('role')
-    .eq('user_id', user.id)
-    .maybeSingle()
 
   if (orgRow?.role === 'manager') {
     return { user, isSalesAgent: false, supabase: supabase as unknown as SupabaseClient }

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getWorkerAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
@@ -21,13 +21,11 @@ function isWorkingHours(now: Date): boolean {
   return ilHour >= WORK_START_H && ilHour < WORK_END_H
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const auth = await getWorkerAuthContext()
     if ('error' in auth) return auth.error
     const { user } = auth
-    // Продажник работает без org — данные фильтруются по user.id (assigned_to)
-    const orgId = 'worker_no_org' // заглушка, не используется в запросах ниже
 
     const supabase = createSupabaseServiceClient()
     const now        = new Date()
@@ -35,6 +33,7 @@ export async function GET(request: NextRequest) {
     const todayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString()
+    const prevStart  = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
     const last24h    = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
     const redZoneCutoff = new Date(now.getTime() - RED_ZONE_MINUTES * 60 * 1000).toISOString()
 
@@ -50,6 +49,8 @@ export async function GET(request: NextRequest) {
       clientsCountRes,
       todayMeetingsRes,
       todayTasksRes,
+      commCurrRes,
+      commPrevRes,
     ] = await Promise.all([
 
       // 1. Burning tasks: просроченные + на сегодня
@@ -157,6 +158,22 @@ export async function GET(request: NextRequest) {
         .is('archived_at', null)
         .gte('due_date', todayStart)
         .lt('due_date',  todayEnd),
+
+      // 12. Комиссия текущий месяц
+      supabase
+        .from('revenue_logs')
+        .select('setup_fee, commission_amount')
+        .eq('worker_id', user.id)
+        .gte('entered_at', monthStart)
+        .lt('entered_at',  monthEnd),
+
+      // 13. Комиссия прошлый месяц
+      supabase
+        .from('revenue_logs')
+        .select('commission_amount')
+        .eq('worker_id', user.id)
+        .gte('entered_at', prevStart)
+        .lt('entered_at',  monthStart),
     ])
 
     // ── KPI ────────────────────────────────────────────────────
@@ -202,6 +219,16 @@ export async function GET(request: NextRequest) {
         }))
       : []
 
+    // ── Комиссия ───────────────────────────────────────────────
+    const commCurr = commCurrRes.data ?? []
+    const commPrev = commPrevRes.data ?? []
+    const commMonthFee        = commCurr.reduce((s, r) => s + Number(r.setup_fee ?? 0), 0)
+    const commMonthCommission = commCurr.reduce((s, r) => s + Number(r.commission_amount ?? 0), 0)
+    const commPrevCommission  = commPrev.reduce((s, r) => s + Number(r.commission_amount ?? 0), 0)
+    const commPercentChange   = commPrevCommission > 0
+      ? Math.round(((commMonthCommission - commPrevCommission) / commPrevCommission) * 100)
+      : null
+
     return NextResponse.json({
       burning_tasks:    tasks,
       red_zone_deals:   redZoneDeals,
@@ -224,6 +251,14 @@ export async function GET(request: NextRequest) {
       settings: {
         phone_mask_enabled: permRes.data?.phone_mask_enabled ?? false,
         can_view_reports:   permRes.data?.can_view_reports   ?? false,
+      },
+      commission: {
+        month_total_fee:       Math.round(commMonthFee * 100) / 100,
+        month_commission:      Math.round(commMonthCommission * 100) / 100,
+        count:                 commCurr.length,
+        prev_month_commission: Math.round(commPrevCommission * 100) / 100,
+        percent_change:        commPercentChange,
+        period:                { year: now.getFullYear(), month: now.getMonth() + 1 },
       },
     })
   } catch (err) {

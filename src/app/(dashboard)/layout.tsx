@@ -27,8 +27,24 @@ export default async function DashboardLayout({
     .maybeSingle()
 
   if (adminRow?.is_sales_agent) {
-    // Продажник — пропускаем org-проверку, рендерим layout без sidebar
-    // Блокировка /inbox происходит в middleware.ts
+    // Продажник Trinity (admin_users) — без sidebar
+    return (
+      <HydrationBoundary state={dehydrate(new QueryClient())}>
+        <DashboardShell workerMode>
+          {children}
+        </DashboardShell>
+      </HydrationBoundary>
+    )
+  }
+
+  // Проверяем роль manager в org_users — тоже без основного sidebar
+  const { data: orgUserRow } = await service
+    .from('org_users')
+    .select('role')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (orgUserRow?.role === 'manager') {
     return (
       <HydrationBoundary state={dehydrate(new QueryClient())}>
         <DashboardShell workerMode>

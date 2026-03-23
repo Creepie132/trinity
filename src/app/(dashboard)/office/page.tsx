@@ -373,7 +373,7 @@ function LeadSourcesWidget({ sources, t }: { sources: LeadSource[]; t: typeof T[
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function OwnerOfficePage() {
-  const { role } = useAuth()
+  const { role, isLoading: authLoading } = useAuth()
   const { language } = useLanguage()
   const router = useRouter()
   const t = T[language === 'he' ? 'he' : 'ru']
@@ -386,8 +386,8 @@ export default function OwnerOfficePage() {
   const [tab, setTab]       = useState<TabKey>('overview')
 
   useEffect(() => {
-    if (role && role !== 'owner') router.replace('/worker/dashboard')
-  }, [role, router])
+    if (!authLoading && role && role !== 'owner') router.replace('/worker/dashboard')
+  }, [role, authLoading, router])
 
   const load = useCallback(async (background = false) => {
     if (background) setRefreshing(true)
@@ -403,7 +403,8 @@ export default function OwnerOfficePage() {
     }
   }, [period])
 
-  useEffect(() => { load() }, [load])
+  // Wait for auth before fetching — avoids 403 flash and double-load
+  useEffect(() => { if (!authLoading) load() }, [load, authLoading])
 
   // Auto-refresh every 30s — background mode: does NOT wipe the UI
   useEffect(() => {
@@ -411,6 +412,8 @@ export default function OwnerOfficePage() {
     return () => clearInterval(interval)
   }, [load])
 
+  // Show nothing until auth is resolved (avoids flash of wrong content)
+  if (authLoading) return null
   if (role && role !== 'owner') return null
 
   const tabs: { key: TabKey; label: string }[] = [

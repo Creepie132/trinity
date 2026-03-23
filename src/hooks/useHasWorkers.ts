@@ -14,7 +14,7 @@ export function useHasWorkers() {
       const res = await fetch('/api/org-users')
       if (!res.ok) return false
       const users: { role: string }[] = await res.json()
-      return users.some(u => u.role === 'user')
+      return users.some(u => u.role !== 'owner')
     },
     enabled: role === 'owner',
     staleTime: 2 * 60 * 1000, // 2 минуты

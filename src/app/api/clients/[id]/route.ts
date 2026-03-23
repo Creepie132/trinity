@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
+import { createClient as createAdmin } from '@supabase/supabase-js'
+
+const supabaseAdmin = createAdmin(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function PUT(
   request: NextRequest,
@@ -7,19 +13,19 @@ export async function PUT(
 ) {
   const auth = await getAuthContext()
   if ('error' in auth) return auth.error
-  
-  const { orgId, supabase } = auth
+
+  const { orgId } = auth
 
   const { id } = await params
   const body = await request.json()
-  const { phone, email, address, city, date_of_birth, notes, description, avatar_url, paint_code } = body
+  const { phone, email, address, city, date_of_birth, notes, description, paint_code } = body
 
   const name = body.name || `${body.first_name || ''} ${body.last_name || ''}`.trim()
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('clients')
     .update({
       first_name: body.first_name,
@@ -32,7 +38,6 @@ export async function PUT(
       notes: notes || null,
       description: description || null,
       paint_code: paint_code || null,
-      avatar_url: avatar_url || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

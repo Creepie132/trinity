@@ -28,14 +28,27 @@ export async function POST() {
     const now = new Date().toISOString()
 
     // Update last_seen_at in org_users (all rows for this user across all orgs)
-    const { error } = await service
+    const { error, data: updatedRows } = await service
       .from('org_users')
       .update({ last_seen_at: now })
       .eq('user_id', user.id)
+      .select('org_id')
 
     if (error) {
       console.error('[heartbeat] update error:', error.message)
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Also update organizations.last_seen_at — fire and forget, don't block response
+    if (updatedRows && updatedRows.length > 0) {
+      const orgIds = updatedRows.map((r: any) => r.org_id)
+      service
+        .from('organizations')
+        .update({ last_seen_at: now })
+        .in('id', orgIds)
+        .then(({ error: orgErr }) => {
+          if (orgErr) console.error('[heartbeat] org last_seen update error:', orgErr.message)
+        })
     }
 
     return NextResponse.json({ ok: true })

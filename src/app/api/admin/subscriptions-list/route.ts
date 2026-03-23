@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
         org_users (
           role,
           user_id,
-          email
+          email,
+          last_seen_at
         )
       `)
       .order('created_at', { ascending: false })
@@ -107,6 +108,12 @@ export async function GET(request: NextRequest) {
     const formatted = (orgs || []).map((org: any) => {
       const businessInfo = org.features?.business_info || {}
       const owner = org.org_users?.find((u: any) => u.role === 'owner')
+      // Use the most recent last_seen_at across all org users (more accurate than org-level field)
+      const freshLastSeen = org.org_users
+        ?.map((u: any) => u.last_seen_at)
+        .filter(Boolean)
+        .sort()
+        .at(-1) ?? org.last_seen_at ?? null
       return {
         id: org.id,
         name: org.name,
@@ -127,7 +134,7 @@ export async function GET(request: NextRequest) {
         payments_enabled: org.payments_enabled ?? true,
         recurring_enabled: org.recurring_enabled ?? false,
         branches_enabled: org.branches_enabled ?? false,
-        last_seen_at: org.last_seen_at ?? null,
+        last_seen_at: freshLastSeen,
         created_at: org.created_at ?? null,
         tranzila_token_terminal: org.tranzila_token_terminal ?? null,
         tranzila_token_password: org.tranzila_token_password ?? null,

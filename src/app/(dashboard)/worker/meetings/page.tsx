@@ -122,7 +122,7 @@ function ClientSearchInput({ value, clientId, onChange, clients: _clients, lang,
         const res = await fetch(`/api/clients?search=${encodeURIComponent(query)}&limit=10`)
         if (!res.ok) return
         const json = await res.json()
-        const list: Client[] = json.clients ?? json.data ?? []
+        const list: Client[] = Array.isArray(json) ? json : (json.clients ?? json.data ?? [])
         setResults(list)
       } catch { /* ignore */ } finally { setSearching(false) }
     }, 300)

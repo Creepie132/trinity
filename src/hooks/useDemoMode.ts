@@ -23,8 +23,9 @@ export function useDemoMode() {
   // Get plan from organization
   const plan = (organization as any)?.plan || 'demo'
 
-  // Check if organization is in trial mode (DEMO)
-  const isDemo = plan === 'demo' || (organization as any)?.subscription_status === 'trial'
+  // Check if organization is in demo mode
+  const subscriptionStatus = (organization as any)?.subscription_status
+  const isDemo = plan === 'demo' || subscriptionStatus === 'trial' || subscriptionStatus === 'demo'
 
   // Get client limit from features or default based on plan
   const featuresClientLimit = (organization as any)?.features?.client_limit

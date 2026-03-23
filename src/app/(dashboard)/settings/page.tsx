@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useFeatures } from '@/hooks/useFeatures'
-import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, MessageSquare, Bell, CreditCard } from 'lucide-react'
+import { Globe, ArrowLeft, Package, FileText, Calendar, Building2, Users, Shield, MessageSquare, Bell, CreditCard, Palette } from 'lucide-react'
 import Link from 'next/link'
 import { useDemoMode } from '@/hooks/useDemoMode'
 
@@ -22,6 +22,13 @@ export default function SettingsPage() {
       icon: Globe,
       title: t('settings.language'),
       description: t('settings.language.desc'),
+    },
+    {
+      id: 'display',
+      href: '/settings/display',
+      icon: Palette,
+      title: language === 'he' ? 'ערכת נושא' : 'Тема оформления',
+      description: language === 'he' ? 'בחר צבעים ומראה לממשק' : 'Выберите цвет и стиль интерфейса',
     },
     {
       id: 'booking',

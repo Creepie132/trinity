@@ -17,6 +17,7 @@ import { DemoLanguagePicker, useDemoLanguagePicker } from '@/components/demo/Dem
 import { WaNotificationProvider } from '@/components/wa/WaNotificationProvider'
 import { ClientProviders } from '@/components/providers/ClientProviders'
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import { NotificationBell } from '@/components/worker/NotificationBell'
 import { NewLeadModal } from '@/components/worker/NewLeadModal'
 import { WorkerOnboarding } from '@/components/worker/WorkerOnboarding'
@@ -411,9 +412,11 @@ export function DashboardShell({
       <AuthProvider>
         <BranchProvider>
           <LanguageProvider>
-            <WorkerShell>
-              {children}
-            </WorkerShell>
+            <ThemeProvider>
+              <WorkerShell>
+                {children}
+              </WorkerShell>
+            </ThemeProvider>
             <ClientProviders />
           </LanguageProvider>
         </BranchProvider>
@@ -425,9 +428,11 @@ export function DashboardShell({
     <AuthProvider>
       <BranchProvider>
         <LanguageProvider>
-          <DashboardInner>
-            {children}
-          </DashboardInner>
+          <ThemeProvider>
+            <DashboardInner>
+              {children}
+            </DashboardInner>
+          </ThemeProvider>
         </LanguageProvider>
       </BranchProvider>
     </AuthProvider>

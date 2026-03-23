@@ -10,8 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
-import { useFeatures } from '@/hooks/useFeatures'
-import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { SalesDemoStub } from '@/components/demo/SalesDemoStub'
 import { useSales, useSaleStats, useToggleReceipt, Sale } from '@/hooks/useSales'
 import { SaleCard } from '@/components/sales/SaleCard'
@@ -640,9 +638,9 @@ function SalesContent() {
 
 export default function SalesPage() {
   const { isDemo } = useDemoMode()
-  const features = useFeatures()
-  const { data: isAdmin } = useIsAdmin()
-  const showStub = isDemo || (!isAdmin && !features.hasSales)
-  if (showStub) return <SalesDemoStub />
+  // ?preview_stub=1 — позволяет администратору увидеть заглушку в браузере
+  const previewStub = typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('preview_stub') === '1'
+  if (isDemo || previewStub) return <SalesDemoStub />
   return <SalesContent />
 }

@@ -63,6 +63,8 @@ export default function ProductCatalogModal({ isOpen, onClose, products, onAddPr
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         <TrinityModalShell
+          open={isOpen && !selected}
+          onClose={onClose}
           icon={<Package />}
           title={t.title}
           subtitle={`${filtered.length} ${t.products}`}

@@ -45,6 +45,8 @@ export default function ProductDetailModal({ isOpen, product, onAdd, onBack }: P
     <>
       <Modal open={isOpen} onClose={onBack} darkHeader width="700px" dir={isRTL ? 'rtl' : 'ltr'}>
         <TrinityModalShell
+          open={isOpen}
+          onClose={onBack}
           icon={<Package />}
           title={product.name}
           subtitle={`₪${price.toFixed(2)}`}

@@ -589,6 +589,8 @@ export function SaleModal() {
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         <TrinityModalShell
+          open={isOpen}
+          onClose={handleClose}
           icon={<ShoppingCart />}
           title={locale === 'he' ? 'קישור לתשלום' : 'Ссылка на оплату'}
           subtitle={clientName}
@@ -672,6 +674,8 @@ export function SaleModal() {
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         <TrinityModalShell
+          open={isOpen}
+          onClose={handleClose}
           icon={<ShoppingCart />}
           title={text.title}
           subtitle={clientName}
@@ -832,6 +836,8 @@ export function SaleModal() {
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       <TrinityModalShell
+        open={isOpen}
+        onClose={handleClose}
         icon={<ShoppingCart />}
         title={text.title}
         subtitle={client ? clientName : (locale === 'he' ? 'בחר לקוח' : 'Выберите клиента')}

@@ -111,6 +111,8 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
       dir={language === 'he' ? 'rtl' : 'ltr'}
     >
       <TrinityModalShell
+        open={open}
+        onClose={() => onOpenChange(false)}
         icon={<UserPlus />}
         title={language === 'he' ? 'לקוח חדש' : 'Новый клиент'}
         subtitle={language === 'he' ? 'מלא את פרטי הלקוח' : 'Заполните данные клиента'}

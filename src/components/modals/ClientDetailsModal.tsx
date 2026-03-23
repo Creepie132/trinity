@@ -2,7 +2,7 @@
 
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
-import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText } from 'lucide-react'
+import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText, Paintbrush } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -51,15 +51,15 @@ export function ClientDetailsModal() {
     he: { information:'מידע', visits:'ביקורים', totalPaid:'שולם', gallery:'גלריה', documents:'מסמכים',
           notes:'הערות', description:'תיאור', createdAt:'תאריך יצירה', edit:'ערוך', sale:'עסקה',
           delete:'מחק', active:'פעיל', call:'התקשר', whatsapp:'WhatsApp', sms:'SMS',
-          address:'כתובת', birthday:'יום הולדת', open:'פתח' },
+          address:'כתובת', birthday:'יום הולדת', open:'פתח', paintCode:'מספר צבע' },
     ru: { information:'Информация', visits:'Визитов', totalPaid:'Оплачено', gallery:'Галерея',
           documents:'Документы', notes:'Заметки', description:'Описание', createdAt:'Дата создания',
           edit:'Редактировать', sale:'Продажа', delete:'Удалить', active:'Активен',
-          call:'Позвонить', whatsapp:'WhatsApp', sms:'SMS', address:'Адрес', birthday:'День рождения', open:'Открыть' },
+          call:'Позвонить', whatsapp:'WhatsApp', sms:'SMS', address:'Адрес', birthday:'День рождения', open:'Открыть', paintCode:'Код краски' },
     en:  { information:'Information', visits:'Visits', totalPaid:'Paid', gallery:'Gallery',
           documents:'Documents', notes:'Notes', description:'Description', createdAt:'Created',
           edit:'Edit', sale:'Sale', delete:'Delete', active:'Active',
-          call:'Call', whatsapp:'WhatsApp', sms:'SMS', address:'Address', birthday:'Birthday', open:'Open' },
+          call:'Call', whatsapp:'WhatsApp', sms:'SMS', address:'Address', birthday:'Birthday', open:'Open', paintCode:'Paint code' },
   }
   const t = T[locale as keyof typeof T] || T.he
 
@@ -276,6 +276,15 @@ export function ClientDetailsModal() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">{t.description}</p>
               <div className="px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-2xl">
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{client.description}</p>
+              </div>
+            </div>
+          )}
+          {client.paint_code && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">{t.paintCode}</p>
+              <div className="flex items-center gap-3 px-4 py-3 bg-violet-50 border border-violet-100 rounded-2xl">
+                <Paintbrush className="w-4 h-4 text-violet-500 shrink-0" />
+                <span className="text-sm font-bold text-violet-800">{client.paint_code}</span>
               </div>
             </div>
           )}

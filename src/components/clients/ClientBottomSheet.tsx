@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, DollarSign, MessageSquare, Trash2, Phone, MessageCircle, Pencil, ArrowRight, ArrowLeft, RefreshCw, Plus, X, ChevronRight } from 'lucide-react'
+import { Calendar, DollarSign, MessageSquare, Trash2, Phone, MessageCircle, Pencil, ArrowRight, ArrowLeft, RefreshCw, Plus, X, ChevronRight, Paintbrush } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EditClientSheet } from './EditClientSheet'
@@ -406,6 +406,17 @@ export function ClientBottomSheet({
             <div className="bg-muted/30 rounded-xl p-3">
               <p className="text-xs text-muted-foreground mb-1">{locale === 'he' ? 'הערות' : 'Заметки'}</p>
               <p className="text-sm">{client.notes}</p>
+            </div>
+          )}
+          {(client as any).paint_code && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800 rounded-xl">
+              <Paintbrush className="w-4 h-4 text-violet-500 shrink-0" />
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-400 mb-0.5">
+                  {locale === 'he' ? 'מספר צבע' : 'Код краски'}
+                </p>
+                <p className="text-sm font-bold text-violet-800 dark:text-violet-300">{(client as any).paint_code}</p>
+              </div>
             </div>
           )}
         </>

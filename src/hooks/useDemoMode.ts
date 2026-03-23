@@ -4,13 +4,16 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 
 export function useDemoMode() {
-  const { data: organization } = useOrganization()
-  const { data: isAdmin } = useIsAdmin()
+  const { data: organization, isLoading: orgLoading } = useOrganization()
+  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin()
+
+  const isLoading = orgLoading || adminLoading
 
   // Админы НИКОГДА не в demo
   if (isAdmin) {
     return {
       isDemo: false,
+      isLoading: false,
       plan: 'custom',
       clientLimit: null,
       daysLeft: null,
@@ -42,6 +45,7 @@ export function useDemoMode() {
 
   return {
     isDemo,
+    isLoading,
     plan,
     clientLimit,
     daysLeft,

@@ -637,10 +637,23 @@ function SalesContent() {
 }
 
 export default function SalesPage() {
-  const { isDemo } = useDemoMode()
+  const { isDemo, isLoading } = useDemoMode()
   // ?preview_stub=1 — позволяет администратору увидеть заглушку в браузере
   const previewStub = typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('preview_stub') === '1'
+
+  // Пока данные орга не загрузились — показываем нейтральный скелетон,
+  // чтобы не мелькал основной контент перед заглушкой
+  if (isLoading) return (
+    <div className="space-y-5 min-h-screen animate-pulse">
+      <div className="h-9 w-48 bg-gray-100 dark:bg-gray-800 rounded-xl" />
+      <div className="grid grid-cols-3 gap-3">
+        {[0,1,2].map(i => <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl" />)}
+      </div>
+      <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-xl" />
+    </div>
+  )
+
   if (isDemo || previewStub) return <SalesDemoStub />
   return <SalesContent />
 }

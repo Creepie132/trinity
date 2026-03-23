@@ -46,6 +46,8 @@ export default function PaymentsPage() {
     accentColor: 'from-violet-500 to-purple-600',
   }
 
+  if (isDemo) return <DemoStub config={PAYMENTS_STUB} />
+
   const [methodModalOpen, setMethodModalOpen] = useState(false)
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [cardDialogOpen, setCardDialogOpen] = useState(false)

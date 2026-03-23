@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
-import { Images, Upload, Trash2, X, ZoomIn, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import {
+  Images, Upload, Trash2, X, ZoomIn,
+  ChevronLeft, ChevronRight, Loader2, Link2, Hash,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { getClientName } from '@/lib/client-utils'
 
-// Сжатие изображения на клиенте перед отправкой
-// Максимум 1200px по длинной стороне, качество 0.82 (JPEG) — хорошо читается, но лёгкое
+// ─── Сжатие на клиенте ──────────────────────────────────────────────────────
 async function compressImage(file: File, maxDim = 1200, quality = 0.82): Promise<File> {
   return new Promise((resolve) => {
     const img = new Image()
@@ -16,15 +18,13 @@ async function compressImage(file: File, maxDim = 1200, quality = 0.82): Promise
     img.onload = () => {
       URL.revokeObjectURL(url)
       const { width, height } = img
-      let newW = width
-      let newH = height
+      let newW = width, newH = height
       if (width > maxDim || height > maxDim) {
         if (width >= height) { newW = maxDim; newH = Math.round((height / width) * maxDim) }
-        else { newH = maxDim; newW = Math.round((width / height) * maxDim) }
+        else                 { newH = maxDim; newW = Math.round((width / height) * maxDim) }
       }
       const canvas = document.createElement('canvas')
-      canvas.width = newW
-      canvas.height = newH
+      canvas.width = newW; canvas.height = newH
       const ctx = canvas.getContext('2d')!
       ctx.drawImage(img, 0, 0, newW, newH)
       canvas.toBlob(
@@ -32,8 +32,7 @@ async function compressImage(file: File, maxDim = 1200, quality = 0.82): Promise
           if (!blob) { resolve(file); return }
           resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }))
         },
-        'image/jpeg',
-        quality
+        'image/jpeg', quality
       )
     }
     img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
@@ -41,90 +40,264 @@ async function compressImage(file: File, maxDim = 1200, quality = 0.82): Promise
   })
 }
 
+// ─── Types ───────────────────────────────────────────────────────────────────
 interface Photo {
   id: string
   url: string | null
   file_name: string
   file_size: number | null
   caption: string | null
+  visit_id: string | null
+  visit_label: string | null
   created_at: string
 }
 
+interface Visit {
+  id: string
+  scheduled_at: string | null
+  created_at: string
+  service_type: string | null
+}
+
+// Мини-диалог метаданных перед загрузкой
+interface MetaDialogProps {
+  files: File[]
+  visits: Visit[]
+  locale: 'he' | 'ru'
+  onConfirm: (caption: string, visitId: string, visitLabel: string) => void
+  onCancel: () => void
+}
+
+const T = {
+  ru: {
+    title: 'Галерея',
+    upload: 'Загрузить фото',
+    empty: 'Фотографий пока нет',
+    emptyHint: 'Нажмите «Загрузить» или перетащите файлы сюда',
+    uploading: 'Загрузка...',
+    deleteConfirm: 'Удалить фотографию?',
+    uploadError: 'Ошибка загрузки',
+    deleteError: 'Ошибка удаления',
+    photos: (n: number) => `${n} фото`,
+    dropHint: 'Отпустите для загрузки',
+    // meta dialog
+    metaTitle: 'Добавить фото',
+    captionLabel: 'Описание (необязательно)',
+    captionPlaceholder: 'Например: результат после процедуры...',
+    visitLabel: 'Привязать к визиту (необязательно)',
+    visitNone: 'Без привязки',
+    confirm: 'Загрузить',
+    cancel: 'Отмена',
+    files: (n: number) => `${n} файл${n === 1 ? '' : n < 5 ? 'а' : 'ов'}`,
+  },
+  he: {
+    title: 'גלריה',
+    upload: 'העלה תמונה',
+    empty: 'אין תמונות עדיין',
+    emptyHint: 'לחץ "העלה" או גרור קבצים לכאן',
+    uploading: 'מעלה...',
+    deleteConfirm: 'למחוק את התמונה?',
+    uploadError: 'שגיאת העלאה',
+    deleteError: 'שגיאת מחיקה',
+    photos: (n: number) => `${n} תמונות`,
+    dropHint: 'שחרר להעלאה',
+    metaTitle: 'הוסף תמונה',
+    captionLabel: 'תיאור (אופציונלי)',
+    captionPlaceholder: 'לדוגמה: תוצאה לאחר טיפול...',
+    visitLabel: 'קשר לביקור (אופציונלי)',
+    visitNone: 'ללא קישור',
+    confirm: 'העלה',
+    cancel: 'ביטול',
+    files: (n: number) => `${n} קבצים`,
+  },
+}
+
+function formatVisitLabel(v: Visit, locale: 'he' | 'ru'): string {
+  const d = new Date(v.scheduled_at || v.created_at)
+  const date = d.toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  })
+  const time = d.toLocaleTimeString(locale === 'he' ? 'he-IL' : 'ru-RU', {
+    hour: '2-digit', minute: '2-digit',
+  })
+  return v.service_type ? `${date} ${time} — ${v.service_type}` : `${date} ${time}`
+}
+
+// ─── MetaDialog ──────────────────────────────────────────────────────────────
+function MetaDialog({ files, visits, locale, onConfirm, onCancel }: MetaDialogProps) {
+  const [caption, setCaption] = useState('')
+  const [visitId, setVisitId] = useState('')
+  const t = T[locale]
+  const isHe = locale === 'he'
+
+  const selectedVisit = visits.find(v => v.id === visitId)
+  const visitLabelStr = selectedVisit ? formatVisitLabel(selectedVisit, locale) : ''
+
+  return (
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center" onClick={onCancel}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div
+        className="relative z-10 bg-background rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6"
+        dir={isHe ? 'rtl' : 'ltr'}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+            <Upload className="w-5 h-5 text-violet-600" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base">{t.metaTitle}</h3>
+            <p className="text-xs text-muted-foreground">{t.files(files.length)}</p>
+          </div>
+        </div>
+
+        {/* Превью миниатюр */}
+        <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+          {files.slice(0, 6).map((f, i) => (
+            <img
+              key={i}
+              src={URL.createObjectURL(f)}
+              alt=""
+              className="w-14 h-14 rounded-xl object-cover shrink-0 border border-muted"
+            />
+          ))}
+          {files.length > 6 && (
+            <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center shrink-0 text-xs text-muted-foreground font-medium">
+              +{files.length - 6}
+            </div>
+          )}
+        </div>
+
+        {/* Caption */}
+        <div className="mb-4">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
+            <Hash className="w-3.5 h-3.5" />{t.captionLabel}
+          </label>
+          <input
+            type="text"
+            value={caption}
+            onChange={e => setCaption(e.target.value)}
+            placeholder={t.captionPlaceholder}
+            className="w-full px-3 py-2.5 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+          />
+        </div>
+
+        {/* Visit reference */}
+        {visits.length > 0 && (
+          <div className="mb-5">
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
+              <Link2 className="w-3.5 h-3.5" />{t.visitLabel}
+            </label>
+            <select
+              value={visitId}
+              onChange={e => setVisitId(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+            >
+              <option value="">{t.visitNone}</option>
+              {visits.map(v => (
+                <option key={v.id} value={v.id}>{formatVisitLabel(v, locale)}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2.5 rounded-xl border text-sm font-medium hover:bg-muted transition"
+          >
+            {t.cancel}
+          </button>
+          <button
+            onClick={() => onConfirm(caption.trim(), visitId, visitLabelStr)}
+            className="flex-1 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition"
+          >
+            {t.confirm}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
 export function ClientGalleryModal() {
   const { isModalOpen, closeModal, getModalData } = useModalStore()
   const isOpen = isModalOpen('client-gallery')
   const data = getModalData('client-gallery')
 
   const [photos, setPhotos] = useState<Photo[]>([])
+  const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  // Pending files waiting for meta confirmation
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const client = data?.client
   const locale: 'he' | 'ru' = data?.locale || 'ru'
   const isHe = locale === 'he'
   const clientName = client ? getClientName(client) : ''
-
-  const T = {
-    ru: {
-      title: 'Галерея',
-      upload: 'Загрузить фото',
-      empty: 'Фотографий пока нет',
-      emptyHint: 'Нажмите «Загрузить» или перетащите файлы сюда',
-      uploading: 'Загрузка...',
-      compressing: 'Сжатие...',
-      deleteConfirm: 'Удалить фотографию?',
-      uploadError: 'Ошибка загрузки',
-      deleteError: 'Ошибка удаления',
-      photos: (n: number) => `${n} ${n === 1 ? 'фото' : n < 5 ? 'фото' : 'фото'}`,
-      dropHint: 'Отпустите для загрузки',
-    },
-    he: {
-      title: 'גלריה',
-      upload: 'העלה תמונה',
-      empty: 'אין תמונות עדיין',
-      emptyHint: 'לחץ "העלה" או גרור קבצים לכאן',
-      uploading: 'מעלה...',
-      compressing: 'דוחס...',
-      deleteConfirm: 'למחוק את התמונה?',
-      uploadError: 'שגיאת העלאה',
-      deleteError: 'שגיאת מחיקה',
-      photos: (n: number) => `${n} תמונות`,
-      dropHint: 'שחרר להעלאה',
-    },
-  }
   const t = T[locale]
 
+  // ── Fetch photos & visits ─────────────────────────────────────────────────
   const fetchPhotos = useCallback(async () => {
     if (!client?.id) return
     setLoading(true)
     try {
       const res = await fetch(`/api/clients/${client.id}/photos`)
-      if (res.ok) setPhotos(await res.json())
+      if (res.ok) {
+        const data: Photo[] = await res.json()
+        // Сортировка: новые сверху
+        setPhotos(data.sort((a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ))
+      }
     } catch { /* silent */ }
     setLoading(false)
   }, [client?.id])
 
-  useEffect(() => {
-    if (isOpen && client?.id) fetchPhotos()
-    else setPhotos([])
-  }, [isOpen, client?.id, fetchPhotos])
+  const fetchVisits = useCallback(async () => {
+    if (!client?.id) return
+    try {
+      const res = await fetch(`/api/clients/${client.id}/visits`)
+      if (res.ok) setVisits(await res.json())
+    } catch { /* silent */ }
+  }, [client?.id])
 
-  async function handleFiles(files: FileList | File[]) {
-    const arr = Array.from(files).filter((f) => f.type.startsWith('image/'))
+  useEffect(() => {
+    if (isOpen && client?.id) { fetchPhotos(); fetchVisits() }
+    else { setPhotos([]); setVisits([]) }
+  }, [isOpen, client?.id, fetchPhotos, fetchVisits])
+
+  // ── File selection → show meta dialog ────────────────────────────────────
+  function handleFileSelect(files: FileList | File[]) {
+    const arr = Array.from(files).filter(f => f.type.startsWith('image/'))
     if (!arr.length) return
+    setPendingFiles(arr)
+  }
+
+  // ── After meta confirmed → compress & upload ──────────────────────────────
+  async function handleConfirmMeta(caption: string, visitId: string, visitLabel: string) {
+    if (!pendingFiles) return
+    const files = pendingFiles
+    setPendingFiles(null)
     setUploading(true)
-    for (const raw of arr) {
+    for (const raw of files) {
       try {
         const compressed = await compressImage(raw)
         const fd = new FormData()
         fd.append('file', compressed)
+        if (caption)    fd.append('caption', caption)
+        if (visitId)    fd.append('visit_id', visitId)
+        if (visitLabel) fd.append('visit_label', visitLabel)
         const res = await fetch(`/api/clients/${client.id}/photos`, { method: 'POST', body: fd })
         if (!res.ok) throw new Error()
-        const photo = await res.json()
-        setPhotos((prev) => [photo, ...prev])
+        const photo: Photo = await res.json()
+        setPhotos(prev => [photo, ...prev])
       } catch {
         toast.error(t.uploadError)
       }
@@ -132,40 +305,56 @@ export function ClientGalleryModal() {
     setUploading(false)
   }
 
+  // ── Delete ────────────────────────────────────────────────────────────────
   async function handleDelete(photoId: string, e: React.MouseEvent) {
     e.stopPropagation()
     if (!confirm(t.deleteConfirm)) return
     try {
-      const res = await fetch(`/api/clients/${client.id}/photos?photoId=${photoId}`, { method: 'DELETE' })
+      const res = await fetch(
+        `/api/clients/${client.id}/photos?photoId=${photoId}`,
+        { method: 'DELETE' }
+      )
       if (!res.ok) throw new Error()
-      setPhotos((prev) => prev.filter((p) => p.id !== photoId))
+      setPhotos(prev => prev.filter(p => p.id !== photoId))
       if (lightboxIndex !== null) setLightboxIndex(null)
     } catch {
       toast.error(t.deleteError)
     }
   }
 
-  function openLightbox(idx: number) { setLightboxIndex(idx) }
-  function closeLightbox() { setLightboxIndex(null) }
-  function lightboxPrev() { setLightboxIndex((i) => (i !== null && i > 0 ? i - 1 : photos.length - 1)) }
-  function lightboxNext() { setLightboxIndex((i) => (i !== null && i < photos.length - 1 ? i + 1 : 0)) }
+  // ── Lightbox ──────────────────────────────────────────────────────────────
+  const closeLightbox = () => setLightboxIndex(null)
+  const lightboxPrev  = () => setLightboxIndex(i => i !== null && i > 0 ? i - 1 : photos.length - 1)
+  const lightboxNext  = () => setLightboxIndex(i => i !== null && i < photos.length - 1 ? i + 1 : 0)
 
-  // Keyboard navigation for lightbox
   useEffect(() => {
     if (lightboxIndex === null) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') lightboxPrev()
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft')  lightboxPrev()
       if (e.key === 'ArrowRight') lightboxNext()
-      if (e.key === 'Escape') closeLightbox()
+      if (e.key === 'Escape')     closeLightbox()
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
   }, [lightboxIndex])
 
   if (!isOpen || !client) return null
 
+  const currentPhoto = lightboxIndex !== null ? photos[lightboxIndex] : null
+
   return (
     <>
+      {/* ── Meta dialog (shown after file pick) ───────────────────────── */}
+      {pendingFiles && (
+        <MetaDialog
+          files={pendingFiles}
+          visits={visits}
+          locale={locale}
+          onConfirm={handleConfirmMeta}
+          onCancel={() => setPendingFiles(null)}
+        />
+      )}
+
       <Modal
         open={isOpen}
         onClose={() => { setLightboxIndex(null); closeModal('client-gallery') }}
@@ -191,7 +380,9 @@ export function ClientGalleryModal() {
             disabled={uploading}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition disabled:opacity-50"
           >
-            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            {uploading
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <Upload className="w-4 h-4" />}
             {uploading ? t.uploading : t.upload}
           </button>
           <input
@@ -200,16 +391,16 @@ export function ClientGalleryModal() {
             accept="image/*"
             multiple
             className="hidden"
-            onChange={(e) => e.target.files && handleFiles(e.target.files)}
+            onChange={e => e.target.files && handleFileSelect(e.target.files)}
           />
         </div>
 
         {/* Drop zone + grid */}
         <div
-          className={`min-h-[320px] p-5 transition-colors ${dragOver ? 'bg-violet-50 dark:bg-violet-900/20' : 'bg-background'}`}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+          className={`relative min-h-[320px] p-5 transition-colors ${dragOver ? 'bg-violet-50 dark:bg-violet-900/20' : 'bg-background'}`}
+          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files) }}
+          onDrop={e => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files) }}
         >
           {dragOver && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -234,11 +425,12 @@ export function ClientGalleryModal() {
             </div>
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              {/* Sorted newest first — already sorted by fetchPhotos */}
               {photos.map((photo, idx) => (
                 <div
                   key={photo.id}
                   className="relative group aspect-square rounded-xl overflow-hidden bg-muted cursor-pointer"
-                  onClick={() => openLightbox(idx)}
+                  onClick={() => setLightboxIndex(idx)}
                 >
                   {photo.url ? (
                     <img
@@ -248,28 +440,47 @@ export function ClientGalleryModal() {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <Images className="w-8 h-8 opacity-30" />
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Images className="w-8 h-8 text-muted-foreground opacity-30" />
                     </div>
                   )}
-                  {/* Overlay on hover */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <ZoomIn className="w-5 h-5 text-white drop-shadow" />
                     <button
-                      onClick={(e) => handleDelete(photo.id, e)}
+                      onClick={e => handleDelete(photo.id, e)}
                       className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition"
                     >
                       <Trash2 className="w-3.5 h-3.5 text-white" />
                     </button>
                   </div>
-                  {/* Caption */}
-                  {photo.caption && (
+
+                  {/* Caption / visit badge */}
+                  {(photo.caption || photo.visit_label) && (
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
-                      <p className="text-white text-[10px] truncate">{photo.caption}</p>
+                      {photo.visit_label && (
+                        <p className="text-[9px] text-violet-300 truncate flex items-center gap-0.5">
+                          <Link2 className="w-2.5 h-2.5 shrink-0" />{photo.visit_label}
+                        </p>
+                      )}
+                      {photo.caption && (
+                        <p className="text-white text-[10px] truncate">{photo.caption}</p>
+                      )}
                     </div>
                   )}
+
+                  {/* Date badge top-left */}
+                  <div className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-[9px] bg-black/60 text-white rounded px-1.5 py-0.5">
+                      {new Date(photo.created_at).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', {
+                        day: '2-digit', month: '2-digit',
+                      })}
+                    </span>
+                  </div>
                 </div>
               ))}
+
               {/* Upload tile */}
               <div
                 className="aspect-square rounded-xl border-2 border-dashed border-muted hover:border-violet-400 hover:bg-violet-50/50 dark:hover:bg-violet-900/10 flex flex-col items-center justify-center cursor-pointer transition-all"
@@ -284,59 +495,69 @@ export function ClientGalleryModal() {
       </Modal>
 
       {/* Lightbox */}
-      {lightboxIndex !== null && photos[lightboxIndex]?.url && (
+      {currentPhoto?.url && (
         <div
-          className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
+          className="fixed inset-0 z-[9999] bg-black/92 flex items-center justify-center"
           onClick={closeLightbox}
         >
           <button
-            onClick={(e) => { e.stopPropagation(); closeLightbox() }}
+            onClick={e => { e.stopPropagation(); closeLightbox() }}
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
           >
             <X className="w-5 h-5" />
           </button>
 
-          {photos.length > 1 && (
-            <>
-              <button
-                onClick={(e) => { e.stopPropagation(); lightboxPrev() }}
-                className="absolute left-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); lightboxNext() }}
-                className="absolute right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
-            </>
-          )}
+          {photos.length > 1 && <>
+            <button
+              onClick={e => { e.stopPropagation(); lightboxPrev() }}
+              className="absolute left-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); lightboxNext() }}
+              className="absolute right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </>}
 
           <img
-            src={photos[lightboxIndex].url!}
-            alt={photos[lightboxIndex].file_name}
+            src={currentPhoto.url}
+            alt={currentPhoto.file_name}
             className="max-w-[90vw] max-h-[85vh] object-contain rounded-xl shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           />
 
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-            {photos[lightboxIndex].caption && (
-              <p className="text-white/80 text-sm bg-black/40 px-3 py-1 rounded-full">
-                {photos[lightboxIndex].caption}
+            {/* Visit reference */}
+            {currentPhoto.visit_label && (
+              <p className="text-violet-300 text-xs bg-black/50 px-3 py-1 rounded-full flex items-center gap-1.5">
+                <Link2 className="w-3 h-3" />{currentPhoto.visit_label}
               </p>
             )}
+            {/* Caption */}
+            {currentPhoto.caption && (
+              <p className="text-white/80 text-sm bg-black/40 px-3 py-1 rounded-full">
+                {currentPhoto.caption}
+              </p>
+            )}
+            {/* Date */}
+            <p className="text-white/40 text-xs">
+              {new Date(currentPhoto.created_at).toLocaleDateString(
+                isHe ? 'he-IL' : 'ru-RU',
+                { day: '2-digit', month: '2-digit', year: 'numeric' }
+              )}
+            </p>
             <button
-              onClick={(e) => handleDelete(photos[lightboxIndex!].id, e)}
+              onClick={e => handleDelete(currentPhoto.id, e)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/80 hover:bg-red-500 text-white text-xs font-medium transition"
             >
               <Trash2 className="w-3.5 h-3.5" />
               {isHe ? 'מחק' : 'Удалить'}
             </button>
             {photos.length > 1 && (
-              <p className="text-white/50 text-xs">
-                {lightboxIndex + 1} / {photos.length}
-              </p>
+              <p className="text-white/40 text-xs">{lightboxIndex! + 1} / {photos.length}</p>
             )}
           </div>
         </div>

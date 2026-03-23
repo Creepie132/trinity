@@ -14,7 +14,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('client_photos')
-      .select('id, storage_path, file_name, file_size, caption, created_at')
+      .select('id, storage_path, file_name, file_size, caption, visit_id, visit_label, created_at')
       .eq('org_id', orgId)
       .eq('client_id', id)
       .order('created_at', { ascending: false })
@@ -50,6 +50,8 @@ export async function POST(
     const formData = await request.formData()
     const file = formData.get('file') as File | null
     const caption = formData.get('caption') as string | null
+    const visitId = formData.get('visit_id') as string | null
+    const visitLabel = formData.get('visit_label') as string | null
 
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
@@ -83,9 +85,11 @@ export async function POST(
         file_name: file.name,
         file_size: file.size,
         caption: caption || null,
+        visit_id: visitId || null,
+        visit_label: visitLabel || null,
         created_by: user.id,
       })
-      .select('id, storage_path, file_name, file_size, caption, created_at')
+      .select('id, storage_path, file_name, file_size, caption, visit_id, visit_label, created_at')
       .single()
 
     if (dbError) throw dbError

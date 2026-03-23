@@ -329,7 +329,7 @@ function PipelineSkeleton() {
 export default function WorkerPipelinePage() {
   const { language, dir } = useLanguage()
   const isHe = language === 'he'
-  const { stages, loading, error, filterTag, setFilterTag, includeClosed, setIncludeClosed, load, moveDeal, stageName } = usePipeline()
+  const { stages, wonStageId, loading, error, filterTag, setFilterTag, includeClosed, setIncludeClosed, load, moveDeal, stageName } = usePipeline()
 
   const draggingDealId  = useRef<string | null>(null)
   const draggingStageId = useRef<string | null>(null)
@@ -382,14 +382,17 @@ export default function WorkerPipelinePage() {
   }, [incomeTarget])
 
   const handleWinFromDrawer = useCallback((dealId: string, dealTitle: string, clientName: string) => {
-    // Найти текущую стадию сделки
+    // wonStageId приходит из API — не зависит от того, показана ли is_won колонка
+    if (!wonStageId) {
+      setMoveError('Не удалось найти стадию "Успех". Обновите страницу.')
+      return
+    }
     const fromStage = stages.find(s => s.deals.some(d => d.id === dealId))
-    const wonStage  = stages.find(s => s.is_won)
-    if (!fromStage || !wonStage) return
-    moveDeal(dealId, fromStage.id, wonStage.id).then(r => { if (!r.ok) setMoveError(r.error ?? 'Error') })
-    setIncomeTarget({ dealId, fromStageId: fromStage.id, toStageId: wonStage.id, dealTitle, clientName })
+    const fromStageId = fromStage?.id ?? 'unknown'
+    moveDeal(dealId, fromStageId, wonStageId).then(r => { if (!r.ok) setMoveError(r.error ?? 'Error') })
+    setIncomeTarget({ dealId, fromStageId, toStageId: wonStageId, dealTitle, clientName })
     setSelectedDealId(null)
-  }, [stages, moveDeal])
+  }, [wonStageId, stages, moveDeal])
 
   const totalDeals  = stages.reduce((s, st) => s + st.deals_count, 0)
   const totalAmount = stages.reduce((s, st) => s + st.total_amount, 0)

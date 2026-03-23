@@ -36,9 +36,10 @@ export type PipelineStage = {
 
 export function usePipeline() {
   const { language } = useLanguage()
-  const [stages, setStages]     = useState<PipelineStage[]>([])
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState<string | null>(null)
+  const [stages, setStages]         = useState<PipelineStage[]>([])
+  const [wonStageId, setWonStageId] = useState<string | null>(null)
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState<string | null>(null)
   const [filterTag, setFilterTag]         = useState<string | null>(null)
   const [includeClosed, setIncludeClosed] = useState(false)
 
@@ -57,6 +58,7 @@ export function usePipeline() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Failed to load pipeline')
       setStages(json.stages)
+      if (json.won_stage_id) setWonStageId(json.won_stage_id)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
@@ -133,7 +135,7 @@ export function usePipeline() {
   }, [language])
 
   return {
-    stages, loading, error,
+    stages, wonStageId, loading, error,
     filterTag, setFilterTag,
     includeClosed, setIncludeClosed,
     load, moveDeal, stageName,

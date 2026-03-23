@@ -95,7 +95,10 @@ export async function GET(request: NextRequest) {
       ),
     }))
 
-    return NextResponse.json({ stages: pipeline })
+    return NextResponse.json({
+      stages: pipeline,
+      won_stage_id: (stages ?? []).find(s => s.is_won)?.id ?? null,
+    })
   } catch (err) {
     console.error('[GET /api/worker/pipeline]', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

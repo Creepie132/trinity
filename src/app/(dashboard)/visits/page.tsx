@@ -66,6 +66,109 @@ const DATE_FILTERS = ['today', 'week', 'month', 'all'] as const
 const STATUS_FILTERS = ['all', 'scheduled', 'completed', 'cancelled'] as const
 const pageSize = 30
 
+// ─── WorkerKpiStrip ──────────────────────────────────────────────────────────
+// Показывается только для воркеров (не owner, не admin)
+// Использует stats, уже вычисленные на странице
+
+interface WorkerKpiStripProps {
+  remainingToday: number
+  completed: number
+  revenue: number
+  cancelledCount: number
+  isHe: boolean
+}
+
+function WorkerKpiStrip({ remainingToday, completed, revenue, cancelledCount, isHe }: WorkerKpiStripProps) {
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS', maximumFractionDigits: 0 }).format(n)
+
+  const cards = [
+    {
+      label: isHe ? 'נותרו היום' : 'Осталось сегодня',
+      value: remainingToday,
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      ),
+      color: 'from-blue-500 to-indigo-500',
+      glow: 'shadow-blue-100/60',
+      textColor: 'text-blue-600',
+      bg: 'bg-blue-50',
+    },
+    {
+      label: isHe ? 'הושלמו' : 'Завершено',
+      value: completed,
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      ),
+      color: 'from-emerald-500 to-teal-500',
+      glow: 'shadow-emerald-100/60',
+      textColor: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+    },
+    {
+      label: isHe ? 'הכנסות' : 'Выручка',
+      value: fmt(revenue),
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+        </svg>
+      ),
+      color: 'from-amber-400 to-orange-500',
+      glow: 'shadow-amber-100/60',
+      textColor: 'text-amber-600',
+      bg: 'bg-amber-50',
+    },
+    {
+      label: isHe ? 'בוטלו (שבוע)' : 'Отмены за неделю',
+      value: cancelledCount,
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      ),
+      color: 'from-slate-400 to-slate-500',
+      glow: 'shadow-slate-100/60',
+      textColor: 'text-slate-500',
+      bg: 'bg-slate-50',
+    },
+  ]
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {cards.map((card) => (
+        <div
+          key={card.label}
+          className={`relative overflow-hidden rounded-2xl p-4 bg-white border border-gray-100
+                      shadow-md hover:shadow-lg ${card.glow} transition-all`}
+        >
+          <div className="flex items-start justify-between mb-3">
+            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${card.color}
+                            flex items-center justify-center text-white shadow-md shrink-0`}>
+              {card.icon}
+            </div>
+            {/* mini sparkline декор */}
+            <svg className="w-14 h-6 opacity-10" viewBox="0 0 56 24">
+              <polyline points="0,20 10,14 22,16 34,6 44,10 56,2"
+                fill="none" stroke="currentColor" strokeWidth="2"
+                className={card.textColor}/>
+            </svg>
+          </div>
+          <p className="text-xl font-black text-gray-900 tabular-nums leading-none">{card.value}</p>
+          <p className="text-xs text-gray-400 mt-1 font-medium">{card.label}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── component ──────────────────────────────────────────────────────────────
 
 export default function VisitsPage() {
@@ -73,9 +176,11 @@ export default function VisitsPage() {
   const features = useFeatures()
   const { t, language } = useLanguage()
   const meetingMode = useMeetingMode()
-  const { orgId: authOrgId } = useAuth()
+  const { orgId: authOrgId, role } = useAuth()
   const { activeOrgId } = useBranch()
   const orgId = activeOrgId || authOrgId
+  // WorkerKpiStrip показывается для воркеров и менеджеров — не для owner/admin
+  const isWorker = role !== null && role !== 'owner'
   const supabase = createSupabaseBrowserClient()
   const queryClient = useQueryClient()
   useRealtimeSync({ table: 'visits', orgId, queryKey: ['visits'] })
@@ -385,6 +490,17 @@ export default function VisitsPage() {
         </>
       )}
       <DemoLimitModal open={demoLimitOpen} onClose={() => setDemoLimitOpen(false)} section="visits" />
+
+      {/* ── Worker KPI Strip — только для не-owner ── */}
+      {isWorker && (
+        <WorkerKpiStrip
+          remainingToday={stats.remainingToday}
+          completed={stats.completed}
+          revenue={stats.revenue}
+          cancelledCount={stats.cancelledCount}
+          isHe={isHe}
+        />
+      )}
 
       {/* ── View toggle ── */}
       <div className="flex justify-center">

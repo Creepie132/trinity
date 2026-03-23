@@ -37,19 +37,40 @@ function ClientAvatar({ firstName, lastName, size = 'md' }: { firstName: string;
   )
 }
 
-// ── Индикатор активности ──────────────────────────────────────────────────────
+// ── Индикатор активности с recency bar ───────────────────────────────────────
 function ActivityBadge({ lastVisit, locale }: { lastVisit: string | null; locale: string }) {
   if (!lastVisit) return <span className="text-xs text-gray-300">—</span>
   const days = differenceInDays(new Date(), new Date(lastVisit))
-  if (days <= 30) return <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-    {locale === 'he' ? `לפני ${days}י` : `${days}д назад`}
-  </span>
-  if (days <= 90) return <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-    {locale === 'he' ? `לפני ${Math.floor(days/30)}ח` : `${Math.floor(days/30)}мес назад`}
-  </span>
-  return <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
-    {locale === 'he' ? 'לא פעיל' : 'Давно'}
-  </span>
+  // Recency bar: 0–7 дней = 100%, 30 дней = 50%, 90+ дней = 10%
+  const barPct = Math.max(10, Math.round(Math.max(0, 1 - days / 90) * 100))
+  const barColor =
+    days <= 14 ? 'bg-emerald-400' :
+    days <= 45 ? 'bg-amber-400' :
+    'bg-gray-300'
+
+  const label =
+    days <= 30
+      ? (locale === 'he' ? `לפני ${days}י` : `${days}д назад`)
+      : days <= 90
+      ? (locale === 'he' ? `לפני ${Math.floor(days / 30)}ח` : `${Math.floor(days / 30)}мес назад`)
+      : (locale === 'he' ? 'לא פעיל' : 'Давно')
+
+  const textColor =
+    days <= 30 ? 'text-emerald-600' :
+    days <= 90 ? 'text-amber-600' :
+    'text-gray-400'
+
+  return (
+    <div className="flex flex-col gap-1 min-w-[80px]">
+      <span className={`text-xs font-medium ${textColor}`}>{label}</span>
+      <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${barColor}`}
+          style={{ width: `${barPct}%` }}
+        />
+      </div>
+    </div>
+  )
 }
 
 export default function ClientsPage() {
@@ -196,7 +217,7 @@ export default function ClientsPage() {
       {/* Desktop — современный список */}
       <div className="hidden md:block">
         {/* Заголовок колонок */}
-        <div className="grid grid-cols-[2fr_1fr_1fr_80px_100px_80px] gap-4 px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-800">
+        <div className="grid grid-cols-[2fr_1fr_1fr_80px_100px_90px] gap-4 px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-800">
           <span>{t('clients.name')}</span>
           <span>{t('clients.phone')}</span>
           <span>{t('clients.lastVisit')}</span>
@@ -231,7 +252,7 @@ export default function ClientsPage() {
                 <div
                   key={client.id}
                   onClick={() => handleClientClick(client)}
-                  className={`grid grid-cols-[2fr_1fr_1fr_80px_100px_80px] gap-4 px-4 py-3 items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group ${
+                  className={`grid grid-cols-[2fr_1fr_1fr_80px_100px_90px] gap-4 px-4 py-2 items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group ${
                     draftClients.has(client.id) ? 'draft-glow' : ''
                   }`}
                 >
@@ -274,15 +295,26 @@ export default function ClientsPage() {
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                     <DraftSaleIndicator clientId={client.id} client={client} locale={language === 'he' ? 'he' : 'ru'} />
                     {client.phone && (
+                      <a
+                        href={`https://wa.me/${client.phone.replace(/\D/g, '').replace(/^0/, '972')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-gray-400 hover:text-emerald-600 transition-colors"
+                        title={language === 'he' ? 'שלח הודעה ב-WhatsApp' : 'WhatsApp'}
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {client.phone && (
                       <a href={`tel:${client.phone}`}
                         className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-emerald-600 transition-colors"
-                        title="Позвонить">
+                        title={language === 'he' ? 'התקשר' : 'Позвонить'}>
                         <Phone className="w-3.5 h-3.5" />
                       </a>
                     )}
                     <button onClick={() => handleClientClick(client)}
                       className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-blue-600 transition-colors"
-                      title="Открыть">
+                      title={language === 'he' ? 'פתח' : 'Открыть'}>
                       <Eye className="w-3.5 h-3.5" />
                     </button>
                   </div>

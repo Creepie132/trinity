@@ -82,23 +82,12 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
   const isOwner = role === 'owner'
   const [newLeadOpen, setNewLeadOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(false)
-  const [onboardingChecked, setOnboardingChecked] = useState(false)
+  // Онбординг управляется внутри WorkerOnboarding через собственный fetch
+  // Здесь только флаг: показывать оверлей или нет
+  const [showOnboarding, setShowOnboarding] = useState(!isOwner && !isSalesAgent)
 
-  // Проверяем нужен ли онбординг (только для manager, не для owner/sales_agent)
-  useEffect(() => {
-    if (authLoading || isOwner || isSalesAgent) { setOnboardingChecked(true); return }
-    fetch('/api/worker/onboarding')
-      .then(r => r.json())
-      .then(data => {
-        if (!data.completed) setShowOnboarding(true)
-        setOnboardingChecked(true)
-      })
-      .catch(() => setOnboardingChecked(true))
-  }, [authLoading, isOwner, isSalesAgent])
-
-  const handleOnboardingComplete = (lang: 'ru' | 'he') => {
-    setLanguage(lang)
+  const handleOnboardingComplete = (selectedLang: 'ru' | 'he') => {
+    setLanguage(selectedLang)
     setShowOnboarding(false)
   }
 
@@ -344,8 +333,8 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
         onCreated={() => setNewLeadOpen(false)}
       />
 
-      {/* Онбординг — показываем после проверки, только для менеджеров */}
-      {onboardingChecked && showOnboarding && (
+      {/* Онбординг — показываем сразу, внутри сам решает loading/lang/tour/profile/done */}
+      {showOnboarding && (
         <WorkerOnboarding onComplete={handleOnboardingComplete} />
       )}
     </div>

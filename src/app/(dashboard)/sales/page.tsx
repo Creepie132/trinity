@@ -189,6 +189,8 @@ export default function SalesPage() {
     accentColor: 'from-amber-500 to-orange-500',
   }
 
+  if (isDemo) return <DemoStub config={SALES_STUB} />
+
   const [statusFilter, setStatusFilter]   = useState('all')
   const [methodFilter, setMethodFilter]   = useState('all')
   const [search, setSearch]               = useState('')

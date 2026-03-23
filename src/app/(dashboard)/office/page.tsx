@@ -382,27 +382,32 @@ export default function OwnerOfficePage() {
   const [period, setPeriod] = useState<Period>('month')
   const [data, setData]     = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [tab, setTab]       = useState<TabKey>('overview')
 
   useEffect(() => {
     if (role && role !== 'owner') router.replace('/worker/dashboard')
   }, [role, router])
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (background = false) => {
+    if (background) setRefreshing(true)
+    else setLoading(true)
     try {
       const res = await fetch(`/api/owner/worker-stats?period=${period}`)
       if (res.ok) setData(await res.json())
       else console.error('API error', res.status)
     } catch(e) { console.error(e) }
-    finally { setLoading(false) }
+    finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
   }, [period])
 
   useEffect(() => { load() }, [load])
 
-  // Auto-refresh every 30s to keep online presence up-to-date
+  // Auto-refresh every 30s — background mode: does NOT wipe the UI
   useEffect(() => {
-    const interval = setInterval(() => { load() }, 30_000)
+    const interval = setInterval(() => { load(true) }, 30_000)
     return () => clearInterval(interval)
   }, [load])
 
@@ -422,6 +427,12 @@ export default function OwnerOfficePage() {
 
   return (
     <div className="min-h-screen bg-gray-50/80 p-4 md:p-6" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Background refresh indicator */}
+      {refreshing && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-indigo-100 overflow-hidden">
+          <div className="h-full bg-indigo-500 animate-pulse" style={{ width: '60%' }} />
+        </div>
+      )}
       {/* ── Header ── */}
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div className="flex items-center gap-4">
@@ -440,9 +451,9 @@ export default function OwnerOfficePage() {
                 }`}>{p.label}</button>
             ))}
           </div>
-          <button onClick={load} disabled={loading}
+          <button onClick={() => load(false)} disabled={loading || refreshing}
             className="w-9 h-9 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:border-indigo-300 transition-all disabled:opacity-40">
-            <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className={`w-4 h-4 ${(loading || refreshing) ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
           </button>

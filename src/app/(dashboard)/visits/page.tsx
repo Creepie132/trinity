@@ -90,7 +90,6 @@ export default function VisitsPage() {
   const [cancelledOpen, setCancelledOpen] = useState(false)
   const [serviceColors, setServiceColors] = useState<Record<string, string>>({})
   const [page, setPage] = useState(1)
-  const [allClients, setAllClients] = useState<any[]>([])
   const [newVisitNotify, setNewVisitNotify] = useState<any>(null)
   const [receiptVisit, setReceiptVisit] = useState<any>(null)
   const [createVisitPrefill, setCreateVisitPrefill] = useState<any>(null)
@@ -100,26 +99,15 @@ export default function VisitsPage() {
   const loc = language === 'he' ? 'he-IL' : 'ru-RU'
   const isHe = language === 'he'
 
-  useEffect(() => {
-    fetch('/api/clients')
-      .then((r) => r.json())
-      .then(setAllClients)
-      .catch(console.error)
-  }, [])
-
+  // PERF: клиент уже приходит из join visit.clients — отдельный fetch('/api/clients') не нужен
   function getClientName(visit: any): string {
-    if (visit.clients?.first_name || visit.clients?.last_name) {
-      return `${visit.clients.first_name || ''} ${visit.clients.last_name || ''}`.trim()
-    }
-    const client = allClients?.find((c: any) => c.id === visit.client_id)
-    if (client) return `${client.first_name || ''} ${client.last_name || ''}`.trim()
-    return ''
+    return `${visit.clients?.first_name || ''} ${visit.clients?.last_name || ''}`.trim()
   }
   function getClientPhone(visit: any): string {
-    return visit.clients?.phone || allClients.find((c: any) => c.id === visit.client_id)?.phone || ''
+    return visit.clients?.phone || ''
   }
   function getClientEmail(visit: any): string {
-    return visit.clients?.email || allClients.find((c: any) => c.id === visit.client_id)?.email || ''
+    return visit.clients?.email || ''
   }
   function getServiceName(visit: any): string {
     if (visit?.services) return isHe ? visit.services.name : (visit.services.name_ru || visit.services.name)
@@ -265,7 +253,10 @@ export default function VisitsPage() {
 
   const handleCompleteVisit = async (visit: Visit) => {
     if (!features.paymentsEnabled) { updateVisitStatus(visit.id, 'completed'); return }
-    const clientData = allClients?.find((c: any) => c.id === visit.client_id)
+    // Клиент уже в visit.clients (join в основном запросе)
+    const clientData = visit.clients
+      ? { id: visit.client_id, first_name: (visit.clients as any).first_name, last_name: (visit.clients as any).last_name, phone: (visit.clients as any).phone, email: (visit.clients as any).email }
+      : undefined
 
     // Always fetch fresh visit_services to avoid empty cart on first open (race condition)
     const { data: freshServices } = await supabase

@@ -6,6 +6,9 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
  * GET /api/clients/summary
  * Для обычных пользователей — все клиенты org.
  * Для sales agents (воркеров) — только assigned_to = user.id.
+ *
+ * PERF: visits и payments агрегируются через SQL RPC (GROUP BY в БД),
+ * а не тянутся полностью в Node и считаются в JS.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -66,28 +69,22 @@ export async function GET(req: NextRequest) {
     if (!clients?.length) return NextResponse.json({ data: [], count: 0 })
 
     const clientIds = clients.map(c => c.id)
-    const [{ data: visits }, { data: payments }] = await Promise.all([
-      service.from('visits')
-        .select('client_id, scheduled_at')
-        .in('client_id', clientIds),
-      service.from('payments')
-        .select('client_id, amount')
-        .in('client_id', clientIds)
-        .eq('status', 'completed'),
+
+    // ── PERF: агрегируем visits и payments одним SQL-запросом каждый ─────────
+    // GROUP BY в БД — не тянем тысячи строк в Node
+    const [visitsResult, paymentsResult] = await Promise.all([
+      service.rpc('aggregate_visits_for_clients', { client_ids: clientIds }),
+      service.rpc('aggregate_payments_for_clients', { client_ids: clientIds }),
     ])
 
     const visitMap: Record<string, { count: number; last: string | null }> = {}
     const payMap:   Record<string, number> = {}
 
-    for (const v of visits ?? []) {
-      if (!visitMap[v.client_id]) visitMap[v.client_id] = { count: 0, last: null }
-      visitMap[v.client_id].count++
-      if (!visitMap[v.client_id].last || v.scheduled_at > visitMap[v.client_id].last!) {
-        visitMap[v.client_id].last = v.scheduled_at
-      }
+    for (const row of (visitsResult.data ?? []) as Array<{ client_id: string; visit_count: number; last_visit: string | null }>) {
+      visitMap[row.client_id] = { count: Number(row.visit_count), last: row.last_visit }
     }
-    for (const p of payments ?? []) {
-      payMap[p.client_id] = (payMap[p.client_id] ?? 0) + (p.amount ?? 0)
+    for (const row of (paymentsResult.data ?? []) as Array<{ client_id: string; total_paid: number }>) {
+      payMap[row.client_id] = Number(row.total_paid)
     }
 
     const data = clients.map(c => ({

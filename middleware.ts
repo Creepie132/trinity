@@ -113,6 +113,15 @@ export async function middleware(req: NextRequest) {
   // Продажники не привязаны к org — пропускаем если есть сессия
   if (pathname.startsWith('/worker')) return response
 
+  // ── 6c. /inbox — заблокирован для sales agent ────────────────────────────
+  // is_sales_agent хранится в app_metadata (устанавливается при создании агента)
+  if (pathname.startsWith('/inbox')) {
+    const isSalesAgent = session.user.app_metadata?.is_sales_agent === true
+    if (isSalesAgent) {
+      return NextResponse.redirect(new URL('/worker/pipeline', req.url))
+    }
+  }
+
   // ── 7. Subscription / access check — page routes only ────────────────────
   try {
     // is_admin from JWT app_metadata — NO DB query, reads from token

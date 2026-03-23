@@ -72,7 +72,7 @@ const WORKER_NAV = [
 
 function WorkerShell({ children }: { children: React.ReactNode }) {
   const { language } = useLanguage()
-  const { role, isSalesAgent } = useAuth()
+  const { role, isSalesAgent, isLoading: authLoading } = useAuth()
   const pathname = usePathname()
   const isHe = language === 'he'
   const isOwner = role === 'owner'
@@ -80,11 +80,15 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
 
   // worker видит только свои пункты, owner не нужен Кабинет в workerShell
   // (owner попадает сюда только если намеренно перешёл в /worker/dashboard)
-  const navItems = WORKER_NAV.filter(item =>
-    isOwner ? !('workerOnly' in item && item.workerOnly) : true
-  ).filter(item =>
-    isSalesAgent ? !('hiddenForSalesAgent' in item && item.hiddenForSalesAgent) : true
-  )
+  // Пока auth не загрузился — скрываем пункты требующие проверки роли,
+  // чтобы не мигали запрещённые разделы (WhatsApp для sales agent)
+  const navItems = authLoading
+    ? WORKER_NAV.filter(item => !('hiddenForSalesAgent' in item && item.hiddenForSalesAgent))
+    : WORKER_NAV.filter(item =>
+        isOwner ? !('workerOnly' in item && item.workerOnly) : true
+      ).filter(item =>
+        isSalesAgent ? !('hiddenForSalesAgent' in item && item.hiddenForSalesAgent) : true
+      )
 
   const dir = language === 'he' ? 'rtl' : 'ltr'
 

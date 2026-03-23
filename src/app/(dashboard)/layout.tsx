@@ -28,6 +28,7 @@ export default async function DashboardLayout({
 
   if (adminRow?.is_sales_agent) {
     // Продажник — пропускаем org-проверку, рендерим layout без sidebar
+    // Блокировка /inbox происходит в middleware.ts
     return (
       <HydrationBoundary state={dehydrate(new QueryClient())}>
         <DashboardShell workerMode>

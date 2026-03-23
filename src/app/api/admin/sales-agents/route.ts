@@ -122,6 +122,11 @@ export async function POST(request: NextRequest) {
       { onConflict: 'user_id' }
     )
 
+    // Прописываем в app_metadata — middleware читает флаг из JWT без DB-запроса
+    await supabase.auth.admin.updateUserById(existingUser.id, {
+      app_metadata: { is_sales_agent: true },
+    })
+
     // Generate magic link WITHOUT sending via Supabase SMTP
     const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
@@ -175,6 +180,11 @@ export async function POST(request: NextRequest) {
     },
     { onConflict: 'user_id' }
   )
+
+  // Прописываем в app_metadata — middleware читает флаг из JWT без DB-запроса
+  await supabase.auth.admin.updateUserById(userId, {
+    app_metadata: { is_sales_agent: true },
+  })
 
   // Send invite email via Resend (not Supabase SMTP)
   try {
@@ -232,6 +242,11 @@ export async function DELETE(request: NextRequest) {
     .eq('user_id', user_id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Снимаем и из app_metadata
+  await supabase.auth.admin.updateUserById(user_id, {
+    app_metadata: { is_sales_agent: false },
+  })
 
   void supabase.from('audit_log').insert({
     org_id: null,

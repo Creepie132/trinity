@@ -52,6 +52,7 @@ const WORKER_NAV = [
     href: '/inbox', exact: false,
     label_he: 'תקשורת WA', label_ru: 'WhatsApp',
     hiddenForSalesAgent: true,
+    hiddenForManager: true,
     icon: (<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>),
   },
   {
@@ -80,6 +81,7 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const isHe = language === 'he'
   const isOwner = role === 'owner'
+  const isManager = role === 'manager'
   const [newLeadOpen, setNewLeadOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   // Онбординг управляется внутри WorkerOnboarding через собственный fetch
@@ -107,6 +109,8 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
         isOwner ? !('workerOnly' in item && item.workerOnly) : true
       ).filter(item =>
         isSalesAgent ? !('hiddenForSalesAgent' in item && item.hiddenForSalesAgent) : true
+      ).filter(item =>
+        isManager ? !('hiddenForManager' in item && (item as any).hiddenForManager) : true
       )
 
   const dir = language === 'he' ? 'rtl' : 'ltr'

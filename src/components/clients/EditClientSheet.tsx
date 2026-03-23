@@ -3,9 +3,8 @@
 import { useState, useCallback, memo } from 'react'
 import Modal from '@/components/ui/Modal'
 import { useQueryClient } from '@tanstack/react-query'
-import { Save, Upload, FileText, Paintbrush } from 'lucide-react'
+import { Save, FileText, Paintbrush } from 'lucide-react'
 import { toast } from 'sonner'
-import Image from 'next/image'
 
 interface EditClientSheetProps {
   client: any
@@ -59,10 +58,12 @@ const Field = memo(({ field, label, required, type = 'text', dir, multiline, val
 
   return (
     <div>
-      <label className={['text-xs mb-1 block font-medium transition-colors', error ? 'text-red-500' : 'text-muted-foreground'].join(' ')}>
-        {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
-      </label>
+      {label && (
+        <label className={['text-xs mb-1 block font-medium transition-colors', error ? 'text-red-500' : 'text-muted-foreground'].join(' ')}>
+          {label}
+          {required && <span className="text-red-500 ml-0.5">*</span>}
+        </label>
+      )}
       {multiline ? (
         <textarea value={value} onChange={e => onChange(field, e.target.value)}
           className={`${base} min-h-[80px] resize-none`} rows={3} />
@@ -95,8 +96,6 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
   const [hasPaintCode, setHasPaintCode] = useState(!!(client?.paint_code))
   const [errors, setErrors]   = useState<Record<string, string>>({})
   const [shaking, setShaking] = useState<Record<string, boolean>>({})
-  const [avatarFile, setAvatarFile]       = useState<File | null>(null)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(client?.avatar_url || null)
   const [saving, setSaving] = useState(false)
 
   const l = locale === 'he' ? {
@@ -124,11 +123,6 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     setErrors(prev => { const e = { ...prev }; delete e[field]; return e })
   }, [])
 
-  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) { setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file)) }
-  }
-
   async function handleSave() {
     const validationErrors = validate(form, locale)
     if (Object.keys(validationErrors).length > 0) {
@@ -139,18 +133,10 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     }
     setSaving(true)
     try {
-      let avatar_url = client?.avatar_url
-      if (avatarFile) {
-        const fd = new FormData()
-        fd.append('file', avatarFile)
-        fd.append('client_id', client.id)
-        const ur = await fetch('/api/clients/avatar', { method: 'POST', body: fd })
-        if (ur.ok) { const d = await ur.json(); avatar_url = d.url }
-      }
       const res  = await fetch(`/api/clients/${client.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, paint_code: hasPaintCode ? form.paint_code : null, avatar_url }),
+        body: JSON.stringify({ ...form, paint_code: hasPaintCode ? form.paint_code : null }),
       })
       const data = await res.json()
       if (res.ok) {
@@ -204,19 +190,11 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
         </div>
       }
     >
-      {/* Avatar */}
+      {/* Avatar — initials only, no upload (avatar_url not in DB) */}
       <div className="flex flex-col items-center mb-6">
-        <label className="relative cursor-pointer group">
-          {avatarPreview
-            ? <Image src={avatarPreview} alt="" width={80} height={80} className="rounded-full object-cover" />
-            : <div className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl`}>{initials || '?'}</div>
-          }
-          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-            <Upload size={20} className="text-white" />
-          </div>
-          <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
-        </label>
-        <p className="text-xs text-muted-foreground mt-2">{l.photo}</p>
+        <div className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl`}>
+          {initials || '?'}
+        </div>
       </div>
 
       {/* Fields — all props passed explicitly, no nested component definitions */}

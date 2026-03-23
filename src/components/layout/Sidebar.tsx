@@ -80,7 +80,8 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const locale = language === 'he' ? 'he' : 'ru'
 
   // Кабинет руководителя — только owner с активными workers
-  const showOffice = role === 'owner' && hasWorkers === true
+  // hasWorkers undefined = loading → показываем кабинет (не прячем во время загрузки)
+  const showOffice = role === 'owner' && hasWorkers !== false
 
   const onLogout = async () => {
     await signOut()
@@ -115,7 +116,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
       <div className="p-6 pb-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Amber Solutions" className="w-12 h-12 object-contain rounded-xl" />
+            <img src="/trinity-logo.png" alt="Trinity" className="w-12 h-12 object-contain rounded-xl" />
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Trinity</h1>
               <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Amber Solutions Systems</p>

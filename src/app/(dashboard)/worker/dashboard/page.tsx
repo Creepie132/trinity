@@ -1,5 +1,4 @@
 'use client'
-'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
@@ -106,8 +105,9 @@ export default function WorkerDashboardPage() {
   const [quickNoteOpen, setQuickNoteOpen] = useState(false)
   const [waTemplateOpen, setWaTemplateOpen] = useState(false)
 
-  const fetchDashboard = useCallback(async () => {
-    setLoading(true); setError(null)
+  const fetchDashboard = useCallback(async (showLoader = false) => {
+    if (showLoader) setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/api/worker/dashboard', { cache: 'no-store' })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -117,8 +117,8 @@ export default function WorkerDashboardPage() {
   }, [])
 
   useEffect(() => {
-    fetchDashboard()
-    const id = setInterval(fetchDashboard, 2 * 60 * 1000)
+    fetchDashboard(true)
+    const id = setInterval(() => fetchDashboard(false), 2 * 60 * 1000)
     return () => clearInterval(id)
   }, [fetchDashboard])
 
@@ -135,7 +135,7 @@ export default function WorkerDashboardPage() {
           <h1 className="text-xl font-black text-gray-900">{isHe ? '🏋️ לוח עבודה' : '🏋️ Рабочий стол'}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{greeting}</p>
         </div>
-        <button onClick={fetchDashboard} disabled={loading}
+        <button onClick={() => fetchDashboard(false)} disabled={loading}
           className="p-2.5 rounded-xl bg-white/70 border border-white/50 text-gray-400 hover:text-gray-600 shadow-sm transition-all disabled:opacity-40">
           <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -184,16 +184,16 @@ export default function WorkerDashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <GlassWidget title={isHe ? '🔴 אזור אדום' : '🔴 Красная зона'}
           action={data && data.red_zone_deals.length > 0 ? <span className="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{data.red_zone_deals.length}</span> : null}>
-          {!data ? <div className="space-y-2 animate-pulse">{[1,2].map(i=><div key={i} className="h-14 bg-gray-100 rounded-xl"/>)}</div>
-            : !data.is_working_hours ? <p className="text-sm text-gray-400 py-3 text-center">💤 {isHe ? 'מחוץ לשעות עבודה' : 'Нерабочее время'}</p>
+          {loading && !data ? <div className="space-y-2 animate-pulse">{[1,2].map(i=><div key={i} className="h-14 bg-gray-100 rounded-xl"/>)}</div>
+            : !data || !data.is_working_hours ? <p className="text-sm text-gray-400 py-3 text-center">💤 {isHe ? 'מחוץ לשעות עבודה' : 'Нерабочее время'}</p>
             : data.red_zone_deals.length === 0 ? <p className="text-sm text-emerald-600 py-3 text-center font-medium">✅ {isHe ? 'הכל בסדר!' : 'Всё под контролем!'}</p>
             : <div className="space-y-2">{data.red_zone_deals.map(d=><MiniDealCard key={d.id} deal={d} lang={language}/>)}</div>}
         </GlassWidget>
 
         <GlassWidget title={isHe ? '🔥 משימות דחופות' : '🔥 Срочные задачи'}
           action={data ? <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${data.burning_tasks.length > 0 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-400'}`}>{data.burning_tasks.length}</span> : null}>
-          {!data ? <div className="space-y-2 animate-pulse">{[1,2,3].map(i=><div key={i} className="h-8 bg-gray-100 rounded-lg"/>)}</div>
-            : data.burning_tasks.length === 0 ? <p className="text-sm text-gray-400 py-3 text-center">{isHe ? 'אין משימות 🎉' : 'Нет задач 🎉'}</p>
+          {loading && !data ? <div className="space-y-2 animate-pulse">{[1,2,3].map(i=><div key={i} className="h-8 bg-gray-100 rounded-lg"/>)}</div>
+            : !data || data.burning_tasks.length === 0 ? <p className="text-sm text-gray-400 py-3 text-center">{isHe ? 'אין משימות 🎉' : 'Нет задач 🎉'}</p>
             : <ul className="space-y-1.5">{data.burning_tasks.map(t=>(
               <li key={t.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-white/50 border border-white/40">
                 <span className={`w-2 h-2 rounded-full shrink-0 ${t.urgency === 'overdue' ? 'bg-red-500' : 'bg-amber-400'}`}/>
@@ -217,7 +217,7 @@ export default function WorkerDashboardPage() {
       {/* KPI + Funnel + Commission */}
       <div className="grid gap-4 lg:grid-cols-3">
         <GlassWidget title={isHe ? '📊 ביצועים חודשיים' : '📊 Выполнение плана'}>
-          {!data ? <div className="space-y-2 animate-pulse"><div className="h-6 bg-gray-100 rounded w-1/2"/><div className="h-2 bg-gray-100 rounded-full"/></div>
+          {loading && !data ? <div className="space-y-2 animate-pulse"><div className="h-6 bg-gray-100 rounded w-1/2"/><div className="h-2 bg-gray-100 rounded-full"/></div>
             : <div className="space-y-2">
               <div className="flex items-baseline justify-between">
                 <span className="text-xl font-black text-gray-900">{fmt(data.kpi.amount, data.kpi.currency)}</span>

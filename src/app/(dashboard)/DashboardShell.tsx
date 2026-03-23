@@ -127,11 +127,9 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div className="px-5 py-5 border-b border-gray-100/80">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#1a237e] to-[#3949ab] shadow-lg flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none">
-                <polygon points="12,2 22,20 2,20" fill="#C8922A" opacity="0.95"/>
-                <polygon points="12,7 18,18 6,18" fill="white" opacity="0.2"/>
-              </svg>
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#1a237e] to-[#3949ab] shadow-lg flex items-center justify-center shrink-0 overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/trinity-logo.png" alt="Trinity" className="w-8 h-8 object-contain" />
             </div>
             <div>
               <p className="font-bold text-gray-900 text-sm">Trinity CRM</p>
@@ -213,10 +211,9 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
 
         {/* Logo center */}
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#1a237e] to-[#3949ab] flex items-center justify-center shadow-md">
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none">
-              <polygon points="12,2 22,20 2,20" fill="#C8922A" opacity="0.95"/>
-            </svg>
+          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#1a237e] to-[#3949ab] flex items-center justify-center shadow-md overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/trinity-logo.png" alt="Trinity" className="w-5 h-5 object-contain" />
           </div>
           <span className="text-sm font-bold text-gray-900">Trinity CRM</span>
         </div>
@@ -248,10 +245,9 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
         {/* Drawer header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#1a237e] to-[#3949ab] shadow-md flex items-center justify-center">
-              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
-                <polygon points="12,2 22,20 2,20" fill="#C8922A" opacity="0.95"/>
-              </svg>
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#1a237e] to-[#3949ab] shadow-md flex items-center justify-center overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/trinity-logo.png" alt="Trinity" className="w-7 h-7 object-contain" />
             </div>
             <div>
               <p className="font-bold text-gray-900 text-sm">Trinity CRM</p>

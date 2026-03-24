@@ -339,7 +339,13 @@ export default function PaymentsPage() {
         onClose={() => setDrawerOpen(false)}
         locale={locale}
         isOwner={!!isAdmin}
+        isSuperAdmin={!!isAdmin}
         onRefunded={handlePaymentSuccess}
+        onDeleted={() => {
+          setDrawerOpen(false)
+          setSelectedPayment(null)
+          handlePaymentSuccess()
+        }}
       />
 
       <style>{`

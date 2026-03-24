@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
+import { AdminDeletePaymentButton } from './AdminDeletePaymentButton'
 
 interface PaymentDetailsDrawerProps {
   payment: any | null
@@ -18,6 +19,8 @@ interface PaymentDetailsDrawerProps {
   locale: 'he' | 'ru'
   isOwner: boolean
   onRefunded?: () => void
+  isSuperAdmin?: boolean
+  onDeleted?: () => void
 }
 
 const METHOD_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: string; border: string; gradient: string }> = {
@@ -42,7 +45,7 @@ function getInitials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')
 }
 
-export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner, onRefunded }: PaymentDetailsDrawerProps) {
+export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner, onRefunded, isSuperAdmin, onDeleted }: PaymentDetailsDrawerProps) {
   const [refunding, setRefunding]    = useState(false)
   const [sendingReceipt, setSending] = useState(false)
   const [downloadingPdf, setDownloading] = useState(false)
@@ -178,6 +181,15 @@ export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner
           {refunding ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <RotateCcw size={13} />}
           {l.refund}
         </button>
+      )}
+      {isSuperAdmin && (
+        <div style={{ marginBottom: 5 }}>
+          <AdminDeletePaymentButton
+            paymentId={payment.id}
+            variant="sidebar"
+            onDeleted={() => { onDeleted?.(); onClose() }}
+          />
+        </div>
       )}
       <button onClick={onClose}
         style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer', marginTop: 2 }}>

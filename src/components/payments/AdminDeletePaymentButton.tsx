@@ -10,9 +10,11 @@ import { useQueryClient } from '@tanstack/react-query'
 
 interface AdminDeletePaymentButtonProps {
   paymentId: string
+  onDeleted?: () => void
+  variant?: 'icon' | 'sidebar'
 }
 
-export function AdminDeletePaymentButton({ paymentId }: AdminDeletePaymentButtonProps) {
+export function AdminDeletePaymentButton({ paymentId, onDeleted, variant = 'icon' }: AdminDeletePaymentButtonProps) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -41,6 +43,7 @@ export function AdminDeletePaymentButton({ paymentId }: AdminDeletePaymentButton
       setPassword('')
       // Обновляем список платежей
       queryClient.invalidateQueries({ queryKey: ['payments'] })
+      onDeleted?.()
     } catch {
       toast.error('Ошибка соединения')
     } finally {
@@ -50,15 +53,26 @@ export function AdminDeletePaymentButton({ paymentId }: AdminDeletePaymentButton
 
   return (
     <>
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={(e) => { e.stopPropagation(); setOpen(true) }}
-        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-        title="Удалить платёж (только для администратора)"
-      >
-        <Trash2 className="w-4 h-4" />
-      </Button>
+      {variant === 'sidebar' ? (
+        <button
+          onClick={(e) => { e.stopPropagation(); setOpen(true) }}
+          style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.1)', color: 'rgba(239,68,68,0.8)', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%' }}
+          title="Удалить платёж"
+        >
+          <Trash2 size={13} />
+          Удалить платёж
+        </button>
+      ) : (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={(e) => { e.stopPropagation(); setOpen(true) }}
+          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+          title="Удалить платёж (только для администратора)"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setPassword('') }}>
         <DialogContent className="max-w-sm">

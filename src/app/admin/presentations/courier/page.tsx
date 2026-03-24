@@ -28,7 +28,6 @@ const DAILY_GOAL = 20
 const STATUS_COLOR: Record<string, string> = { active: '#10b981', idle: '#3b82f6', break: '#f59e0b' }
 const STATUS_LABEL: Record<string, string> = { active: 'בדרך 🛵', idle: 'פנוי', break: 'הפסקה ☕' }
 
-// ─── Animated counter ─────────────────────────────────────────────────────────
 function CountUp({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) {
   const [display, setDisplay] = useState(value)
   const prev = useRef(value)
@@ -46,7 +45,6 @@ function CountUp({ value, prefix = '', suffix = '' }: { value: number; prefix?: 
   return <>{prefix}{display}{suffix}</>
 }
 
-// ─── Live timer ───────────────────────────────────────────────────────────────
 function LiveTimer({ startedAt }: { startedAt: number }) {
   const [elapsed, setElapsed] = useState(Math.floor((Date.now() - startedAt) / 1000))
   useEffect(() => {
@@ -62,7 +60,6 @@ function LiveTimer({ startedAt }: { startedAt: number }) {
   )
 }
 
-// ─── Sparkline ────────────────────────────────────────────────────────────────
 function Sparkline({ data, color }: { data: number[]; color: string }) {
   const max = Math.max(...data), min = Math.min(...data), range = max - min || 1
   const W = 72, H = 24
@@ -82,20 +79,18 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
         </linearGradient>
       </defs>
       <polygon points={`0,${H} ${pts} ${W},${H}`} fill={`url(#grad-${color.replace('#','')})`}/>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2"
-        strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       <circle cx={lx} cy={ly} r="3.5" fill={color} stroke="white" strokeWidth="1.5"/>
     </svg>
   )
 }
 
-// ─── Payment modal ────────────────────────────────────────────────────────────
 function PaymentModal({ courier, onClose }: { courier: Courier; onClose: () => void }) {
   const [done, setDone] = useState(false)
   const amount = courier.earn
   if (done) return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl p-8 text-center shadow-2xl animate-bounce-in max-w-xs w-full mx-4">
+      <div className="bg-white rounded-3xl p-8 text-center shadow-2xl max-w-xs w-full mx-4">
         <div className="text-6xl mb-3">✅</div>
         <div className="text-xl font-black text-gray-900">תשלום התקבל!</div>
         <div className="text-gray-500 mt-1 text-sm">₪{amount} שולם ל{courier.name}</div>
@@ -134,7 +129,6 @@ function PaymentModal({ courier, onClose }: { courier: Courier; onClose: () => v
   )
 }
 
-// ─── Settings modal ───────────────────────────────────────────────────────────
 function SettingsModal({ couriers, onSave, onClose }: {
   couriers: Courier[]; onSave: (r: Record<number, number>) => void; onClose: () => void
 }) {
@@ -156,7 +150,8 @@ function SettingsModal({ couriers, onSave, onClose }: {
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-400 text-sm font-bold">₪</span>
-                <input type="number" value={vals[c.id] ?? 20} onChange={e => setVals(v => ({ ...v, [c.id]: Number(e.target.value) }))}
+                <input type="number" value={vals[c.id] ?? 20}
+                  onChange={e => setVals(v => ({ ...v, [c.id]: Number(e.target.value) }))}
                   className="w-16 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-center font-bold text-sm bg-white dark:bg-slate-600 dark:text-white"/>
               </div>
             </div>
@@ -171,7 +166,6 @@ function SettingsModal({ couriers, onSave, onClose }: {
   )
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function CourierDemoPage() {
   const { language } = useLanguage()
   const [couriers, setCouriers] = useState<Courier[]>(INITIAL_COURIERS)
@@ -221,7 +215,7 @@ export default function CourierDemoPage() {
       {showSettings && <SettingsModal couriers={couriers} onSave={handleSaveRates} onClose={() => setShowSettings(false)} />}
       {payFor && <PaymentModal courier={payFor} onClose={() => setPayFor(null)} />}
 
-      {/* ── Breadcrumb + actions ── */}
+      {/* Breadcrumb + actions */}
       <div className="flex items-center gap-3 flex-wrap">
         <Link href="/admin/presentations" className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 transition-colors">
           <ChevronLeft className="w-4 h-4 rotate-180"/>מצגות
@@ -240,7 +234,7 @@ export default function CourierDemoPage() {
         </div>
       </div>
 
-      {/* ── Demo banner ── */}
+      {/* Demo banner */}
       <div className="flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3">
         <span className="text-lg">🎯</span>
         <span className="text-amber-700 dark:text-amber-400 text-sm font-medium">מצב דמו — הנתונים מדומים לצורך הצגה ללקוח</span>
@@ -249,45 +243,44 @@ export default function CourierDemoPage() {
         </div>
       </div>
 
-      {/* ── KPI cards ── */}
+      {/* KPI cards with shimmer */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'פעילים', value: activeCount, suffix: `/${couriers.length}`, icon: '🛵', from: 'from-emerald-500', to: 'to-teal-600', shadow: 'shadow-emerald-200' },
           { label: 'הזמנות היום', value: totalOrders, icon: '📦', from: 'from-blue-500', to: 'to-indigo-600', shadow: 'shadow-blue-200' },
-          { label: 'זמן ממוצע', value: avgTime, suffix: " דק'", icon: '⏱', from: 'from-amber-500', to: 'to-orange-500', shadow: 'shadow-amber-200' },
+          { label: "זמן ממוצע", value: avgTime, suffix: " דק'", icon: '⏱', from: 'from-amber-500', to: 'to-orange-500', shadow: 'shadow-amber-200' },
           { label: 'שכר לשלם', value: totalEarn, prefix: '₪', icon: '💰', from: 'from-violet-500', to: 'to-purple-600', shadow: 'shadow-violet-200' },
         ].map((s, i) => (
           <div key={i}
-            className={`relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br ${s.from} ${s.to} text-white shadow-lg ${s.shadow} transition-all duration-300 hover:-translate-y-1 hover:shadow-xl`}
-            style={{ animationDelay: `${i * 80}ms`, opacity: mounted ? 1 : 0, transform: mounted ? 'none' : 'translateY(12px)', transition: 'opacity 0.4s, transform 0.4s' }}>
+            className={`relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br ${s.from} ${s.to} text-white shadow-lg ${s.shadow} transition-all duration-300 hover:-translate-y-1 hover:shadow-xl cursor-default`}
+            style={{ opacity: mounted ? 1 : 0, transform: mounted ? 'none' : 'translateY(12px)', transition: `opacity 0.4s ${i*80}ms, transform 0.4s ${i*80}ms, box-shadow 0.2s` }}>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_3s_ease-in-out_infinite]" style={{ animationDelay: `${i * 0.6}s` }}/>
             <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-white/10 blur-2xl"/>
             <div className="text-2xl mb-2">{s.icon}</div>
-            <div className="text-2xl font-black tabular-nums">
-              <CountUp value={s.value} prefix={s.prefix} suffix={s.suffix}/>
-            </div>
+            <div className="text-2xl font-black tabular-nums"><CountUp value={s.value} prefix={s.prefix ?? ''} suffix={s.suffix ?? ''}/></div>
             <div className="text-xs text-white/70 mt-0.5 font-medium">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* ── Goal progress + Top courier ── */}
+      {/* Goal + Top courier */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {/* Daily goal */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-slate-700">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-gray-700 dark:text-gray-200">יעד יומי — {DAILY_GOAL * couriers.length} הזמנות</span>
             <span className="text-sm font-black text-indigo-600">{goalPct}%</span>
           </div>
           <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-700"
-              style={{ width: `${goalPct}%` }}/>
+            <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-700 relative overflow-hidden"
+              style={{ width: `${goalPct}%` }}>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_2s_ease-in-out_infinite]"/>
+            </div>
           </div>
           <div className="flex justify-between mt-2 text-xs text-gray-400">
             <span>{totalOrders} הושלמו</span>
             <span>{Math.max(0, DAILY_GOAL * couriers.length - totalOrders)} נותרו</span>
           </div>
         </div>
-        {/* Top courier */}
         <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20 rounded-2xl p-4 border border-amber-100 dark:border-amber-800">
           <div className="flex items-center gap-2 mb-2">
             <Trophy className="w-4 h-4 text-amber-500"/>
@@ -307,19 +300,16 @@ export default function CourierDemoPage() {
         </div>
       </div>
 
-      {/* ── Courier cards ── */}
+      {/* Courier cards */}
       <div className="space-y-3">
         {couriers.map((c, idx) => {
           const isOpen = expanded === c.id
           return (
             <div key={c.id}
               className="rounded-2xl bg-white dark:bg-slate-800 shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden transition-all duration-300 hover:shadow-md"
-              style={{ opacity: mounted ? 1 : 0, transform: mounted ? 'none' : 'translateY(16px)', transition: `opacity 0.5s ${idx * 80}ms, transform 0.5s ${idx * 80}ms, box-shadow 0.2s` }}>
-
-              {/* Card header — always visible */}
+              style={{ opacity: mounted ? 1 : 0, transform: mounted ? 'none' : 'translateY(16px)', transition: `opacity 0.5s ${idx*80}ms, transform 0.5s ${idx*80}ms, box-shadow 0.2s` }}>
               <div className="p-4 cursor-pointer" onClick={() => setExpanded(isOpen ? null : c.id)}>
                 <div className="flex items-center gap-3">
-                  {/* Avatar with status ring */}
                   <div className="relative flex-shrink-0">
                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-md"
                       style={{ background: `linear-gradient(135deg, #1e3a8a, ${STATUS_COLOR[c.status]})` }}>
@@ -328,25 +318,19 @@ export default function CourierDemoPage() {
                     <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 ${c.status === 'active' ? 'animate-pulse' : ''}`}
                       style={{ background: STATUS_COLOR[c.status] }}/>
                   </div>
-
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-gray-900 dark:text-gray-100 text-base">{c.name}</div>
-                    <div className="text-xs font-semibold mt-0.5" style={{ color: STATUS_COLOR[c.status] }}>
-                      {STATUS_LABEL[c.status]}
-                    </div>
+                    <div className="text-xs font-semibold mt-0.5" style={{ color: STATUS_COLOR[c.status] }}>{STATUS_LABEL[c.status]}</div>
                   </div>
-
                   <Sparkline data={c.history} color={STATUS_COLOR[c.status]}/>
                 </div>
-
-                {/* Stats row */}
                 <div className="grid grid-cols-3 gap-2 mt-3">
                   <div className="bg-gray-50 dark:bg-slate-700/60 rounded-xl p-2.5 text-center">
                     <div className="font-black text-xl text-gray-900 dark:text-gray-100 tabular-nums">{c.orders}</div>
                     <div className="text-xs text-gray-400 mt-0.5">הזמנות</div>
                   </div>
                   <div className="bg-gray-50 dark:bg-slate-700/60 rounded-xl p-2.5 text-center">
-                    <div className="font-black text-xl text-gray-900 dark:text-gray-100">{c.avgTime}'</div>
+                    <div className="font-black text-xl text-gray-900 dark:text-gray-100">{c.avgTime}&apos;</div>
                     <div className="text-xs text-gray-400 mt-0.5">זמן ממוצע</div>
                   </div>
                   <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-xl p-2.5 text-center">
@@ -355,8 +339,6 @@ export default function CourierDemoPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Expanded section — active order + pay button */}
               {isOpen && (
                 <div className="border-t border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/30 p-4 space-y-3">
                   {c.order ? (
@@ -372,8 +354,7 @@ export default function CourierDemoPage() {
                   ) : (
                     <div className="text-center text-sm text-gray-400 py-2">אין הזמנה פעילה כרגע</div>
                   )}
-                  <button
-                    onClick={() => setPayFor(c)}
+                  <button onClick={() => setPayFor(c)}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold text-sm hover:opacity-90 active:scale-[0.98] transition-all shadow-md shadow-emerald-200/60">
                     <CreditCard className="w-4 h-4"/>קבל תשלום ₪{c.earn}
                   </button>
@@ -384,7 +365,34 @@ export default function CourierDemoPage() {
         })}
       </div>
 
-      {/* ── Salary summary ── */}
+      {/* Worker view banner */}
+      <Link href="/admin/presentations/courier/worker-view"
+        className="group block relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 p-5 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-slate-600">
+        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"/>
+        <div className="flex items-center gap-4">
+          <div className="relative flex-shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <span className="text-2xl">🛵</span>
+            </div>
+            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-slate-800 animate-pulse"/>
+          </div>
+          <div className="flex-1">
+            <div className="text-white font-black text-base">תצוגת קורייר — מה הוא רואה?</div>
+            <div className="text-slate-400 text-sm mt-0.5">לחץ לצפייה בממשק הקורייר בשטח בזמן אמת</div>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-semibold border border-emerald-500/30">● Live demo</span>
+              <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-semibold border border-blue-500/30">📱 Mobile UI</span>
+            </div>
+          </div>
+          <div className="flex-shrink-0 text-slate-400 group-hover:text-white group-hover:-translate-x-1 transition-all">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </div>
+      </Link>
+
+      {/* Salary summary */}
       <div className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
         <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
           <span className="text-lg">💸</span>סיכום שכר יומי

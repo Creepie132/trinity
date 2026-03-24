@@ -31,9 +31,6 @@ function validate(form: Record<FieldKey, string>, locale: 'he' | 'ru'): Record<s
   return errors
 }
 
-// ── Field — вынесен ЗА пределы родительского компонента ──────────────────────
-// Это КРИТИЧНО: если Field объявлен внутри компонента, React пересоздаёт его
-// при каждом ре-рендере → поле теряет фокус после каждого символа
 interface FieldProps {
   field: FieldKey
   label: string
@@ -83,23 +80,22 @@ Field.displayName = 'Field'
 export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: EditClientSheetProps) {
   const queryClient = useQueryClient()
   const [form, setForm] = useState<Record<FieldKey, string>>({
-    first_name: client?.first_name || '',
-    last_name:  client?.last_name  || '',
-    email:      client?.email      || '',
-    phone:      client?.phone      || '',
-    address:    client?.address    || '',
-    city:       client?.city       || '',
-    notes:      client?.notes      || '',
+    first_name:  client?.first_name  || '',
+    last_name:   client?.last_name   || '',
+    email:       client?.email       || '',
+    phone:       client?.phone       || '',
+    address:     client?.address     || '',
+    city:        client?.city        || '',
+    notes:       client?.notes       || '',
     description: client?.description || '',
-    paint_code: client?.paint_code || '',
+    paint_code:  client?.paint_code  || '',
   })
   const [showDescription, setShowDescription] = useState(!!(client?.description))
   const [hasPaintCode, setHasPaintCode] = useState(!!(client?.paint_code))
   const [errors, setErrors]   = useState<Record<string, string>>({})
   const [shaking, setShaking] = useState<Record<string, boolean>>({})
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving]   = useState(false)
 
-  // Синхронизируем форму при смене клиента (повторное открытие с другим клиентом)
   useEffect(() => {
     if (!client) return
     setForm({
@@ -122,12 +118,12 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     title: 'עריכת לקוח', firstName: 'שם פרטי', lastName: 'שם משפחה',
     email: 'אימייל', phone: 'טלפון', address: 'כתובת', city: 'עיר', notes: 'הערות',
     description: 'תיאור', paintCode: 'מספר צבע',
-    save: 'שמור', saving: 'שומר...', cancel: 'ביטול', photo: 'שנה תמונה',
+    save: 'שמור', saving: 'שומר...', cancel: 'ביטול',
   } : {
     title: 'Редактирование клиента', firstName: 'Имя', lastName: 'Фамилия',
     email: 'Email', phone: 'Телефон', address: 'Адрес', city: 'Город', notes: 'Заметки',
     description: 'Описание', paintCode: 'Код краски',
-    save: 'Сохранить', saving: 'Сохранение...', cancel: 'Отмена', photo: 'Изменить фото',
+    save: 'Сохранить', saving: 'Сохранение...', cancel: 'Отмена',
   }
 
   const shakeFields = useCallback((fields: string[]) => {
@@ -137,7 +133,6 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     setTimeout(() => setShaking({}), 600)
   }, [])
 
-  // useCallback — стабильная ссылка, Field не перерендерится при смене других полей
   const handleChange = useCallback((field: FieldKey, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }))
     setErrors(prev => { const e = { ...prev }; delete e[field]; return e })
@@ -163,7 +158,8 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
         toast.success(locale === 'he' ? 'נשמר בהצלחה ✓' : 'Сохранено ✓')
         queryClient.invalidateQueries({ queryKey: ['clients'] })
         queryClient.invalidateQueries({ queryKey: ['client'] })
-        onSaved(data); onClose()
+        onSaved(data)
+        onClose()
       } else {
         const msg = data?.error || ''
         let userMsg: string
@@ -187,113 +183,132 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     setSaving(false)
   }
 
-  // Avatar initials
   const fullName    = `${form.first_name} ${form.last_name}`.trim() || 'C'
   const initials    = (fullName.split(' ').map(w => w[0]).join('')).slice(0, 2).toUpperCase()
   const colors      = ['bg-blue-500','bg-emerald-500','bg-amber-500','bg-purple-500','bg-rose-500','bg-cyan-500']
   const avatarColor = colors[fullName.charCodeAt(0) % colors.length]
+  const dir         = locale === 'he' ? 'rtl' : 'ltr'
 
   return (
-    <Modal open={isOpen} onClose={onClose} title={l.title} width="480px"
-      dir={locale === 'he' ? 'rtl' : 'ltr'}
-      footer={
-        <div className="flex gap-2">
-          <button onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-            {l.cancel}
-          </button>
-          <button onClick={handleSave} disabled={saving}
-            className="flex-[1.5] py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition">
-            <Save size={16} />
-            {saving ? l.saving : l.save}
-          </button>
-        </div>
-      }
-    
-      darkHeader
-    >
+    <Modal open={isOpen} onClose={onClose} width="600px" dir={dir} darkHeader>
       <TrinityModalShell
         open={isOpen}
         onClose={onClose}
         icon={<UserPen />}
-        title={''}
-        dir={locale === 'he' ? 'rtl' : 'ltr'}
-      >
-      {/* Avatar — initials only, no upload (avatar_url not in DB) */}
-      <div className="flex flex-col items-center mb-6">
-        <div className={`${avatarColor} w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl`}>
-          {initials || '?'}
-        </div>
-      </div>
-
-      {/* Fields — all props passed explicitly, no nested component definitions */}
-      <div className="space-y-3">
-        {/* Имя + кнопка Описание в одной строке */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{l.firstName} / {l.lastName}</span>
+        title={l.title}
+        subtitle={locale === 'he' ? 'עדכן את פרטי הלקוח' : 'Обновите данные клиента'}
+        dir={dir}
+        sidebarExtra={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto', paddingTop: 12 }}>
+            {/* Аватар */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+              <div className={`${avatarColor} w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg`}>
+                {initials || '?'}
+              </div>
+            </div>
+            {/* Имя клиента */}
+            <p style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: '#fff', margin: '0 0 4px' }}>
+              {fullName}
+            </p>
+            {/* Кнопка Сохранить */}
             <button
-              type="button"
-              onClick={() => setShowDescription(v => !v)}
-              className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${
-                showDescription
-                  ? 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-300 text-indigo-600'
-                  : 'border-border text-muted-foreground hover:border-indigo-300 hover:text-indigo-600'
-              }`}
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                padding: '10px 14px', borderRadius: 10, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+                background: saving ? 'rgba(255,255,255,0.15)' : 'var(--trinity-accent, #4a6fa5)',
+                color: '#fff', fontSize: 13, fontWeight: 600,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                opacity: saving ? 0.6 : 1,
+              }}
             >
-              <FileText size={13} />
-              {l.description}
+              <Save size={14} />
+              {saving ? l.saving : l.save}
+            </button>
+            {/* Кнопка Отмена */}
+            <button
+              onClick={onClose}
+              style={{
+                padding: '8px 14px', borderRadius: 10,
+                border: '1px solid rgba(255,255,255,0.15)',
+                background: 'transparent', color: 'rgba(255,255,255,0.5)',
+                fontSize: 12, cursor: 'pointer', fontWeight: 500,
+              }}
+            >
+              {l.cancel}
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Field field="first_name" label="" required
-              value={form.first_name} error={errors.first_name} shaking={shaking.first_name} onChange={handleChange} />
-            <Field field="last_name" label=""
-              value={form.last_name} error={errors.last_name} shaking={shaking.last_name} onChange={handleChange} />
+        }
+      >
+        {/* ── Поля формы ── */}
+        <div className="space-y-3">
+          {/* Имя + кнопка Описание */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                {l.firstName} / {l.lastName}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowDescription(v => !v)}
+                className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${
+                  showDescription
+                    ? 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-300 text-indigo-600'
+                    : 'border-border text-muted-foreground hover:border-indigo-300 hover:text-indigo-600'
+                }`}
+              >
+                <FileText size={13} />
+                {l.description}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Field field="first_name" label="" required
+                value={form.first_name} error={errors.first_name} shaking={shaking.first_name} onChange={handleChange} />
+              <Field field="last_name" label=""
+                value={form.last_name} error={errors.last_name} shaking={shaking.last_name} onChange={handleChange} />
+            </div>
           </div>
-        </div>
 
-        {showDescription && (
-          <Field field="description" label={l.description} multiline
-            value={form.description} error={errors.description} shaking={shaking.description} onChange={handleChange} />
-        )}
-
-        <Field field="phone" label={l.phone} type="tel" dir="ltr"
-          value={form.phone}  error={errors.phone}  shaking={shaking.phone}  onChange={handleChange} />
-        <Field field="email" label={l.email} type="email" dir="ltr"
-          value={form.email}  error={errors.email}  shaking={shaking.email}  onChange={handleChange} />
-        <Field field="address" label={l.address}
-          value={form.address} error={errors.address} shaking={shaking.address} onChange={handleChange} />
-        <Field field="city" label={l.city}
-          value={form.city} error={errors.city} shaking={shaking.city} onChange={handleChange} />
-
-        {/* Код краски */}
-        <div>
-          <label className="flex items-center gap-2 cursor-pointer select-none w-fit mb-1">
-            <input
-              type="checkbox"
-              checked={hasPaintCode}
-              onChange={(e) => {
-                setHasPaintCode(e.target.checked)
-                if (!e.target.checked) handleChange('paint_code', '')
-              }}
-              className="w-4 h-4 rounded border-gray-300 accent-indigo-600"
-            />
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-              <Paintbrush size={13} className="text-indigo-500" />
-              {l.paintCode}
-            </span>
-          </label>
-          {hasPaintCode && (
-            <Field field="paint_code" label=""
-              value={form.paint_code} error={errors.paint_code} shaking={shaking.paint_code} onChange={handleChange} />
+          {showDescription && (
+            <Field field="description" label={l.description} multiline
+              value={form.description} error={errors.description} shaking={shaking.description} onChange={handleChange} />
           )}
-        </div>
 
-        <Field field="notes" label={l.notes} multiline
-          value={form.notes}   error={errors.notes}   shaking={shaking.notes}   onChange={handleChange} />
-      </div>
-    
+          <Field field="phone" label={l.phone} type="tel" dir="ltr"
+            value={form.phone} error={errors.phone} shaking={shaking.phone} onChange={handleChange} />
+          <Field field="email" label={l.email} type="email" dir="ltr"
+            value={form.email} error={errors.email} shaking={shaking.email} onChange={handleChange} />
+          <Field field="address" label={l.address}
+            value={form.address} error={errors.address} shaking={shaking.address} onChange={handleChange} />
+          <Field field="city" label={l.city}
+            value={form.city} error={errors.city} shaking={shaking.city} onChange={handleChange} />
+
+          {/* Код краски */}
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer select-none w-fit mb-1">
+              <input
+                type="checkbox"
+                checked={hasPaintCode}
+                onChange={(e) => {
+                  setHasPaintCode(e.target.checked)
+                  if (!e.target.checked) handleChange('paint_code', '')
+                }}
+                className="w-4 h-4 rounded border-gray-300 accent-indigo-600"
+              />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Paintbrush size={13} className="text-indigo-500" />
+                {l.paintCode}
+              </span>
+            </label>
+            {hasPaintCode && (
+              <Field field="paint_code" label=""
+                value={form.paint_code} error={errors.paint_code} shaking={shaking.paint_code} onChange={handleChange} />
+            )}
+          </div>
+
+          <Field field="notes" label={l.notes} multiline
+            value={form.notes} error={errors.notes} shaking={shaking.notes} onChange={handleChange} />
+        </div>
       </TrinityModalShell>
     </Modal>
   )

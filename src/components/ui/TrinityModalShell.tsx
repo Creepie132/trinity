@@ -56,9 +56,11 @@ export function TrinityModalShell({
   sidebarExtra,
   dir = 'ltr',
 }: TrinityModalShellProps) {
+  const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     const mq = window.matchMedia('(max-width: 767px)')
     setIsMobile(mq.matches)
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
@@ -70,7 +72,7 @@ export function TrinityModalShell({
   const accent  = accentColor || 'var(--trinity-accent, #4a6fa5)'
 
   // ── Mobile: ModalBottomSheet ──────────────────────────────────────────────
-  if (isMobile) {
+  if (mounted && isMobile) {
     return (
       <ModalBottomSheet
         open={open}

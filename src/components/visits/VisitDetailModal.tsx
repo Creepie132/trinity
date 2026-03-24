@@ -631,24 +631,13 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   }
 
   return (
-    <Modal open={isOpen} onClose={onClose} title={undefined} width="480px" dir={isHe ? 'rtl' : 'ltr'} showCloseButton={viewMode === 'main'}
-      darkHeader
-    >
-      <TrinityModalShell
-        open={isOpen}
-        onClose={onClose}
-        icon={<Calendar />}
-        title={''}
-        dir={isHe ? 'rtl' : 'ltr'}
-      >
+    <Modal open={isOpen} onClose={onClose} title={undefined} width="480px" dir={isHe ? 'rtl' : 'ltr'} showCloseButton={viewMode === 'main'}>
       {viewMode === 'main'             && renderMainView()}
       {viewMode === 'instructions'     && renderInstructionsList()}
       {viewMode === 'send-instruction' && renderSendInstruction()}
       {viewMode === 'services'         && renderServices()}
       {viewMode === 'add-service'      && renderAddService()}
       {viewMode === 'add-product'      && renderAddProduct()}
-    
-      </TrinityModalShell>
     </Modal>
   )
 }

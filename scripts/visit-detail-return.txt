@@ -1,0 +1,11 @@
+  return (
+    <Modal open={isOpen} onClose={onClose} title={undefined} width="480px" dir={isHe ? 'rtl' : 'ltr'} showCloseButton={viewMode === 'main'}>
+      {viewMode === 'main'             && renderMainView()}
+      {viewMode === 'instructions'     && renderInstructionsList()}
+      {viewMode === 'send-instruction' && renderSendInstruction()}
+      {viewMode === 'services'         && renderServices()}
+      {viewMode === 'add-service'      && renderAddService()}
+      {viewMode === 'add-product'      && renderAddProduct()}
+    </Modal>
+  )
+}

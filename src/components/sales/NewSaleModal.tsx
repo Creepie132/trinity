@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { X, Plus, Trash2, Search, ShoppingCart, Wrench, Package, ChevronLeft, ShoppingBag } from 'lucide-react'
+import { X, Plus, Trash2, Search, ShoppingCart, Wrench, Package, ChevronLeft, ShoppingBag, Zap, Percent } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { SaleCareInstructions } from '@/components/care-instructions/SaleCareInstructions'
@@ -42,6 +42,8 @@ const T = {
     noItems: 'לא נמצאו פריטים', min: 'דק׳', perUnit: 'ליחידה', back: 'חזור',
     customName: 'שם פריט / שירות', customPrice: 'מחיר', add: 'הוסף',
     client: 'לקוח', items: 'פריטים',
+    quickAdd: 'פריט מהיר', discount: 'הנחה', discountPct: '% הנחה',
+    discountPlaceholder: 'אחוז הנחה (0-100)', applyDiscount: 'החל הנחה',
   },
   ru: {
     title: 'Новая сделка', clientSearch: 'Поиск клиента...',
@@ -56,6 +58,8 @@ const T = {
     noItems: 'Ничего не найдено', min: 'мин', perUnit: 'за шт.', back: 'Назад',
     customName: 'Название товара / услуги', customPrice: 'Цена', add: 'Добавить',
     client: 'Клиент', items: 'Позиции',
+    quickAdd: 'Быстро добавить', discount: 'Скидка', discountPct: '% скидка',
+    discountPlaceholder: 'Скидка в % (0-100)', applyDiscount: 'Применить',
   },
 }
 
@@ -235,6 +239,97 @@ function CustomItemStep({ t, onAdd, onBack }: {
   )
 }
 
+// ── Quick-add inline mini-modal ───────────────────────────────────────────────
+function QuickAddModal({ isOpen, onClose, t, onAdd }: {
+  isOpen: boolean; onClose: () => void
+  t: typeof T['ru']
+  onAdd: (item: Omit<LineItem, 'id'>) => void
+}) {
+  const [name, setName]   = useState('')
+  const [price, setPrice] = useState('')
+  const nameRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isOpen) { setName(''); setPrice(''); setTimeout(() => nameRef.current?.focus(), 80) }
+  }, [isOpen])
+
+  const submit = () => {
+    if (!name.trim()) return
+    onAdd({ product_name: name.trim(), quantity: 1, unit_price: Number(price) || 0, type: 'custom' })
+    onClose()
+  }
+
+  if (!isOpen) return null
+  return (
+    <div className="fixed inset-0 z-[9300] flex items-center justify-center px-4"
+      style={{ background: 'rgba(0,0,0,0.5)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xs p-5 space-y-4"
+        style={{ animation: 'fadeInUp 0.18s ease both' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+              <Zap size={14} className="text-orange-500" />
+            </div>
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t.quickAdd}</span>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <X size={16} />
+          </button>
+        </div>
+        {/* Name */}
+        <div>
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block uppercase tracking-wide">
+            {t.customName}
+          </label>
+          <input
+            ref={nameRef}
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && submit()}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm
+              bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100
+              focus:outline-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-700"
+            placeholder={t.customName}
+          />
+        </div>
+        {/* Price */}
+        <div>
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block uppercase tracking-wide">
+            {t.customPrice}
+          </label>
+          <div className="relative">
+            <span className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">₪</span>
+            <input
+              type="number" min={0} value={price}
+              onChange={e => setPrice(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && submit()}
+              className="w-full ps-7 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm
+                bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100
+                focus:outline-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-700"
+              placeholder="0"
+            />
+          </div>
+        </div>
+        {/* Buttons */}
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+            {t.cancel}
+          </button>
+          <button onClick={submit} disabled={!name.trim()}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition disabled:opacity-40"
+            style={{ background: name.trim() ? 'linear-gradient(135deg, #f97316, #ea580c)' : '#e2e8f0' }}>
+            <Plus size={14} className="inline me-1" />{t.add}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Picker sheet (slide-up) ────────────────────────────────────────────────────
 type PickerStep = 'choose' | 'service' | 'product' | 'custom'
 
@@ -315,6 +410,10 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
   // ── items ──
   const [items, setItems]       = useState<LineItem[]>([])
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [discountPct, setDiscountPct] = useState<number>(0)
+  const [showDiscountInput, setShowDiscountInput] = useState(false)
+  const [discountInput, setDiscountInput] = useState('')
 
   const addItem = useCallback((item: Omit<LineItem, 'id'>) => {
     setItems(p => [...p, { ...item, id: uid() }])
@@ -330,7 +429,9 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
   const [saleDate, setSaleDate]     = useState(() => new Date().toISOString().slice(0, 10))
   const [notes, setNotes]           = useState('')
 
-  const total = items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
+  const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
+  const discountAmount = discountPct > 0 ? Math.round(subtotal * discountPct / 100 * 100) / 100 : 0
+  const total = subtotal - discountAmount
 
   const selectClient = (c: { id: string; first_name: string; last_name: string }) => {
     setClientId(c.id)
@@ -343,6 +444,7 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
     setItems([]); setPaidAmount(''); setMethod('cash'); setNotes('')
     setClientId(null); setClientLabel(''); setClientSearch('')
     setSaleDate(new Date().toISOString().slice(0, 10))
+    setDiscountPct(0); setDiscountInput(''); setShowDiscountInput(false)
   }
   const handleClose = () => { reset(); onClose() }
 
@@ -525,28 +627,113 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
                   ))}
                 </div>
               )}
-              {/* add-item button — always visible at bottom of items section */}
-              <button onClick={() => setPickerOpen(true)}
-                className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl
-                  bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10
-                  border border-amber-200 dark:border-amber-800/50
-                  text-sm font-semibold text-amber-700 dark:text-amber-400
-                  hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/20
-                  transition-all active:scale-[0.98] group">
-                <div className="w-6 h-6 rounded-md bg-amber-400 dark:bg-amber-600 flex items-center justify-center group-hover:bg-amber-500 transition-colors">
-                  <Plus size={13} className="text-white" />
-                </div>
-                {t.addItem}
-              </button>
+              {/* add-item row: catalog + quick-add */}
+              <div className="flex gap-2">
+                <button onClick={() => setPickerOpen(true)}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl
+                    bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10
+                    border border-amber-200 dark:border-amber-800/50
+                    text-sm font-semibold text-amber-700 dark:text-amber-400
+                    hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/20
+                    transition-all active:scale-[0.98] group">
+                  <div className="w-6 h-6 rounded-md bg-amber-400 dark:bg-amber-600 flex items-center justify-center group-hover:bg-amber-500 transition-colors">
+                    <Plus size={13} className="text-white" />
+                  </div>
+                  {t.addItem}
+                </button>
+                {/* Quick-add button */}
+                <button onClick={() => setQuickAddOpen(true)}
+                  title={t.quickAdd}
+                  className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl
+                    bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800/50
+                    text-sm font-semibold text-orange-600 dark:text-orange-400
+                    hover:bg-orange-100 dark:hover:bg-orange-900/30
+                    transition-all active:scale-[0.98]">
+                  <Zap size={15} />
+                </button>
+              </div>
             </div>
 
-            {/* ── Total / Paid ── */}
+            {/* ── Total / Paid / Discount ── */}
             <div className="bg-gradient-to-br from-slate-50 to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-xl p-4 space-y-3 border border-gray-100 dark:border-gray-700/50">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.total}</span>
-                <span className={`text-2xl font-extrabold ${total > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-300 dark:text-gray-600'}`}>₪{total.toLocaleString()}</span>
+              {/* Subtotal row (only if discount active) */}
+              {discountPct > 0 && (
+                <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                  <span>{locale === 'he' ? 'לפני הנחה' : 'До скидки'}</span>
+                  <span className="line-through">₪{subtotal.toLocaleString()}</span>
+                </div>
+              )}
+              {/* Discount button + row */}
+              <div className="flex items-center justify-between gap-3">
+                {/* Discount badge/button */}
+                {discountPct > 0 ? (
+                  <button
+                    onClick={() => { setShowDiscountInput(v => !v) }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                      bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300
+                      border border-violet-200 dark:border-violet-700 hover:bg-violet-200 dark:hover:bg-violet-900/50 transition">
+                    <Percent size={11} />
+                    {discountPct}% {t.discount}
+                    <X size={10} className="ms-0.5 opacity-60" onClick={e => { e.stopPropagation(); setDiscountPct(0); setDiscountInput(''); setShowDiscountInput(false) }} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowDiscountInput(v => !v)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold
+                      bg-violet-600 hover:bg-violet-700 active:scale-[0.97]
+                      text-white shadow-sm shadow-violet-200 dark:shadow-violet-900/30 transition-all">
+                    <Percent size={13} />
+                    {t.discountPct}
+                  </button>
+                )}
+                {/* Total */}
+                <span className={`text-2xl font-extrabold ${total > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-300 dark:text-gray-600'}`}>
+                  ₪{total.toLocaleString()}
+                </span>
               </div>
-              <div className="flex items-center gap-3">
+
+              {/* Discount input (expandable) */}
+              {showDiscountInput && (
+                <div className="flex items-center gap-2 pt-1">
+                  <div className="relative flex-1">
+                    <Percent size={12} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="number" min={0} max={100} value={discountInput}
+                      onChange={e => setDiscountInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          const v = Math.min(100, Math.max(0, Number(discountInput) || 0))
+                          setDiscountPct(v); setShowDiscountInput(false)
+                        }
+                      }}
+                      placeholder={t.discountPlaceholder}
+                      className="w-full ps-7 py-2 rounded-lg border border-violet-200 dark:border-violet-700 text-sm
+                        bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+                        focus:outline-none focus:ring-2 focus:ring-violet-300 dark:focus:ring-violet-700"
+                      autoFocus
+                    />
+                  </div>
+                  <button
+                    onClick={() => {
+                      const v = Math.min(100, Math.max(0, Number(discountInput) || 0))
+                      setDiscountPct(v); setShowDiscountInput(false)
+                    }}
+                    className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-medium transition">
+                    {t.applyDiscount}
+                  </button>
+                </div>
+              )}
+
+              {/* Discount amount display */}
+              {discountPct > 0 && discountAmount > 0 && (
+                <div className="flex items-center justify-between text-sm text-violet-600 dark:text-violet-400 font-medium">
+                  <span>{locale === 'he' ? 'הנחה' : 'Скидка'} {discountPct}%</span>
+                  <span>−₪{discountAmount.toLocaleString()}</span>
+                </div>
+              )}
+
+              {/* Paid row */}
+              <div className="flex items-center gap-3 pt-1 border-t border-gray-100 dark:border-gray-700/50">
                 <label className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{t.paid}</label>
                 <div className="relative flex-1">
                   <span className="absolute start-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">₪</span>
@@ -599,6 +786,10 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
       {/* ── Item picker sheet ── */}
       <ItemPickerSheet isOpen={pickerOpen} onClose={() => setPickerOpen(false)}
         t={t} language={language} onAdd={addItem} />
+
+      {/* ── Quick-add mini modal ── */}
+      <QuickAddModal isOpen={quickAddOpen} onClose={() => setQuickAddOpen(false)}
+        t={t} onAdd={addItem} />
     </>
   )
 }

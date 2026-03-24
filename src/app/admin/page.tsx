@@ -90,28 +90,34 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 // ── Chart tooltip ─────────────────────────────────────────────────────────────
-const ChartTip = ({ active, payload, label }: any) => {
+const ChartTip = ({ active, payload, label, language }: any) => {
   if (!active || !payload?.length) return null
+  const orgsWord = language === 'ru' ? 'орг.' : 'ארגונים'
   return (
     <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-lg px-4 py-2.5 text-sm">
       <p className="text-gray-400 text-xs mb-1">{label}</p>
-      <p className="font-bold text-indigo-600">{payload[0].value} ארגונים</p>
+      <p className="font-bold text-indigo-600">{payload[0].value} {orgsWord}</p>
     </div>
   )
 }
 
 // ── Audit action label ────────────────────────────────────────────────────────
-const ACTION_LABELS: Record<string, { label: string; color: string }> = {
-  impersonation_start: { label: 'כניסה כמשתמש', color: 'text-violet-600 bg-violet-50' },
-  login:               { label: 'התחברות',      color: 'text-blue-600 bg-blue-50'   },
-  client_create:       { label: 'לקוח נוצר',    color: 'text-emerald-600 bg-emerald-50' },
-  client_delete:       { label: 'לקוח נמחק',    color: 'text-red-600 bg-red-50'     },
-  payment_success:     { label: 'תשלום עבר',     color: 'text-emerald-600 bg-emerald-50' },
-  payment_failed:      { label: 'תשלום נכשל',   color: 'text-red-600 bg-red-50'     },
-  subscription_update: { label: 'מנוי עודכן',   color: 'text-amber-600 bg-amber-50'  },
-  settings_update:     { label: 'הגדרות שונו',  color: 'text-gray-600 bg-gray-100'  },
+type ActionKey = 'impersonation_start' | 'login' | 'client_create' | 'client_delete' | 'payment_success' | 'payment_failed' | 'subscription_update' | 'settings_update'
+const ACTION_LABELS: Record<ActionKey, { he: string; ru: string; color: string }> = {
+  impersonation_start: { he: 'כניסה כמשתמש', ru: 'Вход как пользователь', color: 'text-violet-600 bg-violet-50' },
+  login:               { he: 'התחברות',       ru: 'Вход',                  color: 'text-blue-600 bg-blue-50'    },
+  client_create:       { he: 'לקוח נוצר',     ru: 'Клиент создан',         color: 'text-emerald-600 bg-emerald-50' },
+  client_delete:       { he: 'לקוח נמחק',     ru: 'Клиент удалён',         color: 'text-red-600 bg-red-50'      },
+  payment_success:     { he: 'תשלום עבר',      ru: 'Платёж прошёл',         color: 'text-emerald-600 bg-emerald-50' },
+  payment_failed:      { he: 'תשלום נכשל',    ru: 'Платёж не прошёл',      color: 'text-red-600 bg-red-50'      },
+  subscription_update: { he: 'מנוי עודכן',    ru: 'Подписка обновлена',    color: 'text-amber-600 bg-amber-50'  },
+  settings_update:     { he: 'הגדרות שונו',   ru: 'Настройки изменены',    color: 'text-gray-600 bg-gray-100'   },
 }
-const getAction = (a: string) => ACTION_LABELS[a] ?? { label: a, color: 'text-gray-500 bg-gray-100' }
+const getAction = (a: string, lang: string) => {
+  const entry = ACTION_LABELS[a as ActionKey]
+  if (!entry) return { label: a, color: 'text-gray-500 bg-gray-100' }
+  return { label: lang === 'ru' ? entry.ru : entry.he, color: entry.color }
+}
 
 // ── Impersonation modal ───────────────────────────────────────────────────────
 function ImpersonateModal({ onClose }: { onClose: () => void }) {
@@ -234,6 +240,38 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [showImpersonate, setShowImpersonate] = useState(false)
 
+  const S = language === 'ru' ? {
+    pageTitle: 'Панель управления',
+    impersonate: 'Войти как пользователь',
+    refresh: 'Обновить данные',
+    expiringOrgs: 'Подписки истекают',
+    failedPayments: 'Неудачные платежи',
+    paymentError: 'Ошибка платежа',
+    attempt: 'Попытка',
+    perMonth: '/мес',
+    active: '● Активна',
+    inactive: '○ Неактивна',
+    auditTitle: 'Последние действия',
+    auditAll: 'Весь журнал',
+    noAudit: 'Нет действий',
+    noData: 'Недостаточно данных',
+  } : {
+    pageTitle: 'לוח בקרה',
+    impersonate: 'כניסה כמשתמש',
+    refresh: 'עדכן נתונים',
+    expiringOrgs: 'מנויים שפגים תוקפם',
+    failedPayments: 'תשלומים כושלים',
+    paymentError: 'שגיאת תשלום',
+    attempt: 'ניסיון',
+    perMonth: '/חודש',
+    active: '● פעיל',
+    inactive: '○ לא פעיל',
+    auditTitle: 'פעולות אחרונות',
+    auditAll: 'כל היומן',
+    noAudit: 'אין פעולות עדיין',
+    noData: 'אין מספיק נתונים',
+  }
+
   const { data: stats, isLoading: statsLoading } = useAdminStats()
   const { data: recentOrgs, isLoading: orgsLoading } = useRecentOrganizations(5)
   const { data: orgsByMonth, isLoading: chartLoading } = useOrganizationsByMonth()
@@ -288,7 +326,7 @@ export default function AdminDashboard() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <Activity className="w-7 h-7 text-indigo-500" />
-            לוח בקרה
+            {S.pageTitle}
           </h1>
           <p className="text-gray-400 text-sm mt-1">Trinity CRM · Amber Solutions</p>
         </div>
@@ -296,12 +334,12 @@ export default function AdminDashboard() {
           <Button variant="outline" size="sm" onClick={() => setShowImpersonate(true)}
             className="gap-2 border-violet-200 text-violet-700 hover:bg-violet-50 hover:border-violet-400 transition-colors">
             <Eye className="w-3.5 h-3.5" />
-            כניסה כמשתמש
+            {S.impersonate}
           </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}
             className="gap-2 border-gray-200 hover:border-indigo-300 hover:text-indigo-600 transition-colors">
             <RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />
-            עדכן נתונים
+            {S.refresh}
           </Button>
         </div>
       </div>
@@ -339,7 +377,7 @@ export default function AdminDashboard() {
             <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 p-4">
               <div className="flex items-center gap-2 mb-3">
                 <div className="bg-amber-100 dark:bg-amber-900/50 rounded-lg p-1.5"><Clock className="w-4 h-4 text-amber-600" /></div>
-                <span className="font-semibold text-amber-800 dark:text-amber-300 text-sm">מנויים שפגים תוקפם</span>
+                <span className="font-semibold text-amber-800 dark:text-amber-300 text-sm">{S.expiringOrgs}</span>
                 <Badge className="ml-auto bg-amber-200 text-amber-800 border-0 text-xs">{stats?.expiringOrgs?.length}</Badge>
               </div>
               <div className="space-y-2">
@@ -351,7 +389,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex-shrink-0 ml-3 text-right">
                       <span className="text-xs font-semibold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">{formatDaysLeft(org.subscription_expires_at)}</span>
-                      {org.billing_amount && <p className="text-xs text-gray-400 mt-0.5">₪{org.billing_amount}/חודש</p>}
+                      {org.billing_amount && <p className="text-xs text-gray-400 mt-0.5">₪{org.billing_amount}{S.perMonth}</p>}
                     </div>
                   </div>
                 ))}
@@ -362,7 +400,7 @@ export default function AdminDashboard() {
             <div className="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/20 p-4">
               <div className="flex items-center gap-2 mb-3">
                 <div className="bg-red-100 dark:bg-red-900/50 rounded-lg p-1.5"><AlertTriangle className="w-4 h-4 text-red-600" /></div>
-                <span className="font-semibold text-red-800 dark:text-red-300 text-sm">תשלומים כושלים</span>
+                <span className="font-semibold text-red-800 dark:text-red-300 text-sm">{S.failedPayments}</span>
                 <Badge className="ml-auto bg-red-200 text-red-800 border-0 text-xs">{stats?.failedAttempts?.length}</Badge>
               </div>
               <div className="space-y-2">
@@ -370,10 +408,10 @@ export default function AdminDashboard() {
                   <div key={a.id} className="flex items-center justify-between bg-white/70 dark:bg-gray-800/50 rounded-xl px-3 py-2">
                     <div className="min-w-0">
                       <p className="font-medium text-sm truncate">{a.organizations?.name || '—'}</p>
-                      <p className="text-xs text-gray-400 truncate">{a.error_message || 'שגיאת תשלום'}</p>
+                      <p className="text-xs text-gray-400 truncate">{a.error_message || S.paymentError}</p>
                     </div>
                     <div className="flex-shrink-0 ml-3 text-right">
-                      <span className="text-xs font-semibold text-red-700 bg-red-100 rounded-full px-2 py-0.5">ניסיון {a.attempt_number}/{a.max_attempts}</span>
+                      <span className="text-xs font-semibold text-red-700 bg-red-100 rounded-full px-2 py-0.5">{S.attempt} {a.attempt_number}/{a.max_attempts}</span>
                       <p className="text-xs text-gray-400 mt-0.5">₪{a.amount}</p>
                     </div>
                   </div>
@@ -410,7 +448,7 @@ export default function AdminDashboard() {
                     <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full',
                       org.is_active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
                         : 'bg-gray-100 text-gray-500')}>
-                      {org.is_active ? '● פעיל' : '○ לא פעיל'}
+                      {org.is_active ? S.active : S.inactive}
                     </span>
                     <span className="text-xs text-gray-400">{format(new Date(org.created_at), 'dd/MM/yy')}</span>
                   </div>
@@ -429,9 +467,9 @@ export default function AdminDashboard() {
         <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <div className="bg-violet-50 dark:bg-violet-900/30 rounded-lg p-1.5"><Shield className="w-4 h-4 text-violet-500" /></div>
-            <h2 className="font-semibold text-gray-800 dark:text-gray-100 text-sm">פעולות אחרונות</h2>
+            <h2 className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{S.auditTitle}</h2>
             <a href="/audit" className="ml-auto text-xs text-indigo-500 hover:text-indigo-700 flex items-center gap-0.5 transition-colors">
-              כל היומן <ChevronRight className="w-3 h-3" />
+              {S.auditAll} <ChevronRight className="w-3 h-3" />
             </a>
           </div>
           {auditLoading ? (
@@ -439,7 +477,7 @@ export default function AdminDashboard() {
           ) : auditLog?.length ? (
             <div className="space-y-1">
               {auditLog.map((entry) => {
-                const { label, color } = getAction(entry.action)
+                const { label, color } = getAction(entry.action, language)
                 return (
                   <div key={entry.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">
                     <div className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
@@ -464,7 +502,7 @@ export default function AdminDashboard() {
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-gray-400 gap-2">
               <Shield className="w-8 h-8 opacity-30" />
-              <p className="text-sm">אין פעולות עדיין</p>
+              <p className="text-sm">{S.noAudit}</p>
             </div>
           )}
         </div>
@@ -490,7 +528,7 @@ export default function AdminDashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} reversed />
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-              <Tooltip content={<ChartTip />} />
+              <Tooltip content={<ChartTip language={language} />} />
               <Area type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2.5}
                 fill="url(#adminAreaGrad)"
                 dot={{ r: 4, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
@@ -501,7 +539,7 @@ export default function AdminDashboard() {
         ) : (
           <div className="flex flex-col items-center justify-center h-40 text-gray-300 dark:text-gray-600 gap-2">
             <TrendingUp className="w-10 h-10" />
-            <p className="text-sm">אין מספיק נתונים</p>
+            <p className="text-sm">{S.noData}</p>
           </div>
         )}
       </div>

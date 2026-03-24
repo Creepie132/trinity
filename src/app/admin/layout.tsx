@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminSidebar } from '@/components/layout/AdminSidebar'
 import { MobileAdminHeader } from '@/components/layout/MobileAdminHeader'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function AdminLayout({
   children,
@@ -11,6 +12,7 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const { dir } = useLanguage()
   const [isChecking, setIsChecking] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -59,7 +61,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col">
+    <div dir={dir} className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col">
       {/* Мобильный admin header — только на <1024px */}
       <MobileAdminHeader />
 

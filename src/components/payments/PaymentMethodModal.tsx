@@ -1,13 +1,9 @@
 'use client'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { createPortal } from 'react-dom'
+import { useEffect, useState } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { CreditCard, Banknote, Smartphone } from 'lucide-react'
+import { CreditCard, Banknote, Smartphone, X } from 'lucide-react'
 
 interface PaymentMethodModalProps {
   open: boolean
@@ -15,61 +11,148 @@ interface PaymentMethodModalProps {
   onSelectMethod: (method: 'card' | 'cash' | 'bit') => void
 }
 
+const METHODS = [
+  {
+    id: 'card' as const,
+    labelHe: 'כרטיס אשראי',
+    labelRu: 'Кредитная карта',
+    descHe: 'תשלום מאובטח עם Tranzila',
+    descRu: 'Безопасная оплата через Tranzila',
+    icon: <CreditCard size={22} />,
+    gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+    glow: 'rgba(99,102,241,0.35)',
+    bg: 'linear-gradient(135deg, #eef2ff, #e0e7ff)',
+    border: '#c7d2fe',
+    color: '#4338ca',
+  },
+  {
+    id: 'cash' as const,
+    labelHe: 'מזומן',
+    labelRu: 'Наличные',
+    descHe: 'תשלום במזומן ישירות',
+    descRu: 'Оплата наличными напрямую',
+    icon: <Banknote size={22} />,
+    gradient: 'linear-gradient(135deg, #22c55e, #16a34a)',
+    glow: 'rgba(34,197,94,0.3)',
+    bg: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+    border: '#bbf7d0',
+    color: '#15803d',
+  },
+  {
+    id: 'bit' as const,
+    labelHe: 'BIT',
+    labelRu: 'BIT',
+    descHe: 'תשלום דיגיטלי מהיר',
+    descRu: 'Быстрая цифровая оплата',
+    icon: <Smartphone size={22} />,
+    gradient: 'linear-gradient(135deg, #f97316, #ea580c)',
+    glow: 'rgba(249,115,22,0.3)',
+    bg: 'linear-gradient(135deg, #fff7ed, #ffedd5)',
+    border: '#fed7aa',
+    color: '#c2410c',
+  },
+]
+
 export function PaymentMethodModal({ open, onOpenChange, onSelectMethod }: PaymentMethodModalProps) {
   const { language } = useLanguage()
+  const [mounted, setMounted] = useState(false)
+  const isHe = language === 'he'
 
-  const methods = [
-    {
-      id: 'card' as const,
-      icon: <CreditCard className="w-8 h-8" />,
-      labelHe: 'כרטיס אשראי',
-      labelRu: 'Кредитная карта',
-      emoji: '💳',
-    },
-    {
-      id: 'cash' as const,
-      icon: <Banknote className="w-8 h-8" />,
-      labelHe: 'מזומן',
-      labelRu: 'Наличные',
-      emoji: '💵',
-    },
-    {
-      id: 'bit' as const,
-      icon: <Smartphone className="w-8 h-8" />,
-      labelHe: 'BIT',
-      labelRu: 'BIT',
-      emoji: '📱',
-    },
-  ]
+  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    if (!open) return
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onOpenChange(false) }
+    document.addEventListener('keydown', h)
+    document.body.style.overflow = 'hidden'
+    return () => { document.removeEventListener('keydown', h); document.body.style.overflow = '' }
+  }, [open, onOpenChange])
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px]" dir={language === 'he' ? 'rtl' : 'ltr'}>
-        <DialogHeader>
-          <DialogTitle className="text-center text-xl">
-            {language === 'he' ? 'בחר אמצעי תשלום' : 'Выберите способ оплаты'}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-3 py-4">
-          {methods.map((method) => (
+  if (!open || !mounted) return null
+
+  return createPortal(
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={() => onOpenChange(false)}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)', zIndex: 9000 }}
+      />
+      {/* Modal */}
+      <div
+        dir={isHe ? 'rtl' : 'ltr'}
+        style={{
+          position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+          zIndex: 9001, width: '90%', maxWidth: 420,
+          background: '#fff', borderRadius: 20, boxShadow: '0 32px 80px rgba(0,0,0,0.25)',
+          overflow: 'hidden', animation: 'pmFadeIn 0.2s ease both',
+        }}
+      >
+        {/* Header */}
+        <div style={{ background: 'linear-gradient(135deg, #1e2533 0%, #2d3748 100%)', padding: '20px 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+              {isHe ? 'בחר אמצעי תשלום' : 'Выберите способ оплаты'}
+            </p>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: '#fff', margin: 0 }}>
+              {isHe ? 'תשלום חדש' : 'Новый платёж'}
+            </h2>
+          </div>
+          <button
+            onClick={() => onOpenChange(false)}
+            style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', transition: 'background 0.15s' }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Methods */}
+        <div style={{ padding: '16px 16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {METHODS.map((m, i) => (
             <button
-              key={method.id}
-              onClick={() => {
-                onSelectMethod(method.id)
-                onOpenChange(false)
+              key={m.id}
+              onClick={() => { onSelectMethod(m.id); onOpenChange(false) }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
+                background: m.bg, border: `1.5px solid ${m.border}`,
+                borderRadius: 14, cursor: 'pointer', textAlign: isHe ? 'right' : 'left',
+                transition: 'transform 0.15s, box-shadow 0.15s',
+                animation: `pmSlideIn 0.25s ${i * 0.06}s ease both`,
               }}
-              className={`flex items-center gap-4 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary hover:bg-gray-50 dark:hover:bg-gray-800 transition-all ${language === 'he' ? 'text-right flex-row-reverse' : 'text-left'}`}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'
+                ;(e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 24px ${m.glow}`
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.transform = ''
+                ;(e.currentTarget as HTMLButtonElement).style.boxShadow = ''
+              }}
             >
-              <span className="text-3xl">{method.emoji}</span>
-              <div className="flex-1">
-                <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                  {language === 'he' ? method.labelHe : method.labelRu}
+              {/* Icon bubble */}
+              <div style={{ width: 46, height: 46, borderRadius: 13, background: m.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: `0 4px 14px ${m.glow}`, flexShrink: 0 }}>
+                {m.icon}
+              </div>
+              {/* Text */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: m.color, margin: '0 0 2px' }}>
+                  {isHe ? m.labelHe : m.labelRu}
+                </p>
+                <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>
+                  {isHe ? m.descHe : m.descRu}
                 </p>
               </div>
+              {/* Arrow */}
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: m.color, opacity: 0.5, flexShrink: 0, transform: isHe ? 'rotate(180deg)' : 'none' }}>
+                <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
           ))}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <style>{`
+        @keyframes pmFadeIn { from { opacity: 0; transform: translate(-50%, -52%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+        @keyframes pmSlideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+    </>,
+    document.body
   )
 }

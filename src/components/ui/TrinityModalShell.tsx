@@ -101,6 +101,7 @@ export function TrinityModalShell({
         display:             'grid',
         gridTemplateColumns: '176px minmax(0, 1fr)',
         minHeight:           420,
+        maxHeight:           '85vh',
         overflow:            'hidden',
         overflowWrap:        'break-word',
       }}
@@ -118,7 +119,10 @@ export function TrinityModalShell({
           borderRadius:   dir === 'rtl' ? '0 16px 16px 0' : '16px 0 0 16px',
           minWidth:       0,
           overflow:       'hidden',
-          position:       'relative',
+          position:       'sticky',
+          top:            0,
+          alignSelf:      'stretch',
+          flexShrink:     0,
         }}
       >
         {/* Close button — top-left of sidebar */}
@@ -194,6 +198,7 @@ export function TrinityModalShell({
           borderRadius:  dir === 'rtl' ? '16px 0 0 16px' : '0 16px 16px 0',
           display:       'flex',
           flexDirection: 'column',
+          maxHeight:     '85vh',
         }}
       >
         <div style={{ flex: 1 }}>{children}</div>

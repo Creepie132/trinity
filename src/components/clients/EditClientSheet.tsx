@@ -199,45 +199,41 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
         subtitle={locale === 'he' ? 'עדכן את פרטי הלקוח' : 'Обновите данные клиента'}
         dir={dir}
         sidebarExtra={
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto', paddingTop: 12 }}>
-            {/* Аватар */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
-              <div className={`${avatarColor} w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg`}>
-                {initials || '?'}
-              </div>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div className={`${avatarColor} w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg`}>
+              {initials || '?'}
             </div>
-            {/* Имя клиента */}
-            <p style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: '#fff', margin: '0 0 4px' }}>
-              {fullName}
-            </p>
-            {/* Кнопка Сохранить */}
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={{
-                padding: '10px 14px', borderRadius: 10, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
-                background: saving ? 'rgba(255,255,255,0.15)' : 'var(--trinity-accent, #4a6fa5)',
-                color: '#fff', fontSize: 13, fontWeight: 600,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                opacity: saving ? 0.6 : 1,
-              }}
-            >
-              <Save size={14} />
-              {saving ? l.saving : l.save}
-            </button>
-            {/* Кнопка Отмена */}
+          </div>
+        }
+        footerContent={
+          <>
             <button
               onClick={onClose}
               style={{
-                padding: '8px 14px', borderRadius: 10,
-                border: '1px solid rgba(255,255,255,0.15)',
-                background: 'transparent', color: 'rgba(255,255,255,0.5)',
-                fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                flex: 1, padding: '12px', borderRadius: 10,
+                border: '1px solid #e2e8f0',
+                background: 'transparent', color: '#64748b',
+                fontSize: 14, cursor: 'pointer', fontWeight: 600,
               }}
             >
               {l.cancel}
             </button>
-          </div>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                flex: 2, padding: '12px', borderRadius: 10, border: 'none',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                background: saving ? '#94a3b8' : '#4a6fa5',
+                color: '#fff', fontSize: 14, fontWeight: 600,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                opacity: saving ? 0.7 : 1,
+              }}
+            >
+              <Save size={15} />
+              {saving ? l.saving : l.save}
+            </button>
+          </>
         }
       >
         {/* ── Поля формы ── */}

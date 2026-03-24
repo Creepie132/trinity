@@ -221,8 +221,8 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
         <>
           <motion.div className="fixed inset-0 bg-black/50" style={{ zIndex:999998 }}
             initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} transition={{ duration:.2 }} onClick={handleClose} />
-          <motion.div className="fixed bottom-0 left-0 right-0 flex flex-col"
-            style={{ zIndex:999999, maxHeight:'min(92dvh,92vh)', background:'var(--background,#fff)', borderRadius:'20px 20px 0 0', overflow:'clip', bottom: kbOffset || 0 }}
+          <motion.div className="fixed bottom-0 left-0 right-0 flex flex-col bg-white dark:bg-zinc-900"
+            style={{ zIndex:999999, maxHeight:'min(92dvh,92vh)', borderRadius:'20px 20px 0 0', overflow:'clip', bottom: kbOffset || 0 }}
             initial={{ y:'100%' }} animate={{ y:0 }} exit={{ y:'100%' }}
             transition={{ type:'spring', stiffness:400, damping:40 }} dir={isHe?'rtl':'ltr'}>
 

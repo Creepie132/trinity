@@ -4,6 +4,7 @@ import { ChevronRight, Calendar, Clock, ShoppingCart, Phone, CalendarPlus } from
 import { useEffect, useRef, useState } from 'react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useModalStore } from '@/store/useModalStore'
+import { ClientBottomSheet } from './ClientBottomSheet'
 
 // ── Палитра аватаров ──────────────────────────────────────────────────────────
 const AVATAR_GRADIENTS = [
@@ -60,8 +61,9 @@ export function ClientCard({
 }: ClientCardProps) {
   const { openModal } = useModalStore()
   const [hasDraft, setHasDraft] = useState(false)
-  const [swipeX, setSwipeX]     = useState(0)   // текущий сдвиг
+  const [swipeX, setSwipeX]     = useState(0)
   const [action, setAction]     = useState<'call' | 'visit' | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
   const isScrolling = useRef(false)
@@ -126,7 +128,7 @@ export function ClientCard({
     if (action === 'call' && client.phone) {
       window.location.href = `tel:${client.phone}`
     } else if (action === 'visit') {
-      openModal('client-details', { client, locale, enabledModules })
+      setSheetOpen(true)
     }
     setSwipeX(0)
     setAction(null)
@@ -136,10 +138,11 @@ export function ClientCard({
   const handleCardClick = () => {
     if (Math.abs(swipeX) > 10) return // не открывать при свайпе
     if (onSelect) { onSelect(client); return }
-    openModal('client-details', { client, locale, enabledModules })
+    setSheetOpen(true)  // открываем TrinityMob через ClientBottomSheet
   }
 
   return (
+    <>
     <div className="relative overflow-hidden rounded-2xl mb-2 touch-pan-y">
       {/* ── Фоны свайп-действий ─────────────────────────────────────────── */}
       {/* Левый фон: звонок (свайп влево — карточка уходит влево) */}
@@ -220,5 +223,16 @@ export function ClientCard({
         <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
       </div>
     </div>
+
+    {/* TrinityMob — мобильная шторка клиента */}
+    <ClientBottomSheet
+      client={client}
+      isOpen={sheetOpen}
+      onClose={() => setSheetOpen(false)}
+      locale={locale}
+      isDemo={isDemo}
+      enabledModules={enabledModules}
+    />
+    </>
   )
 }

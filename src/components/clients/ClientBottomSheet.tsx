@@ -24,7 +24,7 @@ interface ClientBottomSheetProps {
     email?: string
     visits_count?: number
     total_visits?: number
-    total_paid?: number
+    total_paid?: number | string
     last_visit?: string
     notes?: string
     created_at?: string

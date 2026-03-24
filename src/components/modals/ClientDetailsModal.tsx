@@ -29,6 +29,7 @@ export function ClientDetailsModal() {
   const [showSettings, setShowSettings] = useState(false)
   const [cardSettings, saveCardSettings] = useClientCardSettings()
   const [photosCount, setPhotosCount] = useState<number | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
   const { templates } = useOrgTemplates()
   const [showPicker, setShowPicker] = useState(false)
   const [pickerType, setPickerType] = useState<'visit' | 'product' | null>(null)
@@ -39,6 +40,14 @@ export function ClientDetailsModal() {
   const isOpen = isModalOpen('client-details')
   const data   = getModalData('client-details')
 
+  // Определяем мобайл один раз при монтировании + resize
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   useEffect(() => {
     if (!isOpen || !data?.client?.id) { setPhotosCount(null); return }
     fetch(`/api/clients/${data.client.id}/photos`)
@@ -47,7 +56,9 @@ export function ClientDetailsModal() {
       .catch(() => setPhotosCount(0))
   }, [isOpen, data?.client?.id])
 
+  // На мобиле эта модалка не рендерится — используется TrinityMob через ClientCard/ClientBottomSheet
   if (!data?.client || !isOpen) return null
+  if (isMobile) return null
 
   const { client, locale = 'he' } = data
   const clientName  = getClientName(client)

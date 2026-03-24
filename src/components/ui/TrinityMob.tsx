@@ -40,7 +40,7 @@ export interface TrinityMobClient {
   email?: string
   visits_count?: number
   total_visits?: number
-  total_paid?: number
+  total_paid?: number | string
   last_visit?: string
   notes?: string
   created_at?: string
@@ -299,7 +299,7 @@ export function TrinityMob({
   const initials   = getClientInitials(client)
   const [g1, g2]   = avatarGradient(clientName || '?')
   const visitsCount = client.visits_count ?? client.total_visits ?? 0
-  const totalPaid   = client.total_paid ?? 0
+  const totalPaid   = Number(client.total_paid ?? 0)
   const createdDate = client.created_at
     ? new Date(client.created_at).toLocaleDateString(isRtl ? 'he-IL' : 'ru-RU')
     : '—'

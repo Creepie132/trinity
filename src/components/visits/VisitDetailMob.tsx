@@ -272,6 +272,19 @@ export function VisitDetailMob({
                   {displayServiceName || (isHe ? 'פרטי ביקור' : 'Детали визита')}
                 </div>
               </div>
+              {/* Быстрая кнопка Начать / Завершить прямо в header */}
+              {visit.status === 'scheduled' && (
+                <button onClick={() => { onStart(); handleClose() }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 20, border: 'none', cursor: 'pointer', background: 'rgba(52,211,153,0.18)', color: '#34d399', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                  <Play size={11} className="fill-current" />{isHe ? 'התחל' : 'Начать'}
+                </button>
+              )}
+              {visit.status === 'in_progress' && (
+                <button onClick={() => { onComplete(); handleClose() }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 20, border: 'none', cursor: 'pointer', background: 'rgba(52,211,153,0.18)', color: '#34d399', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                  <CheckCircle size={11} />{isHe ? 'סיים' : 'Завершить'}
+                </button>
+              )}
               <button onClick={handleClose}
                 style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0 }}>
                 ✕

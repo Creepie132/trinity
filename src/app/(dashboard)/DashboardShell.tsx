@@ -233,7 +233,7 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
           className={`lg:hidden fixed top-0 bottom-0 z-[70] w-72 flex flex-col
             bg-white/95 backdrop-blur-2xl shadow-2xl
             transition-transform duration-300 ease-in-out
-            ${isHe ? 'end-0' : 'start-0'}
+            ${isHe ? 'right-0' : 'left-0'}
             ${drawerOpen
               ? 'translate-x-0'
               : isHe ? 'translate-x-full' : '-translate-x-full'

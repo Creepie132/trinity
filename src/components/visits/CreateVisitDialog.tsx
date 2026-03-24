@@ -158,9 +158,25 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
   const [selClient, setSelClient] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [kbOffset, setKbOffset] = useState(0)
   const [form, setForm] = useState({ ...emptyForm(), clientId: preselectedClientId || '', date: toDateStr(preselectedDate), time: preselectedTime || getDefaultTime() })
 
   useEffect(() => { setMounted(true); return () => setMounted(false) }, [])
+
+  // Track virtual keyboard height to push sheet up
+  useEffect(() => {
+    if (!open || typeof window === 'undefined') return
+    const vv = (window as any).visualViewport
+    if (!vv) return
+    const onResize = () => {
+      const keyboardH = window.innerHeight - vv.height - vv.offsetTop
+      setKbOffset(Math.max(0, keyboardH))
+    }
+    vv.addEventListener('resize', onResize)
+    vv.addEventListener('scroll', onResize)
+    onResize()
+    return () => { vv.removeEventListener('resize', onResize); vv.removeEventListener('scroll', onResize) }
+  }, [open])
   useEffect(() => {
     if (!open) return
     setForm(p => ({ ...p, clientId: preselectedClientId || p.clientId, date: toDateStr(preselectedDate), time: preselectedTime || p.time }))
@@ -206,7 +222,7 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
           <motion.div className="fixed inset-0 bg-black/50" style={{ zIndex:999998 }}
             initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} transition={{ duration:.2 }} onClick={handleClose} />
           <motion.div className="fixed bottom-0 left-0 right-0 flex flex-col"
-            style={{ zIndex:999999, maxHeight:'92dvh', background:'var(--background,#fff)', borderRadius:'20px 20px 0 0', overflow:'hidden' }}
+            style={{ zIndex:999999, maxHeight:'min(92dvh,92vh)', background:'var(--background,#fff)', borderRadius:'20px 20px 0 0', overflow:'clip', bottom: kbOffset || 0 }}
             initial={{ y:'100%' }} animate={{ y:0 }} exit={{ y:'100%' }}
             transition={{ type:'spring', stiffness:400, damping:40 }} dir={isHe?'rtl':'ltr'}>
 
@@ -230,7 +246,7 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
             </div>
 
             {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4" style={{ touchAction:'pan-y' }}>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 space-y-4" style={{ touchAction:'pan-y', WebkitOverflowScrolling:'touch' }}>
 
               {/* Toggle */}
               <div className="flex gap-1 p-1 rounded-xl bg-muted">
@@ -331,7 +347,8 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
             </div>
 
             {/* Footer */}
-            <div className="flex-shrink-0 flex gap-3 px-4 pt-3 border-t border-border" style={{ paddingBottom:'max(1.5rem,env(safe-area-inset-bottom))' }}>
+            <div className="flex-shrink-0 flex gap-3 px-4 pt-3 pb-safe border-t border-border"
+              style={{ paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}>
               <button onClick={handleClose} className="flex-1 py-3 rounded-xl text-sm font-medium"
                 style={{ background:'var(--muted)', color:'var(--muted-foreground)', border:'none', cursor:'pointer' }}>
                 {isHe?'ביטול':'Отмена'}

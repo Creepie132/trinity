@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery } from '@tanstack/react-query';
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser';
+import { useBranch } from '@/contexts/BranchContext';
 import {
   Dialog,
   DialogContent,
@@ -27,22 +27,20 @@ export function AddProductDialog({
   visitId,
 }: AddProductDialogProps) {
   const { t, language } = useLanguage();
+  const { activeOrgId } = useBranch();
   const [searchQuery, setSearchQuery] = useState('');
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-  // Load products
+  // Load products via API (consistent with useProducts hook, avoids Realtime channel conflicts)
   const { data: products, isLoading } = useQuery({
-    queryKey: ['products'],
+    queryKey: ['products', activeOrgId],
     queryFn: async () => {
-      const supabase = createSupabaseBrowserClient();
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, sell_price, stock, is_active')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      return data || [];
+      const headers: Record<string, string> = {}
+      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
+      const res = await fetch('/api/products', { headers })
+      if (!res.ok) return []
+      const json = await res.json()
+      return (json.products ?? []) as { id: string; name: string; sell_price: number; stock?: number; is_active?: boolean }[]
     },
     enabled: open,
   });

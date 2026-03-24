@@ -541,13 +541,18 @@ function CreateVisitDesktop({ open, onOpenChange, preselectedClientId, preselect
 // ─── PUBLIC EXPORT: router — mobile uses bottom sheet, desktop uses wizard ────
 export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, preselectedDate, preselectedTime, onVisitCreated }: CreateVisitDialogProps) {
   const [isMobile, setIsMobile] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
     check()
+    setMounted(true)
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
+
+  // До mount не рендерим ничего — избегаем hydration mismatch
+  if (!mounted) return null
 
   if (isMobile) {
     return <CreateVisitMobile open={open} onClose={()=>onOpenChange(false)}

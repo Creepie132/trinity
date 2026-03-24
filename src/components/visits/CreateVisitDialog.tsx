@@ -203,10 +203,10 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
     <AnimatePresence>
       {open && (
         <>
-          <motion.div className="fixed inset-0 bg-black/50" style={{ zIndex:9998 }}
+          <motion.div className="fixed inset-0 bg-black/50" style={{ zIndex:999998 }}
             initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} transition={{ duration:.2 }} onClick={handleClose} />
           <motion.div className="fixed bottom-0 left-0 right-0 flex flex-col"
-            style={{ zIndex:9999, height:'calc(100dvh - 3rem)', background:'var(--background,#fff)', borderRadius:'20px 20px 0 0', overflow:'hidden' }}
+            style={{ zIndex:999999, maxHeight:'92dvh', background:'var(--background,#fff)', borderRadius:'20px 20px 0 0', overflow:'hidden' }}
             initial={{ y:'100%' }} animate={{ y:0 }} exit={{ y:'100%' }}
             transition={{ type:'spring', stiffness:400, damping:40 }} dir={isHe?'rtl':'ltr'}>
 
@@ -331,7 +331,7 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
             </div>
 
             {/* Footer */}
-            <div className="flex-shrink-0 flex gap-3 px-4 pb-6 pt-3 border-t border-border">
+            <div className="flex-shrink-0 flex gap-3 px-4 pt-3 border-t border-border" style={{ paddingBottom:'max(1.5rem,env(safe-area-inset-bottom))' }}>
               <button onClick={handleClose} className="flex-1 py-3 rounded-xl text-sm font-medium"
                 style={{ background:'var(--muted)', color:'var(--muted-foreground)', border:'none', cursor:'pointer' }}>
                 {isHe?'ביטול':'Отмена'}

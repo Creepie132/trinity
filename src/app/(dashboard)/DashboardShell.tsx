@@ -96,7 +96,19 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
   const isManager = role === 'manager'
   const [newLeadOpen, setNewLeadOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(!isOwner && !isSalesAgent)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // Закрывать дравер при смене маршрута (навигация внутри системы)
+  useEffect(() => {
+    setDrawerOpen(false)
+  }, [pathname])
+
+  // Показывать онбординг только после загрузки auth — и только для не-owner и не-salesAgent
+  useEffect(() => {
+    if (!authLoading) {
+      setShowOnboarding(!isOwner && !isSalesAgent)
+    }
+  }, [authLoading, isOwner, isSalesAgent])
 
   const handleOnboardingComplete = (selectedLang: 'ru' | 'he') => {
     setLanguage(selectedLang)

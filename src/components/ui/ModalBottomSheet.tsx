@@ -251,9 +251,10 @@ export function ModalBottomSheet({
               background:    'var(--trinity-content-bg, #f8f9fc)',
               display:       'flex',
               gap:           10,
+              width:         '100%',
             }}
           >
-            {footerContent}
+            <div style={{ width: '100%' }}>{footerContent}</div>
           </div>
         )}
       </div>

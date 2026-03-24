@@ -86,7 +86,7 @@ export function TrinityModalShell({
         subtitle={subtitle}
         sidebarBg={sidebar}
         accentColor={accent}
-        footerContent={footerContent}
+        footerContent={footerContent ?? sidebarExtra}
         dir={dir}
       >
         {children}

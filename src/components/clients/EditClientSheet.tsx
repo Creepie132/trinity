@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, memo } from 'react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useQueryClient } from '@tanstack/react-query'
-import { Save, FileText, Paintbrush, UserPen } from 'lucide-react'
+import { Save, FileText, Paintbrush } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface EditClientSheetProps {
@@ -194,22 +194,16 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
       <TrinityModalShell
         open={isOpen}
         onClose={onClose}
-        icon={<UserPen />}
-        title={l.title}
+        icon={
+          <div className={`${avatarColor} w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
+            {initials || '?'}
+          </div>
+        }
+        title={fullName || l.title}
         subtitle={locale === 'he' ? 'עדכן את פרטי הלקוח' : 'Обновите данные клиента'}
         dir={dir}
         sidebarExtra={
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            {/* Аватар */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
-              <div className={`${avatarColor} w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg`}>
-                {initials || '?'}
-              </div>
-            </div>
-            {/* Имя клиента */}
-            <p style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>
-              {fullName}
-            </p>
             {/* Кнопка Сохранить */}
             <button
               onClick={handleSave}

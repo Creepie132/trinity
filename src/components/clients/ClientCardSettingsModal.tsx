@@ -25,6 +25,7 @@ function getStorageKey(orgId: string) {
 export function useClientCardSettings(): [ClientCardSettings, (s: ClientCardSettings) => void] {
   const { orgId } = useAuth()
   const [settings, setSettings] = useState<ClientCardSettings>(DEFAULT_SETTINGS)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     if (!orgId) return
@@ -32,6 +33,7 @@ export function useClientCardSettings(): [ClientCardSettings, (s: ClientCardSett
       const raw = localStorage.getItem(getStorageKey(orgId))
       if (raw) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) })
     } catch { /* ignore */ }
+    setLoaded(true)
   }, [orgId])
 
   function save(s: ClientCardSettings) {
@@ -42,7 +44,12 @@ export function useClientCardSettings(): [ClientCardSettings, (s: ClientCardSett
     } catch { /* ignore */ }
   }
 
-  return [settings, save]
+  // До загрузки из localStorage — возвращаем safe defaults (все блоки скрыты)
+  const safeSettings: ClientCardSettings = loaded
+    ? settings
+    : { ...DEFAULT_SETTINGS, showPaintCode: false, showGallery: false, showDocuments: false }
+
+  return [safeSettings, save]
 }
 
 interface ClientCardSettingsPanelProps {

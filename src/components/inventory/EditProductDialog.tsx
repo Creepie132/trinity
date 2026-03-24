@@ -159,7 +159,7 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
 
   return (
     <>
-      <Modal open={open} onClose={onClose} darkHeader showCloseButton={false} width="780px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
+      <Modal open={open} onClose={onClose} darkHeader showCloseButton={false} width="780px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0" size="xl">
         <TrinityModalShell open={open} onClose={onClose} icon={<Package />}
           title={t('inventory.edit')} subtitle={formData.name || product.name}
           dir={isHe ? 'rtl' : 'ltr'}

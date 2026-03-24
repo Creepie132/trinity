@@ -48,6 +48,7 @@ function QuickReceiveModal({ products, locale, onClose, onSave }: QuickReceivePr
   }
 
   const totalItems = Object.values(quantities).reduce((s, v) => s + v, 0)
+  const totalProducts = Object.keys(quantities).length
 
   const handleSave = async () => {
     const items = Object.entries(quantities).map(([id, qty]) => ({ id, qty }))
@@ -60,92 +61,122 @@ function QuickReceiveModal({ products, locale, onClose, onSave }: QuickReceivePr
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-t-3xl md:rounded-3xl w-full max-w-lg shadow-2xl max-h-[85vh] flex flex-col animate-slide-up">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center">
-              <PackagePlus size={20} className="text-emerald-600" />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative rounded-t-3xl md:rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        style={{ background: '#fff' }}>
+
+        {/* Dark header */}
+        <div style={{ background: 'linear-gradient(135deg, #1e2533 0%, #283148 100%)', padding: '20px 20px 16px', flexShrink: 0 }}>
+          {/* Close */}
+          <button onClick={onClose}
+            style={{ position: 'absolute', top: 12, left: 12, width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <X size={14} />
+          </button>
+
+          {/* Icon + title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: 'linear-gradient(135deg,#22c55e,#16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 18px rgba(34,197,94,0.35)', flexShrink: 0 }}>
+              <PackagePlus size={22} color="#fff" />
             </div>
             <div>
-              <h2 className="font-bold text-base">{l ? 'קבלת סחורה' : 'Быстрый приход'}</h2>
-              <p className="text-xs text-slate-400">{l ? 'הוסף כמות לכל מוצר' : 'Добавь количество к товарам'}</p>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#fff', margin: 0 }}>{l ? 'קבלת סחורה' : 'Быстрый приход'}</h2>
+              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', margin: '2px 0 0' }}>{l ? 'הוסף כמות לכל מוצר' : 'Добавь количество к товарам'}</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition">
-            <X size={16} />
-          </button>
-        </div>
 
-        {/* Search */}
-        <div className="px-6 pb-3 border-b border-slate-100">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
-            <input
-              type="text"
-              placeholder={l ? 'חיפוש מוצר...' : 'Поиск товара...'}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              autoFocus
-            />
+          {/* Stats row */}
+          {totalItems > 0 && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 2 }}>
+              <div style={{ background: 'rgba(34,197,94,0.15)', border: '0.5px solid rgba(34,197,94,0.3)', borderRadius: 10, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <TrendingUp size={13} color="#22c55e" />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#34d399' }}>+{totalItems} {l ? 'יחידות' : 'ед.'}</span>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: '6px 12px' }}>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{totalProducts} {l ? 'מוצרים' : 'товаров'}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Search */}
+          <div style={{ position: 'relative', marginTop: totalItems > 0 ? 12 : 0 }}>
+            <Search size={14} color="rgba(255,255,255,0.4)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+            <input type="text" placeholder={l ? 'חיפוש מוצר...' : 'Поиск товара...'}
+              value={search} onChange={e => setSearch(e.target.value)} autoFocus
+              style={{ width: '100%', padding: '10px 12px 10px 34px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
           </div>
         </div>
 
         {/* Product list */}
-        <div className="flex-1 overflow-y-auto px-6 py-3 space-y-2">
-          {filtered.map(p => {
-            const qty = quantities[p.id] || 0
-            return (
-              <div key={p.id} className={`flex items-center gap-3 py-3 px-3 rounded-2xl transition-all ${qty > 0 ? 'bg-emerald-50 border border-emerald-200' : 'border border-transparent'}`}>
-                <div className="w-10 h-10 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0">
-                  {p.image_url
-                    ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
-                    : <Package size={16} className="text-slate-300 m-auto mt-2.5" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{p.name}</p>
-                  <p className="text-xs text-slate-400">{l ? 'במלאי' : 'На складе'}: {p.quantity}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setQty(p.id, -1)} className="w-7 h-7 rounded-full bg-slate-100 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition">
-                    <Minus size={14} />
-                  </button>
-                  <span className={`w-8 text-center text-sm font-bold ${qty > 0 ? 'text-emerald-600' : 'text-slate-300'}`}>
-                    {qty > 0 ? `+${qty}` : '0'}
-                  </span>
-                  <button onClick={() => setQty(p.id, 1)} className="w-7 h-7 rounded-full bg-slate-100 hover:bg-emerald-100 hover:text-emerald-600 flex items-center justify-center transition">
-                    <Plus size={14} />
-                  </button>
-                </div>
-              </div>
-            )
-          })}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', background: '#f8fafc' }}>
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8', fontSize: 13 }}>
+              {l ? 'לא נמצאו מוצרים' : 'Товары не найдены'}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {filtered.map(p => {
+                const qty = quantities[p.id] || 0
+                const active = qty > 0
+                return (
+                  <div key={p.id}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 16, transition: 'all 0.15s',
+                      background: active ? 'linear-gradient(135deg,#f0fdf4,#dcfce7)' : '#fff',
+                      border: `1.5px solid ${active ? '#86efac' : '#e2e8f0'}`,
+                      boxShadow: active ? '0 2px 8px rgba(34,197,94,0.12)' : 'none' }}>
+                    {/* Image */}
+                    <div style={{ width: 44, height: 44, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #e2e8f0' }}>
+                      {p.image_url
+                        ? <img src={p.image_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <Package size={18} color="#94a3b8" />}
+                    </div>
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: active ? '#15803d' : '#1e293b', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                      <p style={{ fontSize: 11, color: active ? '#22c55e' : '#94a3b8', margin: '2px 0 0' }}>
+                        {l ? 'במלאי' : 'На складе'}: <strong>{p.quantity}</strong>
+                        {active && <span style={{ marginLeft: 6, color: '#16a34a', fontWeight: 700 }}>→ {p.quantity + qty}</span>}
+                      </p>
+                    </div>
+                    {/* Controls */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      <button onClick={() => setQty(p.id, -1)}
+                        style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: qty > 0 ? '#fee2e2' : '#f1f5f9', color: qty > 0 ? '#ef4444' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.15s' }}>
+                        <Minus size={13} />
+                      </button>
+                      <span style={{ width: 32, textAlign: 'center', fontSize: 14, fontWeight: 800, color: active ? '#16a34a' : '#cbd5e1' }}>
+                        {active ? `+${qty}` : '0'}
+                      </span>
+                      <button onClick={() => setQty(p.id, 1)}
+                        style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.15s' }}>
+                        <Plus size={13} />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100">
-          <button
-            onClick={handleSave}
-            disabled={totalItems === 0 || saving}
-            className={`w-full py-3 rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
-              totalItems > 0 ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-            }`}
-          >
-            {saving ? (
-              <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Check size={16} />
-            )}
-            {l ? `קבל ${totalItems > 0 ? `+${totalItems} יחידות` : ''}` : `Принять${totalItems > 0 ? ` +${totalItems} ед.` : ''}`}
+        <div style={{ padding: '14px 16px', borderTop: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }}>
+          <button onClick={handleSave} disabled={totalItems === 0 || saving}
+            style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', fontSize: 14, fontWeight: 700, cursor: totalItems > 0 ? 'pointer' : 'not-allowed', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              background: totalItems > 0 ? 'linear-gradient(135deg,#22c55e,#16a34a)' : '#f1f5f9',
+              color: totalItems > 0 ? '#fff' : '#94a3b8',
+              boxShadow: totalItems > 0 ? '0 4px 14px rgba(34,197,94,0.3)' : 'none' }}>
+            {saving
+              ? <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              : <Check size={16} />}
+            {l
+              ? `${totalItems > 0 ? `קבל +${totalItems} יחידות` : 'בחר מוצרים'}`
+              : `${totalItems > 0 ? `Принять +${totalItems} ед.` : 'Выберите товары'}`}
           </button>
         </div>
       </div>
     </div>
   )
 }
-
 // ─── Product Card (Grid view) ─────────────────────────────────────────────────
 function ProductCard({ product, locale, onDelete, onClick }: {
   product: Product; locale: string; onDelete: (e: React.MouseEvent, id: string) => void; onClick: () => void

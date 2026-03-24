@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { X, Plus, Trash2, Search, ShoppingCart, Wrench, Package, ChevronLeft } from 'lucide-react'
+import { X, Plus, Trash2, Search, ShoppingCart, Wrench, Package, ChevronLeft, ShoppingBag } from 'lucide-react'
+import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { SaleCareInstructions } from '@/components/care-instructions/SaleCareInstructions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -375,29 +377,46 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
 
   return (
     <>
-      {/* ── Backdrop + modal ── */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: 'rgba(0,0,0,0.45)' }}
-        onClick={e => { if (e.target === e.currentTarget) handleClose() }}>
-
-        <div dir={dir} className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg
-          max-h-[92vh] overflow-y-auto flex flex-col"
-          style={{ animation: 'fadeInScale 0.2s ease both' }}>
-
-          {/* header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <ShoppingCart className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              </div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t.title}</h2>
+      <Modal
+        open={isOpen}
+        onClose={handleClose}
+        darkHeader
+        width="860px"
+        dir={dir}
+        contentClassName="!p-0"
+      >
+        <TrinityModalShell
+          open={isOpen}
+          onClose={handleClose}
+          icon={<ShoppingBag />}
+          title={t.title}
+          subtitle={clientLabel || (locale === 'he' ? 'בחר לקוח' : 'Выберите клиента')}
+          dir={dir}
+          sidebarExtra={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {total > 0 && (
+                <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '8px 6px', textAlign: 'center', marginBottom: 6 }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#34d399' }}>&#8362;{total.toLocaleString()}</div>
+                  <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{t.total}</div>
+                </div>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={createSale.isPending || items.length === 0}
+                style={{ padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%', background: (createSale.isPending || items.length === 0) ? 'rgba(255,255,255,0.15)' : 'var(--trinity-accent, #4a6fa5)', color: '#fff', fontSize: 13, fontWeight: 600, opacity: (createSale.isPending || items.length === 0) ? 0.5 : 1 }}
+              >
+                {createSale.isPending ? t.saving : `${t.save}${total > 0 ? ` · ₪${total.toLocaleString()}` : ''}`}
+              </button>
+              <button
+                onClick={handleClose}
+                style={{ padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.55)', fontSize: 13, cursor: 'pointer' }}
+              >
+                {t.cancel}
+              </button>
             </div>
-            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="px-5 py-5 space-y-5 flex-1">
+          }
+        >
+          <div className="px-5 py-5 space-y-5">
 
             {/* ── Client search ── */}
             <div>
@@ -529,17 +548,8 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
               clientPhone={clientResults.find(c => `${c.first_name} ${c.last_name}`.trim() === clientLabel)?.phone}
             />
           </div>
-
-          {/* ── Footer ── */}
-          <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-800 flex gap-3 sticky bottom-0 bg-white dark:bg-gray-900">
-            <Button variant="outline" onClick={handleClose} className="flex-1 text-sm">{t.cancel}</Button>
-            <Button onClick={handleSave} disabled={createSale.isPending || items.length === 0}
-              className="flex-1 bg-theme-primary text-white hover:opacity-90 text-sm font-medium disabled:opacity-40">
-              {createSale.isPending ? t.saving : `${t.save}${total > 0 ? ` · ₪${total.toLocaleString()}` : ''}`}
-            </Button>
-          </div>
-        </div>
-      </div>
+        </TrinityModalShell>
+      </Modal>
 
       {/* ── Item picker sheet ── */}
       <ItemPickerSheet isOpen={pickerOpen} onClose={() => setPickerOpen(false)}

@@ -94,46 +94,47 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, onSuccess }: Creat
     <Modal
       open={open}
       onClose={handleClose}
-      title={t('payments.createLink')}
-      width="440px"
+      darkHeader
+      width="680px"
       dir={language === 'he' ? 'rtl' : 'ltr'}
-      footer={
-        !paymentLink ? (
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={handleClose}
-              className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={createPayment.isPending}
-              className="px-5 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
-            >
-              {createPayment.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-              {createPayment.isPending ? t('payments.creating') : t('payments.createLink')}
-            </button>
-          </div>
-        ) : (
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={handleClose}
-              className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
-            >
-              {t('common.close')}
-            </button>
-            <button
-              onClick={openLink}
-              className="px-5 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap flex items-center gap-2"
-            >
-              <ExternalLink className="w-4 h-4" />
-              {t('payments.openLink')}
-            </button>
-          </div>
-        )
-      }
+      contentClassName="!p-0"
     >
+      <TrinityModalShell
+        open={open}
+        onClose={handleClose}
+        icon={<Link />}
+        title={t('payments.createLink')}
+        subtitle={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : (language === 'he' ? 'בחר לקוח' : 'Выберите клиента')}
+        dir={language === 'he' ? 'rtl' : 'ltr'}
+        sidebarExtra={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {!paymentLink ? (
+              <>
+                <button
+                  onClick={handleSubmit}
+                  disabled={createPayment.isPending}
+                  style={{ padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%', background: createPayment.isPending ? 'rgba(255,255,255,0.15)' : '#4f46e5', color: '#fff', fontSize: 13, fontWeight: 600, opacity: createPayment.isPending ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  {createPayment.isPending && <Loader2 style={{ width: 14, height: 14 }} />}
+                  {createPayment.isPending ? t('payments.creating') : t('payments.createLink')}
+                </button>
+                <button onClick={handleClose} style={{ padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.55)', fontSize: 13, cursor: 'pointer' }}>
+                  {t('common.cancel')}
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={openLink} style={{ padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%', background: '#4f46e5', color: '#fff', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <ExternalLink style={{ width: 14, height: 14 }} />{t('payments.openLink')}
+                </button>
+                <button onClick={handleClose} style={{ padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.55)', fontSize: 13, cursor: 'pointer' }}>
+                  {t('common.close')}
+                </button>
+              </>
+            )}
+          </div>
+        }
+      >
       {!paymentLink ? (
         <div className="space-y-4">
           <div>
@@ -206,6 +207,7 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, onSuccess }: Creat
           </div>
         </div>
       )}
+      </TrinityModalShell>
     </Modal>
   )
 }

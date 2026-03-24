@@ -77,30 +77,38 @@ export function CreateCashPaymentDialog({ open, onOpenChange, onSuccess }: Creat
     <Modal
       open={open}
       onClose={() => onOpenChange(false)}
-      title={t('payments.cashPayment')}
-      width="440px"
+      darkHeader
+      width="680px"
       dir={language === 'he' ? 'rtl' : 'ltr'}
-      footer={
-        <div className="flex gap-2 justify-end">
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isProcessing}
-            className="px-5 py-2.5 rounded-xl bg-green-600 text-white text-sm font-medium hover:bg-green-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
-          >
-            {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isProcessing ? t('common.saving') : t('common.save')}
-          </button>
-        </div>
-      }
+      contentClassName="!p-0"
     >
-      <div className="space-y-4">
+      <TrinityModalShell
+        open={open}
+        onClose={() => onOpenChange(false)}
+        icon={<Banknote />}
+        title={t('payments.cashPayment')}
+        subtitle={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : (language === 'he' ? 'בחר לקוח' : 'Выберите клиента')}
+        dir={language === 'he' ? 'rtl' : 'ltr'}
+        sidebarExtra={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              onClick={handleSubmit}
+              disabled={isProcessing}
+              style={{ padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%', background: isProcessing ? 'rgba(255,255,255,0.15)' : '#16a34a', color: '#fff', fontSize: 13, fontWeight: 600, opacity: isProcessing ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+            >
+              {isProcessing && <Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />}
+              {isProcessing ? t('common.saving') : t('common.save')}
+            </button>
+            <button
+              onClick={() => onOpenChange(false)}
+              style={{ padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.55)', fontSize: 13, cursor: 'pointer' }}
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        }
+      >
+      <div className="space-y-4" style={{ padding: '16px 16px 20px' }}>
         {/* Client Selection */}
         <div>
           <Label htmlFor="client">{t('visits.client')} <span className="text-red-500">*</span></Label>
@@ -143,6 +151,7 @@ export function CreateCashPaymentDialog({ open, onOpenChange, onSuccess }: Creat
           />
         </div>
       </div>
+      </TrinityModalShell>
     </Modal>
   )
 }

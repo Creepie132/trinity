@@ -270,13 +270,30 @@ export function PaymentDetailsModal() {
     <Modal
       open={isOpen}
       onClose={() => closeModal('payment-details')}
-      title={clientName}
-      subtitle={new Date(payment.created_at).toLocaleString(locale === 'he' ? 'he-IL' : 'ru-RU')}
-      width="480px"
+      darkHeader
+      width="680px"
       dir={locale === 'he' ? 'rtl' : 'ltr'}
-      footer={getFooter()}
+      contentClassName="!p-0"
     >
-      <div dir={locale === 'he' ? 'rtl' : 'ltr'}>
+      <TrinityModalShell
+        open={isOpen}
+        onClose={() => closeModal('payment-details')}
+        icon={<Receipt />}
+        title={clientName}
+        subtitle={new Date(payment.created_at).toLocaleString(locale === 'he' ? 'he-IL' : 'ru-RU')}
+        dir={locale === 'he' ? 'rtl' : 'ltr'}
+        sidebarExtra={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Amount display */}
+            <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: '12px 10px', textAlign: 'center', marginBottom: 4 }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#34d399' }}>₪{payment.amount}</div>
+              <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{statusLabel}</div>
+            </div>
+            {getFooter()}
+          </div>
+        }
+      >
+      <div dir={locale === 'he' ? 'rtl' : 'ltr'} style={{ padding: '16px 16px 20px' }}>
         {/* Сумма — крупный акцент */}
         <div className="flex flex-col items-center py-4 mb-2">
           <p className="text-4xl font-bold text-gray-900 dark:text-gray-100">₪{payment.amount}</p>
@@ -296,6 +313,7 @@ export function PaymentDetailsModal() {
           </div>
         </div>
       </div>
+      </TrinityModalShell>
     </Modal>
   )
 }

@@ -251,7 +251,7 @@ function ItemPickerSheet({ isOpen, onClose, t, language, onAdd }: {
     choose: t.chooseType, service: t.serviceTitle, product: t.productTitle, custom: t.customTitle,
   }
   return (
-    <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center"
+    <div className="fixed inset-0 z-[9200] flex items-end md:items-center justify-center"
       style={{ background: 'rgba(0,0,0,0.4)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl w-full max-w-sm
@@ -393,23 +393,52 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
           subtitle={clientLabel || (locale === 'he' ? 'בחר לקוח' : 'Выберите клиента')}
           dir={dir}
           sidebarExtra={
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {total > 0 && (
-                <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '8px 6px', textAlign: 'center', marginBottom: 6 }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: '#34d399' }}>&#8362;{total.toLocaleString()}</div>
-                  <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{t.total}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {/* Иконка */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #f59e0b, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(245,158,11,0.35)' }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="3" y1="6" x2="21" y2="6" stroke="#fff" strokeWidth="2" strokeLinecap="round"/><path d="M16 10a4 4 0 01-8 0" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+              </div>
+
+              {/* Итого */}
+              {total > 0 ? (
+                <div style={{ background: 'rgba(52,211,153,0.12)', border: '0.5px solid rgba(52,211,153,0.25)', borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 10 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#34d399', letterSpacing: '-0.5px' }}>₪{total.toLocaleString()}</div>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 3 }}>{t.total}</div>
+                </div>
+              ) : (
+                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 10 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'rgba(255,255,255,0.2)' }}>₪0</div>
+                  <div style={{ fontSize: 9, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 3 }}>{t.total}</div>
                 </div>
               )}
+
+              {/* Кол-во позиций */}
+              {items.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 10 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b' }} />
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+                    {items.length} {locale === 'he' ? 'פריטים' : 'поз.'}
+                  </span>
+                </div>
+              )}
+
+              <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '0 0 10px' }} />
+
+              {/* Кнопка Сохранить */}
               <button
                 onClick={handleSave}
                 disabled={createSale.isPending || items.length === 0}
-                style={{ padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%', background: (createSale.isPending || items.length === 0) ? 'rgba(255,255,255,0.15)' : 'var(--trinity-accent, #4a6fa5)', color: '#fff', fontSize: 13, fontWeight: 600, opacity: (createSale.isPending || items.length === 0) ? 0.5 : 1 }}
+                style={{ padding: '11px 14px', borderRadius: 10, border: 'none', cursor: items.length === 0 ? 'not-allowed' : 'pointer', width: '100%', background: (createSale.isPending || items.length === 0) ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #4a6fa5, #3b5998)', color: (createSale.isPending || items.length === 0) ? 'rgba(255,255,255,0.25)' : '#fff', fontSize: 13, fontWeight: 700, marginBottom: 6, letterSpacing: '0.01em', transition: 'all 0.2s' }}
               >
-                {createSale.isPending ? t.saving : `${t.save}${total > 0 ? ` · ₪${total.toLocaleString()}` : ''}`}
+                {createSale.isPending ? `${t.saving}...` : items.length === 0 ? (locale === 'he' ? 'הוסף פריטים' : 'Добавьте позиции') : `${t.save}${total > 0 ? ` · ₪${total.toLocaleString()}` : ''}`}
               </button>
+
+              {/* Кнопка Отмена */}
               <button
                 onClick={handleClose}
-                style={{ padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.55)', fontSize: 13, cursor: 'pointer' }}
+                style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer' }}
               >
                 {t.cancel}
               </button>
@@ -487,19 +516,24 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
               )}
               {/* add-item button — always visible at bottom of items section */}
               <button onClick={() => setPickerOpen(true)}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed
-                  border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-400
-                  hover:border-amber-400 hover:text-amber-500 dark:hover:border-amber-600 dark:hover:text-amber-400
-                  transition-all active:scale-[0.98]">
-                <Plus size={15} />{t.addItem}
+                className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl
+                  bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10
+                  border border-amber-200 dark:border-amber-800/50
+                  text-sm font-semibold text-amber-700 dark:text-amber-400
+                  hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/20
+                  transition-all active:scale-[0.98] group">
+                <div className="w-6 h-6 rounded-md bg-amber-400 dark:bg-amber-600 flex items-center justify-center group-hover:bg-amber-500 transition-colors">
+                  <Plus size={13} className="text-white" />
+                </div>
+                {t.addItem}
               </button>
             </div>
 
             {/* ── Total / Paid ── */}
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3.5 space-y-3">
+            <div className="bg-gradient-to-br from-slate-50 to-gray-50 dark:from-gray-800 dark:to-gray-800/50 rounded-xl p-4 space-y-3 border border-gray-100 dark:border-gray-700/50">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t.total}</span>
-                <span className="text-xl font-bold text-gray-900 dark:text-gray-100">₪{total.toLocaleString()}</span>
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">{t.total}</span>
+                <span className={`text-2xl font-extrabold ${total > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-300 dark:text-gray-600'}`}>₪{total.toLocaleString()}</span>
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">{t.paid}</label>

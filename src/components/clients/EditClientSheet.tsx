@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useCallback, useEffect, memo } from 'react'
 import Modal from '@/components/ui/Modal'
@@ -190,7 +190,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
   const dir         = locale === 'he' ? 'rtl' : 'ltr'
 
   return (
-    <Modal open={isOpen} onClose={onClose} width="600px" dir={dir} darkHeader>
+    <Modal open={isOpen} onClose={onClose} width="600px" dir={dir} darkHeader showCloseButton={false}>
       <TrinityModalShell
         open={isOpen}
         onClose={onClose}

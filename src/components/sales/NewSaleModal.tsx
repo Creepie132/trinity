@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { X, Plus, Trash2, Search, ShoppingCart, Wrench, Package, ChevronLeft, ShoppingBag } from 'lucide-react'
@@ -380,7 +380,7 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
       <Modal
         open={isOpen}
         onClose={handleClose}
-        darkHeader
+        darkHeader showCloseButton={false}
         width="860px"
         dir={dir}
         contentClassName="!p-0"

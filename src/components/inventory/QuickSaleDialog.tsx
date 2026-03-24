@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -183,7 +183,7 @@ export function QuickSaleDialog({ open, onClose }: QuickSaleDialogProps) {
 
   return (
     <>
-      <Modal open={open} onClose={onClose} darkHeader width="780px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
+      <Modal open={open} onClose={onClose} darkHeader showCloseButton={false} width="780px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
         <TrinityModalShell open={open} onClose={onClose} icon={<ShoppingCart />}
           title={t('inventory.quickSale.title')}
           subtitle={total > 0 ? `₪${total.toFixed(2)}` : (isHe ? 'בחר מוצרים' : 'Выберите товары')}

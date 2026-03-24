@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useModalStore } from '@/store/useModalStore'
@@ -380,8 +380,7 @@ export function ClientGalleryModal() {
       <Modal
         open={isOpen}
         onClose={() => { setLightboxIndex(null); closeModal('client-gallery') }}
-        showCloseButton={true}
-        darkHeader={false}
+        darkHeader showCloseButton={false}
         width="700px"
         dir={isHe ? 'rtl' : 'ltr'}
         contentClassName="!p-0"

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import {
   Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock,
@@ -583,7 +583,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const subTitle = subViewTitle[viewMode] ? (isHe ? subViewTitle[viewMode].he : subViewTitle[viewMode].ru) : ''
 
   return (
-    <Modal open={isOpen} onClose={onClose} title={undefined} width="680px" dir={dir} showCloseButton darkHeader contentClassName="!p-0">
+    <Modal open={isOpen} onClose={onClose} title={undefined} width="680px" dir={dir} darkHeader showCloseButton={false} contentClassName="!p-0">
       {isSimpleSubView ? (
         // Instructions sub-views: simple layout (no sidebar needed)
         <div style={{ background: '#f8f9fc', minHeight: 400 }}>

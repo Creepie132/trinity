@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { useModalStore } from '@/store/useModalStore'
@@ -156,7 +156,7 @@ export function CreateTaskModal() {
   const today = new Date().toISOString().split('T')[0]
 
   return (
-    <Modal open={isOpen} onClose={handleClose} darkHeader width="720px" dir={isRTL ? 'rtl' : 'ltr'} contentClassName="!p-0">
+    <Modal open={isOpen} onClose={handleClose} darkHeader showCloseButton={false} width="720px" dir={isRTL ? 'rtl' : 'ltr'} contentClassName="!p-0">
       <TrinityModalShell open={isOpen} onClose={handleClose} icon={<CheckSquare />}
         title={isEdit ? (isHe ? 'עריכת משימה' : 'Редактировать задачу') : (isHe ? 'משימה חדשה' : 'Новая задача')}
         subtitle={title || (isHe ? 'הוסף פרטים למשימה' : 'Заполните детали')}

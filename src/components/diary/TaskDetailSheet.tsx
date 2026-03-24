@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -145,7 +145,7 @@ export function TaskDetailSheet({ task, isOpen, onClose, onStatusChange, onClien
   )
 
   return (
-    <Modal open={isOpen} onClose={onClose} darkHeader width="700px" dir={dir} contentClassName="!p-0">
+    <Modal open={isOpen} onClose={onClose} darkHeader showCloseButton={false} width="700px" dir={dir} contentClassName="!p-0">
       <TrinityModalShell open={isOpen} onClose={onClose} icon={<CheckSquare />}
         title={task.title} subtitle={isHe ? 'פרטי משימה' : 'Детали задачи'}
         dir={dir} sidebarExtra={sidebar}>

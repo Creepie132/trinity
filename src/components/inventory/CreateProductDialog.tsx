@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useRef } from 'react'
 import { Input } from '@/components/ui/input'
@@ -146,7 +146,7 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
 
   return (
     <>
-      <Modal open={open} onClose={onClose} darkHeader width="780px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
+      <Modal open={open} onClose={onClose} darkHeader showCloseButton={false} width="780px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
         <TrinityModalShell open={open} onClose={onClose} icon={<PackagePlus />}
           title={t('inventory.newProduct')}
           subtitle={formData.name || (isHe ? 'מוצר חדש' : 'Новый товар')}

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
@@ -109,7 +109,7 @@ export function CreateBitPaymentDialog({ open, onOpenChange, onSuccess }: Create
   )
 
   return (
-    <Modal open={open} onClose={handleClose} darkHeader width="680px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
+    <Modal open={open} onClose={handleClose} darkHeader showCloseButton={false} width="680px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
       <TrinityModalShell open={open} onClose={handleClose} icon={<Smartphone />}
         title={isHe ? 'תשלום BIT' : 'BIT платёж'}
         subtitle={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : (isHe ? 'בחר לקוח' : 'Выберите клиента')}

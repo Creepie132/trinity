@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect } from 'react'
 import {
@@ -140,7 +140,7 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
   )
 
   return (
-    <Modal open={!!sale} onClose={onClose} darkHeader width="700px" dir={dir} contentClassName="!p-0">
+    <Modal open={!!sale} onClose={onClose} darkHeader showCloseButton={false} width="700px" dir={dir} contentClassName="!p-0">
       <TrinityModalShell open={!!sale} onClose={onClose} icon={<ShoppingBag />} title={clientName} subtitle={t.title} dir={dir} sidebarExtra={sidebar}>
         <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
 

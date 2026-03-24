@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useMemo } from 'react'
 import { useModalStore } from '@/store/useModalStore'
@@ -583,7 +583,7 @@ export function SaleModal() {
       <Modal
         open={isOpen}
         onClose={handleClose}
-        darkHeader
+        darkHeader showCloseButton={false}
         width="860px"
         className="max-w-[95vw]"
         dir={isRTL ? 'rtl' : 'ltr'}
@@ -668,7 +668,7 @@ export function SaleModal() {
       <Modal
         open={isOpen}
         onClose={handleClose}
-        darkHeader
+        darkHeader showCloseButton={false}
         width="860px"
         className="max-w-[95vw]"
         dir={isRTL ? 'rtl' : 'ltr'}
@@ -830,7 +830,7 @@ export function SaleModal() {
     <Modal
       open={isOpen}
       onClose={handleClose}
-      darkHeader
+      darkHeader showCloseButton={false}
       width="860px"
       className="max-w-[95vw]"
       dir={isRTL ? 'rtl' : 'ltr'}

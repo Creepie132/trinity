@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
@@ -62,7 +62,7 @@ export function UserProfileSheet({ open, onOpenChange }: UserProfileSheetProps) 
         </button>
       }
     
-      darkHeader
+      darkHeader showCloseButton={false}
     >
       <TrinityModalShell
         open={open}

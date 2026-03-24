@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
@@ -144,7 +144,7 @@ export function ProductDetailSheet({ open, onClose, product, onEdit }: ProductDe
 
   return (
     <>
-      <Modal open={open} onClose={onClose} darkHeader width="720px" dir={dir} contentClassName="!p-0">
+      <Modal open={open} onClose={onClose} darkHeader showCloseButton={false} width="720px" dir={dir} contentClassName="!p-0">
         <TrinityModalShell open={open} onClose={onClose} icon={<Package />}
           title={product.name} subtitle={product.category || t('inventory.details')}
           dir={dir} sidebarExtra={sidebar}>

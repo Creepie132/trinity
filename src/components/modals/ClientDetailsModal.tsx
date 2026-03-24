@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
@@ -221,7 +221,7 @@ export function ClientDetailsModal() {
 
   return (
     <>
-      <Modal open={isOpen} onClose={() => closeModal('client-details')} showCloseButton darkHeader width="680px" dir={dir} contentClassName="!p-0">
+      <Modal open={isOpen} onClose={() => closeModal('client-details')} darkHeader showCloseButton={false} width="680px" dir={dir} contentClassName="!p-0">
         <TrinityModalShell open={isOpen} onClose={() => closeModal('client-details')} icon={<User />} title={clientName} subtitle={client.email || (isHe ? 'פרטי לקוח' : 'Данные клиента')} dir={dir} sidebarExtra={sidebarContent}>
           {showSettings ? (
             <ClientCardSettingsPanel

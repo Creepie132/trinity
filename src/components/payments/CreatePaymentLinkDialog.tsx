@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import Modal from '@/components/ui/Modal'
@@ -135,7 +135,7 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, onSuccess }: Creat
   )
 
   return (
-    <Modal open={open} onClose={handleClose} darkHeader width="680px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
+    <Modal open={open} onClose={handleClose} darkHeader showCloseButton={false} width="680px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
       <TrinityModalShell open={open} onClose={handleClose} icon={<Link />}
         title={t('payments.createLink')}
         subtitle={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : (isHe ? 'בחר לקוח' : 'Выберите клиента')}

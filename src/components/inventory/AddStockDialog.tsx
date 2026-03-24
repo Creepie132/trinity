@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
@@ -64,7 +64,7 @@ export function AddStockDialog({ open, onClose, product }: AddStockDialogProps) 
   const isHe = language === 'he'
 
   return (
-    <Modal open={open} onClose={onClose} darkHeader width="680px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
+    <Modal open={open} onClose={onClose} darkHeader showCloseButton={false} width="680px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
       <TrinityModalShell open={open} onClose={onClose} icon={<PackagePlus />}
         title={t('inventory.addStockDialog.title')} subtitle={product.name}
         dir={isHe ? 'rtl' : 'ltr'}

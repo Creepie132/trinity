@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import Modal from '@/components/ui/Modal'
@@ -183,7 +183,7 @@ export function TransferRequestDialog({ open, onClose, preloadedProduct }: Trans
   if (branchOptions.length === 0) {
     return (
       <Modal open={open} onClose={onClose} title={t.title} width="400px"
-      darkHeader
+      darkHeader showCloseButton={false}
     >
       <TrinityModalShell
         open={open}

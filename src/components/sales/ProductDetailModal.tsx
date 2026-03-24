@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { ChevronRight, ChevronLeft, ZoomIn, X, Package } from 'lucide-react'
@@ -43,7 +43,7 @@ export default function ProductDetailModal({ isOpen, product, onAdd, onBack }: P
 
   return (
     <>
-      <Modal open={isOpen} onClose={onBack} darkHeader width="700px" dir={isRTL ? 'rtl' : 'ltr'}>
+      <Modal open={isOpen} onClose={onBack} darkHeader showCloseButton={false} width="700px" dir={isRTL ? 'rtl' : 'ltr'}>
         <TrinityModalShell
           open={isOpen}
           onClose={onBack}

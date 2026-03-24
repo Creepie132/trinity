@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
@@ -187,7 +187,7 @@ export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner
   )
 
   return (
-    <Modal open={isOpen} onClose={onClose} darkHeader width="700px" dir={dir} contentClassName="!p-0">
+    <Modal open={isOpen} onClose={onClose} darkHeader showCloseButton={false} width="700px" dir={dir} contentClassName="!p-0">
       <TrinityModalShell open={isOpen} onClose={onClose} icon={<Receipt />}
         title={clientName} subtitle={formattedDate} dir={dir} sidebarExtra={sidebar}>
         <div style={{ padding: '20px 18px 24px' }} className="space-y-4">

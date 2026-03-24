@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
@@ -106,7 +106,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
     <Modal
       open={open}
       onClose={() => onOpenChange(false)}
-      darkHeader
+      darkHeader showCloseButton={false}
       width="680px"
       dir={language === 'he' ? 'rtl' : 'ltr'}
     >

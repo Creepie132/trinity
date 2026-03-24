@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import { Search, ChevronLeft, ChevronRight, Package } from 'lucide-react'
@@ -58,7 +58,7 @@ export default function ProductCatalogModal({ isOpen, onClose, products, onAddPr
       <Modal
         open={isOpen && !selected}
         onClose={onClose}
-        darkHeader
+        darkHeader showCloseButton={false}
         width="720px"
         dir={isRTL ? 'rtl' : 'ltr'}
       >

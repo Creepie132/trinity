@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { Input } from '@/components/ui/input'
@@ -160,7 +160,7 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
 
   return (
     <>
-      <Modal open={open} onClose={onClose} darkHeader width="780px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
+      <Modal open={open} onClose={onClose} darkHeader showCloseButton={false} width="780px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
         <TrinityModalShell open={open} onClose={onClose} icon={<Package />}
           title={t('inventory.edit')} subtitle={formData.name || product.name}
           dir={isHe ? 'rtl' : 'ltr'}

@@ -344,7 +344,7 @@ export function TrinityMob({
             style={{
               y,
               zIndex: 9999,
-              maxHeight: 'calc(100dvh - 3rem)',
+              height: 'calc(100dvh - 3rem)',
               background: sidebarBg,
               borderRadius: '20px 20px 0 0',
               border: '1px solid rgba(255,255,255,0.07)',

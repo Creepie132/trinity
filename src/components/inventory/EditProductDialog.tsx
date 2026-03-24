@@ -155,45 +155,40 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
 
   if (!product) return null
 
+  const isHe = language === 'he'
   const inputClass = "w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
 
   return (
     <>
-      <Modal
-        open={open}
-        onClose={onClose}
-        title={t('inventory.edit')}
-        width="580px"
-        dir={language === 'he' ? 'rtl' : 'ltr'}
-        footer={
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="flex-1 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={updateProduct.isPending}
-              className="flex-[1.5] min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50"
-            >
-              {updateProduct.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {t('common.saving')}
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  {t('common.save')}
-                </>
+      <Modal open={open} onClose={onClose} darkHeader width="780px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
+        <TrinityModalShell open={open} onClose={onClose} icon={<Package />}
+          title={t('inventory.edit')} subtitle={formData.name || product.name}
+          dir={isHe ? 'rtl' : 'ltr'}
+          sidebarExtra={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {(imagePreview || formData.image_url) && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                  <img src={imagePreview || formData.image_url} alt="" style={{ width: 60, height: 60, borderRadius: 14, objectFit: 'cover', border: '2px solid rgba(255,255,255,0.15)' }} />
+                </div>
               )}
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
+              {formData.sell_price > 0 && (
+                <div style={{ background: 'rgba(34,197,94,0.12)', border: '0.5px solid rgba(34,197,94,0.3)', borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 8 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#34d399' }}>₪{formData.sell_price.toFixed(2)}</div>
+                  <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{isHe ? 'מחיר מכירה' : 'Цена продажи'}</div>
+                </div>
+              )}
+              <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '0 0 8px' }} />
+              <button onClick={handleSubmit} disabled={updateProduct.isPending}
+                style={{ padding: '11px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%', background: updateProduct.isPending ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', fontSize: 13, fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {updateProduct.isPending ? <Loader2 size={14} /> : <Save size={14} />}
+                {updateProduct.isPending ? t('common.saving') : t('common.save')}
+              </button>
+              <button onClick={onClose} style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer' }}>
+                {t('common.cancel')}
+              </button>
+            </div>
+          }>
+          <div className="space-y-4" style={{ padding: '20px 18px 24px' }}>
           {/* Name */}
           <div>
             <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
@@ -390,14 +385,10 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
               </SelectContent>
             </Select>
           </div>
-        </div>
-      </Modal>
-
-      <BarcodeScanner
-        open={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onScan={handleBarcodeScanned}
-      />
+          </div>
+          </TrinityModalShell>
+        </Modal>
+      <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onScan={handleBarcodeScanned} />
     </>
   )
 }

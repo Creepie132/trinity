@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
-import { TrinityButton } from '@/components/ui/TrinityButton'
-import { User, Calendar, Phone, MessageCircle, MapPin, Mail, CheckCircle, Clock, XCircle } from 'lucide-react'
+import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
+import { User, Calendar, Phone, MessageCircle, MapPin, Mail, Clock, CheckSquare } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { getClientName } from '@/lib/client-utils'
 import { he, ru } from 'date-fns/locale'
@@ -26,10 +26,7 @@ interface Task {
   is_auto: boolean
   auto_type: string | null
   created_at: string
-  client?: {
-    id: string
-    name: string
-  } | null
+  client?: { id: string; name: string } | null
 }
 
 interface TaskDetailSheetProps {
@@ -43,420 +40,249 @@ interface TaskDetailSheetProps {
   locale: 'he' | 'ru'
 }
 
-export function TaskDetailSheet({ 
-  task, 
-  isOpen, 
-  onClose, 
-  onStatusChange,
-  onClientClick,
-  onEdit,
-  onDelete,
-  locale 
-}: TaskDetailSheetProps) {
+const PRIORITY_CONFIG = {
+  low:    { color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.3)', he: 'נמוכה', ru: 'Низкий' },
+  normal: { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.3)',  he: 'רגילה', ru: 'Обычный' },
+  high:   { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.3)',  he: 'גבוהה', ru: 'Высокий' },
+  urgent: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.3)',   he: 'דחופה', ru: 'Срочный' },
+}
+
+const STATUS_CONFIG = {
+  open:        { color: '#f59e0b', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.3)',  he: 'פתוח',    ru: 'Открыто' },
+  in_progress: { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.3)',  he: 'בתהליך',  ru: 'В процессе' },
+  done:        { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',   border: 'rgba(34,197,94,0.3)',   he: 'הושלם',   ru: 'Завершено' },
+  cancelled:   { color: '#64748b', bg: 'rgba(100,116,139,0.1)',  border: 'rgba(100,116,139,0.2)', he: 'בוטל',    ru: 'Отменено' },
+}
+
+export function TaskDetailSheet({ task, isOpen, onClose, onStatusChange, onClientClick, onEdit, onDelete, locale }: TaskDetailSheetProps) {
   const router = useRouter()
-  const dateLocale = locale === 'he' ? he : ru
+  const isHe = locale === 'he'
+  const dir = isHe ? 'rtl' : 'ltr'
+  const dateLocale = isHe ? he : ru
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const { templates } = useOrgTemplates()
 
   if (!task) return null
 
-  const t = {
-    he: {
-      description: 'תיאור',
-      dueDate: 'תאריך יעד',
-      client: 'לקוח',
-      visit: 'ביקור',
-      viewVisit: 'צפה בביקור',
-      phone: 'טלפון',
-      email: 'אימייל',
-      address: 'כתובת',
-      navigate: 'נווט',
-      markDone: 'סמן כהושלם',
-      startWork: 'התחל עבודה',
-      cancel: 'בטל',
-      priority: 'עדיפות',
-      status: 'סטטוס',
-      open: 'פתוח',
-      inProgress: 'בתהליך',
-      done: 'הושלם',
-      cancelled: 'בוטל',
-      low: 'נמוכה',
-      normal: 'רגילה',
-      high: 'גבוהה',
-      urgent: 'דחופה',
-      birthdayToday: 'יום הולדת היום!',
-      call: 'חייג',
-      sms: 'SMS',
-      sendEmail: 'שלח אימייל',
-      complete: 'הושלם',
-      edit: 'עריכה',
-      delete: 'מחק',
-      deleteConfirm: 'למחוק את המשימה',
-      yesDelete: 'כן, מחק',
-      cancelAction: 'ביטול',
-    },
-    ru: {
-      description: 'Описание',
-      dueDate: 'Срок',
-      client: 'Клиент',
-      visit: 'Визит',
-      viewVisit: 'Посмотреть визит',
-      phone: 'Телефон',
-      email: 'Email',
-      address: 'Адрес',
-      navigate: 'Навигация',
-      markDone: 'Завершить',
-      startWork: 'В процесс',
-      cancel: 'Отменить',
-      priority: 'Приоритет',
-      status: 'Статус',
-      open: 'Открыто',
-      inProgress: 'В процессе',
-      done: 'Завершено',
-      cancelled: 'Отменено',
-      low: 'Низкий',
-      normal: 'Обычный',
-      high: 'Высокий',
-      urgent: 'Срочный',
-      birthdayToday: 'День рождения сегодня!',
-      call: 'Позвонить',
-      sms: 'SMS',
-      sendEmail: 'Отправить email',
-      complete: 'Завершить',
-      edit: 'Редактировать',
-      delete: 'Удалить',
-      deleteConfirm: 'Удалить задачу',
-      yesDelete: 'Да, удалить',
-      cancelAction: 'Отмена',
-    },
-  }
+  const pc = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.normal
+  const sc = STATUS_CONFIG[task.status] || STATUS_CONFIG.open
+  const priorityLabel = isHe ? pc.he : pc.ru
+  const statusLabel = isHe ? sc.he : sc.ru
 
-  const labels = t[locale]
-
-  const priorityLabels = {
-    low: labels.low,
-    normal: labels.normal,
-    high: labels.high,
-    urgent: labels.urgent,
-  }
-
-  const statusLabels = {
-    open: labels.open,
-    in_progress: labels.inProgress,
-    done: labels.done,
-    cancelled: labels.cancelled,
-  }
-
-  function handleCall(phone: string) {
-    window.location.href = `tel:${phone}`
-  }
+  const isActive = task.status !== 'done' && task.status !== 'cancelled'
 
   function handleWhatsApp(phone: string) {
     const clientName = task?.client ? getClientName(task.client) : undefined
-    const text = templates?.whatsapp_template
-      ? buildMessage(templates.whatsapp_template, { client_name: clientName })
-      : undefined
+    const text = templates?.whatsapp_template ? buildMessage(templates.whatsapp_template, { client_name: clientName }) : undefined
     window.open(buildWhatsAppUrl(phone, text), '_blank')
-  }
-
-  function handleSMS(phone: string) {
-    window.location.href = `sms:${phone}`
-  }
-
-  function handleEmail(email: string) {
-    window.location.href = `mailto:${email}`
   }
 
   function handleNavigate(address: string) {
     const encoded = encodeURIComponent(address)
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent)
-    
     if (isMobile) {
       window.open(`geo:0,0?q=${encoded}`, '_blank')
-      // Фоллбэк на Google Maps если geo: не поддерживается
-      setTimeout(() => {
-        window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank')
-      }, 500)
+      setTimeout(() => window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank'), 500)
     } else {
       window.open(`https://www.google.com/maps/search/?api=1&query=${encoded}`, '_blank')
     }
   }
 
-  function handleClientClick() {
-    if (task && task.client_id && onClientClick) {
-      onClose()
-      onClientClick(task.client_id)
-    }
-  }
-
-  function handleVisitClick() {
-    if (task && task.visit_id) {
-      onClose()
-      router.push(`/visits?highlight=${task.visit_id}`)
-    }
-  }
-
-  function handleComplete() {
-    if (task && onStatusChange) {
-      onStatusChange(task.id, 'done')
-      onClose()
-    }
-  }
-
-  function handleEdit() {
-    if (task && onEdit) {
-      onClose()
-      onEdit(task)
-    }
-  }
-
-  function handleDelete() {
-    if (task && onDelete) {
-      onDelete(task.id)
-      setShowDeleteConfirm(false)
-      onClose()
-    }
-  }
-
-  return (
-    <TrinityBottomDrawer
-      isOpen={isOpen}
-      onClose={onClose}
-      title={task.title}
-    >
-      <div className="space-y-4">
-        {/* Специальная карточка для дня рождения */}
-        {task.is_auto && task.auto_type === 'birthday' && (
-          <div className="bg-gradient-to-r from-pink-50 to-amber-50 dark:from-pink-900/20 dark:to-amber-900/20 rounded-xl p-4 border border-pink-200 dark:border-pink-800 mb-4">
-            <p className="text-3xl mb-2">🎂</p>
-            <p className="font-semibold text-lg">{getClientName(task.client)}</p>
-            <p className="text-sm text-muted-foreground mt-1">{labels.birthdayToday}</p>
-          </div>
-        )}
-
-        {/* Описание */}
-        {task.description && (
-          <div>
-            <label className="block text-sm font-medium mb-2">{labels.description}</label>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.description}</p>
-          </div>
-        )}
-
-        {/* Статус и Приоритет */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium mb-2">{labels.status}</label>
-            <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${
-              task.status === 'done' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-              task.status === 'in_progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-              task.status === 'cancelled' ? 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400' :
-              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-            }`}>
-              {statusLabels[task.status]}
-            </span>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">{labels.priority}</label>
-            <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-medium ${
-              task.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-              task.priority === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-              task.priority === 'low' ? 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400' :
-              'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-            }`}>
-              {priorityLabels[task.priority]}
-            </span>
+  // ── Sidebar ────────────────────────────────────────────────────────────────
+  const sidebar = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Status badge */}
+      <div style={{ background: sc.bg, border: `0.5px solid ${sc.border}`, borderRadius: 12, padding: '8px 8px', textAlign: 'center', marginBottom: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: sc.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{statusLabel}</div>
+      </div>
+      {/* Priority */}
+      <div style={{ background: pc.bg, border: `0.5px solid ${pc.border}`, borderRadius: 10, padding: '6px 8px', textAlign: 'center', marginBottom: 8 }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color: pc.color }}>{priorityLabel}</div>
+      </div>
+      {/* Due date */}
+      {task.due_date && (
+        <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '6px 8px', textAlign: 'center', marginBottom: 8 }}>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>
+            {format(parseISO(task.due_date), 'dd MMM, HH:mm', { locale: dateLocale })}
           </div>
         </div>
-
-        {/* Дедлайн */}
-        {task.due_date && (
-          <div>
-            <label className="block text-sm font-medium mb-2">{labels.dueDate}</label>
-            <p className="text-sm">{format(parseISO(task.due_date), 'dd MMM yyyy, HH:mm', { locale: dateLocale })}</p>
-          </div>
-        )}
-
-        {/* Привязанный клиент - кликабельный */}
-        {task.client_id && task.client && (
-          <div>
-            <label className="block text-sm font-medium mb-2">{labels.client}</label>
-            <button
-              onClick={handleClientClick}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition"
-            >
-              <User size={14} className="text-primary" />
-              <span className="text-sm font-medium text-primary">{getClientName(task.client)}</span>
+      )}
+      <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', marginBottom: 10 }} />
+      {/* Quick actions */}
+      {isActive && (
+        <>
+          <button onClick={() => { if (task && onStatusChange) { onStatusChange(task.id, 'done'); onClose() } }}
+            style={{ padding: '9px 10px', borderRadius: 9, border: 'none', background: 'rgba(34,197,94,0.15)', color: '#34d399', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            <CheckSquare size={13} />{isHe ? 'הושלם' : 'Завершить'}
+          </button>
+          {task.status === 'open' && (
+            <button onClick={() => { if (task && onStatusChange) onStatusChange(task.id, 'in_progress') }}
+              style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              <Clock size={13} />{isHe ? 'התחל עבודה' : 'В процесс'}
             </button>
-          </div>
-        )}
-
-        {/* Привязанный визит - кликабельный */}
-        {task.visit_id && (
-          <div>
-            <label className="block text-sm font-medium mb-2">{labels.visit}</label>
-            <button
-              onClick={handleVisitClick}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition"
-            >
-              <Calendar size={14} className="text-amber-600 dark:text-amber-400" />
-              <span className="text-sm text-amber-700 dark:text-amber-300">{labels.viewVisit}</span>
+          )}
+          {onEdit && (
+            <button onClick={() => { onClose(); onEdit(task) }}
+              style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              ✏️ {isHe ? 'עריכה' : 'Редактировать'}
             </button>
-          </div>
-        )}
+          )}
+          <button onClick={() => setShowDeleteConfirm(true)}
+            style={{ padding: '8px 10px', borderRadius: 9, border: '0.5px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', color: 'rgba(239,68,68,0.7)', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            🗑️ {isHe ? 'מחק' : 'Удалить'}
+          </button>
+          <button onClick={() => { if (task && onStatusChange) { onStatusChange(task.id, 'cancelled'); onClose() } }}
+            style={{ padding: '7px 10px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.08)', background: 'transparent', color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: 600, cursor: 'pointer', marginBottom: 5 }}>
+            {isHe ? 'בטל משימה' : 'Отменить задачу'}
+          </button>
+        </>
+      )}
+      <button onClick={onClose}
+        style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer', marginTop: 2 }}>
+        {isHe ? 'סגור' : 'Закрыть'}
+      </button>
+    </div>
+  )
 
-        {/* Телефон - кликабельный с кнопками */}
-        {task.contact_phone && (
-          <div>
-            <label className="block text-sm font-medium mb-2">{labels.phone}</label>
-            <div className="flex items-center gap-2 flex-wrap">
-              <a
-                href={`tel:${task.contact_phone}`}
-                className="text-sm text-primary underline hover:text-primary/80"
-                dir="ltr"
-              >
-                {task.contact_phone}
-              </a>
-              <button
-                onClick={() => handleCall(task.contact_phone!)}
-                className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 flex items-center justify-center transition"
-                title={labels.call}
-              >
-                <Phone size={14} />
-              </button>
-              <button
-                onClick={() => handleWhatsApp(task.contact_phone!)}
-                className="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 flex items-center justify-center transition"
-                title="WhatsApp"
-              >
-                <MessageCircle size={14} />
-              </button>
-              <button
-                onClick={() => handleSMS(task.contact_phone!)}
-                className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/50 flex items-center justify-center transition"
-                title={labels.sms}
-              >
-                <MessageCircle size={14} />
-              </button>
+  return (
+    <Modal open={isOpen} onClose={onClose} darkHeader width="700px" dir={dir} contentClassName="!p-0">
+      <TrinityModalShell open={isOpen} onClose={onClose} icon={<CheckSquare />}
+        title={task.title} subtitle={isHe ? 'פרטי משימה' : 'Детали задачи'}
+        dir={dir} sidebarExtra={sidebar}>
+        <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
+
+          {/* Birthday card */}
+          {task.is_auto && task.auto_type === 'birthday' && (
+            <div style={{ background: 'linear-gradient(135deg,#fdf2f8,#fce7f3)', border: '1px solid #f9a8d4', borderRadius: 14, padding: '14px 16px', textAlign: 'center' }}>
+              <div style={{ fontSize: 32, marginBottom: 6 }}>🎂</div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: '#9d174d', margin: '0 0 2px' }}>{getClientName(task.client)}</p>
+              <p style={{ fontSize: 12, color: '#be185d', margin: 0 }}>{isHe ? 'יום הולדת היום!' : 'День рождения сегодня!'}</p>
+            </div>
+          )}
+
+          {/* Description */}
+          {task.description && (
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '12px 14px' }}>
+              <p style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                {isHe ? 'תיאור' : 'Описание'}
+              </p>
+              <p style={{ fontSize: 13, color: '#78350f', margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{task.description}</p>
+            </div>
+          )}
+
+          {/* Status + Priority badges */}
+          <div className="grid grid-cols-2 gap-3">
+            <div style={{ background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 12, padding: '10px 14px' }}>
+              <p style={{ fontSize: 9, fontWeight: 700, color: sc.color, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>{isHe ? 'סטטוס' : 'Статус'}</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: sc.color, margin: 0 }}>{statusLabel}</p>
+            </div>
+            <div style={{ background: pc.bg, border: `1px solid ${pc.border}`, borderRadius: 12, padding: '10px 14px' }}>
+              <p style={{ fontSize: 9, fontWeight: 700, color: pc.color, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>{isHe ? 'עדיפות' : 'Приоритет'}</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: pc.color, margin: 0 }}>{priorityLabel}</p>
             </div>
           </div>
-        )}
 
-        {/* Email - кликабельный с кнопкой */}
-        {task.contact_email && (
-          <div>
-            <label className="block text-sm font-medium mb-2">{labels.email}</label>
-            <div className="flex items-center gap-2">
-              <a
-                href={`mailto:${task.contact_email}`}
-                className="text-sm text-primary underline hover:text-primary/80"
-                dir="ltr"
-              >
-                {task.contact_email}
-              </a>
-              <button
-                onClick={() => handleEmail(task.contact_email!)}
-                className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 flex items-center justify-center transition"
-                title={labels.sendEmail}
-              >
-                <Mail size={14} />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Адрес - кликабельный с навигацией */}
-        {task.contact_address && (
-          <div>
-            <label className="block text-sm font-medium mb-2">{labels.address}</label>
-            <button
-              onClick={() => handleNavigate(task.contact_address!)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition w-full text-left"
-            >
-              <MapPin size={14} className="text-purple-600 dark:text-purple-400 flex-shrink-0" />
-              <span className="text-sm text-purple-700 dark:text-purple-300 flex-1">{task.contact_address}</span>
-              <span className="text-xs text-purple-400">{labels.navigate}</span>
-            </button>
-          </div>
-        )}
-
-        {/* Быстрые действия: Завершить / Редактировать / Удалить */}
-        {task.status !== 'done' && task.status !== 'cancelled' && (
-          <>
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              <button
-                onClick={handleComplete}
-                className="flex flex-col items-center gap-1 py-2 px-3 rounded-xl bg-green-50 hover:bg-green-100 border border-green-200 text-green-600 transition-colors text-xs font-medium"
-              >
-                <span className="text-lg">✅</span>
-                {labels.complete}
-              </button>
-
-              <button
-                onClick={handleEdit}
-                className="flex flex-col items-center gap-1 py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-600 transition-colors text-xs font-medium"
-              >
-                <span className="text-lg">✏️</span>
-                {labels.edit}
-              </button>
-
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex flex-col items-center gap-1 py-2 px-3 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-500 transition-colors text-xs font-medium"
-              >
-                <span className="text-lg">🗑️</span>
-                {labels.delete}
-              </button>
-            </div>
-
-            {showDeleteConfirm && (
-              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl">
-                <p className="text-sm text-red-700 text-center mb-3">
-                  {labels.deleteConfirm} «{task.title}»?
+          {/* Due date */}
+          {task.due_date && (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Calendar size={14} color="#94a3b8" />
+              <div>
+                <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 2px' }}>{isHe ? 'תאריך יעד' : 'Срок'}</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', margin: 0 }}>
+                  {format(parseISO(task.due_date), 'dd MMM yyyy, HH:mm', { locale: dateLocale })}
                 </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleDelete}
-                    className="flex-1 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600"
-                  >
-                    {labels.yesDelete}
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteConfirm(false)}
-                    className="flex-1 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
-                  >
-                    {labels.cancelAction}
-                  </button>
-                </div>
               </div>
-            )}
-          </>
-        )}
+            </div>
+          )}
 
-        {/* Кнопки действий */}
-        {task.status !== 'done' && task.status !== 'cancelled' && onStatusChange && (
-          <div className="flex gap-3 pt-4 border-t">
-            {task.status === 'open' && (
-              <TrinityButton
-                variant="primary"
-                size="md"
-                icon={<Clock className="w-4 h-4" />}
-                onClick={() => onStatusChange(task.id, 'in_progress')}
-                fullWidth
-              >
-                {labels.startWork}
-              </TrinityButton>
-            )}
-            <TrinityButton
-              variant="secondary"
-              size="md"
-              icon={<XCircle className="w-4 h-4" />}
-              onClick={() => onStatusChange(task.id, 'cancelled')}
-            >
-              {labels.cancel}
-            </TrinityButton>
-          </div>
-        )}
-      </div>
-    </TrinityBottomDrawer>
+          {/* Client */}
+          {task.client_id && task.client && (
+            <button onClick={() => { if (onClientClick && task.client_id) { onClose(); onClientClick(task.client_id) } }}
+              style={{ width: '100%', background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '1px solid #c7d2fe', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', textAlign: 'left' }}>
+              <User size={14} color="#4f46e5" />
+              <div>
+                <p style={{ fontSize: 9, fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 1px' }}>{isHe ? 'לקוח' : 'Клиент'}</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#4338ca', margin: 0 }}>{getClientName(task.client)}</p>
+              </div>
+            </button>
+          )}
+
+          {/* Visit */}
+          {task.visit_id && (
+            <button onClick={() => { onClose(); router.push(`/visits?highlight=${task.visit_id}`) }}
+              style={{ width: '100%', background: 'linear-gradient(135deg,#fffbeb,#fef3c7)', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', textAlign: 'left' }}>
+              <Calendar size={14} color="#d97706" />
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#d97706' }}>{isHe ? 'צפה בביקור' : 'Посмотреть визит'}</span>
+            </button>
+          )}
+
+          {/* Phone */}
+          {task.contact_phone && (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px' }}>
+              <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{isHe ? 'טלפון' : 'Телефон'}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', flex: 1, fontFamily: 'monospace' }} dir="ltr">{task.contact_phone}</span>
+                <button onClick={() => window.location.href = `tel:${task.contact_phone}`}
+                  style={{ width: 32, height: 32, borderRadius: 8, background: '#eff6ff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Phone size={14} color="#3b82f6" />
+                </button>
+                <button onClick={() => handleWhatsApp(task.contact_phone!)}
+                  style={{ width: 32, height: 32, borderRadius: 8, background: '#f0fdf4', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MessageCircle size={14} color="#22c55e" />
+                </button>
+                <button onClick={() => window.location.href = `sms:${task.contact_phone}`}
+                  style={{ width: 32, height: 32, borderRadius: 8, background: '#faf5ff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MessageCircle size={14} color="#a78bfa" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Email */}
+          {task.contact_email && (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>{isHe ? 'אימייל' : 'Email'}</p>
+                <p style={{ fontSize: 13, color: '#1e293b', margin: 0 }} dir="ltr">{task.contact_email}</p>
+              </div>
+              <button onClick={() => window.location.href = `mailto:${task.contact_email}`}
+                style={{ width: 32, height: 32, borderRadius: 8, background: '#fef2f2', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Mail size={14} color="#ef4444" />
+              </button>
+            </div>
+          )}
+
+          {/* Address */}
+          {task.contact_address && (
+            <button onClick={() => handleNavigate(task.contact_address!)}
+              style={{ width: '100%', background: 'linear-gradient(135deg,#faf5ff,#ede9fe)', border: '1px solid #ddd6fe', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', textAlign: 'left' }}>
+              <MapPin size={14} color="#7c3aed" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: '#6d28d9', flex: 1 }}>{task.contact_address}</span>
+              <span style={{ fontSize: 11, color: '#a78bfa' }}>{isHe ? 'נווט' : 'Навигация'}</span>
+            </button>
+          )}
+
+          {/* Delete confirm */}
+          {showDeleteConfirm && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '14px' }}>
+              <p style={{ fontSize: 13, color: '#dc2626', textAlign: 'center', marginBottom: 10, fontWeight: 600 }}>
+                {isHe ? `למחוק את המשימה «${task.title}»?` : `Удалить задачу «${task.title}»?`}
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => { if (onDelete) { onDelete(task.id); setShowDeleteConfirm(false); onClose() } }}
+                  style={{ flex: 1, padding: '9px', borderRadius: 9, border: 'none', background: '#dc2626', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  {isHe ? 'כן, מחק' : 'Да, удалить'}
+                </button>
+                <button onClick={() => setShowDeleteConfirm(false)}
+                  style={{ flex: 1, padding: '9px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', fontSize: 12, color: '#64748b', cursor: 'pointer' }}>
+                  {isHe ? 'ביטול' : 'Отмена'}
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </TrinityModalShell>
+    </Modal>
   )
 }

@@ -61,35 +61,38 @@ export function AddStockDialog({ open, onClose, product }: AddStockDialogProps) 
 
   if (!product) return null
 
+  const isHe = language === 'he'
+
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={t('inventory.addStockDialog.title')}
-      subtitle={product.name}
-      width="440px"
-      dir={language === 'he' ? 'rtl' : 'ltr'}
-      footer={
-        <div className="flex gap-2 justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 min-h-[44px] rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50 whitespace-nowrap"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={createTransaction.isPending}
-            className="px-5 min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
-          >
-            {createTransaction.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-            {createTransaction.isPending ? t('common.saving') : t('inventory.addStockDialog.confirm')}
-          </button>
-        </div>
-      }
-    >
-      <div className="space-y-4">
+    <Modal open={open} onClose={onClose} darkHeader width="680px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
+      <TrinityModalShell open={open} onClose={onClose} icon={<PackagePlus />}
+        title={t('inventory.addStockDialog.title')} subtitle={product.name}
+        dir={isHe ? 'rtl' : 'ltr'}
+        sidebarExtra={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {/* Stock preview */}
+            <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 6 }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#34d399' }}>+{quantity}</div>
+              <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{isHe ? 'כמות להוסיף' : 'Добавить'}</div>
+            </div>
+            {product.quantity !== undefined && (
+              <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '7px 8px', textAlign: 'center', marginBottom: 6 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#a78bfa' }}>{product.quantity + quantity} {product.unit}</div>
+                <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{isHe ? 'יהיה במלאי' : 'Будет на складе'}</div>
+              </div>
+            )}
+            <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '0 0 8px' }} />
+            <button onClick={handleSubmit} disabled={createTransaction.isPending}
+              style={{ padding: '11px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%', background: createTransaction.isPending ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', fontSize: 13, fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              {createTransaction.isPending ? <Loader2 size={14} /> : <PackagePlus size={14} />}
+              {createTransaction.isPending ? t('common.saving') : t('inventory.addStockDialog.confirm')}
+            </button>
+            <button onClick={onClose} style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer' }}>
+              {t('common.cancel')}
+            </button>
+          </div>
+        }>
+      <div className="space-y-4" style={{ padding: '20px 18px 24px' }}>
         {/* Product Info */}
         <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-200 dark:border-blue-800">
           <p className="font-medium">{product.name}</p>
@@ -149,6 +152,7 @@ export function AddStockDialog({ open, onClose, product }: AddStockDialogProps) 
           </div>
         )}
       </div>
+      </TrinityModalShell>
     </Modal>
   )
 }

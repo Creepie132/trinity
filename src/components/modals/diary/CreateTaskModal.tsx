@@ -156,74 +156,47 @@ export function CreateTaskModal() {
   const today = new Date().toISOString().split('T')[0]
 
   return (
-    <Modal
-      open={isOpen}
-      onClose={handleClose}
-      darkHeader={true}
-      width="660px"
-      footer={
-        <div className="flex gap-2">
-          <button onClick={handleClose}
-            className="flex-1 min-h-[44px] py-2.5 rounded-2xl border border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition">
-            {isHe ? 'ביטול' : 'Отмена'}
-          </button>
-          <button onClick={handleSubmit} disabled={saving}
-            className="flex-[2] min-h-[44px] py-2.5 rounded-2xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-md shadow-indigo-200">
-            {saving
-              ? <><Loader2 className="w-4 h-4 animate-spin" />{isHe ? 'שומר...' : 'Сохранение...'}</>
-              : <>{!isEdit && <Plus className="w-4 h-4" />}{isEdit ? (isHe ? 'שמור שינויים' : 'Сохранить') : (isHe ? 'צור משימה' : 'Создать задачу')}</>}
-          </button>
-        </div>
-      }
-    >
-      {/* ── Dark header ─────────────────────────────────────────────────── */}
-      <div style={{ background: '#0f172a', borderRadius: '16px 16px 0 0' }}>
-        <div className="px-6 pt-6 pb-5" dir={isRTL ? 'rtl' : 'ltr'}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
-              style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)' }}>
-              {isEdit ? '✏️' : '📋'}
+    <Modal open={isOpen} onClose={handleClose} darkHeader width="720px" dir={isRTL ? 'rtl' : 'ltr'} contentClassName="!p-0">
+      <TrinityModalShell open={isOpen} onClose={handleClose} icon={<CheckSquare />}
+        title={isEdit ? (isHe ? 'עריכת משימה' : 'Редактировать задачу') : (isHe ? 'משימה חדשה' : 'Новая задача')}
+        subtitle={title || (isHe ? 'הוסף פרטים למשימה' : 'Заполните детали')}
+        dir={isRTL ? 'rtl' : 'ltr'}
+        sidebarExtra={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {/* Priority pills */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
+              {(Object.entries(PRIORITY_CFG) as [Priority, typeof PRIORITY_CFG.low][]).map(([key, cfg]) => (
+                <button key={key} type="button" onClick={() => setPriority(key)}
+                  style={{ padding: '6px 10px', borderRadius: 8, border: `0.5px solid ${priority === key ? cfg.dot : 'rgba(255,255,255,0.1)'}`, background: priority === key ? `${cfg.dot}20` : 'transparent', color: priority === key ? cfg.dot : 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: cfg.dot }} />
+                  {isHe ? cfg.he : cfg.ru}
+                </button>
+              ))}
             </div>
-            <div>
-              <h2 className="text-lg font-black text-white">
-                {isEdit ? (isHe ? 'עריכת משימה' : 'Редактировать задачу') : (isHe ? 'משימה חדשה' : 'Новая задача')}
-              </h2>
-              <p className="text-slate-400 text-xs mt-0.5">
-                {isHe ? 'הוסף פרטים למשימה' : 'Заполните детали задачи'}
-              </p>
-            </div>
+            <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '0 0 8px' }} />
+            <button onClick={handleSubmit} disabled={saving}
+              style={{ padding: '11px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%', background: saving ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: '#fff', fontSize: 13, fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              {saving ? <Loader2 size={14} /> : <CheckSquare size={14} />}
+              {saving ? (isHe ? 'שומר...' : 'Сохранение...') : isEdit ? (isHe ? 'שמור שינויים' : 'Сохранить') : (isHe ? 'צור משימה' : 'Создать задачу')}
+            </button>
+            <button onClick={handleClose} style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer' }}>
+              {isHe ? 'ביטול' : 'Отмена'}
+            </button>
           </div>
-
-          {/* Title in header */}
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-            autoFocus placeholder={isHe ? 'כותרת המשימה *' : 'Заголовок задачи *'}
-            dir={isRTL ? 'rtl' : 'ltr'}
-            className="w-full px-4 py-3 rounded-2xl text-white font-semibold text-base outline-none placeholder:text-slate-500 transition-all"
-            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
-            onFocus={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)' }}
-            onBlur={e  => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)' }}
-          />
-
-          {/* Priority pills in header */}
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
-            {(Object.entries(PRIORITY_CFG) as [Priority, typeof PRIORITY_CFG.low][]).map(([key, cfg]) => (
-              <button key={key} type="button" onClick={() => setPriority(key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  priority === key
-                    ? 'bg-white text-slate-900 shadow-md'
-                    : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
-                }`}>
-                <div className="w-2 h-2 rounded-full" style={{ background: cfg.dot }} />
-                {isHe ? cfg.he : cfg.ru}
-              </button>
-            ))}
+        }>
+        <div style={{ padding: '20px 18px 24px' }} dir={isRTL ? 'rtl' : 'ltr'}>
+          {/* Title input */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
+              {isHe ? 'כותרת המשימה *' : 'Заголовок задачи *'}
+            </label>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} autoFocus
+              placeholder={isHe ? 'כותרת המשימה...' : 'Заголовок...'} dir={isRTL ? 'rtl' : 'ltr'}
+              style={{ width: '100%', padding: '12px 14px', border: '1.5px solid #e2e8f0', borderRadius: 12, fontSize: 15, fontWeight: 600, color: '#1e293b', background: '#fff', outline: 'none', boxSizing: 'border-box' }}
+              onFocus={e => e.currentTarget.style.borderColor = '#6366f1'}
+              onBlur={e => e.currentTarget.style.borderColor = '#e2e8f0'} />
           </div>
-        </div>
-      </div>
-
-      {/* ── Light body — 2 columns ─────────────────────────────────────── */}
-      <div className="px-6 py-5" dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-4">
 
           {/* Date */}
           <div>
@@ -336,7 +309,8 @@ export function CreateTaskModal() {
               className={`${inp} resize-none`} dir={isRTL ? 'rtl' : 'ltr'} />
           </div>
         </div>
-      </div>
+        </div>
+      </TrinityModalShell>
     </Modal>
   )
 }

@@ -19,12 +19,13 @@ import { useClients } from '@/hooks/useClients'
 import { useAuth } from '@/hooks/useAuth'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { toast } from 'sonner'
-import { Camera, Plus, Trash2, ShoppingCart, Check } from 'lucide-react'
+import { Camera, Plus, Trash2, ShoppingCart, Check, Loader2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { BarcodeScanner } from './BarcodeScannerLazy'
-import ModalWrapper from '@/components/ModalWrapper'
+import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import type { Product } from '@/types/inventory'
-import { Banknote, Smartphone, CreditCard, Building2, Phone, Zap } from 'lucide-react'
+import { Banknote, Smartphone, CreditCard, Building2, Phone } from 'lucide-react'
 
 interface QuickSaleDialogProps {
   open: boolean
@@ -46,7 +47,8 @@ const paymentMethods = [
 ]
 
 export function QuickSaleDialog({ open, onClose }: QuickSaleDialogProps) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  const isHe = language === 'he'
   const { orgId } = useAuth()
   const supabase = createSupabaseBrowserClient()
   const { data: products } = useProducts()
@@ -181,16 +183,42 @@ export function QuickSaleDialog({ open, onClose }: QuickSaleDialogProps) {
 
   return (
     <>
-      <ModalWrapper isOpen={open} onClose={onClose}>
-        <div className="w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <ShoppingCart className="w-6 h-6" />
-              {t('inventory.quickSale.title')}
-            </h2>
-          </div>
-
-          <div className="space-y-4">
+      <Modal open={open} onClose={onClose} darkHeader width="780px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
+        <TrinityModalShell open={open} onClose={onClose} icon={<ShoppingCart />}
+          title={t('inventory.quickSale.title')}
+          subtitle={total > 0 ? `₪${total.toFixed(2)}` : (isHe ? 'בחר מוצרים' : 'Выберите товары')}
+          dir={isHe ? 'rtl' : 'ltr'}
+          sidebarExtra={
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {total > 0 ? (
+                <div style={{ background: 'rgba(34,197,94,0.12)', border: '0.5px solid rgba(34,197,94,0.3)', borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 8 }}>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: '#34d399' }}>₪{total.toFixed(2)}</div>
+                  <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{isHe ? 'סה״כ' : 'Итого'}</div>
+                </div>
+              ) : (
+                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 8 }}>
+                  <ShoppingCart size={22} color="rgba(255,255,255,0.2)" style={{ margin: '0 auto 4px' }} />
+                  <div style={{ fontSize: 9, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{isHe ? 'עגלה ריקה' : 'Корзина пуста'}</div>
+                </div>
+              )}
+              {cart.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 8 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b' }} />
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{cart.length} {isHe ? 'פריטים' : 'поз.'}</span>
+                </div>
+              )}
+              <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '0 0 8px' }} />
+              <button onClick={handleCompleteSale} disabled={isProcessing || cart.length === 0}
+                style={{ padding: '11px 14px', borderRadius: 10, border: 'none', cursor: cart.length === 0 ? 'not-allowed' : 'pointer', width: '100%', background: (isProcessing || cart.length === 0) ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#22c55e,#16a34a)', color: cart.length > 0 ? '#fff' : 'rgba(255,255,255,0.2)', fontSize: 13, fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {isProcessing ? <Loader2 size={14} /> : <Check size={14} />}
+                {isProcessing ? t('common.saving') : t('inventory.quickSale.complete')}
+              </button>
+              <button onClick={onClose} style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer' }}>
+                {t('common.cancel')}
+              </button>
+            </div>
+          }>
+          <div className="space-y-4" style={{ padding: '20px 18px 24px' }}>
             {/* Add Product */}
             <div>
               <Label>{t('inventory.quickSale.addProduct')}</Label>
@@ -322,20 +350,8 @@ export function QuickSaleDialog({ open, onClose }: QuickSaleDialogProps) {
               </div>
             </div>
           </div>
-
-          <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <Button variant="outline" onClick={onClose}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              onClick={handleCompleteSale}
-              disabled={isProcessing || cart.length === 0}
-            >
-              {isProcessing ? t('common.saving') : t('inventory.quickSale.complete')}
-            </Button>
-          </div>
-        </div>
-      </ModalWrapper>
+          </TrinityModalShell>
+        </Modal>
 
       <BarcodeScanner
         open={scannerOpen}

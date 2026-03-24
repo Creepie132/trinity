@@ -141,7 +141,14 @@ export function PaymentDetailsModal() {
     <Modal open={isOpen} onClose={() => closeModal('payment-details')} darkHeader showCloseButton={false} width="700px" dir={dir} contentClassName="!p-0">
       <TrinityModalShell open={isOpen} onClose={() => closeModal('payment-details')} icon={<Receipt />}
         title={clientName} subtitle={new Date(payment.created_at).toLocaleString(isHe ? 'he-IL' : 'ru-RU')}
-        dir={dir} sidebarExtra={sidebar}>
+        dir={dir} sidebarExtra={sidebar}
+        footerContent={
+          <button onClick={() => closeModal('payment-details')}
+            style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#1e293b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+            {t.close}
+          </button>
+        }
+      >
         <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
 
           {/* Amount hero */}

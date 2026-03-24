@@ -600,6 +600,12 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           subtitle={subTitle}
           dir={dir}
           sidebarExtra={subSidebarContent}
+          footerContent={
+            <button onClick={() => setViewMode('main')}
+              style={{ flex: 1, padding: '12px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}>
+              {isHe ? 'חזרה לביקור' : 'Назад к визиту'}
+            </button>
+          }
         >
           {viewMode === 'services'    && renderServices()}
           {viewMode === 'add-service' && renderAddService()}
@@ -615,6 +621,12 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           subtitle={displayServiceName || (isHe ? 'פרטי ביקור' : 'Детали визита')}
           dir={dir}
           sidebarExtra={sidebarContent}
+          footerContent={
+            <button onClick={onClose}
+              style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#1e293b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              {isHe ? 'סגור' : 'Закрыть'}
+            </button>
+          }
         >
           {renderMainContent()}
         </TrinityModalShell>

@@ -41,6 +41,8 @@ interface TrinityModalShellProps {
   children: ReactNode
   /** Доп. контент в сайдбаре (только десктоп) */
   sidebarExtra?: ReactNode
+  /** Кнопки действий — sticky footer на мобиле, inline на десктопе */
+  footerContent?: ReactNode
   /** RTL / LTR */
   dir?: 'rtl' | 'ltr'
 }
@@ -55,6 +57,7 @@ export function TrinityModalShell({
   sidebarBg,
   children,
   sidebarExtra,
+  footerContent,
   dir = 'ltr',
 }: TrinityModalShellProps) {
   const [mounted, setMounted] = useState(false)
@@ -83,6 +86,7 @@ export function TrinityModalShell({
         subtitle={subtitle}
         sidebarBg={sidebar}
         accentColor={accent}
+        footerContent={footerContent}
         dir={dir}
       >
         {children}
@@ -188,9 +192,22 @@ export function TrinityModalShell({
           overflowY:     'auto',
           minWidth:      0,
           borderRadius:  dir === 'rtl' ? '16px 0 0 16px' : '0 16px 16px 0',
+          display:       'flex',
+          flexDirection: 'column',
         }}
       >
-        {children}
+        <div style={{ flex: 1 }}>{children}</div>
+        {footerContent && (
+          <div style={{
+            display:    'flex',
+            gap:        10,
+            paddingTop: 16,
+            marginTop:  8,
+            borderTop:  '1px solid rgba(0,0,0,0.07)',
+          }}>
+            {footerContent}
+          </div>
+        )}
       </div>
     </div>
   )

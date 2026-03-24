@@ -394,8 +394,7 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
           dir={dir}
           sidebarExtra={
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-              {/* Иконка */}
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+              {/* Иконка */}              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
                 <div style={{ width: 52, height: 52, borderRadius: 14, background: 'linear-gradient(135deg, #f59e0b, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(245,158,11,0.35)' }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><line x1="3" y1="6" x2="21" y2="6" stroke="#fff" strokeWidth="2" strokeLinecap="round"/><path d="M16 10a4 4 0 01-8 0" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
@@ -443,6 +442,18 @@ export default function NewSaleModal({ isOpen, onClose }: Props) {
                 {t.cancel}
               </button>
             </div>
+          }
+          footerContent={
+            <>
+              <button onClick={handleClose}
+                style={{ flex: '0 0 auto', padding: '12px 18px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}>
+                {t.cancel}
+              </button>
+              <button onClick={handleSave} disabled={createSale.isPending || items.length === 0}
+                style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', cursor: items.length === 0 ? 'not-allowed' : 'pointer', background: items.length > 0 ? 'linear-gradient(135deg, #f59e0b, #d97706)' : '#e2e8f0', color: items.length > 0 ? '#fff' : '#94a3b8', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {createSale.isPending ? t.saving : `${t.save}${total > 0 ? ` · ₪${total.toLocaleString()}` : ''}`}
+              </button>
+            </>
           }
         >
           <div className="px-5 py-5 space-y-5">

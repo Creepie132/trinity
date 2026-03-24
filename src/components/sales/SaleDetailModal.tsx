@@ -141,7 +141,14 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
 
   return (
     <Modal open={!!sale} onClose={onClose} darkHeader showCloseButton={false} width="700px" dir={dir} contentClassName="!p-0">
-      <TrinityModalShell open={!!sale} onClose={onClose} icon={<ShoppingBag />} title={clientName} subtitle={t.title} dir={dir} sidebarExtra={sidebar}>
+      <TrinityModalShell open={!!sale} onClose={onClose} icon={<ShoppingBag />} title={clientName} subtitle={t.title} dir={dir} sidebarExtra={sidebar}
+        footerContent={
+          <button onClick={onClose}
+            style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#1e293b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+            {t.close}
+          </button>
+        }
+      >
         <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
 
           {/* ── Stats row ──────────────────────────────────────────── */}

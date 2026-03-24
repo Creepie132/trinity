@@ -134,12 +134,39 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, onSuccess }: Creat
     </div>
   )
 
+  const mobileFooter = !paymentLink ? (
+    <>
+      <button onClick={handleClose}
+        style={{ flex: '0 0 auto', padding: '12px 18px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}>
+        {t('common.cancel')}
+      </button>
+      <button onClick={handleSubmit} disabled={!canSubmit || createPayment.isPending}
+        style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', cursor: canSubmit ? 'pointer' : 'not-allowed', background: canSubmit ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)' : '#e2e8f0', color: canSubmit ? '#fff' : '#94a3b8', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        {createPayment.isPending ? <Loader2 size={15} /> : <Link size={15} />}
+        {createPayment.isPending ? t('payments.creating') : t('payments.createLink')}
+      </button>
+    </>
+  ) : (
+    <>
+      {selectedClient?.phone && (
+        <button onClick={sendWhatsApp}
+          style={{ flex: '0 0 auto', padding: '12px 16px', borderRadius: 10, border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#16a34a', fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <MessageCircle size={15} />WA
+        </button>
+      )}
+      <button onClick={handleClose}
+        style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+        {t('common.close')}
+      </button>
+    </>
+  )
+
   return (
     <Modal open={open} onClose={handleClose} darkHeader showCloseButton={false} width="680px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
       <TrinityModalShell open={open} onClose={handleClose} icon={<Link />}
         title={t('payments.createLink')}
         subtitle={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : (isHe ? 'בחר לקוח' : 'Выберите клиента')}
-        dir={isHe ? 'rtl' : 'ltr'} sidebarExtra={sidebar}>
+        dir={isHe ? 'rtl' : 'ltr'} sidebarExtra={sidebar} footerContent={mobileFooter}>
         <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
           {!paymentLink ? (
             <>

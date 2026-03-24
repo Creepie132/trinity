@@ -108,12 +108,26 @@ export function CreateBitPaymentDialog({ open, onOpenChange, onSuccess }: Create
     </div>
   )
 
+  const mobileFooter = (
+    <>
+      <button onClick={handleClose}
+        style={{ flex: '0 0 auto', padding: '12px 18px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}>
+        {t('common.cancel')}
+      </button>
+      <button onClick={handleSubmit} disabled={!canSubmit || isProcessing}
+        style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', cursor: canSubmit ? 'pointer' : 'not-allowed', background: canSubmit ? 'linear-gradient(135deg, #f97316, #ea580c)' : '#e2e8f0', color: canSubmit ? '#fff' : '#94a3b8', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        {isProcessing ? <Loader2 size={15} /> : <CheckCircle2 size={15} />}
+        {isProcessing ? t('common.processing') : t('common.create')}
+      </button>
+    </>
+  )
+
   return (
     <Modal open={open} onClose={handleClose} darkHeader showCloseButton={false} width="680px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
       <TrinityModalShell open={open} onClose={handleClose} icon={<Smartphone />}
         title={isHe ? 'תשלום BIT' : 'BIT платёж'}
         subtitle={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : (isHe ? 'בחר לקוח' : 'Выберите клиента')}
-        dir={isHe ? 'rtl' : 'ltr'} sidebarExtra={sidebar}>
+        dir={isHe ? 'rtl' : 'ltr'} sidebarExtra={sidebar} footerContent={mobileFooter}>
         <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
           {/* Client */}
           <div style={{ background: 'linear-gradient(135deg, #fff7ed, #ffedd5)', border: '1px solid #fed7aa', borderRadius: 14, padding: '14px 16px' }}>

@@ -283,6 +283,7 @@ export function CreateVisitDialog({
       onClose={handleClose}
       title={wizardTitle}
       logoLabel="Trinity CRM"
+      headerIcon={isAppointment ? <Calendar size={24} /> : <Scissors size={24} />}
       steps={wizardSteps}
       currentStep={step}
       onNext={() => setStep(n => n + 1)}

@@ -17,6 +17,8 @@ export interface WizardModalProps {
   title: string
   logoLabel?: string
   logoBadge?: string
+  /** Иконка в кружке над заголовком (как у TrinityModalShell) */
+  headerIcon?: ReactNode
   steps: WizardStep[]
   currentStep: number
   onNext: () => void
@@ -124,7 +126,7 @@ function DotProgress({ total, current }: { total: number; current: number }) {
 }
 
 export function WizardModal({
-  open, onClose, title, logoLabel = 'Trinity CRM', logoBadge,
+  open, onClose, title, logoLabel = 'Trinity CRM', logoBadge, headerIcon,
   steps, currentStep, onNext, onBack, canProceed,
   onSubmit, isSubmitting = false,
   submitLabel = 'Создать', cancelLabel = 'Отмена', backLabel = 'Назад', nextLabel = 'Далее',
@@ -206,11 +208,22 @@ export function WizardModal({
             )}
           </div>
 
+          {/* Header icon — как у TrinityModalShell */}
+          {headerIcon && (
+            <div style={{
+              width: 52, height: 52, borderRadius: '50%',
+              background: 'var(--trinity-accent, #4a6fa5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: 12, color: '#fff', flexShrink: 0,
+            }}>
+              <span style={{ display: 'flex', width: 24, height: 24 }}>{headerIcon}</span>
+            </div>
+          )}
+
           {/* Title */}
           <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', margin: '0 0 18px', lineHeight: 1.3 }}>
             {title}
           </p>
-
           {/* Vertical steps */}
           <SidebarSteps steps={steps} current={currentStep} />
         </div>

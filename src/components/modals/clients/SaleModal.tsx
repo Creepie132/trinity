@@ -738,6 +738,21 @@ export function SaleModal() {
               )}
             </div>
           }
+          footerContent={
+            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+              <button
+                onClick={preloadedItems.length > 0 ? handleClose : () => setStep('cart')}
+                style={{ flex: '0 0 auto', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}>
+                {preloadedItems.length > 0 ? text.cancel : `← ${text.back}`}
+              </button>
+              <button
+                onClick={handleCompleteSale}
+                disabled={isProcessing || total <= 0 || !client?.id}
+                style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', cursor: (isProcessing || total <= 0 || !client?.id) ? 'not-allowed' : 'pointer', background: (isProcessing || total <= 0 || !client?.id) ? '#e2e8f0' : 'var(--trinity-accent, #4a6fa5)', color: (isProcessing || total <= 0 || !client?.id) ? '#94a3b8' : '#fff', fontSize: 14, fontWeight: 700 }}>
+                {isProcessing ? text.processing : `✓ ${text.pay} · ₪${total.toFixed(2)}`}
+              </button>
+            </div>
+          }
         >
         <div className="space-y-6">
           {/* Client Info */}

@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileHeader } from '@/components/layout/MobileHeader'
-import { AuthProvider } from '@/contexts/AuthContext'
 import { BranchProvider } from '@/contexts/BranchContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GlobalSearch } from '@/components/GlobalSearch'
@@ -393,32 +392,28 @@ export function DashboardShell({
 }) {
   if (workerMode) {
     return (
-      <AuthProvider>
-        <BranchProvider>
-          <LanguageProvider>
-            <ThemeProvider>
-              <WorkerShell>
-                {children}
-              </WorkerShell>
-            </ThemeProvider>
-            <ClientProviders />
-          </LanguageProvider>
-        </BranchProvider>
-      </AuthProvider>
+      <BranchProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <WorkerShell>
+              {children}
+            </WorkerShell>
+          </ThemeProvider>
+          <ClientProviders />
+        </LanguageProvider>
+      </BranchProvider>
     )
   }
 
   return (
-    <AuthProvider>
-      <BranchProvider>
-        <LanguageProvider>
-          <ThemeProvider>
-            <DashboardInner>
-              {children}
-            </DashboardInner>
-          </ThemeProvider>
-        </LanguageProvider>
-      </BranchProvider>
-    </AuthProvider>
+    <BranchProvider>
+      <LanguageProvider>
+        <ThemeProvider>
+          <DashboardInner>
+            {children}
+          </DashboardInner>
+        </ThemeProvider>
+      </LanguageProvider>
+    </BranchProvider>
   )
 }

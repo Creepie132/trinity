@@ -85,10 +85,10 @@ function ToastList({ toasts, onDismiss }: { toasts: WaToast[]; onDismiss: (id: n
 export function WaNotificationProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<WaToast[]>([])
 
-  // prevState: Map<convId → { unread_count, last_message_at }>
-  // undefined = первый poll, не показываем уведомления
   const prevRef = useRef<Map<string, { unread: number; lastAt: string }> | null>(null)
   const isFirstPollRef = useRef(true)
+  // Если получили 403 — прекращаем polling навсегда (нет доступа к WA Inbox)
+  const stoppedRef = useRef(false)
 
   useEffect(() => { requestPermission() }, [])
 
@@ -101,8 +101,11 @@ export function WaNotificationProvider({ children }: { children: React.ReactNode
   }, [])
 
   const poll = useCallback(async () => {
+    if (stoppedRef.current) return
     try {
       const res = await fetch('/api/wa-inbox/conversations')
+      // 403 = нет доступа (не isAdmin) — останавливаем polling навсегда
+      if (res.status === 403) { stoppedRef.current = true; return }
       if (!res.ok) return
       const data = await res.json()
       const convs: any[] = data.conversations ?? []

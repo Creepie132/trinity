@@ -412,8 +412,8 @@ export function VisitDetailMob({
                     <a href={`tel:${clientPhone}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '9px 6px', borderRadius: 10, background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.2)', textDecoration: 'none', color: '#60a5fa', fontSize: 9, fontWeight: 600, letterSpacing: '.04em' }}>
                       <Phone size={14} />{isHe ? 'שיחה' : 'Звонок'}
                     </a>
-                    <a href={`sms:${clientPhone}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '9px 6px', borderRadius: 10, background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.15)', textDecoration: 'none', color: '#60a5fa', fontSize: 9, fontWeight: 600, letterSpacing: '.04em' }}>
-                      <MessageSquare size={14} />SMS
+                    <a href={`https://wa.me/${clientPhone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '9px 6px', borderRadius: 10, background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.15)', textDecoration: 'none', color: '#34d399', fontSize: 9, fontWeight: 600, letterSpacing: '.04em' }}>
+                      <MessageCircle size={14} />WhatsApp
                     </a>
                   </div>
                 )}

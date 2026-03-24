@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react' // useRef needed by CityAutocomplete
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useQueryClient } from '@tanstack/react-query'
 import { useServices } from '@/hooks/useServices'
 import { WizardModal } from '@/components/ui/WizardModal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
+import Modal from '@/components/ui/Modal'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,10 +15,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Users, Calendar, FileText, CheckCircle2, Clock, Scissors, MapPin, Video, X } from 'lucide-react'
+import { Users, Calendar, FileText, CheckCircle2, Clock, Scissors, MapPin, Video, X, Loader2 } from 'lucide-react'
 import { ClientSearch } from '@/components/ui/ClientSearch'
-import { createPortal } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
 
 // ─── Cities ───────────────────────────────────────────────────────────────────
 const ISRAEL_CITIES = [
@@ -142,7 +142,7 @@ const emptyForm = () => ({
   duration: 60, price: '', quantity: 1, notes: '', city: '', address: '', meeting_link: '',
 })
 
-// ─── MOBILE component — bottom sheet, single screen ──────────────────────────
+// ─── MOBILE component — uses TrinityModalShell (ModalBottomSheet) ─────────────
 function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate, preselectedTime, onVisitCreated }: {
   open: boolean; onClose: () => void; preselectedClientId?: string
   preselectedDate?: Date | string | null; preselectedTime?: string | null
@@ -153,30 +153,13 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
   const queryClient = useQueryClient()
   const { data: customServices } = useServices()
   const isHe = language === 'he'
+  const dir = isHe ? 'rtl' : 'ltr'
 
   const [isAppt, setIsAppt] = useState(false)
   const [selClient, setSelClient] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const [kbOffset, setKbOffset] = useState(0)
   const [form, setForm] = useState({ ...emptyForm(), clientId: preselectedClientId || '', date: toDateStr(preselectedDate), time: preselectedTime || getDefaultTime() })
 
-  useEffect(() => { setMounted(true); return () => setMounted(false) }, [])
-
-  // Track virtual keyboard height to push sheet up
-  useEffect(() => {
-    if (!open || typeof window === 'undefined') return
-    const vv = (window as any).visualViewport
-    if (!vv) return
-    const onResize = () => {
-      const keyboardH = window.innerHeight - vv.height - vv.offsetTop
-      setKbOffset(Math.max(0, keyboardH))
-    }
-    vv.addEventListener('resize', onResize)
-    vv.addEventListener('scroll', onResize)
-    onResize()
-    return () => { vv.removeEventListener('resize', onResize); vv.removeEventListener('scroll', onResize) }
-  }, [open])
   useEffect(() => {
     if (!open) return
     setForm(p => ({ ...p, clientId: preselectedClientId || p.clientId, date: toDateStr(preselectedDate), time: preselectedTime || p.time }))
@@ -208,163 +191,175 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
     finally { setSubmitting(false) }
   }
 
-  if (!mounted || typeof document === 'undefined') return null
+  const footerContent = (
+    <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+      <button
+        onClick={handleClose}
+        style={{
+          flex: 1, padding: '12px 0', borderRadius: 12, border: '0.5px solid rgba(0,0,0,0.12)',
+          background: 'transparent', color: 'var(--muted-foreground)', fontSize: 14,
+          fontWeight: 500, cursor: 'pointer',
+        }}
+      >
+        {isHe ? 'ביטול' : 'Отмена'}
+      </button>
+      <button
+        onClick={handleSubmit}
+        disabled={!canSubmit || submitting}
+        style={{
+          flex: 2, padding: '12px 0', borderRadius: 12, border: 'none',
+          background: canSubmit && !submitting ? 'var(--trinity-accent, #4a6fa5)' : 'rgba(0,0,0,0.12)',
+          color: canSubmit && !submitting ? '#fff' : 'rgba(0,0,0,0.3)',
+          fontSize: 14, fontWeight: 600, cursor: canSubmit && !submitting ? 'pointer' : 'not-allowed',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          transition: 'background 0.2s',
+        }}
+      >
+        {submitting && <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />}
+        {submitting ? '...' : (isHe ? 'צור ביקור' : 'Создать визит')}
+      </button>
+    </div>
+  )
 
-  const accent = 'var(--trinity-accent,#2d6a4f)'
-  const accentText = 'var(--trinity-accent-text,#74c69d)'
-  const accentBg = 'var(--trinity-accent-bg,rgba(45,106,79,0.18))'
-  const sidebarBg = 'var(--trinity-sidebar-bg,#1a2620)'
+  return (
+    <Modal open={open} onClose={handleClose} darkHeader showCloseButton={false} width="100%" dir={dir}>
+      <TrinityModalShell
+        open={open}
+        onClose={handleClose}
+        icon={isAppt ? <MapPin /> : <Scissors />}
+        title={isAppt ? (isHe ? 'צור פגישה' : 'Создать встречу') : (isHe ? 'צור ביקור' : 'Создать визит')}
+        subtitle={isHe ? 'מלא את הפרטים' : 'Заполните данные'}
+        dir={dir}
+        footerContent={footerContent}
+      >
+        <div className="space-y-4">
 
-  return createPortal(
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div className="fixed inset-0 bg-black/50" style={{ zIndex:999998 }}
-            initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} transition={{ duration:.2 }} onClick={handleClose} />
-          <motion.div className="fixed bottom-0 left-0 right-0 flex flex-col bg-white dark:bg-zinc-900"
-            style={{ zIndex:999999, maxHeight:'min(92dvh,92vh)', borderRadius:'20px 20px 0 0', overflow:'clip', bottom: kbOffset || 0 }}
-            initial={{ y:'100%' }} animate={{ y:0 }} exit={{ y:'100%' }}
-            transition={{ type:'spring', stiffness:400, damping:40 }} dir={isHe?'rtl':'ltr'}>
-
-            {/* Handle */}
-            <div className="flex-shrink-0 flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
-            </div>
-
-            {/* Header */}
-            <div className="flex-shrink-0 flex items-center gap-3 px-4 pb-3 pt-1 border-b border-border">
-              <div style={{ width:34,height:34,borderRadius:'50%',background:sidebarBg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
-                <Scissors size={15} style={{ color:accentText }} />
-              </div>
-              <div style={{ flex:1 }}>
-                <div className="text-sm font-semibold text-foreground">{isHe?'צור ביקור':'Создать визит'}</div>
-                <div className="text-xs text-muted-foreground">{isHe?'מלא את הפרטים':'Заполните данные'}</div>
-              </div>
-              <button onClick={handleClose} className="w-7 h-7 rounded-full bg-muted flex items-center justify-center" style={{ border:'none',cursor:'pointer',flexShrink:0 }}>
-                <X size={14} className="text-muted-foreground" />
+          {/* Toggle Визит / Встреча */}
+          <div style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 12, background: 'var(--muted, #f1f5f9)' }}>
+            {[
+              { v: false, l: isHe ? 'ביקור' : 'Визит', I: <Scissors size={13} /> },
+              { v: true,  l: isHe ? 'פגישה' : 'Встреча', I: <MapPin size={13} /> },
+            ].map(o => (
+              <button key={String(o.v)} onClick={() => setIsAppt(o.v)}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  padding: '8px 0', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  background: isAppt === o.v ? '#fff' : 'transparent',
+                  color: isAppt === o.v ? '#4f46e5' : 'var(--muted-foreground)',
+                  boxShadow: isAppt === o.v ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+                  border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                }}>
+                {o.I}{o.l}
               </button>
+            ))}
+          </div>
+
+          {/* Клиент */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <Users size={11} />{t('visits.client')} *
+            </label>
+            <ClientSearch orgId={orgId || ''} onSelect={c => { setSelClient(c); setForm(p => ({ ...p, clientId: c?.id || '' })) }}
+              placeholder={t('visits.selectClient')} locale={language as 'he' | 'ru' | 'en'} value={selClient} />
+          </div>
+
+          {/* Услуга + кол-во */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <Scissors size={11} />{t('visits.service')} *
+            </label>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Select value={form.serviceId} onValueChange={onSvcChange}>
+                  <SelectTrigger className="h-10 w-full"><SelectValue placeholder={t('visits.selectService')} /></SelectTrigger>
+                  <SelectContent>
+                    {services.map((s: any) => {
+                      const n = isHe ? s.name : (s.name_ru || s.name)
+                      return <SelectItem key={s.id} value={s.id}>{n}{s.price ? ` — ₪${s.price}` : ''}</SelectItem>
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <input type="number" min={1} max={999} value={form.quantity}
+                onChange={e => setForm(p => ({ ...p, quantity: Math.max(1, Math.min(999, parseInt(e.target.value) || 1)) }))}
+                className="h-10 w-14 rounded-md border border-input bg-background px-2 text-sm text-center font-semibold" />
             </div>
+          </div>
 
-            {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 space-y-4" style={{ touchAction:'pan-y', WebkitOverflowScrolling:'touch' }}>
-
-              {/* Toggle */}
-              <div className="flex gap-1 p-1 rounded-xl bg-muted">
-                {[{v:false,l:isHe?'ביקור':'Визит',I:<Scissors size={12}/>},{v:true,l:isHe?'פגישה':'Встреча',I:<MapPin size={12}/>}].map(o=>(
-                  <button key={String(o.v)} onClick={()=>setIsAppt(o.v)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all"
-                    style={{ background:isAppt===o.v?'white':'transparent', color:isAppt===o.v?'#4f46e5':'var(--muted-foreground)',
-                      boxShadow:isAppt===o.v?'0 1px 4px rgba(0,0,0,.12)':'none', border:'none', cursor:'pointer' }}>
-                    {o.I}{o.l}
-                  </button>
-                ))}
-              </div>
-
-              {/* Client */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Users size={11}/>{t('visits.client')} *</label>
-                <ClientSearch orgId={orgId||''} onSelect={c=>{ setSelClient(c); setForm(p=>({...p,clientId:c?.id||''})) }}
-                  placeholder={t('visits.selectClient')} locale={language as 'he'|'ru'|'en'} value={selClient} />
-              </div>
-
-              {/* Service + qty */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Scissors size={11}/>{t('visits.service')} *</label>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <Select value={form.serviceId} onValueChange={onSvcChange}>
-                      <SelectTrigger className="h-10 w-full"><SelectValue placeholder={t('visits.selectService')}/></SelectTrigger>
-                      <SelectContent>{services.map((s:any)=>{const n=isHe?s.name:(s.name_ru||s.name); return <SelectItem key={s.id} value={s.id}>{n}{s.price?` — ₪${s.price}`:''}</SelectItem>})}</SelectContent>
-                    </Select>
-                  </div>
-                  <input type="number" min={1} max={999} value={form.quantity}
-                    onChange={e=>setForm(p=>({...p,quantity:Math.max(1,Math.min(999,parseInt(e.target.value)||1))}))}
-                    className="h-10 w-14 rounded-md border border-input bg-background px-2 text-sm text-center font-semibold" />
-                </div>
-              </div>
-
-              {/* Date + Time */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Calendar size={11}/>{t('visits.date')} *</label>
-                  <Input type="date" value={form.date} className="h-10" onChange={e=>setForm(p=>({...p,date:e.target.value}))} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Clock size={11}/>{t('visits.time')} *</label>
-                  <Input type="time" value={form.time} className="h-10" onChange={e=>setForm(p=>({...p,time:e.target.value}))} />
-                </div>
-              </div>
-
-              {/* Duration+Price OR City+Address */}
-              {!isAppt ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.duration')}</label>
-                    <Select value={form.duration.toString()} onValueChange={v=>setForm(p=>({...p,duration:parseInt(v)}))}>
-                      <SelectTrigger className="h-10"><SelectValue/></SelectTrigger>
-                      <SelectContent>{DURATIONS.map(d=><SelectItem key={d.value} value={d.value.toString()}>{t(d.labelKey)}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.price')} *</label>
-                    <Input type="number" value={form.price} placeholder="₪" className="h-10" onChange={e=>setForm(p=>({...p,price:e.target.value}))} />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><MapPin size={11}/>{isHe?'עיר':'Город'}</label>
-                    <CityAutocomplete value={form.city} onChange={v=>setForm(p=>({...p,city:v}))} placeholder={isHe?'הקלד 2 תווים...':'2 символа...'} inputClass="h-10" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><MapPin size={11}/>{isHe?'כתובת':'Адрес'}</label>
-                    <Input value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))} className="h-10" dir="rtl" placeholder="כתובת בעברית" />
-                  </div>
-                </div>
-              )}
-
-              {/* Notes */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><FileText size={11}/>{t('visits.notes')}</label>
-                <Textarea value={form.notes} rows={2} placeholder={t('visits.notes')} className="resize-none" onChange={e=>setForm(p=>({...p,notes:e.target.value}))} />
-              </div>
-
-              {/* Summary — appears when form is complete */}
-              {canSubmit && (
-                <div className="rounded-xl p-3 space-y-2" style={{ background:accentBg, border:`1px solid ${accent}33` }}>
-                  <div className="text-xs font-bold uppercase tracking-wide flex items-center gap-1.5" style={{ color:accentText }}>
-                    <CheckCircle2 size={11}/>{isHe?'סיכום':'Сводка'}
-                  </div>
-                  <div className="space-y-1 text-xs text-foreground">
-                    {selClient && <div className="flex items-center gap-1.5"><Users size={10} className="text-muted-foreground shrink-0"/><span className="font-medium">{selClient.first_name} {selClient.last_name}</span></div>}
-                    {svcName && <div className="flex items-center gap-1.5"><Scissors size={10} className="text-muted-foreground shrink-0"/><span>{svcName}{!isAppt&&form.price?` — ₪${form.price}`:''}{form.quantity>1?` ×${form.quantity}`:''}</span></div>}
-                    <div className="flex items-center gap-1.5"><Calendar size={10} className="text-muted-foreground shrink-0"/><span>{form.date} {isHe?'ב':'в'} {form.time}</span></div>
-                    {!isAppt&&<div className="flex items-center gap-1.5"><Clock size={10} className="text-muted-foreground shrink-0"/><span>{form.duration} {isHe?'דקות':'мин'}</span></div>}
-                  </div>
-                </div>
-              )}
-              <div className="h-2" />
+          {/* Дата + Время */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Calendar size={11} />{t('visits.date')} *
+              </label>
+              <Input type="date" value={form.date} className="h-10" onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
             </div>
-
-            {/* Footer */}
-            <div className="flex-shrink-0 flex gap-3 px-4 pt-3 pb-safe border-t border-border"
-              style={{ paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}>
-              <button onClick={handleClose} className="flex-1 py-3 rounded-xl text-sm font-medium"
-                style={{ background:'var(--muted)', color:'var(--muted-foreground)', border:'none', cursor:'pointer' }}>
-                {isHe?'ביטול':'Отмена'}
-              </button>
-              <button onClick={handleSubmit} disabled={!canSubmit||submitting}
-                className="py-3 rounded-xl text-sm font-semibold text-white"
-                style={{ flex:2, background:canSubmit&&!submitting?accent:'rgba(0,0,0,0.15)',
-                  border:'none', cursor:canSubmit&&!submitting?'pointer':'not-allowed', transition:'background .2s' }}>
-                {submitting?'...':(isHe?'צור ביקור':'Создать визит')}
-              </button>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Clock size={11} />{t('visits.time')} *
+              </label>
+              <Input type="time" value={form.time} className="h-10" onChange={e => setForm(p => ({ ...p, time: e.target.value }))} />
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>,
-    document.body
+          </div>
+
+          {/* Длит + Цена / Город + Адрес */}
+          {!isAppt ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.duration')}</label>
+                <Select value={form.duration.toString()} onValueChange={v => setForm(p => ({ ...p, duration: parseInt(v) }))}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>{DURATIONS.map(d => <SelectItem key={d.value} value={d.value.toString()}>{t(d.labelKey)}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.price')} *</label>
+                <Input type="number" value={form.price} placeholder="₪" className="h-10" onChange={e => setForm(p => ({ ...p, price: e.target.value }))} />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <MapPin size={11} />{isHe ? 'עיר' : 'Город'}
+                </label>
+                <CityAutocomplete value={form.city} onChange={v => setForm(p => ({ ...p, city: v }))} placeholder={isHe ? 'הקלד 2 תווים...' : '2 символа...'} inputClass="h-10" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <MapPin size={11} />{isHe ? 'כתובת' : 'Адрес'}
+                </label>
+                <Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className="h-10" dir="rtl" placeholder="כתובת בעברית" />
+              </div>
+            </div>
+          )}
+
+          {/* Заметки */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <FileText size={11} />{t('visits.notes')}
+            </label>
+            <Textarea value={form.notes} rows={2} placeholder={t('visits.notes')} className="resize-none"
+              onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
+          </div>
+
+          {/* Сводка */}
+          {canSubmit && (
+            <div style={{ borderRadius: 12, padding: 12, background: 'rgba(74,111,165,0.08)', border: '1px solid rgba(74,111,165,0.2)' }}>
+              <div className="text-xs font-bold uppercase tracking-wide flex items-center gap-1.5 text-indigo-600 mb-2">
+                <CheckCircle2 size={11} />{isHe ? 'סיכום' : 'Сводка'}
+              </div>
+              <div className="space-y-1 text-xs text-foreground">
+                {selClient && <div className="flex items-center gap-1.5"><Users size={10} className="text-muted-foreground shrink-0" /><span className="font-medium">{selClient.first_name} {selClient.last_name}</span></div>}
+                {svcName && <div className="flex items-center gap-1.5"><Scissors size={10} className="text-muted-foreground shrink-0" /><span>{svcName}{!isAppt && form.price ? ` — ₪${form.price}` : ''}{form.quantity > 1 ? ` ×${form.quantity}` : ''}</span></div>}
+                <div className="flex items-center gap-1.5"><Calendar size={10} className="text-muted-foreground shrink-0" /><span>{form.date} {isHe ? 'ב' : 'в'} {form.time}</span></div>
+                {!isAppt && <div className="flex items-center gap-1.5"><Clock size={10} className="text-muted-foreground shrink-0" /><span>{form.duration} {isHe ? 'דקות' : 'мин'}</span></div>}
+              </div>
+            </div>
+          )}
+        </div>
+      </TrinityModalShell>
+    </Modal>
   )
 }
 

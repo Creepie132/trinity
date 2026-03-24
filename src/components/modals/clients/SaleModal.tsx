@@ -16,7 +16,7 @@ import {
   Search, Plus, Minus, X, Percent, ShoppingCart,
   FileText, Download, MessageCircle, Mail,
   CreditCard, Banknote, Building2, ChevronLeft, Check, LayoutGrid,
-  Smartphone, Scissors
+  Smartphone, Scissors, Zap
 } from 'lucide-react'
 import type { Product } from '@/types/inventory'
 import { useGeneratePDF } from '@/lib/pdf/use-generate-pdf'
@@ -88,6 +88,9 @@ export function SaleModal() {
   const [showProposalPanel, setShowProposalPanel] = useState(false)
   const [paymentUrl, setPaymentUrl] = useState<string>('')
   const [catalogOpen, setCatalogOpen] = useState(false)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickName, setQuickName] = useState('')
+  const [quickPrice, setQuickPrice] = useState('')
 
   const { download, uploadAndGetLink, loading: pdfLoading } = useGeneratePDF()
 
@@ -521,6 +524,24 @@ export function SaleModal() {
   const addProductFromCatalog = (product: Product) => {
     addToCart(product)
     setCatalogOpen(false)
+  }
+
+  // Add custom (one-off) item
+  const handleQuickAdd = () => {
+    if (!quickName.trim()) return
+    // Use a fake Product-like structure — cast to any to avoid type collision
+    const customProduct = {
+      id: `custom_${Date.now()}`,
+      name: quickName.trim(),
+      sell_price: Number(quickPrice) || 0,
+      quantity: 9999,
+      unit: '',
+      is_active: true,
+    } as unknown as Product
+    setCart(prev => [...prev, { product: customProduct, quantity: 1, price: Number(quickPrice) || 0 }])
+    setQuickName('')
+    setQuickPrice('')
+    setQuickAddOpen(false)
   }
 
   const t = {
@@ -963,7 +984,7 @@ export function SaleModal() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Column - Product Search & Cart */}
         <div className="space-y-4">
-          {/* Search + Catalog Button */}
+          {/* Search + Catalog + Quick-add */}
           <div className="flex gap-2 items-center">
             <div className="relative flex-1">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -975,6 +996,7 @@ export function SaleModal() {
                 className="w-full pr-10 pl-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
+            {/* Catalog */}
             <button
               onClick={() => setCatalogOpen(true)}
               className="w-12 h-12 flex-shrink-0 flex items-center justify-center border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-indigo-400 transition-colors"
@@ -982,7 +1004,58 @@ export function SaleModal() {
             >
               <LayoutGrid className="w-5 h-5 text-gray-500" />
             </button>
+            {/* Quick-add */}
+            <button
+              onClick={() => setQuickAddOpen(true)}
+              className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl transition-colors
+                bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700
+                hover:bg-orange-100 dark:hover:bg-orange-900/40"
+              title={locale === 'he' ? 'הוסף פריט מהיר' : 'Быстро добавить'}
+            >
+              <Zap className="w-5 h-5 text-orange-500" />
+            </button>
           </div>
+
+          {/* Quick-add inline panel */}
+          {quickAddOpen && (
+            <div className="p-4 rounded-xl border border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/10 space-y-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-orange-700 dark:text-orange-400">
+                  <Zap size={14} /> {locale === 'he' ? 'פריט מהיר' : 'Быстрое добавление'}
+                </span>
+                <button onClick={() => { setQuickAddOpen(false); setQuickName(''); setQuickPrice('') }}
+                  className="text-gray-400 hover:text-gray-600"><X size={15} /></button>
+              </div>
+              <input
+                type="text"
+                value={quickName}
+                onChange={e => setQuickName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleQuickAdd()}
+                autoFocus
+                placeholder={locale === 'he' ? 'שם המוצר / שירות' : 'Название товара / услуги'}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm
+                  bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300"
+              />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">₪</span>
+                  <input
+                    type="number" min={0} value={quickPrice}
+                    onChange={e => setQuickPrice(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleQuickAdd()}
+                    placeholder="0"
+                    className="w-full ps-7 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm
+                      bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                  />
+                </div>
+                <button onClick={handleQuickAdd} disabled={!quickName.trim()}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition disabled:opacity-40"
+                  style={{ background: quickName.trim() ? 'linear-gradient(135deg, #f97316, #ea580c)' : '#e2e8f0' }}>
+                  <Plus size={15} />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Product suggestions */}
           {searchQuery && filteredProducts.length > 0 && (
@@ -1072,10 +1145,16 @@ export function SaleModal() {
           <div>
             <button
               onClick={() => setShowDiscount(!showDiscount)}
-              className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow-sm transition-all active:scale-[0.97]"
+              style={{ background: showDiscount ? '#7c3aed' : 'linear-gradient(135deg, #7c3aed, #6d28d9)', boxShadow: '0 2px 8px rgba(124,58,237,0.25)' }}
             >
               <Percent className="w-4 h-4" />
               {text.discount}
+              {discount.value > 0 && (
+                <span className="ms-1 bg-white/20 px-1.5 py-0.5 rounded-md text-xs">
+                  {discount.type === 'percent' ? `${discount.value}%` : `₪${discount.value}`}
+                </span>
+              )}
             </button>
             
             {showDiscount && (

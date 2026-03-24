@@ -185,36 +185,13 @@ export function WizardModal({
             borderRadius: dir === 'rtl' ? '0 16px 16px 0' : '16px 0 0 16px',
           }}
         >
-          {/* Logo row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-              background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <polygon points="8,1.5 13.5,4.75 13.5,11.25 8,14.5 2.5,11.25 2.5,4.75"
-                  fill="none" stroke="rgba(255,200,80,0.8)" strokeWidth="1.2"/>
-                <circle cx="8" cy="8" r="3" fill="rgba(255,180,0,0.7)"/>
-              </svg>
-            </div>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{logoLabel}</span>
-            {logoBadge && (
-              <span style={{
-                fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 999,
-                background: 'rgba(251,191,36,0.2)', color: 'rgb(251,191,36)',
-                border: '1px solid rgba(251,191,36,0.3)',
-              }}>{logoBadge}</span>
-            )}
-          </div>
-
-          {/* Header icon — как у TrinityModalShell */}
+          {/* Header icon — как у TrinityModalShell, сразу сверху */}
           {headerIcon && (
             <div style={{
               width: 52, height: 52, borderRadius: '50%',
               background: 'var(--trinity-accent, #4a6fa5)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: 12, color: '#fff', flexShrink: 0,
+              marginBottom: 14, color: '#fff', flexShrink: 0,
             }}>
               <span style={{ display: 'flex', width: 24, height: 24 }}>{headerIcon}</span>
             </div>

@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { AdminDeleteButton } from '@/components/admin/AdminDeleteButton'
+import { VisitDetailMob } from './VisitDetailMob'
 
 interface VisitDetailModalProps {
   visit: any
@@ -74,6 +75,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
 
   const [priceOffset, setPriceOffset] = useState(0)
   const [viewMode, setViewMode] = useState<ViewMode>('main')
+  const [isMobile, setIsMobile] = useState(false)
   const [instructions, setInstructions] = useState<CareInstruction[]>([])
   const [selectedInstruction, setSelectedInstruction] = useState<CareInstruction | null>(null)
   const [loading, setLoading] = useState(false)
@@ -85,6 +87,13 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const [servicePage, setServicePage] = useState(1)
   const [productPage, setProductPage] = useState(1)
   const PAGE_SIZE = 10
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     if (isOpen && viewMode === 'instructions' && instructions.length === 0) fetchInstructions()
@@ -142,6 +151,27 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   }
 
   if (!visit || !isOpen) return null
+
+  // ── Mobile: TrinityMob-style swipe sheet ──────────────────────────────────
+  if (isMobile) {
+    return (
+      <VisitDetailMob
+        visit={visit}
+        isOpen={isOpen}
+        onClose={onClose}
+        locale={locale}
+        clientName={clientName}
+        clientPhone={clientPhone}
+        serviceName={serviceName}
+        onStart={onStart}
+        onComplete={onComplete}
+        onCancel={onCancel}
+        onEdit={onEdit}
+        lastVisitDate={lastVisitDate}
+        onShowHistory={onShowHistory}
+      />
+    )
+  }
 
   const isHe = locale === 'he'
   const dir = isHe ? 'rtl' : 'ltr'

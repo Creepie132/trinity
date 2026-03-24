@@ -2,19 +2,22 @@
 
 import { useEffect, useState } from 'react'
 
+function readImpersonating(): boolean {
+  if (typeof window === 'undefined') return false
+  return !!localStorage.getItem('impersonation_session')
+}
+
 /**
  * Возвращает true если текущий сеанс — impersonation (суперадмин смотрит от лица org).
- * Читает из localStorage — быстро, без запросов к серверу.
+ * Инициализируется синхронно из localStorage — кнопка видна сразу при открытии модалки.
  */
 export function useIsImpersonating(): boolean {
-  const [active, setActive] = useState(false)
+  // Инициализация синхронно — никакого flash/задержки
+  const [active, setActive] = useState<boolean>(readImpersonating)
 
   useEffect(() => {
-    const check = () => {
-      const raw = localStorage.getItem('impersonation_session')
-      setActive(!!raw)
-    }
-    check()
+    // Актуализируем при изменениях из других вкладок
+    const check = () => setActive(readImpersonating())
     window.addEventListener('storage', check)
     return () => window.removeEventListener('storage', check)
   }, [])

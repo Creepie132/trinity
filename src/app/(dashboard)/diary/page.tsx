@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Plus, Calendar, Clock, User, CheckCircle2, Circle, AlertTriangle,
-  MessageSquare, Search, X, XCircle, PlayCircle, Trash2, CheckCircle,
-  GripVertical, CreditCard,
+  Plus, Calendar, Clock, AlertTriangle, Search, X, CheckCircle2,
+  Inbox, Flame, Timer, ChevronRight, Phone, MessageCircle,
+  Loader2, MoreHorizontal, Check, Archive, Trash2,
 } from 'lucide-react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -16,7 +16,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoSectionBanner } from '@/components/demo/DemoSectionBanner'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
-import { format, isToday, isTomorrow, isPast, parseISO, type Locale } from 'date-fns'
+import { format, isToday, isTomorrow, isPast, parseISO, isThisWeek, type Locale } from 'date-fns'
 import { he, ru } from 'date-fns/locale'
 
 interface Task {
@@ -47,193 +47,169 @@ interface Task {
 }
 
 interface OrgUser { user_id: string; full_name: string; avatar_url?: string | null }
-type KanbanColumn = { id: Task['status']; label: string; color: string; accent: string; icon: React.ReactNode }
-type PriorityFilter = 'all' | 'urgent' | 'high' | 'normal'
 
-// ── helpers ──
-function formatPhoneForWhatsApp(phone: string): string {
-  const clean = phone.replace(/[^0-9]/g, '')
-  if (clean.startsWith('0')) return '972' + clean.slice(1)
-  if (clean.startsWith('972')) return clean
-  return '972' + clean
-}
 function getClientDisplayName(client: Task['client']): string {
   if (!client) return ''
   return `${client.first_name || ''} ${client.last_name || ''}`.trim() || client.name || ''
 }
-function formatDeadline(due: string, locale: Locale, lang: string) {
+
+// ── Smart bucketing ──────────────────────────────────────────────────────────
+type Bucket = 'burning' | 'today' | 'later' | 'done'
+
+function getBucket(task: Task): Bucket {
+  if (task.status === 'completed' || task.status === 'cancelled') return 'done'
+  const due = task.due_date ? parseISO(task.due_date) : null
+  if (task.priority === 'urgent') return 'burning'
+  if (due && (isPast(due) && !isToday(due))) return 'burning'
+  if (task.priority === 'high' && due && isToday(due)) return 'burning'
+  if (due && isToday(due)) return 'today'
+  if (due && isTomorrow(due)) return 'today'
+  if (task.priority === 'high') return 'today'
+  if (task.status === 'in_progress') return 'today'
+  return 'later'
+}
+
+function formatDue(due: string, locale: Locale, lang: string): { text: string; overdue: boolean } {
   const d = parseISO(due)
   const overdue = isPast(d) && !isToday(d)
-  let text = ''
-  if (overdue) text = lang === 'he' ? 'באיחור' : 'Просрочено'
-  else if (isToday(d)) text = format(d, 'HH:mm', { locale })
-  else if (isTomorrow(d)) text = (lang === 'he' ? 'מחר ' : 'Завтра ') + format(d, 'HH:mm', { locale })
-  else text = format(d, 'dd MMM', { locale })
-  return { text, overdue, urgent: overdue || isToday(d) || isTomorrow(d) }
+  if (overdue) {
+    const days = Math.floor((Date.now() - d.getTime()) / 86400000)
+    return { text: lang === 'he' ? `באיחור ${days}י` : `${days} дн.`, overdue: true }
+  }
+  if (isToday(d)) return { text: format(d, 'HH:mm', { locale }), overdue: false }
+  if (isTomorrow(d)) return { text: lang === 'he' ? 'מחר' : 'Завтра', overdue: false }
+  if (isThisWeek(d)) return { text: format(d, 'EEE', { locale }), overdue: false }
+  return { text: format(d, 'dd MMM', { locale }), overdue: false }
 }
 
-// ── PriorityDot ──
-function PriorityDot({ priority }: { priority: string }) {
-  const map: Record<string, string> = { urgent: 'bg-red-500', high: 'bg-amber-400', normal: 'bg-blue-400', low: 'bg-slate-300' }
-  return <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 mt-1 ${map[priority] ?? map.normal}`} />
+// ── TaskRow — одна строка в Smart Inbox ──────────────────────────────────────
+const PRIORITY_DOT: Record<string, string> = {
+  urgent: '#ef4444', high: '#f59e0b', normal: '#3b82f6', low: '#94a3b8',
+}
+const PRIORITY_LABEL: Record<string, Record<string, string>> = {
+  urgent: { ru: 'Срочно',  he: 'דחוף'  },
+  high:   { ru: 'Высокий', he: 'גבוה'  },
+  normal: { ru: 'Обычный', he: 'רגיל'  },
+  low:    { ru: 'Низкий',  he: 'נמוכה' },
 }
 
-// ── AssigneeAvatar ──
-function AssigneeAvatar({ user }: { user: OrgUser | undefined }) {
-  if (!user) return null
-  const initials = user.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-  return (
-    <div className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[9px] font-bold flex-shrink-0 ring-1 ring-primary/20" title={user.full_name}>
-      {initials}
-    </div>
-  )
-}
-
-// ── KanbanCard ──
-interface KanbanCardProps {
-  task: Task; language: string; dateLocale: Locale
-  clients: any[]; orgUsers: OrgUser[]
+interface TaskRowProps {
+  task: Task
+  lang: string
+  dateLocale: Locale
   onComplete: (id: string) => void
   onDelete: (id: string) => void
-  onCardClick: (task: Task) => void
-  onDragStart: (e: React.DragEvent, task: Task) => void
-  onDragEnd: () => void
-  isDragging: boolean
+  onClick: (task: Task) => void
 }
 
-function KanbanCard({ task, language, dateLocale, clients, orgUsers, onComplete, onDelete, onCardClick, onDragStart, onDragEnd, isDragging }: KanbanCardProps) {
-  const router = useRouter()
-  const client = task.client_id ? clients.find((c: any) => c.id === task.client_id) : null
-  const clientName = getClientDisplayName(client)
-  const deadline = task.due_date ? formatDeadline(task.due_date, dateLocale, language) : null
-  const assignee = task.assigned_to ? orgUsers.find(u => u.user_id === task.assigned_to) : undefined
-  const isRTL = language === 'he'
+function TaskRow({ task, lang, dateLocale, onComplete, onDelete, onClick }: TaskRowProps) {
+  const isHe = lang === 'he'
+  const due = task.due_date ? formatDue(task.due_date, dateLocale, lang) : null
+  const clientName = getClientDisplayName(task.client)
+  const isDone = task.status === 'completed' || task.status === 'cancelled'
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [completing, setCompleting] = useState(false)
 
-  const cardBg: Record<string, string> = {
-    urgent: 'bg-red-50/70 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 border-l-red-500',
-    high:   'bg-amber-50/60 dark:bg-amber-950/25 border-amber-200 dark:border-amber-900/50 border-l-amber-400',
-    normal: 'bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 border-l-transparent',
-    low:    'bg-white dark:bg-slate-800/90 border-slate-200 dark:border-slate-700 border-l-transparent',
-  }
+  // swipe to complete
+  const touchStartX = useRef(0)
+  const [swipe, setSwipe] = useState(0)
+  const [swiping, setSwiping] = useState(false)
 
-  // swipe-to-complete (mobile)
-  const touchStartX = useRef<number>(0)
-  const cardRef = useRef<HTMLDivElement>(null)
-  const [swipeOffset, setSwipeOffset] = useState(0)
-  const [isSwiping, setIsSwiping] = useState(false)
-
-  function onTouchStart(e: React.TouchEvent) { touchStartX.current = e.touches[0].clientX; setIsSwiping(true) }
+  function onTouchStart(e: React.TouchEvent) { touchStartX.current = e.touches[0].clientX; setSwiping(true) }
   function onTouchMove(e: React.TouchEvent) {
-    if (!isSwiping) return
+    if (!swiping) return
     const dx = e.touches[0].clientX - touchStartX.current
-    if (dx > 0) setSwipeOffset(Math.min(dx, 100))
+    setSwipe(Math.max(0, Math.min(dx, 90)))
   }
-  function onTouchEnd() {
-    if (swipeOffset > 60 && task.status !== 'completed' && task.status !== 'cancelled') onComplete(task.id)
-    setSwipeOffset(0); setIsSwiping(false)
+  async function onTouchEnd() {
+    if (swipe > 60 && !isDone) { setCompleting(true); await onComplete(task.id) }
+    setSwipe(0); setSwiping(false)
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl">
-      {/* swipe green layer */}
-      <div className="absolute inset-0 flex items-center ps-4 bg-emerald-500 rounded-2xl transition-opacity"
-        style={{ opacity: swipeOffset > 20 ? Math.min((swipeOffset - 20) / 40, 1) : 0 }}>
-        <CheckCircle size={20} className="text-white" />
-        <span className="text-white text-xs font-bold ms-2">{language === 'he' ? 'סיים' : 'Готово!'}</span>
+    <div className="relative overflow-hidden rounded-2xl" style={{ marginBottom: 6 }}>
+      {/* swipe reveal */}
+      <div className="absolute inset-0 flex items-center gap-2 rounded-2xl"
+        style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', paddingLeft: 16, opacity: swipe > 10 ? Math.min((swipe - 10) / 50, 1) : 0, transition: swiping ? 'none' : 'opacity .2s' }}>
+        <Check size={16} color="#fff" />
+        <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{isHe ? 'בוצע!' : 'Готово!'}</span>
       </div>
 
       <div
-        ref={cardRef}
-        draggable
-        onDragStart={e => onDragStart(e, task)}
-        onDragEnd={onDragEnd}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onClick={() => onCardClick(task)}
-        style={{ transform: `translateX(${swipeOffset}px)`, transition: isSwiping ? 'none' : 'transform .25s ease' }}
-        className={[
-          'group relative rounded-2xl border border-l-4',
-          cardBg[task.priority] ?? cardBg.normal,
-          'shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer',
-          isDragging ? 'opacity-40 scale-95' : 'opacity-100 scale-100',
-          task.status === 'completed' ? 'opacity-60' : '',
-          'animate-card-in',
-        ].join(' ')}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+        style={{ transform: `translateX(${swipe}px)`, transition: swiping ? 'none' : 'transform .2s ease', position: 'relative',
+          background: isDone ? 'var(--color-background-secondary)' : 'var(--color-background-primary)',
+          border: `1.5px solid ${task.priority === 'urgent' && !isDone ? 'rgba(239,68,68,0.3)' : task.priority === 'high' && !isDone ? 'rgba(245,158,11,0.25)' : 'var(--color-border-tertiary)'}`,
+          borderRadius: 16, padding: '12px 14px', cursor: 'pointer', opacity: isDone ? 0.55 : 1,
+          borderLeft: `4px solid ${isDone ? 'transparent' : (PRIORITY_DOT[task.priority] || '#3b82f6')}`,
+        }}
+        onClick={() => !menuOpen && onClick(task)}
       >
-        <div className={`absolute top-3 ${isRTL ? 'left-2' : 'right-2'} opacity-0 group-hover:opacity-30 transition-opacity pointer-events-none`}>
-          <GripVertical size={13} className="text-slate-400" />
-        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          {/* Complete button */}
+          <button
+            onClick={e => { e.stopPropagation(); if (!isDone && !completing) { setCompleting(true); onComplete(task.id) } }}
+            style={{ width: 22, height: 22, borderRadius: '50%', border: isDone ? 'none' : `1.5px solid ${PRIORITY_DOT[task.priority] || '#94a3b8'}`,
+              background: isDone ? '#22c55e' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, cursor: isDone ? 'default' : 'pointer', transition: 'all .15s' }}>
+            {(completing || isDone) && <Check size={12} color="#fff" strokeWidth={3} />}
+          </button>
 
-        <div className="p-3.5 space-y-2">
-          {/* Title */}
-          <div className="flex items-start gap-2">
-            <PriorityDot priority={task.priority} />
-            <p className={`text-sm font-semibold leading-snug flex-1 ${
-              task.priority === 'urgent' ? 'text-red-800 dark:text-red-200' :
-              task.priority === 'high'   ? 'text-amber-900 dark:text-amber-200' :
-              'text-slate-800 dark:text-slate-100'
-            } ${task.status === 'completed' ? 'line-through opacity-50' : ''}`}>
+          {/* Content */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              textDecoration: isDone ? 'line-through' : 'none', opacity: isDone ? 0.7 : 1 }}>
               {task.title}
             </p>
-          </div>
-
-          {/* Description */}
-          {task.description && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2 ps-4">{task.description}</p>
-          )}
-
-          {/* Client + assignee */}
-          {(clientName || assignee) && (
-            <div className="flex items-center gap-2 ps-4">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
               {clientName && (
-                <div className="flex items-center gap-1 flex-1 min-w-0">
-                  <User size={11} className="text-slate-400 flex-shrink-0" />
-                  <span className="text-xs text-slate-500 dark:text-slate-400 truncate">{clientName}</span>
-                </div>
+                <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#6366f1', flexShrink: 0, display: 'inline-block' }} />
+                  {clientName}
+                </span>
               )}
-              {assignee && <AssigneeAvatar user={assignee} />}
+              {due && (
+                <span style={{ fontSize: 11, fontWeight: 600, color: due.overdue ? '#ef4444' : 'var(--color-text-tertiary)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <Clock size={10} style={{ flexShrink: 0 }} />
+                  {due.text}
+                </span>
+              )}
+              {!isDone && task.priority !== 'normal' && (
+                <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 5,
+                  background: task.priority === 'urgent' ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                  color: task.priority === 'urgent' ? '#ef4444' : '#d97706' }}>
+                  {isHe ? PRIORITY_LABEL[task.priority]?.he : PRIORITY_LABEL[task.priority]?.ru}
+                </span>
+              )}
+              {task.contact_phone && (
+                <button onClick={e => { e.stopPropagation(); window.open(`https://wa.me/${task.contact_phone!.replace(/[^0-9]/g,'').replace(/^0/,'972')}`, '_blank') }}
+                  style={{ fontSize: 10, fontWeight: 600, color: '#16a34a', background: 'rgba(34,197,94,0.1)', border: 'none', borderRadius: 5, padding: '1px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <MessageCircle size={9} /> WA
+                </button>
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Deadline */}
-          {deadline && (
-            <div className="flex items-center gap-1.5 ps-4">
-              <Clock size={11} className={deadline.overdue ? 'text-red-500' : deadline.urgent ? 'text-amber-500' : 'text-slate-400'} />
-              <span className={`text-xs font-medium ${deadline.overdue ? 'text-red-500' : deadline.urgent ? 'text-amber-500' : 'text-slate-500 dark:text-slate-400'}`}>
-                {deadline.text}
-              </span>
-            </div>
-          )}
-
-          {/* Action buttons — stopPropagation чтобы не открывать детали */}
-          <div className="flex items-center gap-1.5 pt-1.5 border-t border-black/5 dark:border-white/5">
-            {task.contact_phone && (
-              <button onClick={e => { e.stopPropagation(); window.open(`https://wa.me/${formatPhoneForWhatsApp(task.contact_phone!)}`, '_blank') }}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 transition text-xs font-medium" title="WhatsApp">
-                <MessageSquare size={11} /><span>WA</span>
-              </button>
-            )}
-            {task.client_id && task.status !== 'completed' && task.status !== 'cancelled' && (
-              <button onClick={e => { e.stopPropagation(); router.push(`/payments?client=${task.client_id}`) }}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 hover:bg-violet-200 transition text-xs font-medium"
-                title={language === 'he' ? 'לתשלום' : 'К оплате'}>
-                <CreditCard size={11} />
-                <span className="hidden sm:inline">{language === 'he' ? 'תשלום' : 'Оплата'}</span>
-              </button>
-            )}
-            {task.status !== 'completed' && task.status !== 'cancelled' && (
-              <button onClick={e => { e.stopPropagation(); onComplete(task.id) }}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/5 dark:bg-white/5 text-slate-500 hover:bg-emerald-100 hover:text-emerald-700 transition text-xs ms-auto"
-                title={language === 'he' ? 'סיים' : 'Завершить'}>
-                <CheckCircle size={11} />
-              </button>
-            )}
-            <button onClick={e => { e.stopPropagation(); onDelete(task.id) }}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/5 dark:bg-white/5 text-slate-400 hover:bg-red-100 hover:text-red-600 transition text-xs"
-              title={language === 'he' ? 'מחק' : 'Удалить'}>
-              <Trash2 size={11} />
+          {/* Menu */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <button onClick={e => { e.stopPropagation(); setMenuOpen(o => !o) }}
+              style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--color-text-tertiary)' }}>
+              <MoreHorizontal size={15} />
             </button>
+            {menuOpen && (
+              <div style={{ position: 'absolute', right: 0, top: 30, background: 'var(--color-background-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 140, zIndex: 50 }}
+                onClick={e => e.stopPropagation()}>
+                {!isDone && (
+                  <button onClick={() => { onComplete(task.id); setMenuOpen(false) }}
+                    style={{ width: '100%', padding: '9px 14px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: 13, color: '#16a34a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderRadius: '12px 12px 0 0' }}>
+                    <Check size={13} />{isHe ? 'בוצע' : 'Готово'}
+                  </button>
+                )}
+                <button onClick={() => { onDelete(task.id); setMenuOpen(false) }}
+                  style={{ width: '100%', padding: '9px 14px', border: 'none', background: 'transparent', textAlign: 'left', fontSize: 13, color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderRadius: isDone ? 12 : '0 0 12px 12px' }}>
+                  <Trash2 size={13} />{isHe ? 'מחק' : 'Удалить'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -241,176 +217,89 @@ function KanbanCard({ task, language, dateLocale, clients, orgUsers, onComplete,
   )
 }
 
-// ── KanbanCol ──
-interface KanbanColProps {
-  col: KanbanColumn; tasks: Task[]; language: string; dateLocale: Locale
-  clients: any[]; orgUsers: OrgUser[]
-  onComplete: (id: string) => void
-  onDelete: (id: string) => void
-  onCardClick: (task: Task) => void
-  onDrop: (status: Task['status']) => void
-  draggingId: string | null
-  onDragStart: (e: React.DragEvent, task: Task) => void
-  onDragEnd: () => void
+// ── InboxSection ──────────────────────────────────────────────────────────────
+function InboxSection({ label, icon, color, count, tasks, lang, dateLocale, onComplete, onDelete, onClick, defaultOpen = true }: {
+  label: string; icon: React.ReactNode; color: string; count: number
+  tasks: Task[]; lang: string; dateLocale: Locale
+  onComplete: (id: string) => void; onDelete: (id: string) => void; onClick: (task: Task) => void
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  if (count === 0 && defaultOpen) return null
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <button onClick={() => setOpen(o => !o)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, marginBottom: open ? 10 : 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+        <span style={{ color }}>{icon}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 7px', borderRadius: 20, background: `${color}18`, color }}>{count}</span>
+        <div style={{ flex: 1, height: '0.5px', background: 'var(--color-border-tertiary)' }} />
+        <ChevronRight size={13} color="var(--color-text-tertiary)" style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }} />
+      </button>
+      {open && tasks.map(t => (
+        <TaskRow key={t.id} task={t} lang={lang} dateLocale={dateLocale}
+          onComplete={onComplete} onDelete={onDelete} onClick={onClick} />
+      ))}
+    </div>
+  )
 }
 
-function KanbanCol({ col, tasks, language, dateLocale, clients, orgUsers, onComplete, onDelete, onCardClick, onDrop, draggingId, onDragStart, onDragEnd }: KanbanColProps) {
-  const [isOver, setIsOver] = useState(false)
+// ── StatsBar ─────────────────────────────────────────────────────────────────
+function StatsBar({ tasks, lang }: { tasks: Task[]; lang: string }) {
+  const isHe = lang === 'he'
+  const active = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled')
+  const done = tasks.filter(t => t.status === 'completed')
+  const urgent = active.filter(t => t.priority === 'urgent')
+  const total = active.length
+  const progress = total > 0 ? Math.round((done.length / (done.length + total)) * 100) : 0
+
   return (
-    <div
-      onDragOver={e => { e.preventDefault(); setIsOver(true) }}
-      onDragLeave={() => setIsOver(false)}
-      onDrop={e => { e.preventDefault(); setIsOver(false); onDrop(col.id) }}
-      className={['flex flex-col min-w-[280px] max-w-[320px] rounded-2xl transition-all duration-200',
-        isOver ? 'ring-2 ring-primary/40 bg-primary/5 scale-[1.01]' : 'bg-slate-50 dark:bg-slate-900/50'].join(' ')}
-    >
-      <div className={`flex items-center gap-2 px-4 py-3 rounded-t-2xl ${col.color}`}>
-        {col.icon}
-        <span className="text-sm font-bold text-slate-700 dark:text-slate-200 flex-1">{col.label}</span>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${col.accent}`}>{tasks.length}</span>
-      </div>
-      {isOver && (
-        <div className="mx-3 mt-2 h-12 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 flex items-center justify-center">
-          <span className="text-xs text-primary/60">{language === 'he' ? 'שחרר כאן' : 'Отпустите здесь'}</span>
+    <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+      {[
+        { label: isHe ? 'פתוחות' : 'Активных', value: total, color: '#6366f1', bg: 'rgba(99,102,241,0.08)' },
+        { label: isHe ? 'דחופות' : 'Срочных',  value: urgent.length, color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+        { label: isHe ? 'הושלמו' : 'Сегодня ✓', value: done.filter(t => t.completed_at && isToday(parseISO(t.completed_at))).length, color: '#22c55e', bg: 'rgba(34,197,94,0.08)' },
+      ].map(s => (
+        <div key={s.label} style={{ background: s.bg, borderRadius: 12, padding: '8px 14px', minWidth: 80, flex: '1 1 80px' }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+          <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
         </div>
-      )}
-      <div className="flex flex-col gap-2 p-3 min-h-[120px] flex-1">
-        {tasks.length === 0 && !isOver && (
-          <div className="flex-1 flex items-center justify-center py-8">
-            <span className="text-xs text-slate-400 dark:text-slate-600 italic">{language === 'he' ? 'אין משימות' : 'Нет задач'}</span>
-          </div>
-        )}
-        {tasks.map(task => (
-          <KanbanCard key={task.id} task={task} language={language} dateLocale={dateLocale}
-            clients={clients} orgUsers={orgUsers}
-            onComplete={onComplete} onDelete={onDelete} onCardClick={onCardClick}
-            onDragStart={onDragStart} onDragEnd={onDragEnd} isDragging={draggingId === task.id} />
-        ))}
+      ))}
+      <div style={{ background: 'var(--color-background-secondary)', borderRadius: 12, padding: '8px 14px', flex: '2 1 120px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+          <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{isHe ? 'התקדמות' : 'Прогресс'}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)' }}>{progress}%</span>
+        </div>
+        <div style={{ height: 5, borderRadius: 3, background: 'var(--color-border-tertiary)', overflow: 'hidden' }}>
+          <div style={{ height: '100%', borderRadius: 3, background: 'linear-gradient(90deg,#6366f1,#22c55e)', width: `${progress}%`, transition: 'width .5s ease' }} />
+        </div>
       </div>
     </div>
   )
 }
 
-// ── MobileKanban ──
-interface MobileKanbanProps {
-  columns: KanbanColumn[]
-  tasksByColumn: Record<string, Task[]>
-  language: string
-  dateLocale: Locale
-  clients: any[]
-  orgUsers: OrgUser[]
-  onComplete: (id: string) => void
-  onDelete: (id: string) => void
-  onCardClick: (task: Task) => void
-}
-
-function MobileKanban({ columns, tasksByColumn, language, dateLocale, clients, orgUsers, onComplete, onDelete, onCardClick }: MobileKanbanProps) {
-  const [activeIdx, setActiveIdx] = useState(0)
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  function handleScroll() {
-    if (!scrollRef.current) return
-    const idx = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth)
-    setActiveIdx(idx)
-  }
-
-  function scrollToCol(idx: number) {
-    if (!scrollRef.current) return
-    scrollRef.current.scrollTo({ left: idx * scrollRef.current.offsetWidth, behavior: 'smooth' })
-    setActiveIdx(idx)
-  }
-
-  return (
-    <div className="md:hidden flex flex-col flex-1 overflow-hidden">
-      {/* tab nav — equal-width, never overflow */}
-      <div className="grid border-b border-slate-200 dark:border-slate-800" style={{ gridTemplateColumns: `repeat(${columns.length}, 1fr)` }}>
-        {columns.map((col, i) => (
-          <button
-            key={col.id}
-            onClick={() => scrollToCol(i)}
-            className={[
-              'flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-semibold transition-all border-b-2 min-w-0 overflow-hidden',
-              activeIdx === i
-                ? 'border-primary text-primary'
-                : 'border-transparent text-slate-400 dark:text-slate-500',
-            ].join(' ')}
-          >
-            <span className="truncate max-w-full px-1">{col.label}</span>
-            <span className={[
-              'text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none',
-              activeIdx === i ? 'bg-primary/10 text-primary' : 'bg-slate-100 dark:bg-slate-800 text-slate-400',
-            ].join(' ')}>
-              {(tasksByColumn[col.id] ?? []).length}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* snap scroll columns */}
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex flex-1 overflow-x-auto snap-x snap-mandatory scrollbar-none"
-        style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}
-      >
-        {columns.map(col => (
-          <div
-            key={col.id}
-            className="flex-shrink-0 w-full snap-start overflow-y-auto"
-            style={{ scrollSnapAlign: 'start' }}
-          >
-            <div className="flex flex-col gap-2 p-3 min-h-full">
-              {(tasksByColumn[col.id] ?? []).length === 0 && (
-                <div className="flex-1 flex items-center justify-center py-16">
-                  <span className="text-sm text-slate-400 dark:text-slate-600 italic">
-                    {language === 'he' ? 'אין משימות' : 'Нет задач'}
-                  </span>
-                </div>
-              )}
-              {(tasksByColumn[col.id] ?? []).map(task => (
-                <KanbanCard
-                  key={task.id} task={task} language={language} dateLocale={dateLocale}
-                  clients={clients} orgUsers={orgUsers}
-                  onComplete={onComplete} onDelete={onDelete} onCardClick={onCardClick}
-                  onDragStart={() => {}} onDragEnd={() => {}} isDragging={false}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── DiaryPage ──
+// ── DiaryPage ─────────────────────────────────────────────────────────────────
 export default function DiaryPage() {
   const router = useRouter()
   const { hasDiary } = useFeatures()
   const { language } = useLanguage()
-  const isRTL = language === 'he'
-  const dateLocale = language === 'he' ? he : ru
+  const isHe = language === 'he'
+  const isRTL = isHe
+  const dateLocale = isHe ? he : ru
   const supabase = createSupabaseBrowserClient()
   const { openModal } = useModalStore()
 
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [clients, setClients] = useState<any[]>([])
+  const [tasks,    setTasks]    = useState<Task[]>([])
+  const [clients,  setClients]  = useState<any[]>([])
   const [orgUsers, setOrgUsers] = useState<OrgUser[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all')
-  const [draggingTask, setDraggingTask] = useState<Task | null>(null)
-  const [sheetTask, setSheetTask] = useState<Task | null>(null)
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [isLoading,    setIsLoading]    = useState(true)
+  const [searchQuery,  setSearchQuery]  = useState('')
+  const [sheetTask,    setSheetTask]    = useState<Task | null>(null)
+  const [isSheetOpen,  setIsSheetOpen]  = useState(false)
+  const [showDone,     setShowDone]     = useState(false)
   const { isDemo } = useDemoMode()
   const [demoLimitOpen, setDemoLimitOpen] = useState(false)
-
-  const COLUMNS: KanbanColumn[] = [
-    { id: 'open',        label: language === 'he' ? 'פתוח'   : 'Открытые',   color: 'bg-slate-100 dark:bg-slate-800',       accent: 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300',               icon: <Circle       size={14} className="text-slate-500" /> },
-    { id: 'in_progress', label: language === 'he' ? 'בתהליך' : 'В процессе', color: 'bg-amber-50 dark:bg-amber-900/20',      accent: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',         icon: <PlayCircle   size={14} className="text-amber-500" /> },
-    { id: 'completed',   label: language === 'he' ? 'הושלם'  : 'Завершено',  color: 'bg-emerald-50 dark:bg-emerald-900/20',  accent: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300', icon: <CheckCircle2 size={14} className="text-emerald-500" /> },
-    { id: 'cancelled',   label: language === 'he' ? 'בוטל'   : 'Отменено',   color: 'bg-slate-50 dark:bg-slate-800/40',      accent: 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400',           icon: <XCircle      size={14} className="text-slate-400" /> },
-  ]
 
   useEffect(() => { if (!hasDiary) router.push('/dashboard') }, [hasDiary, router])
   useEffect(() => { loadAll() }, [])
@@ -420,35 +309,43 @@ export default function DiaryPage() {
     await Promise.all([loadTasks(), loadClients(), loadOrgUsers()])
     setIsLoading(false)
   }
-  async function loadTasks() {
-    try { const r = await fetch('/api/tasks'); if (r.ok) setTasks(await r.json()) } catch (e) { console.error(e) }
-  }
-  async function loadClients() {
-    try { const r = await fetch('/api/clients'); if (r.ok) setClients(await r.json()) } catch {}
-  }
-  async function loadOrgUsers() {
-    try { const r = await fetch('/api/org-users'); if (r.ok) setOrgUsers(await r.json()) } catch {}
-  }
+  async function loadTasks()   { try { const r = await fetch('/api/tasks');           if (r.ok) setTasks(await r.json()) } catch {} }
+  async function loadClients() { try { const r = await fetch('/api/clients');         if (r.ok) setClients(await r.json()) } catch {} }
+  async function loadOrgUsers(){ try { const r = await fetch('/api/org-users');       if (r.ok) setOrgUsers(await r.json()) } catch {} }
 
-  const filteredTasks = useMemo(() => {
-    let list = tasks
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase()
-      list = list.filter(t => t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || getClientDisplayName(t.client).toLowerCase().includes(q))
+  const allFiltered = useMemo(() => {
+    if (!searchQuery) return tasks
+    const q = searchQuery.toLowerCase()
+    return tasks.filter(t =>
+      t.title.toLowerCase().includes(q) ||
+      t.description?.toLowerCase().includes(q) ||
+      getClientDisplayName(t.client).toLowerCase().includes(q)
+    )
+  }, [tasks, searchQuery])
+
+  const buckets = useMemo(() => {
+    const burning: Task[] = [], today: Task[] = [], later: Task[] = [], done: Task[] = []
+    allFiltered.forEach(t => {
+      const b = getBucket(t)
+      if (b === 'burning') burning.push(t)
+      else if (b === 'today') today.push(t)
+      else if (b === 'later') later.push(t)
+      else done.push(t)
+    })
+    const sortByPriority = (a: Task, b: Task) => {
+      const w = (p: string) => p === 'urgent' ? 0 : p === 'high' ? 1 : p === 'normal' ? 2 : 3
+      return w(a.priority) - w(b.priority)
     }
-    if (priorityFilter !== 'all') list = list.filter(t => t.priority === priorityFilter)
-    return [...list].sort((a, b) => { const w = (p: string) => p === 'urgent' ? 0 : p === 'high' ? 1 : 2; return w(a.priority) - w(b.priority) })
-  }, [tasks, searchQuery, priorityFilter])
+    return {
+      burning: burning.sort(sortByPriority),
+      today:   today.sort(sortByPriority),
+      later:   later.sort(sortByPriority),
+      done:    done.sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || '')),
+    }
+  }, [allFiltered])
 
-  const tasksByColumn = useMemo(() => {
-    const map: Record<string, Task[]> = { open: [], in_progress: [], completed: [], cancelled: [] }
-    filteredTasks.forEach(t => { if (map[t.status]) map[t.status].push(t) })
-    return map
-  }, [filteredTasks])
-
-  // ── handlers ──
   async function handleComplete(taskId: string) {
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' as const } : t))
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' as const, completed_at: new Date().toISOString() } : t))
     await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId)
   }
   async function handleDelete(taskId: string) {
@@ -456,177 +353,152 @@ export default function DiaryPage() {
     await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' })
   }
   function handleCardClick(task: Task) {
-    if (window.innerWidth < 768) {
-      setSheetTask(task)
-      setIsSheetOpen(true)
-    } else {
-      openModal('task-details', { task, locale: language as 'he' | 'ru' })
-    }
+    if (window.innerWidth < 768) { setSheetTask(task); setIsSheetOpen(true) }
+    else openModal('task-details', { task, locale: language as 'he' | 'ru' })
   }
-
   async function handleSheetStatusChange(taskId: string, rawStatus: string) {
-    // TaskDetailSheet uses 'done', DiaryPage uses 'completed'
     const status = (rawStatus === 'done' ? 'completed' : rawStatus) as Task['status']
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t))
     await supabase.from('tasks').update({ status }).eq('id', taskId)
     setIsSheetOpen(false)
   }
-
   async function handleSheetDelete(taskId: string) {
     setTasks(prev => prev.filter(t => t.id !== taskId))
     await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' })
     setIsSheetOpen(false)
   }
-  function handleDragStart(e: React.DragEvent, task: Task) { setDraggingTask(task); e.dataTransfer.effectAllowed = 'move' }
-  function handleDragEnd() { setDraggingTask(null) }
-  async function handleDrop(targetStatus: Task['status']) {
-    if (!draggingTask || draggingTask.status === targetStatus) return
-    const prev = [...tasks]
-    setTasks(t => t.map(x => x.id === draggingTask.id ? { ...x, status: targetStatus } : x))
-    const { error } = await supabase.from('tasks').update({ status: targetStatus }).eq('id', draggingTask.id)
-    if (error) setTasks(prev)
-    setDraggingTask(null)
-  }
 
-  const PRIORITY_FILTERS: { key: PriorityFilter; label: string; dot?: string }[] = [
-    { key: 'all',    label: language === 'he' ? 'הכל'  : 'Все' },
-    { key: 'urgent', label: language === 'he' ? 'דחוף' : 'Срочные', dot: 'bg-red-500' },
-    { key: 'high',   label: language === 'he' ? 'גבוה' : 'Высокий', dot: 'bg-amber-400' },
-    { key: 'normal', label: language === 'he' ? 'רגיל' : 'Обычные', dot: 'bg-blue-400' },
-  ]
-  const urgentCount = tasks.filter(t => t.priority === 'urgent' && t.status !== 'completed' && t.status !== 'cancelled').length
+  const urgentCount = buckets.burning.length
 
-  if (isLoading) {
-    return (
-      <div className="p-4 md:p-6 space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="flex items-center justify-between">
-          <div className="h-8 w-36 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
-          <div className="h-10 w-28 bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
-        </div>
-        <div className="flex gap-3 overflow-x-auto">
-          {[1,2,3,4].map(i => (
-            <div key={i} className="min-w-[280px]">
-              <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-t-2xl animate-pulse mb-2" />
-              {[1,2,3].map(j => <div key={j} className="h-24 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse mb-2" />)}
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
+  if (isLoading) return (
+    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }} dir={isRTL ? 'rtl' : 'ltr'}>
+      <div style={{ height: 32, width: 180, background: 'var(--color-border-tertiary)', borderRadius: 10, animation: 'pulse 1.5s infinite' }} />
+      {[1,2,3].map(i => <div key={i} style={{ height: 70, background: 'var(--color-background-secondary)', borderRadius: 16, animation: 'pulse 1.5s infinite' }} />)}
+    </div>
+  )
 
   return (
-    <div className="flex flex-col h-full" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* top bar */}
-      <div className="flex items-center gap-3 px-4 md:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm sticky top-0 z-20 flex-wrap gap-y-2">
-        <div className="flex items-center gap-2 me-auto">
-          <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{language === 'he' ? 'יומן משימות' : 'Дневник задач'}</h1>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} dir={isRTL ? 'rtl' : 'ltr'}>
+
+      {/* ── Top bar ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--color-border-tertiary)', background: 'var(--color-background-primary)', position: 'sticky', top: 0, zIndex: 20, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 'auto' }}>
+          <Inbox size={18} style={{ color: '#6366f1' }} />
+          <h1 style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+            {isHe ? 'תיבת משימות' : 'Задачи'}
+          </h1>
           {urgentCount > 0 && (
-            <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 animate-pulse">
-              <AlertTriangle size={10} />{urgentCount}
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'rgba(239,68,68,0.12)', color: '#ef4444', animation: 'pulse 2s infinite', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Flame size={10} />{urgentCount}
             </span>
           )}
         </div>
 
         {/* search */}
-        <div className="relative">
-          <Search size={13} className={`absolute top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none ${isRTL ? 'right-3' : 'left-3'}`} />
+        <div style={{ position: 'relative' }}>
+          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-tertiary)', pointerEvents: 'none' }} />
           <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            placeholder={language === 'he' ? 'חיפוש...' : 'Поиск...'}
-            className={`h-9 w-44 md:w-56 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition ${isRTL ? 'pr-8 pl-8' : 'pl-8 pr-8'}`} />
+            placeholder={isHe ? 'חיפוש...' : 'Поиск...'}
+            style={{ height: 34, width: 180, paddingLeft: 30, paddingRight: searchQuery ? 28 : 10, borderRadius: 10, border: '1px solid var(--color-border-secondary)', background: 'var(--color-background-secondary)', fontSize: 13, color: 'var(--color-text-primary)', outline: 'none' }} />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className={`absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 ${isRTL ? 'left-2' : 'right-2'}`}><X size={13} /></button>
+            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)', padding: 0 }}><X size={12} /></button>
           )}
         </div>
 
-        {/* priority pills */}
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none flex-nowrap max-w-full">
-          {PRIORITY_FILTERS.map(f => (
-            <button key={f.key} onClick={() => setPriorityFilter(f.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${priorityFilter === f.key ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>
-              {f.dot && <span className={`w-1.5 h-1.5 rounded-full ${f.dot}`} />}
-              {f.label}
-            </button>
-          ))}
-        </div>
-
         <button onClick={() => {
-            if (isDemo && tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled').length >= 5) {
-              setDemoLimitOpen(true); return
-            }
+            if (isDemo && tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled').length >= 5) { setDemoLimitOpen(true); return }
             openModal('task-create', { onCreated: loadTasks })
           }}
-          className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm hover:shadow-md">
-          <Plus size={15} />
-          <span className="hidden sm:inline">{language === 'he' ? 'משימה חדשה' : 'Новая задача'}</span>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, height: 34, padding: '0 14px', borderRadius: 10, border: 'none', background: '#6366f1', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          <Plus size={14} />
+          <span className="hidden sm:inline">{isHe ? 'משימה חדשה' : 'Новая задача'}</span>
         </button>
       </div>
 
-      {/* DEMO banner */}
-      {isDemo && (
-        <div className="px-4 md:px-6 pt-3">
-          <DemoSectionBanner section="diary" used={tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled').length} />
-        </div>
-      )}
-      <DemoLimitModal open={demoLimitOpen} onClose={() => setDemoLimitOpen(false)} section="diary" />
-
-      {/* board */}
-      {tasks.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center p-8">
-          <EmptyState
-            icon={<Calendar className="w-8 h-8" />}
-            title={language === 'he' ? 'אין משימות' : 'Нет задач'}
-            description={language === 'he' ? 'צור משימה חדשה כדי להתחיל' : 'Создайте первую задачу для начала работы'}
-            action={{ label: language === 'he' ? 'צור משימה' : 'Создать задачу', onClick: () => openModal('task-create', { onCreated: loadTasks }) }}
-          />
-        </div>
-      ) : (
-        <>
-          {/* ── Mobile: snap scroll ── */}
-          <MobileKanban
-            columns={COLUMNS}
-            tasksByColumn={tasksByColumn}
-            language={language}
-            dateLocale={dateLocale}
-            clients={clients}
-            orgUsers={orgUsers}
-            onComplete={handleComplete}
-            onDelete={handleDelete}
-            onCardClick={handleCardClick}
-          />
-          {/* ── Desktop: standard kanban ── */}
-          <div className="hidden md:flex flex-1 overflow-x-auto">
-            <div className="flex gap-4 p-4 md:p-6 min-w-max h-full">
-              {COLUMNS.map(col => (
-                <KanbanCol
-                  key={col.id} col={col}
-                  tasks={tasksByColumn[col.id] ?? []}
-                  language={language} dateLocale={dateLocale}
-                  clients={clients} orgUsers={orgUsers}
-                  onComplete={handleComplete}
-                  onDelete={handleDelete}
-                  onCardClick={handleCardClick}
-                  onDrop={handleDrop}
-                  draggingId={draggingTask?.id ?? null}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                />
-              ))}
-            </div>
+      {/* ── Content ── */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 32px' }}>
+        {isDemo && (
+          <div style={{ marginBottom: 16 }}>
+            <DemoSectionBanner section="diary" used={tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled').length} />
           </div>
-        </>
-      )}
+        )}
 
-      {/* Bottom Sheet — mobile task details with swipe */}
+        {tasks.length === 0 ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
+            <EmptyState
+              icon={<Inbox className="w-8 h-8" />}
+              title={isHe ? 'תיבת הדואר ריקה' : 'Нет задач'}
+              description={isHe ? 'צור משימה חדשה כדי להתחיל' : 'Создайте первую задачу для начала работы'}
+              action={{ label: isHe ? 'צור משימה' : 'Создать задачу', onClick: () => openModal('task-create', { onCreated: loadTasks }) }}
+            />
+          </div>
+        ) : (
+          <>
+            <StatsBar tasks={tasks} lang={language} />
+
+            <InboxSection
+              label={isHe ? 'בוער' : 'Горит'}
+              icon={<Flame size={13} />}
+              color="#ef4444"
+              count={buckets.burning.length}
+              tasks={buckets.burning}
+              lang={language} dateLocale={dateLocale}
+              onComplete={handleComplete} onDelete={handleDelete} onClick={handleCardClick}
+              defaultOpen={true}
+            />
+            <InboxSection
+              label={isHe ? 'היום' : 'Сегодня'}
+              icon={<Timer size={13} />}
+              color="#f59e0b"
+              count={buckets.today.length}
+              tasks={buckets.today}
+              lang={language} dateLocale={dateLocale}
+              onComplete={handleComplete} onDelete={handleDelete} onClick={handleCardClick}
+              defaultOpen={true}
+            />
+            <InboxSection
+              label={isHe ? 'אחר כך' : 'Позже'}
+              icon={<Clock size={13} />}
+              color="#6366f1"
+              count={buckets.later.length}
+              tasks={buckets.later}
+              lang={language} dateLocale={dateLocale}
+              onComplete={handleComplete} onDelete={handleDelete} onClick={handleCardClick}
+              defaultOpen={buckets.burning.length + buckets.today.length === 0}
+            />
+
+            {/* Done section toggle */}
+            {buckets.done.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <button onClick={() => setShowDone(o => !o)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', width: '100%' }}>
+                  <Archive size={13} style={{ color: '#94a3b8' }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {isHe ? `הושלמו (${buckets.done.length})` : `Завершено (${buckets.done.length})`}
+                  </span>
+                  <div style={{ flex: 1, height: '0.5px', background: 'var(--color-border-tertiary)' }} />
+                  <ChevronRight size={13} style={{ color: '#94a3b8', transform: showDone ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }} />
+                </button>
+                {showDone && buckets.done.slice(0, 20).map(t => (
+                  <TaskRow key={t.id} task={t} lang={language} dateLocale={dateLocale}
+                    onComplete={handleComplete} onDelete={handleDelete} onClick={handleCardClick} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Sheet for mobile */}
       <TaskDetailSheet
-        task={sheetTask as any}
-        isOpen={isSheetOpen}
-        onClose={() => setIsSheetOpen(false)}
-        onStatusChange={(id, status) => handleSheetStatusChange(id, status)}
+        task={sheetTask as any} isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)}
+        onStatusChange={handleSheetStatusChange}
+        onClientClick={clientId => { setIsSheetOpen(false); openModal('client-details', { id: clientId }) }}
+        onEdit={task => openModal('task-create', { editTask: task, onCreated: loadTasks })}
         onDelete={handleSheetDelete}
         locale={language as 'he' | 'ru'}
       />
-
+      <DemoLimitModal open={demoLimitOpen} onClose={() => setDemoLimitOpen(false)} section="diary" />
     </div>
   )
 }

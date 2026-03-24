@@ -10,7 +10,7 @@ import { createPortal } from 'react-dom'
 import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 import { useOrgTemplates } from '@/hooks/useOrgTemplates'
 import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-utils'
-import { ClientCardSettingsModal, useClientCardSettings } from '@/components/clients/ClientCardSettingsModal'
+import { ClientCardSettingsPanel, useClientCardSettings } from '@/components/clients/ClientCardSettingsModal'
 
 const AVATAR_GRADIENTS: [string, string][] = [
   ['#818cf8', '#a78bfa'], ['#34d399', '#0d9488'], ['#fbbf24', '#f97316'],
@@ -23,7 +23,7 @@ function avGrad(name: string): [string, string] {
 export function ClientDetailsModal() {
   const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
   const [showGdprDialog, setShowGdprDialog] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [cardSettings, saveCardSettings] = useClientCardSettings()
   const [photosCount, setPhotosCount] = useState<number | null>(null)
   const { templates } = useOrgTemplates()
@@ -223,13 +223,22 @@ export function ClientDetailsModal() {
     <>
       <Modal open={isOpen} onClose={() => closeModal('client-details')} showCloseButton darkHeader width="680px" dir={dir} contentClassName="!p-0">
         <TrinityModalShell open={isOpen} onClose={() => closeModal('client-details')} icon={<User />} title={clientName} subtitle={client.email || (isHe ? 'פרטי לקוח' : 'Данные клиента')} dir={dir} sidebarExtra={sidebarContent}>
+          {showSettings ? (
+            <ClientCardSettingsPanel
+              onClose={() => setShowSettings(false)}
+              settings={cardSettings}
+              onSave={saveCardSettings}
+              locale={locale as 'he' | 'ru'}
+            />
+          ) : (
+          <>
           {/* ── Content header with gear (Variant 3) ── */}
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 16px', borderBottom:'0.5px solid #e8edf4', background:'transparent' }}>
             <span style={{ fontSize:9, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>
               {isHe ? 'כרטיס לקוח' : 'Карточка клиента'}
             </span>
             <button
-              onClick={() => setSettingsOpen(true)}
+              onClick={() => setShowSettings(true)}
               title={isHe ? 'הגדרות כרטיס' : 'Настройки карточки'}
               style={{ width:26, height:26, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'0.5px solid #e2e8f0', background:'#fff', color:'#94a3b8' }}
             >
@@ -269,10 +278,11 @@ export function ClientDetailsModal() {
               </div>
             )}
           </div>
+          </>
+          )}
         </TrinityModalShell>
       </Modal>
 
-      <ClientCardSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} settings={cardSettings} onSave={saveCardSettings} locale={locale as 'he' | 'ru'} />
       <GdprDeleteDialog open={showGdprDialog} onOpenChange={setShowGdprDialog} clientId={client.id} clientName={clientName} locale={locale as 'he'|'ru'} />
 
       {showPicker && typeof document !== 'undefined' && createPortal(

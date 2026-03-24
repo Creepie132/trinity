@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Settings2 } from 'lucide-react'
+import { X, Settings2, ArrowLeft, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
 export interface ClientCardSettings {
@@ -45,8 +45,7 @@ export function useClientCardSettings(): [ClientCardSettings, (s: ClientCardSett
   return [settings, save]
 }
 
-interface ClientCardSettingsModalProps {
-  isOpen: boolean
+interface ClientCardSettingsPanelProps {
   onClose: () => void
   settings: ClientCardSettings
   onSave: (s: ClientCardSettings) => void
@@ -55,43 +54,50 @@ interface ClientCardSettingsModalProps {
 
 const LABELS = {
   he: {
-    title: 'הגדרות כרטיס לקוח',
+    title: 'הגדרות כרטיס',
     paintCode: 'קוד צבע',
     gallery: 'גלריה',
     documents: 'מסמכים',
-    close: 'סגור',
-    hint: 'בחר אילו שדות יוצגו בכרטיס הלקוח',
+    back: 'חזרה',
+    hint: 'התאם אישית מה יוצג בכרטיס הלקוח',
     primaryAction: 'כפתור פעולה ראשי',
     primaryActionHint: 'מה יוצג ראשון בסרגל הצד',
     sale: 'עסקה',
     visit: 'ביקור',
+    display: 'הצגת בלוקים',
   },
   ru: {
-    title: 'Настройки карточки клиента',
+    title: 'Настройки карточки',
     paintCode: 'Код краски',
     gallery: 'Галерея',
     documents: 'Документы',
-    close: 'Закрыть',
-    hint: 'Выберите, какие блоки отображать в карточке клиента',
+    back: 'Назад',
+    hint: 'Настройте отображение карточки клиента',
     primaryAction: 'Главная кнопка',
     primaryActionHint: 'Что показывать первым в сайдбаре',
     sale: 'Продажа',
     visit: 'Визит',
+    display: 'Блоки отображения',
   },
 }
 
-export function ClientCardSettingsModal({
-  isOpen,
+/**
+ * ClientCardSettingsPanel — inline panel, replaces content area inside the modal.
+ * No overlay, no z-index fights. Rendered in place of the normal card content.
+ */
+export function ClientCardSettingsPanel({
   onClose,
   settings,
   onSave,
   locale,
-}: ClientCardSettingsModalProps) {
+}: ClientCardSettingsPanelProps) {
   const l = LABELS[locale]
   const isHe = locale === 'he'
+  const BackIcon = isHe ? ArrowRight : ArrowLeft
+
   const [local, setLocal] = useState<ClientCardSettings>(settings)
 
-  useEffect(() => { setLocal(settings) }, [settings, isOpen])
+  useEffect(() => { setLocal(settings) }, [settings])
 
   function toggle(key: keyof Omit<ClientCardSettings, 'primaryAction'>) {
     const next = { ...local, [key]: !local[key] }
@@ -105,8 +111,6 @@ export function ClientCardSettingsModal({
     onSave(next)
   }
 
-  if (!isOpen) return null
-
   const toggleItems: { key: keyof Omit<ClientCardSettings, 'primaryAction'>; label: string; emoji: string }[] = [
     { key: 'showGallery',   label: l.gallery,   emoji: '🖼️' },
     { key: 'showDocuments', label: l.documents, emoji: '📄' },
@@ -114,95 +118,137 @@ export function ClientCardSettingsModal({
   ]
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-end justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div
-        className="relative z-10 bg-background rounded-t-2xl shadow-2xl w-full max-w-md px-6 pt-5 pb-8"
-        onClick={(e) => e.stopPropagation()}
-        dir={isHe ? 'rtl' : 'ltr'}
-      >
-        {/* Handle */}
-        <div className="flex justify-center mb-4">
-          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
-        </div>
+    <div dir={isHe ? 'rtl' : 'ltr'} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-              <Settings2 size={16} className="text-violet-600 dark:text-violet-400" />
-            </div>
-            <h3 className="text-base font-bold">{l.title}</h3>
+      {/* Panel header — same style as card content header */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '10px 16px', borderBottom: '0.5px solid #e8edf4',
+      }}>
+        <button
+          onClick={onClose}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#64748b', fontSize: 12, fontWeight: 600, padding: '2px 4px',
+            borderRadius: 6,
+          }}
+        >
+          <BackIcon size={14} />
+          {l.back}
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{
+            width: 22, height: 22, borderRadius: 6,
+            background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Settings2 size={12} color="#7c3aed" />
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition">
-            <X size={16} />
-          </button>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{l.title}</span>
         </div>
+      </div>
 
-        <p className="text-xs text-muted-foreground mb-5">{l.hint}</p>
+      {/* Panel body */}
+      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto' }}>
 
-        {/* Primary action segment */}
-        <div className="flex items-center justify-between px-4 py-3.5 rounded-xl border bg-violet-50 dark:bg-violet-950/20 border-violet-200 dark:border-violet-800 mb-5">
-          <div className="flex items-center gap-3">
-            <span className="text-lg">⭐</span>
-            <div>
-              <p className="text-sm font-medium">{l.primaryAction}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{l.primaryActionHint}</p>
-            </div>
-          </div>
-          <div className="flex rounded-lg overflow-hidden border border-violet-200 dark:border-violet-700 bg-white dark:bg-gray-900 shrink-0">
-            <button
-              onClick={() => setPrimary('sale')}
-              className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                local.primaryAction === 'sale'
-                  ? 'bg-violet-600 text-white'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              🛒 {l.sale}
-            </button>
-            <button
-              onClick={() => setPrimary('visit')}
-              className={`px-3 py-1.5 text-xs font-semibold transition-colors border-s border-violet-200 dark:border-violet-700 ${
-                local.primaryAction === 'visit'
-                  ? 'bg-violet-600 text-white'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              📅 {l.visit}
-            </button>
-          </div>
-        </div>
-
-        {/* Toggle items */}
-        <div className="space-y-3">
-          {toggleItems.map(({ key, label, emoji }) => (
-            <button
-              key={key}
-              onClick={() => toggle(key)}
-              className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl border bg-card hover:bg-muted/50 transition"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-lg">{emoji}</span>
-                <span className="text-sm font-medium">{label}</span>
+        {/* Primary action */}
+        <div style={{
+          padding: '12px 14px', borderRadius: 12,
+          background: '#faf5ff', border: '0.5px solid #ddd6fe',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 16, lineHeight: 1 }}>⭐</span>
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', margin: 0 }}>{l.primaryAction}</p>
+                <p style={{ fontSize: 10, color: '#94a3b8', margin: '2px 0 0' }}>{l.primaryActionHint}</p>
               </div>
-              <div
-                className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
-                  local[key] ? 'bg-violet-600' : 'bg-muted-foreground/30'
-                }`}
+            </div>
+            <div style={{
+              display: 'flex', borderRadius: 8, overflow: 'hidden',
+              border: '0.5px solid #ddd6fe', background: '#fff', flexShrink: 0,
+            }}>
+              <button
+                onClick={() => setPrimary('sale')}
+                style={{
+                  padding: '6px 12px', border: 'none', cursor: 'pointer',
+                  fontSize: 11, fontWeight: 600, transition: 'all 0.15s',
+                  background: local.primaryAction === 'sale' ? '#7c3aed' : 'transparent',
+                  color: local.primaryAction === 'sale' ? '#fff' : '#64748b',
+                }}
               >
-                <div
-                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
-                    local[key]
-                      ? isHe ? 'translate-x-0.5' : 'translate-x-[1.375rem]'
-                      : isHe ? 'translate-x-[1.375rem]' : 'translate-x-0.5'
-                  }`}
-                />
-              </div>
-            </button>
-          ))}
+                🛒 {l.sale}
+              </button>
+              <button
+                onClick={() => setPrimary('visit')}
+                style={{
+                  padding: '6px 12px',
+                  borderLeft: '0.5px solid #ddd6fe', border: 'none',
+                  borderInlineStart: '0.5px solid #ddd6fe',
+                  cursor: 'pointer', fontSize: 11, fontWeight: 600, transition: 'all 0.15s',
+                  background: local.primaryAction === 'visit' ? '#7c3aed' : 'transparent',
+                  color: local.primaryAction === 'visit' ? '#fff' : '#64748b',
+                }}
+              >
+                📅 {l.visit}
+              </button>
+            </div>
+          </div>
         </div>
+
+        {/* Section label */}
+        <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '4px 0 0' }}>
+          {l.display}
+        </p>
+
+        {/* Toggle rows */}
+        {toggleItems.map(({ key, label, emoji }) => (
+          <button
+            key={key}
+            onClick={() => toggle(key)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 14px', borderRadius: 10,
+              border: '0.5px solid #e8edf4', background: '#fff',
+              cursor: 'pointer', width: '100%', transition: 'background 0.15s',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 16, lineHeight: 1 }}>{emoji}</span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: '#1e293b' }}>{label}</span>
+            </div>
+            {/* Toggle pill */}
+            <div style={{
+              position: 'relative', width: 40, height: 22, borderRadius: 11, flexShrink: 0,
+              background: local[key] ? '#7c3aed' : '#e2e8f0',
+              transition: 'background 0.2s',
+            }}>
+              <div style={{
+                position: 'absolute', top: 2,
+                width: 18, height: 18, borderRadius: '50%',
+                background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                transition: 'transform 0.2s',
+                transform: local[key]
+                  ? isHe ? 'translateX(2px)' : 'translateX(20px)'
+                  : isHe ? 'translateX(20px)' : 'translateX(2px)',
+              }} />
+            </div>
+          </button>
+        ))}
+
       </div>
     </div>
   )
+}
+
+// Legacy export for backward compatibility — not used anymore but kept to avoid import errors
+export function ClientCardSettingsModal({
+  isOpen, onClose, settings, onSave, locale,
+}: {
+  isOpen: boolean; onClose: () => void
+  settings: ClientCardSettings; onSave: (s: ClientCardSettings) => void
+  locale: 'he' | 'ru'
+}) {
+  if (!isOpen) return null
+  return <ClientCardSettingsPanel onClose={onClose} settings={settings} onSave={onSave} locale={locale} />
 }

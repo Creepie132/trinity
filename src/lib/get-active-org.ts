@@ -6,6 +6,9 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Суперадмины могут impersonate любую org — для них валидация филиала пропускается
+const SUPER_ADMINS = ['ambersolutions.systems@gmail.com', 'creepie1357@gmail.com']
+
 /**
  * Получить активный org_id пользователя из user_active_branch таблицы.
  * Источник истины на сервере — не заголовки, не localStorage.
@@ -15,6 +18,9 @@ const supabaseAdmin = createClient(
  * сценария когда user_active_branch был напрямую подделан (слабый RLS,
  * race condition, etc.) — злоумышленник не может таким образом
  * переключиться на чужую организацию.
+ *
+ * Исключение: суперадмины могут impersonate любую организацию.
+ * Для них проверка принадлежности к филиалам пропускается.
  *
  * Performance: обёрнут в React cache() — если getActiveOrgId() вызывается
  * несколько раз в одном серверном запросе (checkAuth + getAuthContext),
@@ -39,6 +45,19 @@ export const getActiveOrgId = cache(async (
 
   // Основная org — всегда валидна
   if (stored === mainOrgId) return mainOrgId
+
+  // Суперадмин: проверяем email через auth.users — если да, пропускаем проверку филиала.
+  // Это позволяет impersonation работать корректно без bypassing общей безопасности.
+  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId)
+  if (authUser?.user?.email && SUPER_ADMINS.includes(authUser.user.email)) {
+    // Дополнительно: убеждаемся что org действительно существует
+    const { data: org } = await supabaseAdmin
+      .from('organizations')
+      .select('id')
+      .eq('id', stored)
+      .maybeSingle()
+    if (org) return stored
+  }
 
   // Проверяем что stored является легитимным филиалом mainOrgId
   const { data: branch } = await supabaseAdmin

@@ -13,8 +13,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Users, Calendar, FileText, CheckCircle2, Clock, Scissors, MapPin, Video, Link } from 'lucide-react'
+import { Users, Calendar, FileText, CheckCircle2, Clock, Scissors, MapPin, Video, X } from 'lucide-react'
 import { ClientSearch } from '@/components/ui/ClientSearch'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // ─── Israeli cities list ──────────────────────────────────────────────────────
 const ISRAEL_CITIES = [
@@ -131,6 +133,281 @@ function CityAutocomplete({
   )
 }
 
+// ─── Mobile single-screen visit creation ─────────────────────────────────────
+function CreateVisitMobile({
+  open, onClose,
+  preselectedClientId, preselectedDate, preselectedTime,
+  onVisitCreated,
+}: {
+  open: boolean; onClose: () => void
+  preselectedClientId?: string; preselectedDate?: Date | string | null; preselectedTime?: string | null
+  onVisitCreated?: (v: { clientName: string; clientPhone?: string; date: string; time: string }) => void
+}) {
+  const { t, language } = useLanguage()
+  const { orgId } = useAuth()
+  const queryClient = useQueryClient()
+  const { data: customServices } = useServices()
+  const isHe = language === 'he'
+
+  const [isAppointment, setIsAppointment] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<any>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [form, setForm] = useState({
+    clientId: preselectedClientId || '',
+    serviceId: '', service: '',
+    date: preselectedDate
+      ? (preselectedDate instanceof Date ? preselectedDate.toISOString().split('T')[0] : String(preselectedDate))
+      : getDefaultDate(),
+    time: preselectedTime || getDefaultTime(),
+    duration: 60, price: '', quantity: 1,
+    notes: '', city: '', address: '', meeting_link: '',
+  })
+
+  useEffect(() => { setMounted(true); return () => setMounted(false) }, [])
+  useEffect(() => {
+    if (open) {
+      setForm(p => ({
+        ...p,
+        clientId: preselectedClientId || p.clientId,
+        date: preselectedDate
+          ? (preselectedDate instanceof Date ? preselectedDate.toISOString().split('T')[0] : String(preselectedDate))
+          : p.date,
+        time: preselectedTime || p.time,
+      }))
+    }
+  }, [open, preselectedDate, preselectedTime, preselectedClientId])
+
+  const services = (customServices && customServices.length > 0)
+    ? customServices
+    : DEFAULT_SERVICES.map(s => ({ id: s.value, name: t(s.labelKey), name_ru: t(s.labelKey), duration_minutes: 60, price: undefined }))
+
+  const handleServiceChange = (serviceId: string) => {
+    const svc = services.find((s: any) => s.id === serviceId)
+    setForm(p => ({ ...p, serviceId, service: serviceId, price: svc?.price?.toString() || p.price, duration: svc?.duration_minutes || p.duration }))
+  }
+
+  const selectedSvc = services.find((s: any) => s.id === form.serviceId)
+  const svcName = selectedSvc ? (isHe ? selectedSvc.name : (selectedSvc.name_ru || selectedSvc.name)) : ''
+  const canSubmit = !!form.clientId && !!form.serviceId && !!form.date && !!form.time && (isAppointment || !!form.price)
+
+  const handleClose = () => {
+    onClose()
+    setIsAppointment(false); setSelectedClient(null)
+    setForm({ clientId: '', serviceId: '', service: '', date: getDefaultDate(), time: getDefaultTime(), duration: 60, price: '', quantity: 1, notes: '', city: '', address: '', meeting_link: '' })
+  }
+
+  const handleSubmit = async () => {
+    if (!orgId || !canSubmit) return
+    setIsSubmitting(true)
+    try {
+      let notesData = form.notes
+      if (isAppointment && (form.city || form.address)) {
+        const parts = []
+        if (form.city) parts.push(`${isHe ? 'עיר' : 'Город'}: ${form.city}`)
+        if (form.address) parts.push(`${isHe ? 'כתובת' : 'Адрес'}: ${form.address}`)
+        if (form.notes) parts.push(form.notes)
+        notesData = parts.join('\n')
+      }
+      const res = await fetch('/api/visits', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: form.clientId, serviceId: form.serviceId, service: form.service,
+          date: form.date, time: form.time,
+          duration: isAppointment ? null : form.duration,
+          price: isAppointment ? '0' : form.price,
+          quantity: form.quantity, notes: notesData,
+          event_type: isAppointment ? 'meeting' : 'visit',
+          meeting_link: isAppointment ? (form.meeting_link || null) : null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      toast.success(t('common.success'))
+      queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === 'visits' })
+      if (onVisitCreated && selectedClient) {
+        onVisitCreated({ clientName: `${selectedClient.first_name} ${selectedClient.last_name}`.trim(), clientPhone: selectedClient.phone, date: form.date, time: form.time })
+      }
+      handleClose()
+    } catch (e: any) { toast.error(e.message || t('common.error')) }
+    finally { setIsSubmitting(false) }
+  }
+
+  if (!mounted || typeof document === 'undefined') return null
+
+  const sidebarBg = 'var(--trinity-sidebar-bg, #1a2620)'
+  const accentBg = 'var(--trinity-accent-bg, rgba(45,106,79,0.27))'
+  const accentText = 'var(--trinity-accent-text, #74c69d)'
+  const accent = 'var(--trinity-accent, #2d6a4f)'
+
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div className="fixed inset-0 bg-black/50" style={{ zIndex: 9998 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: .2 }} onClick={handleClose} />
+          <motion.div
+            className="fixed bottom-0 left-0 right-0 flex flex-col outline-none"
+            style={{ zIndex: 9999, height: 'calc(100dvh - 3rem)', background: 'var(--background, #fff)', borderRadius: '20px 20px 0 0', overflow: 'hidden' }}
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+            dir={isHe ? 'rtl' : 'ltr'}
+          >
+            {/* Handle */}
+            <div className="flex-shrink-0 flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
+            </div>
+
+            {/* Header */}
+            <div className="flex-shrink-0 flex items-center gap-3 px-4 pb-3 pt-1 border-b border-border">
+              <div style={{ width: 34, height: 34, borderRadius: '50%', background: sidebarBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Scissors size={16} style={{ color: accentText }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div className="text-sm font-semibold text-foreground">{isHe ? 'צור ביקור' : 'Создать визит'}</div>
+                <div className="text-xs text-muted-foreground">{isHe ? 'מלא את הפרטים' : 'Заполните данные'}</div>
+              </div>
+              <button onClick={handleClose} className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground" style={{ border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Scrollable form */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4" style={{ touchAction: 'pan-y' }}>
+
+              {/* Visit / Meeting toggle */}
+              <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(0,0,0,0.05)' }}>
+                {[{ val: false, label: isHe ? 'ביקור' : 'Визит', icon: <Scissors size={13}/> },
+                  { val: true,  label: isHe ? 'פגישה' : 'Встреча', icon: <MapPin size={13}/> }].map(opt => (
+                  <button key={String(opt.val)} onClick={() => setIsAppointment(opt.val)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all"
+                    style={{ background: isAppointment === opt.val ? 'white' : 'transparent', color: isAppointment === opt.val ? '#4f46e5' : 'var(--muted-foreground)', boxShadow: isAppointment === opt.val ? '0 1px 4px rgba(0,0,0,0.12)' : 'none', border: 'none', cursor: 'pointer' }}>
+                    {opt.icon}{opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Client */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Users size={11}/>{t('visits.client')} *
+                </label>
+                <ClientSearch orgId={orgId || ''} onSelect={(c) => { setSelectedClient(c); setForm(p => ({ ...p, clientId: c?.id || '' })) }}
+                  placeholder={t('visits.selectClient')} locale={language as 'he'|'ru'|'en'} value={selectedClient} />
+              </div>
+
+              {/* Service + qty */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Scissors size={11}/>{t('visits.service')} *
+                </label>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Select value={form.serviceId} onValueChange={handleServiceChange}>
+                      <SelectTrigger className="h-10 w-full"><SelectValue placeholder={t('visits.selectService')} /></SelectTrigger>
+                      <SelectContent>
+                        {services.map((svc: any) => {
+                          const name = isHe ? svc.name : (svc.name_ru || svc.name)
+                          return <SelectItem key={svc.id} value={svc.id}>{name}{svc.price ? ` — ₪${svc.price}` : ''}</SelectItem>
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <input type="number" min={1} max={999} value={form.quantity}
+                    onChange={e => setForm(p => ({ ...p, quantity: Math.max(1, Math.min(999, parseInt(e.target.value)||1)) }))}
+                    className="h-10 w-14 rounded-md border border-input bg-background px-2 text-sm text-center font-semibold" />
+                </div>
+              </div>
+
+              {/* Date + Time */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Calendar size={11}/>{t('visits.date')} *</label>
+                  <Input type="date" value={form.date} className="h-10" onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><Clock size={11}/>{t('visits.time')} *</label>
+                  <Input type="time" value={form.time} className="h-10" onChange={e => setForm(p => ({ ...p, time: e.target.value }))} />
+                </div>
+              </div>
+
+              {/* Visit: duration + price / Meeting: city + address */}
+              {!isAppointment ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.duration')}</label>
+                    <Select value={form.duration.toString()} onValueChange={v => setForm(p => ({ ...p, duration: parseInt(v) }))}>
+                      <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {DURATIONS.map(d => <SelectItem key={d.value} value={d.value.toString()}>{t(d.labelKey)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.price')} *</label>
+                    <Input type="number" value={form.price} placeholder="₪" className="h-10" onChange={e => setForm(p => ({ ...p, price: e.target.value }))} />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><MapPin size={11}/>{isHe ? 'עיר' : 'Город'}</label>
+                    <CityAutocomplete value={form.city} onChange={v => setForm(p => ({ ...p, city: v }))} placeholder={isHe ? 'הקלד 2 תווים...' : '2 символа...'} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><MapPin size={11}/>{isHe ? 'כתובת' : 'Адрес'}</label>
+                    <Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className="h-10" dir="rtl" placeholder="כתובת בעברית" />
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5"><FileText size={11}/>{t('visits.notes')}</label>
+                <Textarea value={form.notes} rows={2} placeholder={t('visits.notes')} className="resize-none"
+                  onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
+              </div>
+
+              {/* Summary */}
+              {canSubmit && (
+                <div className="rounded-xl p-3 space-y-2" style={{ background: accentBg, border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div className="text-xs font-bold uppercase tracking-wide flex items-center gap-1.5" style={{ color: accentText }}>
+                    <CheckCircle2 size={11}/>{isHe ? 'סיכום' : 'Сводка'}
+                  </div>
+                  <div className="space-y-1 text-xs" style={{ color: 'var(--foreground)' }}>
+                    {selectedClient && <div className="flex items-center gap-1.5"><Users size={10} className="text-muted-foreground"/><span className="font-medium">{selectedClient.first_name} {selectedClient.last_name}</span></div>}
+                    {svcName && <div className="flex items-center gap-1.5"><Scissors size={10} className="text-muted-foreground"/><span>{svcName}{!isAppointment && form.price ? ` — ₪${form.price}` : ''}{form.quantity > 1 ? ` ×${form.quantity}` : ''}</span></div>}
+                    <div className="flex items-center gap-1.5"><Calendar size={10} className="text-muted-foreground"/><span>{form.date} {isHe ? 'ב' : 'в'} {form.time}</span></div>
+                    {!isAppointment && <div className="flex items-center gap-1.5"><Clock size={10} className="text-muted-foreground"/><span>{form.duration} {isHe ? 'דקות' : 'мин'}</span></div>}
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom padding */}
+              <div className="h-4" />
+            </div>
+
+            {/* Footer */}
+            <div className="flex-shrink-0 px-4 pb-6 pt-3 border-t border-border flex gap-3">
+              <button onClick={handleClose} className="flex-1 py-3 rounded-xl text-sm font-medium text-muted-foreground"
+                style={{ background: 'var(--muted)', border: 'none', cursor: 'pointer' }}>
+                {isHe ? 'ביטול' : 'Отмена'}
+              </button>
+              <button onClick={handleSubmit} disabled={!canSubmit || isSubmitting}
+                className="flex-2 py-3 rounded-xl text-sm font-semibold text-white"
+                style={{ flex: 2, background: canSubmit && !isSubmitting ? accent : 'rgba(0,0,0,0.2)', border: 'none', cursor: canSubmit && !isSubmitting ? 'pointer' : 'not-allowed', transition: 'background .2s' }}>
+                {isSubmitting ? '...' : (isHe ? 'צור ביקור' : 'Создать визит')}
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function CreateVisitDialog({
   open, onOpenChange,
@@ -142,6 +419,28 @@ export function CreateVisitDialog({
   const queryClient = useQueryClient()
   const { data: customServices } = useServices()
   const dir = language === 'he' ? 'rtl' : 'ltr'
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // На мобиле — single-screen bottom sheet
+  if (isMobile) {
+    return (
+      <CreateVisitMobile
+        open={open}
+        onClose={() => onOpenChange(false)}
+        preselectedClientId={preselectedClientId}
+        preselectedDate={preselectedDate}
+        preselectedTime={preselectedTime}
+        onVisitCreated={onVisitCreated}
+      />
+    )
+  }
 
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)

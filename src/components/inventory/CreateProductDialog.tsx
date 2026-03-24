@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
@@ -175,162 +174,142 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
               </button>
             </div>
           }>
-          <div className="space-y-4" style={{ padding: '20px 18px 24px' }}>
-          {/* Name */}
-          <div>
-            <Label htmlFor="name">{t('inventory.name')} <span className="text-red-500">*</span></Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder={t('inventory.name')}
-              required
-            />
-          </div>
+          <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
 
-          {/* Image Upload */}
-          <div>
-            <Label htmlFor="image">{language === 'he' ? 'תמונה' : 'Фотография'}</Label>
-            <div className="flex items-center gap-4">
-              {imagePreview || formData.image_url ? (
-                <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
-                  <img src={imagePreview || formData.image_url} alt="Preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={handleRemoveImage}
-                    className="absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600"
-                  >
-                    <X className="w-4 h-4" />
+            {/* Name */}
+            <div style={{ background: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: '12px 14px' }}>
+              <label style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
+                {t('inventory.name')} <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <Input id="name" value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder={t('inventory.name')}
+                style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 15, fontWeight: 600, color: '#1e293b', outline: 'none', boxShadow: 'none' }} />
+            </div>
+
+            {/* Image Upload */}
+            <div style={{ background: '#f8fafc', border: '1.5px dashed #cbd5e1', borderRadius: 14, padding: '12px 14px' }}>
+              <label style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 10 }}>
+                {isHe ? 'תמונה' : 'Фотография'}
+              </label>
+              <div className="flex items-center gap-4">
+                {imagePreview || formData.image_url ? (
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden" style={{ border: '2px solid #e2e8f0', flexShrink: 0 }}>
+                    <img src={imagePreview || formData.image_url} alt="Preview" className="w-full h-full object-cover" />
+                    <button type="button" onClick={handleRemoveImage}
+                      className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ width: 56, height: 56, borderRadius: 12, border: '2px dashed #cbd5e1', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Upload size={20} color="#94a3b8" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input ref={fileInputRef} id="image" type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
+                  <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                    style={{ width: '100%', padding: '8px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 12, fontWeight: 600, color: '#475569', cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <Upload size={13} />
+                    {uploading ? (isHe ? 'מעלה...' : 'Загрузка...') : (isHe ? 'העלה תמונה' : 'Загрузить фото')}
                   </button>
+                  <p style={{ fontSize: 10, color: '#94a3b8', margin: '5px 0 0' }}>{isHe ? 'עד 5MB, JPG, PNG, GIF' : 'До 5MB, JPG, PNG, GIF'}</p>
                 </div>
-              ) : (
-                <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-                  <Upload className="w-8 h-8 text-gray-400" />
-                </div>
-              )}
-              <div className="flex-1">
-                <input ref={fileInputRef} id="image" type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="w-full py-2 px-4 rounded-lg border border-gray-200 text-sm hover:bg-gray-50 flex items-center justify-center gap-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  {uploading ? (language === 'he' ? 'מעלה...' : 'Загрузка...') : (language === 'he' ? 'העלה תמונה' : 'Загрузить фото')}
-                </button>
-                <p className="text-xs text-gray-500 mt-1">{language === 'he' ? 'עד 5MB, JPG, PNG, GIF' : 'До 5MB, JPG, PNG, GIF'}</p>
               </div>
             </div>
-          </div>
 
-          {/* Barcode with Scanner */}
-          <div>
-            <Label htmlFor="barcode">{t('inventory.barcode')}</Label>
-            <div className="flex gap-2">
-              <Input
-                id="barcode"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                placeholder={t('inventory.barcode')}
-              />
-              <button type="button" onClick={() => setScannerOpen(true)} className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50">
-                <Camera className="w-4 h-4" />
-              </button>
+            {/* Barcode + SKU row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: '12px 14px' }}>
+                <label style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>{t('inventory.barcode')}</label>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <Input value={formData.barcode} onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                    placeholder={t('inventory.barcode')}
+                    style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 13, fontWeight: 500, flex: 1, outline: 'none', boxShadow: 'none' }} />
+                  <button type="button" onClick={() => setScannerOpen(true)}
+                    style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                    <Camera size={13} color="#64748b" />
+                  </button>
+                </div>
+              </div>
+              <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: '12px 14px' }}>
+                <label style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>{t('inventory.sku')}</label>
+                <Input value={formData.sku} onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  placeholder={t('inventory.sku')}
+                  style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 13, fontWeight: 500, outline: 'none', boxShadow: 'none' }} />
+              </div>
             </div>
-          </div>
 
-          {/* SKU */}
-          <div>
-            <Label htmlFor="sku">{t('inventory.sku')}</Label>
-            <Input id="sku" value={formData.sku} onChange={(e) => setFormData({ ...formData, sku: e.target.value })} placeholder={t('inventory.sku')} />
-          </div>
-
-          {/* Category */}
-          <div>
-            <Label htmlFor="category">{t('inventory.category')}</Label>
-            <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-              <SelectTrigger><SelectValue placeholder={t('inventory.category')} /></SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Description */}
-          <div>
-            <Label htmlFor="description">{t('inventory.description')}</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder={t('inventory.description')}
-              rows={2}
-            />
-          </div>
-
-          {/* Prices */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="purchase_price">{t('inventory.purchasePrice')}</Label>
-              <Input
-                id="purchase_price"
-                type="number"
-                step="0.01"
-                value={formData.purchase_price || ''}
-                onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value ? parseFloat(e.target.value) : undefined })}
-                placeholder="0.00"
-              />
+            {/* Category + Unit */}
+            <div className="grid grid-cols-2 gap-3">
+              <div style={{ background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', border: '1.5px solid #ddd6fe', borderRadius: 14, padding: '12px 14px' }}>
+                <label style={{ fontSize: 9, fontWeight: 700, color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>{t('inventory.category')}</label>
+                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                  <SelectTrigger style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 13, fontWeight: 600, color: '#5b21b6', boxShadow: 'none' }}>
+                    <SelectValue placeholder={t('inventory.category')} />
+                  </SelectTrigger>
+                  <SelectContent>{categories.map((cat) => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '1.5px solid #bbf7d0', borderRadius: 14, padding: '12px 14px' }}>
+                <label style={{ fontSize: 9, fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>{t('inventory.unit')}</label>
+                <Select value={formData.unit} onValueChange={(value) => setFormData({ ...formData, unit: value })}>
+                  <SelectTrigger style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 13, fontWeight: 600, color: '#16a34a', boxShadow: 'none' }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>{units.map((unit) => <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="sell_price">{t('inventory.sellPrice')} <span className="text-red-500">*</span></Label>
-              <Input
-                id="sell_price"
-                type="number"
-                step="0.01"
-                value={formData.sell_price === 0 ? '' : formData.sell_price}
-                onChange={(e) => setFormData({ ...formData, sell_price: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                required
-              />
-            </div>
-          </div>
 
-          {/* Quantity */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="quantity">{t('inventory.quantity')} <span className="text-red-500">*</span></Label>
-              <Input
-                id="quantity"
-                type="number"
-                value={formData.quantity === 0 ? '' : formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
-                placeholder="0"
-                required
-              />
+            {/* Description */}
+            <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: 14, padding: '12px 14px' }}>
+              <label style={{ fontSize: 9, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>{t('inventory.description')}</label>
+              <Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder={t('inventory.description')} rows={2}
+                style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 13, color: '#78350f', resize: 'none', outline: 'none', boxShadow: 'none', width: '100%' }} />
             </div>
-            <div>
-              <Label htmlFor="min_quantity">{t('inventory.minQuantity')}</Label>
-              <Input
-                id="min_quantity"
-                type="number"
-                value={formData.min_quantity === 0 ? '' : formData.min_quantity}
-                onChange={(e) => setFormData({ ...formData, min_quantity: parseInt(e.target.value) || 0 })}
-                placeholder="0"
-              />
-            </div>
-          </div>
 
-          {/* Unit */}
-          <div>
-            <Label htmlFor="unit">{t('inventory.unit')}</Label>
-            <Select value={formData.unit} onValueChange={(value) => setFormData({ ...formData, unit: value })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {units.map((unit) => <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+            {/* Prices */}
+            <div className="grid grid-cols-2 gap-3">
+              <div style={{ background: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: '1.5px solid #e2e8f0', borderRadius: 14, padding: '12px 14px' }}>
+                <label style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>{t('inventory.purchasePrice')}</label>
+                <Input type="number" step="0.01" value={formData.purchase_price || ''}
+                  onChange={(e) => setFormData({ ...formData, purchase_price: e.target.value ? parseFloat(e.target.value) : undefined })}
+                  placeholder="0.00"
+                  style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 15, fontWeight: 700, color: '#475569', outline: 'none', boxShadow: 'none' }} />
+              </div>
+              <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '1.5px solid #bbf7d0', borderRadius: 14, padding: '12px 14px' }}>
+                <label style={{ fontSize: 9, fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
+                  {t('inventory.sellPrice')} <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <Input type="number" step="0.01" value={formData.sell_price === 0 ? '' : formData.sell_price}
+                  onChange={(e) => setFormData({ ...formData, sell_price: parseFloat(e.target.value) || 0 })}
+                  placeholder="0.00" required
+                  style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 15, fontWeight: 700, color: '#16a34a', outline: 'none', boxShadow: 'none' }} />
+              </div>
+            </div>
+
+            {/* Quantity */}
+            <div className="grid grid-cols-2 gap-3">
+              <div style={{ background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: '1.5px solid #bfdbfe', borderRadius: 14, padding: '12px 14px' }}>
+                <label style={{ fontSize: 9, fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
+                  {t('inventory.quantity')} <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <Input type="number" value={formData.quantity === 0 ? '' : formData.quantity}
+                  onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
+                  placeholder="0" required
+                  style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 15, fontWeight: 700, color: '#1d4ed8', outline: 'none', boxShadow: 'none' }} />
+              </div>
+              <div style={{ background: 'linear-gradient(135deg,#fefce8,#fef9c3)', border: '1.5px solid #fde68a', borderRadius: 14, padding: '12px 14px' }}>
+                <label style={{ fontSize: 9, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>{t('inventory.minQuantity')}</label>
+                <Input type="number" value={formData.min_quantity === 0 ? '' : formData.min_quantity}
+                  onChange={(e) => setFormData({ ...formData, min_quantity: parseInt(e.target.value) || 0 })}
+                  placeholder="0"
+                  style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 15, fontWeight: 700, color: '#d97706', outline: 'none', boxShadow: 'none' }} />
+              </div>
+            </div>
+
           </div>
           </TrinityModalShell>
         </Modal>

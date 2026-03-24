@@ -2,7 +2,7 @@
 
 import {
   Phone, MessageCircle, MessageSquare, Pencil, X, Plus, Clock,
-  Calendar, Scissors, FileText, History, ArrowLeft, Download,
+  Calendar, Scissors, ShoppingBag, FileText, History, ArrowLeft, Download,
   Package, ChevronRight, Loader2, CheckCircle, Play, MapPin, Video, Navigation, ExternalLink,
 } from 'lucide-react'
 import { useVisitServices, useRemoveVisitService } from '@/hooks/useVisitServices'
@@ -423,7 +423,6 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
     const total = (visit.price || 0) + visitServices.reduce((s: number, vs: any) => s + (vs.price || 0), 0)
     return (
       <div className="flex flex-col" style={{ minHeight: '55vh', padding: '16px 16px 20px' }}>
-        <SubHeader title={isHe ? 'שירותים ומוצרים' : 'Услуги и товары'} back="main" />
         <div className="flex-1 overflow-y-auto space-y-2 pb-3">
           {displayServiceName && (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
@@ -478,7 +477,6 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
     const paged = filtered.slice((servicePage - 1) * PAGE_SIZE, servicePage * PAGE_SIZE)
     return (
       <div className="flex flex-col" style={{ minHeight: '55vh', padding: '16px 16px 20px' }}>
-        <SubHeader title={isHe ? 'הוסף שירות' : 'Добавить услугу'} back="services" />
         <input type="text" value={serviceSearch} onChange={e => { setServiceSearch(e.target.value); setServicePage(1) }} placeholder={isHe ? 'חיפוש...' : 'Поиск...'} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 mb-3" />
         <div className="flex-1 overflow-y-auto space-y-2">
           {loading ? <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-gray-300" /></div>
@@ -510,7 +508,6 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
     const paged = filtered.slice((productPage - 1) * PAGE_SIZE, productPage * PAGE_SIZE)
     return (
       <div className="flex flex-col" style={{ minHeight: '55vh', padding: '16px 16px 20px' }}>
-        <SubHeader title={isHe ? 'הוסף מוצר' : 'Добавить товар'} back="services" />
         <input type="text" value={productSearch} onChange={e => { setProductSearch(e.target.value); setProductPage(1) }} placeholder={isHe ? 'חיפוש...' : 'Поиск...'} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-200 mb-3" />
         <div className="flex-1 overflow-y-auto space-y-2">
           {loading ? <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-gray-300" /></div>
@@ -539,20 +536,77 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
     )
   }
 
+  // ── Sidebar for sub-views (compact, no action buttons) ────────────────────
+  const subViewTitle: Record<string, { ru: string; he: string }> = {
+    services:        { ru: 'Услуги и товары', he: 'שירותים ומוצרים' },
+    'add-service':   { ru: 'Добавить услугу', he: 'הוסף שירות' },
+    'add-product':   { ru: 'Добавить товар',  he: 'הוסף מוצר' },
+    instructions:    { ru: 'Инструкции',      he: 'הוראות' },
+    'send-instruction': { ru: 'Отправить',    he: 'שלח' },
+  }
+
+  const subSidebarContent = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+        <div style={{ width: 60, height: 60, borderRadius: 14, background: `linear-gradient(135deg, ${g1}, ${g2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 900, boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
+          {getInitials(clientName)}
+        </div>
+      </div>
+      {clientPhone && (
+        <a href={`tel:${clientPhone}`} dir="ltr" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, color: 'rgba(255,255,255,0.45)', fontSize: 11, marginBottom: 8, textDecoration: 'none' }}>
+          <Phone size={11} />{clientPhone}
+        </a>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, marginBottom: 12, alignSelf: 'center', background: `${statusCfg.color}20`, border: `0.5px solid ${statusCfg.color}50` }}>
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusCfg.color }} />
+        <span style={{ fontSize: 10, fontWeight: 600, color: statusCfg.color }}>{statusLabel}</span>
+      </div>
+      {/* Total for services subview */}
+      {(visitServices.length > 0 || (visit.price || 0) > 0) && (
+        <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px 8px', textAlign: 'center', marginBottom: 10 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#34d399' }}>
+            ₪{(visit.price || 0) + visitServices.reduce((s: number, vs: any) => s + (vs.price || 0), 0)}
+          </div>
+          <div style={{ fontSize: 9, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{isHe ? 'סה״כ' : 'Итого'}</div>
+        </div>
+      )}
+      <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '4px 0 10px' }} />
+      <button onClick={() => setViewMode('main')} style={{ display:'flex',alignItems:'center',gap:7,padding:'8px 10px',borderRadius:9,border:'0.5px solid rgba(255,255,255,0.1)',background:'transparent',cursor:'pointer',width:'100%',color:'rgba(255,255,255,0.5)',fontSize:11,fontWeight:500 }}>
+        <ArrowLeft size={13} />{isHe ? 'חזרה לביקור' : 'Назад к визиту'}
+      </button>
+    </div>
+  )
+
   // ── Render ─────────────────────────────────────────────────────────────────
   const isSubView = viewMode !== 'main'
+  const isSimpleSubView = viewMode === 'instructions' || viewMode === 'send-instruction'
+  const subTitle = subViewTitle[viewMode] ? (isHe ? subViewTitle[viewMode].he : subViewTitle[viewMode].ru) : ''
 
   return (
-    <Modal open={isOpen} onClose={onClose} title={undefined} width={isSubView ? '480px' : '680px'} dir={dir} showCloseButton darkHeader contentClassName="!p-0">
-      {isSubView ? (
+    <Modal open={isOpen} onClose={onClose} title={undefined} width="680px" dir={dir} showCloseButton darkHeader contentClassName="!p-0">
+      {isSimpleSubView ? (
+        // Instructions sub-views: simple layout (no sidebar needed)
         <div style={{ background: '#f8f9fc', minHeight: 400 }}>
           {viewMode === 'instructions'     && renderInstructionsList()}
           {viewMode === 'send-instruction' && renderSendInstruction()}
-          {viewMode === 'services'         && renderServices()}
-          {viewMode === 'add-service'      && renderAddService()}
-          {viewMode === 'add-product'      && renderAddProduct()}
         </div>
+      ) : isSubView ? (
+        // Services sub-views: TrinityModalShell with compact sidebar
+        <TrinityModalShell
+          open={isOpen}
+          onClose={onClose}
+          icon={<Scissors />}
+          title={clientName}
+          subtitle={subTitle}
+          dir={dir}
+          sidebarExtra={subSidebarContent}
+        >
+          {viewMode === 'services'    && renderServices()}
+          {viewMode === 'add-service' && renderAddService()}
+          {viewMode === 'add-product' && renderAddProduct()}
+        </TrinityModalShell>
       ) : (
+        // Main view
         <TrinityModalShell
           open={isOpen}
           onClose={onClose}

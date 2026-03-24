@@ -3,7 +3,7 @@
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
-import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText, Paintbrush, Settings2, User } from 'lucide-react'
+import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText, Paintbrush, Settings2, User, CalendarPlus } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
@@ -56,14 +56,15 @@ export function ClientDetailsModal() {
   const totalPaid   = client.total_paid   || 0
 
   const T = {
-    he: { information:'מידע', visits:'ביקורים', totalPaid:'שולם', gallery:'גלריה', documents:'מסמכים', notes:'הערות', description:'תיאור', createdAt:'תאריך יצירה', edit:'ערוך', sale:'עסקה', delete:'מחק', active:'פעיל', call:'התקשר', address:'כתובת', birthday:'יום הולדת', paintCode:'מספר צבע' },
-    ru: { information:'Информация', visits:'Визитов', totalPaid:'Оплачено', gallery:'Галерея', documents:'Документы', notes:'Заметки', description:'Описание', createdAt:'Дата создания', edit:'Редактировать', sale:'Продажа', delete:'Удалить', active:'Активен', call:'Позвонить', address:'Адрес', birthday:'День рождения', paintCode:'Код краски' },
-    en:  { information:'Information', visits:'Visits', totalPaid:'Paid', gallery:'Gallery', documents:'Documents', notes:'Notes', description:'Description', createdAt:'Created', edit:'Edit', sale:'Sale', delete:'Delete', active:'Active', call:'Call', address:'Address', birthday:'Birthday', paintCode:'Paint code' },
+    he: { information:'מידע', visits:'ביקורים', totalPaid:'שולם', gallery:'גלריה', documents:'מסמכים', notes:'הערות', description:'תיאור', createdAt:'תאריך יצירה', edit:'ערוך', sale:'עסקה', newVisit:'ביקור חדש', delete:'מחק', active:'פעיל', call:'התקשר', address:'כתובת', birthday:'יום הולדת', paintCode:'מספר צבע', quickAccess:'גישה מהירה' },
+    ru: { information:'Информация', visits:'Визитов', totalPaid:'Оплачено', gallery:'Галерея', documents:'Документы', notes:'Заметки', description:'Описание', createdAt:'Дата создания', edit:'Редактировать', sale:'Продажа', newVisit:'Новый визит', delete:'Удалить', active:'Активен', call:'Позвонить', address:'Адрес', birthday:'День рождения', paintCode:'Код краски', quickAccess:'Быстрый доступ' },
+    en:  { information:'Information', visits:'Visits', totalPaid:'Paid', gallery:'Gallery', documents:'Documents', notes:'Notes', description:'Description', createdAt:'Created', edit:'Edit', sale:'Sale', newVisit:'New visit', delete:'Delete', active:'Active', call:'Call', address:'Address', birthday:'Birthday', paintCode:'Paint code', quickAccess:'Quick access' },
   }
   const t = T[locale as keyof typeof T] || T.he
 
   const handleEditClick   = () => { closeModal('client-details'); openModal('client-edit',  { client, locale }) }
   const handleSaleClick   = () => { closeModal('client-details'); openModal('client-sale',  { client, locale }) }
+  const handleVisitClick  = () => { closeModal('client-details'); openModal('visit-create', { client, locale }) }
   const handleCall        = () => { if (client.phone) window.location.href = `tel:${client.phone}` }
   const handleSMS         = () => { if (client.phone) window.location.href = `sms:${client.phone}` }
   const handleDeleteClick = () => setShowGdprDialog(true)
@@ -122,6 +123,17 @@ export function ClientDetailsModal() {
   }
 
   // ── Sidebar ───────────────────────────────────────────────────────────────
+  // Primary action button depends on cardSettings.primaryAction
+  const primaryBtn = cardSettings.primaryAction === 'visit' ? (
+    <button onClick={handleVisitClick} style={{ display:'flex',alignItems:'center',gap:7,padding:'9px 10px',borderRadius:10,border:'none',cursor:'pointer',width:'100%',background:'rgba(52,211,153,0.2)',color:'#34d399',fontSize:12,fontWeight:600,marginBottom:4 }}>
+      <CalendarPlus size={14} />{t.newVisit}
+    </button>
+  ) : (
+    <button onClick={handleSaleClick} style={{ display:'flex',alignItems:'center',gap:7,padding:'9px 10px',borderRadius:10,border:'none',cursor:'pointer',width:'100%',background:'rgba(251,191,36,0.2)',color:'#fbbf24',fontSize:12,fontWeight:600,marginBottom:4 }}>
+      <ShoppingCart size={14} />{t.sale}
+    </button>
+  )
+
   const sidebarContent = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
@@ -147,46 +159,86 @@ export function ClientDetailsModal() {
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <button onClick={handleEditClick} style={{ display:'flex',alignItems:'center',gap:7,padding:'8px 10px',borderRadius:9,border:'none',cursor:'pointer',width:'100%',background:'rgba(99,102,241,0.2)',color:'#818cf8',fontSize:11,fontWeight:600 }}><Pencil size={13} />{t.edit}</button>
-        <button onClick={handleSaleClick} style={{ display:'flex',alignItems:'center',gap:7,padding:'8px 10px',borderRadius:9,border:'none',cursor:'pointer',width:'100%',background:'rgba(251,191,36,0.15)',color:'#fbbf24',fontSize:11,fontWeight:600 }}><ShoppingCart size={13} />{t.sale}</button>
-        {client.phone && (<>
-          <button onClick={handleWhatsApp} style={{ display:'flex',alignItems:'center',gap:7,padding:'8px 10px',borderRadius:9,border:'none',cursor:'pointer',width:'100%',background:'rgba(52,211,153,0.15)',color:'#34d399',fontSize:11,fontWeight:600 }}><MessageCircle size={13} />WhatsApp</button>
-          <button onClick={handleCall} style={{ display:'flex',alignItems:'center',gap:7,padding:'8px 10px',borderRadius:9,border:'none',cursor:'pointer',width:'100%',background:'rgba(96,165,250,0.15)',color:'#60a5fa',fontSize:11,fontWeight:600 }}><Phone size={13} />{t.call}</button>
-          <button onClick={handleSMS} style={{ display:'flex',alignItems:'center',gap:7,padding:'8px 10px',borderRadius:9,border:'none',cursor:'pointer',width:'100%',background:'rgba(167,139,250,0.15)',color:'#a78bfa',fontSize:11,fontWeight:600 }}><MessageSquare size={13} />SMS</button>
-        </>)}
-        <button onClick={handleDeleteClick} style={{ display:'flex',alignItems:'center',gap:7,padding:'8px 10px',borderRadius:9,border:'1px solid rgba(248,113,113,0.3)',cursor:'pointer',width:'100%',background:'rgba(248,113,113,0.1)',color:'#f87171',fontSize:11,fontWeight:600,marginTop:4 }}><Trash2 size={13} />{t.delete}</button>
+        {/* Primary action — sale or visit based on settings */}
+        {primaryBtn}
+        {/* WhatsApp always visible if phone exists */}
+        {client.phone && (
+          <button onClick={handleWhatsApp} style={{ display:'flex',alignItems:'center',gap:7,padding:'9px 10px',borderRadius:10,border:'none',cursor:'pointer',width:'100%',background:'rgba(52,211,153,0.15)',color:'#34d399',fontSize:12,fontWeight:600,marginBottom:4 }}>
+            <MessageCircle size={14} />WhatsApp
+          </button>
+        )}
+        {/* Divider */}
+        <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '2px 0 6px' }} />
+        {/* Secondary actions: call + sms grid */}
+        {client.phone && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 4 }}>
+            <button onClick={handleCall} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 4px',borderRadius:8,border:'0.5px solid rgba(255,255,255,0.08)',background:'transparent',cursor:'pointer',color:'rgba(255,255,255,0.4)',fontSize:9,fontWeight:600 }}>
+              <Phone size={14} />{t.call}
+            </button>
+            <button onClick={handleSMS} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 4px',borderRadius:8,border:'0.5px solid rgba(255,255,255,0.08)',background:'transparent',cursor:'pointer',color:'rgba(255,255,255,0.4)',fontSize:9,fontWeight:600 }}>
+              <MessageSquare size={14} />SMS
+            </button>
+          </div>
+        )}
+        {/* Divider */}
+        <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '2px 0 6px' }} />
+        {/* Edit */}
+        <button onClick={handleEditClick} style={{ display:'flex',alignItems:'center',gap:7,padding:'7px 10px',borderRadius:8,border:'0.5px solid rgba(255,255,255,0.07)',background:'transparent',cursor:'pointer',width:'100%',color:'rgba(255,255,255,0.45)',fontSize:11,fontWeight:500 }}>
+          <Pencil size={12} />{t.edit}
+        </button>
+        {/* Delete */}
+        <button onClick={handleDeleteClick} style={{ display:'flex',alignItems:'center',gap:7,padding:'7px 10px',borderRadius:8,border:'0.5px solid rgba(248,113,113,0.2)',background:'transparent',cursor:'pointer',width:'100%',color:'rgba(248,113,113,0.5)',fontSize:11,fontWeight:500,marginTop:2 }}>
+          <Trash2 size={12} />{t.delete}
+        </button>
       </div>
     </div>
   )
 
+  // ── Quick access buttons (gallery + documents) for content area ───────────
+  const hasQuickAccess = cardSettings.showGallery || cardSettings.showDocuments
+  const quickAccessBlock = hasQuickAccess ? (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">{t.quickAccess}</p>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {cardSettings.showGallery && (
+          <button onClick={() => openModal('client-gallery', { client, locale })}
+            style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:'10px 8px',borderRadius:12,background:'rgba(167,139,250,0.08)',border:'1px solid rgba(167,139,250,0.2)',cursor:'pointer' }}>
+            <Images size={16} style={{ color: '#a78bfa' }} />
+            {photosCount !== null && photosCount > 0 && <span style={{ fontSize:14,fontWeight:700,color:'#a78bfa' }}>{photosCount}</span>}
+            <span style={{ fontSize:9,fontWeight:600,color:'#a78bfa',textTransform:'uppercase',letterSpacing:'0.05em' }}>{t.gallery}</span>
+          </button>
+        )}
+        {cardSettings.showDocuments && (
+          <button onClick={() => openModal('client-documents', { client, locale })}
+            style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:'10px 8px',borderRadius:12,background:'rgba(96,165,250,0.08)',border:'1px solid rgba(96,165,250,0.2)',cursor:'pointer' }}>
+            <FileText size={16} style={{ color: '#60a5fa' }} />
+            <span style={{ fontSize:9,fontWeight:600,color:'#60a5fa',textTransform:'uppercase',letterSpacing:'0.05em' }}>{t.documents}</span>
+          </button>
+        )}
+      </div>
+    </div>
+  ) : null
+
   return (
     <>
-      <Modal open={isOpen} onClose={() => closeModal('client-details')} showCloseButton darkHeader width="680px" dir={dir} contentClassName="!p-0"
-        headerActions={
-          <button onClick={() => setSettingsOpen(true)} title={isHe ? 'הגדרות כרטיס' : 'Настройки карточки'} className="p-1.5 rounded-full transition-colors text-white/40 hover:text-white/90 hover:bg-white/20">
-            <Settings2 className="w-4 h-4" />
-          </button>
-        }
-      >
+      <Modal open={isOpen} onClose={() => closeModal('client-details')} showCloseButton darkHeader width="680px" dir={dir} contentClassName="!p-0">
         <TrinityModalShell open={isOpen} onClose={() => closeModal('client-details')} icon={<User />} title={clientName} subtitle={client.email || (isHe ? 'פרטי לקוח' : 'Данные клиента')} dir={dir} sidebarExtra={sidebarContent}>
-          <div className="space-y-4">
-            {(cardSettings.showGallery || cardSettings.showDocuments) && (
-              <div style={{ display: 'flex', gap: 8 }}>
-                {cardSettings.showGallery && (
-                  <button onClick={() => openModal('client-gallery', { client, locale })} style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:'10px 8px',borderRadius:12,background:'rgba(167,139,250,0.08)',border:'1px solid rgba(167,139,250,0.2)',cursor:'pointer' }}>
-                    <Images size={16} style={{ color: '#a78bfa' }} />
-                    {photosCount !== null && photosCount > 0 && <span style={{ fontSize:14,fontWeight:700,color:'#a78bfa' }}>{photosCount}</span>}
-                    <span style={{ fontSize:9,fontWeight:600,color:'#a78bfa',textTransform:'uppercase',letterSpacing:'0.05em' }}>{t.gallery}</span>
-                  </button>
-                )}
-                {cardSettings.showDocuments && (
-                  <button onClick={() => openModal('client-documents', { client, locale })} style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:'10px 8px',borderRadius:12,background:'rgba(96,165,250,0.08)',border:'1px solid rgba(96,165,250,0.2)',cursor:'pointer' }}>
-                    <FileText size={16} style={{ color: '#60a5fa' }} />
-                    <span style={{ fontSize:9,fontWeight:600,color:'#60a5fa',textTransform:'uppercase',letterSpacing:'0.05em' }}>{t.documents}</span>
-                  </button>
-                )}
-              </div>
-            )}
+          {/* ── Content header with gear (Variant 3) ── */}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 16px', borderBottom:'0.5px solid #e8edf4', background:'transparent' }}>
+            <span style={{ fontSize:9, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>
+              {isHe ? 'כרטיס לקוח' : 'Карточка клиента'}
+            </span>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              title={isHe ? 'הגדרות כרטיס' : 'Настройки карточки'}
+              style={{ width:26, height:26, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'0.5px solid #e2e8f0', background:'#fff', color:'#94a3b8' }}
+            >
+              <Settings2 size={13} />
+            </button>
+          </div>
+
+          <div className="space-y-4" style={{ padding:'16px 16px 20px' }}>
+            {quickAccessBlock}
             {(client.email || client.address || client.date_of_birth || client.created_at) && (
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">{t.information}</p>

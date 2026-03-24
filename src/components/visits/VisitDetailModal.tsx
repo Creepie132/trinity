@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
+import { AdminDeleteButton } from '@/components/admin/AdminDeleteButton'
 
 interface VisitDetailModalProps {
   visit: any
@@ -622,10 +623,14 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           dir={dir}
           sidebarExtra={sidebarContent}
           footerContent={
-            <button onClick={onClose}
-              style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#1e293b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-              {isHe ? 'סגור' : 'Закрыть'}
-            </button>
+            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+              <AdminDeleteButton type="visit" id={visit.id}
+                onDeleted={() => { onClose(); queryClient.invalidateQueries({ queryKey: ['visits'] }) }} />
+              <button onClick={onClose}
+                style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#1e293b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                {isHe ? 'סגור' : 'Закрыть'}
+              </button>
+            </div>
           }
         >
           {renderMainContent()}

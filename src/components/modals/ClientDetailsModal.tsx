@@ -11,6 +11,8 @@ import { GdprDeleteDialog } from '@/components/clients/GdprDeleteDialog'
 import { useOrgTemplates } from '@/hooks/useOrgTemplates'
 import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-utils'
 import { ClientCardSettingsPanel, useClientCardSettings } from '@/components/clients/ClientCardSettingsModal'
+import { useQueryClient } from '@tanstack/react-query'
+import { AdminDeleteButton } from '@/components/admin/AdminDeleteButton'
 
 const AVATAR_GRADIENTS: [string, string][] = [
   ['#818cf8', '#a78bfa'], ['#34d399', '#0d9488'], ['#fbbf24', '#f97316'],
@@ -22,6 +24,7 @@ function avGrad(name: string): [string, string] {
 
 export function ClientDetailsModal() {
   const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
+  const queryClient = useQueryClient()
   const [showGdprDialog, setShowGdprDialog] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [cardSettings, saveCardSettings] = useClientCardSettings()
@@ -222,7 +225,18 @@ export function ClientDetailsModal() {
   return (
     <>
       <Modal open={isOpen} onClose={() => closeModal('client-details')} darkHeader showCloseButton={false} width="680px" dir={dir} contentClassName="!p-0">
-        <TrinityModalShell open={isOpen} onClose={() => closeModal('client-details')} icon={<User />} title={clientName} subtitle={client.email || (isHe ? 'פרטי לקוח' : 'Данные клиента')} dir={dir} sidebarExtra={sidebarContent}>
+        <TrinityModalShell open={isOpen} onClose={() => closeModal('client-details')} icon={<User />} title={clientName} subtitle={client.email || (isHe ? 'פרטי לקוח' : 'Данные клиента')} dir={dir} sidebarExtra={sidebarContent}
+          footerContent={
+            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+              <AdminDeleteButton type="client" id={client.id}
+                onDeleted={() => { closeModal('client-details'); queryClient.invalidateQueries({ queryKey: ['clients'] }) }} />
+              <button onClick={() => closeModal('client-details')}
+                style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#1e293b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                {isHe ? 'סגור' : 'Закрыть'}
+              </button>
+            </div>
+          }
+        >
           {showSettings ? (
             <ClientCardSettingsPanel
               onClose={() => setShowSettings(false)}

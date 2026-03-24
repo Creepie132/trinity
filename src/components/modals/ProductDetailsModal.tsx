@@ -8,11 +8,14 @@ import { useBranches } from '@/hooks/useBranches'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { AdminDeleteButton } from '@/components/admin/AdminDeleteButton'
 
 export function ProductDetailsModal() {
   const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
   const { isDemo } = useDemoMode()
   const [demoSellOpen, setDemoSellOpen] = useState(false)
+  const queryClient = useQueryClient()
 
   const isOpen = isModalOpen('product-details')
   const data = getModalData('product-details')
@@ -115,6 +118,16 @@ export function ProductDetailsModal() {
           subtitle={product.category || T.productDetails}
           dir={dir}
           sidebarExtra={sidebar}
+          footerContent={
+            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+              <AdminDeleteButton type="product" id={product.id}
+                onDeleted={() => { closeModal('product-details'); queryClient.invalidateQueries({ queryKey: ['products'] }) }} />
+              <button onClick={() => closeModal('product-details')}
+                style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#1e293b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                {isHe ? 'סגור' : 'Закрыть'}
+              </button>
+            </div>
+          }
         >
           <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
 

@@ -6,6 +6,7 @@ import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { MessageCircle, MessageSquare, Download, Copy, ExternalLink, Receipt, CreditCard, Banknote, Smartphone, Building2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
+import { AdminDeleteButton } from '@/components/admin/AdminDeleteButton'
 
 const METHOD_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: string; border: string }> = {
   cash:          { icon: <Banknote size={18} />,    color: '#16a34a', bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '#bbf7d0' },
@@ -143,10 +144,14 @@ export function PaymentDetailsModal() {
         title={clientName} subtitle={new Date(payment.created_at).toLocaleString(isHe ? 'he-IL' : 'ru-RU')}
         dir={dir} sidebarExtra={sidebar}
         footerContent={
-          <button onClick={() => closeModal('payment-details')}
-            style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#1e293b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            {t.close}
-          </button>
+          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <AdminDeleteButton type="payment" id={payment.id}
+              onDeleted={() => { closeModal('payment-details'); queryClient.invalidateQueries({ queryKey: ['payments'] }) }} />
+            <button onClick={() => closeModal('payment-details')}
+              style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#1e293b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              {t.close}
+            </button>
+          </div>
         }
       >
         <div style={{ padding: '20px 18px 24px' }} className="space-y-4">

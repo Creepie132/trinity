@@ -8,6 +8,8 @@ import {
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Sale } from '@/hooks/useSales'
+import { useQueryClient } from '@tanstack/react-query'
+import { AdminDeleteButton } from '@/components/admin/AdminDeleteButton'
 
 const T = {
   he: {
@@ -63,6 +65,7 @@ interface Props { sale: Sale | null; locale: 'he' | 'ru'; onClose: () => void }
 export function SaleDetailModal({ sale, locale, onClose }: Props) {
   const t = T[locale]
   const dir = locale === 'he' ? 'rtl' : 'ltr'
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -143,10 +146,14 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
     <Modal open={!!sale} onClose={onClose} darkHeader showCloseButton={false} width="700px" dir={dir} contentClassName="!p-0">
       <TrinityModalShell open={!!sale} onClose={onClose} icon={<ShoppingBag />} title={clientName} subtitle={t.title} dir={dir} sidebarExtra={sidebar}
         footerContent={
-          <button onClick={onClose}
-            style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#1e293b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-            {t.close}
-          </button>
+          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <AdminDeleteButton type="sale" id={sale.id}
+              onDeleted={() => { onClose(); queryClient.invalidateQueries({ queryKey: ['sales'] }) }} />
+            <button onClick={onClose}
+              style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: '#1e293b', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              {t.close}
+            </button>
+          </div>
         }
       >
         <div style={{ padding: '20px 18px 24px' }} className="space-y-5">

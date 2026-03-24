@@ -3,316 +3,211 @@
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
-import { MessageCircle, MessageSquare, Download, Copy, ExternalLink, Receipt } from 'lucide-react'
-import { StatusBadge } from '@/components/ui/StatusBadge'
+import { MessageCircle, MessageSquare, Download, Copy, ExternalLink, Receipt, CreditCard, Banknote, Smartphone, Building2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
+
+const METHOD_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: string; border: string }> = {
+  cash:          { icon: <Banknote size={18} />,    color: '#16a34a', bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '#bbf7d0' },
+  bit:           { icon: <Smartphone size={18} />,  color: '#ea580c', bg: 'linear-gradient(135deg,#fff7ed,#ffedd5)', border: '#fed7aa' },
+  credit_card:   { icon: <CreditCard size={18} />,  color: '#4f46e5', bg: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '#c7d2fe' },
+  card:          { icon: <CreditCard size={18} />,  color: '#4f46e5', bg: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '#c7d2fe' },
+  bank_transfer: { icon: <Building2 size={18} />,   color: '#0284c7', bg: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: '#bae6fd' },
+  transfer:      { icon: <Building2 size={18} />,   color: '#0284c7', bg: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: '#bae6fd' },
+}
+
+const STATUS_CONFIG: Record<string, { color: string; bg: string; border: string; dot: string }> = {
+  completed: { color: '#16a34a', bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.3)',  dot: '#22c55e' },
+  paid:      { color: '#16a34a', bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.3)',  dot: '#22c55e' },
+  pending:   { color: '#d97706', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.3)', dot: '#fbbf24' },
+  failed:    { color: '#dc2626', bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.3)',  dot: '#ef4444' },
+  refunded:  { color: '#6366f1', bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)', dot: '#818cf8' },
+  cancelled: { color: '#64748b', bg: 'rgba(100,116,139,0.1)', border: 'rgba(100,116,139,0.2)', dot: '#94a3b8' },
+}
+
+function getInitials(name: string) {
+  return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')
+}
 
 export function PaymentDetailsModal() {
   const { isModalOpen, closeModal, getModalData } = useModalStore()
   const queryClient = useQueryClient()
-  
+
   const isOpen = isModalOpen('payment-details')
   const data = getModalData('payment-details')
-  
   if (!data?.payment || !isOpen) return null
 
   const { payment } = data
   const locale = data.locale || 'he'
+  const isHe = locale === 'he'
+  const dir = isHe ? 'rtl' : 'ltr'
 
-  const t = {
-    he: {
-      amount: 'סכום',
-      date: 'תאריך',
-      method: 'אמצעי תשלום',
-      status: 'סטטוס',
-      paid: 'שולם',
-      pending: 'ממתין',
-      failed: 'נכשל',
-      refunded: 'הוחזר',
-      cancelled: 'בוטל',
-      whatsappReceipt: 'WhatsApp קבלה',
-      smsReceipt: 'SMS קבלה',
-      download: 'הורד',
-      whatsappLink: 'WhatsApp קישור',
-      smsLink: 'SMS קישור',
-      copy: 'העתק',
-      openLink: 'פתח קישור',
-      linkCopied: 'הקישור הועתק',
-      cash: 'מזומן',
-      card: 'כרטיס',
-      transfer: 'העברה',
-      bit: 'ביט',
-      other: 'אחר',
-      cancel: 'ביטול',
-      paymentCancelled: 'בוטל',
-    },
-    ru: {
-      amount: 'Сумма',
-      date: 'Дата',
-      method: 'Способ оплаты',
-      status: 'Статус',
-      paid: 'Оплачено',
-      pending: 'Ожидает',
-      failed: 'Ошибка',
-      refunded: 'Возвращено',
-      cancelled: 'Отменён',
-      whatsappReceipt: 'WhatsApp Квитанция',
-      smsReceipt: 'SMS Квитанция',
-      download: 'Скачать',
-      whatsappLink: 'WhatsApp Ссылка',
-      smsLink: 'SMS Ссылка',
-      copy: 'Скопировать',
-      openLink: 'Открыть',
-      linkCopied: 'Ссылка скопирована',
-      cash: 'Наличные',
-      card: 'Карта',
-      transfer: 'Перевод',
-      bit: 'Bit',
-      other: 'Другое',
-      cancel: 'Отменить',
-      paymentCancelled: 'Платёж отменён',
-    },
+  const T = {
+    he: { paid: 'שולם', pending: 'ממתין', failed: 'נכשל', refunded: 'הוחזר', cancelled: 'בוטל', method: 'אמצעי תשלום', date: 'תאריך', cash: 'מזומן', card: 'כרטיס', transfer: 'העברה', bit: 'ביט', other: 'אחר', cancel: 'ביטול', paymentCancelled: 'בוטל', whatsappReceipt: 'קבלה WA', smsReceipt: 'SMS קבלה', download: 'הורד', whatsappLink: 'קישור WA', smsLink: 'SMS קישור', copy: 'העתק', openLink: 'פתח', close: 'סגור', linkCopied: 'הועתק', description: 'תיאור', phone: 'טלפון', id: 'מזהה', type: 'סוג', service: 'שירות' },
+    ru: { paid: 'Оплачено', pending: 'Ожидает', failed: 'Ошибка', refunded: 'Возврат', cancelled: 'Отменён', method: 'Способ оплаты', date: 'Дата', cash: 'Наличные', card: 'Карта', transfer: 'Перевод', bit: 'Bit', other: 'Другое', cancel: 'Отменить', paymentCancelled: 'Платёж отменён', whatsappReceipt: 'WA Квитанция', smsReceipt: 'SMS Квитанция', download: 'Скачать', whatsappLink: 'WA Ссылка', smsLink: 'SMS Ссылка', copy: 'Копировать', openLink: 'Открыть', close: 'Закрыть', linkCopied: 'Скопировано', description: 'Описание', phone: 'Телефон', id: 'ID', type: 'Тип', service: 'Услуга' },
   }
+  const t = T[locale as 'he' | 'ru']
 
-  const text = t[locale as 'he' | 'ru']
-
-  // Parse client name
-  const clientName = payment.client_name ||
-    (payment.clients
-      ? `${payment.clients.first_name || ''} ${payment.clients.last_name || ''}`.trim()
-      : payment.description || '—')
-
-  // Method label
-  const methodLabels: Record<string, { he: string, ru: string }> = {
-    cash: { he: 'מזומן', ru: 'Наличные' },
-    card: { he: 'כרטיס', ru: 'Карта' },
-    credit_card: { he: 'כרטיס', ru: 'Карта' },
-    transfer: { he: 'העברה', ru: 'Перевод' },
-    bank_transfer: { he: 'העברה', ru: 'Перевод' },
-    bit: { he: 'ביט', ru: 'Bit' },
-  }
-
+  const clientName = payment.client_name || (payment.clients ? `${payment.clients.first_name || ''} ${payment.clients.last_name || ''}`.trim() : payment.description || '—')
   const method = payment.method || payment.payment_method || 'other'
-  const methodLabel = methodLabels[method]?.[locale as 'he' | 'ru'] || text.other
-
-  // Status label
-  const statusLabels: Record<string, string> = {
-    completed: text.paid,
-    paid: text.paid,
-    pending: text.pending,
-    failed: text.failed,
-    refunded: text.refunded,
-    cancelled: text.cancelled,
+  const methodLabels: Record<string, { he: string; ru: string }> = {
+    cash: { he: 'מזומן', ru: 'Наличные' }, card: { he: 'כרטיס', ru: 'Карта' },
+    credit_card: { he: 'כרטיס', ru: 'Карта' }, transfer: { he: 'העברה', ru: 'Перевод' },
+    bank_transfer: { he: 'העברה', ru: 'Перевод' }, bit: { he: 'ביט', ru: 'Bit' },
   }
+  const methodLabel = methodLabels[method]?.[locale as 'he' | 'ru'] || t.other
+  const statusKey = payment.status as keyof typeof STATUS_CONFIG
+  const sc = STATUS_CONFIG[statusKey] || STATUS_CONFIG.cancelled
+  const statusLabels: Record<string, string> = { completed: t.paid, paid: t.paid, pending: t.pending, failed: t.failed, refunded: t.refunded, cancelled: t.cancelled }
   const statusLabel = statusLabels[payment.status] || payment.status
-
+  const mc = METHOD_CONFIG[method] || { icon: <Receipt size={18} />, color: '#64748b', bg: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: '#e2e8f0' }
   const phone = payment.clients?.phone || payment.client_phone || ''
   const paymentUrl = payment.payment_link || payment.payment_url || payment.link || ''
+  const isPaid = payment.status === 'completed' || payment.status === 'paid'
+  const isPendingCard = payment.status === 'pending' && (method === 'credit_card' || method === 'card')
+  const initials = getInitials(clientName)
 
   const openWhatsApp = (message: string) => {
-    if (!phone) {
-      toast.error(locale === 'he' ? 'אין מספר טלפון' : 'Номер телефона отсутствует')
-      return
-    }
-    const cleanPhone = phone.replace(/[^0-9]/g, '')
-    window.open(`https://wa.me/972${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank')
+    if (!phone) { toast.error(isHe ? 'אין מספר טלפון' : 'Нет номера телефона'); return }
+    window.open(`https://wa.me/972${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`, '_blank')
   }
-
   const openSMS = (body?: string) => {
-    if (!phone) {
-      toast.error(locale === 'he' ? 'אין מספר טלפון' : 'Номер телефона отсутствует')
-      return
-    }
-    const cleanPhone = phone.replace(/[^0-9]/g, '')
-    const url = body ? `sms:${cleanPhone}&body=${encodeURIComponent(body)}` : `sms:${cleanPhone}`
-    window.open(url, '_blank')
+    if (!phone) { toast.error(isHe ? 'אין מספר טלפון' : 'Нет номера телефона'); return }
+    window.open(body ? `sms:${phone.replace(/[^0-9]/g, '')}&body=${encodeURIComponent(body)}` : `sms:${phone.replace(/[^0-9]/g, '')}`, '_blank')
+  }
+  const copyLink = () => { if (paymentUrl) { navigator.clipboard.writeText(paymentUrl); toast.success(t.linkCopied) } }
+  const downloadReceipt = () => window.open(`/api/payments/${payment.id}/receipt?locale=${locale}`, '_blank')
+  const cancelPayment = async () => {
+    const res = await fetch(`/api/payments/${payment.id}/cancel`, { method: 'POST' })
+    if (res.ok) { toast.success(t.paymentCancelled); closeModal('payment-details'); queryClient.invalidateQueries({ queryKey: ['payments'] }) }
   }
 
-  const copyLink = () => {
-    if (paymentUrl) {
-      navigator.clipboard.writeText(paymentUrl)
-      toast.success(text.linkCopied)
-    }
-  }
-
-  const openLink = () => {
-    if (paymentUrl) {
-      window.open(paymentUrl, '_blank')
-    }
-  }
-
-  const downloadReceipt = () => {
-    const url = `/api/payments/${payment.id}/receipt?locale=${locale}`
-    window.open(url, '_blank')
-  }
-
-  const isPaid = payment.status === 'completed' || payment.status === 'paid'
-  const isPendingCard = payment.status === 'pending' && 
-    (method === 'credit_card' || method === 'card' || method === 'אשראי')
-
-  // Build footer based on payment status
-  const getFooter = () => {
-    if (isPaid) {
-      return (
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={() => {
-              const message = locale === 'he' ? `קבלה: ${paymentUrl}` : `Квитанция: ${paymentUrl}`
-              openWhatsApp(message)
-            }}
-            className="w-full py-2.5 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm font-medium border border-green-200 dark:border-green-800 flex items-center justify-center gap-2 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors whitespace-nowrap"
-          >
-            <MessageCircle className="w-4 h-4" />
-            {text.whatsappReceipt}
-          </button>
-          <div className="flex gap-2">
-            <button
-              onClick={() => openSMS()}
-              className="flex-1 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm font-medium border border-blue-200 dark:border-blue-800 flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors whitespace-nowrap"
-            >
-              <MessageSquare className="w-4 h-4" />
-              {text.smsReceipt}
-            </button>
-            <button
-              onClick={downloadReceipt}
-              className="flex-1 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium border border-gray-200 dark:border-gray-700 flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
-            >
-              <Download className="w-4 h-4" />
-              {text.download}
-            </button>
-          </div>
-        </div>
-      )
-    }
-
-    if (isPendingCard) {
-      return (
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={() => {
-              const message = locale === 'he' ? `לתשלום לחץ כאן: ${paymentUrl}` : `Ссылка для оплаты: ${paymentUrl}`
-              openWhatsApp(message)
-            }}
-            className="w-full py-2.5 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-sm font-medium border border-green-200 dark:border-green-800 flex items-center justify-center gap-2 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors whitespace-nowrap"
-          >
-            <MessageCircle className="w-4 h-4" />
-            {text.whatsappLink}
-          </button>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                const message = locale === 'he' ? `לתשלום לחץ כאן: ${paymentUrl}` : `Ссылка для оплаты: ${paymentUrl}`
-                openSMS(message)
-              }}
-              className="flex-1 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-sm font-medium border border-blue-200 dark:border-blue-800 flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors whitespace-nowrap"
-            >
-              <MessageSquare className="w-4 h-4" />
-              {text.smsLink}
-            </button>
-            <button
-              onClick={copyLink}
-              className="flex-1 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors whitespace-nowrap"
-            >
-              <Copy className="w-4 h-4" />
-              {text.copy}
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={openLink}
-              className="flex-1 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium border border-gray-200 dark:border-gray-700 flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
-            >
-              <ExternalLink className="w-4 h-4" />
-              {text.openLink}
-            </button>
-            <button
-              onClick={async () => {
-                const res = await fetch(`/api/payments/${payment.id}/cancel`, { method: 'POST' })
-                if (res.ok) {
-                  toast.success(text.paymentCancelled)
-                  closeModal('payment-details')
-                  queryClient.invalidateQueries({ queryKey: ['payments'] })
-                }
-              }}
-              className="flex-1 min-h-[44px] rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium border border-red-100 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors whitespace-nowrap"
-            >
-              {text.cancel}
-            </button>
-          </div>
-        </div>
-      )
-    }
-
-    // For pending non-card payments, just show cancel
-    if (payment.status === 'pending') {
-      return (
-        <button
-          onClick={async () => {
-            const res = await fetch(`/api/payments/${payment.id}/cancel`, { method: 'POST' })
-            if (res.ok) {
-              toast.success(text.paymentCancelled)
-              closeModal('payment-details')
-              queryClient.invalidateQueries({ queryKey: ['payments'] })
-            }
-          }}
-          className="w-full min-h-[44px] rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium border border-red-100 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors whitespace-nowrap"
-        >
-          {text.cancel}
-        </button>
-      )
-    }
-
-    return null
-  }
-
-  return (
-    <Modal
-      open={isOpen}
-      onClose={() => closeModal('payment-details')}
-      darkHeader
-      width="680px"
-      dir={locale === 'he' ? 'rtl' : 'ltr'}
-      contentClassName="!p-0"
-    >
-      <TrinityModalShell
-        open={isOpen}
-        onClose={() => closeModal('payment-details')}
-        icon={<Receipt />}
-        title={clientName}
-        subtitle={new Date(payment.created_at).toLocaleString(locale === 'he' ? 'he-IL' : 'ru-RU')}
-        dir={locale === 'he' ? 'rtl' : 'ltr'}
-        sidebarExtra={
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {/* Amount display */}
-            <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: '12px 10px', textAlign: 'center', marginBottom: 4 }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#34d399' }}>₪{payment.amount}</div>
-              <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{statusLabel}</div>
-            </div>
-            {getFooter()}
-          </div>
-        }
-      >
-      <div dir={locale === 'he' ? 'rtl' : 'ltr'} style={{ padding: '16px 16px 20px' }}>
-        {/* Сумма — крупный акцент */}
-        <div className="flex flex-col items-center py-4 mb-2">
-          <p className="text-4xl font-bold text-gray-900 dark:text-gray-100">₪{payment.amount}</p>
-          <StatusBadge status={payment.status} label={statusLabel} />
-        </div>
-
-        <div className="space-y-1 border-t border-gray-100 dark:border-gray-800 pt-3">
-          <div className="flex justify-between py-2.5 border-b border-gray-50 dark:border-gray-800/60">
-            <span className="text-sm text-gray-400">{text.method}</span>
-            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{methodLabel}</span>
-          </div>
-          <div className="flex justify-between py-2.5">
-            <span className="text-sm text-gray-400">{text.date}</span>
-            <span className="text-sm font-medium text-gray-800 dark:text-gray-200" dir="ltr">
-              {new Date(payment.created_at).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU')}
-            </span>
-          </div>
+  // ── Sidebar ────────────────────────────────────────────────────────────────
+  const sidebar = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Avatar */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+        <div style={{ width: 54, height: 54, borderRadius: 16, background: `linear-gradient(135deg, ${sc.dot}, ${sc.color})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 900, boxShadow: `0 6px 20px ${sc.dot}55` }}>
+          {initials || <Receipt size={22} />}
         </div>
       </div>
+      {/* Amount */}
+      <div style={{ background: sc.bg, border: `0.5px solid ${sc.border}`, borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 8 }}>
+        <div style={{ fontSize: 26, fontWeight: 900, color: sc.color, letterSpacing: '-1px', lineHeight: 1 }}>₪{payment.amount}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 5 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
+          <span style={{ fontSize: 10, fontWeight: 600, color: sc.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{statusLabel}</span>
+        </div>
+      </div>
+      {/* Method */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 10, marginBottom: 10 }}>
+        <span style={{ color: mc.color }}>{mc.icon}</span>
+        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>{methodLabel}</span>
+      </div>
+      <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.07)', marginBottom: 10 }} />
+
+      {/* Action buttons */}
+      {isPaid && phone && (
+        <button onClick={() => openWhatsApp(isHe ? `קבלה: ${paymentUrl}` : `Квитанция: ${paymentUrl}`)}
+          style={{ padding: '9px 10px', borderRadius: 9, border: 'none', background: 'rgba(34,197,94,0.15)', color: '#34d399', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          <MessageCircle size={13} />{t.whatsappReceipt}
+        </button>
+      )}
+      {isPaid && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 5 }}>
+          {phone && <button onClick={() => openSMS()} style={{ padding: '8px 6px', borderRadius: 8, border: '0.5px solid rgba(96,165,250,0.3)', background: 'rgba(96,165,250,0.1)', color: '#60a5fa', fontSize: 10, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><MessageSquare size={12} />{t.smsReceipt}</button>}
+          <button onClick={downloadReceipt} style={{ padding: '8px 6px', borderRadius: 8, border: '0.5px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Download size={12} />{t.download}</button>
+        </div>
+      )}
+      {isPendingCard && paymentUrl && (
+        <>
+          {phone && <button onClick={() => openWhatsApp(isHe ? `לתשלום: ${paymentUrl}` : `Ссылка оплаты: ${paymentUrl}`)} style={{ padding: '9px 10px', borderRadius: 9, border: 'none', background: 'rgba(34,197,94,0.15)', color: '#34d399', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><MessageCircle size={13} />{t.whatsappLink}</button>}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 5 }}>
+            {phone && <button onClick={() => openSMS(isHe ? `לתשלום: ${paymentUrl}` : `Ссылка: ${paymentUrl}`)} style={{ padding: '8px 6px', borderRadius: 8, border: '0.5px solid rgba(96,165,250,0.3)', background: 'rgba(96,165,250,0.1)', color: '#60a5fa', fontSize: 10, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><MessageSquare size={12} />{t.smsLink}</button>}
+            <button onClick={copyLink} style={{ padding: '8px 6px', borderRadius: 8, border: '0.5px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Copy size={12} />{t.copy}</button>
+          </div>
+          <button onClick={() => window.open(paymentUrl, '_blank')} style={{ padding: '8px 10px', borderRadius: 9, border: '0.5px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#a78bfa', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><ExternalLink size={13} />{t.openLink}</button>
+          <button onClick={cancelPayment} style={{ padding: '8px 10px', borderRadius: 9, border: '0.5px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', color: 'rgba(239,68,68,0.7)', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5 }}>{t.cancel}</button>
+        </>
+      )}
+      {payment.status === 'pending' && !isPendingCard && (
+        <button onClick={cancelPayment} style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', color: 'rgba(239,68,68,0.7)', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5 }}>{t.cancel}</button>
+      )}
+      <button onClick={() => closeModal('payment-details')} style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer', marginTop: 2 }}>{t.close}</button>
+    </div>
+  )
+
+  return (
+    <Modal open={isOpen} onClose={() => closeModal('payment-details')} darkHeader width="700px" dir={dir} contentClassName="!p-0">
+      <TrinityModalShell open={isOpen} onClose={() => closeModal('payment-details')} icon={<Receipt />}
+        title={clientName} subtitle={new Date(payment.created_at).toLocaleString(isHe ? 'he-IL' : 'ru-RU')}
+        dir={dir} sidebarExtra={sidebar}>
+        <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
+
+          {/* Amount hero */}
+          <div style={{ background: `${sc.bg.replace('rgba', 'rgba').replace('0.12', '0.08')}`, border: `1px solid ${sc.border.replace('0.3', '0.2')}`, borderRadius: 16, padding: '20px', textAlign: 'center' }}>
+            <div style={{ fontSize: 42, fontWeight: 900, color: sc.color, letterSpacing: '-2px', lineHeight: 1, marginBottom: 8 }}>
+              ₪{Number(payment.amount).toLocaleString()}
+            </div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 20, background: `${sc.dot}20`, border: `1px solid ${sc.dot}40` }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: sc.dot }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: sc.color, letterSpacing: '0.05em' }}>{statusLabel}</span>
+            </div>
+          </div>
+
+          {/* Info cards grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Method */}
+            <div style={{ background: mc.bg, border: `1px solid ${mc.border}`, borderRadius: 14, padding: '12px 14px' }}>
+              <p style={{ fontSize: 9, fontWeight: 700, color: mc.color, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{t.method}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: mc.color }}>{mc.icon}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{methodLabel}</span>
+              </div>
+            </div>
+            {/* Date */}
+            <div style={{ background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)', border: '1px solid #e2e8f0', borderRadius: 14, padding: '12px 14px' }}>
+              <p style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{t.date}</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', margin: 0 }} dir="ltr">
+                {new Date(payment.created_at).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+              <p style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0 0' }} dir="ltr">
+                {new Date(payment.created_at).toLocaleTimeString(isHe ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+          </div>
+
+          {/* Phone */}
+          {phone && (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{t.phone}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#334155' }} dir="ltr">{phone}</span>
+            </div>
+          )}
+
+          {/* Description */}
+          {payment.description && (
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px' }}>
+              <p style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>{t.description}</p>
+              <p style={{ fontSize: 13, color: '#78350f', margin: 0, lineHeight: 1.5 }}>{payment.description}</p>
+            </div>
+          )}
+
+          {/* Type */}
+          {payment.type && (
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{t.type}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>{payment.type === 'service' ? t.service : payment.type}</span>
+            </div>
+          )}
+
+          {/* ID */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: '#cbd5e1', fontWeight: 600 }}>{t.id}:</span>
+            <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#cbd5e1' }}>{payment.id?.substring(0, 8)}...</span>
+          </div>
+
+        </div>
       </TrinityModalShell>
     </Modal>
   )

@@ -20,6 +20,7 @@
  */
 
 import { ReactNode, useEffect, useState } from 'react'
+import { X } from 'lucide-react'
 import { ModalBottomSheet } from './ModalBottomSheet'
 
 interface TrinityModalShellProps {
@@ -113,8 +114,41 @@ export function TrinityModalShell({
           borderRadius:   dir === 'rtl' ? '0 16px 16px 0' : '16px 0 0 16px',
           minWidth:       0,
           overflow:       'hidden',
+          position:       'relative',
         }}
       >
+        {/* Close button — top-left of sidebar */}
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            position:        'absolute',
+            top:             10,
+            left:            10,
+            width:           28,
+            height:          28,
+            borderRadius:    '50%',
+            border:          'none',
+            background:      'rgba(255,255,255,0.12)',
+            color:           'rgba(255,255,255,0.7)',
+            display:         'flex',
+            alignItems:      'center',
+            justifyContent:  'center',
+            cursor:          'pointer',
+            transition:      'background 0.15s, color 0.15s',
+            flexShrink:      0,
+          }}
+          onMouseEnter={e => {
+            ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.22)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = '#fff'
+          }}
+          onMouseLeave={e => {
+            ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.12)'
+            ;(e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.7)'
+          }}
+        >
+          <X size={14} />
+        </button>
         {/* Icon circle */}
         <div
           style={{

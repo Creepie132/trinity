@@ -143,7 +143,7 @@ export function PaymentReportModal({ open, onClose, locale = 'he' }: Props) {
   )
 
   return (
-    <Modal open={open} onClose={onClose} darkHeader width="700px" contentClassName="!p-0">
+    <Modal open={open} onClose={onClose} darkHeader width="700px" contentClassName="!p-0" showCloseButton={false}>
       <TrinityModalShell open={open} onClose={onClose} icon={<FileText />}
         title={isHe ? 'סיכום תשלומים' : 'Сводка платежей'}
         subtitle={isHe ? 'הפק דוח תשלומים לפי תאריך ואמצעי תשלום' : 'Создать отчёт по платежам за период'}

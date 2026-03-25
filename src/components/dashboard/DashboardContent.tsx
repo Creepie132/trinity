@@ -317,16 +317,30 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
     },
   })
 
-  const todayStart = new Date(); todayStart.setHours(0,0,0,0)
-  const todayEnd = new Date(); todayEnd.setHours(23,59,59,999)
+  // Та же логика что и в дневнике (getBucket) — показываем задачи bucket 'today' и 'burning'
   const todayTasks = (todayTasksRaw as any[]).filter((t: any) => {
     if (!t.title) return false
-    if (!t.due_date) return true // без даты — всегда показываем
-    const d = new Date(t.due_date)
-    // Сравниваем локальные даты (без timezone смещения)
-    const dLocal = d.toLocaleDateString()
-    const todayLocal = new Date().toLocaleDateString()
-    return dLocal === todayLocal
+    if (t.status === 'completed' || t.status === 'cancelled' || t.status === 'done') return false
+    const due = t.due_date ? new Date(t.due_date) : null
+    const now = new Date()
+    const todayStr = now.toLocaleDateString()
+    const tomorrowStr = new Date(now.getTime() + 86400000).toLocaleDateString()
+    // urgent — всегда показываем
+    if (t.priority === 'urgent') return true
+    // просрочено — показываем
+    if (due && due.toLocaleDateString() !== todayStr && due < now) return true
+    // high + сегодня — показываем
+    if (t.priority === 'high' && due && due.toLocaleDateString() === todayStr) return true
+    // сегодня
+    if (due && due.toLocaleDateString() === todayStr) return true
+    // завтра — дневник тоже показывает в "СЕГОДНЯ"
+    if (due && due.toLocaleDateString() === tomorrowStr) return true
+    // high без даты — дневник кладёт в 'today'
+    if (t.priority === 'high' && !due) return true
+    // in_progress — дневник кладёт в 'today'
+    if (t.status === 'in_progress') return true
+    // без даты и не high — не показываем (иначе всё подряд попадёт)
+    return false
   }).slice(0, 5)
 
   async function updateVisitStatus(visitId: string, status: string) {

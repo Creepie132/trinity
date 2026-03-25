@@ -220,9 +220,11 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
                   {totalDuration}{locale === 'he' ? "ד'" : 'м'}
                 </span>
               )}
-              {/* Фактическое время начала — показываем только для in_progress */}
-              {visit.status === 'in_progress' && visit.started_at && (() => {
-                const startedTime = new Date(visit.started_at).toLocaleTimeString(
+              {/* Фактическое время начала — для in_progress */}
+              {visit.status === 'in_progress' && (() => {
+                const startSource = visit.started_at || visit.scheduled_at
+                if (!startSource) return null
+                const startedTime = new Date(startSource).toLocaleTimeString(
                   locale === 'he' ? 'he-IL' : 'ru-RU',
                   { hour: '2-digit', minute: '2-digit' }
                 )

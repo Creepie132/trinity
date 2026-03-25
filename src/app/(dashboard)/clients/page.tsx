@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Eye, Users, Phone, Calendar, TrendingUp, MessageCircle, Filter, Loader2 } from 'lucide-react'
+import { Plus, Search, Eye, Users, Phone, Calendar, TrendingUp, MessageCircle, Filter, Loader2, Download } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { useQueryClient } from '@tanstack/react-query'
 import { ClientSummary } from '@/types/database'
@@ -12,6 +12,7 @@ import { useModalStore } from '@/store/useModalStore'
 import { format, differenceInDays } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoSectionBanner } from '@/components/demo/DemoSectionBanner'
@@ -78,7 +79,10 @@ export default function ClientsPage() {
   const features = useFeatures()
   const { t, language } = useLanguage()
   const { isDemo, clientLimit } = useDemoMode()
+  const { role, orgId } = useAuth()
+  const isOwner = role === 'owner'
   const [demoLimitOpen, setDemoLimitOpen] = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -154,6 +158,29 @@ export default function ClientsPage() {
     }
   }, [features.isActive, features.hasClients, features.isLoading, router])
 
+  async function handleExport() {
+    if (!orgId || exportLoading) return
+    setExportLoading(true)
+    try {
+      const params = new URLSearchParams({ type: 'clients', org_id: orgId, format: 'csv' })
+      const res = await fetch(`/api/export?${params}`)
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `clients_${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
   const handleClientClick = (client: ClientSummary) => {
     openModal('client-details', {
       client,
@@ -178,6 +205,29 @@ export default function ClientsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          {/* Кнопка Экспорт — только для owner, десктоп */}
+          {isOwner && (
+            <button
+              onClick={handleExport}
+              disabled={exportLoading}
+              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 relative overflow-hidden transition-all duration-200 hover:border-emerald-400 hover:shadow-md hover:shadow-emerald-100 dark:hover:shadow-emerald-900/30 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ background: 'linear-gradient(135deg, rgba(52,211,153,0.08), rgba(16,185,129,0.05))' }}
+            >
+              {/* Shimmer sweep */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(52,211,153,0.18) 50%, transparent 100%)',
+                  animation: 'shimmer-wave 2.4s ease-in-out infinite',
+                }}
+              />
+              {exportLoading
+                ? <Loader2 className="w-4 h-4 animate-spin relative z-10" />
+                : <Download className="w-4 h-4 relative z-10" />}
+              <span className="relative z-10">{language === 'he' ? 'ייצוא' : 'Экспорт'}</span>
+            </button>
+          )}
           <Button 
             onClick={() => {
               if (isDemo && clientCount >= 10) { setDemoLimitOpen(true); return }

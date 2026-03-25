@@ -61,13 +61,26 @@ export interface CardDetails {
   tranIndex?:   string   // Tranzila transaction index
 }
 
+// Document type codes in Tranzila Invoices API
+// receipt         = קבלה             (type 20001)
+// invoice         = חשבונית מס        (type 10001)
+// receipt_invoice = חשבונית מס קבלה   (type 30001) ← default
+export type TranzilaDocumentType = 'receipt' | 'invoice' | 'receipt_invoice'
+
+const DOCUMENT_TYPE_CODE: Record<TranzilaDocumentType, number> = {
+  receipt:         20001,
+  invoice:         10001,
+  receipt_invoice: 30001,
+}
+
 export interface CreateReceiptParams {
   clientName:    string
   clientEmail?:  string
   items:         ReceiptItem[]
   totalAmount:   number
   paymentMethod: string
-  card?:         CardDetails  // ← данные карточной транзакции
+  card?:         CardDetails
+  documentType?: TranzilaDocumentType  // default: receipt_invoice
 }
 
 export interface TranzilaDocumentResult {
@@ -123,10 +136,13 @@ export async function createReceipt(
     if (c.tranIndex)   payment['cc_transaction_id']  = c.tranIndex
   }
 
+  const docTypeCode = DOCUMENT_TYPE_CODE[params.documentType ?? 'receipt_invoice']
+
   const body: Record<string, unknown> = {
     terminal_name:     INVOICE_TERMINAL,
     document_language: 'heb',
     response_language: 'eng',
+    document_type:     docTypeCode,
     vat_type:          0,   // 0 = עסק פטור (освобождён от НДС)
     client: {
       name: params.clientName,

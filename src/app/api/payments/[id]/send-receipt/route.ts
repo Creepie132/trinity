@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
-import { createReceipt, getReceiptPdf, CardDetails } from '@/lib/tranzila-invoices'
+import { createReceipt, getReceiptPdf, CardDetails, TranzilaDocumentType } from '@/lib/tranzila-invoices'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,7 +38,7 @@ export async function POST(
 
     const { data: receiptSettings } = await serviceClient
       .from('org_receipt_settings')
-      .select('provider, is_enabled')
+      .select('provider, is_enabled, document_type')
       .eq('org_id', payment.org_id)
       .maybeSingle()
 
@@ -48,6 +48,8 @@ export async function POST(
         { status: 400 }
       )
     }
+
+    const documentType = (receiptSettings.document_type ?? 'receipt_invoice') as TranzilaDocumentType
 
     const { data: orgRow } = await serviceClient
       .from('organizations')
@@ -101,6 +103,7 @@ export async function POST(
       totalAmount:   Number(payment.amount),
       paymentMethod: payment.payment_method ?? 'other',
       card,
+      documentType,
     })
 
     await service

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createReceipt, getReceiptPdf } from '@/lib/tranzila-invoices'
+import { createReceipt, getReceiptPdf, TranzilaDocumentType } from '@/lib/tranzila-invoices'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,6 +45,8 @@ export async function POST(
     if (!settings?.is_enabled || settings.provider === 'none') {
       return NextResponse.json({ ok: true, skipped: true, reason: 'disabled or provider=none' })
     }
+
+    const documentType = (settings.document_type ?? 'receipt_invoice') as TranzilaDocumentType
 
     const client = payment.clients as {
       id: string; first_name?: string; last_name?: string
@@ -98,6 +100,7 @@ export async function POST(
           totalAmount:   Number(payment.amount),
           paymentMethod: payment.payment_method ?? 'other',
           card,
+          documentType,
         })
         documentId  = receipt.documentId
         documentNum = receipt.documentNum

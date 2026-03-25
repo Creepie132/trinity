@@ -16,6 +16,10 @@ const I18N = {
     providerNone: 'כבוי — אל תשלח קבלות',
     providerTranzila: 'Tranzila — יצירת קבלה דרך Tranzila',
     providerMorning: 'Morning — יצירת קבלה דרך Morning',
+    documentTypeLabel: 'סוג מסמך',
+    docReceipt: 'קבלה',
+    docInvoice: 'חשבונית מס',
+    docReceiptInvoice: 'חשבונית מס קבלה',
     triggerTitle: 'מתי לשלוח?',
     triggerPayCreated: 'כשתשלום נוצר',
     triggerPayCompleted: 'כשתשלום מסומן כהושלם',
@@ -35,6 +39,10 @@ const I18N = {
     providerNone: 'Выключено — не отправлять квитанции',
     providerTranzila: 'Tranzila — создание квитанции через Tranzila',
     providerMorning: 'Morning — создание квитанции через Morning',
+    documentTypeLabel: 'Тип документа',
+    docReceipt: 'קבלה (Квитанция)',
+    docInvoice: 'חשבונית מס (Счёт-фактура)',
+    docReceiptInvoice: 'חשבונית מס קבלה (Счёт + квитанция)',
     triggerTitle: 'Когда отправлять?',
     triggerPayCreated: 'При создании платежа',
     triggerPayCompleted: 'Когда платёж отмечен как завершённый',
@@ -49,6 +57,7 @@ const I18N = {
 
 type Provider = 'tranzila' | 'morning' | 'none'
 type TriggerEvent = 'payment_created' | 'payment_completed'
+type DocumentType = 'receipt' | 'invoice' | 'receipt_invoice'
 
 interface Props {
   open: boolean
@@ -61,6 +70,7 @@ interface Props {
 interface Settings {
   is_enabled: boolean
   provider: Provider
+  document_type: DocumentType
   trigger_events: TriggerEvent[]
   message_template: string
 }
@@ -81,6 +91,7 @@ export function ReceiptSettingsModal({ open, onClose, orgId, orgName, lang = 'he
   const [settings, setSettings] = useState<Settings>({
     is_enabled:       false,
     provider:         'none',
+    document_type:    'receipt_invoice',
     trigger_events:   ['payment_created'],
     message_template: DEFAULT_TEMPLATE,
   })
@@ -98,6 +109,7 @@ export function ReceiptSettingsModal({ open, onClose, orgId, orgName, lang = 'he
           setSettings({
             is_enabled:       Boolean(data.is_enabled),
             provider:         (data.provider as Provider) ?? 'none',
+            document_type:    (data.document_type as DocumentType) ?? 'receipt_invoice',
             trigger_events:   (data.trigger_events as TriggerEvent[]) ?? ['payment_created'],
             message_template: data.message_template ?? DEFAULT_TEMPLATE,
           })
@@ -224,6 +236,32 @@ export function ReceiptSettingsModal({ open, onClose, orgId, orgName, lang = 'he
               </button>
             ))}
           </div>
+          {/* Document type — only for Tranzila */}
+          {settings.provider === 'tranzila' && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">{s.documentTypeLabel}</label>
+              {([
+                { value: 'receipt_invoice', label: s.docReceiptInvoice },
+                { value: 'receipt',         label: s.docReceipt },
+                { value: 'invoice',         label: s.docInvoice },
+              ] as const).map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSettings(prev => ({ ...prev, document_type: opt.value }))}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl border text-sm text-start transition-colors ${
+                    settings.document_type === opt.value
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-800'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                    settings.document_type === opt.value ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'
+                  }`} />
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -17,8 +17,9 @@ async function requireAdmin(request: NextRequest) {
   return adminRow ? user : null
 }
 
-const VALID_PROVIDERS = ['tranzila', 'morning', 'none'] as const
-const VALID_TRIGGERS  = ['payment_created', 'payment_completed'] as const
+const VALID_PROVIDERS    = ['tranzila', 'morning', 'none'] as const
+const VALID_TRIGGERS     = ['payment_created', 'payment_completed'] as const
+const VALID_DOC_TYPES    = ['receipt', 'invoice', 'receipt_invoice'] as const
 
 // GET /api/admin/organizations/[orgId]/receipt-settings
 export async function GET(
@@ -94,12 +95,17 @@ export async function PUT(
     const {
       is_enabled = false,
       provider = 'none',
+      document_type = 'receipt_invoice',
       trigger_events = ['payment_created'],
       message_template = '',
     } = body
 
     if (!VALID_PROVIDERS.includes(provider)) {
       return NextResponse.json({ error: `Invalid provider: ${provider}` }, { status: 400 })
+    }
+
+    if (!VALID_DOC_TYPES.includes(document_type)) {
+      return NextResponse.json({ error: `Invalid document_type: ${document_type}` }, { status: 400 })
     }
 
     // ── Validate org has credentials for the selected provider ───────────────
@@ -143,6 +149,7 @@ export async function PUT(
           org_id: orgId,
           is_enabled: Boolean(is_enabled),
           provider,
+          document_type,
           trigger_events,
           message_template: String(message_template).slice(0, 1000),
         },

@@ -320,9 +320,13 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   const todayStart = new Date(); todayStart.setHours(0,0,0,0)
   const todayEnd = new Date(); todayEnd.setHours(23,59,59,999)
   const todayTasks = (todayTasksRaw as any[]).filter((t: any) => {
-    if (!t.due_date && !t.title) return false
-    if (t.due_date) { const d = new Date(t.due_date); return d >= todayStart && d <= todayEnd }
-    return !!t.client_id
+    if (!t.title) return false
+    if (!t.due_date) return true // без даты — всегда показываем
+    const d = new Date(t.due_date)
+    // Сравниваем локальные даты (без timezone смещения)
+    const dLocal = d.toLocaleDateString()
+    const todayLocal = new Date().toLocaleDateString()
+    return dLocal === todayLocal
   }).slice(0, 5)
 
   async function updateVisitStatus(visitId: string, status: string) {

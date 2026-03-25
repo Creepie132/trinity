@@ -12,6 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { RefreshCw, Loader2, User, FileText, Paintbrush, UserPlus } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useClientCardSettings } from '@/components/clients/ClientCardSettingsModal'
 
 interface AddClientDialogProps {
   open: boolean
@@ -42,6 +43,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
   const [hasPaintCode, setHasPaintCode] = useState(false)
 
   const addClient = useAddClient()
+  const [cardSettings] = useClientCardSettings()
 
   useEffect(() => {
     if (open && process.env.NODE_ENV === 'development') {
@@ -318,7 +320,8 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
           </div>
         </div>
 
-        {/* Код краски */}
+        {/* Код краски — только если включено в настройках карточки */}
+        {cardSettings.showPaintCode && (
         <div>
           <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
             <input
@@ -345,6 +348,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
             />
           )}
         </div>
+        )}
 
         {/* Заметки */}
         <div>

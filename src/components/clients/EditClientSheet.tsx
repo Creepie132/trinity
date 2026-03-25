@@ -6,6 +6,7 @@ import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useQueryClient } from '@tanstack/react-query'
 import { Save, FileText, Paintbrush } from 'lucide-react'
 import { toast } from 'sonner'
+import { useClientCardSettings } from '@/components/clients/ClientCardSettingsModal'
 
 interface EditClientSheetProps {
   client: any
@@ -79,6 +80,7 @@ Field.displayName = 'Field'
 
 export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: EditClientSheetProps) {
   const queryClient = useQueryClient()
+  const [cardSettings] = useClientCardSettings()
   const [form, setForm] = useState<Record<FieldKey, string>>({
     first_name:  client?.first_name  || '',
     last_name:   client?.last_name   || '',
@@ -278,7 +280,8 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
           <Field field="city" label={l.city}
             value={form.city} error={errors.city} shaking={shaking.city} onChange={handleChange} />
 
-          {/* Код краски */}
+          {/* Код краски — только если включено в настройках карточки */}
+          {cardSettings.showPaintCode && (
           <div>
             <label className="flex items-center gap-2 cursor-pointer select-none w-fit mb-1">
               <input
@@ -300,6 +303,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
                 value={form.paint_code} error={errors.paint_code} shaking={shaking.paint_code} onChange={handleChange} />
             )}
           </div>
+          )}
 
           <Field field="notes" label={l.notes} multiline
             value={form.notes} error={errors.notes} shaking={shaking.notes} onChange={handleChange} />

@@ -327,20 +327,35 @@ export function VisitDetailMob({
                 </button>
 
                 {/* Статус + время/дата */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                  <div style={{ borderRadius: 11, padding: '9px 6px', textAlign: 'center', background: statusCfg.bg, border: `1px solid ${statusCfg.color}30` }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusCfg.color, margin: '0 auto 4px' }} />
-                    <div style={{ fontSize: 9, fontWeight: 600, color: statusCfg.color, textTransform: 'uppercase', letterSpacing: '.04em' }}>{statusLabel}</div>
-                  </div>
-                  <div style={{ borderRadius: 11, padding: '9px 6px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>{timeStr}</div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.04em', marginTop: 2 }}>{isHe ? 'שעה' : 'Время'}</div>
-                  </div>
-                  <div style={{ borderRadius: 11, padding: '9px 6px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', lineHeight: 1.2 }}>{dateStr}</div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.04em', marginTop: 2 }}>{isHe ? 'תאריך' : 'Дата'}</div>
-                  </div>
-                </div>
+                {(() => {
+                  const isInProgress = visit.status === 'in_progress'
+                  const startedAtStr = (isInProgress && visit.started_at)
+                    ? new Date(visit.started_at).toLocaleTimeString(locStr, { hour: '2-digit', minute: '2-digit' })
+                    : null
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: startedAtStr ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: 6 }}>
+                      <div style={{ borderRadius: 11, padding: '9px 6px', textAlign: 'center', background: statusCfg.bg, border: `1px solid ${statusCfg.color}30` }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusCfg.color, margin: '0 auto 4px' }} />
+                        <div style={{ fontSize: 9, fontWeight: 600, color: statusCfg.color, textTransform: 'uppercase', letterSpacing: '.04em' }}>{statusLabel}</div>
+                      </div>
+                      <div style={{ borderRadius: 11, padding: '9px 6px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>{timeStr}</div>
+                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.04em', marginTop: 2 }}>{isHe ? 'שעה' : 'Время'}</div>
+                      </div>
+                      {/* Фактическое начало — только для in_progress */}
+                      {startedAtStr && (
+                        <div style={{ borderRadius: 11, padding: '9px 6px', textAlign: 'center', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24' }}>▶ {startedAtStr}</div>
+                          <div style={{ fontSize: 9, color: 'rgba(251,191,36,0.6)', textTransform: 'uppercase', letterSpacing: '.04em', marginTop: 2 }}>{isHe ? 'התחלה' : 'Начало'}</div>
+                        </div>
+                      )}
+                      <div style={{ borderRadius: 11, padding: '9px 6px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0', lineHeight: 1.2 }}>{dateStr}</div>
+                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.04em', marginTop: 2 }}>{isHe ? 'תאריך' : 'Дата'}</div>
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {/* Услуги */}
                 {(displayServiceName || visitServices.length > 0) && (

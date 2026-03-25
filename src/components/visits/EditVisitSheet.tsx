@@ -165,30 +165,34 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale: propLo
     <Modal
       open={isOpen}
       onClose={onClose}
-      title={l.title}
-      width="480px"
+      darkHeader showCloseButton={false}
+      width="520px"
       dir={locale === 'he' ? 'rtl' : 'ltr'}
-      footer={
-        <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 active:scale-95 transition-all whitespace-nowrap"
-          >
-            {l.cancel}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !form.date || !form.time}
-            className="flex-[1.5] py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:from-blue-600 hover:to-indigo-600 active:scale-95 transition-all shadow-sm shadow-blue-200 dark:shadow-blue-900/30 whitespace-nowrap"
-          >
-            <Save size={15} />
-            {saving ? '...' : l.save}
-          </button>
-        </div>
-      }
+      contentClassName="!p-0"
     >
-      <div className="space-y-4" dir={locale === 'he' ? 'rtl' : 'ltr'}>
-        {/* Date + Time side by side */}
+      <TrinityModalShell
+        open={isOpen}
+        onClose={onClose}
+        icon={<Calendar />}
+        title={l.title}
+        subtitle={locale === 'he' ? 'עדכן פרטי ביקור' : 'Обновите данные визита'}
+        dir={locale === 'he' ? 'rtl' : 'ltr'}
+        footerContent={
+          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <button onClick={onClose}
+              style={{ flex: '0 0 auto', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}>
+              {l.cancel}
+            </button>
+            <button onClick={handleSave} disabled={saving || !form.date || !form.time}
+              style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', background: !form.date || !form.time || saving ? '#e2e8f0' : 'linear-gradient(135deg, #3b82f6, #6366f1)', color: !form.date || !form.time || saving ? '#94a3b8' : '#fff', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <Save size={15} />
+              {saving ? '...' : l.save}
+            </button>
+          </div>
+        }
+      >
+      <div className="space-y-4 px-1" dir={locale === 'he' ? 'rtl' : 'ltr'}>
+        {/* Date + Time */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>{l.date} *</label>
@@ -218,7 +222,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale: propLo
           </select>
         </div>
 
-        {/* Duration + Price side by side */}
+        {/* Duration + Price */}
         <div className="grid grid-cols-2 gap-3">
           {!isMeetingMode && (
             <div>
@@ -248,6 +252,7 @@ export function EditVisitSheet({ visit, isOpen, onClose, onSaved, locale: propLo
             rows={3} />
         </div>
       </div>
+      </TrinityModalShell>
     </Modal>
   )
 }

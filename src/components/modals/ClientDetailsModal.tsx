@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
@@ -29,7 +29,6 @@ export function ClientDetailsModal() {
   const [showSettings, setShowSettings] = useState(false)
   const [cardSettings, saveCardSettings] = useClientCardSettings()
   const [photosCount, setPhotosCount] = useState<number | null>(null)
-  // isMobile: начинается false (SSR safe), устанавливается после mount
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
   const { templates } = useOrgTemplates()
@@ -58,11 +57,36 @@ export function ClientDetailsModal() {
       .catch(() => setPhotosCount(0))
   }, [isOpen, data?.client?.id])
 
-  // Не рендерим до mount (избегаем hydration mismatch)
+  // Не рендерим до mount
   if (!mounted) return null
-  if (!data?.client || !isOpen) return null
-  // На мобиле — TrinityMob через ClientCard/ClientBottomSheet
-  if (isMobile) return null
+  // На мобиле — TrinityMob
+  if (isMobile && !showGdprDialog) return null
+
+  // GdprDeleteDialog рендерим отдельно — он не зависит от isOpen/isMobile
+  if (!data?.client || !isOpen) {
+    return showGdprDialog ? (
+      <GdprDeleteDialog
+        open={showGdprDialog}
+        onOpenChange={setShowGdprDialog}
+        clientId={data?.client?.id || ''}
+        clientName={data?.client ? getClientName(data.client) : ''}
+        locale={(data?.locale || 'ru') as 'he' | 'ru'}
+      />
+    ) : null
+  }
+
+  // На мобиле показываем только GdprDeleteDialog если он открыт
+  if (isMobile) {
+    return showGdprDialog ? (
+      <GdprDeleteDialog
+        open={showGdprDialog}
+        onOpenChange={setShowGdprDialog}
+        clientId={data.client.id}
+        clientName={getClientName(data.client)}
+        locale={(data.locale || 'ru') as 'he' | 'ru'}
+      />
+    ) : null
+  }
 
   const { client, locale = 'he' } = data
   const clientName  = getClientName(client)
@@ -80,11 +104,22 @@ export function ClientDetailsModal() {
   }
   const t = T[locale as keyof typeof T] || T.he
 
-  const handleEditClick   = () => { closeModal('client-details'); openModal('client-edit',  { client, locale }) }
-  const handleSaleClick   = () => { closeModal('client-details'); openModal('client-sale',  { client, locale }) }
+  // БАГ #1 fix: после редактирования — обновляем client в store
+  const handleEditClick = () => {
+    closeModal('client-details')
+    openModal('client-edit', {
+      client, locale,
+      onSaved: (updated: any) => {
+        openModal('client-details', { ...data, client: { ...client, ...updated }, locale })
+      }
+    })
+  }
+  // БАГ #3 fix: Продажа открывает NewSaleModal (client-sale) с клиентом — НЕ закрываем детали
+  const handleSaleClick   = () => { openModal('client-sale', { client, locale }) }
   const handleVisitClick  = () => { closeModal('client-details'); openModal('visit-create', { client, locale }) }
   const handleCall        = () => { if (client.phone) window.location.href = `tel:${client.phone}` }
   const handleSMS         = () => { if (client.phone) window.location.href = `sms:${client.phone}` }
+  // БАГ #2 fix: кнопка удалить — просто показываем диалог
   const handleDeleteClick = () => setShowGdprDialog(true)
   const needsVisitRef     = templates?.whatsapp_template?.includes('{visit_ref}')
   const needsProductRef   = templates?.whatsapp_template?.includes('{product_ref}')
@@ -140,8 +175,7 @@ export function ClientDetailsModal() {
     openWhatsAppWithVars(pendingVars)
   }
 
-  // ── Sidebar ───────────────────────────────────────────────────────────────
-  // Primary action button depends on cardSettings.primaryAction
+  // ── Sidebar ──
   const primaryBtn = cardSettings.primaryAction === 'visit' ? (
     <button onClick={handleVisitClick} style={{ display:'flex',alignItems:'center',gap:7,padding:'9px 10px',borderRadius:10,border:'none',cursor:'pointer',width:'100%',background:'rgba(52,211,153,0.2)',color:'#34d399',fontSize:12,fontWeight:600,marginBottom:4 }}>
       <CalendarPlus size={14} />{t.newVisit}
@@ -183,17 +217,13 @@ export function ClientDetailsModal() {
         </button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        {/* Primary action — sale or visit based on settings */}
         {primaryBtn}
-        {/* WhatsApp always visible if phone exists */}
         {client.phone && (
           <button onClick={handleWhatsApp} style={{ display:'flex',alignItems:'center',gap:7,padding:'9px 10px',borderRadius:10,border:'none',cursor:'pointer',width:'100%',background:'rgba(52,211,153,0.15)',color:'#34d399',fontSize:12,fontWeight:600,marginBottom:4 }}>
             <MessageCircle size={14} />WhatsApp
           </button>
         )}
-        {/* Divider */}
         <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '2px 0 6px' }} />
-        {/* Secondary actions: call + sms grid */}
         {client.phone && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 4 }}>
             <button onClick={handleCall} style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 4px',borderRadius:8,border:'0.5px solid rgba(255,255,255,0.08)',background:'transparent',cursor:'pointer',color:'rgba(255,255,255,0.4)',fontSize:9,fontWeight:600 }}>
@@ -204,9 +234,7 @@ export function ClientDetailsModal() {
             </button>
           </div>
         )}
-        {/* Divider */}
         <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '2px 0 6px' }} />
-        {/* Навигатор — если есть адрес */}
         {(client.address || client.city) && (
           <button
             onClick={() => {
@@ -217,13 +245,10 @@ export function ClientDetailsModal() {
             <Navigation size={12} />{isHe ? 'נווט' : 'Навигатор'}
           </button>
         )}
-        {/* Divider */}
         <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '2px 0 6px' }} />
-        {/* Edit */}
         <button onClick={handleEditClick} style={{ display:'flex',alignItems:'center',gap:7,padding:'7px 10px',borderRadius:8,border:'0.5px solid rgba(255,255,255,0.07)',background:'transparent',cursor:'pointer',width:'100%',color:'rgba(255,255,255,0.45)',fontSize:11,fontWeight:500 }}>
           <Pencil size={12} />{t.edit}
         </button>
-        {/* Delete */}
         <button onClick={handleDeleteClick} style={{ display:'flex',alignItems:'center',gap:7,padding:'7px 10px',borderRadius:8,border:'0.5px solid rgba(248,113,113,0.2)',background:'transparent',cursor:'pointer',width:'100%',color:'rgba(248,113,113,0.5)',fontSize:11,fontWeight:500,marginTop:2 }}>
           <Trash2 size={12} />{t.delete}
         </button>
@@ -231,7 +256,6 @@ export function ClientDetailsModal() {
     </div>
   )
 
-  // ── Quick access buttons (gallery + documents) for content area ───────────
   const hasQuickAccess = cardSettings.showGallery || cardSettings.showDocuments
   const quickAccessBlock = hasQuickAccess ? (
     <div>
@@ -280,20 +304,15 @@ export function ClientDetailsModal() {
             />
           ) : (
           <>
-          {/* ── Content header with gear (Variant 3) ── */}
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 16px', borderBottom:'0.5px solid #e8edf4', background:'transparent' }}>
             <span style={{ fontSize:9, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' }}>
               {isHe ? 'כרטיס לקוח' : 'Карточка клиента'}
             </span>
-            <button
-              onClick={() => setShowSettings(true)}
-              title={isHe ? 'הגדרות כרטיס' : 'Настройки карточки'}
-              style={{ width:26, height:26, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'0.5px solid #e2e8f0', background:'#fff', color:'#94a3b8' }}
-            >
+            <button onClick={() => setShowSettings(true)}
+              style={{ width:26, height:26, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'0.5px solid #e2e8f0', background:'#fff', color:'#94a3b8' }}>
               <Settings2 size={13} />
             </button>
           </div>
-
           <div className="space-y-4" style={{ padding:'16px 16px 20px' }}>
             {quickAccessBlock}
             {(client.email || client.address || client.date_of_birth || client.created_at) && (
@@ -334,10 +353,9 @@ export function ClientDetailsModal() {
       <GdprDeleteDialog open={showGdprDialog} onOpenChange={setShowGdprDialog} clientId={client.id} clientName={clientName} locale={locale as 'he'|'ru'} />
 
       {showPicker && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-end justify-center" style={{ animation: 'fadeInOverlay 0.2s ease' }} onClick={() => setShowPicker(false)}>
-          <style>{`@keyframes fadeInOverlay{from{opacity:0}to{opacity:1}}@keyframes slideUpSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+        <div className="fixed inset-0 z-[9999] flex items-end justify-center" onClick={() => setShowPicker(false)}>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative z-10 bg-white rounded-t-3xl shadow-2xl w-full max-w-lg" style={{ animation: 'slideUpSheet 0.3s cubic-bezier(0.32,0.72,0,1)' }} onClick={e => e.stopPropagation()}>
+          <div className="relative z-10 bg-white rounded-t-3xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
             <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-gray-300" /></div>
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
               <div>

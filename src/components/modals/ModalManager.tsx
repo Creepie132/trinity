@@ -7,6 +7,7 @@ import { EditClientModal } from './clients/EditClientModal'
 import { DeleteClientModal } from './clients/DeleteClientModal'
 import { SaleModal } from './clients/SaleModal'
 import { ClientGalleryModal } from './clients/ClientGalleryModal'
+import { ClientHistoryModal } from './clients/ClientHistoryModal'
 
 // Visits
 import { CreateVisitModal } from './visits/CreateVisitModal'
@@ -74,6 +75,7 @@ export function ModalManager() {
       <DeleteClientModal />
       <SaleModal />
       <ClientGalleryModal />
+      <ClientHistoryModal />
 
       {/* Visits */}
       <CreateVisitModal />

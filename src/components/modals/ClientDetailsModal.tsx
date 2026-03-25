@@ -167,14 +167,20 @@ export function ClientDetailsModal() {
         <span style={{ fontSize: 10, fontWeight: 600, color: '#34d399' }}>{t.active}</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
-        <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '8px 6px', textAlign: 'center' }}>
+        <button onClick={() => { closeModal('client-details'); openModal('client-history', { client, locale, tab: 'payments' }) }}
+          style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '8px 6px', textAlign: 'center', border: 'none', cursor: 'pointer', transition: 'background .15s' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.13)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)' }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#a78bfa' }}>₪{Number(totalPaid).toLocaleString()}</div>
           <div style={{ fontSize: 9, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{t.totalPaid}</div>
-        </div>
-        <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '8px 6px', textAlign: 'center' }}>
+        </button>
+        <button onClick={() => { closeModal('client-details'); openModal('client-history', { client, locale, tab: 'visits' }) }}
+          style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '8px 6px', textAlign: 'center', border: 'none', cursor: 'pointer', transition: 'background .15s' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.13)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)' }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#60a5fa' }}>{visitsCount}</div>
           <div style={{ fontSize: 9, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 2 }}>{t.visits}</div>
-        </div>
+        </button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         {/* Primary action — sale or visit based on settings */}

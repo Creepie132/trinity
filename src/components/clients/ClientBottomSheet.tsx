@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom'
 import { useOrgTemplates } from '@/hooks/useOrgTemplates'
 import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-utils'
 import { getClientName } from '@/lib/client-utils'
+import { useModalStore } from '@/store/useModalStore'
 
 interface ClientBottomSheetProps {
   client: {
@@ -46,6 +47,7 @@ export function ClientBottomSheet({
   isDemo, enabledModules, onEdit, onDelete,
 }: ClientBottomSheetProps) {
   const [editOpen, setEditOpen] = useState(false)
+  const { openModal } = useModalStore()
   const [showPicker, setShowPicker] = useState(false)
   const [pickerType, setPickerType] = useState<'visit' | 'product' | null>(null)
   const [pickerItems, setPickerItems] = useState<any[]>([])
@@ -124,13 +126,15 @@ export function ClientBottomSheet({
         locale={locale}
         isDemo={isDemo}
         enabledModules={enabledModules}
-        onSale={() => { /* TODO: openModal('client-sale', { client, locale }) */ }}
-        onVisit={() => { /* TODO: openModal('visit-create', { client, locale }) */ }}
+        onSale={() => { onClose(); openModal('client-sale', { client, locale }) }}
+        onVisit={() => { onClose(); openModal('visit-create', { client, locale }) }}
         onWhatsApp={() => handleWhatsAppClick()}
         onEdit={() => setEditOpen(true)}
         onDelete={(id) => { onDelete?.(id); handleClose() }}
-        onGallery={() => { /* TODO: openModal('client-gallery', { client, locale }) */ }}
-        onDocuments={() => { /* TODO: openModal('client-documents', { client, locale }) */ }}
+        onGallery={() => { onClose(); openModal('client-gallery', { client, locale }) }}
+        onDocuments={() => { onClose(); openModal('client-documents', { client, locale }) }}
+        onVisitsHistory={() => { onClose(); openModal('client-history', { client, locale, tab: 'visits' }) }}
+        onPaymentsHistory={() => { onClose(); openModal('client-history', { client, locale, tab: 'payments' }) }}
       />
 
       {/* ── Редактирование клиента ── */}

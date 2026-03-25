@@ -70,6 +70,10 @@ export interface TrinityMobProps {
   onGallery?: (client: TrinityMobClient) => void
   /** Открыть документы */
   onDocuments?: (client: TrinityMobClient) => void
+  /** История визитов */
+  onVisitsHistory?: (client: TrinityMobClient) => void
+  /** История платежей */
+  onPaymentsHistory?: (client: TrinityMobClient) => void
 }
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────
@@ -208,6 +212,7 @@ export function TrinityMob({
   client, isOpen, onClose, locale,
   isDemo, enabledModules,
   onSale, onVisit, onWhatsApp, onEdit, onDelete, onGallery, onDocuments,
+  onVisitsHistory, onPaymentsHistory,
 }: TrinityMobProps) {
   const t = T[locale] ?? T.ru
   const isRtl = locale === 'he'
@@ -421,17 +426,30 @@ export function TrinityMob({
                   }
                 </button>
 
-                {/* Stats */}
+                {/* Stats — кликабельные карточки */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {[
-                    { val: `₪${Number(totalPaid).toLocaleString()}`, key: t.paid, color: accentText },
-                    { val: String(visitsCount), key: t.visits, color: '#60a5fa' },
-                  ].map(({ val, key, color }) => (
-                    <div key={key} style={{ borderRadius: 11, padding: '9px 10px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                      <div style={{ fontSize: 17, fontWeight: 600, color }}>{val}</div>
-                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 2 }}>{key}</div>
-                    </div>
-                  ))}
+                  <button
+                    onClick={() => onPaymentsHistory?.(client)}
+                    style={{ borderRadius: 11, padding: '9px 10px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', cursor: onPaymentsHistory ? 'pointer' : 'default', transition: 'background .15s' }}
+                    onMouseEnter={e => { if (onPaymentsHistory) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+                    onTouchStart={e => { if (onPaymentsHistory) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)' }}
+                    onTouchEnd={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+                  >
+                    <div style={{ fontSize: 17, fontWeight: 600, color: accentText }}>₪{Number(totalPaid).toLocaleString()}</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 2 }}>{t.paid}</div>
+                  </button>
+                  <button
+                    onClick={() => onVisitsHistory?.(client)}
+                    style={{ borderRadius: 11, padding: '9px 10px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', cursor: onVisitsHistory ? 'pointer' : 'default', transition: 'background .15s' }}
+                    onMouseEnter={e => { if (onVisitsHistory) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+                    onTouchStart={e => { if (onVisitsHistory) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)' }}
+                    onTouchEnd={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+                  >
+                    <div style={{ fontSize: 17, fontWeight: 600, color: '#60a5fa' }}>{String(visitsCount)}</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 2 }}>{t.visits}</div>
+                  </button>
                 </div>
 
                 {/* Info */}

@@ -9,6 +9,7 @@ export type ModalType =
   | 'client-sale'
   | 'client-gallery'
   | 'client-documents'
+  | 'client-history'
   // Visits
   | 'visit-create'
   | 'visit-edit'

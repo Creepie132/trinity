@@ -9,7 +9,6 @@ import { TodayVisitsWidget } from './TodayVisitsWidget'
 import { TodayTasksWidget } from './TodayTasksWidget'
 import { RevenueChartWidget } from './RevenueChartWidget'
 import { IncomeExpensesWidget } from './IncomeExpensesWidget'
-import { QuickActionsPanel } from './QuickActionsPanel'
 import FABMenu from './FABMenu'
 import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
 import { useModalStore } from '@/store/useModalStore'
@@ -298,7 +297,7 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
             <RevenueChartWidget data={revenueData} locale={locale} />
             <IncomeExpensesWidget locale={locale} />
           </div>
-          <div className="xl:hidden"><QuickActionsPanel locale={locale} /></div>
+
         </div>
       </div>
 

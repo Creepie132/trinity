@@ -19,6 +19,7 @@ import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import type { Product } from '@/types/inventory'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { compressImage } from '@/lib/compress-image'
 
 interface EditProductDialogProps {
   open: boolean
@@ -120,25 +121,24 @@ export function EditProductDialog({ open, onClose, product }: EditProductDialogP
 
     try {
       setUploading(true)
+      const compressed = await compressImage(file, 1200, 0.82)
       const supabase = createSupabaseBrowserClient()
 
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`
       const filePath = `inventory/${fileName}`
 
       const { error: uploadError } = await supabase.storage
         .from('inventory')
-        .upload(filePath, file, { cacheControl: '3600', upsert: false })
+        .upload(filePath, compressed, { cacheControl: '3600', upsert: false })
 
       if (uploadError) throw uploadError
 
       const { data } = supabase.storage.from('inventory').getPublicUrl(filePath)
 
       setFormData({ ...formData, image_url: data.publicUrl })
-      setImagePreview(URL.createObjectURL(file))
+      setImagePreview(URL.createObjectURL(compressed))
       toast.success(language === 'he' ? 'התמונה הועלתה בהצלחה' : 'Изображение загружено')
     } catch (error: any) {
-      console.error('Error uploading image:', error)
       toast.error(error.message || (language === 'he' ? 'שגיאה בהעלאת התמונה' : 'Ошибка загрузки изображения'))
     } finally {
       setUploading(false)

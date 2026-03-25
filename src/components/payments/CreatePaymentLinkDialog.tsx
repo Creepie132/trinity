@@ -11,6 +11,7 @@ import { Copy, ExternalLink, Loader2, Link, MessageCircle, CheckCircle2 } from '
 import { useLanguage } from '@/contexts/LanguageContext'
 import { ClientSearch } from '@/components/ui/ClientSearch'
 import { useAuth } from '@/hooks/useAuth'
+import { useBranch } from '@/contexts/BranchContext'
 
 interface CreatePaymentLinkDialogProps {
   open: boolean
@@ -26,6 +27,8 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, onSuccess }: Creat
 
   const { t, language } = useLanguage()
   const { orgId } = useAuth()
+  const { activeOrgId } = useBranch()
+  const searchOrgId = activeOrgId || orgId || ''
   const createPayment = useCreatePaymentLink()
   const isHe = language === 'he'
 
@@ -175,7 +178,7 @@ export function CreatePaymentLinkDialog({ open, onOpenChange, onSuccess }: Creat
                 <label style={{ fontSize: 10, fontWeight: 700, color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
                   {t('payments.client')} *
                 </label>
-                <ClientSearch orgId={orgId || ''} onSelect={setSelectedClient}
+                <ClientSearch orgId={searchOrgId} onSelect={setSelectedClient}
                   placeholder={t('payments.selectClient')} locale={language as 'he' | 'ru' | 'en'} value={selectedClient} />
               </div>
               {/* Amount */}

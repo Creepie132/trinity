@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseServerClient } from '@/lib/api-auth'
+import { getAuthContext } from '@/lib/auth-helpers'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { generateReceipt } from '@/lib/generate-receipt'
 
 export async function GET(
@@ -8,25 +9,16 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const supabase = await getSupabaseServerClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
 
-    // Get payment with client data
-    const { data: payment, error: paymentError } = await supabase
+    // Service role — bypasses RLS, нужен при impersonation (supabase anon не видит чужой payment)
+    const service = createSupabaseServiceClient()
+
+    const { data: payment, error: paymentError } = await service
       .from('payments')
-      .select(`
-        *,
-        clients:client_id (
-          id,
-          first_name,
-          last_name,
-          phone
-        )
-      `)
+      .select(`*, clients:client_id (id, first_name, last_name, phone)`)
       .eq('id', id)
       .single()
 
@@ -34,31 +26,16 @@ export async function GET(
       return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
     }
 
-    // Get org for current user — use org_users (correct table name)
-    const { data: orgUser, error: orgUserError } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (orgUserError || !orgUser) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
-    }
-
-    // Security: payment must belong to user's org
-    if (orgUser.org_id !== payment.org_id) {
+    // Security: суперадмин может смотреть любой платёж; обычный юзер — только своей org
+    if (!auth.isAdmin && auth.orgId !== payment.org_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { data: organization, error: orgError } = await supabase
+    const { data: organization } = await service
       .from('organizations')
       .select('name')
-      .eq('id', orgUser.org_id)
+      .eq('id', payment.org_id)
       .single()
-
-    if (orgError || !organization) {
-      return NextResponse.json({ error: 'Organization data not found' }, { status: 404 })
-    }
 
     const searchParams = request.nextUrl.searchParams
     const locale = (searchParams.get('locale') || 'he') as 'he' | 'ru'
@@ -75,7 +52,7 @@ export async function GET(
         status: payment.status,
       },
       client: payment.clients || null,
-      orgName: organization.name,
+      orgName: organization?.name || '',
       description: payment.description,
       locale,
     })

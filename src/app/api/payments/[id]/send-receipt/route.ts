@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseServerClient } from '@/lib/api-auth'
+import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { createReceipt, getReceiptPdf, CardDetails } from '@/lib/tranzila-invoices'
 
@@ -11,14 +11,14 @@ export async function POST(
 ) {
   try {
     const { id } = await params
-    const supabase = await getSupabaseServerClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const auth = await getAuthContext()
+    if ('error' in auth) return auth.error
 
-    const { data: payment, error: payErr } = await supabase
+    // Service role — bypasses RLS, нужен при impersonation
+    const service = createSupabaseServiceClient()
+
+    const { data: payment, error: payErr } = await service
       .from('payments')
       .select(`*, clients:client_id (id, first_name, last_name, email, phone)`)
       .eq('id', id)
@@ -28,13 +28,8 @@ export async function POST(
       return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
     }
 
-    const { data: orgUser } = await supabase
-      .from('org_users')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!orgUser || orgUser.org_id !== payment.org_id) {
+    // Security: суперадмин может работать с любым платежом; обычный юзер — только своей org
+    if (!auth.isAdmin && auth.orgId !== payment.org_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -108,7 +103,7 @@ export async function POST(
       card,
     })
 
-    await supabase
+    await service
       .from('payments')
       .update({ tranzila_document_id: receipt.documentId })
       .eq('id', id)

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { WidgetCard } from '@/components/ui/WidgetCard'
-import { CheckSquare, AlertCircle, Clock, ChevronRight, Check, X } from 'lucide-react'
+import { CheckSquare, AlertCircle, Clock, ChevronRight, Check, X, Flame } from 'lucide-react'
 import { useModalStore } from '@/store/useModalStore'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -131,8 +131,10 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
 
   if (dismissed) return null
 
+  const isUrgent = task.priority === 'urgent'
+
   return (
-    <div ref={wrapRef} className="relative overflow-hidden rounded-xl touch-pan-y select-none">
+    <div ref={wrapRef} className={`relative overflow-hidden rounded-xl touch-pan-y select-none ${isUrgent ? 'urgent-glow' : ''}`}>
       {/* Подложка */}
       <div className={`absolute inset-0 flex items-center ${isDone ? 'justify-start pl-4' : 'justify-end pr-4'} ${bgColor} transition-colors`}>
         {swipeHint}
@@ -147,9 +149,17 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
         }}
         className="relative group flex items-center gap-3 p-2.5 bg-white dark:bg-gray-900 rounded-xl cursor-pointer active:scale-[0.98]"
       >
+        {/* Полоса приоритета */}
         <div className={`w-1 h-8 rounded-full flex-shrink-0 ${priority.bar}`} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{task.title}</p>
+          <div className="flex items-center gap-1">
+            {isUrgent && (
+              <Flame className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+            )}
+            <p className={`text-sm font-medium truncate ${
+              isUrgent ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'
+            }`}>{task.title}</p>
+          </div>
           <div className="flex items-center gap-1 text-xs text-gray-400">
             {task.due_date ? (
               <>
@@ -157,7 +167,9 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
                 {new Date(task.due_date).toLocaleTimeString(l ? 'he-IL' : 'ru-RU', { hour: '2-digit', minute: '2-digit' })}
               </>
             ) : (
-              <span>{l ? priority.label_he : priority.label_ru}</span>
+              <span className={isUrgent ? 'text-red-400' : ''}>
+                {l ? priority.label_he : priority.label_ru}
+              </span>
             )}
           </div>
         </div>

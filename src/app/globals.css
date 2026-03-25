@@ -831,6 +831,22 @@
   to   { transform: rotate(360deg); }
 }
 
+/* Подсказка свайпа — покачивание каждые 3-4 секунды */
+@keyframes swipeHintWobble {
+  0%   { transform: translateX(0); }
+  2%   { transform: translateX(-6px); }
+  5%   { transform: translateX(5px); }
+  8%   { transform: translateX(-4px); }
+  11%  { transform: translateX(3px); }
+  14%  { transform: translateX(0); }
+  100% { transform: translateX(0); }
+}
+
+.swipe-hint-wobble {
+  animation: swipeHintWobble 3.8s ease-in-out infinite;
+  display: inline-flex;
+}
+
 .urgent-glow {
   animation: urgentPulse 2.8s ease-in-out infinite;
   border: 1px solid rgba(239, 68, 68, 0.25);

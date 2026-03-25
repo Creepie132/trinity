@@ -314,20 +314,10 @@ export function VisitDetailMob({
                 touchAction: 'pan-y',
               }}>
 
-                {/* Swipe hint — покачивается каждые 3-4 сек */}
-                <motion.button
+                {/* Swipe hint — CSS покачивание каждые ~4 сек */}
+                <button
                   onClick={() => setDrawerOpen(true)}
-                  animate={drawerOpen ? {} : {
-                    x: isRtl
-                      ? [0, 5, -4, 3, -2, 0]
-                      : [0, -5, 4, -3, 2, 0],
-                  }}
-                  transition={{
-                    duration: 0.6,
-                    repeat: Infinity,
-                    repeatDelay: 3.2,
-                    ease: 'easeInOut',
-                  }}
+                  className={drawerOpen ? undefined : 'swipe-hint-wobble'}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                     alignSelf: 'center', padding: '5px 11px', borderRadius: 14,
@@ -338,7 +328,7 @@ export function VisitDetailMob({
                   {isRtl
                     ? <><span>›</span><span>החלק ימינה — פעולות</span><span>‹</span></>
                     : <><span>‹</span><span>← Свайп влево — действия →</span><span>›</span></>}
-                </motion.button>
+                </button>
 
                 {/* Статус + время/дата */}
                 {(() => {

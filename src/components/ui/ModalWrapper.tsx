@@ -32,7 +32,7 @@ export default function ModalWrapper({ isOpen, onClose, children }: ModalWrapper
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4"
       onClick={onClose}
     >
       <div

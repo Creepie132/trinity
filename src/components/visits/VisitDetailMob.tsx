@@ -15,17 +15,18 @@
  *   - RTL (HE): свайп вправо → открыть шторку
  */
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 import {
   ArrowLeft, ArrowRight, Phone, MessageCircle, MessageSquare,
   Scissors, Package, Play, CheckCircle, X, Pencil,
   Calendar, Clock, FileText, History, MapPin, Video,
-  ExternalLink, Navigation, ChevronRight, Plus, Loader2,
+  ExternalLink, Navigation, ChevronRight, Plus, Loader2, Search,
 } from 'lucide-react'
 import { useModalStore } from '@/store/useModalStore'
-import { useVisitServices, useRemoveVisitService } from '@/hooks/useVisitServices'
+import { useVisitServices, useRemoveVisitService, useAddVisitService } from '@/hooks/useVisitServices'
+import { useServices } from '@/hooks/useServices'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
@@ -116,8 +117,13 @@ export function VisitDetailMob({
   const { data: visitServicesFromHook } = useVisitServices(visit?.id || '')
   const visitServices = visitServicesFromHook ?? visit?.visit_services ?? []
   const removeVisitService = useRemoveVisitService(visit?.id || '')
+  const addVisitService = useAddVisitService(visit?.id || '')
+  const { data: allServices = [] } = useServices()
 
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [addSheetOpen, setAddSheetOpen] = useState(false)
+  const [serviceSearch, setServiceSearch] = useState('')
+  const [addingId, setAddingId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
   // Framer motion — drag-to-close
@@ -471,7 +477,8 @@ export function VisitDetailMob({
                       label={isHe ? 'הוסף שירות / מוצר' : 'Добавить услугу / товар'}
                       onClick={() => {
                         setDrawerOpen(false)
-                        openModal('add-to-visit', { visitId: visit.id, visitOrgId: visit.org_id })
+                        setServiceSearch('')
+                        setAddSheetOpen(true)
                       }}
                       iconBg="rgba(167,139,250,0.2)"
                       iconColor="#a78bfa"
@@ -503,5 +510,111 @@ export function VisitDetailMob({
     </AnimatePresence>
   )
 
-  return createPortal(content, document.body)
+  return createPortal(
+    <>
+      {content}
+
+      {/* ── Inline Add Service Sheet ── */}
+      <AnimatePresence>
+        {addSheetOpen && (
+          <>
+            <motion.div className="fixed inset-0" style={{ zIndex: 10998, background: 'rgba(0,0,0,0.55)' }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: .2 }} onClick={() => setAddSheetOpen(false)} />
+
+            <motion.div className="fixed bottom-0 left-0 right-0 flex flex-col"
+              style={{ zIndex: 10999, maxHeight: '85dvh', background: 'var(--trinity-sidebar-bg, #1a2620)', borderRadius: '20px 20px 0 0', overflow: 'hidden' }}
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+              dir={isHe ? 'rtl' : 'ltr'}>
+
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center gap-3 px-4 pb-3 flex-shrink-0"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(167,139,250,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Plus size={15} color="#a78bfa" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{isHe ? 'הוסף שירות' : 'Добавить услугу'}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{isHe ? 'בחר שירות להוספה' : 'Выберите услугу'}</div>
+                </div>
+                <button onClick={() => setAddSheetOpen(false)}
+                  style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={13} />
+                </button>
+              </div>
+
+              {/* Search */}
+              <div className="px-4 pt-3 pb-2 flex-shrink-0">
+                <div style={{ position: 'relative' }}>
+                  <Search size={13} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: isHe ? 'auto' : 10, right: isHe ? 10 : 'auto', color: 'rgba(255,255,255,0.3)' }} />
+                  <input
+                    type="text" value={serviceSearch}
+                    onChange={e => setServiceSearch(e.target.value)}
+                    placeholder={isHe ? 'חיפוש...' : 'Поиск...'}
+                    autoFocus
+                    style={{ width: '100%', padding: isHe ? '8px 28px 8px 10px' : '8px 10px 8px 28px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 13, outline: 'none' }}
+                  />
+                </div>
+              </div>
+
+              {/* Services list */}
+              <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-2" style={{ touchAction: 'pan-y' }}>
+                {allServices
+                  .filter((s: any) => {
+                    if (!serviceSearch) return true
+                    const name = isHe ? s.name : (s.name_ru || s.name)
+                    return name.toLowerCase().includes(serviceSearch.toLowerCase())
+                  })
+                  .map((s: any) => {
+                    const name = isHe ? s.name : (s.name_ru || s.name)
+                    const isAdding = addingId === s.id
+                    return (
+                      <button key={s.id} disabled={!!addingId}
+                        onClick={async () => {
+                          setAddingId(s.id)
+                          try {
+                            await addVisitService.mutateAsync({
+                              visit_id: visit.id,
+                              service_id: s.id,
+                              service_name: s.name,
+                              service_name_ru: s.name_ru || s.name,
+                              price: s.price || 0,
+                              duration_minutes: s.duration_minutes || 0,
+                            })
+                            queryClient.invalidateQueries({ queryKey: ['visit-services', visit.id] })
+                            toast.success(isHe ? `נוסף: ${name}` : `Добавлено: ${name}`)
+                            setAddSheetOpen(false)
+                          } catch { toast.error(isHe ? 'שגיאה' : 'Ошибка') }
+                          finally { setAddingId(null) }
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.04)', cursor: 'pointer', opacity: addingId && !isAdding ? 0.5 : 1 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(96,165,250,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {isAdding ? <Loader2 size={14} color="#60a5fa" style={{ animation: 'spin 1s linear infinite' }} /> : <Scissors size={14} color="#60a5fa" />}
+                        </div>
+                        <div style={{ flex: 1, textAlign: 'start' }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{name}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>
+                            {s.duration_minutes ? `${s.duration_minutes} ${isHe ? 'ד׳' : 'мин'}` : ''}{s.price ? ` · ₪${s.price}` : ''}
+                          </div>
+                        </div>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(167,139,250,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Plus size={13} color="#a78bfa" />
+                        </div>
+                      </button>
+                    )
+                  })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>,
+    document.body
+  )
 }

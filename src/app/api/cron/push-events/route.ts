@@ -109,6 +109,45 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // ── 2b. HOURLY OVERDUE REMINDERS (every hour after visit should have ended) ─
+  // Fires at 2h, 3h, 4h, 5h, 6h after expected end time
+  const hourlyOverdueHours = [2, 3, 4, 5, 6]
+
+  for (const h of hourlyOverdueHours) {
+    const endOffsetMs = h * 60 * 60_000
+    const windowMs = 5 * 60_000 // 5 minute window
+
+    // Fetch visits that are still scheduled and started long enough ago
+    const { data: visits } = await supabase
+      .from('visits')
+      .select('id, scheduled_at, duration_minutes, org_id, org_users!inner(user_id)')
+      .eq('status', 'scheduled')
+      .lt('scheduled_at', new Date(now.getTime() - endOffsetMs).toISOString())
+
+    for (const v of visits ?? []) {
+      const dur = (v.duration_minutes ?? 60) * 60_000
+      const expectedEnd = new Date(new Date(v.scheduled_at).getTime() + dur)
+      const sinceEnd = now.getTime() - expectedEnd.getTime()
+
+      // Only fire in the 5-minute window for this hour mark
+      if (sinceEnd < endOffsetMs || sinceEnd > endOffsetMs + windowMs) continue
+
+      const orgUsers = v.org_users as any[]
+      for (const ou of orgUsers ?? []) {
+        await insertNotificationOnce({
+          org_id: v.org_id,
+          user_id: ou.user_id,
+          type: `visit_overdue_${h}h`,
+          title: 'ביקור עדיין פתוח ⏰',
+          body: `${h} שעות עברו — הביקור עדיין לא הסתיים`,
+          link: '/visits',
+          reference_id: v.id,
+        })
+      }
+      stats.visits++
+    }
+  }
+
   // ── 3. TASK TIMERS ─────────────────────────────────────────────────────────
 
   // 3a. 1 hour before task becomes overdue
@@ -216,11 +255,20 @@ interface NotifInsert {
 
 /**
  * Insert notification only if one with same (type + reference_id + user_id) 
- * doesn't already exist today. Prevents duplicates on every 5m tick.
+ * doesn't already exist. For hourly overdue types — deduplicate per hour.
+ * For all other types — deduplicate per day.
  */
 async function insertNotificationOnce(n: NotifInsert) {
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
+  const isHourly = n.type.match(/^visit_overdue_\d+h$/)
+  const windowStart = new Date()
+
+  if (isHourly) {
+    // Deduplicate per hour
+    windowStart.setMinutes(0, 0, 0)
+  } else {
+    // Deduplicate per day
+    windowStart.setHours(0, 0, 0, 0)
+  }
 
   const { data: existing } = await supabase
     .from('notifications')
@@ -228,7 +276,7 @@ async function insertNotificationOnce(n: NotifInsert) {
     .eq('type', n.type)
     .eq('reference_id', n.reference_id)
     .eq('user_id', n.user_id)
-    .gte('created_at', todayStart.toISOString())
+    .gte('created_at', windowStart.toISOString())
     .maybeSingle()
 
   if (existing) return // already created today

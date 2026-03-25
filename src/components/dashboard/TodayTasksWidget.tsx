@@ -83,8 +83,10 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
       if (!isHorizontal.current) { setOffsetX(0); return }
 
       const dx = currentX.current
-      const doneDir   = isRtl ? dx >  THRESHOLD : dx < -THRESHOLD
-      const cancelDir = isRtl ? dx < -THRESHOLD : dx >  THRESHOLD
+      // LTR: вправо = выполнено, влево = отменить
+      // RTL: влево = выполнено, вправо = отменить
+      const doneDir   = isRtl ? dx < -THRESHOLD : dx >  THRESHOLD
+      const cancelDir = isRtl ? dx >  THRESHOLD : dx < -THRESHOLD
 
       if (doneDir) {
         setDismissed(true)
@@ -109,14 +111,14 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
   }, [isRtl, task.id, onDone, onCancel])
 
   // Цвет подложки при свайпе
-  const bgColor = offsetX < -10 || (isRtl && offsetX > 10)
-    ? 'bg-emerald-500' // выполнено — зелёный
-    : offsetX > 10 || (isRtl && offsetX < -10)
-    ? 'bg-red-400'    // отменить — красный
-    : 'transparent'
+  // LTR: вправо = зелёный (выполнено), влево = красный (отменить)
+  // RTL: влево = зелёный (выполнено), вправо = красный (отменить)
+  const isDone   = (!isRtl && offsetX > 10) || (isRtl && offsetX < -10)
+  const isCancel = (!isRtl && offsetX < -10) || (isRtl && offsetX > 10)
+  const bgColor  = isDone ? 'bg-emerald-500' : isCancel ? 'bg-red-400' : 'transparent'
 
   const swipeHint = Math.abs(offsetX) > 20
-    ? (offsetX < 0 && !isRtl) || (offsetX > 0 && isRtl)
+    ? isDone
       ? <span className="text-white text-xs font-bold flex items-center gap-1"><Check size={14}/>{l ? 'בוצע' : 'Выполнено'}</span>
       : <span className="text-white text-xs font-bold flex items-center gap-1"><X size={14}/>{l ? 'בוטל' : 'Отменить'}</span>
     : null
@@ -126,7 +128,7 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
   return (
     <div className="relative overflow-hidden rounded-xl">
       {/* Подложка */}
-      <div className={`absolute inset-0 flex items-center ${offsetX < 0 || (isRtl && offsetX > 0) ? 'justify-end pr-4' : 'justify-start pl-4'} ${bgColor} transition-colors`}>
+      <div className={`absolute inset-0 flex items-center ${isDone ? 'justify-start pl-4' : 'justify-end pr-4'} ${bgColor} transition-colors`}>
         {swipeHint}
       </div>
 

@@ -127,6 +127,7 @@ export async function createReceipt(
     terminal_name:     INVOICE_TERMINAL,
     document_language: 'heb',
     response_language: 'eng',
+    vat_type:          0,   // 0 = עסק פטור (освобождён от НДС)
     client: {
       name: params.clientName,
       ...(params.clientEmail ? { email: params.clientEmail } : {}),
@@ -136,6 +137,7 @@ export async function createReceipt(
       quantity:      item.quantity,
       unit_price:    item.unit_price,
       currency_code: 'ILS',
+      vat_type:      0,     // עסק פטור — без НДС
     })),
     payments: [payment],
   }

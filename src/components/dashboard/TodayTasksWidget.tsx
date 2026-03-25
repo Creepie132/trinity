@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 interface TodayTasksWidgetProps {
   tasks: any[]
   locale: string
+  orgId?: string
 }
 
 const PRIORITY_CONFIG = {
@@ -162,7 +163,7 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
   )
 }
 
-export function TodayTasksWidget({ tasks, locale }: TodayTasksWidgetProps) {
+export function TodayTasksWidget({ tasks, locale, orgId }: TodayTasksWidgetProps) {
   const l = locale === 'he'
   const [page, setPage] = useState(0)
   const [localTasks, setLocalTasks] = useState(tasks)
@@ -170,8 +171,8 @@ export function TodayTasksWidget({ tasks, locale }: TodayTasksWidgetProps) {
   const queryClient = useQueryClient()
   const { openModal } = useModalStore()
 
-  // Sync когда tasks меняются извне
-  useState(() => { setLocalTasks(tasks) })
+  // Sync когда tasks меняются извне (правильный паттерн)
+  useEffect(() => { setLocalTasks(tasks); setPage(0) }, [tasks])
 
   const urgentCount = localTasks.filter(t => t.priority === 'urgent').length
   const totalPages = Math.ceil(localTasks.length / perPage)
@@ -185,7 +186,7 @@ export function TodayTasksWidget({ tasks, locale }: TodayTasksWidgetProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'done' }),
       })
-      queryClient.invalidateQueries({ queryKey: ['dashboard-tasks'] })
+      queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === 'dashboard-tasks' })
       toast.success(l ? 'משימה הושלמה ✓' : 'Задача выполнена ✓')
     } catch {
       toast.error(l ? 'שגיאה' : 'Ошибка')
@@ -200,7 +201,7 @@ export function TodayTasksWidget({ tasks, locale }: TodayTasksWidgetProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'cancelled' }),
       })
-      queryClient.invalidateQueries({ queryKey: ['dashboard-tasks'] })
+      queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === 'dashboard-tasks' })
       toast.success(l ? 'משימה בוטלה' : 'Задача отменена')
     } catch {
       toast.error(l ? 'שגיאה' : 'Ошибка')

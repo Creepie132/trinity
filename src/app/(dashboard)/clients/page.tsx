@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Eye, Users, Phone, Calendar, TrendingUp, MessageCircle, Filter } from 'lucide-react'
+import { Plus, Search, Eye, Users, Phone, Calendar, TrendingUp, MessageCircle, Filter, Loader2 } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { useQueryClient } from '@tanstack/react-query'
 import { ClientSummary } from '@/types/database'
@@ -199,19 +199,25 @@ export default function ClientsPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
+        {/* Иконка справа: лупа → спиннер с плавным переходом */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5">
+          <Search
+            className={`absolute inset-0 w-5 h-5 text-gray-400 dark:text-gray-500 transition-all duration-300 ${
+              isFetching ? 'opacity-0 scale-75' : 'opacity-100 scale-100'
+            }`}
+          />
+          <Loader2
+            className={`absolute inset-0 w-5 h-5 text-indigo-500 animate-spin transition-all duration-300 ${
+              isFetching ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
+            }`}
+          />
+        </div>
         <Input
           placeholder={t('clients.search')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pr-10 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
         />
-        {/* Spinner — показывается во время поиска, не прячет интерфейс */}
-        {isFetching && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          </div>
-        )}
       </div>
 
       {/* Desktop — современный список */}

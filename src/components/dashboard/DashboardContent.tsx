@@ -404,7 +404,7 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
           <WorkShiftWidget />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <TodayVisitsWidget visits={todayVisits} locale={locale} onVisitClick={setSelectedVisit} />
-            <TodayTasksWidget tasks={todayTasks} locale={locale} />
+            <TodayTasksWidget tasks={todayTasks} locale={locale} orgId={orgId} />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <RevenueChartWidget data={revenueData} locale={locale} />

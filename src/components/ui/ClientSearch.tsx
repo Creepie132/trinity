@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { useQuery } from '@tanstack/react-query';
 
 interface Client {
@@ -54,27 +53,18 @@ export function ClientSearch({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Search clients
+  // Search clients — через API (server-side, service role, учитывает activeOrgId)
+  // Прямой Supabase browser-запрос нельзя использовать: RLS блокирует доступ
+  // к чужим org во время impersonation, даже если orgId передан правильно.
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['client-search', orgId, debouncedQuery],
     queryFn: async () => {
       if (debouncedQuery.length < 2) return [];
-
-      const supabase = createSupabaseBrowserClient();
-      
-      const { data, error } = await supabase
-        .from('clients')
-        .select('id, first_name, last_name, phone')
-        .eq('org_id', orgId)
-        .or(`first_name.ilike.%${debouncedQuery}%,last_name.ilike.%${debouncedQuery}%,phone.ilike.%${debouncedQuery}%,description.ilike.%${debouncedQuery}%`)
-        .limit(5);
-
-      if (error) {
-        console.error('Client search error:', error);
-        return [];
-      }
-
-      return data || [];
+      const res = await fetch(`/api/clients?search=${encodeURIComponent(debouncedQuery)}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      // API возвращает массив напрямую
+      return (Array.isArray(data) ? data : []).slice(0, 5);
     },
     enabled: debouncedQuery.length >= 2,
   });

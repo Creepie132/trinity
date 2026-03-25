@@ -2483,19 +2483,24 @@ export type Client = Tables<'clients'>
 // Client summary — shape returned by GET /api/clients/summary
 // Includes a subset of client fields + aggregated visit/payment stats
 export type ClientSummary = {
-  id:           string
-  first_name:   string
-  last_name:    string
-  phone:        string
-  email:        string | null
-  notes:        string | null
-  description:  string | null
-  paint_code:   string | null
-  created_at:   string
-  org_id:       string
-  total_visits: number
-  last_visit:   string | null
-  total_paid:   number
+  id:             string
+  first_name:     string
+  last_name:      string
+  phone:          string
+  email:          string | null
+  address:        string | null
+  city:           string | null
+  date_of_birth:  string | null
+  notes:          string | null
+  description:    string | null
+  paint_code:     string | null
+  loyalty_balance: number
+  created_at:     string
+  org_id:         string
+  assigned_to:    string | null
+  total_visits:   number
+  last_visit:     string | null
+  total_paid:     number
 }
 
 // Ad campaign type

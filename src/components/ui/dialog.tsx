@@ -94,6 +94,8 @@ function DialogContent({
         >
           <GripHorizontal className="w-5 h-5 text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors" />
         </div>
+        {/* Скрытый DialogTitle — обязателен для Radix accessibility (screen readers) */}
+        <DialogPrimitive.Title className="sr-only">Dialog</DialogPrimitive.Title>
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close

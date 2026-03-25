@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Menu, ArrowRight, Search, Building2, ChevronDown, Check } from 'lucide-react'
+import { Menu, ArrowRight, Building2, ChevronDown, Check } from 'lucide-react'
 import { MobileSidebar } from './MobileSidebar'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -145,16 +145,9 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
             </div>
           )}
 
-          {/* Правая сторона: уведомления + поиск + бургер */}
+          {/* Правая сторона: уведомления + бургер */}
           <div className="flex items-center gap-1">
             <NotificationBell locale={language === 'he' ? 'he' : 'ru'} />
-            <button
-              onClick={onSearchOpen}
-              className="p-2.5 rounded-xl hover:bg-purple-50 dark:hover:bg-slate-700 active:bg-purple-100 dark:active:bg-slate-600 transition-all duration-200 active:scale-95"
-              aria-label="חיפוש"
-            >
-              <Search className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            </button>
             {/* Бургер-кнопка */}
             <button
               onClick={() => setIsOpen(true)}

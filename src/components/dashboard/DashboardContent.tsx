@@ -142,20 +142,51 @@ function ActivityStrip({ visitsToday, visitsDone, tasksOpen, tasksUrgent, revenu
 }) {
   const l = locale === 'he'
   const items = [
-    { icon: '📅', value: visitsToday, label: l ? 'ביקורים היום' : 'визитов сегодня', sub: visitsToday > 0 ? `${visitsDone}/${visitsToday} ${l ? 'הושלמו' : 'завершено'}` : null, color: 'bg-blue-50 border-blue-100', valueColor: 'text-blue-700' },
-    { icon: '✅', value: tasksOpen, label: l ? 'משימות פתוחות' : 'задач открыто', sub: tasksUrgent > 0 ? `${tasksUrgent} ${l ? 'דחוף' : 'срочных'}` : null, color: tasksUrgent > 0 ? 'bg-red-50 border-red-100' : 'bg-purple-50 border-purple-100', valueColor: tasksUrgent > 0 ? 'text-red-700' : 'text-purple-700' },
-    { icon: '💰', value: revenueToday, label: l ? 'הכנסות היום' : 'доход сегодня', prefix: '₪', sub: null, color: 'bg-emerald-50 border-emerald-100', valueColor: 'text-emerald-700' },
+    {
+      icon: '📅',
+      value: visitsToday,
+      // главная подпись — короткая, всегда читаема
+      label: l ? 'визит...' : 'визит...',
+      labelFull: l ? 'ביקורים היום' : 'Визиты',
+      // sub — прогресс завершённых
+      sub: `${visitsDone}/${visitsToday} ${l ? 'הושלמו' : 'завершено'}`,
+      color: 'bg-blue-50 border-blue-100',
+      valueColor: 'text-blue-700',
+    },
+    {
+      icon: '✅',
+      value: tasksOpen,
+      labelFull: l ? 'משימות' : 'Задачи',
+      sub: tasksUrgent > 0 ? `${tasksUrgent} ${l ? 'דחוף' : 'срочных'}` : (l ? 'פתוחות' : 'открыто'),
+      color: tasksUrgent > 0 ? 'bg-red-50 border-red-100' : 'bg-purple-50 border-purple-100',
+      valueColor: tasksUrgent > 0 ? 'text-red-700' : 'text-purple-700',
+    },
+    {
+      icon: '💰',
+      value: revenueToday,
+      prefix: '₪',
+      labelFull: l ? 'הכנסות' : 'Доход',
+      sub: l ? 'היום' : 'сегодня',
+      color: 'bg-emerald-50 border-emerald-100',
+      valueColor: 'text-emerald-700',
+    },
   ]
   return (
-    <div className="grid grid-cols-3 gap-3 mb-5">
+    <div className="grid grid-cols-3 gap-2 mb-5">
       {items.map((item: any, i) => (
-        <div key={i} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border ${item.color} transition-all`}>
-          <span className="text-lg">{item.icon}</span>
-          <div className="min-w-0">
-            <p className={`text-sm font-bold ${item.valueColor} leading-tight`}>{item.prefix}{item.value.toLocaleString()}</p>
-            <p className="text-xs text-gray-400 truncate">{item.label}</p>
-            {item.sub && <p className="text-xs font-medium text-gray-500">{item.sub}</p>}
-          </div>
+        <div key={i} className={`flex flex-col items-center justify-center gap-0.5 px-2 py-3 rounded-xl border ${item.color} transition-all text-center`}>
+          {/* Иконка */}
+          <span className="text-xl leading-none mb-0.5">{item.icon}</span>
+          {/* Значение — крупно, никогда не обрезается */}
+          <p className={`text-base font-extrabold leading-tight ${item.valueColor}`}>
+            {item.prefix || ''}{item.value.toLocaleString()}
+          </p>
+          {/* Лейбл — короткий */}
+          <p className="text-[11px] font-semibold text-gray-500 leading-tight">{item.labelFull}</p>
+          {/* Под-строка — прогресс или срочных */}
+          {item.sub && (
+            <p className="text-[10px] text-gray-400 leading-tight">{item.sub}</p>
+          )}
         </div>
       ))}
     </div>

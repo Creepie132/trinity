@@ -36,32 +36,35 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
   const [offsetX, setOffsetX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [dismissed, setDismissed] = useState(false)
-  const cardRef = useRef<HTMLDivElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
   const startX = useRef(0)
   const startY = useRef(0)
   const currentX = useRef(0)
   const isHorizontal = useRef<boolean | null>(null)
-  const dragging = useRef(false)
+  const active = useRef(false)
 
   const THRESHOLD = 80
 
   useEffect(() => {
-    const el = cardRef.current
+    const el = wrapRef.current
     if (!el) return
 
-    function onTouchStart(e: TouchEvent) {
-      startX.current = e.touches[0].clientX
-      startY.current = e.touches[0].clientY
+    // Pointer Events не вызывают [Intervention] и не блокируются скроллом браузера
+    function onPointerDown(e: PointerEvent) {
+      if (e.pointerType === 'mouse') return
+      startX.current = e.clientX
+      startY.current = e.clientY
       currentX.current = 0
       isHorizontal.current = null
-      dragging.current = true
-      setIsDragging(true)
+      active.current = true
+      setIsDragging(false)
+      el.setPointerCapture(e.pointerId)
     }
 
-    function onTouchMove(e: TouchEvent) {
-      if (!dragging.current) return
-      const dx = e.touches[0].clientX - startX.current
-      const dy = Math.abs(e.touches[0].clientY - startY.current)
+    function onPointerMove(e: PointerEvent) {
+      if (!active.current) return
+      const dx = e.clientX - startX.current
+      const dy = Math.abs(e.clientY - startY.current)
 
       if (isHorizontal.current === null) {
         if (Math.abs(dx) > 6 || dy > 6) {
@@ -71,14 +74,14 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
       }
 
       if (!isHorizontal.current) return
-      e.preventDefault() // работает т.к. passive: false
+      setIsDragging(true)
       currentX.current = dx
       setOffsetX(dx)
     }
 
-    function onTouchEnd() {
-      if (!dragging.current) return
-      dragging.current = false
+    function onPointerUp() {
+      if (!active.current) return
+      active.current = false
       setIsDragging(false)
 
       if (!isHorizontal.current) { setOffsetX(0); return }
@@ -100,14 +103,16 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
       }
     }
 
-    el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchmove',  onTouchMove,  { passive: false })
-    el.addEventListener('touchend',   onTouchEnd,   { passive: true })
+    el.addEventListener('pointerdown', onPointerDown)
+    el.addEventListener('pointermove', onPointerMove)
+    el.addEventListener('pointerup',   onPointerUp)
+    el.addEventListener('pointercancel', onPointerUp)
 
     return () => {
-      el.removeEventListener('touchstart', onTouchStart)
-      el.removeEventListener('touchmove',  onTouchMove)
-      el.removeEventListener('touchend',   onTouchEnd)
+      el.removeEventListener('pointerdown', onPointerDown)
+      el.removeEventListener('pointermove', onPointerMove)
+      el.removeEventListener('pointerup',   onPointerUp)
+      el.removeEventListener('pointercancel', onPointerUp)
     }
   }, [isRtl, task.id, onDone, onCancel])
 
@@ -127,7 +132,7 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
   if (dismissed) return null
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
+    <div ref={wrapRef} className="relative overflow-hidden rounded-xl touch-pan-y select-none">
       {/* Подложка */}
       <div className={`absolute inset-0 flex items-center ${isDone ? 'justify-start pl-4' : 'justify-end pr-4'} ${bgColor} transition-colors`}>
         {swipeHint}
@@ -135,7 +140,6 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
 
       {/* Карточка */}
       <div
-        ref={cardRef}
         onClick={() => { if (Math.abs(offsetX) < 5) onClick() }}
         style={{
           transform: `translateX(${offsetX}px)`,
@@ -184,7 +188,8 @@ export function TodayTasksWidget({ tasks, locale, orgId }: TodayTasksWidgetProps
       await fetch(`/api/tasks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'done' }),
+        // 'completed' — единственный статус который дневник понимает как «выполнено»
+        body: JSON.stringify({ status: 'completed' }),
       })
       queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === 'dashboard-tasks' })
       toast.success(l ? 'משימה הושלמה ✓' : 'Задача выполнена ✓')

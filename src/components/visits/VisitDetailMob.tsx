@@ -24,6 +24,7 @@ import {
   Calendar, Clock, FileText, History, MapPin, Video,
   ExternalLink, Navigation, ChevronRight, Plus, Loader2,
 } from 'lucide-react'
+import { useModalStore } from '@/store/useModalStore'
 import { useVisitServices, useRemoveVisitService } from '@/hooks/useVisitServices'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -110,6 +111,7 @@ export function VisitDetailMob({
   const isRtl = isHe
   const BackIcon = isRtl ? ArrowRight : ArrowLeft
   const queryClient = useQueryClient()
+  const { openModal } = useModalStore()
 
   const { data: visitServicesFromHook } = useVisitServices(visit?.id || '')
   const visitServices = visitServicesFromHook ?? visit?.visit_services ?? []
@@ -461,6 +463,20 @@ export function VisitDetailMob({
                   )}
 
                   <div style={{ height: 1, background: 'rgba(255,255,255,0.07)' }} />
+
+                  {/* Добавить услугу / товар — только в процессе */}
+                  {visit.status === 'in_progress' && (
+                    <ActionRow
+                      icon={<Plus size={13} />}
+                      label={isHe ? 'הוסף שירות / מוצר' : 'Добавить услугу / товар'}
+                      onClick={() => {
+                        setDrawerOpen(false)
+                        openModal('add-to-visit', { visitId: visit.id, visitOrgId: visit.org_id })
+                      }}
+                      iconBg="rgba(167,139,250,0.2)"
+                      iconColor="#a78bfa"
+                    />
+                  )}
 
                   {/* Редактировать */}
                   {visit.status !== 'completed' && (

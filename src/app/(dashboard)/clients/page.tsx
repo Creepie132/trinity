@@ -199,17 +199,28 @@ export default function ClientsPage() {
 
       {/* Search */}
       <div className="relative">
-        {/* Иконка справа: лупа → спиннер с плавным переходом */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5">
+        {/* Иконка справа: лупа ↔ спиннер — независимые слои, без конфликта transition/animate */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none">
+          {/* Лупа — исчезает при загрузке */}
           <Search
-            className={`absolute inset-0 w-5 h-5 text-gray-400 dark:text-gray-500 transition-all duration-300 ${
-              isFetching ? 'opacity-0 scale-75' : 'opacity-100 scale-100'
-            }`}
+            style={{
+              position: 'absolute', inset: 0,
+              transition: 'opacity 250ms ease, transform 250ms ease',
+              opacity: isFetching ? 0 : 1,
+              transform: isFetching ? 'scale(0.6) rotate(-30deg)' : 'scale(1) rotate(0deg)',
+            }}
+            className="w-5 h-5 text-gray-400 dark:text-gray-500"
           />
+          {/* Спиннер — появляется при загрузке, spin управляется отдельно */}
           <Loader2
-            className={`absolute inset-0 w-5 h-5 text-indigo-500 animate-spin transition-all duration-300 ${
-              isFetching ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
-            }`}
+            style={{
+              position: 'absolute', inset: 0,
+              transition: 'opacity 250ms ease, transform 250ms ease',
+              opacity: isFetching ? 1 : 0,
+              transform: isFetching ? 'scale(1)' : 'scale(0.6)',
+              animation: isFetching ? 'spin 0.8s linear infinite' : 'none',
+            }}
+            className="w-5 h-5 text-indigo-500"
           />
         </div>
         <Input

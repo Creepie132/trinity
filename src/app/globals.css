@@ -825,6 +825,12 @@
   }
 }
 
+/* spin keyframe для inline animation style (без animate-spin класса) */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 .urgent-glow {
   animation: urgentPulse 2.8s ease-in-out infinite;
   border: 1px solid rgba(239, 68, 68, 0.25);

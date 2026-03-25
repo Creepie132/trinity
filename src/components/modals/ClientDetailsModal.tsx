@@ -3,7 +3,7 @@
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
-import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText, Paintbrush, Settings2, User, CalendarPlus } from 'lucide-react'
+import { Pencil, Phone, MessageCircle, MessageSquare, Trash2, ShoppingCart, X, ChevronRight, Images, FileText, Paintbrush, Settings2, User, CalendarPlus, Navigation } from 'lucide-react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
@@ -203,6 +203,19 @@ export function ClientDetailsModal() {
               <MessageSquare size={14} />SMS
             </button>
           </div>
+        )}
+        {/* Divider */}
+        <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '2px 0 6px' }} />
+        {/* Навигатор — если есть адрес */}
+        {(client.address || client.city) && (
+          <button
+            onClick={() => {
+              const addr = encodeURIComponent([client.address, client.city].filter(Boolean).join(', '))
+              window.open(`https://maps.google.com/?q=${addr}`, '_blank')
+            }}
+            style={{ display:'flex',alignItems:'center',gap:7,padding:'7px 10px',borderRadius:8,border:'0.5px solid rgba(74,222,128,0.25)',background:'transparent',cursor:'pointer',width:'100%',color:'rgba(74,222,128,0.7)',fontSize:11,fontWeight:500,marginBottom:2 }}>
+            <Navigation size={12} />{isHe ? 'נווט' : 'Навигатор'}
+          </button>
         )}
         {/* Divider */}
         <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '2px 0 6px' }} />

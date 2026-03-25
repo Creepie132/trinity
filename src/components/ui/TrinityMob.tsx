@@ -24,7 +24,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 import {
   ArrowLeft, ArrowRight, Phone, MessageCircle, MessageSquare,
-  ShoppingCart, CalendarPlus, Pencil, Trash2, Images, FileText, Settings2,
+  ShoppingCart, CalendarPlus, Pencil, Trash2, Images, FileText, Settings2, Navigation,
 } from 'lucide-react'
 import { useClientCardSettings } from '@/components/clients/ClientCardSettingsModal'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
@@ -38,6 +38,8 @@ export interface TrinityMobClient {
   name?: string
   phone?: string
   email?: string
+  address?: string
+  city?: string
   visits_count?: number
   total_visits?: number
   total_paid?: number | string
@@ -89,6 +91,7 @@ const T = {
     saleLbl: 'עסקה', visitLbl: 'ביקור', displayBlocks: 'תצוגת בלוקים',
     galleryLbl: 'גלריה', docsLbl: 'מסמכים', paintLbl: 'קוד צבע',
     swipeHint: 'החלק ימינה — פעולות',
+    address: 'כתובת', city: 'עיר', email: 'אימייל', navigate: 'נווט',
   },
   ru: {
     sub: 'Данные клиента', paid: 'Оплачено', visits: 'Визитов', info: 'Информация',
@@ -100,6 +103,7 @@ const T = {
     saleLbl: 'Продажа', visitLbl: 'Визит', displayBlocks: 'Блоки отображения',
     galleryLbl: 'Галерея', docsLbl: 'Документы', paintLbl: 'Код краски',
     swipeHint: '← Свайп влево — действия →',
+    address: 'Адрес', city: 'Город', email: 'Email', navigate: 'Навигатор',
   },
   en: {
     sub: 'Client info', paid: 'Paid', visits: 'Visits', info: 'Information',
@@ -111,6 +115,7 @@ const T = {
     saleLbl: 'Sale', visitLbl: 'Visit', displayBlocks: 'Display blocks',
     galleryLbl: 'Gallery', docsLbl: 'Documents', paintLbl: 'Paint code',
     swipeHint: '← Swipe left — actions →',
+    address: 'Address', city: 'City', email: 'Email', navigate: 'Navigate',
   },
 } as const
 
@@ -457,6 +462,8 @@ export function TrinityMob({
                   <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 5 }}>{t.info}</div>
                   {[
                     client.phone ? { key: t.phone, val: client.phone, dir: 'ltr' as const } : null,
+                    client.email ? { key: t.email, val: client.email, dir: 'ltr' as const } : null,
+                    (client.address || client.city) ? { key: t.address, val: [client.address, client.city].filter(Boolean).join(', '), dir: isRtl ? 'rtl' : 'ltr' as const } : null,
                     { key: t.status, val: null as null },
                     { key: t.created, val: createdDate },
                   ].filter(Boolean).map((row) => row!.key === t.status ? (
@@ -551,6 +558,20 @@ export function TrinityMob({
                     {/* SMS */}
                     {client.phone && (
                       <ActionRow icon={<MessageSquare size={13} />} label="SMS" onClick={() => { if (client.phone) window.location.href = `sms:${client.phone}` }} accentBg="rgba(96,165,250,0.12)" accentText="#60a5fa" />
+                    )}
+
+                    {/* Навигатор — если есть адрес */}
+                    {(client.address || client.city) && (
+                      <ActionRow
+                        icon={<Navigation size={13} />}
+                        label={t.navigate}
+                        onClick={() => {
+                          const addr = encodeURIComponent([client.address, client.city].filter(Boolean).join(', '))
+                          window.open(`https://maps.google.com/?q=${addr}`, '_blank')
+                        }}
+                        accentBg="rgba(34,197,94,0.12)"
+                        accentText="#4ade80"
+                      />
                     )}
 
                     {/* Галерея + Документы */}

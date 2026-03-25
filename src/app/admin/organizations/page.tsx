@@ -563,22 +563,41 @@ export default function AdminOrganizationsPage() {
       const sessionRes = await fetch('/api/admin/check')
       const { isAdmin, adminEmail } = await sessionRes.json()
       if (!isAdmin) { toast.error('Нет доступа'); return }
+
+      // Получаем токен — он обязателен для /api/admin/set-active-org
+      const { createSupabaseBrowserClient } = await import('@/lib/supabase-browser')
+      const supabaseBrowser = createSupabaseBrowserClient()
+      const { data: { session } } = await supabaseBrowser.auth.getSession()
+      if (!session?.access_token) { toast.error('Нет сессии'); return }
+
+      // Сохраняем текущий org до переключения (для корректного выхода)
+      const currentActiveOrg = localStorage.getItem('trinity_active_branch')
+
       const res = await fetch('/api/admin/set-active-org', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ orgId: org.id }),
       })
-      if (!res.ok) throw new Error()
-      document.cookie = `trinity_active_branch=${org.id}; path=/; max-age=${60*60*24*30}; samesite=lax`
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Ошибка переключения org')
+      }
+
       localStorage.setItem('trinity_active_branch', org.id)
-      localStorage.setItem('admin_org_id', org.id)
+      // admin_org_id = откуда пришли (для кнопки "В Админку")
+      localStorage.setItem('admin_org_id', currentActiveOrg || org.id)
       localStorage.setItem('impersonation_session', JSON.stringify({
         orgId: org.id, orgName: org.display_name || org.name,
         adminEmail, startedAt: new Date().toISOString()
       }))
       toast.success(l ? `נכנס בתור: ${org.name}` : `Вход от имени: ${org.name}`)
       router.push('/dashboard'); router.refresh()
-    } catch { toast.error(l ? 'שגיאה' : 'Ошибка входа') }
-    finally { setImpersonating(null) }
+    } catch (err: any) {
+      toast.error(err.message || (l ? 'שגיאה' : 'Ошибка входа'))
+    } finally { setImpersonating(null) }
   }
 
   const getStatusBadge = (status: string) => {

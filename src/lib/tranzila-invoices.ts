@@ -61,16 +61,16 @@ export interface CardDetails {
   tranIndex?:   string   // Tranzila transaction index
 }
 
-// Document type codes in Tranzila Invoices API
-// receipt         = קבלה             (type 20001)
-// invoice         = חשבונית מס        (type 10001)
-// receipt_invoice = חשבונית מס קבלה   (type 30001) ← default
+// Document type codes in Tranzila Invoices API — строковые коды
+// IR = חשבונית מס קבלה (Invoice + Receipt combined) ← default
+// RE = קבלה (Receipt only)
+// IN = חשבונית מס (Invoice only)
 export type TranzilaDocumentType = 'receipt' | 'invoice' | 'receipt_invoice'
 
-const DOCUMENT_TYPE_CODE: Record<TranzilaDocumentType, number> = {
-  receipt:         20001,
-  invoice:         10001,
-  receipt_invoice: 30001,
+const DOCUMENT_TYPE_CODE: Record<TranzilaDocumentType, string> = {
+  receipt:         'RE',
+  invoice:         'IN',
+  receipt_invoice: 'IR',
 }
 
 export interface CreateReceiptParams {
@@ -117,11 +117,12 @@ export async function createReceipt(
   params: CreateReceiptParams
 ): Promise<TranzilaDocumentResult> {
   const method: TranzilaPaymentMethod =
-    (PAYMENT_METHOD_MAP[params.paymentMethod] ?? params.paymentMethod ?? '5') as TranzilaPaymentMethod
+    (PAYMENT_METHOD_MAP[params.paymentMethod] ?? '5') as TranzilaPaymentMethod
 
   // Build payment object — include card details if available
+  // payment_method должен быть integer согласно документации Tranzila
   const payment: Record<string, unknown> = {
-    payment_method: method,
+    payment_method: parseInt(method, 10),
     amount:         params.totalAmount,
     currency_code:  'ILS',
   }
@@ -136,24 +137,23 @@ export async function createReceipt(
     if (c.tranIndex)   payment['cc_transaction_id']  = c.tranIndex
   }
 
-  const docTypeCode = DOCUMENT_TYPE_CODE[params.documentType ?? 'receipt_invoice']
+  const docType = DOCUMENT_TYPE_CODE[params.documentType ?? 'receipt_invoice']
 
   const body: Record<string, unknown> = {
     terminal_name:     INVOICE_TERMINAL,
+    document_type:     docType,          // IR / RE / IN
     document_language: 'heb',
     response_language: 'eng',
-    document_type:     docTypeCode,
-    vat_type:          0,   // 0 = עסק פטור (освобождён от НДС)
+    vat_percent:       0,                // עסק פטור — 0% НДС
     client: {
       name: params.clientName,
       ...(params.clientEmail ? { email: params.clientEmail } : {}),
     },
     items: params.items.map(item => ({
       name:          item.name,
-      quantity:      item.quantity,
+      units_number:  item.quantity,
       unit_price:    item.unit_price,
       currency_code: 'ILS',
-      vat_type:      0,     // עסק פטור — без НДС
     })),
     payments: [payment],
   }

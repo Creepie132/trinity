@@ -145,6 +145,7 @@ export function Modal({
         <div
           className="fixed inset-0 bg-black/50"
           style={{ zIndex: 8999 }}
+          data-trinity-modal-backdrop=""
           onClick={closeOnBackdrop ? onClose : undefined}
           aria-hidden="true"
         />
@@ -154,6 +155,7 @@ export function Modal({
       <div
         ref={containerRef}
         onMouseDown={() => pinned_ && bringToFront(modalId)}
+        data-trinity-modal-wrapper=""
         className={cn(
           'fixed bg-white dark:bg-gray-900 shadow-2xl pointer-events-auto flex flex-col',
           'animate-in fade-in-0 duration-200',

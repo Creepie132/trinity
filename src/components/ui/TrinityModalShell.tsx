@@ -75,22 +75,37 @@ export function TrinityModalShell({
   const sidebar = sidebarBg   || 'var(--trinity-sidebar-bg, #1e2533)'
   const accent  = accentColor || 'var(--trinity-accent, #4a6fa5)'
 
-  // ── Mobile: ModalBottomSheet ──────────────────────────────────────────────
+  // ── Mobile: ModalBottomSheet renders itself via portal — bypasses parent <Modal> ──
+  // We render a sentinel div that hides the parent Modal's backdrop+container on mobile,
+  // plus the ModalBottomSheet itself as a portal.
   if (mounted && isMobile) {
     return (
-      <ModalBottomSheet
-        open={open}
-        onClose={onClose}
-        icon={icon}
-        title={title}
-        subtitle={subtitle}
-        sidebarBg={sidebar}
-        accentColor={accent}
-        footerContent={footerContent ?? sidebarExtra}
-        dir={dir}
-      >
-        {children}
-      </ModalBottomSheet>
+      <>
+        {/* Inject scoped CSS to hide the wrapping Modal's backdrop and container on mobile */}
+        <style>{`
+          @media (max-width: 767px) {
+            [data-trinity-modal-wrapper] {
+              display: none !important;
+            }
+            [data-trinity-modal-backdrop] {
+              display: none !important;
+            }
+          }
+        `}</style>
+        <ModalBottomSheet
+          open={open}
+          onClose={onClose}
+          icon={icon}
+          title={title}
+          subtitle={subtitle}
+          sidebarBg={sidebar}
+          accentColor={accent}
+          footerContent={footerContent ?? sidebarExtra}
+          dir={dir}
+        >
+          {children}
+        </ModalBottomSheet>
+      </>
     )
   }
 

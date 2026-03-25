@@ -314,17 +314,31 @@ export function VisitDetailMob({
                 touchAction: 'pan-y',
               }}>
 
-                {/* Swipe hint */}
-                <button onClick={() => setDrawerOpen(true)} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  alignSelf: 'center', padding: '5px 11px', borderRadius: 14,
-                  border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)',
-                  color: 'rgba(255,255,255,0.4)', fontSize: 10, cursor: 'pointer',
-                }}>
+                {/* Swipe hint — покачивается каждые 3-4 сек */}
+                <motion.button
+                  onClick={() => setDrawerOpen(true)}
+                  animate={drawerOpen ? {} : {
+                    x: isRtl
+                      ? [0, 5, -4, 3, -2, 0]
+                      : [0, -5, 4, -3, 2, 0],
+                  }}
+                  transition={{
+                    duration: 0.6,
+                    repeat: Infinity,
+                    repeatDelay: 3.2,
+                    ease: 'easeInOut',
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    alignSelf: 'center', padding: '5px 11px', borderRadius: 14,
+                    border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)',
+                    color: 'rgba(255,255,255,0.4)', fontSize: 10, cursor: 'pointer',
+                  }}
+                >
                   {isRtl
                     ? <><span>›</span><span>החלק ימינה — פעולות</span><span>‹</span></>
                     : <><span>‹</span><span>← Свайп влево — действия →</span><span>›</span></>}
-                </button>
+                </motion.button>
 
                 {/* Статус + время/дата */}
                 {(() => {

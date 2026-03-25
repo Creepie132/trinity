@@ -5,7 +5,7 @@ import { Plus, User, Calendar, DollarSign } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { AddClientDialog } from '@/components/clients/AddClientDialog'
 import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
-import { CreateCashPaymentDialog } from '@/components/payments/CreateCashPaymentDialog'
+import NewSaleModal from '@/components/sales/NewSaleModal'
 
 export default function FABMenu() {
   const [isOpen, setIsOpen] = useState(false)
@@ -129,9 +129,9 @@ export default function FABMenu() {
         onOpenChange={setShowNewVisit}
       />
       
-      <CreateCashPaymentDialog 
-        open={showNewSale} 
-        onOpenChange={setShowNewSale}
+      <NewSaleModal 
+        isOpen={showNewSale} 
+        onClose={() => setShowNewSale(false)}
       />
     </>
   )

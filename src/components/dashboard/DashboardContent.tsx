@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState, useRef, ReactNode } from 'react'
+import { useEffect, useState, useRef, ReactNode, useCallback } from 'react'
 import { Users, Calendar, TrendingUp, Receipt, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useProducts } from '@/hooks/useProducts'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { TodayVisitsWidget } from './TodayVisitsWidget'
@@ -79,14 +80,33 @@ interface KpiCardProps {
   title: string; value: number; prefix?: string
   icon: ReactNode; gradient: string; iconBg: string
   delay?: number; trend?: number
+  onClick?: () => void
+  periodLabel?: string
 }
 
-function KpiCard({ title, value, prefix = '', icon, gradient, iconBg, delay = 0, trend }: KpiCardProps) {
+function KpiCard({ title, value, prefix = '', icon, gradient, iconBg, delay = 0, trend, onClick, periodLabel }: KpiCardProps) {
   const animated = useCountUp(value, 1000)
   const [visible, setVisible] = useState(false)
+  const [pressed, setPressed] = useState(false)
   useEffect(() => { const t = setTimeout(() => setVisible(true), delay); return () => clearTimeout(t) }, [delay])
+
+  const handleClick = () => {
+    if (!onClick) return
+    setPressed(true)
+    setTimeout(() => setPressed(false), 200)
+    onClick()
+  }
+
   return (
-    <div className={`relative overflow-hidden rounded-2xl p-4 shadow-sm transition-all duration-500 ${gradient} ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`} style={{ transitionDelay: `${delay}ms` }}>
+    <div
+      onClick={handleClick}
+      className={`relative overflow-hidden rounded-2xl p-4 shadow-sm transition-all duration-500 ${gradient}
+        ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}
+        ${onClick ? 'cursor-pointer active:scale-95 hover:shadow-md hover:brightness-110' : ''}
+        ${pressed ? 'scale-95 brightness-110' : ''}
+      `}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
       <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-white/10" />
       <div className="absolute -right-1 -bottom-6 w-14 h-14 rounded-full bg-white/5" />
       <div className="relative flex items-start justify-between mb-3">
@@ -94,10 +114,22 @@ function KpiCard({ title, value, prefix = '', icon, gradient, iconBg, delay = 0,
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconBg}`}>{icon}</div>
       </div>
       <p className="relative text-3xl font-bold text-white tracking-tight">{prefix}{animated.toLocaleString()}</p>
-      {trend !== undefined && (
-        <div className="relative mt-2 flex items-center gap-1">
-          <span className={`text-xs font-semibold ${trend >= 0 ? 'text-white/90' : 'text-white/60'}`}>{trend >= 0 ? '▲' : '▼'} {Math.abs(trend)}%</span>
-          <span className="text-xs text-white/50">vs прошлый месяц</span>
+      <div className="relative mt-2 flex items-center justify-between gap-1">
+        {trend !== undefined ? (
+          <div className="flex items-center gap-1">
+            <span className={`text-xs font-semibold ${trend >= 0 ? 'text-white/90' : 'text-white/60'}`}>{trend >= 0 ? '▲' : '▼'} {Math.abs(trend)}%</span>
+            <span className="text-xs text-white/50">vs прошлый период</span>
+          </div>
+        ) : <div />}
+        {periodLabel && (
+          <span className="text-[10px] font-bold text-white/60 bg-white/10 px-2 py-0.5 rounded-full border border-white/10 animate-in fade-in duration-300">
+            {periodLabel}
+          </span>
+        )}
+      </div>
+      {onClick && (
+        <div className="absolute bottom-2 right-2 opacity-30">
+          <span className="text-[9px] text-white">↻</span>
         </div>
       )}
     </div>
@@ -159,13 +191,56 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
   const { openModal } = useModalStore()
   const { activeOrgId } = useBranch()
   const { orgId: authOrgId } = useAuth()
+  const router = useRouter()
 
   const orgId = _orgIdProp || activeOrgId || authOrgId
   const [isDemoMode, setIsDemoMode] = useState(false)
+
+  // ── Периоды для Дохода и Среднего чека ──
+  const PERIODS = [1, 7, 30, 90] as const
+  type Period = typeof PERIODS[number]
+  const [revenuePeriod, setRevenuePeriod] = useState<Period>(30)
+  const [avgCheckPeriod, setAvgCheckPeriod] = useState<Period>(30)
+
+  const periodLabel = useCallback((days: Period, l: boolean) => {
+    if (days === 1)  return l ? 'היום' : 'Сегодня'
+    if (days === 7)  return l ? '7 ימים' : '7 дней'
+    if (days === 30) return l ? 'חודש' : 'Месяц'
+    return l ? '90 ימים' : '90 дней'
+  }, [])
+
+  const nextPeriod = (cur: Period): Period => {
+    const idx = PERIODS.indexOf(cur)
+    return PERIODS[(idx + 1) % PERIODS.length]
+  }
   const STALE_STATS    = isDemoMode ? 10 * 60_000 : 2 * 60_000
   const STALE_VISITS   = isDemoMode ? 10 * 60_000 : 60_000
   const STALE_REVENUE  = isDemoMode ? 15 * 60_000 : 5 * 60_000
   const STALE_TASKS    = isDemoMode ? 10 * 60_000 : 60_000
+
+  // Периодные данные для Дохода
+  const { data: revenuePeriodStats } = useQuery({
+    queryKey: ['dashboard-stats-period', orgId, revenuePeriod],
+    enabled: !!orgId && revenuePeriod !== 30,
+    staleTime: STALE_STATS,
+    queryFn: async () => {
+      const res = await fetch(`/api/dashboard/stats?org_id=${orgId}&days=${revenuePeriod}`)
+      if (!res.ok) return null
+      return res.json()
+    },
+  })
+
+  // Периодные данные для Среднего чека
+  const { data: avgCheckPeriodStats } = useQuery({
+    queryKey: ['dashboard-stats-period', orgId, avgCheckPeriod],
+    enabled: !!orgId && avgCheckPeriod !== 30,
+    staleTime: STALE_STATS,
+    queryFn: async () => {
+      const res = await fetch(`/api/dashboard/stats?org_id=${orgId}&days=${avgCheckPeriod}`)
+      if (!res.ok) return null
+      return res.json()
+    },
+  })
   const supabase = createSupabaseBrowserClient()
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
 
@@ -281,10 +356,44 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
         <LowStockAlert locale={locale} />
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
-          <KpiCard title={l ? 'לקוחות' : 'Клиенты'} value={s.clients.value} icon={<Users size={18} className="text-white" />} gradient="bg-gradient-to-br from-blue-500 to-indigo-600" iconBg="bg-white/20" delay={0} />
-          <KpiCard title={l ? 'ביקורים החודש' : 'Визиты за месяц'} value={s.visits.value} icon={<Calendar size={18} className="text-white" />} gradient="bg-gradient-to-br from-emerald-500 to-teal-600" iconBg="bg-white/20" delay={80} />
-          <KpiCard title={l ? 'הכנסות' : 'Доход'} value={s.revenue.value} prefix="₪" icon={<TrendingUp size={18} className="text-white" />} gradient="bg-gradient-to-br from-amber-500 to-orange-500" iconBg="bg-white/20" delay={160} trend={s.revenue.change !== 0 ? Math.round(s.revenue.change) : undefined} />
-          <KpiCard title={l ? 'צ׳ק ממוצע' : 'Средний чек'} value={s.avgCheck.value} prefix="₪" icon={<Receipt size={18} className="text-white" />} gradient="bg-gradient-to-br from-purple-500 to-violet-600" iconBg="bg-white/20" delay={240} trend={s.avgCheck.change !== 0 ? Math.round(s.avgCheck.change) : undefined} />
+          <KpiCard
+            title={l ? 'לקוחות' : 'Клиенты'}
+            value={s.clients.value}
+            icon={<Users size={18} className="text-white" />}
+            gradient="bg-gradient-to-br from-blue-500 to-indigo-600"
+            iconBg="bg-white/20" delay={0}
+            onClick={() => router.push('/clients')}
+          />
+          <KpiCard
+            title={l ? 'ביקורים החודש' : 'Визиты за месяц'}
+            value={s.visits.value}
+            icon={<Calendar size={18} className="text-white" />}
+            gradient="bg-gradient-to-br from-emerald-500 to-teal-600"
+            iconBg="bg-white/20" delay={80}
+            onClick={() => router.push('/visits')}
+          />
+          <KpiCard
+            title={l ? 'הכנסות' : 'Доход'}
+            value={revenuePeriod !== 30 && revenuePeriodStats ? revenuePeriodStats.revenue.value : s.revenue.value}
+            prefix="₪"
+            icon={<TrendingUp size={18} className="text-white" />}
+            gradient="bg-gradient-to-br from-amber-500 to-orange-500"
+            iconBg="bg-white/20" delay={160}
+            trend={revenuePeriod !== 30 && revenuePeriodStats ? Math.round(revenuePeriodStats.revenue.change) : (s.revenue.change !== 0 ? Math.round(s.revenue.change) : undefined)}
+            onClick={() => setRevenuePeriod(p => nextPeriod(p))}
+            periodLabel={periodLabel(revenuePeriod, l)}
+          />
+          <KpiCard
+            title={l ? 'צ׳ק ממוצע' : 'Средний чек'}
+            value={avgCheckPeriod !== 30 && avgCheckPeriodStats ? avgCheckPeriodStats.avgCheck.value : s.avgCheck.value}
+            prefix="₪"
+            icon={<Receipt size={18} className="text-white" />}
+            gradient="bg-gradient-to-br from-purple-500 to-violet-600"
+            iconBg="bg-white/20" delay={240}
+            trend={avgCheckPeriod !== 30 && avgCheckPeriodStats ? Math.round(avgCheckPeriodStats.avgCheck.change) : (s.avgCheck.change !== 0 ? Math.round(s.avgCheck.change) : undefined)}
+            onClick={() => setAvgCheckPeriod(p => nextPeriod(p))}
+            periodLabel={periodLabel(avgCheckPeriod, l)}
+          />
         </div>
 
         <div className="space-y-5">

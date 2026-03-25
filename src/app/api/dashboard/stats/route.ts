@@ -19,9 +19,19 @@ export async function GET(request: NextRequest) {
 
     // Date ranges
     const now = new Date()
-    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+    const daysParam = searchParams.get('days')
+    const days = daysParam ? parseInt(daysParam) : null
+
+    // Если передан days — используем rolling window, иначе текущий месяц
+    const currentMonthStart = days
+      ? new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+      : new Date(now.getFullYear(), now.getMonth(), 1)
+    const previousMonthStart = days
+      ? new Date(currentMonthStart.getTime() - days * 24 * 60 * 60 * 1000)
+      : new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const previousMonthEnd = days
+      ? new Date(currentMonthStart.getTime() - 1)
+      : new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
 
     // 1. Total clients (current vs previous month new clients)
     const { count: clientsCount } = await supabase

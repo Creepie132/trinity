@@ -81,6 +81,7 @@ export interface CreateReceiptParams {
   paymentMethod: string
   card?:         CardDetails
   documentType?: TranzilaDocumentType  // default: receipt_invoice
+  terminalName?: string                // org's invoice terminal; fallback to env
 }
 
 export interface TranzilaDocumentResult {
@@ -138,9 +139,10 @@ export async function createReceipt(
   }
 
   const docType = DOCUMENT_TYPE_CODE[params.documentType ?? 'receipt_invoice']
+  const terminalName = params.terminalName || process.env.TRANZILA_TERMINAL_ID || 'ambersolt'
 
   const body: Record<string, unknown> = {
-    terminal_name:     INVOICE_TERMINAL,
+    terminal_name:     terminalName,
     document_type:     docType,          // IR / RE / IN
     document_language: 'heb',
     response_language: 'eng',

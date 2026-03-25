@@ -30,7 +30,7 @@ export async function GET(
 
     const { data: org, error } = await supabaseAdmin
       .from('organizations')
-      .select('tranzila_terminal, tranzila_password, tranzila_token_terminal, tranzila_token_password')
+      .select('tranzila_terminal, tranzila_password, tranzila_token_terminal, tranzila_token_password, tranzila_invoice_terminal')
       .eq('id', orgId)
       .maybeSingle()
 
@@ -39,10 +39,11 @@ export async function GET(
     const is_connected = !!(org?.tranzila_terminal)
 
     return NextResponse.json({
-      tranzila_terminal:       org?.tranzila_terminal       ?? '',
-      tranzila_password:       org?.tranzila_password       ?? '',
-      tranzila_token_terminal: org?.tranzila_token_terminal ?? '',
-      tranzila_token_password: org?.tranzila_token_password ?? '',
+      tranzila_terminal:         org?.tranzila_terminal         ?? '',
+      tranzila_password:         org?.tranzila_password         ?? '',
+      tranzila_token_terminal:   org?.tranzila_token_terminal   ?? '',
+      tranzila_token_password:   org?.tranzila_token_password   ?? '',
+      tranzila_invoice_terminal: org?.tranzila_invoice_terminal ?? '',
       is_connected,
     })
   } catch (err: any) {
@@ -67,6 +68,7 @@ export async function PUT(
       tranzila_password,
       tranzila_token_terminal,
       tranzila_token_password,
+      tranzila_invoice_terminal,
     } = body
 
     if (!tranzila_terminal?.trim()) {
@@ -76,10 +78,11 @@ export async function PUT(
     const { error } = await supabaseAdmin
       .from('organizations')
       .update({
-        tranzila_terminal:       tranzila_terminal.trim(),
-        tranzila_password:       tranzila_password?.trim() || null,
-        tranzila_token_terminal: tranzila_token_terminal?.trim() || null,
-        tranzila_token_password: tranzila_token_password?.trim() || null,
+        tranzila_terminal:         tranzila_terminal.trim(),
+        tranzila_password:         tranzila_password?.trim() || null,
+        tranzila_token_terminal:   tranzila_token_terminal?.trim() || null,
+        tranzila_token_password:   tranzila_token_password?.trim() || null,
+        tranzila_invoice_terminal: tranzila_invoice_terminal?.trim() || null,
       })
       .eq('id', orgId)
 
@@ -105,10 +108,11 @@ export async function DELETE(
     const { error } = await supabaseAdmin
       .from('organizations')
       .update({
-        tranzila_terminal:       null,
-        tranzila_password:       null,
-        tranzila_token_terminal: null,
-        tranzila_token_password: null,
+        tranzila_terminal:         null,
+        tranzila_password:         null,
+        tranzila_token_terminal:   null,
+        tranzila_token_password:   null,
+        tranzila_invoice_terminal: null,
       })
       .eq('id', orgId)
 

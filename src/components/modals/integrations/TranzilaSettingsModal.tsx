@@ -10,48 +10,54 @@ import { CreditCard, Eye, EyeOff, Loader2, AlertTriangle } from 'lucide-react'
 
 const I18N = {
   he: {
-    title:          'הגדרות טרנזילה',
-    stepLabel:      'פרטי חשבון',
-    terminal:       'שם טרמינל',
-    terminalPh:     'terminal_name',
-    password:       'סיסמת טרמינל',
-    passwordPh:     '••••••••',
-    tokenTerminal:  'שם טרמינל טוקן',
-    tokenTermPh:    'token_terminal_name',
-    tokenPassword:  'סיסמת טוקן',
-    tokenPwPh:      '••••••••',
-    connected:      'מחובר',
-    notConnected:   'לא מחובר',
-    save:           'שמור',
-    cancel:         'ביטול',
-    disconnect:     'נתק',
-    disconnectQ:    'לנתק את Tranzila?',
-    saved:          'נשמר בהצלחה ✓',
-    error:          'שגיאה בשמירה',
-    loadError:      'שגיאה בטעינה',
-    disconnected:   'נותק',
+    title:            'הגדרות טרנזילה',
+    stepLabel:        'פרטי חשבון',
+    terminal:         'שם טרמינל (תשלומים)',
+    terminalPh:       'terminal_name',
+    password:         'סיסמת טרמינל',
+    passwordPh:       '••••••••',
+    tokenTerminal:    'שם טרמינל טוקן',
+    tokenTermPh:      'token_terminal_name',
+    tokenPassword:    'סיסמת טוקן',
+    tokenPwPh:        '••••••••',
+    invoiceTerminal:  'שם טרמינל לחשבוניות (Billing API)',
+    invoiceTermPh:    'billing_terminal_name',
+    invoiceTermHint:  'אם ריק — ישתמש בטרמינל התשלומים',
+    connected:        'מחובר',
+    notConnected:     'לא מחובר',
+    save:             'שמור',
+    cancel:           'ביטול',
+    disconnect:       'נתק',
+    disconnectQ:      'לנתק את Tranzila?',
+    saved:            'נשמר בהצלחה ✓',
+    error:            'שגיאה בשמירה',
+    loadError:        'שגיאה בטעינה',
+    disconnected:     'נותק',
   },
   ru: {
-    title:          'Настройки Tranzila',
-    stepLabel:      'Данные аккаунта',
-    terminal:       'Имя терминала',
-    terminalPh:     'terminal_name',
-    password:       'Пароль терминала',
-    passwordPh:     '••••••••',
-    tokenTerminal:  'Имя токен-терминала',
-    tokenTermPh:    'token_terminal_name',
-    tokenPassword:  'Пароль токен-терминала',
-    tokenPwPh:      '••••••••',
-    connected:      'Подключено',
-    notConnected:   'Не подключено',
-    save:           'Сохранить',
-    cancel:         'Отмена',
-    disconnect:     'Отключить',
-    disconnectQ:    'Отключить Tranzila?',
-    saved:          'Сохранено ✓',
-    error:          'Ошибка при сохранении',
-    loadError:      'Ошибка загрузки',
-    disconnected:   'Отключено',
+    title:            'Настройки Tranzila',
+    stepLabel:        'Данные аккаунта',
+    terminal:         'Имя терминала (платежи)',
+    terminalPh:       'terminal_name',
+    password:         'Пароль терминала',
+    passwordPh:       '••••••••',
+    tokenTerminal:    'Имя токен-терминала',
+    tokenTermPh:      'token_terminal_name',
+    tokenPassword:    'Пароль токен-терминала',
+    tokenPwPh:        '••••••••',
+    invoiceTerminal:  'Терминал для квитанций (Billing API)',
+    invoiceTermPh:    'billing_terminal_name',
+    invoiceTermHint:  'Если пусто — используется платёжный терминал',
+    connected:        'Подключено',
+    notConnected:     'Не подключено',
+    save:             'Сохранить',
+    cancel:           'Отмена',
+    disconnect:       'Отключить',
+    disconnectQ:      'Отключить Tranzila?',
+    saved:            'Сохранено ✓',
+    error:            'Ошибка при сохранении',
+    loadError:        'Ошибка загрузки',
+    disconnected:     'Отключено',
   },
 }
 
@@ -73,10 +79,11 @@ export function TranzilaSettingsModal({
   const s = I18N[language]
   const dir = language === 'he' ? 'rtl' : 'ltr'
 
-  const [terminal, setTerminal]           = useState('')
-  const [password, setPassword]           = useState('')
-  const [tokenTerminal, setTokenTerminal] = useState('')
-  const [tokenPassword, setTokenPassword] = useState('')
+  const [terminal, setTerminal]               = useState('')
+  const [password, setPassword]               = useState('')
+  const [tokenTerminal, setTokenTerminal]     = useState('')
+  const [tokenPassword, setTokenPassword]     = useState('')
+  const [invoiceTerminal, setInvoiceTerminal] = useState('')
   const [showPw, setShowPw]               = useState(false)
   const [showTokenPw, setShowTokenPw]     = useState(false)
   const [saving, setSaving]               = useState(false)
@@ -100,6 +107,7 @@ export function TranzilaSettingsModal({
       setPassword(data.tranzila_password ?? '')
       setTokenTerminal(data.tranzila_token_terminal ?? '')
       setTokenPassword(data.tranzila_token_password ?? '')
+      setInvoiceTerminal(data.tranzila_invoice_terminal ?? '')
       setIsConnected(data.is_connected ?? false)
     } catch {
       toast.error(s.loadError)
@@ -116,10 +124,11 @@ export function TranzilaSettingsModal({
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tranzila_terminal:       terminal.trim(),
-          tranzila_password:       password.trim() || null,
-          tranzila_token_terminal: tokenTerminal.trim() || null,
-          tranzila_token_password: tokenPassword.trim() || null,
+          tranzila_terminal:         terminal.trim(),
+          tranzila_password:         password.trim() || null,
+          tranzila_token_terminal:   tokenTerminal.trim() || null,
+          tranzila_token_password:   tokenPassword.trim() || null,
+          tranzila_invoice_terminal: invoiceTerminal.trim() || null,
         }),
       })
       if (!res.ok) throw new Error()
@@ -140,6 +149,7 @@ export function TranzilaSettingsModal({
       if (!res.ok) throw new Error()
       setTerminal(''); setPassword('')
       setTokenTerminal(''); setTokenPassword('')
+      setInvoiceTerminal('')
       setIsConnected(false)
       setConfirmDisconnect(false)
       toast.success(s.disconnected)
@@ -272,6 +282,19 @@ export function TranzilaSettingsModal({
               {showTokenPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+        </div>
+
+        {/* Invoice terminal — separate billing terminal for Tranzila Invoices API */}
+        <div className="pt-2 border-t border-gray-100">
+          <label className="block text-sm font-medium text-gray-700 mb-1">{s.invoiceTerminal}</label>
+          <p className="text-xs text-gray-400 mb-1.5">{s.invoiceTermHint}</p>
+          <input
+            type="text"
+            value={invoiceTerminal}
+            onChange={e => setInvoiceTerminal(e.target.value)}
+            placeholder={s.invoiceTermPh}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
         </div>
 
       </div>

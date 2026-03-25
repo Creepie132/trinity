@@ -53,7 +53,7 @@ export async function POST(
 
     const { data: orgRow } = await serviceClient
       .from('organizations')
-      .select('tranzila_terminal')
+      .select('tranzila_terminal, tranzila_invoice_terminal')
       .eq('id', payment.org_id)
       .maybeSingle()
 
@@ -63,6 +63,9 @@ export async function POST(
         { status: 400 }
       )
     }
+
+    // Для квитанций: invoice-терминал или fallback на payment-терминал
+    const invoiceTerminal = orgRow.tranzila_invoice_terminal || orgRow.tranzila_terminal
 
     // Idempotency
     if (payment.tranzila_document_id) {
@@ -104,6 +107,7 @@ export async function POST(
       paymentMethod: payment.payment_method ?? 'other',
       card,
       documentType,
+      terminalName: invoiceTerminal,
     })
 
     await service

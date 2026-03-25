@@ -139,20 +139,24 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
   const isBurning = isUrgent || !!isOverdue
 
   return (
-    <div ref={wrapRef} className={`relative overflow-hidden rounded-xl touch-pan-y select-none ${isBurning ? 'urgent-glow' : ''}`}>
+    <div ref={wrapRef} className="relative overflow-hidden rounded-xl touch-pan-y select-none">
       {/* Подложка */}
       <div className={`absolute inset-0 flex items-center ${isDone ? 'justify-start pl-4' : 'justify-end pr-4'} ${bgColor} transition-colors`}>
         {swipeHint}
       </div>
 
-      {/* Карточка */}
+      {/* Карточка — urgent-glow здесь, т.к. overflow-hidden на wrapper срезает box-shadow */}
       <div
         onClick={() => { if (Math.abs(offsetX) < 5) onClick() }}
         style={{
           transform: `translateX(${offsetX}px)`,
           transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.32,0.72,0,1)',
         }}
-        className="relative group flex items-center gap-3 p-2.5 bg-white dark:bg-gray-900 rounded-xl cursor-pointer active:scale-[0.98]"
+        className={`relative group flex items-center gap-3 p-2.5 rounded-xl cursor-pointer active:scale-[0.98] ${
+          isBurning
+            ? 'bg-red-50 dark:bg-red-950/20 urgent-glow'
+            : 'bg-white dark:bg-gray-900'
+        }`}
       >
         {/* Полоса приоритета */}
         <div className={`w-1 h-8 rounded-full flex-shrink-0 ${priority.bar}`} />

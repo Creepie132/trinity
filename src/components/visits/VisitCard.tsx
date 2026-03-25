@@ -24,6 +24,7 @@ interface VisitCardProps {
     visit_services?: Array<{ id: string; service_name: string; service_name_ru?: string; duration_minutes?: number; price?: number }>
     event_type?: 'visit' | 'meeting'
     meeting_link?: string | null
+    started_at?: string | null
   }
   locale: 'he' | 'ru'
   isMeetingMode?: boolean
@@ -219,6 +220,18 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
                   {totalDuration}{locale === 'he' ? "ד'" : 'м'}
                 </span>
               )}
+              {/* Фактическое время начала — показываем только для in_progress */}
+              {visit.status === 'in_progress' && visit.started_at && (() => {
+                const startedTime = new Date(visit.started_at).toLocaleTimeString(
+                  locale === 'he' ? 'he-IL' : 'ru-RU',
+                  { hour: '2-digit', minute: '2-digit' }
+                )
+                return (
+                  <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400 mt-0.5 leading-tight">
+                    ▶ {startedTime}
+                  </span>
+                )
+              })()}
               <span className="mt-1" style={{ color: accentColor }}>
                 {isMeeting ? <Video size={12} /> : <MapPin size={12} />}
               </span>

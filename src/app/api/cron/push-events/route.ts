@@ -109,37 +109,44 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // ── 2b. HOURLY OVERDUE REMINDERS (every hour after visit should have ended) ─
-  // Fires at 2h, 3h, 4h, 5h, 6h after expected end time
-  const hourlyOverdueHours = [2, 3, 4, 5, 6]
+  // ── 2b. HOURLY REMINDERS for in_progress visits (from started_at) ─────────
+  // Fires every full hour since started_at while visit is still in_progress
+  // Window: [1h, 2h, 3h, 4h, 5h, 6h] after started_at
+  const inProgressHours = [1, 2, 3, 4, 5, 6]
 
-  for (const h of hourlyOverdueHours) {
-    const endOffsetMs = h * 60 * 60_000
-    const windowMs = 5 * 60_000 // 5 minute window
+  for (const h of inProgressHours) {
+    const startedAtThreshold = new Date(now.getTime() - h * 60 * 60_000)
+    const windowMs = 5 * 60_000 // 5-minute window
 
-    // Fetch visits that are still scheduled and started long enough ago
-    const { data: visits } = await supabase
+    // Visits that are in_progress AND started exactly h hours ago (±5min)
+    const { data: inProgressVisits } = await supabase
       .from('visits')
-      .select('id, scheduled_at, duration_minutes, org_id, org_users!inner(user_id)')
-      .eq('status', 'scheduled')
-      .lt('scheduled_at', new Date(now.getTime() - endOffsetMs).toISOString())
+      .select('id, started_at, org_id, org_users!inner(user_id), clients(first_name, last_name)')
+      .eq('status', 'in_progress')
+      .gte('started_at', new Date(startedAtThreshold.getTime() - windowMs).toISOString())
+      .lte('started_at', startedAtThreshold.toISOString())
 
-    for (const v of visits ?? []) {
-      const dur = (v.duration_minutes ?? 60) * 60_000
-      const expectedEnd = new Date(new Date(v.scheduled_at).getTime() + dur)
-      const sinceEnd = now.getTime() - expectedEnd.getTime()
+    for (const v of inProgressVisits ?? []) {
+      if (!v.started_at) continue
 
-      // Only fire in the 5-minute window for this hour mark
-      if (sinceEnd < endOffsetMs || sinceEnd > endOffsetMs + windowMs) continue
+      const sinceStarted = now.getTime() - new Date(v.started_at).getTime()
+      const targetMs = h * 60 * 60_000
+      if (sinceStarted < targetMs || sinceStarted > targetMs + windowMs) continue
+
+      const client = v.clients as any
+      const clientName = client ? `${client.first_name || ''} ${client.last_name || ''}`.trim() : ''
+      const startedTime = new Date(v.started_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
 
       const orgUsers = v.org_users as any[]
       for (const ou of orgUsers ?? []) {
         await insertNotificationOnce({
           org_id: v.org_id,
           user_id: ou.user_id,
-          type: `visit_overdue_${h}h`,
-          title: 'ביקור עדיין פתוח ⏰',
-          body: `${h} שעות עברו — הביקור עדיין לא הסתיים`,
+          type: `visit_inprogress_${h}h`,
+          title: `⏰ ביקור פתוח כבר ${h} שע'`,
+          body: clientName
+            ? `${clientName} — התחיל ב-${startedTime}, לא הסתיים`
+            : `ביקור שהתחיל ב-${startedTime} עדיין פתוח`,
           link: '/visits',
           reference_id: v.id,
         })
@@ -259,7 +266,7 @@ interface NotifInsert {
  * For all other types — deduplicate per day.
  */
 async function insertNotificationOnce(n: NotifInsert) {
-  const isHourly = n.type.match(/^visit_overdue_\d+h$/)
+  const isHourly = n.type.match(/^visit_overdue_\d+h$/) || n.type.match(/^visit_inprogress_\d+h$/)
   const windowStart = new Date()
 
   if (isHourly) {

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createTranzilaPaymentLink } from '@/lib/tranzila'
-import { checkAuthAndFeature, getSupabaseServerClient } from '@/lib/api-auth'
+import { checkAuthAndFeature } from '@/lib/api-auth'
 import { ratelimitStrict } from '@/lib/ratelimit'
 import { validateBody, createPaymentSchema } from '@/lib/validations'
 import { logAudit } from '@/lib/audit'
-import { getClientIp } from '@/lib/ratelimit'
 import { queuePushNotification } from '@/lib/push-notify'
+import { getClientIp } from '@/lib/ratelimit'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,8 @@ export async function POST(request: NextRequest) {
     }
 
     const { org_id } = authResult.data
-    const supabase = await getSupabaseServerClient()
+    // Service role — bypasses RLS, необходим для impersonation (суперадмин действует от имени чужого org)
+    const supabase = createSupabaseServiceClient()
 
     const body = await request.json()
     

@@ -126,7 +126,12 @@ export async function checkAuth(): Promise<
   // 3. Branch-aware: получаем активный филиал.
   //    getActiveOrgId() кэшируется React cache() — request-scoped, безопасно.
   //    Повторный вызов в рамках одного запроса не идёт в БД.
-  const org_id = isAdmin ? mainOrgId : await getActiveOrgId(user.id, mainOrgId)
+  //
+  //    IMPERSONATION: суперадмин тоже использует activeOrgId из user_active_branch —
+  //    это позволяет создавать платежи/визиты от имени просматриваемой org.
+  //    mainOrgId остаётся как запасное значение если activeOrgId не задан.
+  const activeOrgId = await getActiveOrgId(user.id, mainOrgId)
+  const org_id = activeOrgId || mainOrgId
 
   // 4. Получение данных организации (если не админ)
   let organization = null

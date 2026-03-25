@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { WidgetCard } from '@/components/ui/WidgetCard'
 import { CheckSquare, AlertCircle, Clock, ChevronRight, Check, X } from 'lucide-react'
 import { useModalStore } from '@/store/useModalStore'
@@ -35,56 +35,78 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
   const [offsetX, setOffsetX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
   const startX = useRef(0)
   const startY = useRef(0)
+  const currentX = useRef(0)
   const isHorizontal = useRef<boolean | null>(null)
+  const dragging = useRef(false)
 
   const THRESHOLD = 80
 
-  function handleTouchStart(e: React.TouchEvent) {
-    startX.current = e.touches[0].clientX
-    startY.current = e.touches[0].clientY
-    isHorizontal.current = null
-    setIsDragging(true)
-  }
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
 
-  function handleTouchMove(e: React.TouchEvent) {
-    const dx = e.touches[0].clientX - startX.current
-    const dy = Math.abs(e.touches[0].clientY - startY.current)
+    function onTouchStart(e: TouchEvent) {
+      startX.current = e.touches[0].clientX
+      startY.current = e.touches[0].clientY
+      currentX.current = 0
+      isHorizontal.current = null
+      dragging.current = true
+      setIsDragging(true)
+    }
 
-    // Определяем направление на первых движениях
-    if (isHorizontal.current === null) {
-      if (Math.abs(dx) > 5 || dy > 5) {
-        isHorizontal.current = Math.abs(dx) > dy
+    function onTouchMove(e: TouchEvent) {
+      if (!dragging.current) return
+      const dx = e.touches[0].clientX - startX.current
+      const dy = Math.abs(e.touches[0].clientY - startY.current)
+
+      if (isHorizontal.current === null) {
+        if (Math.abs(dx) > 6 || dy > 6) {
+          isHorizontal.current = Math.abs(dx) > dy
+        }
+        return
       }
-      return
+
+      if (!isHorizontal.current) return
+      e.preventDefault() // работает т.к. passive: false
+      currentX.current = dx
+      setOffsetX(dx)
     }
 
-    if (!isHorizontal.current) return // вертикальный скролл — не трогаем
-    e.preventDefault()
-    setOffsetX(dx)
-  }
+    function onTouchEnd() {
+      if (!dragging.current) return
+      dragging.current = false
+      setIsDragging(false)
 
-  function handleTouchEnd() {
-    setIsDragging(false)
-    if (!isHorizontal.current) { setOffsetX(0); return }
+      if (!isHorizontal.current) { setOffsetX(0); return }
 
-    const dx = offsetX
-    // LTR: влево = выполнено, вправо = отменить
-    // RTL: вправо = выполнено, влево = отменить
-    const doneDirection  = isRtl ? dx >  THRESHOLD : dx < -THRESHOLD
-    const cancelDirection = isRtl ? dx < -THRESHOLD : dx >  THRESHOLD
+      const dx = currentX.current
+      const doneDir   = isRtl ? dx >  THRESHOLD : dx < -THRESHOLD
+      const cancelDir = isRtl ? dx < -THRESHOLD : dx >  THRESHOLD
 
-    if (doneDirection) {
-      setDismissed(true)
-      setTimeout(() => onDone(task.id), 300)
-    } else if (cancelDirection) {
-      setDismissed(true)
-      setTimeout(() => onCancel(task.id), 300)
-    } else {
-      setOffsetX(0)
+      if (doneDir) {
+        setDismissed(true)
+        setTimeout(() => onDone(task.id), 300)
+      } else if (cancelDir) {
+        setDismissed(true)
+        setTimeout(() => onCancel(task.id), 300)
+      } else {
+        setOffsetX(0)
+      }
     }
-  }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove',  onTouchMove,  { passive: false })
+    el.addEventListener('touchend',   onTouchEnd,   { passive: true })
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove',  onTouchMove)
+      el.removeEventListener('touchend',   onTouchEnd)
+    }
+  }, [isRtl, task.id, onDone, onCancel])
 
   // Цвет подложки при свайпе
   const bgColor = offsetX < -10 || (isRtl && offsetX > 10)
@@ -110,9 +132,7 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
 
       {/* Карточка */}
       <div
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        ref={cardRef}
         onClick={() => { if (Math.abs(offsetX) < 5) onClick() }}
         style={{
           transform: `translateX(${offsetX}px)`,

@@ -86,8 +86,22 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
     if (swipeLocked.current || !canAction) return
     if (Math.abs(swipeX) >= SWIPE_THRESHOLD) {
       const dir = swipeX > 0 ? 'right' : 'left'
+      // Снап на полное раскрытие
       setSnapped(dir)
       setSwipeX(swipeX > 0 ? SWIPE_MAX : -SWIPE_MAX)
+      // Автоматически выполняем действие через 350ms (после анимации снапа)
+      const isProgressDir = (dir === 'right' && rightIsProgress) || (dir === 'left' && leftIsProgress)
+      const visitId = visit.id
+      const visitStatus = visit.status
+      setTimeout(() => {
+        setSwipeX(0); setSnapped(null)
+        if (isProgressDir) {
+          if (visitStatus === 'scheduled') onStart?.(visitId)
+          else onComplete?.(visitId)
+        } else {
+          onCancel?.(visitId)
+        }
+      }, 350)
     } else {
       setSwipeX(0); setSnapped(null)
     }
@@ -163,7 +177,7 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
     <>
       <div
         className="relative mb-2"
-        style={{ touchAction: 'pan-y' }}
+        style={{ touchAction: swipeLocked.current ? 'pan-y' : 'pan-y' }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -199,7 +213,8 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
           onClick={() => { if (Math.abs(swipeX) < 8 && !snapped) onClick?.(visit) }}
           style={{
             transform: `translateX(${swipeX}px)`,
-            transition: snapped ? 'transform .25s cubic-bezier(.32,.72,0,1)' : 'none',
+            transition: snapped ? 'transform .25s cubic-bezier(.32,.72,0,1)' : 'transform 0ms',
+            willChange: 'transform',
             borderRadius: 12, overflow:'hidden',
           }}
           className={`bg-card border cursor-pointer ${isCancelled ? 'opacity-50' : ''} ${visit.status === 'in_progress' ? 'border-amber-300 dark:border-amber-700' : ''}`}

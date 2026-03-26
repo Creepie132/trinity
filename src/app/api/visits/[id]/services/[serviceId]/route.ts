@@ -53,20 +53,29 @@ export async function DELETE(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Recalculate visit totals from remaining visit_services
+    // Update visit duration only — NEVER touch visits.price.
+    // visits.price = base service price (immutable after creation).
+    // Total shown in UI = visits.price + sum(visit_services.price) computed dynamically.
     if (serviceData) {
       const targetVisitId = serviceData.visit_id || visitId
       const { data: remaining } = await supabase
         .from('visit_services')
-        .select('price, duration_minutes')
+        .select('duration_minutes')
         .eq('visit_id', targetVisitId)
 
-      const totalPrice = (remaining || []).reduce((sum, s) => sum + (Number(s.price) || 0), 0)
-      const totalDuration = (remaining || []).reduce((sum, s) => sum + (Number(s.duration_minutes) || 0), 0)
-      await supabase
-        .from('visits')
-        .update({ price: totalPrice, duration_minutes: totalDuration })
-        .eq('id', targetVisitId)
+      const extraDuration = (remaining || []).reduce((sum, s) => sum + (Number(s.duration_minutes) || 0), 0)
+      if (extraDuration === 0) {
+        // All extras removed — restore base visit duration from service
+        const { data: visitRow } = await supabase
+          .from('visits')
+          .select('services(duration_minutes)')
+          .eq('id', targetVisitId)
+          .single()
+        const baseDuration = (visitRow as any)?.services?.duration_minutes || 60
+        await supabase.from('visits').update({ duration_minutes: baseDuration }).eq('id', targetVisitId)
+      } else {
+        await supabase.from('visits').update({ duration_minutes: extraDuration }).eq('id', targetVisitId)
+      }
     }
 
     return NextResponse.json({ success: true })

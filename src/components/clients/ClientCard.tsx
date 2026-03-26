@@ -170,18 +170,44 @@ export function ClientCard({
       </div>
 
       {/* ── Сама карточка ─────────────────────────────────────────────────── */}
+      {/* Shimmer keyframes — инжектируем один раз */}
+      {hasDraft && (
+        <style>{`
+          @keyframes trinity-draft-shimmer {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          @keyframes trinity-draft-pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.82; }
+          }
+        `}</style>
+      )}
       <div
         onClick={handleCardClick}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         dir={isRTL ? 'rtl' : 'ltr'}
-        style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 0.25s ease' : 'none' }}
-        className={`relative flex items-center gap-3 bg-white px-4 py-3.5
-          border border-gray-100 shadow-sm rounded-2xl
-          hover:shadow-md hover:border-indigo-100
-          active:bg-gray-50 cursor-pointer select-none
-          ${hasDraft ? 'draft-glow' : ''}`}
+        style={{
+          transform: `translateX(${swipeX}px)`,
+          transition: swipeX === 0 ? 'transform 0.25s ease' : 'none',
+          ...(hasDraft ? {
+            background: 'linear-gradient(120deg, #fff8e7, #fde8ff, #e8f0ff, #e8fff4, #fff8e7)',
+            backgroundSize: '300% 300%',
+            animation: 'trinity-draft-shimmer 3.5s ease infinite, trinity-draft-pulse 3.5s ease infinite',
+            border: '1.5px solid transparent',
+            backgroundClip: 'padding-box',
+            boxShadow: '0 0 0 1.5px rgba(251,191,36,0.4), 0 4px 16px rgba(167,139,250,0.18), 0 1px 3px rgba(0,0,0,0.06)',
+          } : {}),
+        }}
+        className={`relative flex items-center gap-3 px-4 py-3.5
+          rounded-2xl cursor-pointer select-none
+          ${hasDraft
+            ? 'shadow-sm active:opacity-90'
+            : 'bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100 active:bg-gray-50'
+          }`}
       >
         {/* Аватар */}
         <div

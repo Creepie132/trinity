@@ -48,6 +48,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
     phone: '',
     email: '',
     address: '',
+    city: '',
     date_of_birth: '',
     notes: '',
     paint_code: '',
@@ -82,6 +83,7 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
         phone: client.phone || '',
         email: client.email || '',
         address: client.address || '',
+        city: client.city || '',
         date_of_birth: client.date_of_birth ? client.date_of_birth.split('T')[0] : '',
         notes: client.notes || '',
         paint_code: client.paint_code || '',
@@ -417,6 +419,15 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
                 />
               </div>
               <div>
+                <label className="text-xs text-muted-foreground">{locale === 'he' ? 'עיר' : 'Город'}</label>
+                <input
+                  value={editForm.city}
+                  onChange={(e) => setEditForm({...editForm, city: e.target.value})}
+                  className="w-full py-2 px-3 rounded-lg border bg-background text-sm mt-1"
+                  placeholder={locale === 'he' ? 'תל אביב...' : 'Тель-Авив...'}
+                />
+              </div>
+              <div>
                 <label className="text-xs text-muted-foreground">{locale === 'he' ? 'תאריך לידה' : 'Дата рождения'}</label>
                 <input
                   type="date"
@@ -503,6 +514,12 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{l.address}</span>
                   <span className="font-medium">{client.address}</span>
+                </div>
+              )}
+              {client.city && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{locale === 'he' ? 'עיר' : 'Город'}</span>
+                  <span className="font-medium">{client.city}</span>
                 </div>
               )}
               {client.notes && (

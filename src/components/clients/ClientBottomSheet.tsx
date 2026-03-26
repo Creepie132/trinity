@@ -23,6 +23,10 @@ interface ClientBottomSheetProps {
     name?: string
     phone?: string
     email?: string
+    address?: string
+    city?: string
+    date_of_birth?: string
+    description?: string
     visits_count?: number
     total_visits?: number
     total_paid?: number | string

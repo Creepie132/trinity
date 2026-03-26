@@ -62,6 +62,8 @@ export function usePaymentsStats() {
   const { activeOrgId } = useBranch()
 
   // ── Realtime sync ────────────────────────────────────────────────────────
+  // NOTE: usePayments already subscribes to payments table.
+  // This hook uses a separate channel (unique name via queryKey) — no conflict.
   useRealtimeSync({ table: 'payments', orgId: activeOrgId, queryKey: ['payments-stats'] })
 
   return useQuery({

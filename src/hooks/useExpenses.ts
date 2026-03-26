@@ -57,6 +57,8 @@ export function useExpenses(month?: string, category?: string) {
 
 export function useExpensesStats(month?: string) {
   const { activeOrgId } = useBranch()
+  // NOTE: useExpenses already subscribes to expenses table.
+  // This hook uses a separate channel (unique name via queryKey) — no conflict.
   useRealtimeSync({ table: 'expenses', orgId: activeOrgId, queryKey: ['expenses-stats'] })
   return useQuery<ExpensesStats>({
     queryKey: ['expenses-stats', month],

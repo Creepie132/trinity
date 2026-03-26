@@ -116,13 +116,16 @@ export function useRealtimeSync<T = Record<string, unknown>>({
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Stable string representation of queryKey — used both in channel name and deps
+  const keyStr = Array.isArray(queryKey) ? queryKey.join(':') : String(queryKey)
+
   useEffect(() => {
     if (!enabled || !orgId) return
 
     // ── Channel setup ──────────────────────────────────────────────────────
-    // Name must be unique per (table, org) pair so multiple tables
-    // don't share or stomp on each other's channels.
-    const channelName = `realtime:${table}:${orgId}`
+    // Unique per (table, org, queryKey) — prevents collisions when multiple
+    // hooks subscribe to the same table with different queryKeys
+    const channelName = `realtime:${table}:${orgId}:${keyStr}`
 
     // Build the channel and register all requested events
     let channel = supabase.channel(channelName)
@@ -177,6 +180,7 @@ export function useRealtimeSync<T = Record<string, unknown>>({
 
     // events.join is intentional — array identity changes on every render,
     // string comparison is the correct way to detect actual event set changes
+    // keyStr included so channel is recreated if queryKey changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, orgId, enabled, debounceMs, queryClient, events.join(',')])
+  }, [table, orgId, enabled, debounceMs, queryClient, events.join(','), keyStr])
 }

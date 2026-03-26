@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useModalStore } from '@/store/useModalStore'
 import { ClientBottomSheet } from './ClientBottomSheet'
+import { useClientCardSettings } from './ClientCardSettingsModal'
 
 // ── Палитра аватаров ──────────────────────────────────────────────────────────
 const AVATAR_GRADIENTS = [
@@ -65,6 +66,7 @@ export function ClientCard({
   onSelect,
 }: ClientCardProps) {
   const { openModal } = useModalStore()
+  const [cardSettings] = useClientCardSettings()
   const [hasDraft, setHasDraft] = useState(false)
   const [swipeX, setSwipeX]     = useState(0)
   const [action, setAction]     = useState<'call' | 'visit' | null>(null)
@@ -99,9 +101,13 @@ export function ClientCard({
   const isRTL       = locale === 'he'
 
   const t = {
-    he: { visits: 'ביקורים', call: 'שיחה', visit: 'ביקור' },
-    ru: { visits: 'Визитов',  call: 'Звонок', visit: 'Визит' },
+    he: { visits: 'ביקורים', call: 'שיחה', visit: 'ביקור', sale: 'מכירה' },
+    ru: { visits: 'Визитов',  call: 'Звонок', visit: 'Визит', sale: 'Продажа' },
   }[locale]
+
+  // Метка и иконка для свайпа вправо — зависит от настройки карточки
+  const swipeRightLabel = cardSettings.primaryAction === 'visit' ? t.visit : t.sale
+  const SwipeRightIcon  = cardSettings.primaryAction === 'visit' ? CalendarPlus : ShoppingCart
 
   // ── Touch handlers ────────────────────────────────────────────────────────
   const onTouchStart = (e: React.TouchEvent) => {
@@ -133,7 +139,13 @@ export function ClientCard({
     if (action === 'call' && client.phone) {
       window.location.href = `tel:${client.phone}`
     } else if (action === 'visit') {
-      setSheetOpen(true)
+      // Свайп вправо — действие зависит от настройки карточки
+      if (cardSettings.primaryAction === 'visit') {
+        openModal('visit-create', { preselectedClientId: client.id })
+      } else {
+        // primaryAction === 'sale'
+        openModal('client-sale', { client, locale })
+      }
     }
     setSwipeX(0)
     setAction(null)
@@ -159,13 +171,13 @@ export function ClientCard({
           <span className="text-[10px] font-bold text-white">{t.call}</span>
         </div>
       </div>
-      {/* Правый фон: создать визит (свайп вправо) */}
+      {/* Правый фон: главное действие (свайп вправо) */}
       <div className={`absolute inset-y-0 start-0 flex items-center justify-start ps-5
         rounded-2xl transition-colors duration-150
         ${action === 'visit' ? 'bg-indigo-500 w-full' : 'bg-indigo-100 w-20'}`}>
         <div className="flex flex-col items-center gap-1">
-          <CalendarPlus className="w-5 h-5 text-white" />
-          <span className="text-[10px] font-bold text-white">{t.visit}</span>
+          <SwipeRightIcon className="w-5 h-5 text-white" />
+          <span className="text-[10px] font-bold text-white">{swipeRightLabel}</span>
         </div>
       </div>
 

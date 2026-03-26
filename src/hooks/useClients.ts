@@ -4,21 +4,33 @@ import { Client, ClientSummary } from '@/types/database'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
-import { useRealtimeSync } from '@/hooks/useRealtimeSync'
+import { useRealtimeSync, RealtimePayload } from '@/hooks/useRealtimeSync'
 
-export function useClients(searchQuery?: string, page: number = 1, pageSize: number = 25) {
+export function useClients(
+  searchQuery?: string,
+  page: number = 1,
+  pageSize: number = 25,
+  onClientInsert?: () => void,   // optional callback — used by Kira animation
+) {
   const { orgId: authOrgId } = useAuth()
   const { activeOrgId, mainOrgId, isOrgResolved } = useBranch()
   const orgId = activeOrgId || mainOrgId || authOrgId
 
   // ── Realtime sync ────────────────────────────────────────────────────────
-  // Clients are shared at mainOrgId level — use mainOrgId as the filter.
-  // Any INSERT/UPDATE/DELETE on clients → invalidate the clients list cache.
+  // Single subscription per (table, org) — prevents Supabase "mismatch
+  // between server and client bindings" when multiple components subscribe
+  // to the same table+filter with different channel names.
+  // Kira animation piggybacks via onClientInsert callback.
   useRealtimeSync({
     table: 'clients',
-    orgId: mainOrgId,    // clients are shared across branches
+    orgId: mainOrgId,
     queryKey: ['clients'],
     enabled: !!mainOrgId && isOrgResolved,
+    onEvent: (payload: RealtimePayload) => {
+      if (payload.eventType === 'INSERT') {
+        onClientInsert?.()
+      }
+    },
   })
 
   return useQuery({

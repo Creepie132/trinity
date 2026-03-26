@@ -69,6 +69,36 @@ export function useSales(filters?: SalesFilters) {
   })
 }
 
+// ── Chart-only hook: fetches all sales for the last 12 months (no pagination) ──
+// Lightweight — returns only sale_date + total_amount + status
+export interface SaleChartPoint {
+  sale_date: string
+  total_amount: number
+  status: string
+}
+
+export function useSalesChart(opts?: { dateFrom?: string; dateTo?: string }) {
+  const { activeOrgId } = useBranch()
+
+  return useQuery({
+    queryKey: ['sales-chart', activeOrgId, opts?.dateFrom, opts?.dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams({ chart: '1' })
+      if (opts?.dateFrom) params.set('dateFrom', opts.dateFrom)
+      if (opts?.dateTo)   params.set('dateTo', opts.dateTo)
+
+      const headers: Record<string, string> = {}
+      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
+
+      const res = await fetch(`/api/sales?${params.toString()}`, { headers })
+      if (!res.ok) throw new Error('Failed to fetch chart data')
+      return res.json() as Promise<SaleChartPoint[]>
+    },
+    enabled: !!activeOrgId,
+    staleTime: 60_000, // chart data can be slightly stale
+  })
+}
+
 export function useSaleStats(sales: Sale[]) {
   const paid = sales.filter(s => s.status === 'paid')
   const totalRevenue = paid.reduce((s, x) => s + Number(x.paid_amount), 0)

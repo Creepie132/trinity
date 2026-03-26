@@ -5,16 +5,42 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext(req)
   if ('error' in auth) return auth.error
-  const { user, orgId: activeOrgId } = auth
+  const { orgId: activeOrgId } = auth
 
   const supabase = createSupabaseServiceClient()
   const { searchParams } = new URL(req.url)
-  const status = searchParams.get('status')
-  const month = searchParams.get('month')
-  const search = searchParams.get('search')
-  const page = parseInt(searchParams.get('page') || '0')
-  const pageSize = 25
+  const status    = searchParams.get('status')
+  const month     = searchParams.get('month')
+  const search    = searchParams.get('search')
+  const page      = parseInt(searchParams.get('page') || '0')
+  const pageSize  = 25
+  const chartMode = searchParams.get('chart') === '1'
+  const dateFrom  = searchParams.get('dateFrom')
+  const dateTo    = searchParams.get('dateTo')
 
+  // ── Chart mode: lightweight, no pagination, no PII ───────────────────────
+  // Returns sale_date + total_amount for the last 12 months.
+  // Used exclusively by BarChart — never exposes client data.
+  if (chartMode) {
+    const twelveMonthsAgo = new Date()
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
+    const fromDate = dateFrom || twelveMonthsAgo.toISOString().slice(0, 10)
+
+    let chartQuery = supabase
+      .from('sales')
+      .select('sale_date, total_amount, status')
+      .eq('org_id', activeOrgId)
+      .gte('sale_date', fromDate)
+      .order('sale_date', { ascending: true })
+
+    if (dateTo) chartQuery = chartQuery.lte('sale_date', dateTo)
+
+    const { data: chartData, error: chartErr } = await chartQuery
+    if (chartErr) return NextResponse.json({ error: chartErr.message }, { status: 500 })
+    return NextResponse.json(chartData || [])
+  }
+
+  // ── Normal list mode ──────────────────────────────────────────────────────
   let query = supabase
     .from('sales')
     .select(`
@@ -25,9 +51,6 @@ export async function GET(req: NextRequest) {
     .eq('org_id', activeOrgId)
     .order('created_at', { ascending: false })
     .order('sale_date', { ascending: false })
-
-  const dateFrom = searchParams.get('dateFrom')
-  const dateTo   = searchParams.get('dateTo')
 
   if (status && status !== 'all') query = query.eq('status', status)
   if (month) {

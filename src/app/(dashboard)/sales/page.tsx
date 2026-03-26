@@ -7,7 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { SalesDemoStub } from '@/components/demo/SalesDemoStub'
-import { useSales, useSaleStats, useToggleReceipt, Sale } from '@/hooks/useSales'
+import { useSales, useSalesChart, useSaleStats, useToggleReceipt, Sale, SaleChartPoint } from '@/hooks/useSales'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SaleDetailModal } from '@/components/sales/SaleDetailModal'
 import { PaymentReportModal } from '@/components/payments/PaymentReportModal'
@@ -111,15 +111,14 @@ function AnimNum({ value, prefix = '', duration = 700 }: { value: number; prefix
   return <>{prefix}{display.toLocaleString()}</>
 }
 
-// ─── BarChart — из уже загруженных данных ────────────────────────────────────
-function BarChart({ sales, locale }: { sales: Sale[]; locale: string }) {
+// ─── BarChart — gets dedicated chart data (no pagination limit) ──────────────
+function BarChart({ chartPoints, locale }: { chartPoints: SaleChartPoint[]; locale: string }) {
   const isHe = locale === 'he'
   const [mounted, setMounted] = useState(false)
 
-  // группируем по месяцу из переданных sales
   const bars = useMemo(() => {
     const map: Record<string, number> = {}
-    sales.forEach(s => {
+    chartPoints.forEach(s => {
       const m = s.sale_date?.slice(0, 7)
       if (!m) return
       map[m] = (map[m] || 0) + Number(s.total_amount || 0)
@@ -132,7 +131,7 @@ function BarChart({ sales, locale }: { sales: Sale[]; locale: string }) {
       const label = d.toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { month: 'short' })
       return { label, value: map[k], key: k }
     })
-  }, [sales, isHe])
+  }, [chartPoints, isHe])
 
   useEffect(() => {
     setMounted(false)
@@ -263,6 +262,10 @@ function SalesContent() {
     dateTo:   dateTo   || undefined,
     search: search.length >= 2 ? search : undefined,
   })
+  const { data: chartPoints = [] } = useSalesChart({
+    dateFrom: dateFrom || undefined,
+    dateTo:   dateTo   || undefined,
+  })
   const stats     = useSaleStats(sales)
   const toggleRec = useToggleReceipt()
   const drafts    = useDraftSales(draftKey)
@@ -370,7 +373,7 @@ function SalesContent() {
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">{t.monthlyChart}</span>
           </div>
-          <BarChart sales={sales} locale={locale} />
+          <BarChart chartPoints={chartPoints} locale={locale} />
         </div>
 
         {/* ── CHART + BREAKDOWN (desktop) ── */}
@@ -385,7 +388,7 @@ function SalesContent() {
                 </span>
               )}
             </div>
-            <BarChart sales={sales} locale={locale} />
+            <BarChart chartPoints={chartPoints} locale={locale} />
           </div>
           {/* Breakdown */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 flex flex-col">

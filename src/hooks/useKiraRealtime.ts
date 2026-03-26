@@ -2,6 +2,7 @@
 
 import { useRef } from 'react'
 import { useBranch } from '@/contexts/BranchContext'
+import { useClients } from '@/hooks/useClients'
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import type { KiraWaveState } from '@/components/kira/KiraWave'
 
@@ -12,16 +13,17 @@ import type { KiraWaveState } from '@/components/kira/KiraWave'
 //   visits    → INSERT           → 'visit'    (циан)
 //   visits    → UPDATE cancelled → 'cancel'   (затухает)
 //
-// ⚠️ Использует useRealtimeSync (НЕ прямые supabase.channel()) чтобы избежать
-// дублирования каналов на те же таблицы → "mismatch between server and client
-// bindings" error. Логика Киры передаётся через onEvent callback.
+// ⚠️ clients: подписка через useClients (onClientInsert callback),
+// чтобы избежать дублирования канала с тем же (table, org_id, filter) —
+// Supabase Realtime выдаёт "mismatch between server and client bindings"
+// при двух каналах на одну комбинацию schema/table/filter.
 
 interface KiraRealtimeOptions {
   onStateChange: (state: KiraWaveState) => void
 }
 
 export function useKiraRealtime({ onStateChange }: KiraRealtimeOptions) {
-  const { activeOrgId, mainOrgId } = useBranch()
+  const { activeOrgId } = useBranch()
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Вспомогательная функция: ставим состояние на 4 сек, потом возвращаем idle
@@ -31,11 +33,16 @@ export function useKiraRealtime({ onStateChange }: KiraRealtimeOptions) {
     timerRef.current = setTimeout(() => onStateChange('idle'), 4000)
   }
 
+  // ── Клиенты: piggyback на единственную подписку useClients ──────────────
+  // useClients вызывается без параметров (search/page/size) — только для RT.
+  // Реальный список клиентов читается в clients/page.tsx отдельным вызовом.
+  useClients(undefined, 1, 1, () => trigger('client'))
+
   // ── Платежи — новый завершённый платёж ──────────────────────────────────
   useRealtimeSync({
     table: 'payments',
     orgId: activeOrgId,
-    queryKey: ['kira-payments'],   // уникальный ключ — не конфликтует с usePayments
+    queryKey: ['kira-payments'],
     events: ['INSERT'],
     onEvent: ({ new: row }) => {
       const status = (row as any)?.status
@@ -45,21 +52,11 @@ export function useKiraRealtime({ onStateChange }: KiraRealtimeOptions) {
     },
   })
 
-  // ── Клиенты — новый клиент ───────────────────────────────────────────────
-  // clients привязаны к mainOrgId (shared across branches)
-  useRealtimeSync({
-    table: 'clients',
-    orgId: mainOrgId,
-    queryKey: ['kira-clients'],    // уникальный ключ — не конфликтует с useClients
-    events: ['INSERT'],
-    onEvent: () => trigger('client'),
-  })
-
   // ── Визиты — новый визит или отмена ─────────────────────────────────────
   useRealtimeSync({
     table: 'visits',
     orgId: activeOrgId,
-    queryKey: ['kira-visits'],     // уникальный ключ — не конфликтует с visits/page.tsx
+    queryKey: ['kira-visits'],
     events: ['INSERT', 'UPDATE'],
     onEvent: ({ eventType, new: row }) => {
       if (eventType === 'INSERT') {

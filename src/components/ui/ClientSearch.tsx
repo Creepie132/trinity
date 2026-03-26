@@ -51,16 +51,21 @@ export function ClientSearch({
   // Вычисляем fixed-позицию дропдауна через getBoundingClientRect —
   // это позволяет выходить за пределы overflow:hidden родителей (TrinityModalShell, WizardModal)
   useEffect(() => {
-    if (!isOpen || !wrapperRef.current) return;
-    const rect = wrapperRef.current.getBoundingClientRect();
-    setDropdownStyle({
-      position: 'fixed',
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
-      zIndex: 9999,
-    });
-  }, [isOpen, searchQuery]);
+    if (!isOpen || !wrapperRef.current) return
+    // rAF гарантирует что DOM уже отрендерен (важно внутри порталов/анимаций)
+    const raf = requestAnimationFrame(() => {
+      if (!wrapperRef.current) return
+      const rect = wrapperRef.current.getBoundingClientRect()
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 10000,
+      })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [isOpen, searchQuery])
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['client-search', orgId, debouncedQuery],

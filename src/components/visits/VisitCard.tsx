@@ -157,7 +157,7 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
   const isCancelled = visit.status === 'cancelled'
 
   const locationFromNotes = (() => {
-    if (!visit.notes || isMeeting) return null
+    if (!visit.notes) return null
     const lines = visit.notes.split('\n')
     const addr = lines.find(l => l.startsWith('Адрес:') || l.startsWith('כתובת:'))
     const city = lines.find(l => l.startsWith('Город:') || l.startsWith('עיר:'))
@@ -250,10 +250,20 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <p className="font-semibold text-sm truncate text-start">{clientName}</p>
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: accentColor + '18', color: accentColor, border: `1px solid ${accentColor}40` }}>
-                        {isMeeting ? (locale === 'he' ? 'אונליין' : 'Онлайн') : (locale === 'he' ? 'אופליין' : 'Оффлайн')}
-                      </span>
+                      {isMeeting ? (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 flex items-center gap-0.5"
+                          style={{ backgroundColor: accentColor + '18', color: accentColor, border: `1px solid ${accentColor}40` }}>
+                          {visit.meeting_link
+                            ? <><Video size={9} />{locale === 'he' ? 'מקוון' : 'Онлайн'}</>
+                            : <><MapPin size={9} />{locale === 'he' ? 'פרונטלי' : 'Оффлайн'}</>
+                          }
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: '#3b82f618', color: '#3b82f6', border: '1px solid #3b82f640' }}>
+                          {locale === 'he' ? 'ביקור' : 'Визит'}
+                        </span>
+                      )}
                     </div>
                     {serviceName && <p className="text-xs text-muted-foreground truncate mt-0.5 text-start">{serviceName}</p>}
                     {visit.price != null && visit.price > 0 && <p className="text-xs font-medium text-primary mt-0.5 text-start">₪{visit.price}</p>}
@@ -272,7 +282,7 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
                         <ExternalLink size={10} />{locale === 'he' ? 'הצטרף' : 'Присоединиться'}
                       </button>
                     )}
-                    {!isMeeting && locationFromNotes && (
+                    {locationFromNotes && (
                       <button onClick={e => { e.stopPropagation(); window.open(`https://maps.google.com/?q=${encodeURIComponent(locationFromNotes)}`, '_blank') }}
                         className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg"
                         style={{ backgroundColor: '#3b82f618', color: '#3b82f6', border: '1px solid #3b82f640' }}>

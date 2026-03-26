@@ -487,6 +487,25 @@ export function VisitDetailMob({
                     }} iconBg="rgba(52,211,153,0.2)" iconColor="#4ade80" />
                   )}
 
+                  {/* Навигация — если есть адрес в заметках (для оффлайн встреч и визитов) */}
+                  {(() => {
+                    if (!visit.notes) return null
+                    const lines = (visit.notes as string).split('\n')
+                    const addr = lines.find((l: string) => l.startsWith('Адрес:') || l.startsWith('כתובת:'))
+                    const city = lines.find((l: string) => l.startsWith('Город:') || l.startsWith('עיר:'))
+                    if (!addr && !city) return null
+                    const location = [city?.split(': ')[1], addr?.split(': ')[1]].filter(Boolean).join(', ')
+                    return (
+                      <ActionRow
+                        icon={<Navigation size={13} />}
+                        label={isHe ? 'נווט לכתובת' : 'Навигация'}
+                        onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(location)}`, '_blank')}
+                        iconBg="rgba(59,130,246,0.2)"
+                        iconColor="#60a5fa"
+                      />
+                    )
+                  })()}
+
                   <div style={{ height: 1, background: 'rgba(255,255,255,0.07)' }} />
 
                   {/* Добавить услугу / товар — только в процессе */}

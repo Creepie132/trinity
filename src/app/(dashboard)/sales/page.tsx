@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { Plus, Upload, Search, SlidersHorizontal, TrendingUp, ShoppingBag, Receipt, BookmarkCheck, Trash2 } from 'lucide-react'
+import { Plus, Download, Search, SlidersHorizontal, TrendingUp, ShoppingBag, Receipt, BookmarkCheck, Trash2, Loader2 } from 'lucide-react'
 import { useModalStore } from '@/store/useModalStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { SalesDemoStub } from '@/components/demo/SalesDemoStub'
 import { useSales, useSaleStats, useToggleReceipt, Sale } from '@/hooks/useSales'
@@ -17,7 +18,6 @@ import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { FileText } from 'lucide-react'
 import { format } from 'date-fns'
-import ImportSalesModal from '@/components/sales/ImportSalesModal'
 import { SaleDetailModal } from '@/components/sales/SaleDetailModal'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
@@ -25,7 +25,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 const T = {
   he: {
     title: 'מכירות', total: 'סה״כ', sales: 'מכירות',
-    newSale: 'מכירה חדשה', import: 'ייבוא מאקסל',
+    newSale: 'מכירה חדשה', export: 'ייצוא',
     revenue: 'הכנסות', count: 'עסקאות', avg: 'ממוצע לעסקה',
     monthlyChart: 'מכירות לפי חודש', clickHint: 'לחץ על עמודה לסינון',
     all: 'הכל', paid: 'שולם', partial: 'חלקי', newStatus: 'חדש', draft: 'שמורה',
@@ -39,7 +39,7 @@ const T = {
   },
   ru: {
     title: 'Продажи', total: 'Итого', sales: 'сделок',
-    newSale: 'Новая сделка', import: 'Импорт из Excel',
+    newSale: 'Новая сделка', export: 'Экспорт',
     revenue: 'Выручка', count: 'Сделок', avg: 'Средний чек',
     monthlyChart: 'Продажи по месяцам', clickHint: 'нажмите на столбец для фильтрации',
     all: 'Все', paid: 'Оплачено', partial: 'Частично', newStatus: 'Новая', draft: 'Сохранённые',
@@ -175,13 +175,15 @@ function SalesContent() {
   const t     = T[locale]
   const months = locale === 'he' ? MONTHS_HE : MONTHS_RU
   const { openModal } = useModalStore()
+  const { role, orgId } = useAuth()
+  const isOwner = role === 'owner'
 
   const [statusFilter, setStatusFilter]   = useState('all')
   const [methodFilter, setMethodFilter]   = useState('all')
   const [search, setSearch]               = useState('')
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen]     = useState(false)
-  const [importOpen, setImportOpen]       = useState(false)
+  const [exportLoading, setExportLoading] = useState(false)
   const [selectedSale, setSelectedSale]   = useState<Sale | null>(null)
   const [draftRefreshKey, setDraftRefreshKey] = useState(0)
 
@@ -216,6 +218,29 @@ function SalesContent() {
     setSelectedSale(sale)
   }, [])
 
+  const handleExport = async () => {
+    if (!orgId || exportLoading) return
+    setExportLoading(true)
+    try {
+      const params = new URLSearchParams({ type: 'sales', org_id: orgId, format: 'csv' })
+      const res = await fetch(`/api/export?${params}`)
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `sales_${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
   return (
     <div id="demo-step-pipeline" dir={dir} className="space-y-5 min-h-screen">
 
@@ -229,14 +254,30 @@ function SalesContent() {
           </p>
         </div>
         <div className="flex gap-2 justify-center md:justify-end">
-          <Button variant="outline"
-            className="border-amber-400 text-amber-600 hover:bg-amber-50 text-sm"
-            onClick={() => setImportOpen(true)}>
-            <Upload className="w-4 h-4 me-2" />{t.import}
-          </Button>
+          {isOwner && (
+            <button
+              onClick={handleExport}
+              disabled={exportLoading}
+              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 relative overflow-hidden transition-all duration-200 hover:border-emerald-400 hover:shadow-md hover:shadow-emerald-100 dark:hover:shadow-emerald-900/30 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ background: 'linear-gradient(135deg, rgba(52,211,153,0.08), rgba(16,185,129,0.05))' }}
+            >
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(52,211,153,0.18) 50%, transparent 100%)',
+                  animation: 'shimmer-wave 2.4s ease-in-out infinite',
+                }}
+              />
+              {exportLoading
+                ? <Loader2 className="w-4 h-4 animate-spin relative z-10" />
+                : <Download className="w-4 h-4 relative z-10" />}
+              <span className="relative z-10">{t.export}</span>
+            </button>
+          )}
           <Button className="bg-theme-primary text-white hover:opacity-90 text-sm"
             style={{ animation: 'pulseRing 2.5s ease-in-out infinite' }}
-            onClick={() => openModal('client-sale', { locale })}>  
+            onClick={() => openModal('client-sale', { locale })}>
             <Plus className="w-4 h-4 me-2" />{t.newSale}
           </Button>
         </div>
@@ -626,7 +667,6 @@ function SalesContent() {
       </TrinityBottomDrawer>
 
       {/* ── Modals ─────────────────────────────────────────────────────── */}
-      <ImportSalesModal isOpen={importOpen} onClose={() => setImportOpen(false)} />
       <SaleDetailModal sale={selectedSale} locale={locale} onClose={() => setSelectedSale(null)} />
 
     </div>

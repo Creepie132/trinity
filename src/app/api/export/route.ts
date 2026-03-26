@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx'
 
 export const dynamic = 'force-dynamic'
 
-type ExportType = 'clients' | 'visits' | 'payments' | 'products'
+type ExportType = 'clients' | 'visits' | 'payments' | 'products' | 'sales'
 type ExportFormat = 'csv' | 'xlsx'
 
 export async function GET(request: NextRequest) {
@@ -26,9 +26,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    if (!['clients', 'visits', 'payments', 'products'].includes(type)) {
+    if (!['clients', 'visits', 'payments', 'products', 'sales'].includes(type)) {
       return NextResponse.json(
-        { error: 'Invalid type. Must be: clients, visits, payments, or products' },
+        { error: 'Invalid type. Must be: clients, visits, payments, products, or sales' },
         { status: 400 }
       )
     }
@@ -131,6 +131,38 @@ export async function GET(request: NextRequest) {
         'Paid At': p.paid_at ? new Date(p.paid_at).toLocaleString() : '',
         Client: `${p.clients.first_name} ${p.clients.last_name}`,
         'Created At': new Date(p.created_at).toLocaleString(),
+      }))
+    } else if (type === 'sales') {
+      let query = supabase
+        .from('sales')
+        .select(`
+          sale_date,
+          total_amount,
+          paid_amount,
+          payment_method,
+          status,
+          staff_name,
+          notes,
+          clients(first_name, last_name)
+        `)
+        .eq('org_id', org_id)
+        .order('sale_date', { ascending: false })
+
+      if (date_from) query = query.gte('sale_date', date_from)
+      if (date_to) query = query.lte('sale_date', date_to)
+
+      const { data: sales, error } = await query
+      if (error) throw error
+
+      data = (sales as any[]).map((s) => ({
+        Date: s.sale_date,
+        Client: s.clients ? `${s.clients.first_name} ${s.clients.last_name}`.trim() : '',
+        Staff: s.staff_name || '',
+        Total: s.total_amount,
+        Paid: s.paid_amount,
+        Method: s.payment_method || '',
+        Status: s.status,
+        Notes: s.notes || '',
       }))
     } else if (type === 'products') {
       const { data: products, error } = await supabase

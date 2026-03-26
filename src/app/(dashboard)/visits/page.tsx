@@ -190,6 +190,10 @@ export default function VisitsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [dateFilter, setDateFilter] = useState<string>('week')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [eventTypeFilter, setEventTypeFilter] = useState<'all' | 'visit' | 'meeting'>(() => {
+    if (typeof window === 'undefined') return 'all'
+    return (localStorage.getItem('trinity_visit_type_filter') as 'all' | 'visit' | 'meeting') || 'all'
+  })
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [cancelledOpen, setCancelledOpen] = useState(false)
   const [serviceColors, setServiceColors] = useState<Record<string, string>>({})
@@ -244,11 +248,17 @@ export default function VisitsPage() {
     }
   }, [orgId])
 
-  useEffect(() => { setPage(1) }, [dateFilter, statusFilter, searchQuery])
+  useEffect(() => { setPage(1) }, [dateFilter, statusFilter, searchQuery, eventTypeFilter])
+
+  function setEventType(v: 'all' | 'visit' | 'meeting') {
+    setEventTypeFilter(v)
+    localStorage.setItem('trinity_visit_type_filter', v)
+    setPage(1)
+  }
 
   // ── fetch ──────────────────────────────────────────────────────────────────
   const { data: visitsData, isLoading, refetch } = useQuery({
-    queryKey: ['visits', orgId, dateFilter, statusFilter, searchQuery, page],
+    queryKey: ['visits', orgId, dateFilter, statusFilter, searchQuery, page, eventTypeFilter],
     queryFn: async () => {
       if (!orgId) return { data: [], count: 0 }
 
@@ -259,6 +269,7 @@ export default function VisitsPage() {
         .order('scheduled_at', { ascending: false })
 
       if (statusFilter !== 'all') query = query.eq('status', statusFilter)
+      if (eventTypeFilter !== 'all') query = query.eq('event_type', eventTypeFilter === 'meeting' ? 'meeting' : 'visit')
 
       if (dateFilter !== 'all') {
         const now = new Date()
@@ -679,6 +690,26 @@ export default function VisitsPage() {
                   {statusFilterLabel[f]}
                 </button>
               ))}
+              <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
+              {/* Тумблер: Встречи / Визиты / Все */}
+              {(['all', 'visit', 'meeting'] as const).map((t) => {
+                const labels: Record<string, string> = isHe
+                  ? { all: 'הכל', visit: 'ביקורים', meeting: 'פגישות' }
+                  : { all: 'Все', visit: 'Визиты', meeting: 'Встречи' }
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setEventType(t)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      eventTypeFilter === t
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {labels[t]}
+                  </button>
+                )
+              })}
             </div>
           </div>
 

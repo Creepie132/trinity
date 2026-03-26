@@ -2,14 +2,20 @@
 
 /**
  * ClientProviders — lazy-load non-critical UI widgets.
- * Вынесено в отдельный Client Component, чтобы использовать dynamic() с ssr:false
- * без конфликта с серверным layout.tsx.
+ * Also hosts the SINGLE centralised Supabase Realtime subscriptions
+ * for tables that are used by multiple hooks simultaneously.
  *
- * Эти компоненты грузятся ПОСЛЕ первого рендера — не блокируют LCP.
- * На /landing — не рендерим ничего (landing изолирован, ModalManager не нужен).
+ * ⚠️ ANTI-PATTERN PREVENTION:
+ * useProducts(), useServices() are called from 8+ components at once.
+ * Each call used to create its own RT channel → Supabase "mismatch between
+ * server and client bindings" error. Fix: remove RT from those hooks,
+ * subscribe ONCE here instead.
  */
 import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
+import { useAuth } from '@/hooks/useAuth'
+import { useBranch } from '@/contexts/BranchContext'
 
 const ConditionalChatWidget = dynamic(
   () => import('@/components/ConditionalChatWidget'),
@@ -41,6 +47,19 @@ const UpdateBanner = dynamic(
   { ssr: false }
 )
 
+// ── Single RT subscriptions for shared tables ─────────────────────────────────
+function GlobalRealtimeSync() {
+  const { orgId } = useAuth()
+  const { activeOrgId } = useBranch()
+
+  // products — used by SaleModal, VisitDetailMob, InventoryPage, DashboardContent, etc.
+  useRealtimeSync({ table: 'products',  orgId: activeOrgId, queryKey: ['products']  })
+  // services — used by CreateVisitDialog, SaleModal, VisitDetailMob, settings, etc.
+  useRealtimeSync({ table: 'services',  orgId: orgId,       queryKey: ['services']  })
+
+  return null
+}
+
 export function ClientProviders() {
   const pathname = usePathname()
 
@@ -49,6 +68,7 @@ export function ClientProviders() {
 
   return (
     <>
+      <GlobalRealtimeSync />
       <UpdateBanner />
       <ForceLightMode />
       <ModalManager />

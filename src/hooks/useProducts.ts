@@ -14,7 +14,11 @@ import { useRealtimeSync } from '@/hooks/useRealtimeSync'
  */
 export function useProducts(searchQuery?: string) {
   const { activeOrgId } = useBranch()
-  useRealtimeSync({ table: 'products', orgId: activeOrgId, queryKey: ['products'] })
+  // NOTE: useRealtimeSync removed from here.
+  // Having it inside useProducts caused "mismatch between server and client bindings"
+  // because useProducts is called from 8+ components simultaneously — creating
+  // duplicate Supabase Realtime channels on the same (table, org_id) pair.
+  // The single RT subscription for 'products' lives in DashboardShell instead.
 
   return useQuery({
     queryKey: ['products', activeOrgId],

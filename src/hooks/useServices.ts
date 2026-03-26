@@ -2,12 +2,15 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
-import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import type { Service, CreateServiceDTO, UpdateServiceDTO } from '@/types/services'
 
 export function useServices() {
   const { orgId } = useAuth()
-  useRealtimeSync({ table: 'services', orgId, queryKey: ['services'] })
+  // NOTE: useRealtimeSync intentionally removed from here.
+  // useServices is called from multiple components simultaneously (CreateVisitDialog,
+  // SaleModal, VisitDetailMob, settings pages) — creating duplicate Supabase Realtime
+  // channels and "mismatch between server and client bindings" errors.
+  // The single RT subscription for 'services' lives in DashboardShell instead.
   return useQuery({
     queryKey: ['services'],
     queryFn: async () => {
@@ -32,12 +35,10 @@ export function useCreateService() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(service),
       })
-
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to create service')
       }
-
       const data = await response.json()
       return data.service as Service
     },
@@ -57,12 +58,10 @@ export function useUpdateService() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       })
-
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to update service')
       }
-
       const result = await response.json()
       return result.service as Service
     },
@@ -80,12 +79,10 @@ export function useDeleteService() {
       const response = await fetch(`/api/services/${id}`, {
         method: 'DELETE',
       })
-
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to delete service')
       }
-
       const data = await response.json()
       return data.service as Service
     },

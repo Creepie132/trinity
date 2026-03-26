@@ -340,7 +340,7 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
   )
 
   return (
-    <Modal open={open} onClose={handleClose} darkHeader showCloseButton={false} width="100%" dir={dir}>
+    <Modal open={open} onClose={handleClose} darkHeader showCloseButton={false} width="680px" dir={dir}>
       <TrinityModalShell
         open={open}
         onClose={handleClose}

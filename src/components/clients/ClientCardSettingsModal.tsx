@@ -129,20 +129,12 @@ export function ClientCardSettingsPanel({
   const isHe = locale === 'he'
   const BackIcon = isHe ? ArrowRight : ArrowLeft
 
-  const [local, setLocal] = useState<ClientCardSettings>(settings)
-
-  useEffect(() => { setLocal(settings) }, [settings])
-
   function toggle(key: keyof Omit<ClientCardSettings, 'primaryAction'>) {
-    const next = { ...local, [key]: !local[key] }
-    setLocal(next)
-    onSave(next)
+    onSave({ ...settings, [key]: !settings[key] })
   }
 
   function setPrimary(val: 'sale' | 'visit') {
-    const next = { ...local, primaryAction: val }
-    setLocal(next)
-    onSave(next)
+    onSave({ ...settings, primaryAction: val })
   }
 
   const toggleItems: { key: keyof Omit<ClientCardSettings, 'primaryAction'>; label: string; emoji: string }[] = [
@@ -207,8 +199,8 @@ export function ClientCardSettingsPanel({
                 style={{
                   padding: '6px 12px', border: 'none', cursor: 'pointer',
                   fontSize: 11, fontWeight: 600, transition: 'all 0.15s',
-                  background: local.primaryAction === 'sale' ? '#7c3aed' : 'transparent',
-                  color: local.primaryAction === 'sale' ? '#fff' : '#64748b',
+                  background: settings.primaryAction === 'sale' ? '#7c3aed' : 'transparent',
+                  color: settings.primaryAction === 'sale' ? '#fff' : '#64748b',
                 }}
               >
                 🛒 {l.sale}
@@ -220,8 +212,8 @@ export function ClientCardSettingsPanel({
                   borderLeft: '0.5px solid #ddd6fe', border: 'none',
                   borderInlineStart: '0.5px solid #ddd6fe',
                   cursor: 'pointer', fontSize: 11, fontWeight: 600, transition: 'all 0.15s',
-                  background: local.primaryAction === 'visit' ? '#7c3aed' : 'transparent',
-                  color: local.primaryAction === 'visit' ? '#fff' : '#64748b',
+                  background: settings.primaryAction === 'visit' ? '#7c3aed' : 'transparent',
+                  color: settings.primaryAction === 'visit' ? '#fff' : '#64748b',
                 }}
               >
                 📅 {l.visit}
@@ -254,7 +246,7 @@ export function ClientCardSettingsPanel({
             {/* Toggle pill */}
             <div style={{
               position: 'relative', width: 40, height: 22, borderRadius: 11, flexShrink: 0,
-              background: local[key] ? '#7c3aed' : '#e2e8f0',
+              background: settings[key] ? '#7c3aed' : '#e2e8f0',
               transition: 'background 0.2s',
             }}>
               <div style={{
@@ -262,7 +254,7 @@ export function ClientCardSettingsPanel({
                 width: 18, height: 18, borderRadius: '50%',
                 background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                 transition: 'transform 0.2s',
-                transform: local[key]
+                transform: settings[key]
                   ? isHe ? 'translateX(2px)' : 'translateX(20px)'
                   : isHe ? 'translateX(20px)' : 'translateX(2px)',
               }} />

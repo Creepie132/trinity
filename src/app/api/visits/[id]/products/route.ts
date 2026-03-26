@@ -63,19 +63,10 @@ export async function POST(
       return NextResponse.json({ error: vsError.message }, { status: 500 })
     }
 
-    // Update visit price (+sell_price) for display
-    const { data: currentVisit } = await serviceSupabase
-      .from('visits')
-      .select('price')
-      .eq('id', visitId)
-      .single()
-
-    if (currentVisit) {
-      await serviceSupabase
-        .from('visits')
-        .update({ price: (currentVisit.price || 0) + (product.sell_price || 0) })
-        .eq('id', visitId)
-    }
+    // NOTE: We do NOT update visits.price here.
+    // visits.price stores the BASE service price (set at visit creation, immutable).
+    // The full total is computed dynamically in the UI as: visit.price + sum(visit_services.price).
+    // Updating visits.price here caused double-counting in the UI and data corruption on refetch.
 
     return NextResponse.json({
       success: true,

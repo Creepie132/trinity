@@ -372,11 +372,11 @@ function SalesContent() {
               └── flex-1 overflow-y-auto : строки (СКРОЛЛИРУЮТСЯ) + пагинация
         ═══════════════════════════════════════════════════════════════════ */}
         <div className="hidden md:flex rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700"
-          style={{ height: 'calc(100vh - 160px)', minHeight: 520, animation: 'fadeUp 0.42s 0.1s ease both' }}>
+          style={{ height: 'calc(100dvh - 220px)', minHeight: 480, animation: 'fadeUp 0.42s 0.1s ease both' }}>
 
           {/* ══ ЛЕВАЯ ТЁМНАЯ ПАНЕЛЬ ══ */}
           <div className="flex flex-col gap-5 p-5 overflow-y-auto flex-shrink-0"
-            style={{ width: 300, background: 'linear-gradient(160deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)' }}>
+            style={{ width: 'clamp(220px, 22vw, 300px)', background: 'linear-gradient(160deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)' }}>
 
             {/* Выручка */}
             <div>

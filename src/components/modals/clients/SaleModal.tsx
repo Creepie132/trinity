@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useModalStore } from '@/store/useModalStore'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
@@ -81,7 +82,11 @@ function SaleItemPickerSheet({ isOpen, onClose, locale, onAddService, onAddProdu
     if (isOpen) { setStep('choose'); setSearch(''); setCustomName(''); setCustomPrice('') }
   }, [isOpen])
 
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
   if (!isOpen) return null
+  if (!mounted) return null
 
   const titles: Record<PickerStep, string> = {
     choose:  isHe ? 'מה להוסיף?' : 'Что добавить?',
@@ -95,9 +100,9 @@ function SaleItemPickerSheet({ isOpen, onClose, locale, onAddService, onAddProdu
   const filteredPProducts = (pickerProducts as Product[]).filter(p =>
     !search || p.name.toLowerCase().includes(search.toLowerCase()))
 
-  return (
-    <div className="fixed inset-0 z-[9200] flex items-end md:items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.4)' }}
+  return createPortal(
+    <div className="fixed inset-0 flex items-end md:items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.4)', zIndex: 99999 }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col shadow-2xl overflow-hidden"
         style={{ animation: 'fadeInUp 0.2s ease both' }}>
@@ -222,7 +227,7 @@ function SaleItemPickerSheet({ isOpen, onClose, locale, onAddService, onAddProdu
         </div>
       </div>
     </div>
-  )
+  , document.body)
 }
 
 export function SaleModal() {

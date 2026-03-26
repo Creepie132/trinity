@@ -24,7 +24,20 @@ function getStorageKey(orgId: string) {
 
 export function useClientCardSettings(): [ClientCardSettings, (s: ClientCardSettings) => void] {
   const { orgId } = useAuth()
-  const [settings, setSettings] = useState<ClientCardSettings>(DEFAULT_SETTINGS)
+
+  // Читаем из localStorage синхронно при первом рендере чтобы избежать мигания
+  const [settings, setSettings] = useState<ClientCardSettings>(() => {
+    if (typeof window === 'undefined') return DEFAULT_SETTINGS
+    // orgId ещё неизвестен при SSR — пробуем найти любой ключ client_card_settings_*
+    try {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('client_card_settings_'))
+      if (keys.length > 0) {
+        const raw = localStorage.getItem(keys[0])
+        if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+      }
+    } catch { /* ignore */ }
+    return DEFAULT_SETTINGS
+  })
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -44,10 +57,10 @@ export function useClientCardSettings(): [ClientCardSettings, (s: ClientCardSett
     } catch { /* ignore */ }
   }
 
-  // До загрузки из localStorage — возвращаем safe defaults (все блоки скрыты)
+  // До загрузки точного ключа — скрываем визуальные блоки, primaryAction уже известен
   const safeSettings: ClientCardSettings = loaded
     ? settings
-    : { ...DEFAULT_SETTINGS, showPaintCode: false, showGallery: false, showDocuments: false }
+    : { ...settings, showPaintCode: false, showGallery: false, showDocuments: false }
 
   return [safeSettings, save]
 }

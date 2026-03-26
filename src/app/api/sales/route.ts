@@ -117,6 +117,7 @@ export async function POST(req: NextRequest) {
       total_amount,
       paid_amount: paid,
       status: saleStatus,
+      payment_method: payment_method || 'cash',
       notes: notes || null,
     })
     .select('id')
@@ -133,6 +134,12 @@ export async function POST(req: NextRequest) {
   }))
   const { error: itemsErr } = await supabase.from('sale_items').insert(saleItems)
   if (itemsErr) return NextResponse.json({ error: itemsErr.message }, { status: 500 })
+
+  // ── Bidirectional link: set payment.sale_id ────────────────────────────
+  await supabase
+    .from('payments')
+    .update({ sale_id: sale.id })
+    .eq('id', payment.id)
 
   // ── Склад: списываем товары (только те у которых есть product_id) ──────────
   const productItems = items.filter((i: any) => i.product_id)

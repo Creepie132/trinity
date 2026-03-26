@@ -1,6 +1,8 @@
 'use client'
 
 import { useModalStore } from '@/store/useModalStore'
+import { useRouter } from 'next/navigation'
+import { ShoppingBag } from 'lucide-react'
 
 // Inline SVG logos — no external dependencies
 // Generic credit card icon — used when exact card brand is unknown
@@ -71,6 +73,8 @@ interface PaymentCardProps {
     payment_number?: string
     type?: string
     subscription_period_start?: string
+    sale_id?: string | null
+    sales?: { id: string; total_amount: number; status: string; sale_date: string } | null
   }
   locale: 'he' | 'ru'
   onClick?: (payment: any) => void
@@ -78,11 +82,14 @@ interface PaymentCardProps {
 
 export function PaymentCard({ payment, locale, onClick }: PaymentCardProps) {
   const { openModal } = useModalStore()
+  const router = useRouter()
 
   const handleClick = () => {
     if (onClick) { onClick(payment); return }
     openModal('payment-details', { payment, locale })
   }
+
+  const hasSale = !!(payment.sale_id || payment.sales?.id)
 
   const method = payment.payment_method || payment.method || 'other'
   const { icon, bg } = getMethodIcon(method)
@@ -137,6 +144,16 @@ export function PaymentCard({ payment, locale, onClick }: PaymentCardProps) {
             <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${typeTag.cls}`}>
               {typeTag.label}
             </span>
+          )}
+          {hasSale && (
+            <button
+              onClick={e => { e.stopPropagation(); router.push('/sales') }}
+              className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 hover:bg-amber-100 transition-colors"
+              title={locale === 'he' ? 'עבור למכירות' : 'Перейти в Продажи'}
+            >
+              <ShoppingBag size={9} />
+              {locale === 'he' ? 'עסקה' : 'Сделка'}
+            </button>
           )}
         </div>
         {/* Date subtle */}

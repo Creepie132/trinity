@@ -3,13 +3,14 @@
 import { useEffect } from 'react'
 import {
   Package, Wrench, Receipt, CheckCircle2, Clock,
-  AlertCircle, Ban, TrendingUp, Hash, ShoppingBag,
+  AlertCircle, Ban, TrendingUp, Hash, ShoppingBag, CreditCard,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Sale } from '@/hooks/useSales'
 import { useQueryClient } from '@tanstack/react-query'
 import { AdminDeleteButton } from '@/components/admin/AdminDeleteButton'
+import { useRouter } from 'next/navigation'
 
 const T = {
   he: {
@@ -66,6 +67,7 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
   const t = T[locale]
   const dir = locale === 'he' ? 'rtl' : 'ltr'
   const queryClient = useQueryClient()
+  const router = useRouter()
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -128,10 +130,23 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
       )}
 
       {/* Method */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 10, marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 10, marginBottom: 8 }}>
         <span style={{ fontSize: 18, lineHeight: 1 }}>{methodIcon}</span>
         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>{methodLabel}</span>
       </div>
+
+      {/* Payment link — if sale has payment */}
+      {sale.payment_id && (
+        <button
+          onClick={() => { onClose(); router.push('/payments') }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(99,102,241,0.12)', border: '0.5px solid rgba(99,102,241,0.3)', borderRadius: 10, marginBottom: 12, cursor: 'pointer', width: '100%', textAlign: 'left' }}
+        >
+          <CreditCard size={13} color="#818cf8" />
+          <span style={{ fontSize: 11, color: '#818cf8', fontWeight: 500 }}>
+            {locale === 'he' ? 'עבור לתשלומים' : 'Перейти в Платежи'}
+          </span>
+        </button>
+      )}
 
       <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.07)', marginBottom: 10 }} />
 

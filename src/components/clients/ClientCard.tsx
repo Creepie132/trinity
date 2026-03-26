@@ -35,6 +35,11 @@ interface ClientCardProps {
     name?: string
     phone?: string
     email?: string
+    address?: string
+    city?: string
+    date_of_birth?: string
+    description?: string
+    paint_code?: string
     visits_count?: number
     total_visits?: number
     last_visit?: string

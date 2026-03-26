@@ -888,20 +888,37 @@ export function SaleModal() {
         dir={isRTL ? 'rtl' : 'ltr'}
         footerContent={
           // Мобильный футер — светлый фон, тёмный текст
-          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
-            <button
-              onClick={handleClose}
-              style={{ flex: '0 0 auto', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}
-            >
-              {text.cancel}
-            </button>
+          // Все кнопки: Оформить + Сохранить + Предложение + Закрыть
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
             <button
               onClick={() => setStep('checkout')}
               disabled={cart.length === 0 || !client?.id}
-              style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', cursor: (cart.length === 0 || !client?.id) ? 'not-allowed' : 'pointer', background: (cart.length === 0 || !client?.id) ? '#e2e8f0' : 'var(--trinity-accent, #4a6fa5)', color: (cart.length === 0 || !client?.id) ? '#94a3b8' : '#fff', fontSize: 14, fontWeight: 700 }}
+              style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', cursor: (cart.length === 0 || !client?.id) ? 'not-allowed' : 'pointer', background: (cart.length === 0 || !client?.id) ? '#e2e8f0' : 'var(--trinity-accent, #4a6fa5)', color: (cart.length === 0 || !client?.id) ? '#94a3b8' : '#fff', fontSize: 15, fontWeight: 700 }}
             >
               {text.checkout}
             </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={handleSaveDraft}
+                disabled={cart.length === 0}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.12)', background: 'transparent', color: cart.length === 0 ? '#cbd5e1' : '#475569', fontSize: 13, fontWeight: 600, cursor: cart.length === 0 ? 'not-allowed' : 'pointer' }}
+              >
+                💾 {text.save}
+              </button>
+              <button
+                onClick={() => setShowProposalPanel(!showProposalPanel)}
+                disabled={cart.length === 0}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.12)', background: showProposalPanel ? '#f1f5f9' : 'transparent', color: cart.length === 0 ? '#cbd5e1' : '#475569', fontSize: 13, fontWeight: 600, cursor: cart.length === 0 ? 'not-allowed' : 'pointer' }}
+              >
+                📋 {text.proposal}
+              </button>
+              <button
+                onClick={handleClose}
+                style={{ flex: '0 0 auto', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#94a3b8', fontSize: 13, cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
           </div>
         }
         sidebarExtra={

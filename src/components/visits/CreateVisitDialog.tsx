@@ -291,17 +291,22 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
   const services = (customServices && customServices.length > 0) ? customServices
     : DEFAULT_SERVICES.map(s => ({ id: s.value, name: t(s.labelKey), name_ru: t(s.labelKey), duration_minutes: 60, price: undefined }))
 
-  // Сбрасываем выбор услуги когда набор услуг меняется (дефолтные → кастомные),
-  // чтобы избежать ситуации когда старый serviceId не совпадает ни с одним новым.
-  // Также сбрасываем price и duration — иначе при следующем выборе услуги
-  // могут остаться цена/длительность от предыдущего выбора (race condition).
+  // Сбрасываем форму при каждом открытии — чистый старт.
+  // НЕ зависим от customServices?.length: если добавить его как dep,
+  // useEffect срабатывает при фоновом рефетче и сбрасывает уже заполненную форму.
   useEffect(() => {
     if (!open) return
     setForm(p => ({ ...p, serviceId: '', service: '', price: '', duration: 60 }))
-  }, [customServices?.length, open])
+  }, [open])
+
+  // Если форма уже открыта и юзер ещё не выбрал услугу,
+  // но customServices только что загрузились — ничего не делаем принудительно.
+  // Юзер сам выберет из актуального списка. Не трогаем форму.
 
   const onSvcChange = (id: string) => {
-    const svc = services.find((s: any) => s.id === id)
+    // Always search in customServices first (real DB data), fall back to static list
+    const realSvc = (customServices || []).find((s: any) => s.id === id)
+    const svc = realSvc || services.find((s: any) => s.id === id)
     const svcNameStr = isHe ? svc?.name : (svc?.name_ru || svc?.name)
     // price may come as string "3000.00" from Supabase numeric — always parse to float first
     const svcPrice = svc?.price != null ? parseFloat(String(svc.price)) : null

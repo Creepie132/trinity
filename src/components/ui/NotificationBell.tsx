@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Bell, CheckCheck, Phone, MessageCircle, Check, X, Trash2 } from 'lucide-react'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
+import { ClientBottomSheet } from '@/components/clients/ClientBottomSheet'
 import { TrinityNotificationIcon } from './TrinityNotificationIcon'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useModalStore } from '@/store/useModalStore'
@@ -366,6 +367,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   const [isMobile, setIsMobile] = useState(false)
   const bellRef = useRef<HTMLDivElement | null>(null)
   const { openModal } = useModalStore()
+  const [mobileClient, setMobileClient] = useState<any>(null)
 
   const l = translations[locale]
   const supabase = createSupabaseBrowserClient()
@@ -614,7 +616,13 @@ export function NotificationBell({ locale }: NotificationBellProps) {
                   if (!res.ok) return
                   const client = await res.json()
                   setIsOpen(false)
-                  openModal('client-details', { client, locale })
+                  if (window.innerWidth < 768) {
+                    // Мобиле — ClientBottomSheet
+                    setMobileClient(client)
+                  } else {
+                    // Десктоп — модалка
+                    openModal('client-details', { client, locale })
+                  }
                 } catch { /* ignore */ }
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors border border-amber-200 dark:border-amber-800/40"
@@ -698,6 +706,15 @@ export function NotificationBell({ locale }: NotificationBellProps) {
           document.body
         )}
       </div>
+      {/* Мобильная карточка клиента из уведомления */}
+      {mobileClient && (
+        <ClientBottomSheet
+          client={mobileClient}
+          isOpen={!!mobileClient}
+          onClose={() => setMobileClient(null)}
+          locale={locale as 'he' | 'ru'}
+        />
+      )}
     </>
   )
 }

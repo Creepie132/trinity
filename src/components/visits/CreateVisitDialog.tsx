@@ -542,265 +542,32 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
   )
 }
 
-// ─── DESKTOP component — 3-step wizard ───────────────────────────────────────
+// ─── DESKTOP component — same form as mobile, in standard Modal ──────────────
+// WizardModal replaced with TrinityModalShell (consistent look across devices)
 function CreateVisitDesktop({ open, onOpenChange, preselectedClientId, preselectedDate, preselectedTime, onVisitCreated }: CreateVisitDialogProps) {
-  const { t, language } = useLanguage()
-  const { orgId } = useAuth()
-  const queryClient = useQueryClient()
-  const { data: customServices } = useServices()
-  const { hasWhatsapp } = useFeatures()
-  const isHe = language === 'he'; const dir = isHe ? 'rtl' : 'ltr'
-
-  const [step, setStep] = useState(1)
-  const [submitting, setSubmitting] = useState(false)
-  const [isAppt, setIsAppt] = useState(false)
-  const [selClient, setSelClient] = useState<any>(null)
-  const [form, setForm] = useState({ ...emptyForm(), clientId: preselectedClientId||'', date: toDateStr(preselectedDate), time: preselectedTime||getDefaultTime() })
-
-  useEffect(() => {
-    if (!open) return
-    setForm(p => ({ ...p, clientId: preselectedClientId||p.clientId, date: toDateStr(preselectedDate), time: preselectedTime||p.time }))
-  }, [open, preselectedDate, preselectedTime, preselectedClientId])
-
-  const services = (customServices&&customServices.length>0) ? customServices
-    : DEFAULT_SERVICES.map(s=>({ id:s.value, name:t(s.labelKey), name_ru:t(s.labelKey), duration_minutes:60, price:undefined }))
-
-  // Сбрасываем serviceId когда набор услуг меняется (дефолтные → кастомные)
-  useEffect(() => {
-    if (!open) return
-    setForm(p => ({ ...p, serviceId: '', service: '' }))
-  }, [customServices?.length, open])
-
-  const onSvcChange = (id: string) => {
-    const svc = services.find((s:any)=>s.id===id)
-    const svcNameStr = isHe ? svc?.name : (svc?.name_ru || svc?.name)
-    setForm(p=>({...p,serviceId:id,service:svcNameStr||id,price:svc?.price?.toString()||p.price,duration:svc?.duration_minutes||p.duration}))
-  }
-
-  const canProceed = step===1
-    ? (!!form.clientId && (isAppt ? !!form.meetingPurpose : !!form.serviceId))
-    : step===2 ? (!!form.date && !!form.time && (isAppt || !!form.price))
-    : true
-
-  const handleClose = () => {
-    onOpenChange(false); setStep(1); setIsAppt(false); setSelClient(null); setForm(emptyForm())
-  }
-
-  const handleSubmit = async () => {
-    if (!orgId) { toast.error(t('clients.noOrgFound')); return }
-    setSubmitting(true)
-    try {
-      await submitVisit({ orgId, isAppt, form, selClient, isHe, onVisitCreated, t,
-        onSuccess: () => { toast.success(t('common.success')); queryClient.invalidateQueries({ predicate: q=>q.queryKey[0]==='visits' }); handleClose() } })
-    } catch (e:any) { toast.error(e.message||t('common.error')) }
-    finally { setSubmitting(false) }
-  }
-
-  const selSvc = services.find((s:any)=>s.id===form.serviceId)
-  const svcName = selSvc?(isHe?selSvc.name:(selSvc.name_ru||selSvc.name)):''
-
   return (
-    <WizardModal
-      open={open} onClose={handleClose}
-      title={isAppt?(isHe?'צור פגישה':'Создать встречу'):(isHe?'צור ביקור':'Создать визит')}
-      logoLabel="Trinity CRM"
-      headerIcon={isAppt?<Calendar size={24}/>:<Scissors size={24}/>}
-      steps={[
-        { label:isHe?'לקוח ושירות':'Клиент и услуга', icon:Users },
-        { label:isHe?'תאריך ושעה':'Дата и время', icon:Calendar },
-        { label:isHe?'פרטים':'Детали', icon:FileText },
-      ]}
-      currentStep={step} onNext={()=>setStep(n=>n+1)} onBack={()=>setStep(n=>n-1)}
-      canProceed={canProceed} onSubmit={handleSubmit} isSubmitting={submitting}
-      submitLabel={isAppt?(isHe?'צור פגישה':'Создать встречу'):(isHe?'צור ביקור':'Создать визит')}
-      cancelLabel={t('common.cancel')} backLabel={isHe?'חזור':'Назад'} nextLabel={isHe?'הבא':'Далее'}
-      dir={dir} size="md"
-    >
-      {/* Step 1 */}
-      {step===1 && (
-        <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-          <div className="flex items-center p-3 bg-gray-50 rounded-xl border border-gray-200">
-            <div className="flex gap-1 p-1 bg-gray-200 rounded-lg">
-              {[{v:false,l:isHe?'ביקור':'Визит',I:Scissors},{v:true,l:isHe?'פגישה':'Встреча',I:MapPin}].map(o=>(
-                <button key={String(o.v)} type="button" onClick={()=>setIsAppt(o.v)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${isAppt===o.v?'bg-white text-indigo-700 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>
-                  <o.I className="w-3.5 h-3.5"/>{o.l}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-indigo-500"/>{t('visits.client')} *</Label>
-            <ClientSearch orgId={orgId||''} onSelect={c=>{setSelClient(c);setForm(p=>({...p,clientId:c?.id||''}))}}
-              placeholder={t('visits.selectClient')} locale={language as 'he'|'ru'|'en'} value={selClient} />
-          </div>
-          <div className="space-y-2">
-            <Label className="font-semibold text-gray-700 flex items-center gap-1.5">
-              {isAppt ? <FileText className="w-3.5 h-3.5 text-indigo-500"/> : <Scissors className="w-3.5 h-3.5 text-indigo-500"/>}
-              {isAppt ? (isHe ? 'מטרת הפגישה' : 'Цель встречи') : t('visits.service')} *
-            </Label>
-            {isAppt ? (
-              <Input
-                value={form.meetingPurpose}
-                onChange={e=>setForm(p=>({...p,meetingPurpose:e.target.value}))}
-                placeholder={isHe ? 'לדוגמה: ייעוץ, הצגה, פגישת עבודה...' : 'Напр.: консультация, презентация, переговоры...'}
-                className="h-11"
-              />
-            ) : (
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <Select value={form.serviceId} onValueChange={onSvcChange}>
-                    <SelectTrigger className="h-11 w-full"><SelectValue placeholder={t('visits.selectService')}/></SelectTrigger>
-                    <SelectContent>{services.map((s:any)=>{const n=isHe?s.name:(s.name_ru||s.name); return <SelectItem key={s.id} value={s.id}>{n}</SelectItem>})}</SelectContent>
-                  </Select>
-                </div>
-                <input type="number" min={1} max={999} value={form.quantity}
-                  onChange={e=>setForm(p=>({...p,quantity:Math.max(1,Math.min(999,parseInt(e.target.value)||1))}))}
-                  className="h-11 w-16 rounded-md border border-input bg-background px-2 text-sm text-center font-semibold shrink-0" />
-              </div>
-            )}
-          </div>
-          {selClient && (
-            <div className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
-              <div className="w-8 h-8 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-sm">
-                {selClient.first_name?.[0]}{selClient.last_name?.[0]}
-              </div>
-              <div><p className="text-sm font-semibold text-indigo-800">{selClient.first_name} {selClient.last_name}</p>
-                {selClient.phone&&<p className="text-xs text-indigo-500">{selClient.phone}</p>}</div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Step 2 */}
-      {step===2 && (
-        <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-indigo-500"/>{t('visits.date')} *</Label>
-              <Input type="date" value={form.date} className="h-11" onChange={e=>setForm(p=>({...p,date:e.target.value}))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-indigo-500"/>{t('visits.time')} *</Label>
-              <Input type="time" value={form.time} className="h-11" onChange={e=>setForm(p=>({...p,time:e.target.value}))} />
-            </div>
-          </div>
-          {isAppt ? (
-            <div className="space-y-4">
-              {/* Тумблер Онлайн / Оффлайн */}
-              <div className="flex items-center p-2 bg-gray-50 rounded-xl border border-gray-200">
-                <div className="flex gap-1 p-1 bg-gray-200 rounded-lg w-full">
-                  {[{v:false,l:isHe?'פרונטלי':'Оффлайн',I:MapPin},{v:true,l:isHe?'מקוון':'Онлайн',I:Video}].map(o=>(
-                    <button key={String(o.v)} type="button" onClick={()=>setForm(p=>({...p,isOnline:o.v}))}
-                      className={`flex items-center justify-center gap-1.5 flex-1 px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${form.isOnline===o.v?'bg-white shadow-sm '+(o.v?'text-sky-600':'text-indigo-700'):'text-gray-500 hover:text-gray-700'}`}>
-                      <o.I className="w-3.5 h-3.5"/>{o.l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {/* Поля онлайн / оффлайн */}
-              {form.isOnline ? (
-                <div className="space-y-1.5">
-                  <Label className="font-semibold text-gray-700 flex items-center gap-1.5">
-                    <Video className="w-3.5 h-3.5 text-sky-500"/>{isHe?'קישור לפגישה':'Ссылка на встречу'}
-                    <span className="text-xs font-normal text-gray-400">({isHe?'אופציונלי':'необязательно'})</span>
-                  </Label>
-                  <Input value={form.meeting_link} onChange={e=>setForm(p=>({...p,meeting_link:e.target.value}))} className="h-11" placeholder="https://zoom.us/..." type="url" dir="ltr"/>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-1.5">
-                    <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-indigo-500"/>{isHe?'עיר':'Город'}</Label>
-                    <CityAutocomplete value={form.city} onChange={v=>setForm(p=>({...p,city:v}))} placeholder={isHe?'עיר בעברית':'Введите 2 символа...'} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-indigo-500"/>{isHe?'כתובת':'Адрес'}</Label>
-                    <Input value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))} className="h-11" dir="rtl" placeholder="הזן כתובת בעברית בלבד" />
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-gray-700">{t('visits.duration')} *</Label>
-                <Select value={form.duration.toString()} onValueChange={v=>setForm(p=>({...p,duration:parseInt(v)}))}>
-                  <SelectTrigger className="h-11"><SelectValue/></SelectTrigger>
-                  <SelectContent>{DURATIONS.map(d=><SelectItem key={d.value} value={d.value.toString()}>{t(d.labelKey)}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-gray-700">{t('visits.price')} *</Label>
-                <Input type="number" value={form.price} placeholder="100" className="h-11" onChange={e=>setForm(p=>({...p,price:e.target.value}))} />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Step 3 */}
-      {step===3 && (
-        <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-          {/* Напоминания — только для встречи */}
-          {isAppt && (
-            <ReminderBlock
-              hasWhatsapp={hasWhatsapp}
-              value={form.reminderHours}
-              onChange={v=>setForm(p=>({...p,reminderHours:v}))}
-              isHe={isHe}
-            />
-          )}
-          <div className="space-y-1.5">
-            <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-indigo-500"/>{t('visits.notes')}</Label>
-            <Textarea value={form.notes} rows={3} placeholder={t('visits.notes')} className="resize-none max-h-[120px] overflow-y-auto"
-              onChange={e=>setForm(p=>({...p,notes:e.target.value}))} />
-          </div>
-          <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl space-y-2.5">
-            <p className="text-xs font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5"/>
-              {isAppt?(isHe?'סיכום פגישה':'Сводка встречи'):(isHe?'סיכום ביקור':'Сводка визита')}
-            </p>
-            <div className="space-y-1.5 text-sm text-indigo-800">
-              {selClient&&<div className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-indigo-400 shrink-0"/><span className="font-medium">{selClient.first_name} {selClient.last_name}</span></div>}
-              {isAppt && form.meetingPurpose && <div className="flex items-center gap-2"><FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0"/><span>{form.meetingPurpose}</span></div>}
-              {!isAppt && svcName&&<div className="flex items-center gap-2"><Scissors className="w-3.5 h-3.5 text-indigo-400 shrink-0"/>
-                <span>{svcName}{form.price?` — ₪${form.price}`:''}{form.quantity>1&&<span className="ml-1.5 px-1.5 py-0.5 bg-indigo-200 text-indigo-700 rounded text-xs font-bold">×{form.quantity}</span>}</span>
-              </div>}
-              <div className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0"/><span>{form.date} {isHe?'ב':'в'} {form.time}</span></div>
-              {!isAppt&&<div className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0"/><span>{form.duration} {isHe?'דקות':'мин'}</span></div>}
-              {isAppt&&form.isOnline&&<div className="flex items-center gap-2"><Video className="w-3.5 h-3.5 text-sky-400 shrink-0"/><span>{form.meeting_link||( isHe?'מקוון':'Онлайн')}</span></div>}
-              {isAppt&&!form.isOnline&&(form.city||form.address)&&<div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0"/><span dir="rtl">{form.city}{form.address?`, ${form.address}`:''}</span></div>}
-            </div>
-          </div>
-        </div>
-      )}
-    </WizardModal>
+    <CreateVisitMobile
+      open={open}
+      onClose={() => onOpenChange(false)}
+      preselectedClientId={preselectedClientId}
+      preselectedDate={preselectedDate}
+      preselectedTime={preselectedTime}
+      onVisitCreated={onVisitCreated}
+    />
   )
 }
 
-// ─── PUBLIC EXPORT: router — mobile uses bottom sheet, desktop uses wizard ────
+// ─── PUBLIC EXPORT ─────────────────────────────────────────────────────────────
+// Единая форма для мобиля и десктопа — TrinityModalShell bottom sheet
 export function CreateVisitDialog({ open, onOpenChange, preselectedClientId, preselectedDate, preselectedTime, onVisitCreated }: CreateVisitDialogProps) {
-  const [isMobile, setIsMobile] = useState(false)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    setMounted(true)
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-
-  // До mount не рендерим ничего — избегаем hydration mismatch
-  if (!mounted) return null
-
-  if (isMobile) {
-    return <CreateVisitMobile open={open} onClose={()=>onOpenChange(false)}
-      preselectedClientId={preselectedClientId} preselectedDate={preselectedDate}
-      preselectedTime={preselectedTime} onVisitCreated={onVisitCreated} />
-  }
-
-  return <CreateVisitDesktop open={open} onOpenChange={onOpenChange}
-    preselectedClientId={preselectedClientId} preselectedDate={preselectedDate}
-    preselectedTime={preselectedTime} onVisitCreated={onVisitCreated} />
+  return (
+    <CreateVisitMobile
+      open={open}
+      onClose={() => onOpenChange(false)}
+      preselectedClientId={preselectedClientId}
+      preselectedDate={preselectedDate}
+      preselectedTime={preselectedTime}
+      onVisitCreated={onVisitCreated}
+    />
+  )
 }

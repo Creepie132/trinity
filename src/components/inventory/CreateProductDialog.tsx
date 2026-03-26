@@ -246,7 +246,7 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
               <div style={{ background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', border: '1.5px solid #ddd6fe', borderRadius: 14, padding: '12px 14px' }}>
                 <label style={{ fontSize: 9, fontWeight: 700, color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>{t('inventory.category')}</label>
                 <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                  <SelectTrigger style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 13, fontWeight: 600, color: '#5b21b6', boxShadow: 'none' }}>
+                  <SelectTrigger className="w-full border-0 bg-transparent shadow-none focus:ring-0 px-0 text-[13px] font-semibold text-purple-700 h-auto">
                     <SelectValue placeholder={t('inventory.category')} />
                   </SelectTrigger>
                   <SelectContent>{categories.map((cat) => <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>)}</SelectContent>
@@ -255,7 +255,7 @@ export function CreateProductDialog({ open, onClose }: CreateProductDialogProps)
               <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '1.5px solid #bbf7d0', borderRadius: 14, padding: '12px 14px' }}>
                 <label style={{ fontSize: 9, fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>{t('inventory.unit')}</label>
                 <Select value={formData.unit} onValueChange={(value) => setFormData({ ...formData, unit: value })}>
-                  <SelectTrigger style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 13, fontWeight: 600, color: '#16a34a', boxShadow: 'none' }}>
+                  <SelectTrigger className="w-full border-0 bg-transparent shadow-none focus:ring-0 px-0 text-[13px] font-semibold text-green-700 h-auto">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>{units.map((unit) => <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>)}</SelectContent>

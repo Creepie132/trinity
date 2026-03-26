@@ -7,6 +7,7 @@ import {
   MessageCircle, FileText, RotateCcw, Receipt,
   CreditCard, Banknote, Smartphone, Building2, CheckCircle2,
   Clock, AlertCircle, Ban, TrendingUp, Loader2,
+  Package, Wrench, Hash, CalendarDays, Phone,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
@@ -45,16 +46,45 @@ function getInitials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')
 }
 
-export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner, onRefunded, isSuperAdmin, onDeleted }: PaymentDetailsDrawerProps) {
+export function PaymentDetailsDrawer({
+  payment: initialPayment,
+  isOpen,
+  onClose,
+  locale,
+  isOwner,
+  onRefunded,
+  isSuperAdmin,
+  onDeleted,
+}: PaymentDetailsDrawerProps) {
   const [refunding, setRefunding]    = useState(false)
   const [sendingReceipt, setSending] = useState(false)
   const [downloadingPdf, setDownloading] = useState(false)
+  // Rich payment data with sale_items (loaded on open)
+  const [richPayment, setRichPayment] = useState<any>(null)
+  const [loadingDetails, setLoadingDetails] = useState(false)
+
   const isHe = locale === 'he'
   const dir  = isHe ? 'rtl' : 'ltr'
 
+  // Load full details (with sale_items) when drawer opens
+  useEffect(() => {
+    if (!isOpen || !initialPayment?.id) { setRichPayment(null); return }
+    setLoadingDetails(true)
+    fetch(`/api/payments/${initialPayment.id}`)
+      .then(r => r.json())
+      .then(data => setRichPayment(data.payment || null))
+      .catch(() => setRichPayment(null))
+      .finally(() => setLoadingDetails(false))
+  }, [isOpen, initialPayment?.id])
+
+  // Merge: prefer richPayment fields, fallback to initialPayment
+  const payment = richPayment
+    ? { ...initialPayment, ...richPayment }
+    : initialPayment
+
   const L = {
     he: {
-      method: 'אמצעי תשלום', status: 'סטטוס', date: 'תאריך',
+      method: 'אמצעי תשלום', status: 'סטטוס', date: 'תאריך', time: 'שעה',
       tranzilaId: 'מזהה Tranzila', internalId: 'מזהה פנימי', type: 'סוג',
       sendWhatsapp: 'שלח קבלה ב-WhatsApp', downloadPdf: 'הורד PDF (Tranzila)',
       refund: 'בצע החזר', refundConfirm: 'אשר החזר?',
@@ -64,9 +94,11 @@ export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner
       cash: 'מזומן', credit_card: 'כרטיס', bank_transfer: 'העברה', bit: 'ביט',
       service: 'שירות', product: 'מוצר', subscription: 'מנוי',
       noPhone: 'אין מספר טלפון', close: 'סגור', description: 'תיאור', phone: 'טלפון',
+      items: 'פריטים', total: 'סה״כ', saleId: 'מספר עסקה',
+      qty: 'כמות', notes: 'הערות', purchaseDate: 'תאריך רכישה',
     },
     ru: {
-      method: 'Способ оплаты', status: 'Статус', date: 'Дата',
+      method: 'Способ оплаты', status: 'Статус', date: 'Дата', time: 'Время',
       tranzilaId: 'Tranzila ID', internalId: 'Внутренний ID', type: 'Тип',
       sendWhatsapp: 'Отправить квитанцию WA', downloadPdf: 'Скачать PDF (Tranzila)',
       refund: 'Возврат', refundConfirm: 'Подтвердить возврат?',
@@ -76,30 +108,43 @@ export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner
       cash: 'Наличные', credit_card: 'Карта', bank_transfer: 'Перевод', bit: 'Bit',
       service: 'Услуга', product: 'Товар', subscription: 'Абонемент',
       noPhone: 'Нет телефона', close: 'Закрыть', description: 'Описание', phone: 'Телефон',
+      items: 'Позиции', total: 'Итого', saleId: 'Номер сделки',
+      qty: 'Кол-во', notes: 'Примечания', purchaseDate: 'Дата покупки',
     },
   }
   const l = L[locale]
 
   if (!payment) return null
 
-  const clientName = payment.client_name || (payment.clients ? `${payment.clients.first_name || ''} ${payment.clients.last_name || ''}`.trim() : null) || '—'
+  const clientName  = payment.client_name
+    || (payment.clients ? `${payment.clients.first_name || ''} ${payment.clients.last_name || ''}`.trim() : null)
+    || '—'
   const clientPhone = payment.clients?.phone || payment.client_phone || ''
   const paymentDate = payment.paid_at || payment.created_at
-  const formattedDate = paymentDate ? format(new Date(paymentDate), 'dd/MM/yyyy HH:mm') : '—'
-  const method = payment.payment_method || 'cash'
-  const mc = METHOD_CONFIG[method] || { icon: <Receipt size={20} />, color: '#64748b', bg: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: '#e2e8f0', gradient: 'linear-gradient(135deg,#94a3b8,#64748b)' }
-  const sc = STATUS_CONFIG[payment.status] || STATUS_CONFIG.cancelled
+  const dateObj     = paymentDate ? new Date(paymentDate) : null
+  const formattedDate = dateObj ? format(dateObj, 'dd/MM/yyyy') : '—'
+  const formattedTime = dateObj ? format(dateObj, 'HH:mm') : '—'
+  const formattedFull = dateObj ? format(dateObj, 'dd/MM/yyyy HH:mm') : '—'
+
+  const method  = payment.payment_method || 'cash'
+  const mc      = METHOD_CONFIG[method] || { icon: <Receipt size={20} />, color: '#64748b', bg: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: '#e2e8f0', gradient: 'linear-gradient(135deg,#94a3b8,#64748b)' }
+  const sc      = STATUS_CONFIG[payment.status] || STATUS_CONFIG.cancelled
   const methodLabel: Record<string, string> = { cash: l.cash, credit_card: l.credit_card, card: l.credit_card, bank_transfer: l.bank_transfer, bit: l.bit, transfer: l.bank_transfer }
   const statusLabel: Record<string, string> = { completed: l.paid, paid: l.paid, pending: l.pending, failed: l.failed, refunded: l.refunded, cancelled: l.cancelled }
-  const tranzilaId = payment.transaction_id || payment.metadata?.tranzila_transaction_id || payment.metadata?.transaction_id || null
-  const typeLabel = payment.subscription_period_start ? l.subscription : payment.type === 'product' ? l.product : l.service
-  const initials = getInitials(clientName)
+  const tranzilaId  = payment.transaction_id || payment.metadata?.tranzila_transaction_id || payment.metadata?.transaction_id || null
+  const typeLabel   = payment.subscription_period_start ? l.subscription : payment.type === 'product' ? l.product : l.service
+  const initials    = getInitials(clientName)
+
+  // sale_items from linked sale
+  const saleItems: any[] = payment.sales?.sale_items ?? []
+  const saleId    = payment.sales?.id ?? null
+  const saleNotes = payment.sales?.notes ?? payment.description ?? null
 
   const handleWhatsApp = async () => {
     if (!clientPhone) { toast.error(l.noPhone); return }
     setSending(true)
     try {
-      const res = await fetch(`/api/payments/${payment.id}/send-receipt`, { method: 'POST' })
+      const res  = await fetch(`/api/payments/${payment.id}/send-receipt`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
       toast.success(l.receiptSent)
@@ -111,7 +156,7 @@ export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner
     setDownloading(true)
     try {
       if (!payment.tranzila_document_id) {
-        const res = await fetch(`/api/payments/${payment.id}/send-receipt`, { method: 'POST' })
+        const res  = await fetch(`/api/payments/${payment.id}/send-receipt`, { method: 'POST' })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Failed to create receipt')
       }
@@ -133,10 +178,50 @@ export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner
     finally { setRefunding(false) }
   }
 
-  // ── Sidebar ────────────────────────────────────────────────────────────────
+  // ── Mobile footer buttons ─────────────────────────────────────────────────
+  const mobileFooter = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+      {clientPhone && (
+        <button onClick={handleWhatsApp} disabled={sendingReceipt}
+          style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: sendingReceipt ? 0.6 : 1 }}>
+          {sendingReceipt ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <MessageCircle size={16} />}
+          {l.sendWhatsapp}
+        </button>
+      )}
+      {payment.status === 'completed' && (
+        <button onClick={handleDownloadPdf} disabled={downloadingPdf}
+          style={{ width: '100%', padding: '13px', borderRadius: 12, border: '1.5px solid #bfdbfe', background: '#eff6ff', color: '#2563eb', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: downloadingPdf ? 0.6 : 1 }}>
+          {downloadingPdf ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <FileText size={16} />}
+          {l.downloadPdf}
+        </button>
+      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        {isOwner && payment.status === 'completed' && (
+          <button onClick={handleRefund} disabled={refunding}
+            style={{ flex: 1, padding: '13px', borderRadius: 12, border: '1.5px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            {refunding ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <RotateCcw size={16} />}
+            {l.refund}
+          </button>
+        )}
+        <button onClick={onClose}
+          style={{ flex: 1, padding: '13px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+          {l.close}
+        </button>
+      </div>
+      {isSuperAdmin && (
+        <AdminDeletePaymentButton
+          paymentId={payment.id}
+          variant="sidebar"
+          onDeleted={() => { onDeleted?.(); onClose() }}
+        />
+      )}
+    </div>
+  )
+
+  // ── Desktop sidebar ───────────────────────────────────────────────────────
   const sidebar = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {/* Avatar with method gradient */}
+      {/* Avatar */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
         <div style={{ width: 56, height: 56, borderRadius: 16, background: mc.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 900, boxShadow: `0 6px 20px ${mc.color}44` }}>
           {initials || mc.icon}
@@ -144,7 +229,7 @@ export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner
       </div>
       {/* Date */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', padding: '3px 10px', borderRadius: 20 }}>{formattedDate}</span>
+        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.06)', padding: '3px 10px', borderRadius: 20 }}>{formattedFull}</span>
       </div>
       {/* Amount */}
       <div style={{ background: sc.bg, border: `0.5px solid ${sc.border}`, borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 8 }}>
@@ -184,11 +269,7 @@ export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner
       )}
       {isSuperAdmin && (
         <div style={{ marginBottom: 5 }}>
-          <AdminDeletePaymentButton
-            paymentId={payment.id}
-            variant="sidebar"
-            onDeleted={() => { onDeleted?.(); onClose() }}
-          />
+          <AdminDeletePaymentButton paymentId={payment.id} variant="sidebar" onDeleted={() => { onDeleted?.(); onClose() }} />
         </div>
       )}
       <button onClick={onClose}
@@ -198,69 +279,145 @@ export function PaymentDetailsDrawer({ payment, isOpen, onClose, locale, isOwner
     </div>
   )
 
+  // ── Main content (shared desktop + mobile) ────────────────────────────────
+  const content = (
+    <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
+
+      {/* Amount hero */}
+      <div style={{ background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 16, padding: '20px', textAlign: 'center' }}>
+        <div style={{ fontSize: 44, fontWeight: 900, color: sc.color, letterSpacing: '-2px', lineHeight: 1, marginBottom: 8 }}>
+          ₪{Number(payment.amount).toFixed(2)}
+        </div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 20, background: `${sc.dot}20`, border: `1px solid ${sc.dot}40` }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: sc.dot }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: sc.color, letterSpacing: '0.05em' }}>{statusLabel[payment.status] || payment.status}</span>
+        </div>
+      </div>
+
+      {/* Date + Time + Method + Type */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Date */}
+        <div style={{ background: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: '1px solid #e2e8f0', borderRadius: 14, padding: '12px 14px' }}>
+          <p style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{l.purchaseDate}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <CalendarDays size={15} color="#94a3b8" />
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{formattedDate}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 4 }}>
+            <Clock size={13} color="#94a3b8" />
+            <span style={{ fontSize: 12, color: '#64748b' }}>{formattedTime}</span>
+          </div>
+        </div>
+        {/* Method */}
+        <div style={{ background: mc.bg, border: `1px solid ${mc.border}`, borderRadius: 14, padding: '12px 14px' }}>
+          <p style={{ fontSize: 9, fontWeight: 700, color: mc.color, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{l.method}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: mc.color }}>{mc.icon}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{methodLabel[method] || method}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Type */}
+      <div style={{ background: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l.type}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{typeLabel}</span>
+      </div>
+
+      {/* Phone */}
+      {clientPhone && (
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Phone size={13} color="#94a3b8" />
+            <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{l.phone}</span>
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#334155', fontFamily: 'monospace' }}>{clientPhone}</span>
+        </div>
+      )}
+
+      {/* Loading skeleton for sale_items */}
+      {loadingDetails && (
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '14px', textAlign: 'center' }}>
+          <Loader2 size={18} color="#94a3b8" style={{ animation: 'spin 1s linear infinite', margin: '0 auto' }} />
+        </div>
+      )}
+
+      {/* Sale items */}
+      {!loadingDetails && saleItems.length > 0 && (
+        <div>
+          <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{l.items}</p>
+          <div style={{ border: '0.5px solid #e8edf4', borderRadius: 14, overflow: 'hidden', background: '#fff' }}>
+            {saleItems.map((item: any, idx: number) => {
+              const isProduct  = !!item.product_id
+              const itemTotal  = Number(item.total_price || item.quantity * item.unit_price)
+              return (
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderTop: idx > 0 ? '0.5px solid #f1f5f9' : 'none' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: isProduct ? '#fef3c7' : '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {isProduct ? <Package size={15} color="#d97706" /> : <Wrench size={15} color="#7c3aed" />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{item.product_name}</p>
+                    <p style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0 0' }}>{item.quantity} × ₪{Number(item.unit_price).toLocaleString()}</p>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: '#1e293b', flexShrink: 0 }}>₪{itemTotal.toLocaleString()}</span>
+                </div>
+              )
+            })}
+            {/* Total row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'linear-gradient(90deg, #1e293b, #0f172a)', borderTop: '0.5px solid #e8edf4' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l.total}</span>
+              <span style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>₪{Number(payment.amount).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Description / Notes */}
+      {(saleNotes || payment.description) && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px' }}>
+          <p style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>{saleNotes ? l.notes : l.description}</p>
+          <p style={{ fontSize: 13, color: '#78350f', margin: 0, lineHeight: 1.5 }}>{saleNotes || payment.description}</p>
+        </div>
+      )}
+
+      {/* Tranzila ID / Sale ID */}
+      <div className="space-y-2">
+        {tranzilaId && (
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{l.tranzilaId}</span>
+            <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#64748b' }}>{tranzilaId}</span>
+          </div>
+        )}
+        {saleId && (
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{l.saleId}</span>
+            <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#64748b' }}>{saleId.slice(0, 16)}…</span>
+          </div>
+        )}
+        {/* Internal ID — small gray */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Hash size={10} color="#cbd5e1" />
+          <span style={{ fontSize: 10, color: '#cbd5e1', fontWeight: 600 }}>{l.internalId}:</span>
+          <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#cbd5e1' }}>{payment.id?.slice(0, 16)}…</span>
+        </div>
+      </div>
+
+    </div>
+  )
+
   return (
     <Modal open={isOpen} onClose={onClose} darkHeader showCloseButton={false} width="700px" dir={dir} contentClassName="!p-0">
-      <TrinityModalShell open={isOpen} onClose={onClose} icon={<Receipt />}
-        title={clientName} subtitle={formattedDate} dir={dir} sidebarExtra={sidebar}>
-        <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
-
-          {/* Amount hero */}
-          <div style={{ background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: 16, padding: '20px', textAlign: 'center' }}>
-            <div style={{ fontSize: 44, fontWeight: 900, color: sc.color, letterSpacing: '-2px', lineHeight: 1, marginBottom: 8 }}>
-              ₪{Number(payment.amount).toFixed(2)}
-            </div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 20, background: `${sc.dot}20`, border: `1px solid ${sc.dot}40` }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: sc.dot }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: sc.color, letterSpacing: '0.05em' }}>{statusLabel[payment.status] || payment.status}</span>
-            </div>
-          </div>
-
-          {/* Method + Type cards */}
-          <div className="grid grid-cols-2 gap-3">
-            <div style={{ background: mc.bg, border: `1px solid ${mc.border}`, borderRadius: 14, padding: '12px 14px' }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: mc.color, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{l.method}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: mc.color }}>{mc.icon}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{methodLabel[method] || method}</span>
-              </div>
-            </div>
-            <div style={{ background: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: '1px solid #e2e8f0', borderRadius: 14, padding: '12px 14px' }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{l.type}</p>
-              <p style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', margin: 0 }}>{typeLabel}</p>
-            </div>
-          </div>
-
-          {/* Phone */}
-          {clientPhone && (
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{l.phone}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#334155', fontFamily: 'monospace' }}>{clientPhone}</span>
-            </div>
-          )}
-
-          {/* Description */}
-          {payment.description && (
-            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px' }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>{l.description}</p>
-              <p style={{ fontSize: 13, color: '#78350f', margin: 0, lineHeight: 1.5 }}>{payment.description}</p>
-            </div>
-          )}
-
-          {/* IDs */}
-          <div className="space-y-2">
-            {tranzilaId && (
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{l.tranzilaId}</span>
-                <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#64748b' }}>{tranzilaId}</span>
-              </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10, color: '#cbd5e1', fontWeight: 600 }}>{l.internalId}:</span>
-              <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#cbd5e1' }}>{payment.id?.slice(0, 16)}…</span>
-            </div>
-          </div>
-
-        </div>
+      <TrinityModalShell
+        open={isOpen}
+        onClose={onClose}
+        icon={<Receipt />}
+        title={clientName}
+        subtitle={formattedFull}
+        dir={dir}
+        sidebarExtra={sidebar}
+        footerContent={mobileFooter}
+      >
+        {content}
       </TrinityModalShell>
     </Modal>
   )

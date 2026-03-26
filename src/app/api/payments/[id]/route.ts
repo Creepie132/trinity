@@ -16,7 +16,17 @@ export async function GET(
 
     const { data: payment, error } = await serviceSupabase
       .from('payments')
-      .select(`*, clients(id, first_name, last_name, phone, email)`)
+      .select(`
+        *,
+        clients(id, first_name, last_name, phone, email),
+        sales:sale_id(
+          id, total_amount, paid_amount, status, sale_date,
+          payment_method, receipt_sent, notes,
+          sale_items(
+            id, product_id, product_name, quantity, unit_price, total_price
+          )
+        )
+      `)
       .eq('id', id)
       .eq('org_id', orgId)
       .single()

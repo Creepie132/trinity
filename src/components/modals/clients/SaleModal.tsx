@@ -500,23 +500,39 @@ export function SaleModal() {
         credit: 'credit_card',
       }
 
-      const { data: payment, error: paymentError } = await supabase
-        .from('payments')
-        .insert({
-          client_id: client.id,
-          org_id: orgId,
-          amount: total,
-          payment_method: methodMap[paymentMethod] || paymentMethod,
-          status: 'completed',
-          type: 'client',
-          description,
-          ...(visitId ? { visit_id: visitId } : {}),
-          paid_at: new Date().toISOString(),
-        })
-        .select()
-        .single()
+      // ── Create sale via API (handles both sales + payments atomically) ──
+      // Previously SaleModal created payment directly via supabase browser client
+      // and never created a sales record. Now we use /api/sales which creates
+      // both atomically on the server with proper org isolation.
+      const saleApiHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (activeOrgId) saleApiHeaders['X-Branch-Org-Id'] = activeOrgId
 
-      if (paymentError) throw paymentError
+      const saleRes = await fetch('/api/sales', {
+        method: 'POST',
+        headers: saleApiHeaders,
+        body: JSON.stringify({
+          client_id: client.id,
+          items: cart.map(i => ({
+            product_id: i.product.id.startsWith('custom_') ? undefined : i.product.id,
+            product_name: i.product.name,
+            quantity: i.quantity,
+            unit_price: i.price,
+          })),
+          paid_amount: total,
+          payment_method: methodMap[paymentMethod] || paymentMethod,
+          sale_date: new Date().toISOString().slice(0, 10),
+          notes: description,
+        }),
+      })
+
+      if (!saleRes.ok) {
+        const errBody = await saleRes.json().catch(() => ({}))
+        throw new Error(errBody.error || 'Failed to create sale')
+      }
+
+      const saleResult = await saleRes.json()
+      // saleResult.payment_id — the payment created by /api/sales
+      const payment = { id: saleResult.payment_id }
 
       // Inventory transactions only for cart products (not preloaded services)
       // Use /api/inventory (service role) to support branch isolation
@@ -550,6 +566,10 @@ export function SaleModal() {
 
       // Clear draft
       localStorage.removeItem(`draft_sale_${client.id}`)
+
+      // Invalidate sales + payments cache so lists refresh immediately
+      queryClient.invalidateQueries({ queryKey: ['sales'] })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
 
       toast.success(locale === 'he' ? 'התשלום התקבל ✓' : 'Оплата принята ✓')
       handleClose()

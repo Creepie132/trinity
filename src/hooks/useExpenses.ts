@@ -39,7 +39,16 @@ export interface ExpensesStats {
 
 export function useExpenses(month?: string, category?: string) {
   const { activeOrgId } = useBranch()
-  useRealtimeSync({ table: 'expenses', orgId: activeOrgId, queryKey: ['expenses'] })
+  const queryClient = useQueryClient()
+  // ONE channel — also invalidates expenses-stats via onEvent
+  useRealtimeSync({
+    table: 'expenses',
+    orgId: activeOrgId,
+    queryKey: ['expenses'],
+    onEvent: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses-stats'], exact: false })
+    },
+  })
   return useQuery<Expense[]>({
     queryKey: ['expenses', month, category],
     queryFn: async () => {
@@ -57,9 +66,8 @@ export function useExpenses(month?: string, category?: string) {
 
 export function useExpensesStats(month?: string) {
   const { activeOrgId } = useBranch()
-  // NOTE: useExpenses already subscribes to expenses table.
-  // This hook uses a separate channel (unique name via queryKey) — no conflict.
-  useRealtimeSync({ table: 'expenses', orgId: activeOrgId, queryKey: ['expenses-stats'] })
+  // Subscription handled by useExpenses via onEvent callback.
+  // No separate channel here — useRealtimeSync intentionally omitted.
   return useQuery<ExpensesStats>({
     queryKey: ['expenses-stats', month],
     queryFn: async () => {

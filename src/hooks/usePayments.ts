@@ -25,10 +25,19 @@ interface PaymentsFilters {
 
 export function usePayments(clientId?: string, filters?: PaymentsFilters) {
   const { activeOrgId } = useBranch()
+  const queryClient = useQueryClient()
 
   // ── Realtime sync ────────────────────────────────────────────────────────
-  // Any INSERT/UPDATE/DELETE on payments for this org → invalidate cache
-  useRealtimeSync({ table: 'payments', orgId: activeOrgId, queryKey: ['payments'] })
+  // ONE channel per table — invalidates both payments and payments-stats
+  // via onEvent to avoid duplicate channel error (mismatch bindings)
+  useRealtimeSync({
+    table: 'payments',
+    orgId: activeOrgId,
+    queryKey: ['payments'],
+    onEvent: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments-stats'], exact: false })
+    },
+  })
 
   return useQuery({
     queryKey: ['payments', activeOrgId, clientId, filters],
@@ -62,9 +71,9 @@ export function usePaymentsStats() {
   const { activeOrgId } = useBranch()
 
   // ── Realtime sync ────────────────────────────────────────────────────────
-  // NOTE: usePayments already subscribes to payments table.
-  // This hook uses a separate channel (unique name via queryKey) — no conflict.
-  useRealtimeSync({ table: 'payments', orgId: activeOrgId, queryKey: ['payments-stats'] })
+  // Subscription handled by usePayments via onEvent callback.
+  // No separate channel here to avoid duplicate subscriptions on same table.
+  // useRealtimeSync intentionally omitted.
 
   return useQuery({
     queryKey: ['payments-stats', activeOrgId],

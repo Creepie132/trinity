@@ -31,6 +31,27 @@
  * useRealtimeSync({ table: 'clients',  orgId: mainOrgId,   queryKey: ['clients']  })
  * useRealtimeSync({ table: 'products', orgId: activeOrgId, queryKey: ['products'] })
  * ```
+ *
+ * ─── ⚠️ ANTI-PATTERN: Never subscribe to the same table twice ─────────────
+ * If two hooks need to react to the same table, use ONE subscription and
+ * invalidate additional queryKeys via the `onEvent` callback:
+ *
+ * ```ts
+ * // ✅ CORRECT — one channel, multiple invalidations
+ * useRealtimeSync({
+ *   table: 'payments',
+ *   orgId: activeOrgId,
+ *   queryKey: ['payments'],
+ *   onEvent: () => {
+ *     queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
+ *   }
+ * })
+ *
+ * // ❌ WRONG — two channels on same table = "mismatch between server and
+ * //            client bindings" error in Supabase Realtime
+ * useRealtimeSync({ table: 'payments', orgId, queryKey: ['payments'] })
+ * useRealtimeSync({ table: 'payments', orgId, queryKey: ['payments-stats'] })
+ * ```
  */
 
 import { useEffect, useRef } from 'react'

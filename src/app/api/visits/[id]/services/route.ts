@@ -87,7 +87,7 @@ export async function POST(
 
     const body: CreateVisitServiceDTO = await request.json()
 
-    if (!body.service_name || !body.price || !body.duration_minutes) {
+    if (!body.service_name || body.price == null || body.duration_minutes == null) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 

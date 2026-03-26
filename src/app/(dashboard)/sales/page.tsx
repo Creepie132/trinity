@@ -140,9 +140,10 @@ function BarChart({ chartPoints, locale }: { chartPoints: SaleChartPoint[]; loca
   }, [bars])
 
   const max = Math.max(...bars.map(b => b.value), 1)
+  const CHART_H = 56 // px — высота области баров (контейнер h-16 = 64px минус 8px под метки)
 
   return (
-    <div className="flex items-end gap-2 h-16">
+    <div className="flex items-end gap-2" style={{ height: '64px' }}>
       {bars.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <span className="text-xs text-gray-300 dark:text-gray-600">
@@ -150,22 +151,25 @@ function BarChart({ chartPoints, locale }: { chartPoints: SaleChartPoint[]; loca
           </span>
         </div>
       ) : bars.map((b, i) => {
-        const pct = Math.round((b.value / max) * 100)
+        const barH = Math.max(Math.round((b.value / max) * CHART_H), 3)
         const isLast = i === bars.length - 1
         return (
-          <div key={b.key} className="flex flex-col items-center gap-1 flex-1 group cursor-default"
+          <div key={b.key} className="flex flex-col items-center justify-end gap-1 flex-1 group cursor-default"
+            style={{ height: '64px' }}
             title={`₪${b.value.toLocaleString()}`}>
-            <div className="w-full flex items-end" style={{ height: '100%' }}>
-              <div className="w-full rounded-t-md transition-all duration-700"
-                style={{
-                  height: mounted ? `${Math.max(pct, 4)}%` : '2%',
-                  background: isLast ? 'linear-gradient(to top,#f59e0b,#fbbf24)' : 'linear-gradient(to top,#fde68a,#fef3c7)',
-                  boxShadow: isLast ? '0 -2px 8px rgba(245,158,11,.35)' : 'none',
-                  transitionDelay: `${i * 80}ms`,
-                }}
-              />
-            </div>
-            <span className={`text-[9px] font-medium ${
+            <div
+              className="w-full rounded-t-md transition-all duration-700"
+              style={{
+                height: mounted ? `${barH}px` : '2px',
+                background: isLast
+                  ? 'linear-gradient(to top,#f59e0b,#fbbf24)'
+                  : 'linear-gradient(to top,#fde68a,#fef3c7)',
+                boxShadow: isLast ? '0 -2px 8px rgba(245,158,11,.35)' : 'none',
+                transitionDelay: `${i * 80}ms`,
+                flexShrink: 0,
+              }}
+            />
+            <span className={`text-[9px] font-medium leading-none ${
               isLast ? 'text-amber-500' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
             }`}>{b.label}</span>
           </div>

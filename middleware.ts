@@ -10,7 +10,7 @@ const PUBLIC_PATH_SET = new Set([
 ])
 
 const PUBLIC_PATH_PREFIXES = [
-  '/demo', '/onboarding/', '/book/', '/invite/', '/.well-known',
+  '/demo', '/onboarding/', '/book/', '/invite/', '/register/', '/.well-known',
   '/api/demo/', '/api/payments/webhook', '/api/payments/stripe-webhook',
   '/api/payments/tranzila/webhook', '/api/payments/tranzila-success',
   '/api/payments/tranzila-failed', '/api/payments/cardcom-success',
@@ -18,6 +18,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/booking/', '/api/contact', '/api/access/', '/api/health',
   '/api/cron/',
   '/api/webhooks/',
+  '/api/register/',
 ]
 
 function isPublicPath(pathname: string): boolean {

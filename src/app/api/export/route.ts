@@ -133,35 +133,40 @@ export async function GET(request: NextRequest) {
         'Created At': new Date(p.created_at).toLocaleString(),
       }))
     } else if (type === 'sales') {
-      let query = supabase
+      // Fetch sales directly by org_id (no client JOIN to avoid cross-org issues)
+      let salesQuery = supabase
         .from('sales')
-        .select(`
-          sale_date,
-          total_amount,
-          paid_amount,
-          payment_method,
-          status,
-          staff_name,
-          notes,
-          clients(first_name, last_name)
-        `)
+        .select('id, sale_date, total_amount, paid_amount, payment_method, status, staff_name, notes, client_id')
         .eq('org_id', org_id)
         .order('sale_date', { ascending: false })
 
-      if (date_from) query = query.gte('sale_date', date_from)
-      if (date_to) query = query.lte('sale_date', date_to)
+      if (date_from) salesQuery = salesQuery.gte('sale_date', date_from)
+      if (date_to) salesQuery = salesQuery.lte('sale_date', date_to)
 
-      const { data: sales, error } = await query
-      if (error) throw error
+      const { data: salesRaw, error: salesErr } = await salesQuery
+      if (salesErr) throw salesErr
 
-      data = (sales as any[]).map((s) => ({
+      // Fetch client names separately
+      const clientIds = Array.from(new Set((salesRaw || []).map((s: any) => s.client_id).filter(Boolean)))
+      let clientMap: Record<string, string> = {}
+      if (clientIds.length > 0) {
+        const { data: clientsData } = await supabase
+          .from('clients')
+          .select('id, first_name, last_name')
+          .in('id', clientIds)
+        ;(clientsData || []).forEach((c: any) => {
+          clientMap[c.id] = `${c.first_name} ${c.last_name}`.trim()
+        })
+      }
+
+      data = (salesRaw || []).map((s: any) => ({
         Date: s.sale_date,
-        Client: s.clients ? `${s.clients.first_name} ${s.clients.last_name}`.trim() : '',
+        Client: s.client_id ? (clientMap[s.client_id] || '') : '',
         Staff: s.staff_name || '',
-        Total: s.total_amount,
-        Paid: s.paid_amount,
+        'Total (₪)': Number(s.total_amount) || 0,
+        'Paid (₪)': Number(s.paid_amount) || 0,
         Method: s.payment_method || '',
-        Status: s.status,
+        Status: s.status || '',
         Notes: s.notes || '',
       }))
     } else if (type === 'products') {

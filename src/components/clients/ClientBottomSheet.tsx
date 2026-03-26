@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { X, ChevronRight } from 'lucide-react'
 import { TrinityMob } from '@/components/ui/TrinityMob'
 import { EditClientSheet } from './EditClientSheet'
+import { GdprDeleteDialog } from './GdprDeleteDialog'
 import { createPortal } from 'react-dom'
 import { useOrgTemplates } from '@/hooks/useOrgTemplates'
 import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-utils'
@@ -51,6 +52,7 @@ export function ClientBottomSheet({
   isDemo, enabledModules, onEdit, onDelete,
 }: ClientBottomSheetProps) {
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const { openModal } = useModalStore()
   const [showPicker, setShowPicker] = useState(false)
   const [pickerType, setPickerType] = useState<'visit' | 'product' | null>(null)
@@ -134,15 +136,7 @@ export function ClientBottomSheet({
         onVisit={() => { onClose(); openModal('visit-create', { client, locale }) }}
         onWhatsApp={() => handleWhatsAppClick()}
         onEdit={() => setEditOpen(true)}
-        onDelete={(id) => {
-          const name = getClientName(client)
-          const msg = locale === 'he'
-            ? `למחוק את ${name}? פעולה זו אינה ניתנת לביטול.`
-            : `Удалить клиента ${name}? Это действие нельзя отменить.`
-          if (!window.confirm(msg)) return
-          onDelete?.(id)
-          handleClose()
-        }}
+        onDelete={() => { setDeleteOpen(true) }}
         onGallery={() => { onClose(); openModal('client-gallery', { client, locale }) }}
         onDocuments={() => { onClose(); openModal('client-documents', { client, locale }) }}
         onVisitsHistory={() => { onClose(); openModal('client-history', { client, locale, tab: 'visits' }) }}
@@ -155,6 +149,15 @@ export function ClientBottomSheet({
         isOpen={editOpen}
         onClose={() => setEditOpen(false)}
         onSaved={handleClose}
+        locale={locale}
+      />
+
+      {/* ── GDPR удаление клиента ── */}
+      <GdprDeleteDialog
+        open={deleteOpen}
+        onOpenChange={(open) => { if (!open) { setDeleteOpen(false); handleClose() } }}
+        clientId={client.id}
+        clientName={getClientName(client)}
         locale={locale}
       />
 

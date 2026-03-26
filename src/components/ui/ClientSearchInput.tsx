@@ -60,7 +60,7 @@ export function ClientSearchInput({
       const res = await fetch(`/api/clients?search=${encodeURIComponent(debouncedQuery)}`)
       if (!res.ok) return []
       const data = await res.json()
-      return (Array.isArray(data) ? data : []).slice(0, 10) as Client[]
+      return (Array.isArray(data) ? data : []).slice(0, 8) as Client[]
     },
     enabled: debouncedQuery.length >= 2,
   })
@@ -142,39 +142,50 @@ export function ClientSearchInput({
         </button>
       )}
 
-      {/* Dropdown с результатами - ВВЕРХ на мобильном, ВНИЗ на десктопе */}
+      {/* Dropdown с результатами */}
       {isOpen && query.length >= 2 && (
-        <div className="absolute z-50 w-full bg-card border border-border rounded-md shadow-lg max-h-60 overflow-y-auto bottom-full mb-1 md:bottom-auto md:top-full md:mb-0 md:mt-1">
-          {isLoading ? (
-            <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-              {isRTL ? 'טוען...' : 'Загрузка...'}
-            </div>
-          ) : clients.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-              {isRTL ? 'לא נמצאו לקוחות' : 'Клиенты не найдены'}
-            </div>
-          ) : (
-            clients.map((client) => (
-              <button
-                key={client.id}
-                type="button"
-                onClick={() => handleSelect(client)}
-                className="w-full px-4 py-3 hover:bg-muted/50 cursor-pointer transition border-b border-border last:border-0 flex items-center gap-3 text-left"
-              >
-                <User size={16} className="text-muted-foreground flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-foreground">
-                    {client.first_name} {client.last_name}
-                  </div>
-                  {client.phone && (
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {client.phone}
+        <div className="absolute z-[200] w-full bg-card border border-border rounded-lg shadow-xl overflow-hidden top-full mt-1">
+          <div className="max-h-[220px] overflow-y-auto">
+            {isLoading ? (
+              <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                {isRTL ? 'טוען...' : 'Загрузка...'}
+              </div>
+            ) : clients.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                {isRTL ? 'לא נמצאו לקוחות' : 'Клиенты не найдены'}
+              </div>
+            ) : (
+              <>
+                {clients.slice(0, 5).map((client) => (
+                  <button
+                    key={client.id}
+                    type="button"
+                    onClick={() => handleSelect(client)}
+                    className="w-full px-4 py-2.5 hover:bg-muted/50 cursor-pointer transition border-b border-border last:border-0 flex items-center gap-3 text-left"
+                  >
+                    <User size={16} className="text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-foreground">
+                        {client.first_name} {client.last_name}
+                      </div>
+                      {client.phone && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {client.phone}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </button>
-            ))
-          )}
+                  </button>
+                ))}
+                {clients.length > 5 && (
+                  <div className="px-4 py-2 text-xs text-muted-foreground text-center bg-muted/30">
+                    {isRTL
+                      ? 'הקלד יותר תווים לתוצאות מדויקות יותר'
+                      : 'Введите больше символов для точного поиска'}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
 

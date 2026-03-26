@@ -63,8 +63,8 @@ export function ClientSearch({
       const res = await fetch(`/api/clients?search=${encodeURIComponent(debouncedQuery)}`);
       if (!res.ok) return [];
       const data = await res.json();
-      // API возвращает массив напрямую
-      return (Array.isArray(data) ? data : []).slice(0, 5);
+      // Возвращаем до 8 — покажем 5, остальные скроллим
+      return (Array.isArray(data) ? data : []).slice(0, 8);
     },
     enabled: debouncedQuery.length >= 2,
   });
@@ -136,34 +136,49 @@ export function ClientSearch({
             />
           </div>
 
-          {/* Dropdown - ВВЕРХ на мобильном, ВНИЗ на десктопе */}
+          {/* Dropdown */}
           {isOpen && searchQuery.length >= 2 && (
-            <div className="absolute z-50 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto bottom-full mb-1 md:bottom-auto md:top-full md:mb-0 md:mt-1">
-              {isLoading ? (
-                <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                  {locale === 'he' ? 'טוען...' : locale === 'ru' ? 'Загрузка...' : 'Loading...'}
-                </div>
-              ) : clients.length > 0 ? (
-                clients.map((client) => (
-                  <button
-                    key={client.id}
-                    onClick={() => handleSelect(client)}
-                    className="w-full px-4 py-3 text-right hover:bg-gray-50 dark:hover:bg-gray-600 transition flex items-center justify-between"
-                    type="button"
-                  >
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {getClientDisplay(client)}
-                    </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {client.phone}
-                    </span>
-                  </button>
-                ))
-              ) : (
-                <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
-                  {getNoResults()}
-                </div>
-              )}
+            <div className="absolute z-[200] w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl overflow-hidden top-full mt-1">
+              {/* Скроллируемая зона — 5 пунктов максимум видно */}
+              <div className="max-h-[220px] overflow-y-auto">
+                {isLoading ? (
+                  <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    {locale === 'he' ? 'טוען...' : locale === 'ru' ? 'Загрузка...' : 'Loading...'}
+                  </div>
+                ) : clients.length > 0 ? (
+                  <>
+                    {clients.slice(0, 5).map((client) => (
+                      <button
+                        key={client.id}
+                        onClick={() => handleSelect(client)}
+                        className="w-full px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center justify-between border-b border-gray-50 dark:border-gray-700 last:border-0"
+                        type="button"
+                      >
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {getClientDisplay(client)}
+                        </span>
+                        <span className="text-xs text-gray-400 dark:text-gray-400">
+                          {client.phone}
+                        </span>
+                      </button>
+                    ))}
+                    {/* Если больше 5 результатов — подсказка */}
+                    {clients.length > 5 && (
+                      <div className="px-4 py-2 text-xs text-gray-400 dark:text-gray-500 text-center bg-gray-50 dark:bg-gray-700/50">
+                        {locale === 'he'
+                          ? 'הקלד יותר תווים לתוצאות מדויקות יותר'
+                          : locale === 'ru'
+                          ? 'Введите больше символов для точного поиска'
+                          : 'Type more characters for better results'}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                    {getNoResults()}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </>

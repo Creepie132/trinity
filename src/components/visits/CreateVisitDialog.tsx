@@ -276,7 +276,7 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
                   <SelectContent>
                     {services.map((s: any) => {
                       const n = isHe ? s.name : (s.name_ru || s.name)
-                      return <SelectItem key={s.id} value={s.id}>{n}{s.price ? ` — ₪${s.price}` : ''}</SelectItem>
+                      return <SelectItem key={s.id} value={s.id}>{n}</SelectItem>
                     })}
                   </SelectContent>
                 </Select>
@@ -452,7 +452,7 @@ function CreateVisitDesktop({ open, onOpenChange, preselectedClientId, preselect
               <div className="flex-1">
                 <Select value={form.serviceId} onValueChange={onSvcChange}>
                   <SelectTrigger className="h-11 w-full"><SelectValue placeholder={t('visits.selectService')}/></SelectTrigger>
-                  <SelectContent>{services.map((s:any)=>{const n=isHe?s.name:(s.name_ru||s.name); return <SelectItem key={s.id} value={s.id}>{n}{s.price?` — ₪${s.price}`:''}</SelectItem>})}</SelectContent>
+                  <SelectContent>{services.map((s:any)=>{const n=isHe?s.name:(s.name_ru||s.name); return <SelectItem key={s.id} value={s.id}>{n}</SelectItem>})}</SelectContent>
                 </Select>
               </div>
               <input type="number" min={1} max={999} value={form.quantity}

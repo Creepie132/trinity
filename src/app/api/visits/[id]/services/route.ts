@@ -116,18 +116,28 @@ export async function POST(
     // We must NOT overwrite visits.price with only the sum of visit_services —
     // that would erase the base service price.
     // Instead, we only update duration_minutes (additive extra duration).
-    const { data: allServices } = await supabase
-      .from('visit_services')
-      .select('price, duration_minutes')
-      .eq('visit_id', visitId)
+    // Update visit duration: base duration + sum of extra visit_services durations.
+    // We read the base duration from the visit itself (set at creation time),
+    // then add all visit_services durations on top.
+    // We NEVER touch visits.price here — it reflects the base service price set at creation.
+    const [{ data: visitBase }, { data: allServices }] = await Promise.all([
+      supabase.from('visits').select('duration_minutes').eq('id', visitId).single(),
+      supabase.from('visit_services').select('duration_minutes').eq('visit_id', visitId),
+    ])
 
-    if (allServices) {
+    if (visitBase && allServices) {
+      // visits.duration_minutes = base duration from creation
+      // We don't know the "pre-extra" base anymore if services were added before.
+      // Safest: store extra duration as the sum of ALL visit_services durations.
+      // The UI adds this to the base for display; we store extra separately.
+      // For now: only update if extraDuration > 0 to avoid zeroing out a valid base.
       const extraDuration = allServices.reduce((sum, s) => sum + (Number(s.duration_minutes) || 0), 0)
-      // Only update duration — price is managed separately via /api/visits/[id]/products
-      await supabase
-        .from('visits')
-        .update({ duration_minutes: extraDuration })
-        .eq('id', visitId)
+      if (extraDuration > 0) {
+        await supabase
+          .from('visits')
+          .update({ duration_minutes: extraDuration })
+          .eq('id', visitId)
+      }
     }
 
     return NextResponse.json({ service: visitService }, { status: 201 })

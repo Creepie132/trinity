@@ -62,6 +62,14 @@ function statusBadge(status: string, lang: string) {
   return { label: lang === 'he' ? s.he : s.ru, cls: s.cls }
 }
 
+function getVisitTotal(visit: any): number {
+  const base = Number(visit.price) || 0
+  const extra = ((visit as any).visit_services || []).reduce(
+    (sum: number, vs: any) => sum + (Number(vs.price) || 0), 0
+  )
+  return base + extra
+}
+
 const DATE_FILTERS = ['today', 'week', 'month', 'all'] as const
 const STATUS_FILTERS = ['all', 'scheduled', 'completed', 'cancelled'] as const
 const pageSize = 30
@@ -797,7 +805,7 @@ export default function VisitsPage() {
                             <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${stCls}`}>{stLabel}</span>
                           </td>
                           <td className="py-3 px-4 text-end font-medium text-gray-900 dark:text-gray-100">
-                            {visit.price ? `₪${visit.price}` : '—'}
+                            {getVisitTotal(visit) > 0 ? `₪${getVisitTotal(visit).toLocaleString()}` : '—'}
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex gap-1.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
@@ -912,7 +920,7 @@ export default function VisitsPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4 text-end font-medium text-gray-900 dark:text-gray-100">
-                            {visit.price ? `₪${visit.price}` : '—'}
+                            {getVisitTotal(visit) > 0 ? `₪${getVisitTotal(visit).toLocaleString()}` : '—'}
                           </td>
                           <td className="py-3 px-4" />
                         </tr>
@@ -981,7 +989,7 @@ export default function VisitsPage() {
                               </span>
                             </td>
                             <td className="py-3 px-4 text-end text-gray-500">
-                              {visit.price ? `₪${visit.price}` : '—'}
+                              {getVisitTotal(visit) > 0 ? `₪${getVisitTotal(visit).toLocaleString()}` : '—'}
                             </td>
                             <td className="py-3 px-4" />
                           </tr>

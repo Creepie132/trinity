@@ -110,23 +110,34 @@ async function submitVisit(params: {
 }) {
   const { orgId, isAppt, form, selClient, isHe, onVisitCreated, onSuccess, t } = params
   let notes = form.notes
-  if (isAppt && (form.city || form.address)) {
+
+  if (isAppt) {
+    // Собираем заметки для встречи
     const p: string[] = []
-    if (form.city) p.push(`${isHe ? 'עיר' : 'Город'}: ${form.city}`)
-    if (form.address) p.push(`${isHe ? 'כתובת' : 'Адрес'}: ${form.address}`)
+    if (form.meetingPurpose) p.push(`${isHe ? 'מטרת הפגישה' : 'Цель встречи'}: ${form.meetingPurpose}`)
+    if (form.isOnline) {
+      if (form.meeting_link) p.push(`${isHe ? 'קישור' : 'Ссылка'}: ${form.meeting_link}`)
+    } else {
+      if (form.city) p.push(`${isHe ? 'עיר' : 'Город'}: ${form.city}`)
+      if (form.address) p.push(`${isHe ? 'כתובת' : 'Адрес'}: ${form.address}`)
+    }
     if (form.notes) p.push(form.notes)
     notes = p.join('\n')
   }
+
   const res = await fetch('/api/visits', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      clientId: form.clientId, serviceId: form.serviceId, service: form.service,
+      clientId: form.clientId,
+      serviceId: isAppt ? null : form.serviceId,
+      service: isAppt ? (form.meetingPurpose || (isHe ? 'פגישה' : 'Встреча')) : form.service,
       date: form.date, time: form.time,
       duration: isAppt ? null : form.duration,
       price: isAppt ? '0' : form.price,
-      quantity: form.quantity, notes,
+      quantity: isAppt ? 1 : form.quantity,
+      notes,
       event_type: isAppt ? 'meeting' : 'visit',
-      meeting_link: isAppt ? (form.meeting_link || null) : null,
+      meeting_link: isAppt && form.isOnline ? (form.meeting_link || null) : null,
     }),
   })
   const data = await res.json()
@@ -141,6 +152,7 @@ const emptyForm = () => ({
   clientId: '', serviceId: '', service: '',
   date: getDefaultDate(), time: getDefaultTime(),
   duration: 60, price: '', quantity: 1, notes: '', city: '', address: '', meeting_link: '',
+  meetingPurpose: '', isOnline: false,
 })
 
 // ─── MOBILE component — uses TrinityModalShell (ModalBottomSheet) ─────────────
@@ -184,7 +196,8 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
 
   const selSvc = services.find((s: any) => s.id === form.serviceId)
   const svcName = selSvc ? (isHe ? selSvc.name : (selSvc.name_ru || selSvc.name)) : ''
-  const canSubmit = !!form.clientId && !!form.serviceId && !!form.date && !!form.time && (isAppt || !!form.price)
+  const canSubmit = !!form.clientId && !!form.date && !!form.time &&
+    (isAppt ? !!form.meetingPurpose : (!!form.serviceId && !!form.price))
 
   const handleClose = () => {
     onClose(); setIsAppt(false); setSelClient(null); setForm(emptyForm())
@@ -272,30 +285,93 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
               placeholder={t('visits.selectClient')} locale={language as 'he' | 'ru' | 'en'} value={selClient} />
           </div>
 
-          {/* Услуга + кол-во */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-              <Scissors size={11} />{t('visits.service')} *
-            </label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Select value={form.serviceId} onValueChange={onSvcChange}>
-                  <SelectTrigger className="h-10 w-full"><SelectValue placeholder={t('visits.selectService')} /></SelectTrigger>
-                  <SelectContent>
-                    {services.map((s: any) => {
-                      const n = isHe ? s.name : (s.name_ru || s.name)
-                      return <SelectItem key={s.id} value={s.id}>{n}</SelectItem>
-                    })}
-                  </SelectContent>
-                </Select>
+          {/* Услуга + кол-во / Цель встречи */}
+          {!isAppt ? (
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Scissors size={11} />{t('visits.service')} *
+              </label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Select value={form.serviceId} onValueChange={onSvcChange}>
+                    <SelectTrigger className="h-10 w-full"><SelectValue placeholder={t('visits.selectService')} /></SelectTrigger>
+                    <SelectContent>
+                      {services.map((s: any) => {
+                        const n = isHe ? s.name : (s.name_ru || s.name)
+                        return <SelectItem key={s.id} value={s.id}>{n}</SelectItem>
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <input type="number" min={1} max={999} value={form.quantity}
+                  onChange={e => setForm(p => ({ ...p, quantity: Math.max(1, Math.min(999, parseInt(e.target.value) || 1)) }))}
+                  className="h-10 w-14 rounded-md border border-input bg-background px-2 text-sm text-center font-semibold" />
               </div>
-              <input type="number" min={1} max={999} value={form.quantity}
-                onChange={e => setForm(p => ({ ...p, quantity: Math.max(1, Math.min(999, parseInt(e.target.value) || 1)) }))}
-                className="h-10 w-14 rounded-md border border-input bg-background px-2 text-sm text-center font-semibold" />
             </div>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Цель встречи */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <FileText size={11} />{isHe ? 'מטרת הפגישה' : 'Цель встречи'} *
+                </label>
+                <Input
+                  value={form.meetingPurpose}
+                  onChange={e => setForm(p => ({ ...p, meetingPurpose: e.target.value }))}
+                  placeholder={isHe ? 'לדוגמה: ייעוץ, הצגה...' : 'Напр.: консультация, презентация...'}
+                  className="h-10"
+                />
+              </div>
 
-          {/* Дата + Время */}
+              {/* Тумблер Онлайн / Оффлайн */}
+              <div style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 10, background: 'var(--muted, #f1f5f9)' }}>
+                {[
+                  { v: false, l: isHe ? 'פרונטלי' : 'Оффлайн', I: <MapPin size={12} /> },
+                  { v: true,  l: isHe ? 'מקוון'   : 'Онлайн',  I: <Video size={12} /> },
+                ].map(o => (
+                  <button key={String(o.v)} onClick={() => setForm(p => ({ ...p, isOnline: o.v }))}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                      padding: '7px 0', borderRadius: 7, fontSize: 12, fontWeight: 600,
+                      background: form.isOnline === o.v ? '#fff' : 'transparent',
+                      color: form.isOnline === o.v ? (o.v ? '#0ea5e9' : '#4f46e5') : 'var(--muted-foreground)',
+                      boxShadow: form.isOnline === o.v ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+                      border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                    }}>
+                    {o.I}{o.l}
+                  </button>
+                ))}
+              </div>
+
+              {/* Поля в зависимости от онлайн/оффлайн */}
+              {form.isOnline ? (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <Video size={11} />{isHe ? 'קישור לפגישה' : 'Ссылка на встречу'}
+                  </label>
+                  <Input value={form.meeting_link} onChange={e => setForm(p => ({ ...p, meeting_link: e.target.value }))}
+                    className="h-10" placeholder="https://zoom.us/..." type="url" dir="ltr" />
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                      <MapPin size={11} />{isHe ? 'עיר' : 'Город'}
+                    </label>
+                    <CityAutocomplete value={form.city} onChange={v => setForm(p => ({ ...p, city: v }))}
+                      placeholder={isHe ? 'עיר בעברית' : '2 символа...'} inputClass="h-10" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                      <MapPin size={11} />{isHe ? 'כתובת' : 'Адрес'}
+                    </label>
+                    <Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
+                      className="h-10" dir="rtl" placeholder="כתובת בעברית" />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
@@ -311,8 +387,8 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
             </div>
           </div>
 
-          {/* Длит + Цена / Город + Адрес */}
-          {!isAppt ? (
+          {/* Длит + Цена (только для визита) */}
+          {!isAppt && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.duration')}</label>
@@ -324,21 +400,6 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.price')} *</label>
                 <Input type="number" value={form.price} placeholder="₪" className="h-10" onChange={e => setForm(p => ({ ...p, price: e.target.value }))} />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                  <MapPin size={11} />{isHe ? 'עיר' : 'Город'}
-                </label>
-                <CityAutocomplete value={form.city} onChange={v => setForm(p => ({ ...p, city: v }))} placeholder={isHe ? 'הקלד 2 תווים...' : '2 символа...'} inputClass="h-10" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                  <MapPin size={11} />{isHe ? 'כתובת' : 'Адрес'}
-                </label>
-                <Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className="h-10" dir="rtl" placeholder="כתובת בעברית" />
               </div>
             </div>
           )}
@@ -360,9 +421,12 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
               </div>
               <div className="space-y-1 text-xs text-foreground">
                 {selClient && <div className="flex items-center gap-1.5"><Users size={10} className="text-muted-foreground shrink-0" /><span className="font-medium">{selClient.first_name} {selClient.last_name}</span></div>}
-                {svcName && <div className="flex items-center gap-1.5"><Scissors size={10} className="text-muted-foreground shrink-0" /><span>{svcName}{!isAppt && form.price ? ` — ₪${form.price}` : ''}{form.quantity > 1 ? ` ×${form.quantity}` : ''}</span></div>}
+                {isAppt && form.meetingPurpose && <div className="flex items-center gap-1.5"><FileText size={10} className="text-muted-foreground shrink-0" /><span>{form.meetingPurpose}</span></div>}
+                {!isAppt && svcName && <div className="flex items-center gap-1.5"><Scissors size={10} className="text-muted-foreground shrink-0" /><span>{svcName}{form.price ? ` — ₪${form.price}` : ''}{form.quantity > 1 ? ` ×${form.quantity}` : ''}</span></div>}
                 <div className="flex items-center gap-1.5"><Calendar size={10} className="text-muted-foreground shrink-0" /><span>{form.date} {isHe ? 'ב' : 'в'} {form.time}</span></div>
                 {!isAppt && <div className="flex items-center gap-1.5"><Clock size={10} className="text-muted-foreground shrink-0" /><span>{form.duration} {isHe ? 'דקות' : 'мин'}</span></div>}
+                {isAppt && form.isOnline && form.meeting_link && <div className="flex items-center gap-1.5"><Video size={10} className="text-muted-foreground shrink-0" /><span className="truncate">{form.meeting_link}</span></div>}
+                {isAppt && !form.isOnline && (form.city || form.address) && <div className="flex items-center gap-1.5"><MapPin size={10} className="text-muted-foreground shrink-0" /><span dir="rtl">{form.city}{form.address ? `, ${form.address}` : ''}</span></div>}
               </div>
             </div>
           )}
@@ -406,8 +470,10 @@ function CreateVisitDesktop({ open, onOpenChange, preselectedClientId, preselect
     setForm(p=>({...p,serviceId:id,service:svcNameStr||id,price:svc?.price?.toString()||p.price,duration:svc?.duration_minutes||p.duration}))
   }
 
-  const canProceed = step===1 ? !!form.clientId&&!!form.serviceId
-    : step===2 ? !!form.date&&!!form.time&&(isAppt||!!form.price) : true
+  const canProceed = step===1
+    ? (!!form.clientId && (isAppt ? !!form.meetingPurpose : !!form.serviceId))
+    : step===2 ? (!!form.date && !!form.time && (isAppt || !!form.price))
+    : true
 
   const handleClose = () => {
     onOpenChange(false); setStep(1); setIsAppt(false); setSelClient(null); setForm(emptyForm())
@@ -462,18 +528,30 @@ function CreateVisitDesktop({ open, onOpenChange, preselectedClientId, preselect
               placeholder={t('visits.selectClient')} locale={language as 'he'|'ru'|'en'} value={selClient} />
           </div>
           <div className="space-y-2">
-            <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><Scissors className="w-3.5 h-3.5 text-indigo-500"/>{t('visits.service')} *</Label>
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <Select value={form.serviceId} onValueChange={onSvcChange}>
-                  <SelectTrigger className="h-11 w-full"><SelectValue placeholder={t('visits.selectService')}/></SelectTrigger>
-                  <SelectContent>{services.map((s:any)=>{const n=isHe?s.name:(s.name_ru||s.name); return <SelectItem key={s.id} value={s.id}>{n}</SelectItem>})}</SelectContent>
-                </Select>
+            <Label className="font-semibold text-gray-700 flex items-center gap-1.5">
+              {isAppt ? <FileText className="w-3.5 h-3.5 text-indigo-500"/> : <Scissors className="w-3.5 h-3.5 text-indigo-500"/>}
+              {isAppt ? (isHe ? 'מטרת הפגישה' : 'Цель встречи') : t('visits.service')} *
+            </Label>
+            {isAppt ? (
+              <Input
+                value={form.meetingPurpose}
+                onChange={e=>setForm(p=>({...p,meetingPurpose:e.target.value}))}
+                placeholder={isHe ? 'לדוגמה: ייעוץ, הצגה, פגישת עבודה...' : 'Напр.: консультация, презентация, переговоры...'}
+                className="h-11"
+              />
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Select value={form.serviceId} onValueChange={onSvcChange}>
+                    <SelectTrigger className="h-11 w-full"><SelectValue placeholder={t('visits.selectService')}/></SelectTrigger>
+                    <SelectContent>{services.map((s:any)=>{const n=isHe?s.name:(s.name_ru||s.name); return <SelectItem key={s.id} value={s.id}>{n}</SelectItem>})}</SelectContent>
+                  </Select>
+                </div>
+                <input type="number" min={1} max={999} value={form.quantity}
+                  onChange={e=>setForm(p=>({...p,quantity:Math.max(1,Math.min(999,parseInt(e.target.value)||1))}))}
+                  className="h-11 w-16 rounded-md border border-input bg-background px-2 text-sm text-center font-semibold shrink-0" />
               </div>
-              <input type="number" min={1} max={999} value={form.quantity}
-                onChange={e=>setForm(p=>({...p,quantity:Math.max(1,Math.min(999,parseInt(e.target.value)||1))}))}
-                className="h-11 w-16 rounded-md border border-input bg-background px-2 text-sm text-center font-semibold shrink-0" />
-            </div>
+            )}
           </div>
           {selClient && (
             <div className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
@@ -502,22 +580,38 @@ function CreateVisitDesktop({ open, onOpenChange, preselectedClientId, preselect
           </div>
           {isAppt ? (
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-indigo-500"/>{isHe?'עיר':'Город'}</Label>
-                <CityAutocomplete value={form.city} onChange={v=>setForm(p=>({...p,city:v}))} placeholder={isHe?'הקלד 2 תווים לחיפוש...':'Введите 2 символа...'} />
+              {/* Тумблер Онлайн / Оффлайн */}
+              <div className="flex items-center p-2 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="flex gap-1 p-1 bg-gray-200 rounded-lg w-full">
+                  {[{v:false,l:isHe?'פרונטלי':'Оффлайн',I:MapPin},{v:true,l:isHe?'מקוון':'Онлайн',I:Video}].map(o=>(
+                    <button key={String(o.v)} type="button" onClick={()=>setForm(p=>({...p,isOnline:o.v}))}
+                      className={`flex items-center justify-center gap-1.5 flex-1 px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${form.isOnline===o.v?'bg-white shadow-sm '+(o.v?'text-sky-600':'text-indigo-700'):'text-gray-500 hover:text-gray-700'}`}>
+                      <o.I className="w-3.5 h-3.5"/>{o.l}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-indigo-500"/>{isHe?'כתובת':'Адрес'}</Label>
-                <Input value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))} className="h-11" dir="rtl" placeholder="הזן כתובת בעברית בלבד" />
-                <p className="text-xs text-amber-600 flex items-center gap-1 mt-1"><span>⚠️</span>כתובת בעברית בלבד</p>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-gray-700 flex items-center gap-1.5">
-                  <Video className="w-3.5 h-3.5 text-indigo-500"/>{isHe?'קישור לפגישה':'Ссылка на встречу'}
-                  <span className="text-xs font-normal text-gray-400">({isHe?'אופציונלי':'необязательно'})</span>
-                </Label>
-                <Input value={form.meeting_link} onChange={e=>setForm(p=>({...p,meeting_link:e.target.value}))} className="h-11" placeholder="https://zoom.us/..." type="url" />
-              </div>
+              {/* Поля онлайн / оффлайн */}
+              {form.isOnline ? (
+                <div className="space-y-1.5">
+                  <Label className="font-semibold text-gray-700 flex items-center gap-1.5">
+                    <Video className="w-3.5 h-3.5 text-sky-500"/>{isHe?'קישור לפגישה':'Ссылка на встречу'}
+                    <span className="text-xs font-normal text-gray-400">({isHe?'אופציונלי':'необязательно'})</span>
+                  </Label>
+                  <Input value={form.meeting_link} onChange={e=>setForm(p=>({...p,meeting_link:e.target.value}))} className="h-11" placeholder="https://zoom.us/..." type="url" dir="ltr"/>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-indigo-500"/>{isHe?'עיר':'Город'}</Label>
+                    <CityAutocomplete value={form.city} onChange={v=>setForm(p=>({...p,city:v}))} placeholder={isHe?'עיר בעברית':'Введите 2 символа...'} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-indigo-500"/>{isHe?'כתובת':'Адрес'}</Label>
+                    <Input value={form.address} onChange={e=>setForm(p=>({...p,address:e.target.value}))} className="h-11" dir="rtl" placeholder="הזן כתובת בעברית בלבד" />
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
@@ -552,12 +646,14 @@ function CreateVisitDesktop({ open, onOpenChange, preselectedClientId, preselect
             </p>
             <div className="space-y-1.5 text-sm text-indigo-800">
               {selClient&&<div className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-indigo-400 shrink-0"/><span className="font-medium">{selClient.first_name} {selClient.last_name}</span></div>}
-              {svcName&&<div className="flex items-center gap-2"><Scissors className="w-3.5 h-3.5 text-indigo-400 shrink-0"/>
-                <span>{svcName}{!isAppt&&form.price?` — ₪${form.price}`:''}{form.quantity>1&&<span className="ml-1.5 px-1.5 py-0.5 bg-indigo-200 text-indigo-700 rounded text-xs font-bold">×{form.quantity}</span>}</span>
+              {isAppt && form.meetingPurpose && <div className="flex items-center gap-2"><FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0"/><span>{form.meetingPurpose}</span></div>}
+              {!isAppt && svcName&&<div className="flex items-center gap-2"><Scissors className="w-3.5 h-3.5 text-indigo-400 shrink-0"/>
+                <span>{svcName}{form.price?` — ₪${form.price}`:''}{form.quantity>1&&<span className="ml-1.5 px-1.5 py-0.5 bg-indigo-200 text-indigo-700 rounded text-xs font-bold">×{form.quantity}</span>}</span>
               </div>}
               <div className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0"/><span>{form.date} {isHe?'ב':'в'} {form.time}</span></div>
               {!isAppt&&<div className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-indigo-400 shrink-0"/><span>{form.duration} {isHe?'דקות':'мин'}</span></div>}
-              {isAppt&&(form.city||form.address)&&<div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0"/><span dir="rtl">{form.city}{form.address?`, ${form.address}`:''}</span></div>}
+              {isAppt&&form.isOnline&&<div className="flex items-center gap-2"><Video className="w-3.5 h-3.5 text-sky-400 shrink-0"/><span>{form.meeting_link||( isHe?'מקוון':'Онлайн')}</span></div>}
+              {isAppt&&!form.isOnline&&(form.city||form.address)&&<div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-indigo-400 shrink-0"/><span dir="rtl">{form.city}{form.address?`, ${form.address}`:''}</span></div>}
             </div>
           </div>
         </div>

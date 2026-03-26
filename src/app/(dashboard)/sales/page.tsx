@@ -168,34 +168,41 @@ function SaleRow({ sale, locale, index, onClick, onToggleReceipt }: {
   sale: Sale; locale: string; index: number; onClick: () => void; onToggleReceipt: () => void
 }) {
   const cfg = STATUS_CFG[sale.status] || STATUS_CFG.new
+  const itemsLabel = (sale.sale_items || []).slice(0, 1).map(it => `${it.quantity}× ${it.product_name}`).join('') +
+    ((sale.sale_items?.length || 0) > 1 ? ` +${(sale.sale_items?.length || 0) - 1}` : '')
   return (
-    <div onClick={onClick} className="grid items-center px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors duration-150 border-b border-gray-50 dark:border-gray-700/40 last:border-0"
-      style={{ gridTemplateColumns: '2fr 76px 76px minmax(0,1.2fr) 68px 90px', borderInlineStart: `2.5px solid ${cfg.border}`, animation: `slideInRow 0.35s ${index * 0.04}s ease both` }}>
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${avCls(sale)}`}>{saleIni(sale)}</div>
-        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{saleName(sale, locale)}</span>
+    <div onClick={onClick} className="grid items-center px-3 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors duration-150 border-b border-gray-50 dark:border-gray-700/40 last:border-0"
+      style={{ gridTemplateColumns: '1fr auto auto auto', borderInlineStart: `2.5px solid ${cfg.border}`, animation: `slideInRow 0.35s ${index * 0.04}s ease both` }}>
+
+      {/* Клиент + товары (первая строка) */}
+      <div className="min-w-0 pe-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 ${avCls(sale)}`}>{saleIni(sale)}</div>
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{saleName(sale, locale)}</span>
+        </div>
+        {itemsLabel && <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 ps-8 truncate">{itemsLabel}</p>}
       </div>
-      <span className="text-xs text-gray-400 dark:text-gray-500">{sale.sale_date}</span>
-      <div>
-        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">₪{Number(sale.total_amount).toLocaleString()}</div>
-        {sale.status === 'partial' && <div className="text-[10px] text-amber-500 mt-0.5">↑₪{Number(sale.paid_amount).toLocaleString()}</div>}
+
+      {/* Дата */}
+      <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap px-2 tabular-nums">{sale.sale_date?.slice(5)}</span>
+
+      {/* Сумма */}
+      <div className="text-right px-2">
+        <div className="text-sm font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">₪{Number(sale.total_amount).toLocaleString()}</div>
+        {sale.status === 'partial' && <div className="text-[9px] text-amber-500">↑₪{Number(sale.paid_amount).toLocaleString()}</div>}
       </div>
-      <div className="flex flex-wrap gap-1 min-w-0">
-        {(sale.sale_items || []).slice(0, 2).map(it => (
-          <span key={it.id} className="text-[10px] bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5 text-gray-500 dark:text-gray-400 truncate max-w-[90px]">
-            {it.quantity}× {it.product_name}
-          </span>
-        ))}
-        {(sale.sale_items?.length || 0) > 2 && <span className="text-[10px] text-gray-400">+{(sale.sale_items?.length || 0) - 2}</span>}
+
+      {/* Статус */}
+      <div className="flex items-center gap-1.5 ps-1">
+        <div onClick={e => { e.stopPropagation(); onToggleReceipt() }}
+          className={`flex items-center justify-center w-6 h-6 rounded-md border transition-all cursor-pointer ${sale.receipt_sent ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400' : 'bg-gray-50 border-dashed border-gray-200 text-gray-300 dark:bg-gray-700 dark:border-gray-600 hover:border-gray-300'}`}
+          title={locale === 'he' ? 'חשבונית' : 'Чек'}>
+          <FileText size={10} />
+        </div>
+        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold border whitespace-nowrap ${cfg.badge}`}>
+          {cfg.label[locale as 'ru' | 'he']}
+        </span>
       </div>
-      <div onClick={e => { e.stopPropagation(); onToggleReceipt() }}>
-        <button className={`flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md font-medium border transition-all ${sale.receipt_sent ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400' : 'bg-gray-50 border-dashed border-gray-200 text-gray-400 dark:bg-gray-700 dark:border-gray-600'}`}>
-          <FileText size={9} />{locale === 'he' ? 'חשבונית' : 'Чек'} {sale.receipt_sent ? '✓' : '—'}
-        </button>
-      </div>
-      <span className={`text-[10px] px-2 py-1 rounded-full font-medium border ${cfg.badge}`}>
-        {cfg.label[locale as 'ru' | 'he']}
-      </span>
     </div>
   )
 }
@@ -540,10 +547,10 @@ function SalesContent() {
 
               {/* Шапка таблицы */}
               {statusFilter !== 'draft' && !isLoading && filteredSales.length > 0 && (
-                <div className="grid px-4 py-2 bg-gray-50/80 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700"
-                  style={{ gridTemplateColumns: '2fr 76px 76px minmax(0,1.2fr) 68px 90px' }}>
-                  {[t.client, t.date, t.amount, t.items, t.receipt, t.status].map((h, i) => (
-                    <span key={i} className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{h}</span>
+                <div className="grid px-3 py-2 bg-gray-50/80 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700"
+                  style={{ gridTemplateColumns: '1fr auto auto auto' }}>
+                  {[t.client, t.date, t.amount, t.status].map((h, i) => (
+                    <span key={i} className={`text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest ${i > 0 ? 'px-2' : ''} ${i === 2 ? 'text-right' : ''}`}>{h}</span>
                   ))}
                 </div>
               )}

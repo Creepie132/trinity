@@ -560,14 +560,22 @@ export function TrinityMob({
                       <ActionRow icon={<MessageSquare size={13} />} label="SMS" onClick={() => { if (client.phone) window.location.href = `sms:${client.phone}` }} accentBg="rgba(96,165,250,0.12)" accentText="#60a5fa" />
                     )}
 
-                    {/* Навигатор — если есть адрес */}
+                    {/* Навигатор — geo: URI вызывает системный диалог выбора приложения (Waze, Google Maps и т.д.) */}
                     {(client.address || client.city) && (
                       <ActionRow
                         icon={<Navigation size={13} />}
                         label={t.navigate}
                         onClick={() => {
-                          const addr = encodeURIComponent([client.address, client.city].filter(Boolean).join(', '))
-                          window.open(`https://maps.google.com/?q=${addr}`, '_blank')
+                          const addr = [client.address, client.city].filter(Boolean).join(', ')
+                          const encoded = encodeURIComponent(addr)
+                          // На мобильных: geo: URI показывает диалог выбора навигатора (Waze, Google Maps, Яндекс и др.)
+                          // На десктопе: открываем Google Maps как обычно
+                          const isMobile = 'ontouchstart' in window
+                          if (isMobile) {
+                            window.location.href = `geo:0,0?q=${encoded}`
+                          } else {
+                            window.open(`https://maps.google.com/?q=${encoded}`, '_blank')
+                          }
                         }}
                         accentBg="rgba(34,197,94,0.12)"
                         accentText="#4ade80"

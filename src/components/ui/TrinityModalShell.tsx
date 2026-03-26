@@ -117,7 +117,7 @@ export function TrinityModalShell({
         gridTemplateColumns: '176px minmax(0, 1fr)',
         minHeight:           420,
         maxHeight:           '85vh',
-        overflow:            'hidden',
+        overflow:            'visible',   // НЕ hidden — иначе дропдауны (ClientSearch) обрезаются
         overflowWrap:        'break-word',
       }}
       dir={dir}

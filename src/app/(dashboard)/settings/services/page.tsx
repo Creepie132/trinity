@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useServices } from '@/hooks/useServices';
 import { Service } from '@/types/services';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Clock, DollarSign } from 'lucide-react';
+import { Plus, Search, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreateServiceDialog } from '@/components/services/CreateServiceDialog';
 import { ServiceDetailSheet } from '@/components/services/ServiceDetailSheet';
@@ -101,7 +101,6 @@ export default function ServicesSettingsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-gray-100">
-                          <DollarSign className="w-4 h-4" />
                           ₪{service.price?.toFixed(2) || '0.00'}
                         </div>
                       </td>
@@ -141,7 +140,6 @@ export default function ServicesSettingsPage() {
 
                   <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-gray-100">
-                      <DollarSign className="w-4 h-4" />
                       ₪{service.price?.toFixed(2) || '0.00'}
                     </div>
                     <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">

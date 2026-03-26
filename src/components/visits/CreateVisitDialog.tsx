@@ -169,9 +169,17 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
   const services = (customServices && customServices.length > 0) ? customServices
     : DEFAULT_SERVICES.map(s => ({ id: s.value, name: t(s.labelKey), name_ru: t(s.labelKey), duration_minutes: 60, price: undefined }))
 
+  // Сбрасываем выбор услуги когда набор услуг меняется (дефолтные → кастомные)
+  // чтобы избежать ситуации когда старый serviceId не совпадает ни с одним новым
+  useEffect(() => {
+    if (!open) return
+    setForm(p => ({ ...p, serviceId: '', service: '' }))
+  }, [customServices?.length, open])
+
   const onSvcChange = (id: string) => {
     const svc = services.find((s: any) => s.id === id)
-    setForm(p => ({ ...p, serviceId: id, service: id, price: svc?.price?.toString() || p.price, duration: svc?.duration_minutes || p.duration }))
+    const svcNameStr = isHe ? svc?.name : (svc?.name_ru || svc?.name)
+    setForm(p => ({ ...p, serviceId: id, service: svcNameStr || id, price: svc?.price?.toString() || p.price, duration: svc?.duration_minutes || p.duration }))
   }
 
   const selSvc = services.find((s: any) => s.id === form.serviceId)
@@ -386,9 +394,16 @@ function CreateVisitDesktop({ open, onOpenChange, preselectedClientId, preselect
   const services = (customServices&&customServices.length>0) ? customServices
     : DEFAULT_SERVICES.map(s=>({ id:s.value, name:t(s.labelKey), name_ru:t(s.labelKey), duration_minutes:60, price:undefined }))
 
+  // Сбрасываем serviceId когда набор услуг меняется (дефолтные → кастомные)
+  useEffect(() => {
+    if (!open) return
+    setForm(p => ({ ...p, serviceId: '', service: '' }))
+  }, [customServices?.length, open])
+
   const onSvcChange = (id: string) => {
     const svc = services.find((s:any)=>s.id===id)
-    setForm(p=>({...p,serviceId:id,service:id,price:svc?.price?.toString()||p.price,duration:svc?.duration_minutes||p.duration}))
+    const svcNameStr = isHe ? svc?.name : (svc?.name_ru || svc?.name)
+    setForm(p=>({...p,serviceId:id,service:svcNameStr||id,price:svc?.price?.toString()||p.price,duration:svc?.duration_minutes||p.duration}))
   }
 
   const canProceed = step===1 ? !!form.clientId&&!!form.serviceId

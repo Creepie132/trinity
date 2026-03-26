@@ -110,35 +110,14 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Recalculate visit totals.
-    // IMPORTANT: visits.price stores the BASE service price (the main service of the visit).
-    // visit_services stores ADDITIONAL services/products added during the visit.
-    // We must NOT overwrite visits.price with only the sum of visit_services —
-    // that would erase the base service price.
-    // Instead, we only update duration_minutes (additive extra duration).
-    // Update visit duration: base duration + sum of extra visit_services durations.
-    // We read the base duration from the visit itself (set at creation time),
-    // then add all visit_services durations on top.
-    // We NEVER touch visits.price here — it reflects the base service price set at creation.
-    const [{ data: visitBase }, { data: allServices }] = await Promise.all([
-      supabase.from('visits').select('duration_minutes').eq('id', visitId).single(),
-      supabase.from('visit_services').select('duration_minutes').eq('visit_id', visitId),
-    ])
-
-    if (visitBase && allServices) {
-      // visits.duration_minutes = base duration from creation
-      // We don't know the "pre-extra" base anymore if services were added before.
-      // Safest: store extra duration as the sum of ALL visit_services durations.
-      // The UI adds this to the base for display; we store extra separately.
-      // For now: only update if extraDuration > 0 to avoid zeroing out a valid base.
-      const extraDuration = allServices.reduce((sum, s) => sum + (Number(s.duration_minutes) || 0), 0)
-      if (extraDuration > 0) {
-        await supabase
-          .from('visits')
-          .update({ duration_minutes: extraDuration })
-          .eq('id', visitId)
-      }
-    }
+    // NOTE: We do NOT touch visits.price or visits.duration_minutes here.
+    // visits.price = BASE service price (immutable, set at creation).
+    // visits.duration_minutes = BASE duration (immutable, set at creation).
+    // Full totals are computed dynamically in the UI:
+    //   total price    = visit.price + SUM(visit_services.price)
+    //   total duration = visit.duration_minutes + SUM(visit_services.duration_minutes)
+    // The DB trigger update_visit_totals has been dropped — it overwrote visits.price
+    // with only SUM(visit_services.price), destroying the base price.
 
     return NextResponse.json({ service: visitService }, { status: 201 })
   } catch (error) {

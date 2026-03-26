@@ -25,6 +25,7 @@ interface ModalProps {
   dir?: 'rtl' | 'ltr'
   modalId?: string
   pinTitle?: string
+  zIndexOverride?: number
   /**
    * When true: drag handle becomes a transparent overlay (no white bar),
    * close/pin buttons float over the content as white icons.
@@ -62,6 +63,7 @@ export function Modal({
   modalId: modalIdProp,
   pinTitle,
   darkHeader = false,
+  zIndexOverride,
 }: ModalProps) {
   const idRef = useRef<string>(modalIdProp || `modal-${++idCounter}`)
   const modalId = idRef.current
@@ -136,7 +138,7 @@ export function Modal({
   if (!open && !pinned_) return null
   if (!mounted) return null
 
-  const zIndex = pinnedData ? pinnedData.zIndex : 9000
+  const zIndex = zIndexOverride ?? (pinnedData ? pinnedData.zIndex : 9000)
 
   return createPortal(
     <>
@@ -144,7 +146,7 @@ export function Modal({
       {!pinned_ && (
         <div
           className="fixed inset-0 bg-black/50"
-          style={{ zIndex: 8999 }}
+          style={{ zIndex: zIndexOverride ? zIndexOverride - 1 : 8999 }}
           data-trinity-modal-backdrop=""
           onClick={closeOnBackdrop ? onClose : undefined}
           aria-hidden="true"

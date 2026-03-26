@@ -136,7 +136,7 @@ export function ClientBottomSheet({
         onVisit={() => { onClose(); openModal('visit-create', { client, locale }) }}
         onWhatsApp={() => handleWhatsAppClick()}
         onEdit={() => setEditOpen(true)}
-        onDelete={() => { setDeleteOpen(true) }}
+        onDelete={() => { onClose(); setTimeout(() => setDeleteOpen(true), 300) }}
         onGallery={() => { onClose(); openModal('client-gallery', { client, locale }) }}
         onDocuments={() => { onClose(); openModal('client-documents', { client, locale }) }}
         onVisitsHistory={() => { onClose(); openModal('client-history', { client, locale, tab: 'visits' }) }}
@@ -155,10 +155,11 @@ export function ClientBottomSheet({
       {/* ── GDPR удаление клиента ── */}
       <GdprDeleteDialog
         open={deleteOpen}
-        onOpenChange={(open) => { if (!open) { setDeleteOpen(false); handleClose() } }}
+        onOpenChange={(open) => { if (!open) setDeleteOpen(false) }}
         clientId={client.id}
         clientName={getClientName(client)}
         locale={locale}
+        zIndex={10000}
       />
 
       {/* ── WhatsApp picker (портал) ── */}

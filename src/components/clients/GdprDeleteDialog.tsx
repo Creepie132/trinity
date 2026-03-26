@@ -15,6 +15,7 @@ interface GdprDeleteDialogProps {
   clientId: string
   clientName: string
   locale?: 'he' | 'ru'
+  zIndex?: number
 }
 
 export function GdprDeleteDialog({
@@ -23,6 +24,7 @@ export function GdprDeleteDialog({
   clientId,
   clientName,
   locale = 'ru',
+  zIndex,
 }: GdprDeleteDialogProps) {
   const queryClient = useQueryClient()
   const { closeModal } = useModalStore()
@@ -111,6 +113,7 @@ export function GdprDeleteDialog({
       }}
       title={text.title}
       width="480px"
+      zIndexOverride={zIndex}
       footer={
         <div className="flex gap-2 justify-end">
           <button

@@ -236,6 +236,20 @@ export function SaleModal() {
     handleClose()
   }
 
+  // Delete draft
+  const handleDeleteDraft = () => {
+    if (client?.id) {
+      localStorage.removeItem(`draft_sale_${client.id}`)
+    }
+    setCart([])
+    setDiscount({ type: 'percent', value: 0 })
+    toast.success(locale === 'he' ? 'העסקה נמחקה' : 'Сделка удалена')
+    handleClose()
+  }
+
+  // Check if draft exists in localStorage
+  const hasDraft = !!(client?.id && typeof window !== 'undefined' && localStorage.getItem(`draft_sale_${client.id}`))
+
   // Check if org has terminal configured (password never exposed to client)
   const orgTerminal = (org as any)?.tranzila_terminal || ''
 
@@ -912,6 +926,15 @@ export function SaleModal() {
               >
                 📋 {text.proposal}
               </button>
+              {hasDraft && (
+                <button
+                  onClick={handleDeleteDraft}
+                  title={locale === 'he' ? 'מחק טיוטא' : 'Удалить черновик'}
+                  style={{ flex: '0 0 auto', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.06)', color: '#ef4444', fontSize: 13, cursor: 'pointer' }}
+                >
+                  🗑️
+                </button>
+              )}
               <button
                 onClick={handleClose}
                 style={{ flex: '0 0 auto', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#94a3b8', fontSize: 13, cursor: 'pointer' }}
@@ -957,6 +980,17 @@ export function SaleModal() {
             >
               📋 {text.proposal}
             </button>
+            {hasDraft && (
+              <button
+                onClick={handleDeleteDraft}
+                style={{
+                  padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(239,68,68,0.3)',
+                  background: 'rgba(239,68,68,0.12)', color: '#f87171', fontSize: 12, cursor: 'pointer',
+                }}
+              >
+                🗑️ {locale === 'he' ? 'מחק טיוטא' : 'Удалить'}
+              </button>
+            )}
             <button
               onClick={handleClose}
               style={{

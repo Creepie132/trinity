@@ -50,10 +50,11 @@ export function ClientSearch({
 
   // Вычисляем fixed-позицию дропдауна через getBoundingClientRect —
   // это позволяет выходить за пределы overflow:hidden родителей (TrinityModalShell, WizardModal)
+  // Пересчитываем при КАЖДОМ изменении debouncedQuery (а не только при isOpen),
+  // чтобы dropdownStyle был готов к моменту рендера списка
   useEffect(() => {
     if (!isOpen || !wrapperRef.current) return
-    // rAF гарантирует что DOM уже отрендерен (важно внутри порталов/анимаций)
-    const raf = requestAnimationFrame(() => {
+    const recalc = () => {
       if (!wrapperRef.current) return
       const rect = wrapperRef.current.getBoundingClientRect()
       setDropdownStyle({
@@ -63,9 +64,12 @@ export function ClientSearch({
         width: rect.width,
         zIndex: 10000,
       })
-    })
+    }
+    // Немедленный вызов + rAF для порталов/анимаций
+    recalc()
+    const raf = requestAnimationFrame(recalc)
     return () => cancelAnimationFrame(raf)
-  }, [isOpen, searchQuery])
+  }, [isOpen, debouncedQuery])
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['client-search', orgId, debouncedQuery],

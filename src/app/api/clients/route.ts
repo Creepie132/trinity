@@ -53,9 +53,20 @@ export async function GET(req: NextRequest) {
     if (search) {
       const words = search.split(/\s+/).filter(Boolean)
       for (const word of words) {
-        const term = `%${word}%`
-        query = query.or(
-          `first_name.ilike.${term},last_name.ilike.${term},phone.ilike.${term},email.ilike.${term},description.ilike.${term}`
+        const escaped = word.replace(/[%_\\]/g, '\\$&')
+        const term = `%${escaped}%`
+        // NOTE: PostgREST .or() парсит строку как "col.op.value" —
+        // % внутри value не экранируется, но ilike в Supabase JS SDK
+        // передаёт term как URL query param, поэтому % должен быть в самом term.
+        // Используем явный массив для читаемости:
+        query = (query as any).or(
+          [
+            `first_name.ilike.${term}`,
+            `last_name.ilike.${term}`,
+            `phone.ilike.${term}`,
+            `email.ilike.${term}`,
+            `description.ilike.${term}`,
+          ].join(',')
         )
       }
     }

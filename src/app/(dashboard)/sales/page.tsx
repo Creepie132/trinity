@@ -11,8 +11,7 @@ import { useSales, useSaleStats, useToggleReceipt, Sale } from '@/hooks/useSales
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SaleDetailModal } from '@/components/sales/SaleDetailModal'
 import { PaymentReportModal } from '@/components/payments/PaymentReportModal'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { useBranch } from '@/contexts/BranchContext'
+
 
 // ─── i18n ──────────────────────────────────────────────────────────────────
 const T = {
@@ -112,49 +111,34 @@ function AnimNum({ value, prefix = '', duration = 700 }: { value: number; prefix
   return <>{prefix}{display.toLocaleString()}</>
 }
 
-// ─── LiveBarChart — реальные данные из API ───────────────────────────────────
-function LiveBarChart({ locale, dateFrom, dateTo }: { locale: string; dateFrom: string; dateTo: string }) {
-  const { activeOrgId } = useBranch()
+// ─── BarChart — из уже загруженных данных ────────────────────────────────────
+function BarChart({ sales, locale }: { sales: Sale[]; locale: string }) {
   const isHe = locale === 'he'
-  const [bars, setBars] = useState<{ label: string; value: number; key: string }[]>([])
   const [mounted, setMounted] = useState(false)
+
+  // группируем по месяцу из переданных sales
+  const bars = useMemo(() => {
+    const map: Record<string, number> = {}
+    sales.forEach(s => {
+      const m = s.sale_date?.slice(0, 7)
+      if (!m) return
+      map[m] = (map[m] || 0) + Number(s.total_amount || 0)
+    })
+    const sorted = Object.keys(map).sort()
+    const last6 = sorted.slice(-6)
+    return last6.map(k => {
+      const [y, mo] = k.split('-')
+      const d = new Date(Number(y), Number(mo) - 1, 1)
+      const label = d.toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { month: 'short' })
+      return { label, value: map[k], key: k }
+    })
+  }, [sales, isHe])
 
   useEffect(() => {
     setMounted(false)
-    const load = async () => {
-      try {
-        const params = new URLSearchParams()
-        if (dateFrom) params.set('dateFrom', dateFrom)
-        if (dateTo)   params.set('dateTo', dateTo)
-        const headers: Record<string, string> = {}
-        if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
-        const res = await fetch(`/api/sales?${params}&limit=500`, { headers })
-        if (!res.ok) return
-        const sales: Sale[] = await res.json()
-
-        // группируем по месяцу
-        const map: Record<string, number> = {}
-        sales.forEach(s => {
-          const m = s.sale_date?.slice(0, 7) // YYYY-MM
-          if (!m) return
-          map[m] = (map[m] || 0) + Number(s.total_amount || 0)
-        })
-
-        // последние 6 месяцев или то что есть
-        const sorted = Object.keys(map).sort()
-        const last6 = sorted.slice(-6)
-        const result = last6.map(k => {
-          const [y, m] = k.split('-')
-          const d = new Date(Number(y), Number(m) - 1, 1)
-          const label = d.toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { month: 'short' })
-          return { label, value: map[k], key: k }
-        })
-        setBars(result)
-        setTimeout(() => setMounted(true), 50)
-      } catch { /**/ }
-    }
-    load()
-  }, [activeOrgId, dateFrom, dateTo, isHe])
+    const t = setTimeout(() => setMounted(true), 60)
+    return () => clearTimeout(t)
+  }, [bars])
 
   const max = Math.max(...bars.map(b => b.value), 1)
 
@@ -168,25 +152,22 @@ function LiveBarChart({ locale, dateFrom, dateTo }: { locale: string; dateFrom: 
         </div>
       ) : bars.map((b, i) => {
         const pct = Math.round((b.value / max) * 100)
+        const isLast = i === bars.length - 1
         return (
           <div key={b.key} className="flex flex-col items-center gap-1 flex-1 group cursor-default"
             title={`₪${b.value.toLocaleString()}`}>
-            <div className="w-full rounded-t-md overflow-hidden relative"
-              style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}>
-              <div
-                className="w-full rounded-t-md transition-all duration-700"
+            <div className="w-full flex items-end" style={{ height: '100%' }}>
+              <div className="w-full rounded-t-md transition-all duration-700"
                 style={{
                   height: mounted ? `${Math.max(pct, 4)}%` : '2%',
-                  background: i === bars.length - 1
-                    ? 'linear-gradient(to top, #f59e0b, #fbbf24)'
-                    : 'linear-gradient(to top, #fde68a, #fef3c7)',
-                  boxShadow: i === bars.length - 1 ? '0 -2px 8px rgba(245,158,11,.35)' : 'none',
+                  background: isLast ? 'linear-gradient(to top,#f59e0b,#fbbf24)' : 'linear-gradient(to top,#fde68a,#fef3c7)',
+                  boxShadow: isLast ? '0 -2px 8px rgba(245,158,11,.35)' : 'none',
                   transitionDelay: `${i * 80}ms`,
                 }}
               />
             </div>
-            <span className={`text-[9px] font-medium transition-colors ${
-              i === bars.length - 1 ? 'text-amber-500' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+            <span className={`text-[9px] font-medium ${
+              isLast ? 'text-amber-500' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
             }`}>{b.label}</span>
           </div>
         )
@@ -383,6 +364,15 @@ function SalesContent() {
         </div>
 
 
+        {/* ── MOBILE CHART (только телефон) ── */}
+        <div className="md:hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4"
+          style={{ animation: 'fadeUp 0.42s 0.14s ease both' }}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">{t.monthlyChart}</span>
+          </div>
+          <BarChart sales={sales} locale={locale} />
+        </div>
+
         {/* ── CHART + BREAKDOWN (desktop) ── */}
         <div className="hidden md:grid grid-cols-[1fr_260px] gap-3" style={{ animation: 'fadeUp 0.42s 0.14s ease both' }}>
           {/* Live bar chart */}
@@ -395,7 +385,7 @@ function SalesContent() {
                 </span>
               )}
             </div>
-            <LiveBarChart locale={locale} dateFrom={dateFrom} dateTo={dateTo} />
+            <BarChart sales={sales} locale={locale} />
           </div>
           {/* Breakdown */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 flex flex-col">

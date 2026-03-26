@@ -27,11 +27,23 @@ const SETTINGS_EVENT = 'trinity:card-settings-changed'
 export function useClientCardSettings(): [ClientCardSettings, (s: ClientCardSettings) => void] {
   const { orgId } = useAuth()
 
+  // Фолбэк: если orgId из хука ещё не загрузился (auth pending / 502), берём из localStorage
+  function getEffectiveOrgId(hookOrgId: string | null): string | null {
+    if (hookOrgId) return hookOrgId
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem('current_org_id')
+  }
+
   // Читаем из localStorage синхронно при первом рендере чтобы избежать мигания
   const [settings, setSettings] = useState<ClientCardSettings>(() => {
     if (typeof window === 'undefined') return DEFAULT_SETTINGS
-    // orgId ещё неизвестен при SSR — пробуем найти любой ключ client_card_settings_*
+    // Пробуем по exact org key → иначе любой client_card_settings_* ключ
     try {
+      const fallbackOrgId = localStorage.getItem('current_org_id')
+      if (fallbackOrgId) {
+        const raw = localStorage.getItem(getStorageKey(fallbackOrgId))
+        if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+      }
       const keys = Object.keys(localStorage).filter(k => k.startsWith('client_card_settings_'))
       if (keys.length > 0) {
         const raw = localStorage.getItem(keys[0])
@@ -43,9 +55,10 @@ export function useClientCardSettings(): [ClientCardSettings, (s: ClientCardSett
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    if (!orgId) return
+    const effectiveOrgId = getEffectiveOrgId(orgId)
+    if (!effectiveOrgId) return
     try {
-      const raw = localStorage.getItem(getStorageKey(orgId))
+      const raw = localStorage.getItem(getStorageKey(effectiveOrgId))
       if (raw) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) })
     } catch { /* ignore */ }
     setLoaded(true)
@@ -65,9 +78,10 @@ export function useClientCardSettings(): [ClientCardSettings, (s: ClientCardSett
     setSettings(s)
     // Диспатчим событие — все инстансы хука обновляются мгновенно
     window.dispatchEvent(new CustomEvent<ClientCardSettings>(SETTINGS_EVENT, { detail: s }))
-    if (!orgId) return
+    const effectiveOrgId = getEffectiveOrgId(orgId)
+    if (!effectiveOrgId) return
     try {
-      localStorage.setItem(getStorageKey(orgId), JSON.stringify(s))
+      localStorage.setItem(getStorageKey(effectiveOrgId), JSON.stringify(s))
     } catch { /* ignore */ }
   }
 

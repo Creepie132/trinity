@@ -17,7 +17,6 @@ import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { FileText } from 'lucide-react'
 import { format } from 'date-fns'
-import NewSaleModal from '@/components/sales/NewSaleModal'
 import ImportSalesModal from '@/components/sales/ImportSalesModal'
 import { SaleDetailModal } from '@/components/sales/SaleDetailModal'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
@@ -182,7 +181,6 @@ function SalesContent() {
   const [search, setSearch]               = useState('')
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen]     = useState(false)
-  const [newSaleOpen, setNewSaleOpen]     = useState(false)
   const [importOpen, setImportOpen]       = useState(false)
   const [selectedSale, setSelectedSale]   = useState<Sale | null>(null)
   const [draftRefreshKey, setDraftRefreshKey] = useState(0)
@@ -238,7 +236,7 @@ function SalesContent() {
           </Button>
           <Button className="bg-theme-primary text-white hover:opacity-90 text-sm"
             style={{ animation: 'pulseRing 2.5s ease-in-out infinite' }}
-            onClick={() => setNewSaleOpen(true)}>
+            onClick={() => openModal('client-sale', { locale })}>  
             <Plus className="w-4 h-4 me-2" />{t.newSale}
           </Button>
         </div>
@@ -456,7 +454,7 @@ function SalesContent() {
             icon={<ShoppingBag size={28} />}
             title={t.noSales}
             description={t.noSalesDesc}
-            action={{ label: t.newSale, onClick: () => setNewSaleOpen(true) }}
+            action={{ label: t.newSale, onClick: () => openModal('client-sale', { locale }) }}
           />
         )}
       </div>
@@ -582,7 +580,7 @@ function SalesContent() {
         rounded-full shadow-lg flex items-center justify-center hover:opacity-90
         active:scale-95 transition-all z-50"
         aria-label={t.newSale}
-        onClick={() => setNewSaleOpen(true)}>
+        onClick={() => openModal('client-sale', { locale })}>
         <Plus className="w-6 h-6" />
       </button>
 
@@ -628,7 +626,6 @@ function SalesContent() {
       </TrinityBottomDrawer>
 
       {/* ── Modals ─────────────────────────────────────────────────────── */}
-      <NewSaleModal isOpen={newSaleOpen} onClose={() => setNewSaleOpen(false)} />
       <ImportSalesModal isOpen={importOpen} onClose={() => setImportOpen(false)} />
       <SaleDetailModal sale={selectedSale} locale={locale} onClose={() => setSelectedSale(null)} />
 

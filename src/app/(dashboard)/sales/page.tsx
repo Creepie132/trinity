@@ -117,19 +117,22 @@ function BarChart({ chartPoints, locale }: { chartPoints: SaleChartPoint[]; loca
   const [mounted, setMounted] = useState(false)
 
   const bars = useMemo(() => {
+    // Собираем фактические данные по месяцам
     const map: Record<string, number> = {}
     chartPoints.forEach(s => {
       const m = s.sale_date?.slice(0, 7)
       if (!m) return
       map[m] = (map[m] || 0) + Number(s.total_amount || 0)
     })
-    const sorted = Object.keys(map).sort()
-    const last6 = sorted.slice(-6)
-    return last6.map(k => {
-      const [y, mo] = k.split('-')
-      const d = new Date(Number(y), Number(mo) - 1, 1)
+
+    // Всегда рисуем ровно 6 слотов назад от текущего месяца
+    // Если данных за месяц нет — value = 0, но бар и метка всё равно отображаются
+    const now = new Date()
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       const label = d.toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { month: 'short' })
-      return { label, value: map[k], key: k }
+      return { label, value: map[key] ?? 0, key }
     })
   }, [chartPoints, isHe])
 
@@ -151,26 +154,35 @@ function BarChart({ chartPoints, locale }: { chartPoints: SaleChartPoint[]; loca
           </span>
         </div>
       ) : bars.map((b, i) => {
-        const barH = Math.max(Math.round((b.value / max) * CHART_H), 3)
+        const isEmpty = b.value === 0
+        const barH = isEmpty ? 2 : Math.max(Math.round((b.value / max) * CHART_H), 3)
         const isLast = i === bars.length - 1
         return (
           <div key={b.key} className="flex flex-col items-center justify-end gap-1 flex-1 group cursor-default"
             style={{ height: '64px' }}
-            title={`₪${b.value.toLocaleString()}`}>
+            title={isEmpty ? '₪0' : `₪${b.value.toLocaleString()}`}>
             <div
-              className="w-full rounded-t-md transition-all duration-700"
+              className="w-full rounded-t-sm transition-all duration-700"
               style={{
                 height: mounted ? `${barH}px` : '2px',
-                background: isLast
-                  ? 'linear-gradient(to top,#f59e0b,#fbbf24)'
-                  : 'linear-gradient(to top,#fde68a,#fef3c7)',
-                boxShadow: isLast ? '0 -2px 8px rgba(245,158,11,.35)' : 'none',
+                background: isEmpty
+                  ? 'transparent'
+                  : isLast
+                    ? 'linear-gradient(to top,#f59e0b,#fbbf24)'
+                    : 'linear-gradient(to top,#fde68a,#fef3c7)',
+                border: isEmpty ? '1px dashed rgba(203,213,225,0.6)' : 'none',
+                borderBottom: isEmpty ? '1px dashed rgba(203,213,225,0.6)' : 'none',
+                boxShadow: (!isEmpty && isLast) ? '0 -2px 8px rgba(245,158,11,.35)' : 'none',
                 transitionDelay: `${i * 80}ms`,
                 flexShrink: 0,
               }}
             />
             <span className={`text-[9px] font-medium leading-none ${
-              isLast ? 'text-amber-500' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+              isLast && !isEmpty
+                ? 'text-amber-500'
+                : isEmpty
+                  ? 'text-gray-300 dark:text-gray-600'
+                  : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
             }`}>{b.label}</span>
           </div>
         )

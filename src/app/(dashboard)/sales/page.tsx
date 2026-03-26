@@ -367,14 +367,14 @@ function SalesContent() {
           </div>
         </div>
 
-        {/* ── KPI CARDS ── */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* ── KPI CARDS — только мобиль ── */}
+        <div className="grid grid-cols-3 gap-3 md:hidden">
           {kpiData.map((k, i) => (
             <div key={i} className="anim-popin bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 relative overflow-hidden"
               style={{ animationDelay: `${i * 0.08}s` }}>
               <div className={`absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r ${k.grad}`} />
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold mb-3 ${k.bg}`} style={{ color: k.iconColor }}>{k.icon}</div>
-              <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 <AnimNum value={k.value} prefix={k.prefix} />
               </div>
               <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-medium">{k.label}</div>
@@ -382,8 +382,7 @@ function SalesContent() {
           ))}
         </div>
 
-
-        {/* ── MOBILE CHART (только телефон) ── */}
+        {/* ── MOBILE CHART ── */}
         <div className="md:hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4"
           style={{ animation: 'fadeUp 0.42s 0.14s ease both' }}>
           <div className="flex items-center justify-between mb-3">
@@ -392,230 +391,329 @@ function SalesContent() {
           <BarChart chartPoints={chartPoints} locale={locale} />
         </div>
 
-        {/* ── CHART + BREAKDOWN (desktop) ── */}
-        <div className="hidden md:grid grid-cols-[1fr_260px] gap-3" style={{ animation: 'fadeUp 0.42s 0.14s ease both' }}>
-          {/* Live bar chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">{t.monthlyChart}</span>
-              {hasDateFilter && (
-                <span className="text-[10px] text-amber-500 font-medium">
+        {/* ── КОНЦЕПТ A: SPLIT LAYOUT (только десктоп) ── */}
+        <div className="hidden md:grid gap-0 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700"
+          style={{ gridTemplateColumns: '300px minmax(0,1fr)', animation: 'fadeUp 0.42s 0.1s ease both', minHeight: 380 }}>
+
+          {/* ═══ ЛЕВАЯ ТЁМНАЯ ПАНЕЛЬ ═══ */}
+          <div className="flex flex-col gap-5 p-5"
+            style={{ background: 'linear-gradient(160deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)' }}>
+
+            {/* Выручка */}
+            <div>
+              <div style={{ fontSize: 9, color: 'rgba(167,210,255,.45)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 4 }}>
+                {locale === 'he' ? 'הכנסות' : 'Выручка'}
+                {hasDateFilter && <span style={{ marginInlineStart: 6, color: 'rgba(251,191,36,.6)' }}>
                   {dateFrom && dateTo ? `${dateFrom} → ${dateTo}` : dateFrom ? `с ${dateFrom}` : `до ${dateTo}`}
-                </span>
-              )}
+                </span>}
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 800, color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>
+                ₪<AnimNum value={stats.totalRevenue} />
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(167,210,255,.4)', marginTop: 4 }}>
+                {stats.count} {locale === 'he' ? 'עסקאות' : 'сделок'} · {locale === 'he' ? 'ממוצע' : 'средний'} ₪<AnimNum value={stats.avg} />
+              </div>
             </div>
-            <BarChart chartPoints={chartPoints} locale={locale} />
-          </div>
-          {/* Breakdown */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 flex flex-col">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3 block">{t.breakdown}</span>
-            <div className="space-y-3 flex-1">
+
+            {/* 3 мини-карточки */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
               {[
-                { label: t.paid, count: paidSales.length, rev: paidRev, pct: paidPct, color: '#10b981' },
-                { label: t.partial, count: partSales.length, rev: partRev, pct: partPct, color: '#f59e0b' },
-              ].map((row, i) => (
-                <div key={i}>
-                  <div className="flex justify-between items-baseline mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full" style={{ background: row.color }} />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{row.label}</span>
-                    </div>
-                    <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">{row.count} · ₪{row.rev.toLocaleString()}</span>
+                { v: stats.count,        prefix: '',  color: '#a5b4fc', lbl: locale === 'he' ? 'עסקאות' : 'Сделок' },
+                { v: stats.avg,          prefix: '₪', color: '#fbbf24', lbl: locale === 'he' ? 'ממוצע' : 'Средний' },
+                { v: paidPct,            prefix: '',  color: '#34d399', lbl: '% ' + (locale === 'he' ? 'שולם' : 'оплачено'), suffix: '%' },
+              ].map((s, i) => (
+                <div key={i} style={{ background: 'rgba(255,255,255,.06)', borderRadius: 10, padding: '9px 10px' }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: s.color }}>
+                    {s.prefix}<AnimNum value={s.v} />{s.suffix || ''}
                   </div>
-                  <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${row.pct}%`, background: row.color }} />
-                  </div>
+                  <div style={{ fontSize: 8, color: 'rgba(255,255,255,.35)', textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 2 }}>{s.lbl}</div>
                 </div>
               ))}
             </div>
-            <p className="text-[9px] text-gray-400 dark:text-gray-600 mt-3 leading-tight flex items-center gap-1.5 pt-3 border-t border-gray-50 dark:border-gray-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />{t.syncNote}
-            </p>
+
+            {/* Бар-чарт */}
+            <div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,.28)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
+                {t.monthlyChart}
+              </div>
+              <BarChart chartPoints={chartPoints} locale={locale} />
+            </div>
+
+            {/* Разбивка по статусам */}
+            <div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,.28)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
+                {t.breakdown}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {[
+                  { label: t.paid,    count: paidSales.length, pct: paidPct, color: '#10b981' },
+                  { label: t.partial, count: partSales.length, pct: partPct, color: '#f59e0b' },
+                  { label: t.newStatus, count: filteredSales.filter((s: Sale) => s.status === 'new').length,
+                    pct: totalRev > 0 ? Math.round((filteredSales.filter((s: Sale) => s.status === 'new').reduce((acc: number, x: Sale) => acc + Number(x.total_amount || 0), 0) / totalRev) * 100) : 0,
+                    color: '#8b5cf6' },
+                ].map((row, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: row.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,.55)', flex: 1 }}>{row.label}</span>
+                    <div style={{ width: 60, height: 4, background: 'rgba(255,255,255,.08)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${row.pct}%`, background: row.color, borderRadius: 2, transition: 'width .7s ease' }} />
+                    </div>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)', minWidth: 14, textAlign: 'right' }}>{row.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Топ позиции */}
+            {(() => {
+              const itemMap: Record<string, number> = {}
+              filteredSales.forEach((s: Sale) => {
+                (s.sale_items || []).forEach(it => {
+                  itemMap[it.product_name] = (itemMap[it.product_name] || 0) + it.quantity
+                })
+              })
+              const top = Object.entries(itemMap).sort((a, b) => b[1] - a[1]).slice(0, 4)
+              const maxQ = top[0]?.[1] || 1
+              if (top.length === 0) return null
+              return (
+                <div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,.28)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
+                    {locale === 'he' ? 'פריטים מובילים' : 'Топ позиции'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {top.map(([name, qty], i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,.22)', minWidth: 10 }}>{i + 1}</span>
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,.7)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                        <div style={{ width: 44, height: 3, background: 'rgba(255,255,255,.08)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${Math.round((qty / maxQ) * 100)}%`, background: '#6366f1', borderRadius: 2 }} />
+                        </div>
+                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,.38)', minWidth: 18, textAlign: 'right' }}>×{qty}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Синк-нота */}
+            <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#34d399', flexShrink: 0 }} />
+              <span style={{ fontSize: 9, color: 'rgba(255,255,255,.25)', lineHeight: 1.4 }}>{t.syncNote}</span>
+            </div>
+          </div>
+
+          {/* ═══ ПРАВАЯ ПАНЕЛЬ — список ═══ */}
+          <div className="bg-white dark:bg-gray-800 flex flex-col min-w-0">
+
+            {/* Поиск + фильтры */}
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50 dark:border-gray-700/60">
+              <div className="relative flex-1">
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t.search}
+                  className="w-full ps-8 pe-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/25 transition-shadow" />
+              </div>
+              <button onClick={() => setShowFilters(v => !v)}
+                className={`relative flex items-center justify-center w-9 h-9 rounded-xl border transition-all ${
+                  showFilters || hasDateFilter
+                    ? 'bg-amber-50 border-amber-300 text-amber-600 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400'
+                    : 'border-gray-100 dark:border-gray-600 text-gray-400 hover:border-gray-300 dark:hover:border-gray-500'}`}>
+                <SlidersHorizontal size={15} />
+                {hasDateFilter && <span className="absolute -top-1 -end-1 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-white dark:border-gray-800" />}
+              </button>
+              <select value={methodFilter} onChange={e => setMethodFilter(e.target.value)}
+                className="text-xs border border-gray-100 dark:border-gray-600 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-400/20">
+                <option value="all">{t.filterAll}</option>
+                <option value="cash">{t.cash}</option>
+                <option value="card">{t.card}</option>
+                <option value="bit">{t.bit}</option>
+              </select>
+            </div>
+
+            {/* Фильтры (разворачиваемые) */}
+            {showFilters && (
+              <div className="px-4 py-3 border-b border-gray-50 dark:border-gray-700/60 bg-gray-50/60 dark:bg-gray-700/20 space-y-3"
+                style={{ animation: 'fadeUp 0.2s ease both' }}>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide block mb-1">{t.from}</label>
+                    <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                      className="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-400/20" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide block mb-1">{t.to}</label>
+                    <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                      className="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-400/20" />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-gray-400">{hasDateFilter ? (locale === 'he' ? 'מסנן פעיל ✓' : 'Фильтр активен ✓') : t.allTime}</span>
+                  {(hasDateFilter || methodFilter !== 'all') && (
+                    <button onClick={() => { setDateFrom(''); setDateTo(''); setMethodFilter('all') }}
+                      className="text-[11px] text-amber-500 hover:text-amber-600 flex items-center gap-1 font-medium">
+                      <X size={10} />{locale === 'he' ? 'נקה' : 'Сбросить'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Табы */}
+            <div className="flex bg-gray-50 dark:bg-gray-700/40 border-b border-gray-100 dark:border-gray-700 px-2 overflow-x-auto scrollbar-hide">
+              {(['all','paid','partial','new','draft'] as const).map(s => (
+                <button key={s} onClick={() => setStatusFilter(s)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 text-[11px] font-semibold py-3 px-3 border-b-2 transition-all whitespace-nowrap ${
+                    statusFilter === s ? 'border-amber-500 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600'}`}>
+                  {s === 'draft' && <BookmarkCheck size={11} />}
+                  {s === 'all' ? t.all : s === 'paid' ? t.paid : s === 'partial' ? t.partial : s === 'new' ? t.newStatus : t.draft}
+                  {s === 'draft' && drafts.length > 0 && (
+                    <span className="bg-amber-500 text-white text-[8px] min-w-[14px] h-3.5 px-1 rounded-full flex items-center justify-center font-bold">{drafts.length}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Шапка таблицы */}
+            {statusFilter !== 'draft' && !isLoading && filteredSales.length > 0 && (
+              <div className="grid px-4 py-2 bg-gray-50/80 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700"
+                style={{ gridTemplateColumns: '2fr 76px 76px minmax(0,1.2fr) 68px 90px' }}>
+                {[t.client, t.date, t.amount, t.items, t.receipt, t.status].map((h, i) => (
+                  <span key={i} className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{h}</span>
+                ))}
+              </div>
+            )}
+
+            {/* Контент */}
+            <div className="flex-1 overflow-y-auto">
+              {statusFilter === 'draft' && (
+                <div className="divide-y divide-gray-50 dark:divide-gray-700/40">
+                  {drafts.length === 0 ? (
+                    <EmptyState icon={<BookmarkCheck size={26} />}
+                      title={locale === 'he' ? 'אין עסקאות שמורות' : 'Нет сохранённых сделок'}
+                      description={locale === 'he' ? 'שמור עסקה מכרטיס לקוח' : 'Сохраните сделку из карточки клиента'} />
+                  ) : drafts.map((d, i) => {
+                    const av = AV_COLORS[d.clientName.charCodeAt(0) % AV_COLORS.length]
+                    const ini = d.clientName.split(' ').map((w: string) => w[0]?.toUpperCase() || '').join('').slice(0,2) || '?'
+                    return (
+                      <div key={d.clientId} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                        style={{ animation: `slideInRow 0.3s ${i * 0.05}s ease both` }}>
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${av}`}>{ini}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{d.clientName}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{d.itemCount} {locale === 'he' ? 'פריטים' : 'поз.'} · ₪{d.total.toLocaleString()}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <button onClick={() => openModal('client-sale', { client: { id: d.clientId, first_name: d.clientName }, locale })}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold active:scale-95 transition-all">
+                            {locale === 'he' ? 'פתח' : 'Открыть'}
+                          </button>
+                          <button onClick={() => { if (confirm(locale === 'he' ? 'למחוק?' : 'Удалить?')) { localStorage.removeItem(`draft_sale_${d.clientId}`); setDraftKey(k => k + 1) } }}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/20 text-red-400 hover:text-red-600 transition-all active:scale-95">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {statusFilter !== 'draft' && isLoading && (
+                <div className="divide-y divide-gray-50 dark:divide-gray-700/40">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3.5 bg-gray-100 dark:bg-gray-700 rounded-full w-36" />
+                        <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full w-24" />
+                      </div>
+                      <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full w-14" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {statusFilter !== 'draft' && !isLoading && (
+                filteredSales.length > 0
+                  ? filteredSales.map((s, i) => (
+                      <SaleRow key={s.id} sale={s} locale={locale} index={i}
+                        onClick={() => handleSaleClick(s)}
+                        onToggleReceipt={() => toggleRec.mutate({ id: s.id, receipt_sent: !s.receipt_sent })} />
+                    ))
+                  : <div className="py-16 text-center">
+                      <ShoppingBag className="w-10 h-10 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
+                      <p className="text-sm text-gray-400 dark:text-gray-500">{t.noSales}</p>
+                      <button onClick={() => openModal('client-sale', { locale })}
+                        className="mt-3 text-sm text-amber-500 hover:text-amber-600 hover:underline transition-colors">{t.newSale}</button>
+                    </div>
+              )}
+            </div>
           </div>
         </div>
 
-
-        {/* ── DEALS PANEL ── */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden"
+        {/* ── MOBILE список сделок ── */}
+        <div className="md:hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden"
           style={{ animation: 'fadeUp 0.42s 0.2s ease both' }}>
-
-          {/* Search + filter button row */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50 dark:border-gray-700/60">
             <div className="relative flex-1">
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t.search}
                 className="w-full ps-8 pe-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/25 transition-shadow" />
             </div>
-            {/* Filter button — with date dot indicator */}
             <button onClick={() => setShowFilters(v => !v)}
-              className={`relative flex items-center justify-center w-9 h-9 rounded-xl border transition-all ${
-                showFilters || hasDateFilter
-                  ? 'bg-amber-50 border-amber-300 text-amber-600 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-400'
-                  : 'border-gray-100 dark:border-gray-600 text-gray-400 hover:border-gray-300 dark:hover:border-gray-500'}`}>
+              className={`relative flex items-center justify-center w-9 h-9 rounded-xl border transition-all ${showFilters || hasDateFilter ? 'bg-amber-50 border-amber-300 text-amber-600' : 'border-gray-100 text-gray-400'}`}>
               <SlidersHorizontal size={15} />
-              {hasDateFilter && (
-                <span className="absolute -top-1 -end-1 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-white dark:border-gray-800" />
-              )}
+              {hasDateFilter && <span className="absolute -top-1 -end-1 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-white" />}
             </button>
-            {/* Method select — desktop only */}
-            <select value={methodFilter} onChange={e => setMethodFilter(e.target.value)}
-              className="hidden md:block text-xs border border-gray-100 dark:border-gray-600 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-400/20">
-              <option value="all">{t.filterAll}</option>
-              <option value="cash">{t.cash}</option>
-              <option value="card">{t.card}</option>
-              <option value="bit">{t.bit}</option>
-            </select>
           </div>
-
-          {/* ── Expandable date + method filter ── */}
           {showFilters && (
-            <div className="px-4 py-3 border-b border-gray-50 dark:border-gray-700/60 bg-gray-50/60 dark:bg-gray-700/20 space-y-3"
-              style={{ animation: 'fadeUp 0.2s ease both' }}>
-              {/* Date row */}
+            <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/60 space-y-3" style={{ animation: 'fadeUp 0.2s ease both' }}>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide block mb-1">{t.from}</label>
-                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                    className="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-400/20" />
+                  <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none" />
                 </div>
                 <div>
                   <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide block mb-1">{t.to}</label>
-                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                    className="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-400/20" />
+                  <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none" />
                 </div>
               </div>
-              {/* Method row — mobile only */}
-              <div className="md:hidden">
-                <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide block mb-1">{t.filterAll}</label>
-                <select value={methodFilter} onChange={e => setMethodFilter(e.target.value)}
-                  className="w-full text-sm border border-gray-200 dark:border-gray-600 rounded-lg py-1.5 px-2.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+              <div>
+                <select value={methodFilter} onChange={e => setMethodFilter(e.target.value)} className="w-full text-sm border border-gray-200 rounded-lg py-1.5 px-2.5 bg-white text-gray-800">
                   <option value="all">{t.filterAll}</option>
                   <option value="cash">{t.cash}</option>
                   <option value="card">{t.card}</option>
                   <option value="bit">{t.bit}</option>
                 </select>
               </div>
-              {/* Reset + active hint */}
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-gray-400">
-                  {hasDateFilter ? t.allTime.replace('За всё', 'Фильтр активен') + ' ✓' : t.allTime}
-                </span>
-                {(hasDateFilter || methodFilter !== 'all') && (
-                  <button onClick={() => { setDateFrom(''); setDateTo(''); setMethodFilter('all') }}
-                    className="text-[11px] text-amber-500 hover:text-amber-600 flex items-center gap-1 font-medium">
-                    <X size={10} />{locale === 'he' ? 'נקה' : 'Сбросить'}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-
-          {/* Tabs */}
-          <div className="flex bg-gray-50 dark:bg-gray-700/40 border-b border-gray-100 dark:border-gray-700 px-2 overflow-x-auto scrollbar-hide">
-            {(['all','paid','partial','new','draft'] as const).map(s => (
-              <button key={s} onClick={() => setStatusFilter(s)}
-                className={`flex-shrink-0 flex items-center gap-1.5 text-[11px] font-semibold py-3 px-3 border-b-2 transition-all whitespace-nowrap ${
-                  statusFilter === s ? 'border-amber-500 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}>
-                {s === 'draft' && <BookmarkCheck size={11} />}
-                {s === 'all' ? t.all : s === 'paid' ? t.paid : s === 'partial' ? t.partial : s === 'new' ? t.newStatus : t.draft}
-                {s === 'draft' && drafts.length > 0 && (
-                  <span className="bg-amber-500 text-white text-[8px] min-w-[14px] h-3.5 px-1 rounded-full flex items-center justify-center font-bold">{drafts.length}</span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Draft tab */}
-          {statusFilter === 'draft' && (
-            <div className="divide-y divide-gray-50 dark:divide-gray-700/40">
-              {drafts.length === 0 ? (
-                <EmptyState icon={<BookmarkCheck size={26} />}
-                  title={locale === 'he' ? 'אין עסקאות שמורות' : 'Нет сохранённых сделок'}
-                  description={locale === 'he' ? 'שמור עסקה מכרטיס לקוח' : 'Сохраните сделку из карточки клиента'} />
-              ) : drafts.map((d, i) => {
-                const av = AV_COLORS[d.clientName.charCodeAt(0) % AV_COLORS.length]
-                const ini = d.clientName.split(' ').map((w: string) => w[0]?.toUpperCase() || '').join('').slice(0,2) || '?'
-                return (
-                  <div key={d.clientId} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
-                    style={{ animation: `slideInRow 0.3s ${i * 0.05}s ease both` }}>
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${av}`}>{ini}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{d.clientName}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{d.itemCount} {locale === 'he' ? 'פריטים' : 'поз.'} · ₪{d.total.toLocaleString()}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <button onClick={() => openModal('client-sale', { client: { id: d.clientId, first_name: d.clientName }, locale })}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold active:scale-95 transition-all">
-                        {locale === 'he' ? 'פתח' : 'Открыть'}
-                      </button>
-                      <button onClick={() => { if (confirm(locale === 'he' ? 'למחוק?' : 'Удалить?')) { localStorage.removeItem(`draft_sale_${d.clientId}`); setDraftKey(k => k + 1) } }}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-900/20 text-red-400 hover:text-red-600 transition-all active:scale-95">
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Skeleton */}
-          {statusFilter !== 'draft' && isLoading && (
-            <div className="divide-y divide-gray-50 dark:divide-gray-700/40">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
-                  <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3.5 bg-gray-100 dark:bg-gray-700 rounded-full w-36" />
-                    <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full w-24" />
-                  </div>
-                  <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full w-14" />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Mobile cards */}
-          {statusFilter !== 'draft' && !isLoading && (
-            <div className="md:hidden divide-y divide-gray-50 dark:divide-gray-700/40">
-              {filteredSales.length > 0
-                ? filteredSales.map((s, i) => <MobileSaleCard key={s.id} sale={s} locale={locale} index={i} onClick={() => handleSaleClick(s)} />)
-                : <EmptyState icon={<ShoppingBag size={26} />} title={t.noSales} description={t.noSalesDesc}
-                    action={{ label: t.newSale, onClick: () => openModal('client-sale', { locale }) }} />}
-            </div>
-          )}
-
-
-          {/* Desktop table */}
-          {statusFilter !== 'draft' && !isLoading && (
-            <div className="hidden md:block">
-              {filteredSales.length > 0 ? (
-                <>
-                  <div className="grid px-4 py-2 bg-gray-50/80 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700"
-                    style={{ gridTemplateColumns: '2fr 76px 76px minmax(0,1.2fr) 68px 90px' }}>
-                    {[t.client, t.date, t.amount, t.items, t.receipt, t.status].map((h, i) => (
-                      <span key={i} className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">{h}</span>
-                    ))}
-                  </div>
-                  {filteredSales.map((s, i) => (
-                    <SaleRow key={s.id} sale={s} locale={locale} index={i}
-                      onClick={() => handleSaleClick(s)}
-                      onToggleReceipt={() => toggleRec.mutate({ id: s.id, receipt_sent: !s.receipt_sent })} />
-                  ))}
-                </>
-              ) : (
-                <div className="py-16 text-center">
-                  <ShoppingBag className="w-10 h-10 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
-                  <p className="text-sm text-gray-400 dark:text-gray-500">{t.noSales}</p>
-                  <button onClick={() => openModal('client-sale', { locale })}
-                    className="mt-3 text-sm text-amber-500 hover:text-amber-600 hover:underline transition-colors">{t.newSale}</button>
-                </div>
+              {(hasDateFilter || methodFilter !== 'all') && (
+                <button onClick={() => { setDateFrom(''); setDateTo(''); setMethodFilter('all') }} className="text-[11px] text-amber-500 flex items-center gap-1">
+                  <X size={10} />{locale === 'he' ? 'נקה' : 'Сбросить'}
+                </button>
               )}
             </div>
           )}
-
-        </div>{/* end deals panel */}
+          <div className="flex bg-gray-50 dark:bg-gray-700/40 border-b border-gray-100 dark:border-gray-700 px-2 overflow-x-auto scrollbar-hide">
+            {(['all','paid','partial','new','draft'] as const).map(s => (
+              <button key={s} onClick={() => setStatusFilter(s)}
+                className={`flex-shrink-0 flex items-center gap-1.5 text-[11px] font-semibold py-3 px-3 border-b-2 transition-all whitespace-nowrap ${statusFilter === s ? 'border-amber-500 text-gray-900' : 'border-transparent text-gray-400'}`}>
+                {s === 'draft' && <BookmarkCheck size={11} />}
+                {s === 'all' ? t.all : s === 'paid' ? t.paid : s === 'partial' ? t.partial : s === 'new' ? t.newStatus : t.draft}
+                {s === 'draft' && drafts.length > 0 && <span className="bg-amber-500 text-white text-[8px] min-w-[14px] h-3.5 px-1 rounded-full flex items-center justify-center font-bold">{drafts.length}</span>}
+              </button>
+            ))}
+          </div>
+          <div className="divide-y divide-gray-50 dark:divide-gray-700/40">
+            {isLoading ? [...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+                <div className="w-9 h-9 rounded-full bg-gray-100 flex-shrink-0" />
+                <div className="flex-1 space-y-2"><div className="h-3.5 bg-gray-100 rounded-full w-36" /><div className="h-3 bg-gray-100 rounded-full w-24" /></div>
+                <div className="h-4 bg-gray-100 rounded-full w-14" />
+              </div>
+            )) : filteredSales.length > 0
+              ? filteredSales.map((s, i) => <MobileSaleCard key={s.id} sale={s} locale={locale} index={i} onClick={() => handleSaleClick(s)} />)
+              : <EmptyState icon={<ShoppingBag size={26} />} title={t.noSales} description={t.noSalesDesc} action={{ label: t.newSale, onClick: () => openModal('client-sale', { locale }) }} />
+            }
+          </div>
+        </div>
 
         {/* FAB */}
         <button onClick={() => openModal('client-sale', { locale })}

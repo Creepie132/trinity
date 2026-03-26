@@ -7,6 +7,30 @@ const supabaseAdmin = createAdmin(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await getAuthContext()
+  if ('error' in auth) return auth.error
+
+  const { orgId } = auth
+  const { id } = await params
+
+  const { data, error } = await supabaseAdmin
+    .from('clients')
+    .select('id, first_name, last_name, phone, email, address, city, date_of_birth, notes, description, paint_code, created_at, org_id')
+    .eq('id', id)
+    .eq('org_id', orgId)
+    .single()
+
+  if (error || !data) {
+    return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+  }
+
+  return NextResponse.json(data)
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

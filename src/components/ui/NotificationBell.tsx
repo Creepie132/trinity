@@ -6,6 +6,7 @@ import { Bell, CheckCheck, Phone, MessageCircle, Check, X, Trash2 } from 'lucide
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { TrinityNotificationIcon } from './TrinityNotificationIcon'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useModalStore } from '@/store/useModalStore'
 
 interface NotificationMetadata {
   invited_user_email?: string
@@ -364,6 +365,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const bellRef = useRef<HTMLDivElement | null>(null)
+  const { openModal } = useModalStore()
 
   const l = translations[locale]
   const supabase = createSupabaseBrowserClient()
@@ -603,11 +605,22 @@ export function NotificationBell({ locale }: NotificationBellProps) {
           </div>
         )}
 
-        {n.type === 'client_registered' && n.link && (
+        {n.type === 'client_registered' && n.reference_id && (
           <div className="mt-2 ms-5">
-            <a href={n.link} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors border border-amber-200 dark:border-amber-800/40">
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch(`/api/clients/${n.reference_id}`)
+                  if (!res.ok) return
+                  const client = await res.json()
+                  setIsOpen(false)
+                  openModal('client-details', { client, locale })
+                } catch { /* ignore */ }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors border border-amber-200 dark:border-amber-800/40"
+            >
               <span>👤</span>{locale === 'he' ? 'פתח כרטיס לקוח' : 'Открыть карточку'}
-            </a>
+            </button>
           </div>
         )}
       </div>

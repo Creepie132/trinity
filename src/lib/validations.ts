@@ -14,14 +14,14 @@ export const createClientSchema = z.object({
 // Визиты
 export const createVisitSchema = z.object({
   clientId: z.string().uuid(),
-  service: z.string().max(500).optional(),
-  serviceId: z.string().optional(), // UUID или текст
+  service: z.string().max(500).optional().nullable(),
+  serviceId: z.string().optional().nullable(), // UUID или текст, может быть null для встречи
   date: z.string().min(1),
   time: z.string().min(1),
   duration: z.coerce.number().int().max(480).optional().nullable(),
-  price: z.string().min(1), // Приходит как строка
+  price: z.string().optional().nullable(), // Может быть null/пустой строкой для встречи
   quantity: z.coerce.number().int().min(1, 'Количество не может быть меньше 1').max(999).default(1),
-  notes: z.string().max(2000).optional().or(z.literal("")),
+  notes: z.string().max(2000).optional().or(z.literal("")).nullable(),
   event_type: z.enum(['visit', 'meeting']).default('visit'),
   meeting_link: z.string().url().optional().or(z.literal("")).nullable(),
 })

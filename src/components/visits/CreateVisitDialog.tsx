@@ -391,7 +391,7 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
                 <div className="flex-1">
                   <Select value={form.serviceId} onValueChange={onSvcChange}>
                     <SelectTrigger className="h-10 w-full"><SelectValue placeholder={t('visits.selectService')} /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" side="bottom" avoidCollisions={false}>
                       {services.map((s: any) => {
                         const n = isHe ? s.name : (s.name_ru || s.name)
                         return <SelectItem key={s.id} value={s.id}>{n}</SelectItem>

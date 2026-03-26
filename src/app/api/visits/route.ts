@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     if (!date || !time) {
       return NextResponse.json({ error: 'חסר תאריך או שעה' }, { status: 400 })
     }
-    if (!isMeetingMode && !price) {
+    if (!isMeetingMode && (price === null || price === undefined || price === '')) {
       return NextResponse.json({ error: 'חסר מחיר' }, { status: 400 })
     }
 
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-    let visitPrice = price ? parseFloat(price) : 0
+    let visitPrice = (price !== null && price !== undefined && price !== '') ? parseFloat(price) : 0
     if (!price && serviceId) {
       if (uuidRegex.test(serviceId)) {
         const { data: serviceData, error: serviceError } = await supabase

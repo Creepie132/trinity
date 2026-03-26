@@ -260,6 +260,10 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
   const { orgId } = useAuth()
   const queryClient = useQueryClient()
   const { data: customServices } = useServices()
+  // Force-invalidate services cache on open to always get fresh prices
+  useEffect(() => {
+    if (open) queryClient.invalidateQueries({ queryKey: ['services'] })
+  }, [open])
   const { hasWhatsapp } = useFeatures()
   const isHe = language === 'he'
   const dir = isHe ? 'rtl' : 'ltr'
@@ -287,17 +291,28 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
   const services = (customServices && customServices.length > 0) ? customServices
     : DEFAULT_SERVICES.map(s => ({ id: s.value, name: t(s.labelKey), name_ru: t(s.labelKey), duration_minutes: 60, price: undefined }))
 
-  // Сбрасываем выбор услуги когда набор услуг меняется (дефолтные → кастомные)
-  // чтобы избежать ситуации когда старый serviceId не совпадает ни с одним новым
+  // Сбрасываем выбор услуги когда набор услуг меняется (дефолтные → кастомные),
+  // чтобы избежать ситуации когда старый serviceId не совпадает ни с одним новым.
+  // Также сбрасываем price и duration — иначе при следующем выборе услуги
+  // могут остаться цена/длительность от предыдущего выбора (race condition).
   useEffect(() => {
     if (!open) return
-    setForm(p => ({ ...p, serviceId: '', service: '' }))
+    setForm(p => ({ ...p, serviceId: '', service: '', price: '', duration: 60 }))
   }, [customServices?.length, open])
 
   const onSvcChange = (id: string) => {
     const svc = services.find((s: any) => s.id === id)
     const svcNameStr = isHe ? svc?.name : (svc?.name_ru || svc?.name)
-    setForm(p => ({ ...p, serviceId: id, service: svcNameStr || id, price: svc?.price?.toString() || p.price, duration: svc?.duration_minutes || p.duration }))
+    // price may come as string "3000.00" from Supabase numeric — always parse to float first
+    const svcPrice = svc?.price != null ? parseFloat(String(svc.price)) : null
+    const svcDuration = svc?.duration_minutes ? Number(svc.duration_minutes) : null
+    setForm(p => ({
+      ...p,
+      serviceId: id,
+      service: svcNameStr || id,
+      price: svcPrice != null ? String(svcPrice) : p.price,
+      duration: svcDuration != null ? svcDuration : p.duration,
+    }))
   }
 
   const selSvc = services.find((s: any) => s.id === form.serviceId)

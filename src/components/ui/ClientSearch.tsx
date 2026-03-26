@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useQuery } from '@tanstack/react-query';
@@ -30,14 +31,19 @@ export function ClientSearch({
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
+  const [mounted, setMounted] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Нужен для createPortal — только на клиенте
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Закрытие по клику вне компонента
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
@@ -48,28 +54,21 @@ export function ClientSearch({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Вычисляем fixed-позицию дропдауна через getBoundingClientRect —
-  // это позволяет выходить за пределы overflow:hidden родителей (TrinityModalShell, WizardModal)
-  // Пересчитываем при КАЖДОМ изменении debouncedQuery (а не только при isOpen),
-  // чтобы dropdownStyle был готов к моменту рендера списка
+  // Пересчитываем позицию при каждом открытии и при изменении query
+  // Двойной rAF гарантирует что Bottom Sheet/модал завершил анимацию
   useEffect(() => {
-    if (!isOpen || !wrapperRef.current) return
+    if (!isOpen || !wrapperRef.current) return;
     const recalc = () => {
-      if (!wrapperRef.current) return
-      const rect = wrapperRef.current.getBoundingClientRect()
-      setDropdownStyle({
-        position: 'fixed',
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-        zIndex: 10000,
-      })
-    }
-    // Немедленный вызов + rAF для порталов/анимаций
-    recalc()
-    const raf = requestAnimationFrame(recalc)
-    return () => cancelAnimationFrame(raf)
-  }, [isOpen, debouncedQuery])
+      if (!wrapperRef.current) return;
+      setDropdownRect(wrapperRef.current.getBoundingClientRect());
+    };
+    recalc();
+    const raf1 = requestAnimationFrame(() => {
+      const raf2 = requestAnimationFrame(recalc);
+      return () => cancelAnimationFrame(raf2);
+    });
+    return () => cancelAnimationFrame(raf1);
+  }, [isOpen, debouncedQuery]);
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['client-search', orgId, debouncedQuery],
@@ -109,6 +108,60 @@ export function ClientSearch({
 
   const getClientDisplay = (client: Client) => `${client.first_name} ${client.last_name}`;
 
+  // Dropdown через portal в document.body — выходит за любой overflow:hidden/clip
+  const showDropdown = isOpen && searchQuery.length >= 2 && mounted && dropdownRect;
+
+  const dropdownPortal = showDropdown ? createPortal(
+    <div
+      style={{
+        position: 'fixed',
+        top: dropdownRect!.bottom + 4,
+        left: dropdownRect!.left,
+        width: dropdownRect!.width,
+        zIndex: 99999,
+      }}
+      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-2xl overflow-hidden"
+    >
+      <div className="max-h-[220px] overflow-y-auto">
+        {isLoading ? (
+          <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+            {locale === 'he' ? 'טוען...' : locale === 'ru' ? 'Загрузка...' : 'Loading...'}
+          </div>
+        ) : clients.length > 0 ? (
+          <>
+            {clients.slice(0, 5).map((client) => (
+              <button
+                key={client.id}
+                onMouseDown={(e) => { e.preventDefault(); handleSelect(client); }}
+                className="w-full px-4 py-2.5 hover:bg-indigo-50 dark:hover:bg-gray-700 transition flex items-center justify-between border-b border-gray-50 dark:border-gray-700 last:border-0"
+                type="button"
+              >
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  {getClientDisplay(client)}
+                </span>
+                <span className="text-xs text-gray-400">{client.phone}</span>
+              </button>
+            ))}
+            {clients.length > 5 && (
+              <div className="px-4 py-2 text-xs text-amber-600 dark:text-amber-400 text-center bg-amber-50 dark:bg-amber-900/20 border-t border-amber-100 dark:border-amber-800">
+                {locale === 'he'
+                  ? '✏️ הקלד יותר תווים לתוצאות מדויקות יותר'
+                  : locale === 'ru'
+                  ? '✏️ Введите больше символов для точного поиска'
+                  : '✏️ Type more characters for better results'}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+            {getNoResults()}
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
   return (
     <div ref={wrapperRef} className="relative">
       {value ? (
@@ -129,56 +182,12 @@ export function ClientSearch({
               type="text"
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setIsOpen(true); }}
-              onFocus={() => setIsOpen(true)}
+              onFocus={() => { if (searchQuery.length >= 2) setIsOpen(true); }}
               placeholder={getPlaceholder()}
               className="pr-10 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
             />
           </div>
-
-          {/* Dropdown — fixed позиция, выходит за overflow:hidden родителей */}
-          {isOpen && searchQuery.length >= 2 && (
-            <div
-              style={dropdownStyle}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-2xl overflow-hidden"
-            >
-              <div className="max-h-[220px] overflow-y-auto">
-                {isLoading ? (
-                  <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                    {locale === 'he' ? 'טוען...' : locale === 'ru' ? 'Загрузка...' : 'Loading...'}
-                  </div>
-                ) : clients.length > 0 ? (
-                  <>
-                    {clients.slice(0, 5).map((client) => (
-                      <button
-                        key={client.id}
-                        onMouseDown={(e) => { e.preventDefault(); handleSelect(client); }}
-                        className="w-full px-4 py-2.5 hover:bg-indigo-50 dark:hover:bg-gray-700 transition flex items-center justify-between border-b border-gray-50 dark:border-gray-700 last:border-0"
-                        type="button"
-                      >
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {getClientDisplay(client)}
-                        </span>
-                        <span className="text-xs text-gray-400">{client.phone}</span>
-                      </button>
-                    ))}
-                    {clients.length > 5 && (
-                      <div className="px-4 py-2 text-xs text-amber-600 dark:text-amber-400 text-center bg-amber-50 dark:bg-amber-900/20 border-t border-amber-100 dark:border-amber-800">
-                        {locale === 'he'
-                          ? '✏️ הקלד יותר תווים לתוצאות מדויקות יותר'
-                          : locale === 'ru'
-                          ? '✏️ Введите больше символов для точного поиска'
-                          : '✏️ Type more characters for better results'}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
-                    {getNoResults()}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {dropdownPortal}
         </>
       )}
     </div>

@@ -233,7 +233,9 @@ export function ModalBottomSheet({
             overflowY:          'auto',
             overscrollBehavior: 'contain',
             touchAction:        'pan-y',   // скролл контента всегда работает
-            padding:            '20px 16px 16px',
+            padding:            '20px 16px',
+            // Extra bottom padding so sticky footer never overlaps last content item
+            paddingBottom:      footerContent ? '80px' : '20px',
             WebkitOverflowScrolling: 'touch',
           }}
         >

@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   try {
     const { data, error } = await service
       .from('audit_log')
-      .select('id, action, entity_type, user_email, org_id, metadata, created_at, organizations(name)')
+      .select('id, action, entity_type, user_email, org_id, new_data, old_data, created_at, organizations(name)')
       .order('created_at', { ascending: false })
       .limit(50)
 

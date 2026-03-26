@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 
 // Admin Dashboard Stats
 export function useAdminStats() {
@@ -418,6 +419,16 @@ export function useRemoveOrgUser() {
 
 // Audit Log
 export function useAuditLog(limit = 5) {
+  const queryClient = useQueryClient()
+
+  // Realtime: при любом INSERT в audit_log — сразу обновляем список действий
+  useRealtimeSync({
+    table: 'audit_log',
+    orgId: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', // audit_log — глобальная, используем главный org
+    queryKey: ['admin', 'audit-log'],
+    events: ['INSERT'],
+  })
+
   return useQuery({
     queryKey: ['admin', 'audit-log', limit],
     queryFn: async () => {
@@ -430,7 +441,8 @@ export function useAuditLog(limit = 5) {
         entity_type: string
         user_email: string
         org_id: string
-        metadata: any
+        new_data: any
+        old_data: any
         created_at: string
         organizations?: { name: string }
       }>

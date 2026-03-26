@@ -9,20 +9,21 @@ import { useAuth } from '@/hooks/useAuth'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useBranch } from '@/contexts/BranchContext'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getClientName } from '@/lib/client-utils'
 import {
   Search, Plus, Minus, X, Percent, ShoppingCart,
   FileText, Download, MessageCircle, Mail,
   CreditCard, Banknote, Building2, ChevronLeft, Check, LayoutGrid,
-  Smartphone, Scissors, Zap
+  Smartphone, Scissors, Zap, Wrench, Package
 } from 'lucide-react'
 import type { Product } from '@/types/inventory'
 import { useGeneratePDF } from '@/lib/pdf/use-generate-pdf'
 import type { ProposalData } from '@/lib/pdf/proposal-types'
 import { sendProposalEmail } from '@/app/actions/send-proposal-email'
 import ProductCatalogModal from '@/components/sales/ProductCatalogModal'
+import { useServices } from '@/hooks/useServices'
 
 interface CartItem {
   product: Product
@@ -50,6 +51,179 @@ const paymentMethods = [
   { value: 'bit', label: { he: 'Bit', ru: 'Bit' }, icon: Smartphone },
   { value: 'bank', label: { he: 'העברה בנקאית', ru: 'Перевод' }, icon: Building2 },
 ]
+
+// ── Item Picker Sheet ──────────────────────────────────────────────────────
+type PickerStep = 'choose' | 'service' | 'product' | 'custom'
+
+function SaleItemPickerSheet({ isOpen, onClose, locale, onAddService, onAddProduct, onAddCustom }: {
+  isOpen: boolean; onClose: () => void; locale: string
+  onAddService: (name: string, price: number) => void
+  onAddProduct: (product: Product) => void
+  onAddCustom: (name: string, price: number) => void
+}) {
+  const [step, setStep] = useState<PickerStep>('choose')
+  const [search, setSearch] = useState('')
+  const [customName, setCustomName] = useState('')
+  const [customPrice, setCustomPrice] = useState('')
+  const isHe = locale === 'he'
+  const { data: services = [], isLoading: svcLoading } = useServices()
+  const { data: pickerProducts = [] } = useQuery({
+    queryKey: ['products-for-sale-picker'],
+    queryFn: async () => {
+      const res = await fetch('/api/products')
+      if (!res.ok) return []
+      const json = await res.json()
+      return (json.products ?? []) as Product[]
+    },
+  })
+
+  useEffect(() => {
+    if (isOpen) { setStep('choose'); setSearch(''); setCustomName(''); setCustomPrice('') }
+  }, [isOpen])
+
+  if (!isOpen) return null
+
+  const titles: Record<PickerStep, string> = {
+    choose:  isHe ? 'מה להוסיף?' : 'Что добавить?',
+    service: isHe ? 'בחר שירות'  : 'Выберите услугу',
+    product: isHe ? 'בחר מוצר'   : 'Выберите товар',
+    custom:  isHe ? 'פריט חופשי' : 'Произвольная позиция',
+  }
+
+  const filteredServices = (services as any[]).filter(s =>
+    !search || (s.name_ru || s.name || '').toLowerCase().includes(search.toLowerCase()))
+  const filteredPProducts = (pickerProducts as Product[]).filter(p =>
+    !search || p.name.toLowerCase().includes(search.toLowerCase()))
+
+  return (
+    <div className="fixed inset-0 z-[9200] flex items-end md:items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.4)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col shadow-2xl overflow-hidden"
+        style={{ animation: 'fadeInUp 0.2s ease both' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{titles[step]}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <X size={17} />
+          </button>
+        </div>
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto">
+
+          {/* Step: choose */}
+          {step === 'choose' && (
+            <div className="p-5 space-y-3">
+              {([
+                { type: 'service' as const, icon: <Wrench size={18} />,  label: isHe ? 'שירות' : 'Услуга',      cls: 'bg-violet-50 border-violet-200 text-violet-700 hover:bg-violet-100 dark:bg-violet-900/20 dark:border-violet-800 dark:text-violet-300' },
+                { type: 'product' as const, icon: <Package size={18} />, label: isHe ? 'מוצר'  : 'Товар',       cls: 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' },
+                { type: 'custom'  as const, icon: <Plus size={18} />,    label: isHe ? 'כללי'  : 'Произвольно', cls: 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300' },
+              ]).map(({ type, icon, label, cls }) => (
+                <button key={type} onClick={() => setStep(type)}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 font-medium text-sm transition-all active:scale-[0.98] ${cls}`}>
+                  {icon}{label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Step: service */}
+          {step === 'service' && (
+            <div className="flex flex-col h-full">
+              <div className="px-4 pt-3 pb-2 space-y-2">
+                <button onClick={() => setStep('choose')} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                  <ChevronLeft size={13} />{isHe ? 'חזור' : 'Назад'}
+                </button>
+                <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder={isHe ? 'חיפוש...' : 'Поиск...'} autoFocus
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-200" />
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
+                {svcLoading
+                  ? <p className="py-8 text-center text-sm text-gray-400">{isHe ? 'טוען...' : 'Загрузка...'}</p>
+                  : filteredServices.map((s: any) => {
+                      const name = isHe ? s.name : (s.name_ru || s.name)
+                      return (
+                        <button key={s.id} onClick={() => onAddService(name, s.price || 0)}
+                          className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-violet-50 dark:hover:bg-violet-900/20 active:scale-[0.98] transition-all text-start">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
+                              <Wrench className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                            </div>
+                            <p className="text-sm font-semibold truncate">{name}</p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0 ms-2">
+                            <span className="text-sm font-bold text-gray-600 dark:text-gray-300">₪{s.price || 0}</span>
+                            <Plus size={16} className="text-violet-400" />
+                          </div>
+                        </button>
+                      )
+                    })}
+              </div>
+            </div>
+          )}
+
+          {/* Step: product */}
+          {step === 'product' && (
+            <div className="flex flex-col h-full">
+              <div className="px-4 pt-3 pb-2 space-y-2">
+                <button onClick={() => setStep('choose')} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                  <ChevronLeft size={13} />{isHe ? 'חזור' : 'Назад'}
+                </button>
+                <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder={isHe ? 'חיפוש...' : 'Поиск...'} autoFocus
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-200" />
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
+                {filteredPProducts.map((p: Product) => (
+                  <button key={p.id} onClick={() => onAddProduct(p)}
+                    className="w-full flex items-center justify-between p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 active:scale-[0.98] transition-all text-start">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                        <Package className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                      </div>
+                      <p className="text-sm font-semibold truncate">{p.name}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ms-2">
+                      <span className="text-sm font-bold text-gray-600 dark:text-gray-300">₪{p.sell_price}</span>
+                      <Plus size={16} className="text-amber-400" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step: custom */}
+          {step === 'custom' && (
+            <div className="px-5 pt-3 pb-5 space-y-4">
+              <button onClick={() => setStep('choose')} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                <ChevronLeft size={13} />{isHe ? 'חזור' : 'Назад'}
+              </button>
+              <input type="text" value={customName} onChange={e => setCustomName(e.target.value)} autoFocus
+                placeholder={isHe ? 'שם פריט / שירות' : 'Название'}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+              <div className="relative">
+                <span className="absolute start-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">₪</span>
+                <input type="number" min={0} value={customPrice} onChange={e => setCustomPrice(e.target.value)}
+                  placeholder="0"
+                  className="w-full ps-6 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+              </div>
+              <button
+                onClick={() => { if (customName.trim()) onAddCustom(customName.trim(), Number(customPrice) || 0) }}
+                disabled={!customName.trim()}
+                className="w-full py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40"
+                style={{ background: customName.trim() ? 'linear-gradient(135deg, #f59e0b, #d97706)' : '#e2e8f0' }}>
+                <Plus size={15} className="inline me-1" />{isHe ? 'הוסף' : 'Добавить'}
+              </button>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function SaleModal() {
   const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
@@ -91,6 +265,7 @@ export function SaleModal() {
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [quickName, setQuickName] = useState('')
   const [quickPrice, setQuickPrice] = useState('')
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   const { download, uploadAndGetLink, loading: pdfLoading } = useGeneratePDF()
 
@@ -538,6 +713,19 @@ export function SaleModal() {
   const addProductFromCatalog = (product: Product) => {
     addToCart(product)
     setCatalogOpen(false)
+  }
+
+  // Direct quick-add by name+price (used from picker)
+  const handleQuickAddDirect = (name: string, price: number) => {
+    const customProduct = {
+      id: `custom_${Date.now()}`,
+      name: name.trim(),
+      sell_price: price,
+      quantity: 9999,
+      unit: '',
+      is_active: true,
+    } as unknown as Product
+    setCart(prev => [...prev, { product: customProduct, quantity: 1, price }])
   }
 
   // Add custom (one-off) item
@@ -1076,7 +1264,7 @@ export function SaleModal() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Column - Product Search & Cart */}
         <div className="space-y-4">
-          {/* Search + Catalog + Quick-add */}
+          {/* Search + Add button */}
           <div className="flex gap-2 items-center">
             <div className="relative flex-1">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -1088,66 +1276,17 @@ export function SaleModal() {
                 className="w-full pr-10 pl-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
-            {/* Catalog */}
+            {/* Picker — opens service/product/custom choice */}
             <button
-              onClick={() => setCatalogOpen(true)}
-              className="w-12 h-12 flex-shrink-0 flex items-center justify-center border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-indigo-400 transition-colors"
-              title={locale === 'he' ? 'כל המוצרים' : 'Каталог'}
-            >
-              <LayoutGrid className="w-5 h-5 text-gray-500" />
-            </button>
-            {/* Quick-add */}
-            <button
-              onClick={() => setQuickAddOpen(true)}
+              onClick={() => setPickerOpen(true)}
               className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-xl transition-colors
-                bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700
-                hover:bg-orange-100 dark:hover:bg-orange-900/40"
-              title={locale === 'he' ? 'הוסף פריט מהיר' : 'Быстро добавить'}
+                bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700
+                hover:bg-amber-100 dark:hover:bg-amber-900/40"
+              title={locale === 'he' ? 'הוסף פריט' : 'Добавить позицию'}
             >
-              <Zap className="w-5 h-5 text-orange-500" />
+              <Plus className="w-5 h-5 text-amber-600" />
             </button>
           </div>
-
-          {/* Quick-add inline panel */}
-          {quickAddOpen && (
-            <div className="p-4 rounded-xl border border-orange-200 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/10 space-y-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="flex items-center gap-1.5 text-sm font-semibold text-orange-700 dark:text-orange-400">
-                  <Zap size={14} /> {locale === 'he' ? 'פריט מהיר' : 'Быстрое добавление'}
-                </span>
-                <button onClick={() => { setQuickAddOpen(false); setQuickName(''); setQuickPrice('') }}
-                  className="text-gray-400 hover:text-gray-600"><X size={15} /></button>
-              </div>
-              <input
-                type="text"
-                value={quickName}
-                onChange={e => setQuickName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleQuickAdd()}
-                autoFocus
-                placeholder={locale === 'he' ? 'שם המוצר / שירות' : 'Название товара / услуги'}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm
-                  bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300"
-              />
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">₪</span>
-                  <input
-                    type="number" min={0} value={quickPrice}
-                    onChange={e => setQuickPrice(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleQuickAdd()}
-                    placeholder="0"
-                    className="w-full ps-7 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm
-                      bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-300"
-                  />
-                </div>
-                <button onClick={handleQuickAdd} disabled={!quickName.trim()}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition disabled:opacity-40"
-                  style={{ background: quickName.trim() ? 'linear-gradient(135deg, #f97316, #ea580c)' : '#e2e8f0' }}>
-                  <Plus size={15} />
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Product suggestions */}
           {searchQuery && filteredProducts.length > 0 && (
@@ -1342,13 +1481,26 @@ export function SaleModal() {
       </TrinityModalShell>
     </Modal>
 
-    {/* Product Catalog Modal */}
-    <ProductCatalogModal
-      isOpen={catalogOpen}
-      onClose={() => setCatalogOpen(false)}
-      products={products || []}
-      onAddProduct={addProductFromCatalog}
-    />
+    {/* Item Picker Sheet — service / product / custom */}
+    {pickerOpen && (
+      <SaleItemPickerSheet
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        locale={locale}
+        onAddService={(name, price) => {
+          handleQuickAddDirect(name, price)
+          setPickerOpen(false)
+        }}
+        onAddProduct={(product) => {
+          addToCart(product)
+          setPickerOpen(false)
+        }}
+        onAddCustom={(name, price) => {
+          handleQuickAddDirect(name, price)
+          setPickerOpen(false)
+        }}
+      />
+    )}
     </>
   )
 }

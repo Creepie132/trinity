@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useQueryClient } from '@tanstack/react-query'
 import { useServices } from '@/hooks/useServices'
 import { useBranch } from '@/contexts/BranchContext'
+import { useFeatures } from '@/hooks/useFeatures'
 import { WizardModal } from '@/components/ui/WizardModal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import Modal from '@/components/ui/Modal'
@@ -121,6 +122,9 @@ async function submitVisit(params: {
       if (form.city) p.push(`${isHe ? 'עיר' : 'Город'}: ${form.city}`)
       if (form.address) p.push(`${isHe ? 'כתובת' : 'Адрес'}: ${form.address}`)
     }
+    if (form.reminderHours?.length > 0) {
+      p.push(`${isHe ? 'תזכורות' : 'Напоминания'}: ${form.reminderHours.sort((a: number, b: number) => b - a).join(', ')}ч`)
+    }
     if (form.notes) p.push(form.notes)
     notes = p.join('\n')
   }
@@ -152,8 +156,99 @@ const emptyForm = () => ({
   clientId: '', serviceId: '', service: '',
   date: getDefaultDate(), time: getDefaultTime(),
   duration: 60, price: '', quantity: 1, notes: '', city: '', address: '', meeting_link: '',
-  meetingPurpose: '', isOnline: false,
+  meetingPurpose: '', isOnline: false, reminderHours: [] as number[],
 })
+
+// ─── Reminder block — WhatsApp reminder checkboxes or upgrade banner ──────────
+const REMINDER_OPTIONS = [24, 12, 6, 3, 1]
+
+function ReminderBlock({ hasWhatsapp, value, onChange, isHe }: {
+  hasWhatsapp: boolean
+  value: number[]
+  onChange: (v: number[]) => void
+  isHe: boolean
+}) {
+  const toggle = (h: number) => {
+    onChange(value.includes(h) ? value.filter(x => x !== h) : [...value, h])
+  }
+
+  if (!hasWhatsapp) {
+    return (
+      <div style={{
+        borderRadius: 14, overflow: 'hidden', position: 'relative',
+        background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #d1fae5 100%)',
+        border: '1.5px solid #86efac',
+        padding: '14px 16px',
+      }}>
+        {/* Анимированный shimmer */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(134,239,172,0.3) 50%, transparent 100%)',
+          animation: 'shimmer-wave 2.4s ease-in-out infinite',
+        }} />
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, position: 'relative' }}>
+          <span style={{ fontSize: 22, flexShrink: 0, marginTop: 1 }}>📱</span>
+          <div>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#15803d', lineHeight: 1.3 }}>
+              {isHe ? 'שלח תזכורות WhatsApp ללקוחות' : 'Отправляйте напоминания в WhatsApp'}
+            </p>
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: '#16a34a', lineHeight: 1.5 }}>
+              {isHe
+                ? 'הפעל את שילוב WhatsApp וצור תזכורות אוטומטיות לפגישות'
+                : 'Подключите WhatsApp и автоматически напоминайте клиентам о встречах'}
+            </p>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8,
+              padding: '5px 12px', borderRadius: 20,
+              background: 'linear-gradient(135deg, #16a34a, #15803d)',
+              color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'default',
+              boxShadow: '0 2px 8px rgba(22,163,74,0.3)',
+            }}>
+              ✨ {isHe ? 'לשדרוג פנה למנהל' : 'Для подключения обратитесь к администратору'}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ borderRadius: 12, padding: '12px 14px', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)' }}>
+      <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span>🔔</span>{isHe ? 'תזכורות WhatsApp' : 'Напоминания WhatsApp'}
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+        {REMINDER_OPTIONS.map(h => {
+          const active = value.includes(h)
+          return (
+            <button
+              key={h}
+              type="button"
+              onClick={() => toggle(h)}
+              style={{
+                padding: '6px 13px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                border: active ? '1.5px solid #4f46e5' : '1.5px solid #e2e8f0',
+                background: active ? 'linear-gradient(135deg,#4f46e5,#6366f1)' : '#fff',
+                color: active ? '#fff' : '#64748b',
+                cursor: 'pointer', transition: 'all 0.15s',
+                boxShadow: active ? '0 2px 8px rgba(79,70,229,0.3)' : 'none',
+              }}
+            >
+              {isHe ? `${h}ש` : `${h}ч`}
+            </button>
+          )
+        })}
+      </div>
+      {value.length > 0 && (
+        <p style={{ margin: '8px 0 0', fontSize: 10, color: '#6366f1' }}>
+          {isHe
+            ? `✓ תזכורת תישלח ${value.sort((a,b)=>b-a).join(', ')} שעות לפני הפגישה`
+            : `✓ Напоминание отправится за ${value.sort((a,b)=>b-a).join(', ')} ч до встречи`}
+        </p>
+      )}
+    </div>
+  )
+}
 
 // ─── MOBILE component — uses TrinityModalShell (ModalBottomSheet) ─────────────
 function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate, preselectedTime, onVisitCreated }: {
@@ -165,6 +260,7 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
   const { orgId } = useAuth()
   const queryClient = useQueryClient()
   const { data: customServices } = useServices()
+  const { hasWhatsapp } = useFeatures()
   const isHe = language === 'he'
   const dir = isHe ? 'rtl' : 'ltr'
 
@@ -404,6 +500,16 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
             </div>
           )}
 
+          {/* Напоминания WhatsApp — только для встречи */}
+          {isAppt && (
+            <ReminderBlock
+              hasWhatsapp={hasWhatsapp}
+              value={form.reminderHours}
+              onChange={v => setForm(p => ({ ...p, reminderHours: v }))}
+              isHe={isHe}
+            />
+          )}
+
           {/* Заметки */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
@@ -442,6 +548,7 @@ function CreateVisitDesktop({ open, onOpenChange, preselectedClientId, preselect
   const { orgId } = useAuth()
   const queryClient = useQueryClient()
   const { data: customServices } = useServices()
+  const { hasWhatsapp } = useFeatures()
   const isHe = language === 'he'; const dir = isHe ? 'rtl' : 'ltr'
 
   const [step, setStep] = useState(1)
@@ -634,6 +741,15 @@ function CreateVisitDesktop({ open, onOpenChange, preselectedClientId, preselect
       {/* Step 3 */}
       {step===3 && (
         <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+          {/* Напоминания — только для встречи */}
+          {isAppt && (
+            <ReminderBlock
+              hasWhatsapp={hasWhatsapp}
+              value={form.reminderHours}
+              onChange={v=>setForm(p=>({...p,reminderHours:v}))}
+              isHe={isHe}
+            />
+          )}
           <div className="space-y-1.5">
             <Label className="font-semibold text-gray-700 flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-indigo-500"/>{t('visits.notes')}</Label>
             <Textarea value={form.notes} rows={3} placeholder={t('visits.notes')} className="resize-none max-h-[120px] overflow-y-auto"

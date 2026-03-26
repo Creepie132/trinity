@@ -15,7 +15,7 @@
  *   - RTL (HE): свайп вправо → открыть шторку
  */
 
-import { useRef, useState, useEffect, useCallback } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 import {
@@ -27,6 +27,7 @@ import {
 import { useModalStore } from '@/store/useModalStore'
 import { useVisitServices, useRemoveVisitService, useAddVisitService } from '@/hooks/useVisitServices'
 import { useServices } from '@/hooks/useServices'
+import { useProducts } from '@/hooks/useProducts'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
@@ -119,11 +120,16 @@ export function VisitDetailMob({
   const removeVisitService = useRemoveVisitService(visit?.id || '')
   const addVisitService = useAddVisitService(visit?.id || '')
   const { data: allServices = [] } = useServices()
+  const { data: allProducts = [] } = useProducts()
 
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [addSheetOpen, setAddSheetOpen] = useState(false)
+  const [addMode, setAddMode] = useState<'menu' | 'service' | 'product' | 'custom' | null>(null)
   const [serviceSearch, setServiceSearch] = useState('')
+  const [productSearch, setProductSearch] = useState('')
+  const [customName, setCustomName] = useState('')
+  const [customPrice, setCustomPrice] = useState('')
   const [addingId, setAddingId] = useState<string | null>(null)
+  const [addingCustom, setAddingCustom] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   // Framer motion — drag-to-close
@@ -516,7 +522,10 @@ export function VisitDetailMob({
                       onClick={() => {
                         setDrawerOpen(false)
                         setServiceSearch('')
-                        setAddSheetOpen(true)
+                        setProductSearch('')
+                        setCustomName('')
+                        setCustomPrice('')
+                        setAddMode('menu')
                       }}
                       iconBg="rgba(167,139,250,0.2)"
                       iconColor="#a78bfa"
@@ -552,16 +561,16 @@ export function VisitDetailMob({
     <>
       {content}
 
-      {/* ── Inline Add Service Sheet ── */}
+      {/* ── Add Sheet (menu → service / product / custom) ── */}
       <AnimatePresence>
-        {addSheetOpen && (
+        {addMode !== null && (
           <>
             <motion.div className="fixed inset-0" style={{ zIndex: 10998, background: 'rgba(0,0,0,0.55)' }}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: .2 }} onClick={() => setAddSheetOpen(false)} />
+              transition={{ duration: .2 }} onClick={() => setAddMode(null)} />
 
             <motion.div className="fixed bottom-0 left-0 right-0 flex flex-col"
-              style={{ zIndex: 10999, maxHeight: '85dvh', background: 'var(--trinity-sidebar-bg, #1a2620)', borderRadius: '20px 20px 0 0', overflow: 'hidden' }}
+              style={{ zIndex: 10999, maxHeight: '88dvh', background: 'var(--trinity-sidebar-bg, #1a2620)', borderRadius: '20px 20px 0 0', overflow: 'hidden' }}
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 400, damping: 40 }}
               dir={isHe ? 'rtl' : 'ltr'}>
@@ -574,80 +583,210 @@ export function VisitDetailMob({
               {/* Header */}
               <div className="flex items-center gap-3 px-4 pb-3 flex-shrink-0"
                 style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(167,139,250,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Plus size={15} color="#a78bfa" />
+                {addMode !== 'menu' && (
+                  <button onClick={() => setAddMode('menu')}
+                    style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <ArrowLeft size={13} />
+                  </button>
+                )}
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(167,139,250,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {addMode === 'service' ? <Scissors size={15} color="#60a5fa" /> :
+                   addMode === 'product' ? <Package size={15} color="#fbbf24" /> :
+                   <Plus size={15} color="#a78bfa" />}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{isHe ? 'הוסף שירות' : 'Добавить услугу'}</div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{isHe ? 'בחר שירות להוספה' : 'Выберите услугу'}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+                    {addMode === 'menu'    ? (isHe ? 'הוסף שירות / מוצר' : 'Добавить') :
+                     addMode === 'service' ? (isHe ? 'הוסף שירות' : 'Добавить услугу') :
+                     addMode === 'product' ? (isHe ? 'הוסף מוצר' : 'Добавить товар') :
+                     (isHe ? 'פריט מותאם' : 'Произвольно')}
+                  </div>
                 </div>
-                <button onClick={() => setAddSheetOpen(false)}
+                <button onClick={() => setAddMode(null)}
                   style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <X size={13} />
                 </button>
               </div>
 
-              {/* Search */}
-              <div className="px-4 pt-3 pb-2 flex-shrink-0">
-                <div style={{ position: 'relative' }}>
-                  <Search size={13} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: isHe ? 'auto' : 10, right: isHe ? 10 : 'auto', color: 'rgba(255,255,255,0.3)' }} />
-                  <input
-                    type="text" value={serviceSearch}
-                    onChange={e => setServiceSearch(e.target.value)}
-                    placeholder={isHe ? 'חיפוש...' : 'Поиск...'}
-                    autoFocus
-                    style={{ width: '100%', padding: isHe ? '8px 28px 8px 10px' : '8px 10px 8px 28px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 13, outline: 'none' }}
-                  />
-                </div>
-              </div>
+              {/* ── MENU ── */}
+              {addMode === 'menu' && (
+                <div style={{ padding: '16px 16px 32px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {/* Услуга */}
+                  <button onClick={() => setAddMode('service')}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(96,165,250,0.2)', background: 'rgba(96,165,250,0.07)', cursor: 'pointer', width: '100%' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(96,165,250,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Scissors size={18} color="#60a5fa" />
+                    </div>
+                    <div style={{ flex: 1, textAlign: 'start' }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>{isHe ? 'שירות' : 'Услуга'}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{isHe ? 'בחר מרשימת השירותים' : 'Из списка услуг'}</div>
+                    </div>
+                    <span style={{ color: 'rgba(96,165,250,0.4)', fontSize: 18 }}>›</span>
+                  </button>
 
-              {/* Services list */}
-              <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-2" style={{ touchAction: 'pan-y' }}>
-                {allServices
-                  .filter((s: any) => {
-                    if (!serviceSearch) return true
-                    const name = isHe ? s.name : (s.name_ru || s.name)
-                    return name.toLowerCase().includes(serviceSearch.toLowerCase())
-                  })
-                  .map((s: any) => {
-                    const name = isHe ? s.name : (s.name_ru || s.name)
-                    const isAdding = addingId === s.id
-                    return (
-                      <button key={s.id} disabled={!!addingId}
-                        onClick={async () => {
-                          setAddingId(s.id)
-                          try {
-                            await addVisitService.mutateAsync({
-                              visit_id: visit.id,
-                              service_id: s.id,
-                              service_name: s.name,
-                              service_name_ru: s.name_ru || s.name,
-                              price: s.price || 0,
-                              duration_minutes: s.duration_minutes || 0,
-                            })
-                            queryClient.invalidateQueries({ queryKey: ['visit-services', visit.id] })
-                            toast.success(isHe ? `נוסף: ${name}` : `Добавлено: ${name}`)
-                            setAddSheetOpen(false)
-                          } catch { toast.error(isHe ? 'שגיאה' : 'Ошибка') }
-                          finally { setAddingId(null) }
-                        }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.04)', cursor: 'pointer', opacity: addingId && !isAdding ? 0.5 : 1 }}>
-                        <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(96,165,250,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {isAdding ? <Loader2 size={14} color="#60a5fa" style={{ animation: 'spin 1s linear infinite' }} /> : <Scissors size={14} color="#60a5fa" />}
-                        </div>
-                        <div style={{ flex: 1, textAlign: 'start' }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{name}</div>
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>
-                            {s.duration_minutes ? `${s.duration_minutes} ${isHe ? 'ד׳' : 'мин'}` : ''}{s.price ? ` · ₪${s.price}` : ''}
-                          </div>
-                        </div>
-                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(167,139,250,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Plus size={13} color="#a78bfa" />
-                        </div>
-                      </button>
-                    )
-                  })}
-              </div>
+                  {/* Товар */}
+                  <button onClick={() => setAddMode('product')}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(251,191,36,0.2)', background: 'rgba(251,191,36,0.06)', cursor: 'pointer', width: '100%' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(251,191,36,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Package size={18} color="#fbbf24" />
+                    </div>
+                    <div style={{ flex: 1, textAlign: 'start' }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>{isHe ? 'מוצר' : 'Товар'}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{isHe ? 'בחר מרשימת המוצרים' : 'Из списка товаров'}</div>
+                    </div>
+                    <span style={{ color: 'rgba(251,191,36,0.4)', fontSize: 18 }}>›</span>
+                  </button>
+
+                  {/* Произвольно */}
+                  <button onClick={() => setAddMode('custom')}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 14, border: '1px solid rgba(167,139,250,0.2)', background: 'rgba(167,139,250,0.06)', cursor: 'pointer', width: '100%' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(167,139,250,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <FileText size={18} color="#a78bfa" />
+                    </div>
+                    <div style={{ flex: 1, textAlign: 'start' }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>{isHe ? 'פריט מותאם' : 'Произвольно'}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{isHe ? 'הזן שם ומחיר ידנית (לא ברשימה)' : 'Название и цена вручную'}</div>
+                    </div>
+                    <span style={{ color: 'rgba(167,139,250,0.4)', fontSize: 18 }}>›</span>
+                  </button>
+                </div>
+              )}
+
+              {/* ── УСЛУГИ ── */}
+              {addMode === 'service' && (
+                <>
+                  <div className="px-4 pt-3 pb-2 flex-shrink-0">
+                    <div style={{ position: 'relative' }}>
+                      <Search size={13} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: isHe ? 'auto' : 10, right: isHe ? 10 : 'auto', color: 'rgba(255,255,255,0.3)' }} />
+                      <input type="text" value={serviceSearch} onChange={e => setServiceSearch(e.target.value)}
+                        placeholder={isHe ? 'חיפוש...' : 'Поиск...'} autoFocus
+                        style={{ width: '100%', padding: isHe ? '8px 28px 8px 10px' : '8px 10px 8px 28px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 13, outline: 'none' }} />
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-2" style={{ touchAction: 'pan-y' }}>
+                    {allServices
+                      .filter((s: any) => !serviceSearch || (isHe ? s.name : (s.name_ru || s.name)).toLowerCase().includes(serviceSearch.toLowerCase()))
+                      .map((s: any) => {
+                        const name = isHe ? s.name : (s.name_ru || s.name)
+                        const isAdding = addingId === s.id
+                        return (
+                          <button key={s.id} disabled={!!addingId}
+                            onClick={async () => {
+                              setAddingId(s.id)
+                              try {
+                                await addVisitService.mutateAsync({ visit_id: visit.id, service_id: s.id, service_name: s.name, service_name_ru: s.name_ru || s.name, price: s.price || 0, duration_minutes: s.duration_minutes || 0 })
+                                toast.success(isHe ? `נוסף: ${name}` : `Добавлено: ${name}`)
+                                setAddMode(null)
+                              } catch { toast.error(isHe ? 'שגיאה' : 'Ошибка') }
+                              finally { setAddingId(null) }
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.04)', cursor: 'pointer', opacity: addingId && !isAdding ? 0.5 : 1 }}>
+                            <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(96,165,250,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {isAdding ? <Loader2 size={14} color="#60a5fa" className="animate-spin" /> : <Scissors size={14} color="#60a5fa" />}
+                            </div>
+                            <div style={{ flex: 1, textAlign: 'start' }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{name}</div>
+                              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>{s.duration_minutes ? `${s.duration_minutes} ${isHe ? 'ד׳' : 'мин'}` : ''}{s.price ? ` · ₪${s.price}` : ''}</div>
+                            </div>
+                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(96,165,250,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Plus size={13} color="#60a5fa" />
+                            </div>
+                          </button>
+                        )
+                      })}
+                  </div>
+                </>
+              )}
+
+              {/* ── ТОВАРЫ ── */}
+              {addMode === 'product' && (
+                <>
+                  <div className="px-4 pt-3 pb-2 flex-shrink-0">
+                    <div style={{ position: 'relative' }}>
+                      <Search size={13} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: isHe ? 'auto' : 10, right: isHe ? 10 : 'auto', color: 'rgba(255,255,255,0.3)' }} />
+                      <input type="text" value={productSearch} onChange={e => setProductSearch(e.target.value)}
+                        placeholder={isHe ? 'חיפוש...' : 'Поиск...'} autoFocus
+                        style={{ width: '100%', padding: isHe ? '8px 28px 8px 10px' : '8px 10px 8px 28px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 13, outline: 'none' }} />
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-2" style={{ touchAction: 'pan-y' }}>
+                    {(allProducts as any[])
+                      .filter((p: any) => p.quantity > 0 && (!productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())))
+                      .map((p: any) => {
+                        const isAdding = addingId === p.id
+                        return (
+                          <button key={p.id} disabled={!!addingId}
+                            onClick={async () => {
+                              setAddingId(p.id)
+                              try {
+                                const r = await fetch(`/api/visits/${visit.id}/products`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id: p.id }) })
+                                if (!r.ok) { const e = await r.json(); throw new Error(e.error) }
+                                queryClient.invalidateQueries({ queryKey: ['visits'] })
+                                queryClient.invalidateQueries({ queryKey: ['visit-services', visit.id] })
+                                toast.success(isHe ? `נוסף: ${p.name}` : `Добавлено: ${p.name}`)
+                                setAddMode(null)
+                              } catch (e: any) { toast.error(e.message || (isHe ? 'שגיאה' : 'Ошибка')) }
+                              finally { setAddingId(null) }
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.04)', cursor: 'pointer', opacity: addingId && !isAdding ? 0.5 : 1 }}>
+                            {p.image_url
+                              ? <img src={p.image_url} alt={p.name} style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                              : <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(251,191,36,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                  {isAdding ? <Loader2 size={14} color="#fbbf24" className="animate-spin" /> : <Package size={14} color="#fbbf24" />}
+                                </div>}
+                            <div style={{ flex: 1, textAlign: 'start' }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{p.name}</div>
+                              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 1 }}>{isHe ? 'במלאי:' : 'В наличии:'} {p.quantity}</div>
+                            </div>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24', flexShrink: 0 }}>₪{p.sell_price}</span>
+                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(251,191,36,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Plus size={13} color="#fbbf24" />
+                            </div>
+                          </button>
+                        )
+                      })}
+                  </div>
+                </>
+              )}
+
+              {/* ── ПРОИЗВОЛЬНО ── */}
+              {addMode === 'custom' && (
+                <div style={{ padding: '16px 16px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>{isHe ? 'שם פריט' : 'Название'}</div>
+                    <input type="text" value={customName} onChange={e => setCustomName(e.target.value)}
+                      placeholder={isHe ? 'לדוגמה: עיסוי מיוחד' : 'Например: Массаж особый'}
+                      autoFocus
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 14, outline: 'none' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em' }}>{isHe ? 'מחיר (₪)' : 'Цена (₪)'}</div>
+                    <input type="number" value={customPrice} onChange={e => setCustomPrice(e.target.value)}
+                      placeholder="0" min="0"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 14, outline: 'none' }} />
+                  </div>
+                  <button
+                    disabled={!customName.trim() || addingCustom}
+                    onClick={async () => {
+                      if (!customName.trim()) return
+                      setAddingCustom(true)
+                      try {
+                        const r = await fetch(`/api/visits/${visit.id}/services`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_name: customName.trim(), service_name_ru: customName.trim(), price: parseFloat(customPrice) || 0, duration_minutes: 0 }) })
+                        if (!r.ok) throw new Error()
+                        queryClient.invalidateQueries({ queryKey: ['visit-services', visit.id] })
+                        queryClient.invalidateQueries({ queryKey: ['visits'] })
+                        toast.success(isHe ? `נוסף: ${customName.trim()}` : `Добавлено: ${customName.trim()}`)
+                        setAddMode(null)
+                      } catch { toast.error(isHe ? 'שגיאה' : 'Ошибка') }
+                      finally { setAddingCustom(false) }
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px', borderRadius: 12, border: 'none', background: customName.trim() ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.07)', color: customName.trim() ? '#a78bfa' : 'rgba(255,255,255,0.3)', fontSize: 14, fontWeight: 700, cursor: customName.trim() ? 'pointer' : 'not-allowed', transition: 'all .2s' }}>
+                    {addingCustom ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                    {isHe ? 'הוסף' : 'Добавить'}
+                  </button>
+                </div>
+              )}
+
             </motion.div>
           </>
         )}

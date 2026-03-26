@@ -74,6 +74,17 @@ export function ClientCard({
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
   const isScrolling = useRef(false)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const actionRef = useRef<'call' | 'visit' | null>(null)
+  // Refs для доступа к актуальным значениям внутри нативных event listeners
+  const openModalRef     = useRef(openModal)
+  const cardSettingsRef  = useRef(cardSettings)
+  const clientRef        = useRef(client)
+  const localeRef        = useRef(locale)
+  useEffect(() => { openModalRef.current    = openModal     }, [openModal])
+  useEffect(() => { cardSettingsRef.current = cardSettings  }, [cardSettings])
+  useEffect(() => { clientRef.current       = client        }, [client])
+  useEffect(() => { localeRef.current       = locale        }, [locale])
 
   useEffect(() => {
     const draftKey = `draft_sale_${client.id}`
@@ -109,48 +120,69 @@ export function ClientCard({
   const swipeRightLabel = cardSettings.primaryAction === 'visit' ? t.visit : t.sale
   const SwipeRightIcon  = cardSettings.primaryAction === 'visit' ? CalendarPlus : ShoppingCart
 
-  // ── Touch handlers ────────────────────────────────────────────────────────
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX
-    touchStartY.current = e.touches[0].clientY
-    isScrolling.current = false
-    setAction(null)
-  }
+  // ── Touch handlers — через addEventListener { passive: false } ──────────
+  // React вешает обработчики как passive по умолчанию (Chrome 56+),
+  // из-за чего e.preventDefault() вызывает ошибку в консоли.
+  // Решение: вешаем вручную с { passive: false } только для touchmove.
+  useEffect(() => {
+    const el = cardRef.current
+    if (!el) return
 
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) return
-    const dx = e.touches[0].clientX - touchStartX.current
-    const dy = e.touches[0].clientY - touchStartY.current
-    // Если вертикальный скролл — не блокируем
-    if (!isScrolling.current && Math.abs(dy) > Math.abs(dx)) {
-      isScrolling.current = true
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX
+      touchStartY.current = e.touches[0].clientY
+      isScrolling.current = false
+      actionRef.current = null
+      setAction(null)
     }
-    if (isScrolling.current) return
-    e.preventDefault()
-    const clamped = Math.max(-SWIPE_MAX, Math.min(SWIPE_MAX, dx))
-    setSwipeX(clamped)
-    if (clamped < -SWIPE_THRESHOLD)      setAction('call')
-    else if (clamped > SWIPE_THRESHOLD)  setAction('visit')
-    else                                 setAction(null)
-  }
 
-  const onTouchEnd = () => {
-    if (isScrolling.current) { setSwipeX(0); return }
-    if (action === 'call' && client.phone) {
-      window.location.href = `tel:${client.phone}`
-    } else if (action === 'visit') {
-      // Свайп вправо — действие зависит от настройки карточки
-      if (cardSettings.primaryAction === 'visit') {
-        openModal('visit-create', { preselectedClientId: client.id })
-      } else {
-        // primaryAction === 'sale'
-        openModal('client-sale', { client, locale })
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartX.current === null || touchStartY.current === null) return
+      const dx = e.touches[0].clientX - touchStartX.current
+      const dy = e.touches[0].clientY - touchStartY.current
+      if (!isScrolling.current && Math.abs(dy) > Math.abs(dx)) {
+        isScrolling.current = true
       }
+      if (isScrolling.current) return
+      e.preventDefault() // работает — passive: false
+      const clamped = Math.max(-SWIPE_MAX, Math.min(SWIPE_MAX, dx))
+      setSwipeX(clamped)
+      const next = clamped < -SWIPE_THRESHOLD ? 'call'
+                 : clamped > SWIPE_THRESHOLD  ? 'visit'
+                 : null
+      actionRef.current = next
+      setAction(next)
     }
-    setSwipeX(0)
-    setAction(null)
-    touchStartX.current = null
-  }
+
+    const handleTouchEnd = () => {
+      if (isScrolling.current) { setSwipeX(0); return }
+      const act = actionRef.current
+      const c   = clientRef.current
+      if (act === 'call' && c.phone) {
+        window.location.href = `tel:${c.phone}`
+      } else if (act === 'visit') {
+        if (cardSettingsRef.current.primaryAction === 'visit') {
+          openModalRef.current('visit-create', { preselectedClientId: c.id })
+        } else {
+          openModalRef.current('client-sale', { client: c, locale: localeRef.current })
+        }
+      }
+      setSwipeX(0)
+      setAction(null)
+      actionRef.current = null
+      touchStartX.current = null
+    }
+
+    el.addEventListener('touchstart', handleTouchStart, { passive: true })
+    el.addEventListener('touchmove',  handleTouchMove,  { passive: false })
+    el.addEventListener('touchend',   handleTouchEnd,   { passive: true })
+
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart)
+      el.removeEventListener('touchmove',  handleTouchMove)
+      el.removeEventListener('touchend',   handleTouchEnd)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCardClick = () => {
     if (Math.abs(swipeX) > 10) return // не открывать при свайпе
@@ -160,7 +192,7 @@ export function ClientCard({
 
   return (
     <>
-    <div className="relative overflow-hidden rounded-2xl mb-2 touch-pan-y">
+    <div className="relative overflow-hidden rounded-2xl mb-2">
       {/* ── Фоны свайп-действий ─────────────────────────────────────────── */}
       {/* Левый фон: звонок (свайп влево — карточка уходит влево) */}
       <div className={`absolute inset-y-0 end-0 flex items-center justify-end pe-5
@@ -197,10 +229,8 @@ export function ClientCard({
         `}</style>
       )}
       <div
+        ref={cardRef}
         onClick={handleCardClick}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
         dir={isRTL ? 'rtl' : 'ltr'}
         style={{
           transform: `translateX(${swipeX}px)`,

@@ -110,18 +110,23 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Recalculate visit totals from all visit_services (always recompute, never accumulate)
+    // Recalculate visit totals.
+    // IMPORTANT: visits.price stores the BASE service price (the main service of the visit).
+    // visit_services stores ADDITIONAL services/products added during the visit.
+    // We must NOT overwrite visits.price with only the sum of visit_services —
+    // that would erase the base service price.
+    // Instead, we only update duration_minutes (additive extra duration).
     const { data: allServices } = await supabase
       .from('visit_services')
       .select('price, duration_minutes')
       .eq('visit_id', visitId)
 
     if (allServices) {
-      const totalPrice = allServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0)
-      const totalDuration = allServices.reduce((sum, s) => sum + (Number(s.duration_minutes) || 0), 0)
+      const extraDuration = allServices.reduce((sum, s) => sum + (Number(s.duration_minutes) || 0), 0)
+      // Only update duration — price is managed separately via /api/visits/[id]/products
       await supabase
         .from('visits')
-        .update({ price: totalPrice, duration_minutes: totalDuration })
+        .update({ duration_minutes: extraDuration })
         .eq('id', visitId)
     }
 

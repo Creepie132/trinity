@@ -4,7 +4,13 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 /**
  * POST /api/visits/[id]/products
- * Add product to visit: create inventory_transaction, decrement quantity, add price to visit
+ * Add product to visit: add to visit_services for display, update visit price.
+ * 
+ * ⚠️ IMPORTANT: Does NOT create inventory_transaction or decrement stock here.
+ * Stock is decremented only when the visit is completed and payment is confirmed
+ * via SaleModal → /api/sales → /api/inventory flow.
+ * Previous behaviour (decrement on add) caused premature stock deduction
+ * even when the user cancelled the payment.
  */
 export async function POST(
   request: NextRequest,
@@ -38,37 +44,9 @@ export async function POST(
       return NextResponse.json({ error: 'Product not available' }, { status: 400 })
     }
 
-    // Create inventory transaction (sale, quantity: -1)
-    const { error: txError } = await serviceSupabase
-      .from('inventory_transactions')
-      .insert({
-        org_id: orgId,
-        product_id,
-        type: 'sale',
-        quantity: -1,
-        price_per_unit: product.sell_price,
-        total_price: product.sell_price,
-        related_visit_id: visitId,
-      })
-
-    if (txError) {
-      console.error('[API] POST /api/visits/[id]/products tx error:', txError)
-      return NextResponse.json({ error: txError.message }, { status: 500 })
-    }
-
-    // Decrement product quantity
-    const { error: qtyError } = await serviceSupabase
-      .from('products')
-      .update({ quantity: product.quantity - 1 })
-      .eq('id', product_id)
-
-    if (qtyError) {
-      console.error('[API] POST /api/visits/[id]/products qty error:', qtyError)
-    }
-
-    // Insert into visit_services for display in the services list
-    // (duration_minutes=0, service_id=null marks this as a product entry)
-    const { data: visitServiceEntry } = await serviceSupabase
+    // Insert into visit_services for display (product_id stored for later inventory deduction)
+    // duration_minutes=0 + service_id=null marks this as a product entry
+    const { data: visitServiceEntry, error: vsError } = await serviceSupabase
       .from('visit_services')
       .insert({
         visit_id: visitId,
@@ -81,7 +59,11 @@ export async function POST(
       .select()
       .single()
 
-    // Add sell_price to visit price
+    if (vsError) {
+      return NextResponse.json({ error: vsError.message }, { status: 500 })
+    }
+
+    // Update visit price (+sell_price) for display
     const { data: currentVisit } = await serviceSupabase
       .from('visits')
       .select('price')

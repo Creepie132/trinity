@@ -512,12 +512,21 @@ export function SaleModal() {
         headers: saleApiHeaders,
         body: JSON.stringify({
           client_id: client.id,
-          items: cart.map(i => ({
-            product_id: i.product.id.startsWith('custom_') ? undefined : i.product.id,
-            product_name: i.product.name,
-            quantity: i.quantity,
-            unit_price: i.price,
-          })),
+          items: [
+            // Preloaded items (services from visit) — included as sale items
+            ...preloadedItems.map(i => ({
+              product_name: i.name,
+              quantity: 1,
+              unit_price: i.price,
+            })),
+            // Cart items (products added manually)
+            ...cart.map(i => ({
+              product_id: i.product.id.startsWith('custom_') ? undefined : i.product.id,
+              product_name: i.product.name,
+              quantity: i.quantity,
+              unit_price: i.price,
+            })),
+          ],
           paid_amount: total,
           payment_method: methodMap[paymentMethod] || paymentMethod,
           sale_date: new Date().toISOString().slice(0, 10),

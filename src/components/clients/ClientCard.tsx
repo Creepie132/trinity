@@ -52,6 +52,7 @@ interface ClientCardProps {
   isDemo?: boolean
   enabledModules?: Record<string, boolean>
   onSelect?: (client: unknown) => void
+  onDelete?: (clientId: string) => void
 }
 
 // ── Константы свайпа ──────────────────────────────────────────────────────────
@@ -64,6 +65,7 @@ export function ClientCard({
   isDemo,
   enabledModules,
   onSelect,
+  onDelete,
 }: ClientCardProps) {
   const { openModal } = useModalStore()
   const [cardSettings] = useClientCardSettings()
@@ -305,6 +307,7 @@ export function ClientCard({
       locale={locale}
       isDemo={isDemo}
       enabledModules={enabledModules}
+      onDelete={onDelete}
     />
     </>
   )

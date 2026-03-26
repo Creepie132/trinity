@@ -76,3 +76,38 @@ export async function PUT(
 
   return NextResponse.json(data)
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await getAuthContext()
+  if ('error' in auth) return auth.error
+
+  const { orgId } = auth
+  const { id } = await params
+
+  const { data: existing } = await supabaseAdmin
+    .from('clients')
+    .select('id')
+    .eq('id', id)
+    .eq('org_id', orgId)
+    .single()
+
+  if (!existing) {
+    return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+  }
+
+  const { error } = await supabaseAdmin
+    .from('clients')
+    .delete()
+    .eq('id', id)
+    .eq('org_id', orgId)
+
+  if (error) {
+    console.error('Delete client error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}

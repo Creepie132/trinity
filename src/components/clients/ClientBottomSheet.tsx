@@ -134,7 +134,15 @@ export function ClientBottomSheet({
         onVisit={() => { onClose(); openModal('visit-create', { client, locale }) }}
         onWhatsApp={() => handleWhatsAppClick()}
         onEdit={() => setEditOpen(true)}
-        onDelete={(id) => { onDelete?.(id); handleClose() }}
+        onDelete={(id) => {
+          const name = getClientName(client)
+          const msg = locale === 'he'
+            ? `למחוק את ${name}? פעולה זו אינה ניתנת לביטול.`
+            : `Удалить клиента ${name}? Это действие нельзя отменить.`
+          if (!window.confirm(msg)) return
+          onDelete?.(id)
+          handleClose()
+        }}
         onGallery={() => { onClose(); openModal('client-gallery', { client, locale }) }}
         onDocuments={() => { onClose(); openModal('client-documents', { client, locale }) }}
         onVisitsHistory={() => { onClose(); openModal('client-history', { client, locale, tab: 'visits' }) }}

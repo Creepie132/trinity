@@ -191,6 +191,16 @@ export default function ClientsPage() {
     })
   }
 
+  async function handleDeleteClient(clientId: string) {
+    try {
+      const res = await fetch(`/api/clients/${clientId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Delete failed')
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+    } catch (e) {
+      console.error('Failed to delete client:', e)
+    }
+  }
+
   // Never show full-screen loader — use inline skeleton instead
   // features redirect
 
@@ -505,6 +515,7 @@ export default function ClientsPage() {
               locale={language === 'he' ? 'he' : 'ru'}
               isDemo={isDemo}
               enabledModules={{ appointments: features.hasVisits, recurring: features.recurringEnabled }}
+              onDelete={handleDeleteClient}
             />
           ))
         ) : (

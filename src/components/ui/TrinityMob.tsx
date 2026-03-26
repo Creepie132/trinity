@@ -322,12 +322,6 @@ export function TrinityMob({
   // Drawer темнее sidebar на ~30% — используем rgba overlay поверх
   const drawerBg   = 'color-mix(in srgb, var(--trinity-sidebar-bg, #1a2620) 80%, black)'
 
-  // Главная кнопка — продажа или визит
-  const primaryIsSale = cardSettings.primaryAction !== 'visit'
-  const primaryLabel  = primaryIsSale ? t.sale : t.newVisit
-  const primaryIcon   = primaryIsSale ? <ShoppingCart size={13} /> : <CalendarPlus size={13} />
-  const primaryAction = primaryIsSale ? () => onSale?.(client) : () => onVisit?.(client)
-
   if (!mounted || typeof document === 'undefined') return null
 
   // ── RENDER ────────────────────────────────────────────────────────────────
@@ -542,8 +536,11 @@ export function TrinityMob({
 
                     <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '.07em' }}>{t.actions}</div>
 
-                    {/* Главная кнопка */}
-                    <ActionRow icon={primaryIcon} label={primaryLabel} onClick={primaryAction} accentBg={accentBg} accentText={accentText} />
+                    {/* Продажа */}
+                    <ActionRow icon={<ShoppingCart size={13} />} label={t.sale} onClick={() => onSale?.(client)} accentBg={accentBg} accentText={accentText} />
+
+                    {/* Визит */}
+                    <ActionRow icon={<CalendarPlus size={13} />} label={t.newVisit} onClick={() => onVisit?.(client)} accentBg={accentBg} accentText={accentText} />
 
                     {/* WhatsApp */}
                     {client.phone && (

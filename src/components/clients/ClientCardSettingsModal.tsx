@@ -22,6 +22,8 @@ function getStorageKey(orgId: string) {
   return `client_card_settings_${orgId}`
 }
 
+const SETTINGS_EVENT = 'trinity:card-settings-changed'
+
 export function useClientCardSettings(): [ClientCardSettings, (s: ClientCardSettings) => void] {
   const { orgId } = useAuth()
 
@@ -49,8 +51,20 @@ export function useClientCardSettings(): [ClientCardSettings, (s: ClientCardSett
     setLoaded(true)
   }, [orgId])
 
+  // Синхронизируем все инстансы хука в одной вкладке через CustomEvent
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const s = (e as CustomEvent<ClientCardSettings>).detail
+      if (s) setSettings(s)
+    }
+    window.addEventListener(SETTINGS_EVENT, handler)
+    return () => window.removeEventListener(SETTINGS_EVENT, handler)
+  }, [])
+
   function save(s: ClientCardSettings) {
     setSettings(s)
+    // Диспатчим событие — все инстансы хука обновляются мгновенно
+    window.dispatchEvent(new CustomEvent<ClientCardSettings>(SETTINGS_EVENT, { detail: s }))
     if (!orgId) return
     try {
       localStorage.setItem(getStorageKey(orgId), JSON.stringify(s))

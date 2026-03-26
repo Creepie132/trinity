@@ -164,7 +164,7 @@ export function ClientCard({
         window.location.href = `tel:${c.phone}`
       } else if (act === 'visit') {
         if (cardSettingsRef.current.primaryAction === 'visit') {
-          openModalRef.current('visit-create', { preselectedClientId: c.id })
+          openModalRef.current('visit-create', { clientId: c.id })
         } else {
           openModalRef.current('client-sale', { client: c, locale: localeRef.current })
         }

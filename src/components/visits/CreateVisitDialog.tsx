@@ -274,6 +274,16 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
     setForm(p => ({ ...p, clientId: preselectedClientId || p.clientId, date: toDateStr(preselectedDate), time: preselectedTime || p.time }))
   }, [open, preselectedDate, preselectedTime, preselectedClientId])
 
+  // Загружаем клиента по ID чтобы ClientSearch показал имя
+  useEffect(() => {
+    if (!open || !preselectedClientId) return
+    setSelClient(null)
+    fetch(`/api/clients/${preselectedClientId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setSelClient(data) })
+      .catch(() => {})
+  }, [open, preselectedClientId])
+
   const services = (customServices && customServices.length > 0) ? customServices
     : DEFAULT_SERVICES.map(s => ({ id: s.value, name: t(s.labelKey), name_ru: t(s.labelKey), duration_minutes: 60, price: undefined }))
 

@@ -133,7 +133,7 @@ export function ClientBottomSheet({
         isDemo={isDemo}
         enabledModules={enabledModules}
         onSale={() => { onClose(); openModal('client-sale', { client, locale }) }}
-        onVisit={() => { onClose(); openModal('visit-create', { client, locale }) }}
+        onVisit={() => { onClose(); openModal('visit-create', { clientId: client.id, client, locale }) }}
         onWhatsApp={() => handleWhatsAppClick()}
         onEdit={() => setEditOpen(true)}
         onDelete={() => { onClose(); setTimeout(() => setDeleteOpen(true), 300) }}

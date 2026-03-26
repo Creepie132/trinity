@@ -630,6 +630,14 @@ export function SaleModal() {
               {locale === 'he' ? 'סגור' : 'Закрыть'}
             </button>
           }
+          footerContent={
+            <button
+              onClick={handleClose}
+              style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}
+            >
+              {locale === 'he' ? 'סגור' : 'Закрыть'}
+            </button>
+          }
         >
         <div className="space-y-6">
           {/* Amount */}
@@ -878,6 +886,24 @@ export function SaleModal() {
         title={text.title}
         subtitle={client ? clientName : (locale === 'he' ? 'בחר לקוח' : 'Выберите клиента')}
         dir={isRTL ? 'rtl' : 'ltr'}
+        footerContent={
+          // Мобильный футер — светлый фон, тёмный текст
+          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+            <button
+              onClick={handleClose}
+              style={{ flex: '0 0 auto', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}
+            >
+              {text.cancel}
+            </button>
+            <button
+              onClick={() => setStep('checkout')}
+              disabled={cart.length === 0 || !client?.id}
+              style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', cursor: (cart.length === 0 || !client?.id) ? 'not-allowed' : 'pointer', background: (cart.length === 0 || !client?.id) ? '#e2e8f0' : 'var(--trinity-accent, #4a6fa5)', color: (cart.length === 0 || !client?.id) ? '#94a3b8' : '#fff', fontSize: 14, fontWeight: 700 }}
+            >
+              {text.checkout}
+            </button>
+          </div>
+        }
         sidebarExtra={
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <button

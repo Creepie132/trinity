@@ -7,12 +7,15 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { useGeneratePDF } from '@/lib/pdf/use-generate-pdf'
 import { buildPaymentReportHTML, type PaymentReportData } from '@/lib/pdf/payment-report-html'
 import { toast } from 'sonner'
-import { FileText, Loader2, Calendar, CheckCircle2 } from 'lucide-react'
+import { FileText, Loader2, Calendar, CheckCircle2, TrendingUp } from 'lucide-react'
+import { useEffect } from 'react'
 
 interface Props {
   open: boolean
   onClose: () => void
   locale?: 'he' | 'ru'
+  initialFrom?: string
+  initialTo?: string
 }
 
 const PAYMENT_METHODS = [
@@ -26,7 +29,7 @@ const METHOD_LABEL_HE: Record<string, string> = {
   cash: 'מזומן', bit: 'ביט', credit_card: 'כרטיס', bank_transfer: 'העברה',
 }
 
-export function PaymentReportModal({ open, onClose, locale = 'he' }: Props) {
+export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, initialTo }: Props) {
   const { data: org } = useOrganization()
   const { downloadRaw, loading: pdfLoading } = useGeneratePDF()
   const isHe = locale === 'he'
@@ -34,10 +37,38 @@ export function PaymentReportModal({ open, onClose, locale = 'he' }: Props) {
   const today = new Date().toISOString().split('T')[0]
   const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
 
-  const [fromDate, setFromDate] = useState(firstOfMonth)
-  const [toDate, setToDate] = useState(today)
+  const [fromDate, setFromDate] = useState(initialFrom || firstOfMonth)
+  const [toDate, setToDate] = useState(initialTo || today)
+  const [totalSum, setTotalSum] = useState<number | null>(null)
+  const [sumLoading, setSumLoading] = useState(false)
+
+  // Обновляем даты если родитель передал новые
+  useEffect(() => {
+    if (initialFrom !== undefined) setFromDate(initialFrom || firstOfMonth)
+    if (initialTo   !== undefined) setToDate(initialTo   || today)
+  }, [initialFrom, initialTo])
   const [selectedMethods, setSelectedMethods] = useState<string[]>(['cash', 'bit', 'credit_card', 'bank_transfer'])
   const [loading, setLoading] = useState(false)
+
+  // Считаем сумму при изменении дат или методов
+  useEffect(() => {
+    if (!open) return
+    const load = async () => {
+      setSumLoading(true)
+      try {
+        const params = new URLSearchParams({ status: 'completed', limit: '500' })
+        if (fromDate) params.set('startDate', fromDate)
+        if (toDate)   params.set('endDate', toDate)
+        const res = await fetch(`/api/payments?${params}`)
+        if (!res.ok) return
+        const raw = await res.json()
+        const all: any[] = Array.isArray(raw) ? raw : (raw.payments || raw.data || [])
+        const filtered = all.filter(p => selectedMethods.includes(p.payment_method))
+        setTotalSum(filtered.reduce((s: number, p: any) => s + Number(p.amount || 0), 0))
+      } catch { setTotalSum(null) } finally { setSumLoading(false) }
+    }
+    load()
+  }, [open, fromDate, toDate, selectedMethods])
 
   const toggleMethod = (value: string) =>
     setSelectedMethods(prev => prev.includes(value) ? prev.filter(m => m !== value) : [...prev, value])
@@ -47,7 +78,9 @@ export function PaymentReportModal({ open, onClose, locale = 'he' }: Props) {
     if (selectedMethods.length === 0) { toast.error(isHe ? 'בחר לפחות אמצעי אחד' : 'Выберите хотя бы один способ'); return }
     setLoading(true)
     try {
-      const params = new URLSearchParams({ status: 'completed', startDate: fromDate, endDate: toDate, limit: '500' })
+      const params = new URLSearchParams({ status: 'completed', limit: '500' })
+      if (fromDate) params.set('startDate', fromDate)
+      if (toDate)   params.set('endDate',   toDate)
       const res = await fetch(`/api/payments?${params}`)
       if (!res.ok) throw new Error('Failed to fetch payments')
       const raw = await res.json()
@@ -149,6 +182,30 @@ export function PaymentReportModal({ open, onClose, locale = 'he' }: Props) {
         subtitle={isHe ? 'הפק דוח תשלומים לפי תאריך ואמצעי תשלום' : 'Создать отчёт по платежам за период'}
         sidebarExtra={sidebar}>
         <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
+
+          {/* ── Красивая сумма ── */}
+          <div style={{ background: 'linear-gradient(135deg,#1e1b4b,#312e81)', borderRadius: 16, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'rgba(199,210,254,.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>
+                {isHe ? 'סה״כ לתקופה' : 'Итого за период'}
+              </div>
+              {sumLoading ? (
+                <div style={{ height: 36, width: 120, borderRadius: 8, background: 'rgba(255,255,255,.1)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              ) : (
+                <div style={{ fontSize: 32, fontWeight: 800, color: '#fff', letterSpacing: '-1px', lineHeight: 1 }}>
+                  {totalSum !== null ? `₪${totalSum.toLocaleString()}` : '—'}
+                </div>
+              )}
+              {(fromDate || toDate) && (
+                <div style={{ fontSize: 10, color: 'rgba(199,210,254,.45)', marginTop: 6 }}>
+                  {fromDate && toDate ? `${fromDate} → ${toDate}` : fromDate ? `с ${fromDate}` : `до ${toDate}`}
+                </div>
+              )}
+            </div>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(99,102,241,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TrendingUp size={22} color="#a5b4fc" />
+            </div>
+          </div>
 
           {/* Date range */}
           <div className="grid grid-cols-2 gap-3">

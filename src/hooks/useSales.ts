@@ -36,6 +36,8 @@ export interface SalesFilters {
   status?: string
   method?: string
   month?: string   // YYYY-MM
+  dateFrom?: string // YYYY-MM-DD
+  dateTo?: string   // YYYY-MM-DD
   search?: string
   page?: number
 }
@@ -50,6 +52,8 @@ export function useSales(filters?: SalesFilters) {
       const params = new URLSearchParams()
       if (filters?.status && filters.status !== 'all') params.set('status', filters.status)
       if (filters?.month) params.set('month', filters.month)
+      if (filters?.dateFrom) params.set('dateFrom', filters.dateFrom)
+      if (filters?.dateTo)   params.set('dateTo',   filters.dateTo)
       if (filters?.search) params.set('search', filters.search)
       if (filters?.page) params.set('page', String(filters.page))
 

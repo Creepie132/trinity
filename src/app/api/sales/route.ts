@@ -26,11 +26,16 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
     .order('sale_date', { ascending: false })
 
+  const dateFrom = searchParams.get('dateFrom')
+  const dateTo   = searchParams.get('dateTo')
+
   if (status && status !== 'all') query = query.eq('status', status)
   if (month) {
     const [y, m] = month.split('-')
     query = query.gte('sale_date', `${y}-${m}-01`).lte('sale_date', `${y}-${m}-31`)
   }
+  if (dateFrom) query = query.gte('sale_date', dateFrom)
+  if (dateTo)   query = query.lte('sale_date', dateTo)
 
   const { data, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -28,11 +28,8 @@ export type ModalType =
   | 'product-return'
   | 'product-transfer'
   | 'quick-sale'
-  // Payments
-  | 'payment-create'
-  | 'payment-create-link'
-  | 'payment-create-cash'
-  | 'payment-create-stripe'
+  // Payments — unified entry point
+  | 'payment-unified'
   | 'payment-create-subscription'
   | 'payment-details'
   // Services

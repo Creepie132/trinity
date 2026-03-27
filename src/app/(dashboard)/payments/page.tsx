@@ -1,13 +1,11 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Plus, Search, SlidersHorizontal, Receipt, FileText, Banknote, CheckCircle, TrendingUp, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
-import { CreatePaymentLinkDialog } from '@/components/payments/CreatePaymentLinkDialog'
 import { PaymentReportModal } from '@/components/payments/PaymentReportModal'
-import { CreateCashPaymentDialog } from '@/components/payments/CreateCashPaymentDialog'
 import { CreateBitPaymentDialog } from '@/components/payments/CreateBitPaymentDialog'
-import { PaymentMethodModal } from '@/components/payments/PaymentMethodModal'
+import { useModalStore } from '@/store/useModalStore'
 import { PaymentCard } from '@/components/payments/PaymentCard'
 import { PaymentDetailsDrawer } from '@/components/payments/PaymentDetailsDrawer'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
@@ -166,10 +164,9 @@ function PaymentsContent() {
   const locale = language === 'he' ? 'he' : 'ru'
   const dir = locale === 'he' ? 'rtl' : 'ltr'
 
-  const [methodModalOpen, setMethodModalOpen]     = useState(false)
+  const { openModal } = useModalStore()
+
   const [reportModalOpen, setReportModalOpen]     = useState(false)
-  const [cardDialogOpen, setCardDialogOpen]       = useState(false)
-  const [cashDialogOpen, setCashDialogOpen]       = useState(false)
   const [bitDialogOpen, setBitDialogOpen]         = useState(false)
   const [filtersOpen, setFiltersOpen]             = useState(false)
   const [statusFilter, setStatusFilter]           = useState('all')
@@ -211,8 +208,8 @@ function PaymentsContent() {
 
   const handlePaymentSuccess = () => { refetch(); router.refresh() }
   const handleMethodSelect = (method: 'card' | 'cash' | 'bit') => {
-    if (method === 'card') setCardDialogOpen(true)
-    else if (method === 'cash') setCashDialogOpen(true)
+    if (method === 'card') openModal('payment-unified', { defaultMethod: 'link', onSuccess: handlePaymentSuccess })
+    else if (method === 'cash') openModal('payment-unified', { defaultMethod: 'cash', onSuccess: handlePaymentSuccess })
     else setBitDialogOpen(true)
   }
 
@@ -295,7 +292,7 @@ function PaymentsContent() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 transition-colors">
               <FileText className="w-4 h-4" />{locale === 'he' ? 'סיכום' : 'Сводка'}
             </button>
-            <button onClick={() => setMethodModalOpen(true)}
+            <button onClick={() => openModal('payment-unified', { onSuccess: handlePaymentSuccess })}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-theme-primary text-white shadow-md hover:opacity-90 active:scale-95 transition-all">
               <Plus className="w-4 h-4" />{locale === 'he' ? 'עסקה חדשה' : 'Новая сделка'}
             </button>
@@ -405,7 +402,7 @@ function PaymentsContent() {
               : <EmptyState icon={<Receipt size={26} />}
                   title={locale === 'he' ? 'אין תשלומים' : 'Платежей нет'}
                   description={locale === 'he' ? 'צור תשלום חדש' : 'Создайте первый платёж'}
-                  action={{ label: locale === 'he' ? 'הוסף' : 'Добавить', onClick: () => setMethodModalOpen(true) }} />
+                  action={{ label: locale === 'he' ? 'הוסף' : 'Добавить', onClick: () => openModal('payment-unified', { onSuccess: handlePaymentSuccess }) }} />
             }
           </div>
         </div>
@@ -549,7 +546,7 @@ function PaymentsContent() {
                 <div className="py-16 text-center">
                   <Receipt className="w-10 h-10 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
                   <p className="text-sm text-gray-400 dark:text-gray-500">{locale === 'he' ? 'אין תשלומים' : 'Платежей нет'}</p>
-                  <button onClick={() => setMethodModalOpen(true)} className="mt-3 text-sm text-amber-500 hover:text-amber-600 hover:underline">
+                  <button onClick={() => openModal('payment-unified', { onSuccess: handlePaymentSuccess })} className="mt-3 text-sm text-amber-500 hover:text-amber-600 hover:underline">
                     {locale === 'he' ? 'הוסף תשלום' : 'Добавить платёж'}
                   </button>
                 </div>
@@ -594,7 +591,7 @@ function PaymentsContent() {
         </div>{/* end split layout */}
 
         {/* FAB мобиль */}
-        <button onClick={() => setMethodModalOpen(true)}
+        <button onClick={() => openModal('payment-unified', { onSuccess: handlePaymentSuccess })}
           className="md:hidden fixed bottom-6 end-6 w-14 h-14 rounded-full bg-theme-primary text-white shadow-xl flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50"
           aria-label={locale === 'he' ? 'עסקה חדשה' : 'Новая сделка'}>
           <Plus className="w-6 h-6" />
@@ -647,9 +644,7 @@ function PaymentsContent() {
           </div>
         </TrinityBottomDrawer>
 
-        <PaymentMethodModal open={methodModalOpen} onOpenChange={setMethodModalOpen} onSelectMethod={handleMethodSelect} />
-        <CreatePaymentLinkDialog open={cardDialogOpen} onOpenChange={setCardDialogOpen} onSuccess={handlePaymentSuccess} />
-        <CreateCashPaymentDialog open={cashDialogOpen} onOpenChange={setCashDialogOpen} onSuccess={handlePaymentSuccess} />
+        {/* BIT — отдельный провайдер, не входит в UnifiedPaymentDialog */}
         <CreateBitPaymentDialog open={bitDialogOpen} onOpenChange={setBitDialogOpen} onSuccess={handlePaymentSuccess} />
         <PaymentReportModal open={reportModalOpen} onClose={() => setReportModalOpen(false)} locale={locale} />
         <PaymentDetailsDrawer

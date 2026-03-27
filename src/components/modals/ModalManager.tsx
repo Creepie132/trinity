@@ -26,11 +26,8 @@ import { EditProductModal } from './products/EditProductModal'
 import { TransferProductModal } from './products/TransferProductModal'
 // PaymentLinkResultModal используется напрямую в SellProductDialog с props, не через useModalStore
 
-// Payments
-import { CreatePaymentModal } from './payments/CreatePaymentModal'
-import { CreatePaymentLinkModal } from './payments/CreatePaymentLinkModal'
-import { CreateCashPaymentModal } from './payments/CreateCashPaymentModal'
-import { CreateStripePaymentModal } from './payments/CreateStripePaymentModal'
+// Payments — unified
+import { UnifiedPaymentModal } from './payments/UnifiedPaymentModal'
 import { CreateSubscriptionModal } from './payments/CreateSubscriptionModal'
 import { PaymentDetailsModal } from './payments/PaymentDetailsModal'
 
@@ -95,10 +92,7 @@ export function ModalManager() {
       {/* <TransferProductModal /> — убран: не использует useModalStore */}
 
       {/* Payments */}
-      <CreatePaymentModal />
-      <CreatePaymentLinkModal />
-      <CreateCashPaymentModal />
-      <CreateStripePaymentModal />
+      <UnifiedPaymentModal />
       <CreateSubscriptionModal />
       <PaymentDetailsModal />
 

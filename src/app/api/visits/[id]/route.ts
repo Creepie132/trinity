@@ -50,15 +50,37 @@ export async function PUT(
     return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
   }
 
+  // ── Читаем текущий визит — нужен для service_type NOT-NULL гарантии ────────────
+  // service_type = legacy NOT NULL колонка (равна service_id).
+  // Если клиент не передаёт service_id — берём текущее значение из БД.
+  const { data: currentVisit, error: fetchErr } = await supabase
+    .from('visits')
+    .select('service_type, service_id')
+    .eq('id', id)
+    .eq('org_id', orgId)
+    .single()
+
+  if (fetchErr || !currentVisit) {
+    return NextResponse.json({ error: 'Visit not found' }, { status: 404 })
+  }
+
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   }
 
-  if (data.scheduled_at   !== undefined) updateData.scheduled_at   = data.scheduled_at
-  if (data.service_id     !== undefined) {
+  if (data.scheduled_at !== undefined) updateData.scheduled_at = data.scheduled_at
+
+  if (data.service_id !== undefined) {
+    // Клиент явно передал service_id — обновляем оба поля
     updateData.service_id   = data.service_id
-    updateData.service_type = data.service_id  // backward compat
+    // service_type NOT NULL: если service_id = null (встреча) — сохраняем старое значение
+    updateData.service_type = data.service_id ?? currentVisit.service_type ?? 'other'
+  } else {
+    // service_id не передан — явно устанавливаем service_type из БД
+    // чтобы не получить NULL в NOT NULL колонке
+    updateData.service_type = currentVisit.service_type ?? 'other'
   }
+
   if (data.duration_minutes !== undefined) updateData.duration_minutes = data.duration_minutes
   if (data.notes            !== undefined) updateData.notes            = data.notes
   if (data.price            !== undefined) updateData.price            = data.price

@@ -362,6 +362,15 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
       isSubmittingRef.current = false; return
     }
 
+    // ── GUARD: не отправляем optimistic clientId на сервер ──────────────────
+    // Клиент ещё не сохранён — UUID не вернулся с сервера (onSettled ещё не завершился).
+    if (form.clientId.startsWith('optimistic-')) {
+      toast.error(isHe
+        ? 'הלקוח עדיין נשמר. נסה שוב עוד רגע.'
+        : 'Клиент ещё сохраняется. Повторите попытку через секунду.')
+      isSubmittingRef.current = false; return
+    }
+
     setIsLoading(true)
     setErrorMsg(null)
 

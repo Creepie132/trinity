@@ -61,7 +61,9 @@ export function useClient(id?: string) {
 
   return useQuery({
     queryKey: ['client', orgId, id],
-    enabled: !!orgId && !!id,
+    // ── GUARD: никогда не запрашиваем optimistic ID у Supabase ──────────────
+    // Supabase упадёт с 'invalid input syntax for type uuid: "optimistic-..."'
+    enabled: !!orgId && !!id && !id.startsWith('optimistic-'),
     queryFn: async () => {
       if (!id) return null
 

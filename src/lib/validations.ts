@@ -1,5 +1,10 @@
 import { z } from "zod"
 
+// ── UUID helper ──────────────────────────────────────────────────────────────────────────────
+// Имя нарочно, чтобы ошибка 'инвалидный UUID' перехватывалась на сервере
+// до обращения к БД, а не приходила из Supabase.
+const strictUuid = z.string().uuid('Invalid UUID — optimistic IDs are not accepted')
+
 // Клиенты
 export const createClientSchema = z.object({
   first_name: z.string().min(1, "Имя обязательно").max(100),
@@ -11,9 +16,25 @@ export const createClientSchema = z.object({
   notes: z.string().max(2000).optional().or(z.literal("")),
 })
 
+// Обновление клиента (PUT /api/clients/[id])
+// id валидируется отдельно в route params, здесь опциональные поля body
+export const updateClientSchema = z.object({
+  first_name:    z.string().min(1).max(100).optional(),
+  last_name:     z.string().max(100).optional().or(z.literal('')),
+  phone:         z.string().min(7).max(20).regex(/^[0-9+\-() ]+$/).optional().or(z.literal('')),
+  email:         z.string().email().optional().or(z.literal('')),
+  address:       z.string().max(300).optional().or(z.literal('')),
+  city:          z.string().max(100).optional().or(z.literal('')),
+  date_of_birth: z.string().optional().or(z.literal('')),
+  notes:         z.string().max(2000).optional().or(z.literal('')),
+  description:   z.string().max(2000).optional().or(z.literal('')).nullable(),
+  paint_code:    z.string().max(200).optional().or(z.literal('')).nullable(),
+})
+
 // Визиты
 export const createVisitSchema = z.object({
-  clientId: z.string().uuid(),
+  // strictUuid — отклонит 'optimistic-...' задолго до Supabase
+  clientId: strictUuid,
   service: z.string().max(500).optional().nullable(),
   serviceId: z.string().optional().nullable(), // UUID или текст, может быть null для встречи
   date: z.string().min(1),

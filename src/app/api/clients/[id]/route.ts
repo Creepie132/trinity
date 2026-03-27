@@ -17,6 +17,12 @@ export async function GET(
   const { orgId } = auth
   const { id } = await params
 
+  // ── UUID guard ───────────────────────────────────────────────────────────
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!id || !UUID_RE.test(id)) {
+    return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+  }
+
   const { data, error } = await supabaseAdmin
     .from('clients')
     .select('id, first_name, last_name, phone, email, address, city, date_of_birth, notes, description, paint_code, created_at, org_id')
@@ -41,6 +47,16 @@ export async function PUT(
   const { orgId } = auth
 
   const { id } = await params
+
+  // ── UUID guard: отклоняем optimistic / мусорные ID до обращения к БД ────────────
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!id || !UUID_RE.test(id)) {
+    return NextResponse.json(
+      { error: `Invalid client id: "${id}". Expected a valid UUID.` },
+      { status: 400 }
+    )
+  }
+
   const body = await request.json()
   const { phone, email, address, city, date_of_birth, notes, description, paint_code } = body
 

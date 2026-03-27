@@ -106,7 +106,8 @@ export function usePaymentsStats() {
 // ─── useCreatePaymentLink ──────────────────────────────────────────────────
 
 export function useCreatePaymentLink() {
-  const queryClient = useQueryClient()
+  const qc = useQueryClient()
+  const { activeOrgId } = useBranch()
 
   return useMutation({
     mutationFn: async (params: CreatePaymentLinkParams) => {
@@ -121,9 +122,45 @@ export function useCreatePaymentLink() {
       }
       return response.json()
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payments'] })
-      queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
+
+    // ── 1. onMutate: вставить optimistic платёж ────────────────────────────
+    onMutate: async (params) => {
+      await qc.cancelQueries({ queryKey: ['payments', activeOrgId] })
+
+      const snapshot = qc.getQueriesData<any[]>({
+        queryKey: ['payments', activeOrgId],
+      })
+
+      const optimistic = {
+        id:             `optimistic-${Date.now()}`,
+        client_id:      params.client_id,
+        amount:         params.amount,
+        payment_method: 'link',
+        status:         'pending',
+        created_at:     new Date().toISOString(),
+        description:    params.description ?? null,
+        visit_id:       params.visit_id ?? null,
+      }
+
+      qc.setQueriesData<any[]>(
+        { queryKey: ['payments', activeOrgId] },
+        (old) => (old ? [optimistic, ...old] : [optimistic])
+      )
+
+      return { snapshot }
+    },
+
+    // ── 2. onError: откат ──────────────────────────────────────────────────
+    onError: (_err, _vars, context) => {
+      context?.snapshot?.forEach(([queryKey, data]: [any, any]) => {
+        qc.setQueryData(queryKey, data)
+      })
+    },
+
+    // ── 3. onSettled: фоновая сверка ───────────────────────────────────────
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['payments'] })
+      qc.invalidateQueries({ queryKey: ['payments-stats'] })
     },
   })
 }

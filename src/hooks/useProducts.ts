@@ -128,10 +128,10 @@ export function useCreateProduct() {
 }
 
 /**
- * useUpdateProduct - Update existing product
+ * useUpdateProduct - Update existing product — OPTIMISTIC
  */
 export function useUpdateProduct() {
-  const queryClient = useQueryClient()
+  const qc = useQueryClient()
   const { activeOrgId } = useBranch()
 
   return useMutation({
@@ -153,19 +153,45 @@ export function useUpdateProduct() {
       const result = await response.json()
       return result.product as Product
     },
-    onSuccess: (updatedProduct) => {
-      // Invalidate both list and single product queries
-      queryClient.invalidateQueries({ queryKey: ['products'] })
-      queryClient.invalidateQueries({ queryKey: ['products', updatedProduct.id] })
+
+    // ── 1. onMutate: обновить товар в кэше мгновенно ─────────────────────────
+    onMutate: async ({ id, data }) => {
+      await qc.cancelQueries({ queryKey: ['products', activeOrgId] })
+
+      const previousProducts = qc.getQueryData<Product[]>(['products', activeOrgId])
+
+      qc.setQueryData<Product[]>(
+        ['products', activeOrgId],
+        (old) => old?.map(p =>
+          p.id === id
+            ? { ...p, ...data, updated_at: new Date().toISOString() }
+            : p
+        )
+      )
+
+      return { previousProducts }
+    },
+
+    // ── 2. onError: откат ─────────────────────────────────────────────────────
+    onError: (error: any, _vars, context) => {
+      if (context?.previousProducts !== undefined) {
+        qc.setQueryData(['products', activeOrgId], context.previousProducts)
+      }
+      toast.error('שגיאה בעדכון מוצר: ' + error.message)
+    },
+
+    // ── 3. onSettled: фоновая сверка ──────────────────────────────────────────
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['products'] })
     },
   })
 }
 
 /**
- * useDeleteProduct - Soft delete product (set is_active = false)
+ * useDeleteProduct - Soft delete product (set is_active = false) — OPTIMISTIC
  */
 export function useDeleteProduct() {
-  const queryClient = useQueryClient()
+  const qc = useQueryClient()
   const { activeOrgId } = useBranch()
 
   return useMutation({
@@ -186,9 +212,33 @@ export function useDeleteProduct() {
       const data = await response.json()
       return data.product as Product
     },
-    onSuccess: () => {
-      // Invalidate products list
-      queryClient.invalidateQueries({ queryKey: ['products'] })
+
+    // ── 1. onMutate: скрыть товар мгновенно (soft delete = is_active: false) ────
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['products', activeOrgId] })
+
+      const previousProducts = qc.getQueryData<Product[]>(['products', activeOrgId])
+
+      // Софт дилит — скрываем из UI, но не удаляем из БД
+      qc.setQueryData<Product[]>(
+        ['products', activeOrgId],
+        (old) => old?.filter(p => p.id !== id)
+      )
+
+      return { previousProducts }
+    },
+
+    // ── 2. onError: откат ────────────────────────────────────────────────────
+    onError: (error: any, _vars, context) => {
+      if (context?.previousProducts !== undefined) {
+        qc.setQueryData(['products', activeOrgId], context.previousProducts)
+      }
+      toast.error('שגיאה במחיקת מוצר: ' + error.message)
+    },
+
+    // ── 3. onSettled: фоновая сверка ─────────────────────────────────────────
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['products'] })
     },
   })
 }

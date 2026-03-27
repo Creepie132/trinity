@@ -22,7 +22,6 @@ export interface Expense {
   verified: boolean
   created_at: string
   updated_at: string
-  // Extended fields
   vendor_phone: string | null
   vendor_website: string | null
   order_number: string | null
@@ -37,20 +36,33 @@ export interface ExpensesStats {
   byCategory: Record<string, number>
 }
 
+// ── Query key factory ─────────────────────────────────────────────────────────
+
+export const expensesKeys = {
+  all:   () => ['expenses'] as const,
+  list:  (month?: string, category?: string) =>
+           ['expenses', month, category] as const,
+  stats: (month?: string) =>
+           ['expenses-stats', month] as const,
+}
+
+// ── useExpenses ───────────────────────────────────────────────────────────────
+
 export function useExpenses(month?: string, category?: string) {
   const { activeOrgId } = useBranch()
   const queryClient = useQueryClient()
-  // ONE channel — also invalidates expenses-stats via onEvent
+
   useRealtimeSync({
     table: 'expenses',
     orgId: activeOrgId,
     queryKey: ['expenses'],
     onEvent: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses-stats'], exact: false })
+      queryClient.invalidateQueries({ queryKey: expensesKeys.stats() })
     },
   })
+
   return useQuery<Expense[]>({
-    queryKey: ['expenses', month, category],
+    queryKey: expensesKeys.list(month, category),
     queryFn: async () => {
       const params = new URLSearchParams()
       if (month) params.set('month', month)
@@ -64,12 +76,11 @@ export function useExpenses(month?: string, category?: string) {
   })
 }
 
+// ── useExpensesStats ──────────────────────────────────────────────────────────
+
 export function useExpensesStats(month?: string) {
-  // ✅ Нет второго fetch — stats считаются как деривация из кэша useExpenses.
-  // useExpenses уже подписан на realtime и invalidates expenses-stats.
-  // Оба хука вызываются параллельно — React Query дедуплицирует HTTP запрос.
   return useQuery<ExpensesStats>({
-    queryKey: ['expenses-stats', month],
+    queryKey: expensesKeys.stats(month),
     queryFn: async () => {
       const params = new URLSearchParams()
       if (month) params.set('month', month)
@@ -78,10 +89,9 @@ export function useExpensesStats(month?: string) {
       if (!res.ok) throw new Error('Failed to fetch expenses stats')
       const data = await res.json()
       const expenses: Expense[] = data.expenses ?? []
-      // Деривация stats client-side — не нужен отдельный API endpoint
       const total = expenses.reduce((s, e) => s + (e.amount ?? 0), 0)
       const byCategory: Record<string, number> = {}
-      expenses.forEach((e) => {
+      expenses.forEach(e => {
         byCategory[e.category] = (byCategory[e.category] ?? 0) + (e.amount ?? 0)
       })
       return { total, count: expenses.length, byCategory }
@@ -90,8 +100,11 @@ export function useExpensesStats(month?: string) {
   })
 }
 
+// ── useUpdateExpense — OPTIMISTIC ─────────────────────────────────────────────
+
 export function useUpdateExpense() {
   const qc = useQueryClient()
+
   return useMutation({
     mutationFn: async (data: Partial<Expense> & { id: string }) => {
       const res = await fetch('/api/expenses', {
@@ -102,20 +115,77 @@ export function useUpdateExpense() {
       if (!res.ok) throw new Error('Failed to update expense')
       return res.json()
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['expenses'] }); qc.invalidateQueries({ queryKey: ['expenses-stats'] }) },
-    onError: () => toast.error('שגיאה בעדכון הוצאה'),
+
+    onMutate: async (updated) => {
+      await qc.cancelQueries({ queryKey: expensesKeys.all() })
+
+      const snapshot = qc.getQueriesData<Expense[]>({
+        queryKey: expensesKeys.all(),
+      })
+
+      // Обновляем поля расхода во всех активных кэшах
+      qc.setQueriesData<Expense[]>(
+        { queryKey: expensesKeys.all() },
+        (old) => old?.map(e =>
+          e.id === updated.id ? { ...e, ...updated } : e
+        )
+      )
+
+      return { snapshot }
+    },
+
+    onError: (err: any, _vars, context) => {
+      context?.snapshot?.forEach(([queryKey, data]) => {
+        qc.setQueryData(queryKey, data)
+      })
+      toast.error(err.message || 'Ошибка обновления расхода')
+    },
+
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: expensesKeys.all() })
+      qc.invalidateQueries({ queryKey: expensesKeys.stats() })
+    },
   })
 }
 
+// ── useDeleteExpense — OPTIMISTIC ─────────────────────────────────────────────
+
 export function useDeleteExpense() {
   const qc = useQueryClient()
+
   return useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/expenses?id=${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete expense')
       return res.json()
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['expenses'] }); qc.invalidateQueries({ queryKey: ['expenses-stats'] }) },
-    onError: () => toast.error('שגיאה במחיקת הוצאה'),
+
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: expensesKeys.all() })
+
+      const snapshot = qc.getQueriesData<Expense[]>({
+        queryKey: expensesKeys.all(),
+      })
+
+      // Убираем расход из кэша немедленно
+      qc.setQueriesData<Expense[]>(
+        { queryKey: expensesKeys.all() },
+        (old) => old?.filter(e => e.id !== id)
+      )
+
+      return { snapshot }
+    },
+
+    onError: (err: any, _vars, context) => {
+      context?.snapshot?.forEach(([queryKey, data]) => {
+        qc.setQueryData(queryKey, data)
+      })
+      toast.error(err.message || 'Ошибка удаления расхода')
+    },
+
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: expensesKeys.all() })
+      qc.invalidateQueries({ queryKey: expensesKeys.stats() })
+    },
   })
 }

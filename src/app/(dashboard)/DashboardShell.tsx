@@ -35,7 +35,7 @@ import type { QueryClient } from '@tanstack/react-query'
 // Данные начинают грузиться ДО перехода на страницу — белого экрана нет.
 // staleTime на всех хуках 30_000 — React Query не делает дубль-запросы.
 
-type PrefetchTarget = 'visits' | 'sales' | 'payments' | 'expenses' | 'inventory'
+type PrefetchTarget = 'visits' | 'sales' | 'payments' | 'expenses' | 'inventory' | 'diary' | 'analytics'
 
 async function prefetchModule(
   qc: QueryClient,
@@ -105,6 +105,38 @@ async function prefetchModule(
           staleTime: STALE,
         })
         break
+
+      case 'diary':
+        await qc.prefetchQuery({
+          queryKey: ['tasks-diary'],
+          queryFn: () => fetch('/api/tasks').then(r => r.json()),
+          staleTime: STALE,
+        })
+        break
+
+      case 'analytics':
+        await qc.prefetchQuery({
+          queryKey: ['analytics', orgId, 30],
+          queryFn: async () => {
+            const from = new Date(); from.setDate(from.getDate() - 30)
+            const fromStr = from.toISOString().split('T')[0]
+            const toStr   = new Date().toISOString().split('T')[0]
+            const [sR, rR, vR, rpR] = await Promise.all([
+              fetch(`/api/dashboard/stats?org_id=${orgId}`),
+              fetch(`/api/dashboard/revenue?org_id=${orgId}&days=30`),
+              fetch(`/api/dashboard/visits-chart?org_id=${orgId}&days=30`),
+              fetch(`/api/dashboard/reports?org_id=${orgId}&from=${fromStr}T00:00:00Z&to=${toStr}T23:59:59Z`),
+            ])
+            return {
+              stats:   sR.ok  ? await sR.json()  : null,
+              revenue: rR.ok  ? await rR.json()  : [],
+              visits:  vR.ok  ? await vR.json()  : [],
+              reports: rpR.ok ? await rpR.json() : null,
+            }
+          },
+          staleTime: STALE,
+        })
+        break
     }
   } catch {
     // prefetch некритичен — молча игнорируем
@@ -113,14 +145,15 @@ async function prefetchModule(
 
 // Маппинг pathname → модуль для adjacent prefetch
 const ADJACENT_MAP: Record<string, PrefetchTarget[]> = {
-  '/visits':   ['sales', 'payments'],
-  '/sales':    ['visits', 'payments'],
-  '/payments': ['sales', 'expenses'],
-  '/finances': ['payments', 'inventory'],
-  '/inventory':['sales', 'expenses'],
-  '/dashboard':['visits', 'sales'],
-  '/clients':  ['visits', 'sales'],
-  '/diary':    ['visits'],
+  '/visits':    ['sales', 'payments'],
+  '/sales':     ['visits', 'payments'],
+  '/payments':  ['sales', 'expenses'],
+  '/finances':  ['payments', 'inventory'],
+  '/inventory': ['sales', 'expenses'],
+  '/dashboard': ['visits', 'sales', 'diary'],
+  '/clients':   ['visits', 'sales'],
+  '/diary':     ['visits', 'analytics'],
+  '/analytics': ['diary', 'visits'],
 }
 
 // ─── DashboardPrefetcher ───────────────────────────────────────────────────────
@@ -160,6 +193,8 @@ export function useHoverPrefetch(href: string) {
     '/payments':  'payments',
     '/finances':  'expenses',
     '/inventory': 'inventory',
+    '/diary':     'diary',
+    '/analytics': 'analytics',
   }
 
   const onMouseEnter = useCallback(() => {

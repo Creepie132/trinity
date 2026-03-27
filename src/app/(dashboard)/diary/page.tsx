@@ -12,6 +12,7 @@ import { useModalStore } from '@/store/useModalStore'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { TaskDetailSheet } from '@/components/diary/TaskDetailSheet'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoSectionBanner } from '@/components/demo/DemoSectionBanner'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
@@ -400,9 +401,8 @@ export default function DiaryPage() {
   const dateLocale = isHe ? he : ru
   const supabase = createSupabaseBrowserClient()
   const { openModal } = useModalStore()
+  const queryClient = useQueryClient()
 
-  const [tasks,        setTasks]        = useState<Task[]>([])
-  const [isLoading,    setIsLoading]    = useState(true)
   const [searchQuery,  setSearchQuery]  = useState('')
   const [sheetTask,    setSheetTask]    = useState<Task | null>(null)
   const [isSheetOpen,  setIsSheetOpen]  = useState(false)
@@ -412,15 +412,23 @@ export default function DiaryPage() {
   const [demoLimitOpen, setDemoLimitOpen] = useState(false)
 
   useEffect(() => { if (!hasDiary) router.push('/dashboard') }, [hasDiary, router])
-  useEffect(() => { loadAll() }, [])
 
-  async function loadAll() {
-    setIsLoading(true)
-    await Promise.all([loadTasks()])
-    setIsLoading(false)
-  }
-  async function loadTasks() {
-    try { const r = await fetch('/api/tasks'); if (r.ok) setTasks(await r.json()) } catch {}
+  // ── useQuery: Zero-overhead — кэш сразу, staleTime 30s ──────────────────
+  const { data: tasks = [], isLoading } = useQuery<Task[]>({
+    queryKey: ['tasks-diary'],
+    queryFn: async () => {
+      const r = await fetch('/api/tasks')
+      if (!r.ok) return []
+      return r.json()
+    },
+    staleTime: 30_000,
+    gcTime:    60_000,
+    placeholderData: (prev) => prev,
+  })
+
+  // Инвалидация после мутаций
+  async function refreshTasks() {
+    await queryClient.invalidateQueries({ queryKey: ['tasks-diary'] })
   }
 
   const allFiltered = useMemo(() => {
@@ -462,13 +470,19 @@ export default function DiaryPage() {
   }, [activeBucket, allFiltered, buckets])
 
   async function handleComplete(taskId: string) {
-    setTasks(prev => prev.map(t => t.id === taskId
-      ? { ...t, status: 'completed' as const, completed_at: new Date().toISOString() } : t))
+    // Optimistic update
+    queryClient.setQueryData<Task[]>(['tasks-diary'], (old = []) =>
+      old.map(t => t.id === taskId
+        ? { ...t, status: 'completed' as const, completed_at: new Date().toISOString() } : t))
     await supabase.from('tasks').update({ status: 'completed' }).eq('id', taskId)
+    refreshTasks()
   }
   async function handleDelete(taskId: string) {
-    setTasks(prev => prev.filter(t => t.id !== taskId))
+    // Optimistic update
+    queryClient.setQueryData<Task[]>(['tasks-diary'], (old = []) =>
+      old.filter(t => t.id !== taskId))
     await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' })
+    refreshTasks()
   }
   function handleCardClick(task: Task) {
     if (window.innerWidth < 768) { setSheetTask(task); setIsSheetOpen(true) }
@@ -476,21 +490,25 @@ export default function DiaryPage() {
   }
   async function handleSheetStatusChange(taskId: string, rawStatus: string) {
     const status = (rawStatus === 'done' ? 'completed' : rawStatus) as Task['status']
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t))
+    queryClient.setQueryData<Task[]>(['tasks-diary'], (old = []) =>
+      old.map(t => t.id === taskId ? { ...t, status } : t))
     await supabase.from('tasks').update({ status }).eq('id', taskId)
     setIsSheetOpen(false)
+    refreshTasks()
   }
   async function handleSheetDelete(taskId: string) {
-    setTasks(prev => prev.filter(t => t.id !== taskId))
+    queryClient.setQueryData<Task[]>(['tasks-diary'], (old = []) =>
+      old.filter(t => t.id !== taskId))
     await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' })
     setIsSheetOpen(false)
+    refreshTasks()
   }
 
   function openCreate() {
     if (isDemo && tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled').length >= 5) {
       setDemoLimitOpen(true); return
     }
-    openModal('task-create', { onCreated: loadTasks })
+    openModal('task-create', { onCreated: refreshTasks })
   }
 
   // ── Скелетон ─────────────────────────────────────────────────────────────
@@ -693,7 +711,7 @@ export default function DiaryPage() {
           task={sheetTask as any} isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)}
           onStatusChange={handleSheetStatusChange}
           onClientClick={clientId => { setIsSheetOpen(false); openModal('client-details', { id: clientId }) }}
-          onEdit={task => openModal('task-create', { editTask: task, onCreated: loadTasks })}
+          onEdit={task => openModal('task-create', { editTask: task, onCreated: refreshTasks })}
           onDelete={handleSheetDelete}
           locale={language as 'he' | 'ru'} />
         <DemoLimitModal open={demoLimitOpen} onClose={() => setDemoLimitOpen(false)} section="diary" />

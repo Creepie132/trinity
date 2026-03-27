@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useBranch } from '@/contexts/BranchContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
+import { useQuery } from '@tanstack/react-query'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -111,44 +112,46 @@ export default function AnalyticsPage() {
   })
   const [showConfig, setShowConfig] = useState(false)
 
-  // Data
-  const [stats, setStats]     = useState<StatsData | null>(null)
-  const [revenue, setRevenue] = useState<RevenuePoint[]>([])
-  const [visits, setVisits]   = useState<VisitPoint[]>([])
-  const [reports, setReports] = useState<ReportsData | null>(null)
-  const [loading, setLoading] = useState(true)
+  // ── useQuery: данные аналитики (staleTime 30s, keepPreviousData при смене period) ──
+  const { data: analyticsData, isLoading: loading, refetch } = useQuery({
+    queryKey: ['analytics', orgId, period],
+    enabled: !!orgId && !isDemo,
+    staleTime: 30_000,
+    gcTime:    60_000,
+    placeholderData: (prev) => prev,
+    queryFn: async () => {
+      const from = new Date(); from.setDate(from.getDate() - period)
+      const fromStr = from.toISOString().split('T')[0]
+      const toStr   = new Date().toISOString().split('T')[0]
 
-  // Persist visibility
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(visible))
-  }, [visible])
-
-  // Fetch all data
-  const fetchData = useCallback(async () => {
-    if (!orgId) return
-    setLoading(true)
-    const from = new Date(); from.setDate(from.getDate() - period)
-    const fromStr = from.toISOString().split('T')[0]
-    const toStr   = new Date().toISOString().split('T')[0]
-
-    try {
       const [statsRes, revenueRes, visitsRes, reportsRes] = await Promise.all([
         fetch(`/api/dashboard/stats?org_id=${orgId}`),
         fetch(`/api/dashboard/revenue?org_id=${orgId}&days=${period}`),
         fetch(`/api/dashboard/visits-chart?org_id=${orgId}&days=${period}`),
         fetch(`/api/dashboard/reports?org_id=${orgId}&from=${fromStr}T00:00:00Z&to=${toStr}T23:59:59Z`),
       ])
-      if (statsRes.ok)   setStats(await statsRes.json())
-      if (revenueRes.ok) setRevenue(await revenueRes.json())
-      if (visitsRes.ok)  setVisits(await visitsRes.json())
-      if (reportsRes.ok) setReports(await reportsRes.json())
-    } catch (e) { console.error(e) }
-    setLoading(false)
-  }, [orgId, period])
+      return {
+        stats:   statsRes.ok   ? (await statsRes.json()   as StatsData)   : null,
+        revenue: revenueRes.ok ? (await revenueRes.json() as RevenuePoint[]) : [],
+        visits:  visitsRes.ok  ? (await visitsRes.json()  as VisitPoint[])   : [],
+        reports: reportsRes.ok ? (await reportsRes.json() as ReportsData)    : null,
+      }
+    },
+  })
 
-  useEffect(() => { fetchData() }, [fetchData])
+  const stats   = analyticsData?.stats   ?? null
+  const revenue = analyticsData?.revenue ?? []
+  const visits  = analyticsData?.visits  ?? []
+  const reports = analyticsData?.reports ?? null
 
-  const toggleWidget = (id: string) => setVisible(v => ({ ...v, [id]: !v[id] }))
+  // Persist visibility
+  const toggleWidget = useCallback((id: string) => {
+    setVisible(v => {
+      const next = { ...v, [id]: !v[id] }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
 
   // Labels
   const L = {
@@ -306,7 +309,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Refresh */}
-          <button onClick={fetchData} disabled={loading}
+          <button onClick={() => refetch()} disabled={loading}
             className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 shadow-sm transition disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             {L.refresh}

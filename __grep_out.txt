@@ -1,0 +1,3 @@
+F:\Amber_solutions_Kira\Trinity\src\app\(dashboard)\diary\page.tsx:497:  if (isLoading) return (
+F:\Amber_solutions_Kira\Trinity\src\app\(dashboard)\visits\page.tsx:443:  if (isLoading && !visitsData) return (
+DONE 

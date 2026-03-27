@@ -295,7 +295,7 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
     if ((onboardingData as any)?.isDemoOrg) setIsDemoMode(true)
   }, [(onboardingData as any)?.isDemoOrg])
 
-  const { data: stats, isLoading: statsLoading } = useQuery<StatsData>({
+  const { data: stats } = useQuery<StatsData>({
     queryKey: ['dashboard-stats', orgId],
     enabled: !!orgId,
     staleTime: STALE_STATS,
@@ -381,20 +381,16 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
 
   const revenueToday = (revenueData as any[])[(revenueData as any[]).length - 1]?.amount || 0
 
-  if (statsLoading && !stats) {
-    return (
-      <div className="p-4 md:p-6">
-        <div className="mb-5 h-12 w-64 rounded-xl bg-gray-100 animate-pulse" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {[1,2,3,4].map(i => <div key={i} className="rounded-2xl h-28 animate-pulse" style={{ background: `hsl(${220 + i * 30}, 60%, 90%)` }} />)}
-        </div>
-        <div className="grid grid-cols-3 gap-3 mb-5">{[1,2,3].map(i => <div key={i} className="rounded-xl h-16 bg-gray-100 animate-pulse" />)}</div>
-      </div>
-    )
-  }
-
+  // ⚡ Каркас рендерится МГНОВЕННО — без полноэкранного блокирующего скелетона.
+  // KPI-карточки анимируются от 0 до реального значения — это и есть их loading state.
   const l = locale === 'he'
-  const s = stats!
+  // Пока stats не пришли — используем нули; KpiCard покажет анимацию countUp от 0
+  const s: StatsData = stats ?? {
+    clients:  { value: 0, change: 0 },
+    visits:   { value: 0, change: 0 },
+    revenue:  { value: 0, change: 0 },
+    avgCheck: { value: 0, change: 0 },
+  }
 
   return (
     <>

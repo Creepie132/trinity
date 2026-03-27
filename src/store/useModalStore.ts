@@ -16,7 +16,10 @@ export type ModalType =
   | 'visit-add-service'
   | 'add-service'
   | 'add-to-visit'
-  // Products
+  // Products — unified (заменяет product-create и product-edit)
+  | 'product-unified'
+  // product-create и product-edit оставлены для обратной совместимости,
+  // оба обслуживаются через EditProductModal → UnifiedProductDialog
   | 'product-create'
   | 'product-details'
   | 'product-edit'

@@ -66,12 +66,64 @@ export const updateVisitSchema = z.object({
   price:  z.coerce.number().min(0).max(100000).optional().nullable(),
 })
 
-// Платежи
+// ── Допустимые методы оплаты (единый источник истины) ──────────────────────────
+export const PAYMENT_METHOD_VALUES = ['cash', 'bit', 'credit', 'credit_card', 'bank', 'bank_transfer'] as const
+export type PaymentMethodValue = typeof PAYMENT_METHOD_VALUES[number]
+
+// ── Допустимые категории расходов (единый источник истины) ─────────────────────
+export const EXPENSE_CATEGORY_VALUES = [
+  'supplies', 'food', 'transport', 'utilities',
+  'equipment', 'marketing', 'rent', 'salary', 'other',
+] as const
+export type ExpenseCategoryValue = typeof EXPENSE_CATEGORY_VALUES[number]
+
+// ── ISO date helper ────────────────────────────────────────────────────────────
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD')
+
+// Платежи — создание (POST /api/payments)
 export const createPaymentSchema = z.object({
-  client_id: z.string().uuid(),
-  amount: z.number().min(0.01).max(100000),
-  description: z.string().max(500).optional().or(z.literal("")),
-  visit_id: z.string().uuid().optional(),
+  client_id:      z.string().uuid('Invalid client_id'),
+  amount:         z.coerce.number()
+                    .min(0.01, 'Amount must be > 0')
+                    .max(1_000_000, 'Amount too large'),
+  payment_method: z.enum(PAYMENT_METHOD_VALUES, {
+                    errorMap: () => ({ message: 'Invalid payment_method' }),
+                  }),
+  visit_id:       z.string().uuid('Invalid visit_id').optional().nullable(),
+  description:    z.string().max(500).optional().or(z.literal('')),
+  status:         z.enum(['pending', 'completed', 'failed'])
+                    .optional()
+                    .default('completed'),
+})
+
+// Расходы — создание (POST /api/expenses)
+export const createExpenseSchema = z.object({
+  vendor:       z.string().min(1, 'Vendor required').max(200),
+  amount:       z.coerce.number()
+                  .min(0.01, 'Amount must be > 0')
+                  .max(10_000_000, 'Amount too large'),
+  expense_date: isoDate,
+  category:     z.enum(EXPENSE_CATEGORY_VALUES, {
+                  errorMap: () => ({ message: 'Invalid category' }),
+                }),
+  description:  z.string().max(1000).optional().or(z.literal('')),
+  notes:        z.string().max(2000).optional().or(z.literal('')),
+})
+
+// Расходы — обновление (PATCH /api/expenses)
+export const updateExpenseSchema = z.object({
+  id:           z.string().uuid('Invalid expense id'),
+  vendor:       z.string().min(1).max(200).optional(),
+  amount:       z.coerce.number()
+                  .min(0.01, 'Amount must be > 0')
+                  .max(10_000_000)
+                  .optional(),
+  expense_date: isoDate.optional(),
+  category:     z.enum(EXPENSE_CATEGORY_VALUES).optional(),
+  description:  z.string().max(1000).optional().or(z.literal('')),
+  verified:     z.boolean().optional(),
+  notes:        z.string().max(2000).optional().or(z.literal('')),
+  order_number: z.string().max(100).optional().or(z.literal('')),
 })
 
 // SMS
@@ -119,6 +171,15 @@ export const createProductSchema = z.object({
   min_quantity: z.number().int().min(0).optional(),
   unit: z.string().max(50).optional().or(z.literal("")),
   image_url: z.string().max(500).optional().or(z.literal("")),
+})
+
+// Продажа товара со склада (POST /api/inventory/sell)
+export const sellProductSchema = z.object({
+  product_id:     z.string().uuid('Invalid product_id'),
+  quantity:       z.coerce.number().int().min(1, 'Quantity must be >= 1').max(9999),
+  price_per_unit: z.coerce.number().min(0.01, 'Price must be > 0').max(1_000_000),
+  payment_method: z.enum(['cash', 'bit', 'credit', 'bank_transfer']),
+  client_id:      z.string().uuid('Invalid client_id').optional().nullable(),
 })
 
 // Контактная форма

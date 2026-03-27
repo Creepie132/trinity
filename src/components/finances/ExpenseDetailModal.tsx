@@ -1,22 +1,36 @@
 'use client'
 
+/**
+ * ExpenseDetailModal — детали и редактирование расхода.
+ *
+ * Trinity Standard compliance:
+ * ✅ TrinityModalShell — стандартная оболочка вместо кастомного overlay
+ * ✅ PATCH /api/expenses — Zod-валидация на сервере
+ * ✅ queryClient.invalidateQueries() — через useUpdateExpense hook
+ */
+
 import { useState } from 'react'
-import { X, Phone, Globe, Hash, FileText, Package, Gift, ExternalLink, Pencil, Check } from 'lucide-react'
+import {
+  Phone, Globe, Hash, FileText, Package, Gift,
+  ExternalLink, Pencil, Check, X,
+} from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useUpdateExpense } from '@/hooks/useExpenses'
 import type { Expense } from '@/hooks/useExpenses'
 import { toast } from 'sonner'
+import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 
-// ─── Item type ─────────────────────────────────────────────────────────────────
+// ─── Item type ────────────────────────────────────────────────────────────────
 interface ExpenseItem {
   name: string
   qty: number
   unit_price: number
-  is_gift?: boolean   // бесплатный "подарок" от поставщика
+  is_gift?: boolean
 }
 
-// ─── Translations ──────────────────────────────────────────────────────────────
-const t = {
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+const TRANSLATIONS = {
   he: {
     title: 'פרטי הוצאה', vendor: 'ספק', phone: 'טלפון', website: 'אתר',
     orderNum: 'מספר הזמנה', notes: 'הערות', items: 'פירוט מוצרים',
@@ -24,7 +38,9 @@ const t = {
     gifts: 'מתנות (חינם)', costPrice: 'עלות (כולל מתנות)', perUnit: 'לפריט',
     noItems: 'אין פירוט מוצרים', save: 'שמור', edit: 'עריכה',
     notesPlaceholder: 'הוסף הערה...', orderPlaceholder: 'מספר הזמנה...',
-    saved: 'נשמר בהצלחה', giftInfo: 'הכמות כוללת {{gift}} מתנות — העלות האמיתית לפריט:',
+    saved: 'נשמר בהצלחה', cancel: 'ביטול', close: 'סגור',
+    giftInfo: 'הכמות כוללת {{gift}} מתנות — העלות האמיתית לפריט:',
+    receiptLink: 'צפה בקבלה המקורית',
   },
   ru: {
     title: 'Детали расхода', vendor: 'Поставщик', phone: 'Телефон', website: 'Сайт',
@@ -33,18 +49,18 @@ const t = {
     gifts: 'Бесплатно (подарки)', costPrice: 'Себестоимость (с учётом подарков)', perUnit: 'за ед.',
     noItems: 'Состав не указан', save: 'Сохранить', edit: 'Редактировать',
     notesPlaceholder: 'Добавить заметку...', orderPlaceholder: 'Номер заказа...',
-    saved: 'Сохранено', giftInfo: 'В количество входит {{gift}} бесплатных — реальная себестоимость за ед.:',
+    saved: 'Сохранено', cancel: 'Отмена', close: 'Закрыть',
+    giftInfo: 'В количество входит {{gift}} бесплатных — реальная себестоимость за ед.:',
+    receiptLink: 'Открыть оригинал квитанции',
   },
 }
 
-// ─── Cost with gifts ──────────────────────────────────────────────────────────
+// ─── CostWithGifts ────────────────────────────────────────────────────────────
 function CostWithGifts({ items, lang }: { items: ExpenseItem[]; lang: 'he' | 'ru' }) {
-  const tx = t[lang]
-  if (!items.length) return null
-
-  const paid = items.filter(i => !i.is_gift)
-  const gifts = items.filter(i => i.is_gift)
-  if (!gifts.length) return null
+  const tx = TRANSLATIONS[lang]
+  const paidItems = items.filter(i => !i.is_gift)
+  const giftItems = items.filter(i => i.is_gift)
+  if (!giftItems.length) return null
 
   return (
     <div className="mt-3 p-3 rounded-xl bg-violet-50 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-800">
@@ -52,8 +68,8 @@ function CostWithGifts({ items, lang }: { items: ExpenseItem[]; lang: 'he' | 'ru
         <Gift className="w-4 h-4 text-violet-500 flex-shrink-0" />
         <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">{tx.costPrice}</p>
       </div>
-      {paid.map((item, i) => {
-        const giftItem = gifts.find(g => g.name === item.name)
+      {paidItems.map((item, i) => {
+        const giftItem = giftItems.find(g => g.name === item.name)
         if (!giftItem) return null
         const totalQty = item.qty + giftItem.qty
         const realCost = (item.qty * item.unit_price) / totalQty
@@ -75,9 +91,9 @@ function CostWithGifts({ items, lang }: { items: ExpenseItem[]; lang: 'he' | 'ru
   )
 }
 
-// ─── Items list ───────────────────────────────────────────────────────────────
+// ─── ItemsList ────────────────────────────────────────────────────────────────
 function ItemsList({ items, lang }: { items: ExpenseItem[]; lang: 'he' | 'ru' }) {
-  const tx = t[lang]
+  const tx = TRANSLATIONS[lang]
   if (!items.length) return <p className="text-xs text-gray-400 py-2">{tx.noItems}</p>
 
   const paidItems = items.filter(i => !i.is_gift)
@@ -110,7 +126,7 @@ function ItemsList({ items, lang }: { items: ExpenseItem[]; lang: 'he' | 'ru' })
   )
 }
 
-// ─── Main Modal ───────────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 interface Props {
   expense: Expense
   onClose: () => void
@@ -119,14 +135,14 @@ interface Props {
 export function ExpenseDetailModal({ expense, onClose }: Props) {
   const { language } = useLanguage()
   const lang = language === 'he' ? 'he' : 'ru'
-  const tx = t[lang]
-  const dir = lang === 'he' ? 'rtl' : 'ltr'
+  const tx   = TRANSLATIONS[lang]
+  const dir  = lang === 'he' ? 'rtl' : 'ltr'
   const update = useUpdateExpense()
 
-  const [notes, setNotes] = useState(expense.notes ?? '')
+  const [notes,       setNotes]       = useState(expense.notes ?? '')
   const [orderNumber, setOrderNumber] = useState(expense.order_number ?? '')
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [editing,     setEditing]     = useState(false)
+  const [saving,      setSaving]      = useState(false)
 
   const items: ExpenseItem[] = Array.isArray(expense.items) ? expense.items as ExpenseItem[] : []
   const vatAmount: number = expense.vat_amount ?? 0
@@ -143,39 +159,84 @@ export function ExpenseDetailModal({ expense, onClose }: Props) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div
-        dir={dir}
-        onClick={e => e.stopPropagation()}
-        className="w-full sm:max-w-md max-h-[90dvh] overflow-y-auto bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700"
-      >
-        {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-900 flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-700 rounded-t-3xl">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">{tx.title}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+  // ── Sidebar ──────────────────────────────────────────────────────────────────
+  const sidebar = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {/* Amount badge */}
+      <div style={{ background: 'rgba(239,68,68,0.12)', border: '0.5px solid rgba(239,68,68,0.3)', borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 8 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#f87171' }}>
+          ₪{(expense.amount ?? 0).toLocaleString('he-IL', { maximumFractionDigits: 2 })}
         </div>
+        <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>
+          {tx.total}
+        </div>
+      </div>
+      <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '0 0 8px' }} />
 
-        <div className="px-5 py-4 space-y-4">
+      {/* Edit/Save button */}
+      {editing ? (
+        <>
+          <button onClick={handleSave} disabled={saving}
+            style={{ padding: '11px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%',
+              background: saving ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#f59e0b,#d97706)',
+              color: '#fff', fontSize: 13, fontWeight: 700, marginBottom: 6,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Check size={14} />
+            {saving ? '...' : tx.save}
+          </button>
+          <button onClick={() => setEditing(false)}
+            style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer' }}>
+            {tx.cancel}
+          </button>
+        </>
+      ) : (
+        <>
+          <button onClick={() => setEditing(true)}
+            style={{ padding: '11px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%',
+              background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)',
+              fontSize: 13, fontWeight: 600, marginBottom: 6,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Pencil size={14} />{tx.edit}
+          </button>
+          <button onClick={onClose}
+            style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer' }}>
+            {tx.close}
+          </button>
+        </>
+      )}
+    </div>
+  )
+
+  // ── Render ────────────────────────────────────────────────────────────────────
+  return (
+    <Modal open={true} onClose={onClose} darkHeader showCloseButton={false}
+      width="680px" dir={dir} contentClassName="!p-0">
+      <TrinityModalShell
+        open={true} onClose={onClose}
+        icon={<FileText />}
+        title={tx.title}
+        subtitle={expense.vendor ?? (lang === 'he' ? 'ספק לא ידוע' : 'Неизвестный')}
+        dir={dir}
+        sidebarExtra={sidebar}
+      >
+        <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
+
           {/* Vendor block */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">{tx.vendor}</p>
-            <p className="text-lg font-bold text-gray-900 dark:text-white">
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '12px 14px' }}>
+            <p style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{tx.vendor}</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', margin: '0 0 8px' }}>
               {expense.vendor ?? (lang === 'he' ? 'ספק לא ידוע' : 'Неизвестный')}
             </p>
             <div className="flex flex-wrap gap-2">
               {expense.vendor_phone && (
                 <a href={`tel:${expense.vendor_phone}`}
-                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 transition-colors">
-                  <Phone className="w-3.5 h-3.5" />
-                  {expense.vendor_phone}
+                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors">
+                  <Phone className="w-3.5 h-3.5" />{expense.vendor_phone}
                 </a>
               )}
               {expense.vendor_website && (
                 <a href={expense.vendor_website} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 hover:bg-violet-100 transition-colors">
+                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors">
                   <Globe className="w-3.5 h-3.5" />
                   {lang === 'he' ? 'אתר הספק' : 'Сайт поставщика'}
                   <ExternalLink className="w-3 h-3" />
@@ -185,53 +246,46 @@ export function ExpenseDetailModal({ expense, onClose }: Props) {
           </div>
 
           {/* Financial summary */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 px-4 pt-3 pb-2">{tx.total}</p>
+          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, overflow: 'hidden' }}>
+            <p style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '10px 14px 6px' }}>{tx.total}</p>
             {vatAmount > 0 && (
               <>
-                <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-xs text-gray-500">{tx.subtotal}</span>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 tabular-nums">
-                    ₪{subtotal.toLocaleString('he-IL', { maximumFractionDigits: 2 })}
-                  </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 14px', borderBottom: '1px solid #f1f5f9' }}>
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>{tx.subtotal}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: '#475569' }}>₪{subtotal.toLocaleString('he-IL', { maximumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-                  <span className="text-xs text-gray-500">{tx.vat} (17%)</span>
-                  <span className="text-sm font-medium text-amber-600 tabular-nums">
-                    +₪{vatAmount.toLocaleString('he-IL', { maximumFractionDigits: 2 })}
-                  </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 14px', borderBottom: '1px solid #f1f5f9' }}>
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>{tx.vat} (17%)</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: '#d97706' }}>+₪{vatAmount.toLocaleString('he-IL', { maximumFractionDigits: 2 })}</span>
                 </div>
               </>
             )}
-            <div className="flex justify-between items-center px-4 py-3 bg-gray-50 dark:bg-gray-700/40">
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{tx.total}</span>
-              <span className="text-lg font-bold text-red-500 tabular-nums">
-                ₪{(expense.amount ?? 0).toLocaleString('he-IL', { maximumFractionDigits: 2 })}
-              </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>{tx.total}</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: '#ef4444' }}>₪{(expense.amount ?? 0).toLocaleString('he-IL', { maximumFractionDigits: 2 })}</span>
             </div>
           </div>
 
           {/* Items */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">{tx.items}</p>
-            <ItemsList items={items} lang={lang} />
-          </div>
+          {items.length > 0 && (
+            <div>
+              <p style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{tx.items}</p>
+              <ItemsList items={items} lang={lang} />
+            </div>
+          )}
 
           {/* Order number */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1.5">{tx.orderNum}</p>
+            <p style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{tx.orderNum}</p>
             {editing ? (
-              <input
-                value={orderNumber}
-                onChange={e => setOrderNumber(e.target.value)}
+              <input value={orderNumber} onChange={e => setOrderNumber(e.target.value)}
                 placeholder={tx.orderPlaceholder}
-                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-amber-400"
-              />
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', background: '#fff', color: '#1e293b', boxSizing: 'border-box' }} />
             ) : (
-              <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5">
-                <Hash className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  {orderNumber || <span className="text-gray-400 italic">{tx.orderPlaceholder}</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', borderRadius: 10, padding: '10px 12px' }}>
+                <Hash className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <span style={{ fontSize: 13, color: orderNumber ? '#334155' : '#94a3b8', fontStyle: orderNumber ? 'normal' : 'italic' }}>
+                  {orderNumber || tx.orderPlaceholder}
                 </span>
               </div>
             )}
@@ -239,20 +293,16 @@ export function ExpenseDetailModal({ expense, onClose }: Props) {
 
           {/* Notes */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1.5">{tx.notes}</p>
+            <p style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{tx.notes}</p>
             {editing ? (
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder={tx.notesPlaceholder}
-                rows={3}
-                className="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 outline-none focus:ring-2 focus:ring-amber-400 resize-none"
-              />
+              <textarea value={notes} onChange={e => setNotes(e.target.value)}
+                placeholder={tx.notesPlaceholder} rows={3}
+                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13, outline: 'none', background: '#fff', color: '#1e293b', resize: 'none', boxSizing: 'border-box' }} />
             ) : (
-              <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2.5 min-h-[44px]">
-                <FileText className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                <span className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                  {notes || <span className="text-gray-400 italic">{tx.notesPlaceholder}</span>}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: '#f8fafc', borderRadius: 10, padding: '10px 12px', minHeight: 44 }}>
+                <FileText className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                <span style={{ fontSize: 13, color: notes ? '#334155' : '#94a3b8', fontStyle: notes ? 'normal' : 'italic', whiteSpace: 'pre-wrap' }}>
+                  {notes || tx.notesPlaceholder}
                 </span>
               </div>
             )}
@@ -262,35 +312,12 @@ export function ExpenseDetailModal({ expense, onClose }: Props) {
           {expense.receipt_url && (
             <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-2 text-xs text-blue-500 hover:text-blue-600 transition-colors">
-              <ExternalLink className="w-3.5 h-3.5" />
-              {lang === 'he' ? 'צפה בקבלה המקורית' : 'Открыть оригинал квитанции'}
+              <ExternalLink className="w-3.5 h-3.5" />{tx.receiptLink}
             </a>
           )}
 
-          {/* Action buttons */}
-          <div className="flex gap-2 pt-1 pb-1">
-            {editing ? (
-              <>
-                <button onClick={() => setEditing(false)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition-colors">
-                  {lang === 'he' ? 'ביטול' : 'Отмена'}
-                </button>
-                <button onClick={handleSave} disabled={saving}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5">
-                  <Check className="w-4 h-4" />
-                  {tx.save}
-                </button>
-              </>
-            ) : (
-              <button onClick={() => setEditing(true)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5">
-                <Pencil className="w-4 h-4" />
-                {tx.edit}
-              </button>
-            )}
-          </div>
         </div>
-      </div>
-    </div>
+      </TrinityModalShell>
+    </Modal>
   )
 }

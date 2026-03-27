@@ -22,10 +22,9 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ClientSearch } from '@/components/ui/ClientSearch'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
 import { useCreatePaymentLink } from '@/hooks/usePayments'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   CreditCard, Banknote, Link, CheckCircle2,
@@ -146,13 +145,13 @@ export function UnifiedPaymentDialog({
   open, onOpenChange, initialData,
 }: UnifiedPaymentDialogProps) {
   const { language } = useLanguage()
-  const { orgId } = useAuth()
   const { activeOrgId } = useBranch()
-  const searchOrgId = activeOrgId || orgId || ''
+  const searchOrgId = activeOrgId || ''
   const isHe = language === 'he'
   const t = I18N[language as 'he' | 'ru'] ?? I18N.ru
 
   const safeData = validateModalData(initialData)
+  const queryClient = useQueryClient()
 
   // ── State machine ────────────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>(() =>
@@ -177,7 +176,6 @@ export function UnifiedPaymentDialog({
   const isSubmittingRef = useRef(false)
 
   const createPaymentLinkMutation = useCreatePaymentLink()
-  const supabase = createSupabaseBrowserClient()
 
   // ── Reset on open ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -238,7 +236,7 @@ export function UnifiedPaymentDialog({
     setStep('method-select')
   }, [])
 
-  /** Единственная точка записи в БД — централизованная валидация и API */
+  /** Единственная точка записи в БД — через защищённый API, не суpabase-browser */
   const handleSubmit = useCallback(async () => {
     // ── Double-submit: логический замок ────────────────────────────────────
     if (isSubmittingRef.current) return
@@ -252,39 +250,43 @@ export function UnifiedPaymentDialog({
       toast.error(t.invalidAmount)
       isSubmittingRef.current = false; return
     }
-    if (!orgId) {
-      toast.error('Organization not found')
-      isSubmittingRef.current = false; return
-    }
 
     setIsLoading(true)
-    setErrorMsg(null)      // сбрасываем предыдущую ошибку, но не форму
+    setErrorMsg(null)
 
     try {
-      // ── CASH ────────────────────────────────────────────────────────────────
+      // ── CASH — через POST /api/payments (Zero Trust) ────────────────────
       if (step === 'cash-form') {
-        const { error } = await supabase.from('payments').insert({
-          client_id: selectedClient.id,
-          org_id: orgId,
-          amount: amountNum,
-          payment_method: 'cash',
-          status: 'completed',
-          visit_id: safeData.visitId ?? null,
-          description: notes.trim() ||
-            `Наличные — ${selectedClient.first_name} ${selectedClient.last_name}`,
+        const res = await fetch('/api/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id:      selectedClient.id,
+            amount:         amountNum,
+            payment_method: 'cash',
+            status:         'completed',
+            visit_id:       safeData.visitId ?? null,
+            description:    notes.trim() ||
+              `Наличные — ${selectedClient.first_name} ${selectedClient.last_name}`,
+          }),
         })
-        if (error) throw new Error(error.message)
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || t.errorGeneric)
+        }
+        // ✅ React Query invalidate
+        queryClient.invalidateQueries({ queryKey: ['payments'] })
         toast.success(t.successCash)
         safeData.onSuccess?.()
         setStep('success')
         return
       }
 
-      // ── PAYMENT LINK ──────────────────────────────────────────────────────────
+      // ── PAYMENT LINK ──────────────────────────────────────────────────────
       if (step === 'link-form') {
         const result = await createPaymentLinkMutation.mutateAsync({
-          client_id: selectedClient.id,
-          amount: amountNum,
+          client_id:   selectedClient.id,
+          amount:      amountNum,
           description: description.trim() ||
             `Оплата — ${selectedClient.first_name} ${selectedClient.last_name}`,
           visit_id: safeData.visitId,
@@ -298,18 +300,18 @@ export function UnifiedPaymentDialog({
       }
 
     } catch (err: unknown) {
-      // ── Ошибка: форма НЕ сбрасывается, только показываем banner ─────────────
+      // ── Ошибка: форма НЕ сбрасывается, только показываем banner ─────────
       const msg = err instanceof Error ? err.message : t.errorGeneric
       setErrorMsg(msg)
       console.error('[UnifiedPaymentDialog] submit error:', err)
     } finally {
       setIsLoading(false)
-      isSubmittingRef.current = false   // всегда снимаем замок
+      isSubmittingRef.current = false
     }
   }, [
-    step, selectedClient, isAmountValid, amountNum, orgId,
-    notes, description, safeData, supabase,
-    createPaymentLinkMutation, handleClose, t,
+    step, selectedClient, isAmountValid, amountNum,
+    notes, description, safeData, queryClient,
+    createPaymentLinkMutation, t,
   ])
 
   const handleCopyLink = useCallback(() => {

@@ -52,9 +52,10 @@ export function ProductDetailsModal() {
       ? { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)', label: T.lowStock, icon: '🟡' }
       : { color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.3)', label: T.inStock, icon: '🟢' }
 
-  const handleEditClick    = () => { closeModal('product-details'); openModal('product-edit',     { product }) }
-  const handleAddStockClick= () => { closeModal('product-details'); openModal('product-add-stock',{ product }) }
-  const handleTransferClick= () => { closeModal('product-details'); openModal('product-transfer', { product, locale }) }
+  // ✅ product-unified заменяет product-edit и product-create
+  const handleEditClick    = () => { closeModal('product-details'); openModal('product-unified',   { mode: 'edit', product }) }
+  const handleAddStockClick= () => { closeModal('product-details'); openModal('product-add-stock', { product }) }
+  const handleTransferClick= () => { closeModal('product-details'); openModal('product-transfer',  { product, locale }) }
   const handleSellClick    = () => {
     if (isDemo) { setDemoSellOpen(true); return }
     closeModal('product-details'); openModal('product-sell', { product })

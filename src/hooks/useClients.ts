@@ -170,29 +170,29 @@ export function useAddClient() {
 
 export function useUpdateClient() {
   const queryClient = useQueryClient()
-  const { orgId: authOrgId } = useAuth()
-  const { mainOrgId } = useBranch()
-  // Clients are always shared — use mainOrgId
-  const orgId = mainOrgId || authOrgId
 
   return useMutation({
     mutationFn: async ({ id, ...client }: Partial<Client> & { id: string }) => {
-      if (!orgId) throw new Error('Missing orgId')
+      // ── GUARD: никогда не отправляем optimistic ID на сервер ──────────────
+      // Если пользователь открыл редактирование до завершения onSettled,
+      // id может содержать 'optimistic-...'. Такой UPDATE бессмысленен.
+      if (!id || id.startsWith('optimistic-')) {
+        throw new Error(
+          'Cannot update client: real UUID not yet available. ' +
+          'Please wait a moment and try again.'
+        )
+      }
 
-      // Запрещаем обновлять org_id
+      // Запрещаем обновлять org_id — не доверяем клиенту
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { org_id, ...safeClient } = client as any
+      const { org_id, created_at, updated_at, ...safeClient } = client as any
 
-      const { data, error } = await supabase
-        .from('clients')
-        .update(safeClient)
-        .eq('org_id', orgId) // <-- важно
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
+      // Zero-Trust: обновляем через API route (auth + org_id из сессии)
+      const res = await apiFetch(`/api/clients/${id}`, {
+        method: 'PUT',
+        json: safeClient,
+      })
+      return res
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
@@ -200,7 +200,12 @@ export function useUpdateClient() {
       toast.success('הלקוח עודכן בהצלחה')
     },
     onError: (error: any) => {
-      toast.error('שגיאה בעדכון לקוח: ' + error.message)
+      // Понятное сообщение если ID ещё optimistic
+      if (error.message?.includes('optimistic')) {
+        toast.error('נסה שוב — הנתונים עדיין נטענים')
+      } else {
+        toast.error('שגיאה בעדכון לקוח: ' + error.message)
+      }
     },
   })
 }

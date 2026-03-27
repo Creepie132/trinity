@@ -107,11 +107,13 @@ export function ClientCard({
     return () => clearTimeout(id)
   }, [swipeX])
 
-  const clientName  = getClientName(client)
-  const initials    = getClientInitials(client)
-  const [g1, g2]   = avatarGradient(clientName)
-  const visitsCount = client.visits_count || client.total_visits || 0
-  const isRTL       = locale === 'he'
+  const clientName    = getClientName(client)
+  const initials      = getClientInitials(client)
+  const [g1, g2]     = avatarGradient(clientName)
+  const visitsCount   = client.visits_count || client.total_visits || 0
+  const isRTL         = locale === 'he'
+  // Optimistic-запись ещё не сохранена на сервере
+  const isOptimistic  = client.id?.startsWith('optimistic-') ?? false
 
   const t = {
     he: { visits: 'ביקורים', call: 'שיחה', visit: 'ביקור', sale: 'מכירה' },
@@ -188,6 +190,10 @@ export function ClientCard({
 
   const handleCardClick = () => {
     if (Math.abs(swipeX) > 10) return // не открывать при свайпе
+    // ── GUARD: не открываем шторку для optimistic записей ─────────────────
+    // Пока сервер не вернул реальный UUID, карточка не кликабельна.
+    // Это предотвращает попытку редактирования/просмотра несуществующего ID.
+    if (client.id?.startsWith('optimistic-')) return
     if (onSelect) { onSelect(client); return }
     setSheetOpen(true)  // открываем TrinityMob через ClientBottomSheet
   }
@@ -247,7 +253,8 @@ export function ClientCard({
           } : {}),
         }}
         className={`relative flex items-center gap-3 px-4 py-3.5
-          rounded-2xl cursor-pointer select-none
+          rounded-2xl select-none transition-opacity duration-300
+          ${isOptimistic ? 'opacity-60 cursor-default' : 'cursor-pointer'}
           ${hasDraft
             ? 'shadow-sm active:opacity-90'
             : 'bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-100 active:bg-gray-50'

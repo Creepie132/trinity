@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, memo } from 'react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
-import { useQueryClient } from '@tanstack/react-query'
+import { useUpdateClient } from '@/hooks/useClients'
 import { Save, FileText, Paintbrush } from 'lucide-react'
 import { toast } from 'sonner'
 import { useClientCardSettings } from '@/components/clients/ClientCardSettingsModal'
@@ -79,7 +79,7 @@ const Field = memo(({ field, label, required, type = 'text', dir, multiline, val
 Field.displayName = 'Field'
 
 export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: EditClientSheetProps) {
-  const queryClient = useQueryClient()
+  const updateClient = useUpdateClient()
   const [cardSettings] = useClientCardSettings()
   const [form, setForm] = useState<Record<FieldKey, string>>({
     first_name:  client?.first_name  || '',
@@ -148,41 +148,51 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
       toast.error(Object.values(validationErrors)[0], { duration: 4000 })
       return
     }
+
+    // ── GUARD: запрещаем отправку если ID ещё optimistic ────────────────────
+    // Ид 'optimistic-...' значит клиент только что был создан и реальный UUID
+    // ещё не вернулся с сервера (редко, но возможно при медленном интернете)
+    if (!client?.id || client.id.startsWith('optimistic-')) {
+      toast.error(
+        locale === 'he'
+          ? 'הלקוח עדיין נשמר. נסה שוב עוד רגע.'
+          : 'Клиент ещё сохраняется. Повторите попытку через секунду.',
+        { duration: 4000 }
+      )
+      return
+    }
+
     setSaving(true)
     try {
-      const res  = await fetch(`/api/clients/${client.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, paint_code: hasPaintCode ? form.paint_code : null }),
+      // Используем useUpdateClient — Zero-Trust API route,
+      // защищён от optimistic ID на уровне мутации тоже
+      const data = await updateClient.mutateAsync({
+        id: client.id,
+        ...form,
+        paint_code: hasPaintCode ? form.paint_code : null,
       })
-      const data = await res.json()
-      if (res.ok) {
-        toast.success(locale === 'he' ? 'נשמר בהצלחה ✓' : 'Сохранено ✓')
-        queryClient.invalidateQueries({ queryKey: ['clients'] })
-        queryClient.invalidateQueries({ queryKey: ['client'] })
-        onSaved(data)
-        onClose()
-      } else {
-        const msg = data?.error || ''
-        let userMsg: string
-        if (msg.includes('Name is required') || msg.includes('first_name')) {
-          userMsg = locale === 'he' ? 'שם פרטי הוא שדה חובה' : 'Имя обязательно'
-          setErrors({ first_name: userMsg }); shakeFields(['first_name'])
-        } else if (msg.includes('phone')) {
-          userMsg = locale === 'he' ? 'מספר טלפון לא תקין' : 'Неверный формат телефона'
-          setErrors({ phone: userMsg }); shakeFields(['phone'])
-        } else if (msg.includes('email')) {
-          userMsg = locale === 'he' ? 'כתובת אימייל לא תקינה' : 'Неверный формат email'
-          setErrors({ email: userMsg }); shakeFields(['email'])
-        } else {
-          userMsg = locale === 'he' ? `שגיאה בשמירה: ${msg || 'שגיאה לא ידועה'}` : `Ошибка: ${msg || 'неизвестная'}`
-        }
-        toast.error(userMsg, { duration: 5000 })
+      toast.success(locale === 'he' ? 'נשמר בהצלחה ✓' : 'Сохранено ✓')
+      onSaved(data)
+      onClose()
+    } catch (err: any) {
+      const msg = err?.message || ''
+      if (msg.includes('first_name') || msg.includes('Name is required')) {
+        const e = locale === 'he' ? 'שם פרטי הוא שדה חובה' : 'Имя обязательно'
+        setErrors({ first_name: e }); shakeFields(['first_name'])
+        toast.error(e, { duration: 4000 })
+      } else if (msg.includes('phone')) {
+        const e = locale === 'he' ? 'מספר טלפון לא תקין' : 'Неверный формат телефона'
+        setErrors({ phone: e }); shakeFields(['phone'])
+        toast.error(e, { duration: 4000 })
+      } else if (msg.includes('email')) {
+        const e = locale === 'he' ? 'כתובת אימייל לא תקינה' : 'Неверный формат email'
+        setErrors({ email: e }); shakeFields(['email'])
+        toast.error(e, { duration: 4000 })
       }
-    } catch {
-      toast.error(locale === 'he' ? 'שגיאת רשת' : 'Ошибка сети')
+      // Остальные ошибки обрабатывает useUpdateClient.onError через toast
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   const fullName    = `${form.first_name} ${form.last_name}`.trim() || 'C'

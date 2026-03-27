@@ -464,7 +464,7 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
       {selectedVisit && (
         <VisitDetailModal visit={selectedVisit} isOpen={!!selectedVisit} onClose={() => setSelectedVisit(null)} locale={locale === 'he' ? 'he' : 'ru'} clientName={selectedVisit.clients ? `${selectedVisit.clients.first_name || ''} ${selectedVisit.clients.last_name || ''}`.trim() : selectedVisit.clientName || ''} clientPhone={selectedVisit.clients?.phone || ''}
           onStart={() => updateVisitStatus(selectedVisit.id, 'in_progress')} onComplete={() => updateVisitStatus(selectedVisit.id, 'completed')} onCancel={() => updateVisitStatus(selectedVisit.id, 'cancelled')}
-          onEdit={() => { openModal('edit-visit', { visitId: selectedVisit.id, visit: selectedVisit }); setSelectedVisit(null) }} />
+          onEdit={() => { openModal('visit-unified', { mode: 'edit', visit: selectedVisit }); setSelectedVisit(null) }} />
       )}
 
       {onboardingData?.showOnboarding && orgId && (

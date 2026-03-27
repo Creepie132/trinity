@@ -1,34 +1,42 @@
-chore(stripe): complete removal of Stripe integration
+refactor(visits): UnifiedVisitDialog centralized master component
 
-UI / State machine:
-- Removed 'stripe' from PaymentMethod type (now: 'cash' | 'link' only)
-- Removed 'stripe-form' step from UnifiedPaymentDialog state machine
-- Removed stripe from METHODS array and METHOD_ICONS
-- Removed stripe i18n keys (stripe, stripeDesc, successStripe) from both locales
-- Removed stripe-form block from handleSubmit (no more fetch to stripe-checkout)
-- Removed 'stripe' from validateModalData whitelist
-- Removed Smartphone import from lucide (unused)
+Backend:
+- Added updateVisitSchema (Zod) to validations.ts for PUT endpoint
+- Rewrote /api/visits/[id] PUT route with Zod validation, removed bare `any` type
+- PUT now validates scheduled_at (ISO datetime), service_id (UUID), duration_minutes,
+  notes (max 2000), price (0-100000) before writing to DB
 
-Files deleted:
-- src/components/payments/CreateStripePaymentDialog.tsx
-- src/components/payments/CreateSubscriptionDialog.tsx
-- src/components/modals/payments/CreateSubscriptionModal.tsx
+New files:
+- src/components/visits/UnifiedVisitDialog.tsx (create + edit in one state machine)
+- src/components/modals/visits/UnifiedVisitModal.tsx (ModalStore wrapper)
 
-ModalStore / ModalManager:
-- Removed 'payment-create-subscription' from ModalType
-- Removed CreateSubscriptionModal from ModalManager
+State machine: create-form | edit-form -> submitting -> success/error
+Protections:
+  - isSubmittingRef: logical lock against double-submit and race conditions
+  - Error banner preserves form data on API failure
+  - validateVisitModalData() strict payload validation from ModalStore
+  - queryClient.invalidateQueries instead of window.location.reload (Step 5)
 
-Seed data:
-- Removed 'stripe' from paymentMethods array in seed-test-data
+ModalStore: replaced visit-create, visit-edit, edit-visit with single visit-unified
+ModalManager: replaced CreateVisitModal + EditVisitModal with UnifiedVisitModal
 
-Comments:
-- Fixed CompleteVisitPaymentDialog comment (Tranzila only, not Stripe)
+Deleted legacy wrappers (were dead code — both old types now gone):
+- src/components/modals/visits/CreateVisitModal.tsx
+- src/components/modals/visits/EditVisitModal.tsx
 
-Config:
-- Removed STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-  STRIPE_WEBHOOK_SECRET from .env.example
+Removed local EditVisitSheet instance from VisitCard.tsx (was mounting N copies in DOM)
+Removed direct CreateVisitDialog import from FABMenu.tsx -> now uses openModal
+Removed window.location.reload() from VisitCard (was after every edit save)
 
-npm uninstall command (run manually):
-  npm uninstall stripe @stripe/stripe-js
+All callers migrated to openModal('visit-unified', { mode: 'create'|'edit', ... }):
+- visits/page.tsx (4 call sites)
+- DashboardContent.tsx
+- TodayBlockClient.tsx
+- TaskDetailsModal.tsx
+- Sidebar.tsx
+- ClientDetailsModal.tsx
+- ClientCard.tsx
+- ClientBottomSheet.tsx
+- FABMenu.tsx
 
 Build: exit code 0, 195 pages, zero TypeScript errors

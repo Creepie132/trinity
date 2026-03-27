@@ -134,7 +134,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
             </button>
             <button onClick={() => {
                 if (isDemo && (visitCount >= 15 || activeVisitCount >= 3)) { setDemoVisitOpen(true); return }
-                openModal('visit-create')
+                openModal('visit-unified', { mode: 'create' })
               }}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all active:scale-95">
               <CalendarPlus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />

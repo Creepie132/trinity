@@ -10,10 +10,8 @@ export type ModalType =
   | 'client-gallery'
   | 'client-documents'
   | 'client-history'
-  // Visits
-  | 'visit-create'
-  | 'visit-edit'
-  | 'edit-visit'
+  // Visits — unified entry point
+  | 'visit-unified'
   | 'visit-complete-payment'
   | 'visit-add-product'
   | 'visit-add-service'

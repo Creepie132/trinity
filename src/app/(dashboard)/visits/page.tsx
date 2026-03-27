@@ -508,7 +508,7 @@ export default function VisitsPage() {
               if (isDemo) {
                 if (realActiveCount >= 3 || realTotalCount >= 15) { setDemoLimitOpen(true); return }
               }
-              openModal('visit-create')
+              openModal('visit-unified', { mode: 'create' })
             }}
             className="hidden md:flex bg-theme-primary text-white hover:opacity-90"
           >
@@ -574,7 +574,8 @@ export default function VisitsPage() {
             }
             const dateStr = date.toISOString().split('T')[0]
             const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-            openModal('visit-create', {
+            openModal('visit-unified', {
+              mode: 'create',
               date: dateStr,
               time: date.getHours() > 0 || date.getMinutes() > 0 ? timeStr : undefined,
             })
@@ -1141,7 +1142,7 @@ export default function VisitsPage() {
       <button
         onClick={() => {
           if (isDemo && (activeVisits.length >= 3 || totalCount >= 15)) { setDemoLimitOpen(true); return }
-          openModal('visit-create')
+          openModal('visit-unified', { mode: 'create' })
         }}
         className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-theme-primary text-white rounded-full shadow-lg flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50"
         aria-label={meetingMode.t.newVisit}
@@ -1224,7 +1225,7 @@ export default function VisitsPage() {
                 const next = new Date(); next.setDate(next.getDate() + 14)
                 setReceiptVisit(null)
                 setCreateVisitPrefill({ clientId: receiptVisit.client_id, clientName: receiptVisit.clientName, date: next.toISOString().split('T')[0] })
-                openModal('visit-create')
+                openModal('visit-unified', { mode: 'create' })
               }}
               className="w-full py-3.5 rounded-2xl border-2 border-blue-600 text-blue-600 text-sm font-semibold"
             >
@@ -1250,7 +1251,7 @@ export default function VisitsPage() {
         onStart={() => { if (selectedVisit) { updateVisitStatus(selectedVisit.id, 'in_progress'); setSelectedVisit(null) } }}
         onComplete={() => { if (selectedVisit) { handleCompleteVisit(selectedVisit); setSelectedVisit(null) } }}
         onCancel={() => { if (selectedVisit) { updateVisitStatus(selectedVisit.id, 'cancelled'); setSelectedVisit(null) } }}
-        onEdit={() => { if (selectedVisit) { openModal('edit-visit', { visitId: selectedVisit.id, visit: selectedVisit }); setSelectedVisit(null) } }}
+        onEdit={() => { if (selectedVisit) { openModal('visit-unified', { mode: 'edit', visit: selectedVisit }); setSelectedVisit(null) } }}
         lastVisitDate={selectedVisit ? getLastVisitDate(selectedVisit) : ''}
         onShowHistory={() => setSelectedVisit(null)}
       />

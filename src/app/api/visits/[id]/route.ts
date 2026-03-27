@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { validateBody, updateVisitSchema } from '@/lib/validations'
 
 // GET /api/visits/[id] — получить один визит с данными клиента и услуги
 export async function GET(
@@ -38,27 +39,31 @@ export async function PUT(
 ) {
   const auth = await getAuthContext()
   if ('error' in auth) return auth.error
-  
+
   const { orgId, supabase } = auth
-
   const { id } = await params
-  const body = await request.json()
-  const { scheduled_at, service_id, duration_minutes, notes, price } = body
 
-  const updateData: any = {
-    updated_at: new Date().toISOString()
+  // ✅ Zod validation — защита от битых данных
+  const rawBody = await request.json()
+  const { data, error: validationError } = validateBody(updateVisitSchema, rawBody)
+  if (validationError || !data) {
+    return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
   }
 
-  if (scheduled_at !== undefined) updateData.scheduled_at = scheduled_at
-  if (service_id !== undefined) {
-    updateData.service_id = service_id
-    updateData.service_type = service_id // Keep service_type in sync for backward compatibility
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
   }
-  if (duration_minutes !== undefined) updateData.duration_minutes = duration_minutes
-  if (notes !== undefined) updateData.notes = notes
-  if (price !== undefined) updateData.price = price
 
-  const { data, error } = await supabase
+  if (data.scheduled_at   !== undefined) updateData.scheduled_at   = data.scheduled_at
+  if (data.service_id     !== undefined) {
+    updateData.service_id   = data.service_id
+    updateData.service_type = data.service_id  // backward compat
+  }
+  if (data.duration_minutes !== undefined) updateData.duration_minutes = data.duration_minutes
+  if (data.notes            !== undefined) updateData.notes            = data.notes
+  if (data.price            !== undefined) updateData.price            = data.price
+
+  const { data: updated, error } = await supabase
     .from('visits')
     .update(updateData)
     .eq('id', id)
@@ -71,5 +76,5 @@ export async function PUT(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json(updated)
 }

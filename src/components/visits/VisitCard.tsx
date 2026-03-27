@@ -3,8 +3,8 @@
 import { useRef, useState, useEffect } from 'react'
 import { ChevronRight, MapPin, Video, Navigation, ExternalLink, Play, CheckCircle, X } from 'lucide-react'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { EditVisitSheet } from './EditVisitSheet'
 import { useVisitServices } from '@/hooks/useVisitServices'
+import { useModalStore } from '@/store/useModalStore'
 
 interface VisitCardProps {
   visit: {
@@ -51,7 +51,7 @@ const SWIPE_THRESHOLD = 60
 const SWIPE_MAX = 88
 
 export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, onCancel, onEdit, onClick }: VisitCardProps) {
-  const [editOpen, setEditOpen] = useState(false)
+  const { openModal } = useModalStore()
   const { data: visitServices = [] } = useVisitServices(visit.id)
 
   const isRtl     = locale === 'he'
@@ -296,15 +296,6 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
           </div>
         </div>
       </div>
-
-      <EditVisitSheet
-        visit={visit}
-        isOpen={editOpen}
-        onClose={() => setEditOpen(false)}
-        onSaved={() => { setEditOpen(false); window.location.reload() }}
-        locale={locale}
-        isMeetingMode={isMeetingMode}
-      />
     </>
   )
 }

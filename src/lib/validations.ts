@@ -26,6 +26,15 @@ export const createVisitSchema = z.object({
   meeting_link: z.string().url().optional().or(z.literal("")).nullable(),
 })
 
+// Обновление визита (PUT)
+export const updateVisitSchema = z.object({
+  scheduled_at: z.string().datetime({ offset: true }).optional(),
+  service_id:   z.string().uuid().optional().nullable(),
+  duration_minutes: z.coerce.number().int().min(5).max(480).optional().nullable(),
+  notes:  z.string().max(2000).optional().nullable(),
+  price:  z.coerce.number().min(0).max(100000).optional().nullable(),
+})
+
 // Платежи
 export const createPaymentSchema = z.object({
   client_id: z.string().uuid(),

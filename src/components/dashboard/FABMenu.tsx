@@ -5,11 +5,11 @@ import { Plus, User, Calendar, DollarSign } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useQuery } from '@tanstack/react-query'
 import { AddClientDialog } from '@/components/clients/AddClientDialog'
-import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
 import NewSaleModal from '@/components/sales/NewSaleModal'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DEMO_LIMITS } from '@/lib/demo-limits'
+import { useModalStore } from '@/store/useModalStore'
 
 // Lightweight count fetch for demo guard
 async function fetchDemoCounts() {
@@ -29,11 +29,11 @@ async function fetchDemoCounts() {
 export default function FABMenu() {
   const [isOpen, setIsOpen] = useState(false)
   const [showNewClient, setShowNewClient] = useState(false)
-  const [showNewVisit, setShowNewVisit] = useState(false)
   const [showNewSale, setShowNewSale] = useState(false)
   const [demoLimitSection, setDemoLimitSection] = useState<'clients' | 'visits' | null>(null)
   const { language, dir } = useLanguage()
   const { isDemo } = useDemoMode()
+  const { openModal } = useModalStore()
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Only fetch counts in demo mode
@@ -79,7 +79,7 @@ export default function FABMenu() {
         return
       }
     }
-    setShowNewVisit(true)
+    openModal('visit-unified', { mode: 'create' })
   }
   // ──────────────────────────────────────────────────────────────────────────
 
@@ -167,11 +167,6 @@ export default function FABMenu() {
       <AddClientDialog
         open={showNewClient}
         onOpenChange={setShowNewClient}
-      />
-
-      <CreateVisitDialog
-        open={showNewVisit}
-        onOpenChange={setShowNewVisit}
       />
 
       <NewSaleModal

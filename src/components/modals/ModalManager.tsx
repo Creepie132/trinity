@@ -9,9 +9,8 @@ import { SaleModal } from './clients/SaleModal'
 import { ClientGalleryModal } from './clients/ClientGalleryModal'
 import { ClientHistoryModal } from './clients/ClientHistoryModal'
 
-// Visits
-import { CreateVisitModal } from './visits/CreateVisitModal'
-import { EditVisitModal } from './visits/EditVisitModal'
+// Visits — unified
+import { UnifiedVisitModal } from './visits/UnifiedVisitModal'
 import { CompleteVisitPaymentModal } from './visits/CompleteVisitPaymentModal'
 import { AddProductModal } from './visits/AddProductModal'
 import { AddServiceModal } from './visits/AddServiceModal'
@@ -74,8 +73,7 @@ export function ModalManager() {
       <ClientHistoryModal />
 
       {/* Visits */}
-      <CreateVisitModal />
-      <EditVisitModal />
+      <UnifiedVisitModal />
       <CompleteVisitPaymentModal />
       <AddProductModal />
       <AddServiceModal />

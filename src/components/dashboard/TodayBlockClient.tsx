@@ -93,7 +93,7 @@ export default function TodayBlockClient({ visits }: TodayBlockClientProps) {
             {visits.map((visit) => (
               <div
                 key={visit.id}
-                onClick={() => openModal('visit-edit', { visit, locale: language })}
+                onClick={() => openModal('visit-unified', { mode: 'edit', visit, locale: language })}
                 className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer text-start"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">

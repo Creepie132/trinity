@@ -93,7 +93,7 @@ export function TaskDetailsModal() {
     const { openModal } = useModalStore.getState()
     const visit = visits.find((v: any) => v.id === visitId)
     if (visit) {
-      openModal('visit-edit', { visit, locale: data?.locale || 'he' })
+      openModal('visit-unified', { mode: 'edit', visit })
     }
   }
 

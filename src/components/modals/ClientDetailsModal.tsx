@@ -116,7 +116,7 @@ export function ClientDetailsModal() {
   }
   // БАГ #3 fix: Продажа открывает NewSaleModal (client-sale) с клиентом — НЕ закрываем детали
   const handleSaleClick   = () => { openModal('client-sale', { client, locale }) }
-  const handleVisitClick  = () => { closeModal('client-details'); openModal('visit-create', { client, locale }) }
+  const handleVisitClick  = () => { closeModal('client-details'); openModal('visit-unified', { mode: 'create', clientId: client.id }) }
   const handleCall        = () => { if (client.phone) window.location.href = `tel:${client.phone}` }
   const handleSMS         = () => { if (client.phone) window.location.href = `sms:${client.phone}` }
   // БАГ #2 fix: кнопка удалить — просто показываем диалог

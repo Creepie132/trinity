@@ -1,50 +1,15 @@
-refactor(sales): UnifiedSalesDialog centralized master component
+refactor: finalize unified sales architecture and remove legacy modals
 
-Backend security:
-- Added createSaleSchema (Zod) to validations.ts
-  * Validates item prices (min 0, max 1_000_000)
-  * Validates discount_type + discount_value
-  * superRefine: discount percent cannot exceed 100%
-  * superRefine: paid_amount cannot exceed server-computed total
-  * Server recomputes total independently - client total is never trusted
-- Rewrote /api/sales POST with Zod validation, removed all `any` types
-- Direct supabase.from('sales').insert() from browser is now eliminated
+Deleted legacy files:
+- src/components/modals/clients/SaleModal.tsx (1453 lines)
+- src/components/sales/NewSaleModal.tsx (~600 lines)
+- src/components/sales/ProductCatalogModal.tsx (dead subcomponent)
+- src/components/sales/ProductDetailModal.tsx (dead subcomponent)
 
-New files:
-- src/components/sales/UnifiedSalesDialog.tsx (cart/checkout/success state machine)
-- src/components/modals/clients/UnifiedSalesModal.tsx (ModalStore wrapper)
+ModalManager: removed SaleModal registration
+useModalStore: removed 'client-sale' ModalType (replaced by 'sale-unified')
 
-State machine: cart -> checkout -> success
-Protections:
-  - isSubmittingRef: logical lock against double-submit and race conditions
-  - Error banner preserves cart on API failure (no data loss)
-  - validateSaleModalData() strict payload validation from ModalStore
-  - queryClient.invalidateQueries for sales + payments after success
-
-Feature parity (no regressions):
-  - ItemPickerSheet: service / product / custom item selection (from SaleModal)
-  - QuickAdd mini modal (from NewSaleModal)
-  - Discount: percent or amount with server-side validation (from SaleModal)
-  - PDF proposal generation with correct ProposalData structure (from SaleModal)
-  - WhatsApp PDF link sending (from SaleModal)
-  - preloadedItems support for visit-based sales (from SaleModal)
-  - preloadedProduct support for inventory sell (from SaleModal)
-  - visitId: marks visit as completed after sale (from SaleModal)
-  - Client search with dropdown (from NewSaleModal)
-
-ModalStore: added 'sale-unified' type
-
-All 9 callers migrated to openModal('sale-unified', { ... }):
-- sales/page.tsx (5 call sites including mobile FAB)
-- visits/page.tsx (preloadedItems + visitId)
-- ClientDetailsModal.tsx
-- ClientBottomSheet.tsx
-- ClientCard.tsx (x2)
-- DraftSaleIndicator.tsx
-- Sidebar.tsx
-- ProductDetailSheet.tsx
-- FABMenu.tsx (removed NewSaleModal direct import)
-
-Legacy files preserved (SaleModal, NewSaleModal) - not deleted per instructions
+All sales entry points now route exclusively through:
+  openModal('sale-unified', { ... }) -> UnifiedSalesDialog -> POST /api/sales
 
 Build: exit code 0, 195 pages, zero TypeScript errors

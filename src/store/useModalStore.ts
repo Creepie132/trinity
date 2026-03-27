@@ -6,7 +6,6 @@ export type ModalType =
   | 'client-add'
   | 'client-edit'
   | 'client-delete'
-  | 'client-sale'
   | 'client-gallery'
   | 'client-documents'
   | 'client-history'

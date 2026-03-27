@@ -86,9 +86,10 @@ export const createPaymentSchema = z.object({
   amount:         z.coerce.number()
                     .min(0.01, 'Amount must be > 0')
                     .max(1_000_000, 'Amount too large'),
-  payment_method: z.enum(PAYMENT_METHOD_VALUES, {
-                    errorMap: () => ({ message: 'Invalid payment_method' }),
-                  }),
+  payment_method: z.enum(PAYMENT_METHOD_VALUES).refine(
+                    (v) => PAYMENT_METHOD_VALUES.includes(v as any),
+                    { message: 'Invalid payment_method' }
+                  ),
   visit_id:       z.string().uuid('Invalid visit_id').optional().nullable(),
   description:    z.string().max(500).optional().or(z.literal('')),
   status:         z.enum(['pending', 'completed', 'failed'])
@@ -103,9 +104,10 @@ export const createExpenseSchema = z.object({
                   .min(0.01, 'Amount must be > 0')
                   .max(10_000_000, 'Amount too large'),
   expense_date: isoDate,
-  category:     z.enum(EXPENSE_CATEGORY_VALUES, {
-                  errorMap: () => ({ message: 'Invalid category' }),
-                }),
+  category:     z.enum(EXPENSE_CATEGORY_VALUES).refine(
+                  (v) => EXPENSE_CATEGORY_VALUES.includes(v as any),
+                  { message: 'Invalid category' }
+                ),
   description:  z.string().max(1000).optional().or(z.literal('')),
   notes:        z.string().max(2000).optional().or(z.literal('')),
 })

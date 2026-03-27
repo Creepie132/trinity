@@ -742,19 +742,11 @@ function SalesContent() {
 
 // ─── SalesPage ───────────────────────────────────────────────────────────────
 export default function SalesPage() {
-  const { isDemo, isLoading } = useDemoMode()
+  const { isDemo } = useDemoMode()
   const previewStub = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview_stub') === '1'
-
-  if (isLoading) return (
-    <div className="min-h-screen space-y-4 animate-pulse">
-      <div className="flex justify-between">
-        <div className="h-9 w-40 bg-gray-100 dark:bg-gray-800 rounded-xl" />
-        <div className="h-10 w-48 bg-gray-100 dark:bg-gray-800 rounded-xl" />
-      </div>
-      <div className="grid grid-cols-3 gap-3 md:hidden">{[0,1,2].map(i => <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-2xl" />)}</div>
-      <div className="hidden md:flex h-[calc(100vh-160px)] bg-gray-100 dark:bg-gray-800 rounded-2xl" />
-    </div>
-  )
+  // Removed isLoading guard — SalesContent has its own inline skeleton via useSales.isLoading.
+  // useDemoMode.isLoading (useOrganization + useIsAdmin) caused white screen on every
+  // navigation before React Query could serve cached data.
   if (isDemo || previewStub) return <SalesDemoStub />
   return <SalesContent />
 }

@@ -11,7 +11,7 @@ import {
   AlertTriangle, TrendingUp, Archive, PackagePlus, X
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { LoadingScreen } from '@/components/ui/LoadingScreen'
+// LoadingScreen removed — inline skeleton used instead
 import { UnifiedProductDialog } from '@/components/inventory/UnifiedProductDialog'
 import { QuickReceiveModal } from '@/components/inventory/QuickReceiveModal'
 import { BarcodeScanner } from '@/components/inventory/BarcodeScannerLazy'
@@ -196,7 +196,22 @@ export default function InventoryPage() {
   const activeCount = products.filter((p: any) => (p.quantity || 0) > 0).length
   const lowStockCount = products.filter((p: any) => p.quantity > 0 && p.min_quantity > 0 && p.quantity <= p.min_quantity).length
 
-  if (isLoading) return <LoadingScreen />
+  if (isLoading) return (
+    <div className="bg-[#f8fafc] min-h-screen p-4 md:p-6 animate-pulse">
+      <div className="flex items-center justify-between mb-6">
+        <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+        <div className="flex gap-2">
+          <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
+          <div className="h-10 w-28 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <div className="bg-[#f8fafc] min-h-screen p-4 md:p-6">

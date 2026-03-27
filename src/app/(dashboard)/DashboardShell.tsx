@@ -27,6 +27,7 @@ import { useBranch } from '@/contexts/BranchContext'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 
 // ─── Prefetch helpers ─────────────────────────────────────────────────────────
 //
@@ -37,7 +38,7 @@ import { useQueryClient } from '@tanstack/react-query'
 type PrefetchTarget = 'visits' | 'sales' | 'payments' | 'expenses' | 'inventory'
 
 async function prefetchModule(
-  qc: ReturnType<typeof useQueryClient>,
+  qc: QueryClient,
   module: PrefetchTarget,
   orgId: string | undefined
 ) {
@@ -93,7 +94,7 @@ const ADJACENT_MAP: Record<string, PrefetchTarget[]> = {
   '/sales':    ['visits', 'payments'],
   '/payments': ['sales', 'expenses'],
   '/finances': ['payments', 'inventory'],
-  '/inventory':['sales', 'finances' as any],
+  '/inventory':['sales', 'expenses'],
   '/dashboard':['visits', 'sales'],
   '/clients':  ['visits', 'sales'],
   '/diary':    ['visits'],

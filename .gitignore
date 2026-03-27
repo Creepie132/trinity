@@ -49,3 +49,11 @@ next-env.d.ts
 build.log
 
 _git_push.js
+
+# temp files from Claude tooling - never commit these
+__cm.txt
+__commitmsg.txt
+__commit_out.txt
+__grep_out.txt
+deploy.bat
+queryClient.invalidateQueries*

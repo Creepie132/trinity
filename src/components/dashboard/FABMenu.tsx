@@ -9,6 +9,7 @@ import { CreateVisitDialog } from '@/components/visits/CreateVisitDialog'
 import NewSaleModal from '@/components/sales/NewSaleModal'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { useDemoMode } from '@/hooks/useDemoMode'
+import { DEMO_LIMITS } from '@/lib/demo-limits'
 
 // Lightweight count fetch for demo guard
 async function fetchDemoCounts() {
@@ -24,8 +25,6 @@ async function fetchDemoCounts() {
     visitsActive: (visits.active ?? 0)  as number,
   }
 }
-
-const DEMO_LIMITS = { clients: 10, visits_total: 15, visits_active: 3 }
 
 export default function FABMenu() {
   const [isOpen, setIsOpen] = useState(false)

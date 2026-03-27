@@ -330,12 +330,60 @@ function CreateVisitMobile({ open, onClose, preselectedClientId, preselectedDate
 
   const handleSubmit = async () => {
     if (!orgId || !canSubmit) return
+
+    // ─── OPTIMISTIC UPDATE ──────────────────────────────────────────────
+    // 1. Немедленно закрываем модалку — пользователь не ждёт сервер
+    const optimisticId = `optimistic-${Date.now()}`
+    const optimisticVisit = {
+      id: optimisticId,
+      org_id: orgId,
+      client_id: form.clientId,
+      service: isAppt ? (form.meetingPurpose || (isHe ? 'פגישה' : 'Встреча')) : form.service,
+      scheduled_at: `${form.date}T${form.time}:00`,
+      duration_minutes: isAppt ? null : form.duration,
+      price: isAppt ? 0 : parseFloat(form.price) || 0,
+      quantity: isAppt ? 1 : form.quantity,
+      status: 'scheduled',
+      event_type: isAppt ? 'meeting' : 'visit',
+      notes: form.notes,
+      clients: selClient ? { first_name: selClient.first_name, last_name: selClient.last_name, phone: selClient.phone } : null,
+      visit_services: [],
+      created_at: new Date().toISOString(),
+    }
+
+    // Вставляем optimistic-запись в кэш визитов
+    queryClient.setQueriesData<any[]>(
+      { queryKey: ['visits'] },
+      (old) => (Array.isArray(old) ? [optimisticVisit, ...old] : old)
+    )
+
+    // Немедленно закрываем и сбрасываем форму
+    const prevForm = { ...form }
+    const prevIsAppt = isAppt
+    const prevSelClient = selClient
+    handleClose()
+
+    // 2. Отправляем запрос в фоне
     setSubmitting(true)
     try {
-      await submitVisit({ orgId, isAppt, form, selClient, isHe, onVisitCreated, t,
-        onSuccess: () => { toast.success(t('common.success')); queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === 'visits' }); handleClose() } })
-    } catch (e: any) { toast.error(e.message || t('common.error')) }
-    finally { setSubmitting(false) }
+      await submitVisit({
+        orgId, isAppt: prevIsAppt, form: prevForm, selClient: prevSelClient, isHe,
+        onVisitCreated,
+        t,
+        onSuccess: () => { toast.success(t('common.success')) },
+      })
+    } catch (e: any) {
+      // Rollback: убираем optimistic-запись из кэша
+      queryClient.setQueriesData<any[]>(
+        { queryKey: ['visits'] },
+        (old) => (Array.isArray(old) ? old.filter(v => v.id !== optimisticId) : old)
+      )
+      toast.error(e.message || t('common.error'))
+    } finally {
+      setSubmitting(false)
+      // Фоновая инвалидация — подтянет реальные данные с сервера
+      queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === 'visits' })
+    }
   }
 
   const footerContent = (

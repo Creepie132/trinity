@@ -78,31 +78,92 @@ export function useClient(id?: string) {
   })
 }
 
+// Тип для clientInput — то же что принимает mutationFn
+type AddClientInput = Pick<Client, 'first_name' | 'last_name' | 'phone'> &
+  Partial<Omit<Client, 'id' | 'created_at' | 'updated_at' | 'org_id'>>
+
 export function useAddClient() {
   const queryClient = useQueryClient()
-  const { isLoading } = useAuth()
+  const { isLoading, orgId } = useAuth()
+  const { mainOrgId, activeOrgId } = useBranch()
+  const resolvedOrgId = mainOrgId || activeOrgId || orgId
 
   return useMutation({
-    mutationFn: async (client: Pick<Client, 'first_name' | 'last_name' | 'phone'> & Partial<Omit<Client, 'id' | 'created_at' | 'updated_at' | 'org_id'>>) => {
+    mutationFn: async (client: AddClientInput) => {
       if (isLoading) {
         throw new Error('אנא המתן, הנתונים נטענים...')
       }
-
       return apiFetch('/api/clients', {
         method: 'POST',
         json: client,
       })
     },
-    onSuccess: async () => {
-      // Realtime will also invalidate, but we invalidate immediately here
-      // so the user sees the new client even before the WebSocket event arrives
-      await queryClient.invalidateQueries({ queryKey: ['clients'] })
-      await queryClient.refetchQueries({ queryKey: ['clients'], type: 'active' })
+
+    // ─── OPTIMISTIC UPDATE ────────────────────────────────────────────────
+    // Немедленно добавляем запись в кэш — пользователь видит клиента
+    // в списке до ответа сервера. Модалка закрывается мгновенно.
+    onMutate: async (newClient: AddClientInput) => {
+      // 1. Отменяем любые исходящие рефетчи чтобы не перезаписать наш optimistic
+      await queryClient.cancelQueries({ queryKey: ['clients'] })
+
+      // 2. Снэпшот предыдущего состояния для rollback
+      const previousData = queryClient.getQueriesData<{ data: ClientSummary[]; count: number }>({
+        queryKey: ['clients'],
+      })
+
+      // 3. Создаём optimistic-запись с временным ID
+      const optimisticClient: ClientSummary = {
+        id: `optimistic-${Date.now()}`,
+        org_id: resolvedOrgId || '',
+        first_name: newClient.first_name,
+        last_name: newClient.last_name,
+        phone: newClient.phone,
+        email: (newClient as any).email || null,
+        notes: (newClient as any).notes || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        total_visits: 0,
+        total_spent: 0,
+        last_visit_date: null,
+      } as any
+
+      // 4. Вставляем в начало всех активных страниц/запросов клиентов
+      queryClient.setQueriesData<{ data: ClientSummary[]; count: number }>(
+        { queryKey: ['clients'] },
+        (old) => {
+          if (!old) return old
+          return {
+            data: [optimisticClient, ...old.data],
+            count: old.count + 1,
+          }
+        }
+      )
+
+      // 5. Возвращаем контекст для rollback
+      return { previousData }
+    },
+
+    // ─── SUCCESS ───────────────────────────────────────────────────────────
+    onSuccess: () => {
       toast.success('הלקוח נוסף בהצלחה')
     },
-    onError: (error: any) => {
+
+    // ─── ERROR → ROLLBACK ──────────────────────────────────────────────────
+    onError: (error: any, _newClient, context) => {
       console.error('Add client error:', error)
+      // Откатываем кэш к состоянию до мутации
+      if (context?.previousData) {
+        for (const [queryKey, data] of context.previousData) {
+          queryClient.setQueryData(queryKey, data)
+        }
+      }
       toast.error('שגיאה בהוספת לקוח: ' + error.message)
+    },
+
+    // ─── SETTLED → фоновая инвалидация ────────────────────────────────────
+    // Подтягиваем реальные ID и данные с сервера незаметно для пользователя.
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
     },
   })
 }

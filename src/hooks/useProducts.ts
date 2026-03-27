@@ -9,6 +9,7 @@ import type { Product, CreateProductDTO, UpdateProductDTO } from '@/types/invent
 import { useBranch } from '@/contexts/BranchContext'
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import { apiFetch } from '@/lib/api-fetch'
+import { toast } from 'sonner'
 
 /**
  * useProducts - Fetch all products (search is done locally in component)
@@ -61,7 +62,7 @@ export function useProduct(id: string) {
 }
 
 /**
- * useCreateProduct - Create new product
+ * useCreateProduct — Create new product with Optimistic UI
  */
 export function useCreateProduct() {
   const queryClient = useQueryClient()
@@ -69,17 +70,58 @@ export function useCreateProduct() {
 
   return useMutation({
     mutationFn: async (product: CreateProductDTO) => {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
-
       const data = await apiFetch<{ product: Product }>('/api/products', {
         method: 'POST',
         json: product,
       })
       return data.product
     },
+
+    // ─── OPTIMISTIC UPDATE ─────────────────────────────────────────────────
+    onMutate: async (newProduct: CreateProductDTO) => {
+      await queryClient.cancelQueries({ queryKey: ['products', activeOrgId] })
+
+      const previousProducts = queryClient.getQueryData<Product[]>(['products', activeOrgId])
+
+      const optimistic: Product = {
+        id: `optimistic-${Date.now()}`,
+        org_id: activeOrgId || '',
+        name: newProduct.name,
+        sku: newProduct.sku,
+        description: newProduct.description,
+        barcode: newProduct.barcode,
+        category: newProduct.category,
+        purchase_price: newProduct.purchase_price,
+        sell_price: newProduct.sell_price ?? 0,
+        quantity: newProduct.quantity ?? 0,
+        min_quantity: newProduct.min_quantity ?? 0,
+        unit: newProduct.unit || '',
+        image_url: newProduct.image_url,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      queryClient.setQueryData<Product[]>(
+        ['products', activeOrgId],
+        (old) => (old ? [optimistic, ...old] : [optimistic])
+      )
+
+      return { previousProducts }
+    },
+
     onSuccess: () => {
-      // Invalidate products list
+      // optimistic запись уже в UI — просто показываем тост
+    },
+
+    onError: (error: any, _vars, context) => {
+      if (context?.previousProducts !== undefined) {
+        queryClient.setQueryData(['products', activeOrgId], context.previousProducts)
+      }
+      toast.error('שגיאה ביצירת מוצר: ' + error.message)
+    },
+
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
     },
   })

@@ -5,8 +5,16 @@ import { X, ChevronRight, ChevronLeft, Check, Sparkles, Package, Zap,
   Settings2, Lock, ExternalLink, CreditCard, AlertCircle, Crown, Plus, Minus } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 
+// Валидация телефона — Israeli format + международный
+export function validatePhone(phone: string): boolean {
+  const cleaned = phone.replace(/[\s\-()]/g, '')
+  // Israeli: 05X-XXXXXXX or +972-5X-XXXXXXX
+  return /^(\+972|0)(5[0-9])\d{7}$|^\+?[\d]{10,15}$/.test(cleaned)
+}
+
 export interface OrderForm {
   firstName: string; lastName: string; birthDate: string
+  phone: string
   street: string; city: string; country: string
   email: string; notes: string; agreed: boolean
 }
@@ -79,6 +87,26 @@ const Step1 = memo(({ form, setForm, l }: { form: OrderForm; setForm: React.Disp
         <FormField label={l ? 'שם משפחה' : 'Фамилия'} value={form.lastName} onChange={set('lastName')}/>
       </div>
       <FormField label={l ? 'תאריך לידה' : 'Дата рождения'} value={form.birthDate} onChange={set('birthDate')} type="date"/>
+      {/* Телефон — обязательное поле */}
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          {l ? 'טלפון' : 'Номер телефона'} <span className="text-red-400">*</span>
+        </label>
+        <input
+          type="tel"
+          value={form.phone}
+          onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+          className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all placeholder:text-slate-300 ${
+            form.phone && !validatePhone(form.phone) ? 'border-red-300 bg-red-50' : 'border-slate-200'
+          }`}
+          placeholder={l ? '05X-XXXXXXX' : '05X-XXXXXXX или +972...'}
+        />
+        {form.phone && !validatePhone(form.phone) && (
+          <p className="text-xs text-red-500 mt-0.5">
+            {l ? 'פורמט לא תקין. לדוגמה: 052-1234567' : 'Неверный формат. Пример: 052-1234567'}
+          </p>
+        )}
+      </div>
       <FormField label={l ? 'רחוב' : 'Улица'} value={form.street} onChange={set('street')}/>
       <div className="grid grid-cols-2 gap-3">
         <FormField label={l ? 'עיר' : 'Город'} value={form.city} onChange={set('city')}/>
@@ -402,7 +430,7 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
   const { language } = useLanguage()
   const l = language === 'he'
   const [step, setStep]     = useState<1 | 2>(1)
-  const [form, setForm]     = useState<OrderForm>({ firstName:'', lastName:'', birthDate:'', street:'', city:'', country:'', email:'', notes:'', agreed: false })
+  const [form, setForm]     = useState<OrderForm>({ firstName:'', lastName:'', birthDate:'', phone:'', street:'', city:'', country:'', email:'', notes:'', agreed: false })
   const [plan, setPlan]     = useState<'base' | 'pro' | 'enterprise' | 'custom' | null>(null)
   const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set())
   const [staffCount, setStaffCount]           = useState(0)
@@ -446,7 +474,7 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
     }
   }, [open, submitted, form])
 
-  const canProceed = !!(form.firstName && form.lastName && form.email && form.country && form.agreed)
+  const canProceed = !!(form.firstName && form.lastName && form.email && form.phone && validatePhone(form.phone) && form.country && form.agreed)
   const canSubmit  = !!(plan && (plan !== 'custom' || selectedModules.size > 0)) && !submitting
 
   const handleSendClick = () => { if (canSubmit) setShowSetupPicker(true) }
@@ -458,7 +486,7 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
       // 1. Notify admin
       await notifyAdmin('order_submitted', {
         firstName: form.firstName, lastName: form.lastName, email: form.email,
-        country: form.country, plan, setupType: type, setupPrice: price,
+        phone: form.phone, country: form.country, plan, setupType: type, setupPrice: price,
         monthlyPrice: planAmount, staffCount, wantsPayments, notes: form.notes,
       })
       // 2. Send contact email

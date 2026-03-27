@@ -48,6 +48,7 @@ export function createSubscriptionPaymentUrl({
   recurStartDate,
   orgId,
   orgName,
+  plan,
   ownerEmail,
   notifyUrl,
   successUrl,
@@ -58,6 +59,7 @@ export function createSubscriptionPaymentUrl({
   recurStartDate?: string  // DD/MM/YYYY — если не передан, рекуррент стартует сразу
   orgId: string
   orgName: string
+  plan?: string            // 'base' | 'pro' | 'enterprise' — для webhook cField2
   ownerEmail?: string
   notifyUrl: string
   successUrl: string
@@ -91,8 +93,10 @@ export function createSubscriptionPaymentUrl({
     success_url_address: successUrl,
     fail_url_address: failUrl,
     notify_url_address: notifyUrl,
-    // org_id передаём через cField1 — придёт в callback
+    // org_id передаём через cField1 — придёт в webhook callback
     cField1: orgId,
+    // plan передаём через cField2 — webhook читает для определения модулей
+    ...(plan ? { cField2: plan } : {}),
     // Защита от дублей: Tranzila блокирует повторный платёж с тем же DCdisable
     // Требует настройки поля 20 в my.tranzila → Настройки → שדות נוספים לעסקה
     DCdisable: dcDisable,

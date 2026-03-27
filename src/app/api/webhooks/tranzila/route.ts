@@ -6,6 +6,22 @@ import {
   extractWebhookData,
   type TranzilaWebhookParams,
 } from '@/lib/tranzila-webhook'
+import { sendSubscriptionWelcomeEmail } from '@/lib/resend'
+
+// ─── Маппинг план → модули ────────────────────────────────────────────────────
+// Читается из cField2 (передаётся при генерации ссылки в tranzila.ts)
+function getPlanModules(plan: string | null): Record<string, boolean> {
+  const base = {
+    clients: true, visits: true, diary: true, inventory: true, payments: true,
+    analytics: false, sms: false, booking: false, loyalty: false,
+    branches: false, subscriptions: false,
+  }
+  const pro  = { ...base, analytics: true, sms: true, booking: true }
+  const ent  = { ...pro, loyalty: true, branches: true, subscriptions: true }
+  if (plan === 'pro')        return pro
+  if (plan === 'enterprise') return ent
+  return base  // 'base', null, 'custom' — базовый набор
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +31,7 @@ const supabase = createClient(
 /**
  * POST /api/webhooks/tranzila
  *
- * Вызывается Tranzila после успешной подписки (notify_url_address).
+ * Server-to-server уведомление от Tranzila об успешной оплате (notify_url_address).
  *
  * ── Слои безопасности ────────────────────────────────────────────────────────
  *  1. Верификация подписи:  TranzilaToken = MD5(password + sum + currency)
@@ -31,7 +47,6 @@ export async function POST(request: NextRequest) {
 
   try {
     const rawBody = await request.text()
-
     if (contentType.includes('application/json')) {
       const json = JSON.parse(rawBody)
       params = Object.fromEntries(
@@ -68,23 +83,16 @@ export async function POST(request: NextRequest) {
   // поскольку failed-транзакции могут не включать TranzilaToken.
   if (data.responseCode === '000') {
     const { valid, reason } = verifyTranzilaSignature(params)
-
     if (!valid) {
       console.error('[Tranzila Security] Signature verification FAILED:', {
-        reason,
-        transactionId: data.transactionId,
-        terminalName:  data.terminalName,
+        reason, transactionId: data.transactionId, terminalName: data.terminalName,
       })
-      // Логируем попытку в audit для последующего анализа
       await logSecurityEvent({
-        type:          'webhook_signature_failed',
-        transactionId: data.transactionId,
-        terminalName:  data.terminalName,
-        reason,
+        type: 'webhook_signature_failed', transactionId: data.transactionId,
+        terminalName: data.terminalName, reason,
       })
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
-
     console.log('[Tranzila] ✅ Signature verified (TranzilaToken MD5)')
   }
 
@@ -99,7 +107,6 @@ export async function POST(request: NextRequest) {
     console.error('[Tranzila] Missing org_id (cField1) in webhook')
     return NextResponse.json({ error: 'Missing org_id' }, { status: 400 })
   }
-
   if (!data.cardToken) {
     console.error('[Tranzila] Missing TranzilaTK in webhook')
     return NextResponse.json({ error: 'Missing card token' }, { status: 400 })
@@ -112,15 +119,15 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('transaction_id', data.transactionId)
       .maybeSingle()
-
     if (existing) {
       console.log('[Tranzila] ⏭️  Duplicate transaction, skipping:', data.transactionId)
       return NextResponse.json({ success: true, duplicate: true })
     }
   }
 
-  // ── 7. Обновляем организацию ─────────────────────────────────────────────
-  const cardLast4 = data.cardNum ? data.cardNum.slice(-4) : null
+  // ── 7. Читаем org для получения текущих features и email ─────────────────
+  const cardLast4  = data.cardNum ? data.cardNum.slice(-4) : null
+  const planField  = params['cField2'] ?? null  // 'base' | 'pro' | 'enterprise' | null
 
   const nextBillingDate = new Date()
   nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
@@ -129,16 +136,37 @@ export async function POST(request: NextRequest) {
   expiresAt.setMonth(expiresAt.getMonth() + 1)
   expiresAt.setDate(expiresAt.getDate() + 3)
 
+  // Читаем существующие features — не перезаписываем бизнес-данные
+  const { data: orgRow } = await supabase
+    .from('organizations')
+    .select('features, name')
+    .eq('id', data.orgId)
+    .single()
+
+  const existingFeatures = (orgRow?.features as Record<string, any>) ?? {}
+  const newModules = getPlanModules(planField)
+
+  // ── 8. Атомарное обновление: demo → active + модули + карта ──────────────
   const { error: updateError } = await supabase
     .from('organizations')
     .update({
-      tranzila_card_token:      data.cardToken,
-      tranzila_card_last4:      cardLast4,
-      tranzila_card_expiry:     data.expDate,
-      billing_status:           'paid',
-      billing_due_date:         nextBillingDate.toISOString().split('T')[0],
-      subscription_status:      'active',
-      subscription_expires_at:  expiresAt.toISOString(),
+      // Карта и биллинг
+      tranzila_card_token:     data.cardToken,
+      tranzila_card_last4:     cardLast4,
+      tranzila_card_expiry:    data.expDate,
+      billing_status:          'paid',
+      billing_due_date:        nextBillingDate.toISOString().split('T')[0],
+      // Активация подписки: demo → active
+      subscription_status:     'active',
+      subscription_expires_at: expiresAt.toISOString(),
+      plan:                    planField ?? 'base',
+      // Разблокировка модулей + снятие demo-флага и лимитов
+      features: {
+        ...existingFeatures,
+        modules:      newModules,
+        is_demo:      false,
+        client_limit: 9999,
+      },
     })
     .eq('id', data.orgId)
 
@@ -147,9 +175,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
   }
 
-  console.log('[Tranzila] ✅ Card token saved for org:', data.orgId, { last4: cardLast4 })
+  const activeModules = Object.keys(newModules).filter(k => newModules[k])
+  console.log('[Tranzila] ✅ Org activated:', data.orgId, {
+    plan: planField, last4: cardLast4, modules: activeModules,
+  })
 
-  // ── 8. Логируем успешную оплату ───────────────────────────────────────────
+  // ── 9. Лог успешной оплаты ────────────────────────────────────────────────
   try {
     await supabase.from('subscription_billing_log').insert({
       org_id:         data.orgId,
@@ -158,21 +189,43 @@ export async function POST(request: NextRequest) {
       transaction_id: data.transactionId,
       card_last4:     cardLast4,
       type:           'first_payment',
-      notes:          'Subscription payment via webhook (signature verified)',
+      notes:          `Plan: ${planField ?? 'base'} | Modules: ${activeModules.join(',')} | Signature verified`,
     })
   } catch (logError) {
-    // Ошибка логирования не отменяет обработку
     console.warn('[Tranzila] Could not write to subscription_billing_log:', logError)
   }
 
-  // ── 9. Cookie для клиентского flash-message ───────────────────────────────
+  // ── 10. Email-квитанция (Задача 3) — после commit в БД, не блокирует ответ
+  try {
+    const { data: ownerRow } = await supabase
+      .from('org_users')
+      .select('email')
+      .eq('org_id', data.orgId)
+      .eq('role', 'owner')
+      .maybeSingle()
+
+    if (ownerRow?.email && orgRow?.name) {
+      await sendSubscriptionWelcomeEmail({
+        toEmail:         ownerRow.email,
+        orgName:         orgRow.name as string,
+        amount:          data.sum ? parseFloat(data.sum) : 0,
+        nextBillingDate: nextBillingDate.toISOString().split('T')[0],
+        cardLast4,
+      })
+    }
+  } catch (emailErr) {
+    // Email вторичен — не отменяем успешную активацию
+    console.error('[Tranzila] Email receipt failed (non-fatal):', emailErr)
+  }
+
+  // ── 11. Cookie для клиентского flash-message ──────────────────────────────
   const response = NextResponse.json({
     success: true,
     org_id:  data.orgId,
-    message: 'Card token saved',
+    message: 'Organization activated',
   })
   response.cookies.set('trinity_active_branch', data.orgId, {
-    httpOnly: false,   // клиент читает для flash-отображения
+    httpOnly: false,
     sameSite: 'lax',
     maxAge:   60 * 60 * 24 * 30,
     path:     '/',
@@ -181,15 +234,15 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET — health check для проверки доступности endpoint.
+ * GET — health check
  */
 export async function GET() {
   return NextResponse.json({
     status:  'ok',
-    message: 'Tranzila webhook endpoint (signature verification enabled)',
+    message: 'Tranzila webhook endpoint (signature verification + demo activation enabled)',
     expected_params: [
       'Response', 'TranzilaTK', 'TranzilaToken',
-      'cField1', 'cardnum', 'expdate',
+      'cField1', 'cField2', 'cardnum', 'expdate',
       'sum', 'currency_code', 'terminal_name',
     ],
   })
@@ -215,6 +268,6 @@ async function logSecurityEvent(event: {
       },
     })
   } catch {
-    // Не блокируем response из-за ошибки логирования
+    // Не блокируем response
   }
 }

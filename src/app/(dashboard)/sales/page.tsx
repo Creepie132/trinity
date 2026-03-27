@@ -344,7 +344,7 @@ function SalesContent() {
                 {t.export}
               </button>
             )}
-            <button onClick={() => openModal('client-sale', { locale })}
+            <button onClick={() => openModal('sale-unified', {})}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-theme-primary text-white shadow-md hover:opacity-90 active:scale-95 transition-all">
               <Plus className="w-4 h-4" />{t.newSale}
             </button>
@@ -578,7 +578,7 @@ function SalesContent() {
                           <p className="text-xs text-gray-400 mt-0.5">{d.itemCount} {locale === 'he' ? 'פריטים' : 'поз.'} · ₪{d.total.toLocaleString()}</p>
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <button onClick={() => openModal('client-sale', { client: { id: d.clientId, first_name: d.clientName }, locale })}
+                          <button onClick={() => openModal('sale-unified', { clientId: d.clientId, clientName: d.clientName })}
                             className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold active:scale-95 transition-all">
                             {locale === 'he' ? 'פתח' : 'Открыть'}
                           </button>
@@ -653,7 +653,7 @@ function SalesContent() {
                   <div className="py-16 text-center">
                     <ShoppingBag className="w-10 h-10 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
                     <p className="text-sm text-gray-400 dark:text-gray-500">{t.noSales}</p>
-                    <button onClick={() => openModal('client-sale', { locale })}
+                    <button onClick={() => openModal('sale-unified', {})}
                       className="mt-3 text-sm text-amber-500 hover:text-amber-600 hover:underline">{t.newSale}</button>
                   </div>
                 )
@@ -721,13 +721,13 @@ function SalesContent() {
               </div>
             )) : filteredSales.length > 0
               ? filteredSales.map((s, i) => <MobileSaleCard key={s.id} sale={s} locale={locale} index={i} onClick={() => handleSaleClick(s)} />)
-              : <EmptyState icon={<ShoppingBag size={26} />} title={t.noSales} description={t.noSalesDesc} action={{ label: t.newSale, onClick: () => openModal('client-sale', { locale }) }} />
+              : <EmptyState icon={<ShoppingBag size={26} />} title={t.noSales} description={t.noSalesDesc} action={{ label: t.newSale, onClick: () => openModal('sale-unified', {}) }} />
             }
           </div>
         </div>
 
         {/* FAB */}
-        <button onClick={() => openModal('client-sale', { locale })}
+        <button onClick={() => openModal('sale-unified', {})}
           className="md:hidden fixed bottom-6 end-6 w-14 h-14 rounded-full bg-theme-primary text-white shadow-xl flex items-center justify-center hover:opacity-90 active:scale-95 transition-all z-50"
           aria-label={t.newSale}>
           <Plus className="w-6 h-6" />

@@ -26,6 +26,8 @@ export type ModalType =
   | 'product-return'
   | 'product-transfer'
   | 'quick-sale'
+  // Sales — unified entry point (replaces client-sale + quick-sale direct usage)
+  | 'sale-unified'
   // Payments — unified entry point
   | 'payment-unified'
   | 'payment-details'

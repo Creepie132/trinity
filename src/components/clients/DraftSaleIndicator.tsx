@@ -24,7 +24,7 @@ export function DraftSaleIndicator({ clientId, client, locale }: DraftSaleIndica
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    openModal('client-sale', { client, locale })
+    openModal('sale-unified', { clientId, clientName: `${client.first_name||''} ${client.last_name||''}`.trim() })
   }
 
   return (

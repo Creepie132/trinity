@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { validateBody, createSaleSchema } from '@/lib/validations'
 
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext(req)
@@ -81,12 +82,23 @@ export async function POST(req: NextRequest) {
   if ('error' in auth) return auth.error
   const { user, orgId: activeOrgId } = auth
 
-  const body = await req.json()
-  const { client_id, items, paid_amount, payment_method, sale_date, notes } = body
-  if (!items?.length) return NextResponse.json({ error: 'items required' }, { status: 400 })
+  // ✅ Zod validation — защита от битых данных, невалидных цен и скидок > 100%
+  const rawBody = await req.json()
+  const { data: body, error: validationError } = validateBody(createSaleSchema, rawBody)
+  if (validationError || !body) {
+    return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
+  }
+
+  const { client_id, items, paid_amount, payment_method, sale_date, notes, discount_type, discount_value } = body
 
   const supabase = createSupabaseServiceClient()
-  const total_amount = items.reduce((s: number, i: any) => s + i.quantity * i.unit_price, 0)
+
+  // Пересчитываем total на сервере — не доверяем клиенту
+  const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
+  const discountAmt = discount_type === 'percent'
+    ? subtotal * ((discount_value ?? 0) / 100)
+    : (discount_value ?? 0)
+  const total_amount = Math.max(0, subtotal - discountAmt)
   const paid = Number(paid_amount ?? total_amount)
   const saleStatus = paid >= total_amount ? 'paid' : paid > 0 ? 'partial' : 'new'
   const paymentStatus = paid >= total_amount ? 'completed' : 'pending'
@@ -124,7 +136,7 @@ export async function POST(req: NextRequest) {
     .single()
   if (saleErr) return NextResponse.json({ error: saleErr.message }, { status: 500 })
 
-  const saleItems = items.map((i: any) => ({
+  const saleItems = items.map(i => ({
     sale_id: sale.id,
     org_id: activeOrgId,
     product_id: i.product_id || null,
@@ -142,14 +154,13 @@ export async function POST(req: NextRequest) {
     .eq('id', payment.id)
 
   // ── Склад: списываем товары (только те у которых есть product_id) ──────────
-  const productItems = items.filter((i: any) => i.product_id)
+  const productItems = items.filter(i => i.product_id)
   if (productItems.length > 0) {
     for (const item of productItems) {
-      // Получаем текущий остаток
       const { data: product } = await supabase
         .from('products')
         .select('id, quantity')
-        .eq('id', item.product_id)
+        .eq('id', item.product_id!)
         .eq('org_id', activeOrgId)
         .single()
 
@@ -157,7 +168,6 @@ export async function POST(req: NextRequest) {
 
       const newQty = Math.max(0, product.quantity - item.quantity)
 
-      // Создаём транзакцию склада
       await supabase.from('inventory_transactions').insert({
         org_id: activeOrgId,
         product_id: item.product_id,
@@ -169,11 +179,10 @@ export async function POST(req: NextRequest) {
         notes: `Продажа #${sale.id.slice(0, 8)}`,
       })
 
-      // Обновляем остаток в products
       await supabase
         .from('products')
         .update({ quantity: newQty })
-        .eq('id', item.product_id)
+        .eq('id', item.product_id!)
         .eq('org_id', activeOrgId)
     }
   }

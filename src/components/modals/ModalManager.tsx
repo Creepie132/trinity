@@ -6,6 +6,7 @@ import { AddClientModal } from './clients/AddClientModal'
 import { EditClientModal } from './clients/EditClientModal'
 import { DeleteClientModal } from './clients/DeleteClientModal'
 import { SaleModal } from './clients/SaleModal'
+import { UnifiedSalesModal } from './clients/UnifiedSalesModal'
 import { ClientGalleryModal } from './clients/ClientGalleryModal'
 import { ClientHistoryModal } from './clients/ClientHistoryModal'
 
@@ -69,6 +70,7 @@ export function ModalManager() {
       <EditClientModal />
       <DeleteClientModal />
       <SaleModal />
+      <UnifiedSalesModal />
       <ClientGalleryModal />
       <ClientHistoryModal />
 

@@ -426,10 +426,10 @@ export default function VisitsPage() {
 
     // Main service is always first → checkout step is always shown (never empty cart screen)
     const preloadedItems = [mainItem, ...additionalItems]
-    openModal('client-sale', {
-      client: clientData || { id: visit.client_id, first_name: getClientName(visit), last_name: '', phone: getClientPhone(visit), email: getClientEmail(visit) },
-      locale: isHe ? 'he' : 'ru',
-      visitId: visit.id,
+    openModal('sale-unified', {
+      clientId:   (clientData || { id: visit.client_id }).id,
+      clientName: getClientName(visit),
+      visitId:    visit.id,
       preloadedItems,
     })
   }

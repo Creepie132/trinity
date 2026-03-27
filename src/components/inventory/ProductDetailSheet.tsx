@@ -87,7 +87,7 @@ export function ProductDetailSheet({ open, onClose, product, onEdit }: ProductDe
       </div>
       <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.07)', marginBottom: 10 }} />
       {/* Actions */}
-      <button onClick={() => { if (isDemo) return; onClose(); openModal('client-sale', { preloadedProduct: product, locale: isHe ? 'he' : 'ru' }) }}
+      <button onClick={() => { if (isDemo) return; onClose(); openModal('sale-unified', { preloadedProduct: product }) }}
         disabled={product.quantity === 0 || isDemo}
         style={{ padding: '9px 10px', borderRadius: 9, border: 'none', background: (product.quantity === 0 || isDemo) ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: (product.quantity === 0 || isDemo) ? 'rgba(255,255,255,0.2)' : '#fff', fontSize: 11, fontWeight: 600, cursor: (product.quantity === 0 || isDemo) ? 'not-allowed' : 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
         <ShoppingCart size={13} />{t('inventory.sell')}

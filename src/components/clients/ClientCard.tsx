@@ -166,7 +166,7 @@ export function ClientCard({
         if (cardSettingsRef.current.primaryAction === 'visit') {
           openModalRef.current('visit-unified', { mode: 'create', clientId: c.id })
         } else {
-          openModalRef.current('client-sale', { client: c, locale: localeRef.current })
+          openModalRef.current('sale-unified', { clientId: c.id, clientName: `${c.first_name||''} ${c.last_name||''}`.trim() })
         }
       }
       setSwipeX(0)
@@ -267,7 +267,7 @@ export function ClientCard({
             <p className="font-semibold text-gray-900 text-sm truncate">{clientName || '—'}</p>
             {hasDraft && (
               <button
-                onClick={e => { e.stopPropagation(); openModal('client-sale', { client, locale }) }}
+                onClick={e => { e.stopPropagation(); openModal('sale-unified', { clientId: client.id, clientName: `${client.first_name||''} ${client.last_name||''}`.trim() }) }}
                 className="p-1 rounded-lg bg-amber-100 hover:bg-amber-200 transition shrink-0"
                 title={locale === 'he' ? 'יש עסקה שמורה' : 'Есть сохранённая сделка'}
               >

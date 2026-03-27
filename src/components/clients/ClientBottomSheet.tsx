@@ -132,7 +132,7 @@ export function ClientBottomSheet({
         locale={locale}
         isDemo={isDemo}
         enabledModules={enabledModules}
-        onSale={() => { onClose(); openModal('client-sale', { client, locale }) }}
+        onSale={() => { onClose(); openModal('sale-unified', { clientId: client.id, clientName: `${client.first_name||''} ${client.last_name||''}`.trim() }) }}
         onVisit={() => { onClose(); openModal('visit-unified', { mode: 'create', clientId: client.id }) }}
         onWhatsApp={() => handleWhatsAppClick()}
         onEdit={() => setEditOpen(true)}

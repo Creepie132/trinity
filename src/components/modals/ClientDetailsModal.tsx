@@ -114,8 +114,8 @@ export function ClientDetailsModal() {
       }
     })
   }
-  // БАГ #3 fix: Продажа открывает NewSaleModal (client-sale) с клиентом — НЕ закрываем детали
-  const handleSaleClick   = () => { openModal('client-sale', { client, locale }) }
+  // Продажа открывает UnifiedSalesDialog с предзаполненным клиентом — НЕ закрываем детали
+  const handleSaleClick   = () => { openModal('sale-unified', { clientId: client.id, clientName: `${client.first_name || ''} ${client.last_name || ''}`.trim() }) }
   const handleVisitClick  = () => { closeModal('client-details'); openModal('visit-unified', { mode: 'create', clientId: client.id }) }
   const handleCall        = () => { if (client.phone) window.location.href = `tel:${client.phone}` }
   const handleSMS         = () => { if (client.phone) window.location.href = `sms:${client.phone}` }

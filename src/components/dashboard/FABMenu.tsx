@@ -5,7 +5,6 @@ import { Plus, User, Calendar, DollarSign } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useQuery } from '@tanstack/react-query'
 import { AddClientDialog } from '@/components/clients/AddClientDialog'
-import NewSaleModal from '@/components/sales/NewSaleModal'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DEMO_LIMITS } from '@/lib/demo-limits'
@@ -29,7 +28,6 @@ async function fetchDemoCounts() {
 export default function FABMenu() {
   const [isOpen, setIsOpen] = useState(false)
   const [showNewClient, setShowNewClient] = useState(false)
-  const [showNewSale, setShowNewSale] = useState(false)
   const [demoLimitSection, setDemoLimitSection] = useState<'clients' | 'visits' | null>(null)
   const { language, dir } = useLanguage()
   const { isDemo } = useDemoMode()
@@ -99,7 +97,7 @@ export default function FABMenu() {
     {
       icon: DollarSign,
       label: t.newSale,
-      onClick: () => { setShowNewSale(true); setIsOpen(false) },
+      onClick: () => { openModal('sale-unified', {}); setIsOpen(false) },
       color: 'bg-amber-500 text-white',
     },
   ]
@@ -167,11 +165,6 @@ export default function FABMenu() {
       <AddClientDialog
         open={showNewClient}
         onOpenChange={setShowNewClient}
-      />
-
-      <NewSaleModal
-        isOpen={showNewSale}
-        onClose={() => setShowNewSale(false)}
       />
     </>
   )

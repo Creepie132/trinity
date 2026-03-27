@@ -26,6 +26,37 @@ export const createVisitSchema = z.object({
   meeting_link: z.string().url().optional().or(z.literal("")).nullable(),
 })
 
+// Создание продажи (POST /api/sales)
+export const createSaleSchema = z.object({
+  client_id: z.string().uuid().optional().nullable(),
+  items: z.array(z.object({
+    product_id:   z.string().uuid().optional().nullable(),
+    product_name: z.string().min(1).max(500),
+    quantity:     z.coerce.number().int().min(1).max(9999),
+    unit_price:   z.coerce.number().min(0).max(1_000_000),
+  })).min(1, 'At least one item required'),
+  paid_amount:    z.coerce.number().min(0).max(10_000_000).optional(),
+  payment_method: z.enum(['cash', 'bit', 'credit', 'credit_card', 'bank', 'bank_transfer']).optional(),
+  sale_date:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  notes:          z.string().max(2000).optional().nullable(),
+  discount_type:  z.enum(['percent', 'amount']).optional(),
+  discount_value: z.coerce.number().min(0).max(100_000).optional(),
+}).superRefine((data, ctx) => {
+  // Проверяем что скидка в процентах не превышает 100%
+  if (data.discount_type === 'percent' && (data.discount_value ?? 0) > 100) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Discount percent cannot exceed 100', path: ['discount_value'] })
+  }
+  // Проверяем что paid_amount не превышает сумму товаров с учётом скидки
+  const subtotal = data.items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
+  const discountAmt = data.discount_type === 'percent'
+    ? subtotal * ((data.discount_value ?? 0) / 100)
+    : (data.discount_value ?? 0)
+  const total = Math.max(0, subtotal - discountAmt)
+  if ((data.paid_amount ?? 0) > total + 0.01) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `paid_amount (${data.paid_amount}) exceeds total (${total.toFixed(2)})`, path: ['paid_amount'] })
+  }
+})
+
 // Обновление визита (PUT)
 export const updateVisitSchema = z.object({
   scheduled_at: z.string().datetime({ offset: true }).optional(),

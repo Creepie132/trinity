@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Sidebar } from '@/components/layout/Sidebar'
@@ -23,10 +23,160 @@ import { NewLeadModal } from '@/components/worker/NewLeadModal'
 import { WorkerOnboarding } from '@/components/worker/WorkerOnboarding'
 import { useAuth } from '@/hooks/useAuth'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { useBranch } from '@/contexts/BranchContext'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 
-// ─── Worker nav items ─────────────────────────────────────────────────────────
+// ─── Prefetch helpers ─────────────────────────────────────────────────────────
+//
+// Стратегия: adjacent prefetch при mount + hover prefetch при наведении.
+// Данные начинают грузиться ДО перехода на страницу — белого экрана нет.
+// staleTime на всех хуках 30_000 — React Query не делает дубль-запросы.
+
+type PrefetchTarget = 'visits' | 'sales' | 'payments' | 'expenses' | 'inventory'
+
+async function prefetchModule(
+  qc: ReturnType<typeof useQueryClient>,
+  module: PrefetchTarget,
+  orgId: string | undefined
+) {
+  if (!orgId) return
+  const STALE = 30_000
+
+  try {
+    switch (module) {
+      case 'visits':
+        await qc.prefetchQuery({
+          queryKey: ['visits', orgId, { dateFilter: 'week', statusFilter: 'all', eventTypeFilter: 'all', search: '', page: 1, pageSize: 30 }],
+          queryFn:  () => fetch('/api/visits/list?dateFilter=week&statusFilter=all&eventTypeFilter=all&page=1&pageSize=30').then(r => r.json()),
+          staleTime: STALE,
+        })
+        break
+      case 'sales':
+        await qc.prefetchQuery({
+          queryKey: ['sales', orgId, undefined],
+          queryFn:  () => fetch('/api/sales', { headers: { 'X-Branch-Org-Id': orgId } }).then(r => r.json()),
+          staleTime: STALE,
+        })
+        break
+      case 'payments':
+        await qc.prefetchQuery({
+          queryKey: ['payments', orgId, undefined, undefined],
+          queryFn:  () => fetch('/api/payments').then(r => r.json()),
+          staleTime: STALE,
+        })
+        break
+      case 'expenses':
+        await qc.prefetchQuery({
+          queryKey: ['expenses', undefined, undefined],
+          queryFn:  () => fetch('/api/expenses').then(r => r.json()).then(d => d.expenses ?? []),
+          staleTime: STALE,
+        })
+        break
+      case 'inventory':
+        await qc.prefetchQuery({
+          queryKey: ['products', orgId],
+          queryFn:  () => fetch('/api/products', { headers: { 'X-Branch-Org-Id': orgId } }).then(r => r.json()).then(d => d.products ?? []),
+          staleTime: STALE,
+        })
+        break
+    }
+  } catch {
+    // prefetch — некритичная операция, молча игнорируем ошибки
+  }
+}
+
+// Маппинг pathname → модуль для adjacent prefetch
+const ADJACENT_MAP: Record<string, PrefetchTarget[]> = {
+  '/visits':   ['sales', 'payments'],
+  '/sales':    ['visits', 'payments'],
+  '/payments': ['sales', 'expenses'],
+  '/finances': ['payments', 'inventory'],
+  '/inventory':['sales', 'finances' as any],
+  '/dashboard':['visits', 'sales'],
+  '/clients':  ['visits', 'sales'],
+  '/diary':    ['visits'],
+}
+
+// ─── DashboardPrefetcher ───────────────────────────────────────────────────────
+// Отдельный компонент чтобы иметь доступ к BranchContext
+function DashboardPrefetcher() {
+  const qc = useQueryClient()
+  const { activeOrgId } = useBranch()
+  const pathname = usePathname()
+  const prefetchedRef = useRef<Set<string>>(new Set())
+
+  // Adjacent prefetch: при входе на страницу — prefetch соседних модулей
+  useEffect(() => {
+    if (!activeOrgId) return
+    const adjacent = ADJACENT_MAP[pathname] ?? []
+    adjacent.forEach(module => {
+      const key = `${module}:${activeOrgId}`
+      if (!prefetchedRef.current.has(key)) {
+        prefetchedRef.current.add(key)
+        // Небольшая задержка — сначала грузим текущую страницу, потом соседей
+        setTimeout(() => prefetchModule(qc, module, activeOrgId), 800)
+      }
+    })
+  }, [pathname, activeOrgId, qc])
+
+  return null
+}
+
+// Хук для hover-prefetch — возвращает onMouseEnter для nav-ссылок
+export function useHoverPrefetch(href: string) {
+  const qc = useQueryClient()
+  const { activeOrgId } = useBranch()
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const moduleMap: Record<string, PrefetchTarget> = {
+    '/visits':    'visits',
+    '/sales':     'sales',
+    '/payments':  'payments',
+    '/finances':  'expenses',
+    '/inventory': 'inventory',
+  }
+
+  const onMouseEnter = useCallback(() => {
+    const module = Object.entries(moduleMap).find(([path]) => href.startsWith(path))?.[1]
+    if (!module || !activeOrgId) return
+    // Prefetch только после 150мс hover — не спамим на быстром движении мыши
+    timerRef.current = setTimeout(() => {
+      prefetchModule(qc, module, activeOrgId)
+    }, 150)
+  }, [href, qc, activeOrgId])
+
+  const onMouseLeave = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+  }, [])
+
+  return { onMouseEnter, onMouseLeave }
+}
+
+// ─── NavItem — отдельный компонент для Rules of Hooks ────────────────────────
+function NavItem({ item, isActive, isHe }: {
+  item: { href: string; icon: React.ReactNode; label_he: string; label_ru: string }
+  isActive: boolean
+  isHe: boolean
+}) {
+  const { onMouseEnter, onMouseLeave } = useHoverPrefetch(item.href)
+  return (
+    <Link href={item.href}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${
+        isActive
+          ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-200/50'
+          : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
+      }`}>
+      <span className={isActive ? 'text-white' : 'text-gray-400'}>{item.icon}</span>
+      <span className="flex-1">{isHe ? item.label_he : item.label_ru}</span>
+      {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse"/>}
+    </Link>
+  )
+}
+
 
 const WORKER_NAV = [
   {
@@ -165,16 +315,7 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
           {navItems.map(item => {
             const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
             return (
-              <Link key={item.href} href={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${
-                  isActive
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-200/50'
-                    : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
-                }`}>
-                <span className={isActive ? 'text-white' : 'text-gray-400'}>{item.icon}</span>
-                <span className="flex-1">{isHe ? item.label_he : item.label_ru}</span>
-                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse"/>}
-              </Link>
+              <NavItem key={item.href} item={item} isActive={isActive} isHe={isHe} />
             )
           })}
         </nav>
@@ -360,6 +501,8 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
   return (
     <WaNotificationProvider>
       <DemoLimitGuardProvider>
+      {/* ✅ Prefetcher: adjacent prefetch соседних модулей при навигации */}
+      <DashboardPrefetcher />
       {showLangPicker && <DemoLanguagePicker onSelect={handleLangSelect}/>}
       <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-gray-950 flex flex-col">
         <DemoBannerGlobal/>

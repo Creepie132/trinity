@@ -3,81 +3,81 @@
 /**
  * useMobileBackTrap — универсальный хук перехвата кнопки "Назад".
  *
- * Применяется к ЛЮБОМУ открытому слою UI: модалка, шторка, свайп-действие,
- * drawer, picker — всему что имеет boolean open-стейт и функцию закрытия.
+ * ═══════════════════════════════════════════════════════════════════
+ * v2 — Race-safe, unmount-safe, routing-safe
+ * ═══════════════════════════════════════════════════════════════════
  *
- * Использование:
+ * ПРАВИЛА:
+ *   ✓ Регистрируем слой только один раз при isOpen: false→true
+ *   ✓ При isOpen: true→false — ТОЛЬКО unregisterLayer() (без history.back)
+ *   ✓ Cleanup при анмаунте — ТОЛЬКО unregisterLayer() (без history.back)
+ *   ✓ history.back() вызывается ТОЛЬКО из _handlePopState() в сторе
+ *   ✓ Работает только на мобильных < 768px
  *
- *   // В TrinityModalShell, ModalBottomSheet, TrinityMob:
- *   useMobileBackTrap(open, onClose)
- *
- *   // Для локального стейта (свайп карточки):
- *   useMobileBackTrap(swipeX !== 0, () => setSwipeX(0))
- *
- *   // Для шторки клиента:
- *   useMobileBackTrap(sheetOpen, () => setSheetOpen(false))
- *
- * Поведение:
- *   - isOpen true  → регистрируем слой в useUIStackStore (pushState в историю)
- *   - isOpen false → снимаем слой (history.back() для синхронизации)
- *   - Нажатие "Назад" → useUIStackStore._handlePopState() → closeFn()
- *
- * Ограничение: работает ТОЛЬКО на мобильных (<768px).
- * На десктопе хук не активен — там кнопка "Назад" нативная и не нужна.
+ * ИСПОЛЬЗОВАНИЕ:
+ *   useMobileBackTrap(open, onClose)                    // модалки, шторки
+ *   useMobileBackTrap(Math.abs(swipeX) >= 10, reset)    // свайп
+ *   useMobileBackTrap(drawerOpen, closeDrawer)          // вложенный drawer
  */
 
 import { useEffect, useId, useRef } from 'react'
 import { useUIStackStore } from '@/store/useUIStackStore'
 
-export function useMobileBackTrap(
-  isOpen: boolean,
-  closeFn: () => void,
-) {
-  // useId генерирует стабильный уникальный ID для этого экземпляра хука
-  const reactId = useId()
-  // Делаем ID более читаемым (убираем двоеточия React)
-  const id = reactId.replace(/:/g, '_')
+export function useMobileBackTrap(isOpen: boolean, closeFn: () => void) {
+  // Стабильный уникальный ID для этого экземпляра хука (не меняется между рендерами)
+  const rawId   = useId()
+  const id      = rawId.replace(/:/g, '_')
 
   const { registerLayer, unregisterLayer } = useUIStackStore()
 
-  // Храним актуальную closeFn в ref чтобы не перерегистрировать слой
-  // при каждом рендере (closeFn часто пересоздаётся родителем)
+  // Актуальная closeFn через ref — чтобы не пересоздавать регистрацию
+  // при каждом ре-рендере родителя (inline-функции пересоздаются каждый рендер)
   const closeFnRef = useRef(closeFn)
-  useEffect(() => {
-    closeFnRef.current = closeFn
-  }, [closeFn])
+  useEffect(() => { closeFnRef.current = closeFn }, [closeFn])
 
-  // Проверяем мобильный viewport (только там перехватываем "Назад")
-  // SSR-safe: window доступен только на клиенте
-  const isMobile = typeof window !== 'undefined'
-    ? window.matchMedia('(max-width: 767px)').matches
-    : false
+  // Отслеживаем реально ли слой зарегистрирован прямо сейчас.
+  // Нужно чтобы cleanup в useEffect не делал unregister дважды.
+  const registeredRef = useRef(false)
+
+  // Мобильный viewport — вычисляем один раз при маунте компонента.
+  // MediaQueryList используем через ref чтобы не пересчитывать на каждый рендер.
+  const isMobileRef = useRef(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 767px)')
+    isMobileRef.current = mq.matches
+    const handler = (e: MediaQueryListEvent) => { isMobileRef.current = e.matches }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   useEffect(() => {
     // Не активен на десктопе
-    if (!isMobile) return
+    if (!isMobileRef.current) return
 
-    if (isOpen) {
-      // Регистрируем слой — стор сам сделает pushState
-      registerLayer(id, () => {
-        // Вызываем актуальную closeFn через ref
-        closeFnRef.current()
-      })
-    } else {
-      // Слой закрылся — снимаем регистрацию (стор сделает history.back())
+    if (isOpen && !registeredRef.current) {
+      // Переход false → true: регистрируем слой
+      registeredRef.current = true
+      registerLayer(id, () => closeFnRef.current())
+
+    } else if (!isOpen && registeredRef.current) {
+      // Переход true → false (программное закрытие: крестик, Save, action-кнопка):
+      // ТОЛЬКО чистим стек. История браузера НЕ ТРОГАЕТСЯ.
+      registeredRef.current = false
       unregisterLayer(id)
     }
 
-    // Cleanup при анмаунте: если компонент уничтожается пока открыт —
-    // снимаем слой чтобы не оставлять "мёртвые" записи в стеке
+    // Cleanup при анмаунте компонента:
+    // Если компонент уничтожается пока isOpen=true (например, роут сменился) —
+    // чистим стек. История браузера НЕ ТРОГАЕТСЯ.
     return () => {
-      // При анмаунте передаём skipHistoryBack=true если isOpen=false
-      // (history.back уже был вызван выше при переходе isOpen: true → false)
-      // При анмаунте пока isOpen=true — нужно убрать синтетическую запись
-      if (isOpen) {
-        unregisterLayer(id, { skipHistoryBack: false })
+      if (registeredRef.current) {
+        registeredRef.current = false
+        unregisterLayer(id)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, id, isMobile])
+  // id стабилен, isMobileRef — ref (не вызывает ре-рендер).
+  // Зависим только от isOpen.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 }

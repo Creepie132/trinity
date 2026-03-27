@@ -3,54 +3,44 @@
 /**
  * useUIStackStore — глобальный менеджер UI-слоёв для кнопки "Назад".
  *
- * Паттерн: Synthetic History Entries + LIFO Stack
+ * ═══════════════════════════════════════════════════════════════════
+ * АРХИТЕКТУРА v2 — Safe Synthetic History
+ * ═══════════════════════════════════════════════════════════════════
  *
- * Как работает:
- *   1. Компонент открывается → вызывает registerLayer(id, closeFn)
- *      → в браузерную историю добавляется синтетическая запись
- *        window.history.pushState({ uiLayer: id }, '')
- *   2. Пользователь нажимает "Назад" → срабатывает единый popstate listener
- *      → берём верхний слой из стека → вызываем его closeFn() → удаляем из стека
- *   3. Компонент закрывается программно (крестик / Save) → вызывает unregisterLayer(id)
- *      → под капотом делаем history.back() чтобы убрать синтетическую запись
- *        и не засорять историю "мёртвыми" состояниями
+ * ГЛАВНОЕ ПРАВИЛО: history.back() при программном закрытии ЗАПРЕЩЁН.
  *
- * ВАЖНО: popstate listener ОДИН, он регистрируется один раз на уровне стора.
- * Хук useMobileBackTrap использует registerLayer / unregisterLayer.
+ * Почему старая версия ломала роутинг:
+ *   - unregisterLayer() вызывал history.back() вслепую
+ *   - При action "Продажа": свайп закрывается → back() → убивает реальный URL
+ *   - Cleanup useEffect срабатывал при анмаунте → лишний back()
  *
- * Область применения:
- *   - TrinityModalShell (→ все Unified-модалки)
- *   - ModalBottomSheet
- *   - TrinityMob (шторка клиента + drawer действий)
- *   - ClientCard (свайп-действие)
- *   - Любые локальные open-стейты через useMobileBackTrap
+ * Новая стратегия:
+ *   ОТКРЫТИЕ:  registerLayer()   → pushState({ uiLayer: id })  ✓
+ *   ЗАКРЫТИЕ программное:        → только удаляем из стека, историю НЕ ТРОГАЕМ
+ *   ЗАКРЫТИЕ по "Назад":         → popstate срабатывает, closeFn(), удаляем из стека
+ *
+ * "Мусор" в истории (синтетические записи без соответствующего слоя):
+ *   Они безопасны. Следующее нажатие "Назад" попадёт на них, popstate
+ *   сработает, стек пуст → мы просто ПРОПУСКАЕМ (не вызываем closeFn).
+ *   Браузер продолжит навигацию назад по реальным URL-записям.
+ *
+ * ═══════════════════════════════════════════════════════════════════
  */
 
 import { create } from 'zustand'
 
 export interface UILayer {
-  /** Уникальный ID слоя (генерируется хуком) */
   id: string
-  /** Функция закрытия компонента */
   closeFn: () => void
 }
 
 interface UIStackState {
-  /** LIFO стек открытых слоёв */
   stack: UILayer[]
-  /** Флаг: глобальный popstate listener уже навешен */
   _listenerAttached: boolean
 
-  /** Регистрирует слой: добавляет в стек + pushState */
-  registerLayer: (id: string, closeFn: () => void) => void
-
-  /** Снимает слой: убирает из стека + history.back() для синхронизации */
-  unregisterLayer: (id: string, options?: { skipHistoryBack?: boolean }) => void
-
-  /** Внутренний обработчик popstate — вызывается единым listener'ом */
+  registerLayer:   (id: string, closeFn: () => void) => void
+  unregisterLayer: (id: string) => void
   _handlePopState: () => void
-
-  /** Навешивает единый глобальный popstate listener (вызывать один раз) */
   _attachListener: () => void
 }
 
@@ -63,70 +53,51 @@ export const useUIStackStore = create<UIStackState>((set, get) => ({
     if (typeof window === 'undefined') return
 
     window.addEventListener('popstate', (event: PopStateEvent) => {
-      // Срабатывает только если это наша синтетическая запись
-      if (event.state && typeof event.state === 'object' && 'uiLayer' in event.state) {
+      const state = event.state
+      // Реагируем ТОЛЬКО на наши синтетические записи
+      if (state && typeof state === 'object' && 'uiLayer' in state) {
         get()._handlePopState()
       }
-      // Иначе — нативная навигация, не трогаем
+      // Нативная навигация (Next.js router) — не трогаем
     })
 
     set({ _listenerAttached: true })
   },
 
   registerLayer: (id, closeFn) => {
-    // Убеждаемся что listener навешен (ленивая инициализация)
     get()._attachListener()
 
-    // Проверяем — нет ли уже этого id в стеке (защита от двойного вызова)
-    const existing = get().stack.find(l => l.id === id)
-    if (existing) return
+    // Защита от двойной регистрации одного и того же слоя
+    if (get().stack.some(l => l.id === id)) return
 
-    // Добавляем синтетическую запись в браузерную историю
+    // Добавляем синтетическую запись — НЕ меняем pathname/search
     if (typeof window !== 'undefined') {
       window.history.pushState({ uiLayer: id }, '')
     }
 
-    set(state => ({
-      stack: [...state.stack, { id, closeFn }],
-    }))
+    set(s => ({ stack: [...s.stack, { id, closeFn }] }))
   },
 
-  unregisterLayer: (id, options) => {
-    const state = get()
-    const index = state.stack.findIndex(l => l.id === id)
-    if (index === -1) return // слой уже удалён
-
-    // Удаляем из стека
-    set(s => ({
-      stack: s.stack.filter(l => l.id !== id),
-    }))
-
-    // Синхронизируем браузерную историю:
-    // если слой закрылся НЕ по кнопке "Назад" (т.е. программно),
-    // нужно убрать синтетическую запись из истории.
-    // skipHistoryBack = true только когда вызываем из _handlePopState
-    if (!options?.skipHistoryBack && typeof window !== 'undefined') {
-      // history.back() асинхронный — делаем через queueMicrotask чтобы
-      // не прерывать React rendering cycle
-      queueMicrotask(() => {
-        window.history.back()
-      })
-    }
+  unregisterLayer: (id) => {
+    // ТОЛЬКО чистим стек. history НЕ ТРОГАЕМ.
+    // "Мёртвые" синтетические записи в истории безопасны —
+    // следующий popstate с пустым стеком просто пропускается.
+    set(s => ({ stack: s.stack.filter(l => l.id !== id) }))
   },
 
   _handlePopState: () => {
     const { stack } = get()
-    if (stack.length === 0) return
 
-    // Берём верхний слой (LIFO)
+    if (stack.length === 0) {
+      // Стек пуст — синтетическая запись осталась от уже закрытого слоя.
+      // Ничего не делаем: браузер уже сделал шаг назад, следующий popstate
+      // будет либо ещё один наш слой, либо реальный роут Next.js.
+      return
+    }
+
+    // LIFO: закрываем верхний слой
     const topLayer = stack[stack.length - 1]
-
-    // Удаляем из стека БЕЗ history.back() — мы уже "назад" от popstate
-    set(s => ({
-      stack: s.stack.filter(l => l.id !== topLayer.id),
-    }))
-
-    // Вызываем функцию закрытия компонента
+    set(s => ({ stack: s.stack.filter(l => l.id !== topLayer.id) }))
     topLayer.closeFn()
   },
 }))

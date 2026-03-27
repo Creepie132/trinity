@@ -15,6 +15,21 @@ import { BranchSwitcher } from '@/components/BranchSwitcher'
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
 import { useHasWorkers } from '@/hooks/useHasWorkers'
+import { useMobileMenuPrefetch, useTouchPrefetch } from '@/hooks/useMobilePrefetch'
+
+// ─── NavLink — Link с touch prefetch для мгновенной навигации на мобиле ──────
+function NavLink({ href, onClick, className, children }: {
+  href: string; onClick: () => void; className: string; children: React.ReactNode
+}) {
+  const { onTouchStart, onTouchEnd } = useTouchPrefetch(href)
+  return (
+    <Link href={href} prefetch={true} onClick={onClick}
+      onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
+      className={className}>
+      {children}
+    </Link>
+  )
+}
 
 interface MobileSidebarProps {
   isOpen: boolean
@@ -35,6 +50,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const sidebarSide = 'right'
   const isOwner = role === 'owner'
   const showOffice = isOwner && hasWorkers !== false
+
+  // ⚡ При открытии меню — prefetch RSC payload + RQ данных для всех разделов
+  useMobileMenuPrefetch(isOpen)
 
   const baseNavigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: Home, requireFeature: null },
@@ -112,7 +130,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
               const isActive = pathname === item.href
               const Icon = item.icon
               return (
-                <Link key={item.href} href={item.href} onClick={onClose}
+                <NavLink key={item.href} href={item.href} onClick={onClose}
                   className={cn(
                     'flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group',
                     isActive
@@ -131,26 +149,26 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                     </span>
                   )}
                   {isActive && <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />}
-                </Link>
+                </NavLink>
               )
             })}
             {isAdmin && (
               <>
                 <Separator className="my-4 bg-gray-200 dark:bg-slate-700" />
-                <Link href="/admin" onClick={onClose}
+                <NavLink href="/admin" onClick={onClose}
                   className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-700 hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md active:scale-[0.98]">
                   <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-800">
                     <Shield className="w-5 h-5 flex-shrink-0 text-purple-600 dark:text-purple-400" />
                   </div>
                   <span className="flex-1 text-purple-700 dark:text-purple-300 font-semibold">{t('nav.admin')}</span>
                   <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-                </Link>
+                </NavLink>
               </>
             )}
             {showOffice && (
               <>
                 <Separator className="my-2 bg-gray-200 dark:bg-slate-700" />
-                <Link href="/office" onClick={onClose}
+                <NavLink href="/office" onClick={onClose}
                   className={cn(
                     'flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group',
                     pathname.startsWith('/office')
@@ -164,7 +182,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   </div>
                   <span className="flex-1 font-semibold">🏢 Кабинет</span>
                   {pathname.startsWith('/office') && <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />}
-                </Link>
+                </NavLink>
               </>
             )}
           </nav>

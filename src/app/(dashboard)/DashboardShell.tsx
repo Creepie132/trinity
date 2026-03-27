@@ -28,6 +28,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
+import { useMobileMenuPrefetch, useTouchPrefetch } from '@/hooks/useMobilePrefetch'
 
 // ─── Prefetch helpers ─────────────────────────────────────────────────────────
 //
@@ -213,7 +214,7 @@ export function useHoverPrefetch(href: string) {
   return { onMouseEnter, onMouseLeave }
 }
 
-// ─── NavItem — отдельный компонент для Rules of Hooks ────────────────────────
+// ─── NavItem — отдельный компонент для Rules of Hooks (десктоп) ──────────────
 function NavItem({ item, isActive, isHe }: {
   item: { href: string; icon: React.ReactNode; label_he: string; label_ru: string }
   isActive: boolean
@@ -230,6 +231,34 @@ function NavItem({ item, isActive, isHe }: {
           ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-200/50'
           : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
       }`}>
+      <span className={isActive ? 'text-white' : 'text-gray-400'}>{item.icon}</span>
+      <span className="flex-1">{isHe ? item.label_he : item.label_ru}</span>
+      {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse"/>}
+    </Link>
+  )
+}
+
+// ─── WorkerMobileNavLink — Link с touch prefetch для мобильного drawer ────────
+function WorkerMobileNavLink({ item, isActive, isHe, onClose }: {
+  item: { href: string; icon: React.ReactNode; label_he: string; label_ru: string }
+  isActive: boolean
+  isHe: boolean
+  onClose: () => void
+}) {
+  const { onTouchStart, onTouchEnd } = useTouchPrefetch(item.href)
+  return (
+    <Link
+      href={item.href}
+      prefetch={true}
+      onClick={onClose}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+        isActive
+          ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-200/50'
+          : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
+      }`}
+    >
       <span className={isActive ? 'text-white' : 'text-gray-400'}>{item.icon}</span>
       <span className="flex-1">{isHe ? item.label_he : item.label_ru}</span>
       {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse"/>}
@@ -307,6 +336,9 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
   const [newLeadOpen, setNewLeadOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // ⚡ При открытии мобильного drawer — prefetch RSC + RQ для всех разделов
+  useMobileMenuPrefetch(drawerOpen)
 
   // Закрывать дравер при смене маршрута (навигация внутри системы)
   useEffect(() => {
@@ -477,20 +509,13 @@ function WorkerShell({ children }: { children: React.ReactNode }) {
             {navItems.map(item => {
               const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
               return (
-                <Link
+                <WorkerMobileNavLink
                   key={item.href}
-                  href={item.href}
-                  onClick={() => setDrawerOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-200/50'
-                      : 'text-gray-600 hover:bg-gray-100/80 hover:text-gray-900'
-                  }`}
-                >
-                  <span className={isActive ? 'text-white' : 'text-gray-400'}>{item.icon}</span>
-                  <span className="flex-1">{isHe ? item.label_he : item.label_ru}</span>
-                  {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse"/>}
-                </Link>
+                  item={item}
+                  isActive={isActive}
+                  isHe={isHe}
+                  onClose={() => setDrawerOpen(false)}
+                />
               )
             })}
           </nav>

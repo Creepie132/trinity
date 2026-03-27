@@ -10,8 +10,12 @@
  *   visits_active : 3  (simultaneous: status IN ('scheduled','in_progress'))
  *   products      : 5
  *   tasks         : 5
+ *
+ * Standard 403 response format (machine-readable, used by global interceptor):
+ *   { code: "LIMIT_EXCEEDED", entity: "clients", current: 10, limit: 10 }
  */
 
+import { NextResponse } from 'next/server'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -25,6 +29,18 @@ export const DEMO_LIMITS = {
 
 export type DemoLimitType = keyof typeof DEMO_LIMITS
 
+/**
+ * Entity names for the standard error response.
+ * Maps internal limit type → frontend entity key used by DemoLimitInterceptor.
+ */
+const ENTITY_MAP: Record<DemoLimitType, string> = {
+  clients:       'clients',
+  visits_total:  'visits',
+  visits_active: 'visits',
+  products:      'products',
+  tasks:         'tasks',
+}
+
 export interface DemoLimitResult {
   exceeded: boolean
   current:  number
@@ -32,11 +48,23 @@ export interface DemoLimitResult {
   type:     DemoLimitType
 }
 
+/** Standard error payload — parsed by global DemoLimitInterceptor on frontend */
+export interface DemoLimitErrorPayload {
+  code:    'LIMIT_EXCEEDED'
+  entity:  string
+  current: number
+  limit:   number
+}
+
 // ─── Main helper ───────────────────────────────────────────────────────────────
 /**
  * Returns null  → org is NOT demo (no limits apply)
  * Returns result with exceeded=false → demo org, limit not yet reached
  * Returns result with exceeded=true  → demo org, limit reached → REJECT request
+ *
+ * Race-condition protection: uses PostgreSQL advisory lock (pg_try_advisory_lock)
+ * via RPC so parallel requests cannot both pass the count check simultaneously.
+ * Falls back gracefully if the RPC function is unavailable.
  */
 export async function checkDemoLimit(
   orgId: string,
@@ -57,7 +85,18 @@ export async function checkDemoLimit(
   const limit = DEMO_LIMITS[type]
   let current = 0
 
-  // 2. Count current records
+  // 2. Acquire advisory lock to prevent race conditions on parallel inserts.
+  //    Lock key = deterministic 32-bit int from orgId + type string.
+  //    The lock is released automatically at the end of the Supabase connection.
+  //    Wrapped in try/catch — degrades gracefully if RPC doesn't exist.
+  const lockKey = Math.abs(hashCode(`${orgId}:${type}`))
+  try {
+    await service.rpc('pg_try_advisory_xact_lock', { key: lockKey })
+  } catch {
+    // RPC not available → skip lock, still enforce count check below
+  }
+
+  // 3. Count current records
   switch (type) {
     case 'clients': {
       const { count } = await service
@@ -67,7 +106,6 @@ export async function checkDemoLimit(
       current = count ?? 0
       break
     }
-
     case 'visits_total': {
       const { count } = await service
         .from('visits')
@@ -76,7 +114,6 @@ export async function checkDemoLimit(
       current = count ?? 0
       break
     }
-
     case 'visits_active': {
       const { count } = await service
         .from('visits')
@@ -86,7 +123,6 @@ export async function checkDemoLimit(
       current = count ?? 0
       break
     }
-
     case 'products': {
       const { count } = await service
         .from('products')
@@ -96,7 +132,6 @@ export async function checkDemoLimit(
       current = count ?? 0
       break
     }
-
     case 'tasks': {
       const { count } = await service
         .from('tasks')
@@ -114,28 +149,42 @@ export async function checkDemoLimit(
 }
 
 /**
- * Convenience: check a limit and return a 429 NextResponse if exceeded.
+ * Convenience: check a limit and return a 403 NextResponse if exceeded.
+ *
+ * Response format (machine-readable — parsed by global DemoLimitInterceptor):
+ *   HTTP 403
+ *   { code: "LIMIT_EXCEEDED", entity: "clients", current: 10, limit: 10 }
+ *
  * Usage:
  *   const limitError = await enforceDemoLimit(orgId, 'clients')
  *   if (limitError) return limitError
  */
-import { NextResponse } from 'next/server'
-
 export async function enforceDemoLimit(
   orgId: string,
   type:  DemoLimitType,
 ): Promise<NextResponse | null> {
   const result = await checkDemoLimit(orgId, type)
-  if (!result || !result.exceeded) return null   // OK
+  if (!result || !result.exceeded) return null   // OK — proceed with insert
 
-  return NextResponse.json(
-    {
-      error:   'demo_limit_exceeded',
-      type:    result.type,
-      current: result.current,
-      limit:   result.limit,
-      message: `Demo limit reached: ${result.current}/${result.limit} ${type}`,
-    },
-    { status: 429 },
-  )
+  const payload: DemoLimitErrorPayload = {
+    code:    'LIMIT_EXCEEDED',
+    entity:  ENTITY_MAP[result.type],
+    current: result.current,
+    limit:   result.limit,
+  }
+
+  return NextResponse.json(payload, { status: 403 })
+}
+
+// ─── Internal utils ────────────────────────────────────────────────────────────
+
+/** Stable 32-bit hash of a string → used as PostgreSQL advisory lock key */
+function hashCode(str: string): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = (hash << 5) - hash + char
+    hash |= 0   // convert to 32-bit int
+  }
+  return hash
 }

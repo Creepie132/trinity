@@ -1,6 +1,6 @@
 'use client'
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, keepPreviousData } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
@@ -9,12 +9,15 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 2 * 60 * 1000,   // 2 min — данные свежие, не рефетчим без нужды
-            gcTime: 10 * 60 * 1000,      // 10 min — кеш живёт в памяти (было 5min default)
+            staleTime: 2 * 60 * 1000,        // 2 min — данные свежие, не рефетчим без нужды
+            gcTime: 10 * 60 * 1000,           // 10 min — кеш живёт в памяти
             refetchOnWindowFocus: false,
-            refetchOnReconnect: false,   // не рефетчить при восстановлении соединения
+            refetchOnReconnect: false,
             retry: false,
             throwOnError: false,
+            // ★ Ключевой параметр: при фетче новых данных показываем СТАРЫЕ,
+            //   а не undefined → нет скелетонов/белых экранов при навигации
+            placeholderData: keepPreviousData,
           },
           mutations: {
             retry: false,
@@ -25,13 +28,10 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
   )
 
   useEffect(() => {
-    // Global error handler for unhandled promise rejections
     const handleError = (event: PromiseRejectionEvent) => {
       console.error('[Unhandled Promise Rejection]:', event.reason)
-      // Prevent the error overlay from showing
       event.preventDefault()
     }
-
     window.addEventListener('unhandledrejection', handleError)
     return () => window.removeEventListener('unhandledrejection', handleError)
   }, [])

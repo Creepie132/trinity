@@ -12,6 +12,7 @@ import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner'
 import { PinnedModalsTray } from '@/components/ui/PinnedModalsTray'
 import { RightPanel } from '@/components/layout/RightPanel'
 import { DemoBannerGlobal } from '@/components/demo/DemoBannerGlobal'
+import { DemoLimitGuardProvider } from '@/components/demo/DemoLimitGuard'
 import { DemoLanguagePicker, useDemoLanguagePicker } from '@/components/demo/DemoLanguagePicker'
 import { WaNotificationProvider } from '@/components/wa/WaNotificationProvider'
 import { ClientProviders } from '@/components/providers/ClientProviders'
@@ -358,6 +359,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
   return (
     <WaNotificationProvider>
+      <DemoLimitGuardProvider>
       {showLangPicker && <DemoLanguagePicker onSelect={handleLangSelect}/>}
       <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-gray-950 flex flex-col">
         <DemoBannerGlobal/>
@@ -378,6 +380,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
       <ImpersonationBanner />
       <PinnedModalsTray />
       <ClientProviders />
+      </DemoLimitGuardProvider>
     </WaNotificationProvider>
   )
 }

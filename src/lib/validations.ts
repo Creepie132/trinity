@@ -98,6 +98,29 @@ export const EXPENSE_CATEGORY_VALUES = [
 ] as const
 export type ExpenseCategoryValue = typeof EXPENSE_CATEGORY_VALUES[number]
 
+// ── Phone utilities ──────────────────────────────────────────────────────────
+/**
+ * Нормализует телефон к E.164 для единого хранения в БД.
+ * Используется в API-обработчиках перед вставкой в Supabase.
+ * Это обеспечивает совместимость с SMS-модулем и WhatsApp.
+ */
+export function normalizePhoneE164(raw: string): string {
+  const digits = raw.replace(/[^\d+]/g, '')
+  if (/^05\d{8}$/.test(digits))     return '+972' + digits.slice(1) // Israeli local
+  if (/^\+\d{10,15}$/.test(digits)) return digits                   // уже E.164
+  if (/^972\d{9}$/.test(digits))    return '+' + digits             // без +
+  return raw.trim()                                                  // fallback
+}
+
+/**
+ * Фронтенд-совместимая валидация: Israeli 05X + международный формат.
+ * Экспортируется для переиспользования в DemoOrderModal и API.
+ */
+export function validatePhone(phone: string): boolean {
+  const cleaned = phone.replace(/[\s\-()]/g, '')
+  return /^(\+972|0)(5[0-9])\d{7}$|^\+?\d{10,15}$/.test(cleaned)
+}
+
 // ── ISO date helper ────────────────────────────────────────────────────────────
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD')
 

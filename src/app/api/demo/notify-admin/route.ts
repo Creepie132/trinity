@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { normalizePhoneE164, validatePhone } from '@/lib/validations'
 
 // POST /api/demo/notify-admin
 // Called from DemoOrderModal — no auth required (public endpoint)
@@ -8,6 +9,15 @@ export async function POST(request: NextRequest) {
   try {
     const { type, data } = await request.json()
     // type: 'order_submitted' | 'abandoned'
+
+    // Бэкенд-валидация телефона + нормализация к E.164
+    if (type === 'order_submitted' && data?.phone) {
+      if (!validatePhone(data.phone)) {
+        return NextResponse.json({ ok: false, error: 'Invalid phone format' }, { status: 400 })
+      }
+      data.phone = normalizePhoneE164(data.phone)
+    }
+
     const service = createSupabaseServiceClient()
 
     // Admin = Amber Solutions org owner
@@ -29,6 +39,7 @@ export async function POST(request: NextRequest) {
       : [
           `Имя: ${name}`,
           `Email: ${data.email || '—'}`,
+          `Телефон: ${data.phone || '—'}`,
           `Страна: ${data.country || '—'}`,
           `Пакет: ${data.plan || '—'}`,
           data.setupType  ? `Setup: ${data.setupType} ₪${data.setupPrice}` : '',

@@ -4,13 +4,7 @@ import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { X, ChevronRight, ChevronLeft, Check, Sparkles, Package, Zap,
   Settings2, Lock, ExternalLink, CreditCard, AlertCircle, Crown, Plus, Minus } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-
-// Валидация телефона — Israeli format + международный
-export function validatePhone(phone: string): boolean {
-  const cleaned = phone.replace(/[\s\-()]/g, '')
-  // Israeli: 05X-XXXXXXX or +972-5X-XXXXXXX
-  return /^(\+972|0)(5[0-9])\d{7}$|^\+?[\d]{10,15}$/.test(cleaned)
-}
+import { validatePhone } from '@/lib/validations'
 
 export interface OrderForm {
   firstName: string; lastName: string; birthDate: string

@@ -1,5 +1,0 @@
-fix: prevent optimistic ID from reaching server on client update
-
-- useUpdateClient: guard id.startsWith('optimistic-'), switch to apiFetch API route (Zero-Trust)
-- EditClientSheet: guard before handleSave, use useUpdateClient hook instead of raw fetch
-- ClientCard: block sheet open + show opacity-60 while id is still optimistic

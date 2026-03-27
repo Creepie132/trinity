@@ -9,6 +9,20 @@ export function useDemoMode() {
 
   const isLoading = orgLoading || adminLoading
 
+  // ⚡ Пока данные грузятся — НЕ блокируем рендер страницы.
+  // isDemo=false означает: показываем реальный контент (не demo-stub).
+  // Когда данные придут (обычно мгновенно из HydrationBoundary кэша) —
+  // компонент перерендерится с правильным значением.
+  if (isLoading) {
+    return {
+      isDemo: false,
+      isLoading: true,
+      plan: 'unknown',
+      clientLimit: null,
+      daysLeft: null,
+    }
+  }
+
   // Админы НИКОГДА не в demo
   if (isAdmin) {
     return {

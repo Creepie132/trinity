@@ -743,10 +743,8 @@ function SalesContent() {
 // ─── SalesPage ───────────────────────────────────────────────────────────────
 export default function SalesPage() {
   const { isDemo } = useDemoMode()
-  const previewStub = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview_stub') === '1'
-  // Removed isLoading guard — SalesContent has its own inline skeleton via useSales.isLoading.
-  // useDemoMode.isLoading (useOrganization + useIsAdmin) caused white screen on every
-  // navigation before React Query could serve cached data.
-  if (isDemo || previewStub) return <SalesDemoStub />
+  // ⚡ useDemoMode больше не блокирует рендер при isLoading —
+  // organization уже в HydrationBoundary кэше из layout.tsx — данные мгновенные.
+  if (isDemo) return <SalesDemoStub />
   return <SalesContent />
 }

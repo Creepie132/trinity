@@ -72,6 +72,14 @@ async function prefetchModule(
               .then(r => r.json()),
           staleTime: STALE,
         })
+        // Prefetch chart данных — useSalesChart() без фильтров
+        await qc.prefetchQuery({
+          queryKey: ['sales-chart', orgId, undefined, undefined],
+          queryFn: () =>
+            fetch('/api/sales?chart=1', { headers: { 'X-Branch-Org-Id': orgId } })
+              .then(r => r.json()),
+          staleTime: STALE,
+        })
         break
 
       case 'payments':

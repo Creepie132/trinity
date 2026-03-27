@@ -72,7 +72,8 @@ export function useExpenses(month?: string, category?: string) {
       const data = await res.json()
       return data.expenses ?? []
     },
-    staleTime: 30_000,
+    staleTime:       30_000,
+    placeholderData: (prev: any) => prev, // нет мигания при смене фильтров
   })
 }
 

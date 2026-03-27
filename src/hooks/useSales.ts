@@ -47,8 +47,8 @@ export interface SalesFilters {
 
 export const salesKeys = {
   all:   (orgId: string | undefined) => ['sales', orgId] as const,
-  list:  (orgId: string | undefined, filters?: SalesFilters) =>
-           ['sales', orgId, filters] as const,
+  list:  (orgId: string | undefined, filters?: SalesFilters | null) =>
+           ['sales', orgId, filters ?? null] as const,
   chart: (orgId: string | undefined, dateFrom?: string, dateTo?: string) =>
            ['sales-chart', orgId, dateFrom, dateTo] as const,
 }
@@ -60,7 +60,8 @@ export function useSales(filters?: SalesFilters) {
   useRealtimeSync({ table: 'sales', orgId: activeOrgId, queryKey: ['sales'] })
 
   return useQuery({
-    queryKey: salesKeys.list(activeOrgId, filters),
+    // ✅ null вместо undefined — стабильный ключ, совместимый с prefetch
+    queryKey: salesKeys.list(activeOrgId, filters ?? null),
     queryFn: async () => {
       const params = new URLSearchParams()
       if (filters?.status && filters.status !== 'all') params.set('status', filters.status)
@@ -77,8 +78,9 @@ export function useSales(filters?: SalesFilters) {
       if (!res.ok) throw new Error('Failed to fetch sales')
       return res.json() as Promise<Sale[]>
     },
-    enabled:   !!activeOrgId,
-    staleTime: 30_000,
+    enabled:          !!activeOrgId,
+    staleTime:         30_000,
+    placeholderData:   (prev: any) => prev, // нет мигания при смене фильтров
   })
 }
 

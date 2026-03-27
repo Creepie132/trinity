@@ -48,43 +48,66 @@ async function prefetchModule(
   try {
     switch (module) {
       case 'visits':
+        // Ключ совпадает с visitsKeys.list(orgId, { dateFilter:'week', statusFilter:'all',
+        //   eventTypeFilter:'all', search:'', page:1, pageSize:30 })
         await qc.prefetchQuery({
-          queryKey: ['visits', orgId, { dateFilter: 'week', statusFilter: 'all', eventTypeFilter: 'all', search: '', page: 1, pageSize: 30 }],
-          queryFn:  () => fetch('/api/visits/list?dateFilter=week&statusFilter=all&eventTypeFilter=all&page=1&pageSize=30').then(r => r.json()),
+          queryKey: ['visits', orgId, {
+            dateFilter: 'week', statusFilter: 'all', eventTypeFilter: 'all',
+            search: '', page: 1, pageSize: 30,
+          }],
+          queryFn: () =>
+            fetch('/api/visits/list?dateFilter=week&statusFilter=all&eventTypeFilter=all&page=1&pageSize=30')
+              .then(r => r.json()),
           staleTime: STALE,
         })
         break
+
       case 'sales':
+        // Ключ совпадает с salesKeys.list(orgId, null) — страница вызывает useSales() без фильтров
         await qc.prefetchQuery({
-          queryKey: ['sales', orgId, undefined],
-          queryFn:  () => fetch('/api/sales', { headers: { 'X-Branch-Org-Id': orgId } }).then(r => r.json()),
+          queryKey: ['sales', orgId, null],
+          queryFn: () =>
+            fetch('/api/sales', { headers: { 'X-Branch-Org-Id': orgId } })
+              .then(r => r.json()),
           staleTime: STALE,
         })
         break
+
       case 'payments':
+        // Ключ совпадает с ['payments', orgId, undefined, undefined]
         await qc.prefetchQuery({
           queryKey: ['payments', orgId, undefined, undefined],
-          queryFn:  () => fetch('/api/payments').then(r => r.json()),
+          queryFn: () => fetch('/api/payments').then(r => r.json()),
           staleTime: STALE,
         })
         break
+
       case 'expenses':
+        // Ключ совпадает с expensesKeys.list(undefined, undefined) = ['expenses', undefined, undefined]
         await qc.prefetchQuery({
           queryKey: ['expenses', undefined, undefined],
-          queryFn:  () => fetch('/api/expenses').then(r => r.json()).then(d => d.expenses ?? []),
+          queryFn: () =>
+            fetch('/api/expenses')
+              .then(r => r.json())
+              .then(d => d.expenses ?? []),
           staleTime: STALE,
         })
         break
+
       case 'inventory':
+        // Ключ совпадает с ['products', orgId]
         await qc.prefetchQuery({
           queryKey: ['products', orgId],
-          queryFn:  () => fetch('/api/products', { headers: { 'X-Branch-Org-Id': orgId } }).then(r => r.json()).then(d => d.products ?? []),
+          queryFn: () =>
+            fetch('/api/products', { headers: { 'X-Branch-Org-Id': orgId } })
+              .then(r => r.json())
+              .then(d => d.products ?? []),
           staleTime: STALE,
         })
         break
     }
   } catch {
-    // prefetch — некритичная операция, молча игнорируем ошибки
+    // prefetch некритичен — молча игнорируем
   }
 }
 
@@ -116,8 +139,8 @@ function DashboardPrefetcher() {
       const key = `${module}:${activeOrgId}`
       if (!prefetchedRef.current.has(key)) {
         prefetchedRef.current.add(key)
-        // Небольшая задержка — сначала грузим текущую страницу, потом соседей
-        setTimeout(() => prefetchModule(qc, module, activeOrgId), 800)
+        // 200ms — достаточно чтобы не мешать текущей странице, но быстро
+        setTimeout(() => prefetchModule(qc, module, activeOrgId), 200)
       }
     })
   }, [pathname, activeOrgId, qc])

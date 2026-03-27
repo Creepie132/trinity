@@ -65,7 +65,8 @@ export function usePayments(clientId?: string, filters?: PaymentsFilters) {
       const page = filters?.page || 0
       return data.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
     },
-    staleTime: 30_000, // ✅ 30 сек вместо 0 — не refetch при каждом фокусе
+    staleTime:       30_000,
+    placeholderData: (prev: any) => prev, // нет мигания при смене фильтров
   })
 }
 

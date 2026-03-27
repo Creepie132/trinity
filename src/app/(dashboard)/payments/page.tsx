@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Plus, Search, SlidersHorizontal, Receipt, FileText, Banknote, CheckCircle, TrendingUp, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { usePayments, usePaymentsStats } from '@/hooks/usePayments'
+import { useQueryClient } from '@tanstack/react-query'
 import { PaymentReportModal } from '@/components/payments/PaymentReportModal'
 import { CreateBitPaymentDialog } from '@/components/payments/CreateBitPaymentDialog'
 import { useModalStore } from '@/store/useModalStore'
@@ -163,6 +164,7 @@ function PaymentsContent() {
   const { t, language } = useLanguage()
   const locale = language === 'he' ? 'he' : 'ru'
   const dir = locale === 'he' ? 'rtl' : 'ltr'
+  const queryClient = useQueryClient()
 
   const { openModal } = useModalStore()
 
@@ -200,13 +202,17 @@ function PaymentsContent() {
     else if (searchParams.get('canceled') === 'true') toast.error(t('payments.paymentCanceled'))
   }, [searchParams, t])
 
-  const { data: payments = [], isLoading, refetch } = usePayments(undefined, {
+  const { data: payments = [], isLoading } = usePayments(undefined, {
     status: statusFilter, paymentMethod: methodFilter !== 'all' ? methodFilter : undefined,
     startDate, endDate, page: 0,
   })
   const { data: stats } = usePaymentsStats()
 
-  const handlePaymentSuccess = () => { refetch(); router.refresh() }
+  // ✅ invalidateQueries вместо refetch() + router.refresh()
+  const handlePaymentSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['payments'] })
+    queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
+  }
   const handleMethodSelect = (method: 'card' | 'cash' | 'bit') => {
     if (method === 'card') openModal('payment-unified', { defaultMethod: 'link', onSuccess: handlePaymentSuccess })
     else if (method === 'cash') openModal('payment-unified', { defaultMethod: 'cash', onSuccess: handlePaymentSuccess })

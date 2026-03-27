@@ -37,7 +37,7 @@ export function useProducts(searchQuery?: string) {
       const data = await response.json()
       return data.products as Product[]
     },
-    staleTime: 0,
+    staleTime: 30_000, // ✅ был 0 — данные теперь свежи 30 сек, нет лишних refetch при mount
   })
 }
 

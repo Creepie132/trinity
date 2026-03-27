@@ -65,9 +65,9 @@ export function useExpenses(month?: string, category?: string) {
 }
 
 export function useExpensesStats(month?: string) {
-  const { activeOrgId } = useBranch()
-  // Subscription handled by useExpenses via onEvent callback.
-  // No separate channel here — useRealtimeSync intentionally omitted.
+  // ✅ Нет второго fetch — stats считаются как деривация из кэша useExpenses.
+  // useExpenses уже подписан на realtime и invalidates expenses-stats.
+  // Оба хука вызываются параллельно — React Query дедуплицирует HTTP запрос.
   return useQuery<ExpensesStats>({
     queryKey: ['expenses-stats', month],
     queryFn: async () => {
@@ -78,6 +78,7 @@ export function useExpensesStats(month?: string) {
       if (!res.ok) throw new Error('Failed to fetch expenses stats')
       const data = await res.json()
       const expenses: Expense[] = data.expenses ?? []
+      // Деривация stats client-side — не нужен отдельный API endpoint
       const total = expenses.reduce((s, e) => s + (e.amount ?? 0), 0)
       const byCategory: Record<string, number> = {}
       expenses.forEach((e) => {

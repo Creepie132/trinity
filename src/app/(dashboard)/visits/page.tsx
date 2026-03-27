@@ -12,15 +12,15 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
 import { useFeatures } from '@/hooks/useFeatures'
+import { useOrganization } from '@/hooks/useOrganization'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useMeetingMode } from '@/hooks/useMeetingMode'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoSectionBanner } from '@/components/demo/DemoSectionBanner'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
-import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
-import { useRealtimeSync } from '@/hooks/useRealtimeSync'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDebounce } from '@/hooks/useDebounce'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
+import { useVisits } from '@/hooks/useVisits'
 import { useModalStore } from '@/store/useModalStore'
 import { CalendarView } from '@/components/visits/CalendarView'
 import { VisitCard } from '@/components/visits/VisitCard'
@@ -183,16 +183,14 @@ function WorkerKpiStrip({ remainingToday, completed, revenue, cancelledCount, is
 export default function VisitsPage() {
   const router = useRouter()
   const features = useFeatures()
+  const { data: orgData } = useOrganization()
   const { t, language } = useLanguage()
   const meetingMode = useMeetingMode()
   const { orgId: authOrgId, role } = useAuth()
   const { activeOrgId } = useBranch()
   const orgId = activeOrgId || authOrgId
-  // WorkerKpiStrip показывается для воркеров и менеджеров — не для owner/admin
   const isWorker = role !== null && role !== 'owner'
-  const supabase = createSupabaseBrowserClient()
   const queryClient = useQueryClient()
-  useRealtimeSync({ table: 'visits', orgId, queryKey: ['visits'] })
 
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
   const { openModal } = useModalStore()
@@ -266,12 +264,10 @@ export default function VisitsPage() {
   }, [features.isActive, features.hasVisits, features.isLoading, router])
 
   useEffect(() => {
-    if (orgId) {
-      supabase.from('organizations').select('features').eq('id', orgId).single().then(({ data }) => {
-        if (data?.features?.serviceColors) setServiceColors(data.features.serviceColors)
-      })
-    }
-  }, [orgId])
+    // serviceColors из данных организации (non-critical)
+    const colors = (orgData as any)?.features?.serviceColors
+    if (colors) setServiceColors(colors)
+  }, [orgData])
 
   useEffect(() => { setPage(1) }, [dateFilter, statusFilter, debouncedSearch, eventTypeFilter])
 
@@ -281,51 +277,14 @@ export default function VisitsPage() {
     setPage(1)
   }
 
-  // ── fetch ──────────────────────────────────────────────────────────────────
-  const { data: visitsData, isLoading, refetch } = useQuery({
-    queryKey: ['visits', orgId, dateFilter, statusFilter, debouncedSearch, page, eventTypeFilter],
-    queryFn: async () => {
-      if (!orgId) return { data: [], count: 0 }
-
-      let query = supabase
-        .from('visits')
-        .select(`*, status, clients(first_name,last_name,phone,email), services(id,name,name_ru,duration_minutes,price), visit_services(id,visit_id,service_id,service_name,service_name_ru,price,duration_minutes,created_at)`, { count: 'exact' })
-        .eq('org_id', orgId)
-        .order('scheduled_at', { ascending: false })
-
-      if (statusFilter !== 'all') query = query.eq('status', statusFilter)
-      if (eventTypeFilter !== 'all') query = query.eq('event_type', eventTypeFilter === 'meeting' ? 'meeting' : 'visit')
-
-      if (dateFilter !== 'all') {
-        const now = new Date()
-        const start = new Date()
-        if (dateFilter === 'today') { start.setHours(0, 0, 0, 0) }
-        else if (dateFilter === 'week') { start.setDate(now.getDate() - now.getDay()); start.setHours(0, 0, 0, 0) }
-        else if (dateFilter === 'month') { start.setDate(1); start.setHours(0, 0, 0, 0) }
-        query = query.gte('scheduled_at', start.toISOString())
-      }
-
-      const from = (page - 1) * pageSize
-      query = query.range(from, from + pageSize - 1)
-
-      const { data, error, count } = await query
-      if (error) throw error
-
-      // Поиск применяем только если debounced значение >= 2 символов
-      let filtered = data as Visit[]
-      if (debouncedSearch && debouncedSearch.length >= 2) {
-        const q = debouncedSearch.toLowerCase()
-        filtered = filtered.filter((v: Visit) =>
-          (v.clients?.first_name || '').toLowerCase().includes(q) ||
-          (v.clients?.last_name || '').toLowerCase().includes(q) ||
-          (v.clients?.phone || '').includes(debouncedSearch)
-        )
-      }
-      return { data: filtered, count: count || 0 }
-    },
-    enabled: !!orgId,
-    staleTime: 30_000,
-    placeholderData: (prev) => prev,  // не мигаем при смене фильтров
+  // ── fetch — через useVisits (Zero Trust: нет прямых supabase вызовов) ──────
+  const { data: visitsData, isLoading } = useVisits({
+    dateFilter:      dateFilter as any,
+    statusFilter:    statusFilter as any,
+    eventTypeFilter: eventTypeFilter as any,
+    search:          debouncedSearch,
+    page,
+    pageSize,
   })
 
   const visits = visitsData?.data || []
@@ -387,10 +346,14 @@ export default function VisitsPage() {
 
   async function updateVisitStatus(visitId: string, newStatus: string) {
     try {
-      const { error } = await supabase.from('visits').update({ status: newStatus }).eq('id', visitId)
-      if (error) throw error
+      const res = await fetch(`/api/visits/${visitId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       toast.success('✓')
-      refetch()
+      queryClient.invalidateQueries({ queryKey: ['visits'] })
     } catch { toast.error(t('common.error')) }
   }
 
@@ -402,10 +365,8 @@ export default function VisitsPage() {
       : undefined
 
     // Always fetch fresh visit_services to avoid empty cart on first open (race condition)
-    const { data: freshServices } = await supabase
-      .from('visit_services')
-      .select('*')
-      .eq('visit_id', visit.id)
+    const svcsRes = await fetch(`/api/visits/${visit.id}/services`)
+    const freshServices = svcsRes.ok ? await svcsRes.json() : []
 
     // Build main service item first — always included
     const mainServiceName = isHe
@@ -437,19 +398,27 @@ export default function VisitsPage() {
   const handleCancelVisit = async (visitId: string) => {
     if (!confirm(t('common.deleteConfirm'))) return
     try {
-      const { error } = await supabase.from('visits').update({ status: 'cancelled' }).eq('id', visitId)
-      if (error) throw error
+      const res = await fetch(`/api/visits/${visitId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' }),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       toast.success(t('common.success'))
-      refetch()
+      queryClient.invalidateQueries({ queryKey: ['visits'] })
     } catch { toast.error(t('common.error')) }
   }
 
   const handleStartVisit = async (visitId: string) => {
     try {
-      const { error } = await supabase.from('visits').update({ status: 'in_progress', started_at: new Date().toISOString() }).eq('id', visitId)
-      if (error) throw error
+      const res = await fetch(`/api/visits/${visitId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'in_progress' }),
+      })
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       toast.success(t('visits.startVisit') + ' ✓')
-      refetch()
+      queryClient.invalidateQueries({ queryKey: ['visits'] })
     } catch { toast.error(t('common.error')) }
   }
 

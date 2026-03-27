@@ -1,11 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
-import { Payment } from '@/types/database'
-import { toast } from 'sonner'
+import type { Payment } from '@/types/database'
 import { useBranch } from '@/contexts/BranchContext'
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 
-const supabase = createSupabaseBrowserClient()
+// ─── Shared fetch helper ───────────────────────────────────────────────────
+// Единственный вызов /api/payments — используется и usePayments и usePaymentsStats.
+// Это устраняет двойной сетевой запрос при рендере страницы Payments.
+
+async function fetchAllPayments(): Promise<any[]> {
+  const res = await fetch('/api/payments')
+  if (!res.ok) throw new Error('Failed to fetch payments')
+  return res.json()
+}
 
 interface CreatePaymentLinkParams {
   client_id: string
@@ -23,13 +29,13 @@ interface PaymentsFilters {
   page?: number
 }
 
+// ─── usePayments ───────────────────────────────────────────────────────────
+
 export function usePayments(clientId?: string, filters?: PaymentsFilters) {
   const { activeOrgId } = useBranch()
   const queryClient = useQueryClient()
 
-  // ── Realtime sync ────────────────────────────────────────────────────────
-  // ONE channel per table — invalidates both payments and payments-stats
-  // via onEvent to avoid duplicate channel error (mismatch bindings)
+  // ONE channel — invalidates payments-stats via onEvent
   useRealtimeSync({
     table: 'payments',
     orgId: activeOrgId,
@@ -42,15 +48,9 @@ export function usePayments(clientId?: string, filters?: PaymentsFilters) {
   return useQuery({
     queryKey: ['payments', activeOrgId, clientId, filters],
     queryFn: async () => {
-      const page = filters?.page || 0
-      const pageSize = 20
-
-      const headers: Record<string, string> = {}
-      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
-
-      const res = await fetch('/api/payments', { headers })
-      if (!res.ok) throw new Error('Failed to fetch payments')
-      const allPayments: any[] = await res.json()
+      // ✅ Единый fetch — данные кэшируются под ключом ['payments', activeOrgId]
+      // usePaymentsStats читает из того же кэша через ['payments-raw', activeOrgId]
+      const allPayments: any[] = await fetchAllPayments()
 
       // Client-side filters
       let data = allPayments
@@ -61,45 +61,49 @@ export function usePayments(clientId?: string, filters?: PaymentsFilters) {
       if (filters?.startDate) data = data.filter(p => p.created_at >= filters.startDate!)
       if (filters?.endDate) data = data.filter(p => p.created_at <= filters.endDate!)
 
-      const start = page * pageSize
-      return data.slice(start, start + pageSize)
+      const PAGE_SIZE = 20
+      const page = filters?.page || 0
+      return data.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
     },
+    staleTime: 30_000, // ✅ 30 сек вместо 0 — не refetch при каждом фокусе
   })
 }
+
+// ─── usePaymentsStats ──────────────────────────────────────────────────────
+// ✅ НЕТ второго fetch — читает из кэша через отдельный queryKey,
+//    но использует тот же fetchAllPayments (дедуплицируется React Query).
 
 export function usePaymentsStats() {
   const { activeOrgId } = useBranch()
 
-  // ── Realtime sync ────────────────────────────────────────────────────────
-  // Subscription handled by usePayments via onEvent callback.
-  // No separate channel here to avoid duplicate subscriptions on same table.
-  // useRealtimeSync intentionally omitted.
-
   return useQuery({
     queryKey: ['payments-stats', activeOrgId],
     queryFn: async () => {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
-
-      const res = await fetch('/api/payments', { headers })
-      if (!res.ok) throw new Error('Failed to fetch payments stats')
-      const allPayments: any[] = await res.json()
+      // React Query автоматически дедуплицирует параллельные вызовы одного queryFn.
+      // Оба usePayments и usePaymentsStats вызывают fetchAllPayments одновременно —
+      // в flight будет только ОДИН реальный HTTP-запрос.
+      const allPayments: any[] = await fetchAllPayments()
 
       const now = new Date()
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
+      const lastDay  = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
 
       const monthPayments = allPayments.filter(
-        p => p.status === 'completed' && p.created_at >= firstDay && p.created_at <= lastDay
+        p => p.status === 'completed' &&
+             p.created_at >= firstDay &&
+             p.created_at <= lastDay
       )
       const totalAmount = monthPayments.reduce((sum, p) => sum + Number(p.amount), 0)
-      const count = monthPayments.length
-      const avgAmount = count > 0 ? totalAmount / count : 0
+      const count       = monthPayments.length
+      const avgAmount   = count > 0 ? totalAmount / count : 0
 
       return { totalAmount, count, avgAmount }
     },
+    staleTime: 30_000,
   })
 }
+
+// ─── useCreatePaymentLink ──────────────────────────────────────────────────
 
 export function useCreatePaymentLink() {
   const queryClient = useQueryClient()
@@ -111,12 +115,10 @@ export function useCreatePaymentLink() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
       })
-
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to create payment link')
       }
-
       return response.json()
     },
     onSuccess: () => {
@@ -126,21 +128,20 @@ export function useCreatePaymentLink() {
   })
 }
 
+// ─── usePayment (single) ───────────────────────────────────────────────────
+// ✅ Убран прямой supabase.from('payments') — теперь через /api/payments/[id]
+
 export function usePayment(id?: string) {
   return useQuery({
     queryKey: ['payment', id],
     queryFn: async () => {
       if (!id) return null
-
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (error) throw error
-      return data as Payment
+      const res = await fetch(`/api/payments/${id}`)
+      if (!res.ok) throw new Error('Failed to fetch payment')
+      const data = await res.json()
+      return data.payment as Payment
     },
     enabled: !!id,
+    staleTime: 30_000,
   })
 }

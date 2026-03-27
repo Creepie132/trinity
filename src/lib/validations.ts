@@ -175,6 +175,17 @@ export const createProductSchema = z.object({
   image_url: z.string().max(500).optional().or(z.literal("")),
 })
 
+// Листинг визитов (GET /api/visits/list)
+export const listVisitsSchema = z.object({
+  dateFilter:      z.enum(['today', 'week', 'month', 'all']).default('week'),
+  statusFilter:    z.enum(['all', 'scheduled', 'in_progress', 'completed', 'cancelled', 'no_show']).default('all'),
+  eventTypeFilter: z.enum(['all', 'visit', 'meeting']).default('all'),
+  search:          z.string().max(200).optional(),
+  page:            z.coerce.number().int().min(1).max(1000).default(1),
+  pageSize:        z.coerce.number().int().min(1).max(100).default(30),
+})
+export type ListVisitsInput = z.infer<typeof listVisitsSchema>
+
 // Продажа товара со склада (POST /api/inventory/sell)
 export const sellProductSchema = z.object({
   product_id:     z.string().uuid('Invalid product_id'),

@@ -1,42 +1,9 @@
-refactor(visits): UnifiedVisitDialog centralized master component
+refactor: unify visits and remove legacy code
 
-Backend:
-- Added updateVisitSchema (Zod) to validations.ts for PUT endpoint
-- Rewrote /api/visits/[id] PUT route with Zod validation, removed bare `any` type
-- PUT now validates scheduled_at (ISO datetime), service_id (UUID), duration_minutes,
-  notes (max 2000), price (0-100000) before writing to DB
+Deleted dead files (Step 6 of refactoring plan):
+- src/components/visits/CreateVisitDialog.tsx
+- src/components/visits/EditVisitSheet.tsx
 
-New files:
-- src/components/visits/UnifiedVisitDialog.tsx (create + edit in one state machine)
-- src/components/modals/visits/UnifiedVisitModal.tsx (ModalStore wrapper)
-
-State machine: create-form | edit-form -> submitting -> success/error
-Protections:
-  - isSubmittingRef: logical lock against double-submit and race conditions
-  - Error banner preserves form data on API failure
-  - validateVisitModalData() strict payload validation from ModalStore
-  - queryClient.invalidateQueries instead of window.location.reload (Step 5)
-
-ModalStore: replaced visit-create, visit-edit, edit-visit with single visit-unified
-ModalManager: replaced CreateVisitModal + EditVisitModal with UnifiedVisitModal
-
-Deleted legacy wrappers (were dead code — both old types now gone):
-- src/components/modals/visits/CreateVisitModal.tsx
-- src/components/modals/visits/EditVisitModal.tsx
-
-Removed local EditVisitSheet instance from VisitCard.tsx (was mounting N copies in DOM)
-Removed direct CreateVisitDialog import from FABMenu.tsx -> now uses openModal
-Removed window.location.reload() from VisitCard (was after every edit save)
-
-All callers migrated to openModal('visit-unified', { mode: 'create'|'edit', ... }):
-- visits/page.tsx (4 call sites)
-- DashboardContent.tsx
-- TodayBlockClient.tsx
-- TaskDetailsModal.tsx
-- Sidebar.tsx
-- ClientDetailsModal.tsx
-- ClientCard.tsx
-- ClientBottomSheet.tsx
-- FABMenu.tsx
-
+These files were fully superseded by UnifiedVisitDialog.tsx.
+All import references had already been removed in previous commit.
 Build: exit code 0, 195 pages, zero TypeScript errors

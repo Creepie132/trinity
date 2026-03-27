@@ -7,6 +7,7 @@ import { Phone, MessageSquare, Navigation, AlertCircle, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { getClientName } from '@/lib/client-utils'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { apiFetch } from '@/lib/api-fetch'
 
 interface CreateTaskSheetProps {
   isOpen: boolean
@@ -348,24 +349,11 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
         contact_address,
       }
 
-      console.log('=== CREATE TASK ===')
-      console.log('Body:', JSON.stringify(body))
-
-      const response = await fetch('/api/tasks', {
+      const data = await apiFetch('/api/tasks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        json: body,
       })
 
-      console.log('Status:', response.status)
-      const data = await response.json()
-      console.log('Response:', JSON.stringify(data))
-
-      if (!response.ok) {
-        alert((data.error || (currentLocale === 'he' ? 'שגיאה' : 'Ошибка')))
-        return
-      }
-      
       // Reset form
       setTitle('')
       setPriority('normal')

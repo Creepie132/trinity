@@ -8,6 +8,7 @@ import { TrinitySearchDropdown } from '@/components/ui/TrinitySearch'
 import { Phone, MessageCircle, Loader2, Plus, MapPin, AlertCircle, CheckSquare } from 'lucide-react'
 import { getClientName } from '@/lib/client-utils'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { apiFetch } from '@/lib/api-fetch'
 
 interface OrgUser  { user_id: string; full_name: string; role: string; email?: string }
 interface Client   { id: string; first_name?: string; last_name?: string; name?: string; phone: string; email: string }
@@ -147,8 +148,7 @@ export function CreateTaskModal() {
         contact_phone: contactPhone || null, address: address.trim() || null, reminder,
       }
       const url = isEdit ? `/api/tasks/${editTask.id}` : '/api/tasks'
-      const r = await fetch(url, { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      if (!r.ok) { const d = await r.json(); alert(d.error || 'Ошибка'); return }
+      const r = await apiFetch(url, { method: isEdit ? 'PUT' : 'POST', json: body })
       onCreated(); handleClose()
     } catch { alert('Ошибка') } finally { setSaving(false) }
   }

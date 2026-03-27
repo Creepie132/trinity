@@ -8,6 +8,7 @@ import {
 import { useVisitServices, useRemoveVisitService } from '@/hooks/useVisitServices'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { apiFetch } from '@/lib/api-fetch'
 import { useState, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
@@ -125,8 +126,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const handleAddService = async (service: ServiceItem) => {
     if (addingItem) return; setAddingItem(service.id)
     try {
-      const r = await fetch(`/api/visits/${visit.id}/services`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: service.id, service_name: service.name, service_name_ru: service.name_ru || service.name, price: service.price || 0, duration_minutes: service.duration_minutes || 0 }) })
-      if (!r.ok) throw new Error()
+      const r = await apiFetch(`/api/visits/${visit.id}/services`, { method: 'POST', json: { service_id: service.id, service_name: service.name, service_name_ru: service.name_ru || service.name, price: service.price || 0, duration_minutes: service.duration_minutes || 0 } })
       queryClient.invalidateQueries({ queryKey: ['visit-services', visit.id] })
       queryClient.invalidateQueries({ queryKey: ['visits'] })
       setPriceOffset(p => p + (service.price || 0))
@@ -139,8 +139,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const handleAddProduct = async (product: ProductItem) => {
     if (addingItem) return; setAddingItem(product.id)
     try {
-      const r = await fetch(`/api/visits/${visit.id}/products`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id: product.id }) })
-      if (!r.ok) { const e = await r.json(); throw new Error(e.error) }
+      const r = await apiFetch(`/api/visits/${visit.id}/products`, { method: 'POST', json: { product_id: product.id } })
       queryClient.invalidateQueries({ queryKey: ['visits'] })
       queryClient.invalidateQueries({ queryKey: ['visit-services', visit.id] })
       setPriceOffset(p => p + product.sell_price)

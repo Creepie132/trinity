@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Product, CreateProductDTO, UpdateProductDTO } from '@/types/inventory'
 import { useBranch } from '@/contexts/BranchContext'
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
+import { apiFetch } from '@/lib/api-fetch'
 
 /**
  * useProducts - Fetch all products (search is done locally in component)
@@ -71,19 +72,11 @@ export function useCreateProduct() {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (activeOrgId) headers['X-Branch-Org-Id'] = activeOrgId
 
-      const response = await fetch('/api/products', {
+      const data = await apiFetch<{ product: Product }>('/api/products', {
         method: 'POST',
-        headers,
-        body: JSON.stringify(product),
+        json: product,
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create product')
-      }
-
-      const data = await response.json()
-      return data.product as Product
+      return data.product
     },
     onSuccess: () => {
       // Invalidate products list

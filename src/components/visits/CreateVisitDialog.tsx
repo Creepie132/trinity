@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useServices } from '@/hooks/useServices'
 import { useBranch } from '@/contexts/BranchContext'
 import { useFeatures } from '@/hooks/useFeatures'
+import { apiFetch } from '@/lib/api-fetch'
 import { WizardModal } from '@/components/ui/WizardModal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import Modal from '@/components/ui/Modal'
@@ -129,9 +130,9 @@ async function submitVisit(params: {
     notes = p.join('\n')
   }
 
-  const res = await fetch('/api/visits', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  const data = await apiFetch('/api/visits', {
+    method: 'POST',
+    json: {
       clientId: form.clientId,
       serviceId: isAppt ? null : form.serviceId,
       service: isAppt ? (form.meetingPurpose || (isHe ? 'פגישה' : 'Встреча')) : form.service,
@@ -142,10 +143,8 @@ async function submitVisit(params: {
       notes,
       event_type: isAppt ? 'meeting' : 'visit',
       meeting_link: isAppt && form.isOnline ? (form.meeting_link || null) : null,
-    }),
+    },
   })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error || 'Failed')
   if (onVisitCreated && selClient) {
     onVisitCreated({ clientName: `${selClient.first_name} ${selClient.last_name}`.trim(), clientPhone: selClient.phone, date: form.date, time: form.time })
   }

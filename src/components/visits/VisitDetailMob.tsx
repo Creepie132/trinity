@@ -30,6 +30,7 @@ import { useServices } from '@/hooks/useServices'
 import { useProducts } from '@/hooks/useProducts'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { apiFetch } from '@/lib/api-fetch'
 
 // ─── Типы ──────────────────────────────────────────────────────────────────────
 
@@ -719,8 +720,7 @@ export function VisitDetailMob({
                             onClick={async () => {
                               setAddingId(p.id)
                               try {
-                                const r = await fetch(`/api/visits/${visit.id}/products`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id: p.id }) })
-                                if (!r.ok) { const e = await r.json(); throw new Error(e.error) }
+                                const r = await apiFetch(`/api/visits/${visit.id}/products`, { method: 'POST', json: { product_id: p.id } })
                                 queryClient.invalidateQueries({ queryKey: ['visits'] })
                                 queryClient.invalidateQueries({ queryKey: ['visit-services', visit.id] })
                                 toast.success(isHe ? `נוסף: ${p.name}` : `Добавлено: ${p.name}`)
@@ -771,8 +771,7 @@ export function VisitDetailMob({
                       if (!customName.trim()) return
                       setAddingCustom(true)
                       try {
-                        const r = await fetch(`/api/visits/${visit.id}/services`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_name: customName.trim(), service_name_ru: customName.trim(), price: parseFloat(customPrice) || 0, duration_minutes: 0 }) })
-                        if (!r.ok) throw new Error()
+                        const r = await apiFetch(`/api/visits/${visit.id}/services`, { method: 'POST', json: { service_name: customName.trim(), service_name_ru: customName.trim(), price: parseFloat(customPrice) || 0, duration_minutes: 0 } })
                         queryClient.invalidateQueries({ queryKey: ['visit-services', visit.id] })
                         queryClient.invalidateQueries({ queryKey: ['visits'] })
                         toast.success(isHe ? `נוסף: ${customName.trim()}` : `Добавлено: ${customName.trim()}`)

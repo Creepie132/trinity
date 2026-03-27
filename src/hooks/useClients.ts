@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { Client, ClientSummary } from '@/types/database'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
+import { apiFetch } from '@/lib/api-fetch'
 import { useBranch } from '@/contexts/BranchContext'
 import { useRealtimeSync, RealtimePayload } from '@/hooks/useRealtimeSync'
 
@@ -87,28 +88,10 @@ export function useAddClient() {
         throw new Error('אנא המתן, הנתונים נטענים...')
       }
 
-      const { data: { session } } = await supabase.auth.getSession()
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user || !session) {
-        throw new Error('לא נמצא ארגון למשתמש הנוכחי. אנא פנה לתמיכה.')
-      }
-
-      const response = await fetch('/api/clients', {
+      return apiFetch('/api/clients', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(client),
+        json: client,
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to add client')
-      }
-
-      return response.json()
     },
     onSuccess: async () => {
       // Realtime will also invalidate, but we invalidate immediately here

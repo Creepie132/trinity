@@ -6,16 +6,11 @@
  * Архитектура:
  *  - Context хранит состояние открытой модалки (entity + open)
  *  - useDemoLimitGuard() — хук для ручного открытия из любого компонента
- *  - GlobalMutationErrorHandler встраивается в QueryClient onError и
- *    автоматически перехватывает все мутации с кодом LIMIT_EXCEEDED
+ *  - Перехват через React Query MutationCache onError — нативный, безопасный,
+ *    не трогает window.fetch, не конфликтует с Next.js App Router
  *
- * Подключение (в DashboardShell / layout):
- *   <DemoLimitGuardProvider>
- *     {children}
- *   </DemoLimitGuardProvider>
- *
- * Использование в мутациях (автоматически через QueryClient):
- *   Никакого дополнительного кода не нужно — перехватчик глобальный.
+ * Подключение: QueryProvider создаёт MutationCache с onError → вызывает
+ *   openDemoLimitModal из DemoLimitGuardContext.
  *
  * Ручное открытие (если нужно вне мутаций):
  *   const { openLimitModal } = useDemoLimitGuard()
@@ -27,18 +22,16 @@ import {
   useContext,
   useState,
   useCallback,
-  useEffect,
   ReactNode,
 } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ModalSection = 'clients' | 'visits' | 'inventory' | 'diary'
+export type ModalSection = 'clients' | 'visits' | 'inventory' | 'diary'
 
 /** Maps API entity → DemoLimitModal section prop */
-const ENTITY_TO_SECTION: Record<string, ModalSection> = {
+export const ENTITY_TO_SECTION: Record<string, ModalSection> = {
   clients:  'clients',
   visits:   'visits',
   products: 'inventory',
@@ -46,11 +39,11 @@ const ENTITY_TO_SECTION: Record<string, ModalSection> = {
 }
 
 interface DemoLimitGuardContextType {
-  /** Programmatically open the limit modal for a specific section */
   openLimitModal: (section: ModalSection) => void
 }
 
-const DemoLimitGuardContext = createContext<DemoLimitGuardContextType | null>(null)
+export const DemoLimitGuardContext =
+  createContext<DemoLimitGuardContextType | null>(null)
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
@@ -62,42 +55,6 @@ export function DemoLimitGuardProvider({ children }: { children: ReactNode }) {
     setSection(s)
     setOpen(true)
   }, [])
-
-  // Install global fetch interceptor for 403 LIMIT_EXCEEDED responses.
-  // Wraps window.fetch so ALL HTTP calls (fetch, React Query, manual) are covered.
-  useEffect(() => {
-    const originalFetch = window.fetch
-
-    window.fetch = async (...args) => {
-      const response = await originalFetch(...args)
-
-      // Only intercept 403 responses
-      if (response.status === 403) {
-        try {
-          // Clone before reading — body can only be consumed once
-          const cloned = response.clone()
-          const json = await cloned.json().catch(() => null)
-
-          if (json?.code === 'LIMIT_EXCEEDED') {
-            const entity = json.entity as string
-            const modalSection: ModalSection =
-              ENTITY_TO_SECTION[entity] ?? 'visits'
-
-            // Defer to next tick so component state update is not inside fetch
-            setTimeout(() => openLimitModal(modalSection), 0)
-          }
-        } catch {
-          // JSON parse failed — not our error, pass through
-        }
-      }
-
-      return response
-    }
-
-    return () => {
-      window.fetch = originalFetch
-    }
-  }, [openLimitModal])
 
   return (
     <DemoLimitGuardContext.Provider value={{ openLimitModal }}>
@@ -111,7 +68,7 @@ export function DemoLimitGuardProvider({ children }: { children: ReactNode }) {
   )
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+// ─── Hooks ────────────────────────────────────────────────────────────────────
 
 export function useDemoLimitGuard(): DemoLimitGuardContextType {
   const ctx = useContext(DemoLimitGuardContext)
@@ -119,7 +76,6 @@ export function useDemoLimitGuard(): DemoLimitGuardContextType {
   return ctx
 }
 
-/** Safe version — returns null outside provider (e.g., in worker shell) */
 export function useDemoLimitGuardSafe(): DemoLimitGuardContextType | null {
   return useContext(DemoLimitGuardContext)
 }

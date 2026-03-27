@@ -6,13 +6,14 @@
  * Zero Trust: запросы только через /api/visits/list (сервер проверяет orgId).
  * Нет прямых вызовов supabase.from() на клиенте.
  *
- * staleTime: 30_000 — данные свежи 30 сек, нет лишних refetch при фокусе.
+ * staleTime: 30_000 — данные свежи 30 сек.
  * placeholderData: keepPreviousData — нет мигания при смене фильтров.
+ * Optimistic updates на useUpdateVisitStatus — мгновенный отклик UI.
  */
 
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useBranch } from '@/contexts/BranchContext'
-import { useRealtimeSync } from '@/hooks/useRealtimeSync'
+import { toast } from 'sonner'
 import type { Visit } from '@/types/visits'
 
 // ── Filter types ──────────────────────────────────────────────────────────────
@@ -48,12 +49,6 @@ export const visitsKeys = {
 
 // ── Main hook ─────────────────────────────────────────────────────────────────
 
-/**
- * useVisits — основной хук листинга.
- *
- * Realtime: ONE channel в DashboardShell (не здесь) — чтобы не дублировать
- * подписки при параллельных вызовах.
- */
 export function useVisits(params: UseVisitsParams = {}) {
   const { activeOrgId } = useBranch()
   const {
@@ -65,13 +60,10 @@ export function useVisits(params: UseVisitsParams = {}) {
     pageSize        = 30,
   } = params
 
-  // Debounced search не нужен здесь — caller передаёт уже debounced значение
-  const debouncedSearch = search
-
   return useQuery<VisitsResult>({
     queryKey: visitsKeys.list(activeOrgId, {
       dateFilter, statusFilter, eventTypeFilter,
-      search: debouncedSearch, page, pageSize,
+      search, page, pageSize,
     }),
     queryFn: async () => {
       const sp = new URLSearchParams({
@@ -81,9 +73,7 @@ export function useVisits(params: UseVisitsParams = {}) {
         page:     String(page),
         pageSize: String(pageSize),
       })
-      if (debouncedSearch && debouncedSearch.length >= 2) {
-        sp.set('search', debouncedSearch)
-      }
+      if (search && search.length >= 2) sp.set('search', search)
 
       const res = await fetch(`/api/visits/list?${sp.toString()}`)
       if (!res.ok) {
@@ -94,15 +84,17 @@ export function useVisits(params: UseVisitsParams = {}) {
     },
     enabled:         !!activeOrgId,
     staleTime:       30_000,
-    placeholderData: keepPreviousData,   // нет мигания при смене фильтров
+    placeholderData: keepPreviousData,
   })
 }
 
-// ── Status update mutation ────────────────────────────────────────────────────
+// ── Status update mutation — OPTIMISTIC ───────────────────────────────────────
 
 export interface UpdateVisitStatusParams {
   id:     string
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
+  /** started_at для статуса in_progress (ISO string) */
+  started_at?: string
 }
 
 export function useUpdateVisitStatus() {
@@ -111,7 +103,7 @@ export function useUpdateVisitStatus() {
 
   return useMutation({
     mutationFn: async ({ id, status }: UpdateVisitStatusParams) => {
-      const res = await fetch(`/api/visits/${id}`, {
+      const res = await fetch(`/api/visits/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -122,7 +114,54 @@ export function useUpdateVisitStatus() {
       }
       return res.json()
     },
-    onSuccess: () => {
+
+    // ── 1. onMutate: мгновенное обновление кэша ──────────────────────────────
+    onMutate: async ({ id, status, started_at }) => {
+      // Отменяем все исходящие запросы — чтобы они не перезаписали optimistic update
+      await qc.cancelQueries({ queryKey: visitsKeys.all(activeOrgId) })
+
+      // Снимок всех закэшированных списков визитов для rollback
+      const snapshot = qc.getQueriesData<VisitsResult>({
+        queryKey: visitsKeys.all(activeOrgId),
+      })
+
+      // Обновляем статус визита во всех активных кэшах списков
+      qc.setQueriesData<VisitsResult>(
+        { queryKey: visitsKeys.all(activeOrgId) },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.map((v) =>
+              v.id === id
+                ? {
+                    ...v,
+                    status,
+                    ...(status === 'in_progress' && {
+                      started_at: started_at ?? new Date().toISOString(),
+                    }),
+                  }
+                : v
+            ),
+          }
+        }
+      )
+
+      return { snapshot }
+    },
+
+    // ── 2. onError: откат до сохранённого снимка ─────────────────────────────
+    onError: (err: any, _vars, context) => {
+      if (context?.snapshot) {
+        context.snapshot.forEach(([queryKey, data]) => {
+          qc.setQueryData(queryKey, data)
+        })
+      }
+      toast.error(err.message || 'Ошибка обновления статуса')
+    },
+
+    // ── 3. onSettled: фоновая сверка с БД ────────────────────────────────────
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: visitsKeys.all(activeOrgId) })
     },
   })

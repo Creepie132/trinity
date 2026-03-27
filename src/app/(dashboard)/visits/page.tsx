@@ -212,6 +212,20 @@ export default function VisitsPage() {
   const { isDemo } = useDemoMode()
   const [demoLimitOpen, setDemoLimitOpen] = useState(false)
 
+  // Accurate visit counts for demo gate — independent of current date/status filter
+  const { data: demoVisitCounts } = useQuery({
+    queryKey: ['visits-count-demo', orgId],
+    queryFn: async (): Promise<{ count: number; active: number }> => {
+      const res = await fetch('/api/visits/count')
+      if (!res.ok) return { count: 0, active: 0 }
+      return res.json()
+    },
+    enabled: !!orgId && isDemo,
+    staleTime: 15_000,
+  })
+  const realActiveCount = isDemo ? (demoVisitCounts?.active ?? 0) : 0
+  const realTotalCount  = isDemo ? (demoVisitCounts?.count  ?? 0) : 0
+
   const loc = language === 'he' ? 'he-IL' : 'ru-RU'
   const isHe = language === 'he'
 
@@ -488,8 +502,7 @@ export default function VisitsPage() {
           <Button
             onClick={() => {
               if (isDemo) {
-                if (activeVisits.length >= 3) { setDemoLimitOpen(true); return }
-                if (totalCount >= 15) { setDemoLimitOpen(true); return }
+                if (realActiveCount >= 3 || realTotalCount >= 15) { setDemoLimitOpen(true); return }
               }
               openModal('visit-create')
             }}
@@ -553,7 +566,7 @@ export default function VisitsPage() {
           onDateClick={(date) => {
             setSelectedVisit(null)
             if (isDemo) {
-              if (activeVisits.length >= 3 || totalCount >= 15) { setDemoLimitOpen(true); return }
+              if (realActiveCount >= 3 || realTotalCount >= 15) { setDemoLimitOpen(true); return }
             }
             const dateStr = date.toISOString().split('T')[0]
             const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`

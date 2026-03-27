@@ -1,6 +1,7 @@
 import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
+import { enforceDemoLimit } from '@/lib/demo-limits'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -94,6 +95,11 @@ export async function POST(req: NextRequest) {
     if ('error' in auth) return auth.error
     
     const { orgId } = auth
+
+    // ── Demo limit: max 10 clients ────────────────────────────────────────────
+    const limitError = await enforceDemoLimit(orgId, 'clients')
+    if (limitError) return limitError
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Parse request body
     const body = await req.json()

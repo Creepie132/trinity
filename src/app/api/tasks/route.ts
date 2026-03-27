@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { queuePushNotification } from '@/lib/push-notify'
+import { enforceDemoLimit } from '@/lib/demo-limits'
 
 // GET /api/tasks - список задач с фильтрами
 export async function GET(request: NextRequest) {
@@ -51,6 +52,11 @@ export async function POST(request: NextRequest) {
   if ('error' in auth) return auth.error
 
   const { user, orgId, supabase } = auth
+
+  // ── Demo limit: max 5 open tasks ─────────────────────────────────────────
+  const limitError = await enforceDemoLimit(orgId, 'tasks')
+  if (limitError) return limitError
+  // ─────────────────────────────────────────────────────────────────────────
 
   const body = await request.json()
   const {

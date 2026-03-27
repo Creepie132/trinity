@@ -9,6 +9,7 @@ import type { CreateProductDTO, Product } from '@/types/inventory'
 import { validateBody, createProductSchema } from '@/lib/validations'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { enforceDemoLimit } from '@/lib/demo-limits'
 
 /**
  * GET /api/products
@@ -61,6 +62,11 @@ export async function POST(request: NextRequest) {
     if ('error' in auth) return auth.error
     
     const { orgId, supabase } = auth
+
+    // ── Demo limit: max 5 products ────────────────────────────────────────────
+    const limitError = await enforceDemoLimit(orgId, 'products')
+    if (limitError) return limitError
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Parse request body
     const body = await request.json()

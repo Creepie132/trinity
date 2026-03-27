@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateBody, createVisitSchema } from '@/lib/validations'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { DEMO_LIMITS } from '@/lib/demo-limits'
 import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 import { bookingConfirmEmail, newBookingNotifyEmail } from '@/lib/email-templates'
 import { queuePushNotification } from '@/lib/push-notify'
@@ -66,6 +67,37 @@ export async function POST(request: NextRequest) {
     
     const isMeetingMode = orgData?.features?.meeting_mode === true
     console.log('[API /api/visits POST] Meeting mode:', isMeetingMode)
+
+    // ── Demo limits: server-side enforcement (cannot be bypassed via UI) ───────
+    if ((orgData?.features as any)?.is_demo) {
+      const svc = createSupabaseServiceClient()
+
+      // 1. Total visits limit
+      const { count: totalVisits } = await svc
+        .from('visits')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org_id)
+      if ((totalVisits ?? 0) >= DEMO_LIMITS.visits_total) {
+        return NextResponse.json(
+          { error: 'demo_limit_exceeded', type: 'visits_total', current: totalVisits, limit: DEMO_LIMITS.visits_total },
+          { status: 429 },
+        )
+      }
+
+      // 2. Simultaneous active visits limit
+      const { count: activeVisits } = await svc
+        .from('visits')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org_id)
+        .in('status', ['scheduled', 'in_progress'])
+      if ((activeVisits ?? 0) >= DEMO_LIMITS.visits_active) {
+        return NextResponse.json(
+          { error: 'demo_limit_exceeded', type: 'visits_active', current: activeVisits, limit: DEMO_LIMITS.visits_active },
+          { status: 429 },
+        )
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     const { clientId, service, serviceId, date, time, duration, price, quantity, notes, event_type, meeting_link } = data
 

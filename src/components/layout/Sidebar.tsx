@@ -58,24 +58,22 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const [demoClientOpen, setDemoClientOpen] = useState(false)
   const [demoVisitOpen, setDemoVisitOpen] = useState(false)
 
-  // Count visits for demo limit check
+  // Count visits for demo limit check (total + active simultaneous)
   const { activeOrgId } = useBranch()
   const visitOrgId = activeOrgId || authOrgId
   const { data: visitCountData } = useQuery({
     queryKey: ['visits-count-sidebar', visitOrgId],
-    queryFn: async () => {
-      if (!visitOrgId) return 0
-      const supabase = createSupabaseBrowserClient()
-      const { count } = await supabase
-        .from('visits')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', visitOrgId)
-      return count ?? 0
+    queryFn: async (): Promise<{ count: number; active: number }> => {
+      if (!visitOrgId) return { count: 0, active: 0 }
+      const res = await fetch('/api/visits/count')
+      if (!res.ok) return { count: 0, active: 0 }
+      return res.json()
     },
     enabled: !!visitOrgId && isDemo,
     staleTime: 30_000,
   })
-  const visitCount = visitCountData ?? 0
+  const visitCount       = visitCountData?.count  ?? 0
+  const activeVisitCount = visitCountData?.active ?? 0
   const t = translations[language]
   const locale = language === 'he' ? 'he' : 'ru'
 
@@ -135,7 +133,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
               <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">{language === 'he' ? 'לקוח' : 'Клиент'}</span>
             </button>
             <button onClick={() => {
-                if (isDemo && visitCount >= 15) { setDemoVisitOpen(true); return }
+                if (isDemo && (visitCount >= 15 || activeVisitCount >= 3)) { setDemoVisitOpen(true); return }
                 openModal('visit-create')
               }}
               className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all active:scale-95">

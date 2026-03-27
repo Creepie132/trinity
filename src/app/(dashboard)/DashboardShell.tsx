@@ -222,6 +222,7 @@ function NavItem({ item, isActive, isHe }: {
   const { onMouseEnter, onMouseLeave } = useHoverPrefetch(item.href)
   return (
     <Link href={item.href}
+      prefetch={true}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all group ${

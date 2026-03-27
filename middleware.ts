@@ -114,26 +114,33 @@ export async function middleware(req: NextRequest) {
   // Продажники не привязаны к org — пропускаем если есть сессия
   if (pathname.startsWith('/worker')) return response
 
-  // ── 6c-manager. Manager role — только /worker/* + разрешённые разделы ──────
-  // app_metadata.org_role НЕ заполняется автоматически, поэтому читаем из БД.
-  const MANAGER_ALLOWED_PREFIXES = [
-    '/worker', '/clients', '/diary',
-  ]
+  // ── 6c-manager. Manager role — JWT fast-path, zero DB roundtrip ────────────
+  // org_role is set in app_metadata when user is invited as manager.
+  // DB fallback only when JWT doesn't have it (legacy accounts).
+  const MANAGER_ALLOWED_PREFIXES = ['/worker', '/clients', '/diary']
   const isManagerAllowed = MANAGER_ALLOWED_PREFIXES.some(p => pathname.startsWith(p))
 
   if (!isManagerAllowed) {
-    try {
-      const { data: orgRow } = await supabase
-        .from('org_users')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .maybeSingle()
-
-      if (orgRow?.role === 'manager') {
-        return NextResponse.redirect(new URL('/worker/dashboard', req.url))
+    // Fast-path: read from JWT (no DB)
+    const roleFromJWT = session.user.app_metadata?.org_role as string | undefined
+    if (roleFromJWT === 'manager') {
+      return NextResponse.redirect(new URL('/worker/dashboard', req.url))
+    }
+    // Slow-path: only for legacy accounts without org_role in JWT
+    // Skip if we already know they're not a manager (JWT has a different role)
+    if (!roleFromJWT) {
+      try {
+        const { data: orgRow } = await supabase
+          .from('org_users')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .maybeSingle()
+        if (orgRow?.role === 'manager') {
+          return NextResponse.redirect(new URL('/worker/dashboard', req.url))
+        }
+      } catch {
+        // Не блокируем при ошибке
       }
-    } catch {
-      // Не блокируем при ошибке
     }
   }
 
@@ -150,13 +157,29 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── 7. Subscription / access check — page routes only ────────────────────
+  // ⚡ PERF: Cache result in a short-lived cookie (5 min) to avoid DB on every nav.
+  const SUB_CACHE_COOKIE = 'trinity_sub_ok'
+  const subCacheVal = req.cookies.get(SUB_CACHE_COOKIE)?.value
+  const subCacheOrgId = subCacheVal?.split(':')[0]
+  const subCacheTs    = parseInt(subCacheVal?.split(':')[1] ?? '0', 10)
+  const SUB_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
   try {
     // is_admin from JWT app_metadata — NO DB query, reads from token
     const isAdmin = session.user.app_metadata?.is_admin === true
     if (isAdmin) return response
 
-    // org_id from JWT — fast path, no join needed
     const jwtOrgId = session.user.app_metadata?.org_id as string | undefined
+
+    // Use cache if same org and not expired
+    if (
+      jwtOrgId &&
+      subCacheOrgId === jwtOrgId &&
+      Date.now() - subCacheTs < SUB_CACHE_TTL
+    ) {
+      return response
+    }
+
     let org: any = null
 
     if (jwtOrgId) {
@@ -227,6 +250,19 @@ export async function middleware(req: NextRequest) {
             return NextResponse.redirect(new URL('/dashboard', req.url))
           }
         }
+      }
+    }
+
+    // ⚡ Set subscription cache cookie — skip DB on next navigations for 5 min
+    if (hasAccess) {
+      const jwtOrgIdForCache = session.user.app_metadata?.org_id as string | undefined
+      if (jwtOrgIdForCache) {
+        response.cookies.set(SUB_CACHE_COOKIE, `${jwtOrgIdForCache}:${Date.now()}`, {
+          httpOnly: true,
+          sameSite: 'lax',
+          maxAge: SUB_CACHE_TTL / 1000,
+          path: '/',
+        })
       }
     }
   } catch (error) {

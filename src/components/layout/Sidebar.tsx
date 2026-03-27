@@ -166,7 +166,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
           const isActive = pathname === item.href
           const Icon = item.icon
           return (
-            <Link key={item.href} href={item.href}
+            <Link key={item.href} href={item.href} prefetch={true}
               className={cn(
                 'flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group',
                 isActive
@@ -188,7 +188,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
         {showOffice && (
           <>
             <Separator className="my-2 bg-gray-200 dark:bg-slate-700" />
-            <Link href="/office"
+            <Link href="/office" prefetch={true}
               className={cn(
                 'flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group',
                 pathname.startsWith('/office')

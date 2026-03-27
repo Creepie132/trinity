@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
-import { getActiveOrgId } from '@/lib/get-active-org'
 import { DashboardShell } from './DashboardShell'
 import {
   dehydrate,
@@ -9,6 +8,11 @@ import {
   QueryClient,
 } from '@tanstack/react-query'
 
+// ─── DashboardLayout ──────────────────────────────────────────────────────────
+// ⚡ PERFORMANCE CRITICAL: layout runs on every soft navigation.
+// Rule: ZERO sequential DB roundtrips here.
+// Auth = JWT only (getUser reads cookie, no network).
+// All per-page data fetched client-side via React Query.
 export default async function DashboardLayout({
   children,
 }: {
@@ -18,72 +22,61 @@ export default async function DashboardLayout({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Продажники Trinity не привязаны к org — проверяем отдельно
-  const service = createSupabaseServiceClient()
-  const { data: adminRow } = await service
-    .from('admin_users')
-    .select('is_sales_agent')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  // ── Fast-path: all metadata from JWT app_metadata (no DB) ──────────────
+  const isAdmin      = user.app_metadata?.is_admin       === true
+  const isSalesAgent = user.app_metadata?.is_sales_agent === true
+  const orgIdFromJWT = user.app_metadata?.org_id as string | undefined
+  const roleFromJWT  = user.app_metadata?.org_role as string | undefined
 
-  if (adminRow?.is_sales_agent) {
-    // Продажник Trinity (admin_users) — без sidebar
+  // Sales agent — worker shell (JWT tells us, no DB needed)
+  if (isSalesAgent) {
     return (
       <HydrationBoundary state={dehydrate(new QueryClient())}>
-        <DashboardShell workerMode>
-          {children}
-        </DashboardShell>
+        <DashboardShell workerMode>{children}</DashboardShell>
       </HydrationBoundary>
     )
   }
 
-  // Проверяем роль manager в org_users — тоже без основного sidebar
-  const { data: orgUserRow } = await service
-    .from('org_users')
-    .select('role')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  if (orgUserRow?.role === 'manager') {
+  // Manager — worker shell (JWT fast-path when available, 1 DB call as fallback)
+  if (roleFromJWT === 'manager') {
     return (
       <HydrationBoundary state={dehydrate(new QueryClient())}>
-        <DashboardShell workerMode>
-          {children}
-        </DashboardShell>
+        <DashboardShell workerMode>{children}</DashboardShell>
       </HydrationBoundary>
     )
   }
 
-  // org_id из JWT, fallback на таблицу
-  let orgId = user.app_metadata?.org_id as string | undefined
+  // Need org_id for owner shell — JWT first, single DB fallback
+  let orgId = orgIdFromJWT
   if (!orgId) {
-    const { data: orgUser } = await supabase
-      .from('org_users').select('org_id').eq('user_id', user.id).single()
-    orgId = orgUser?.org_id
+    const supaService = createSupabaseServiceClient()
+    const { data: orgUser } = await supaService
+      .from('org_users').select('org_id, role').eq('user_id', user.id).single()
+    if (!orgUser?.org_id) redirect('/unauthorized')
+    orgId = orgUser.org_id
+    // Manager without JWT org_role
+    if (orgUser.role === 'manager') {
+      return (
+        <HydrationBoundary state={dehydrate(new QueryClient())}>
+          <DashboardShell workerMode>{children}</DashboardShell>
+        </HydrationBoundary>
+      )
+    }
   }
+
   if (!orgId) redirect('/unauthorized')
 
-  // Активный филиал из БД
-  const activeOrgId = await getActiveOrgId(user.id, orgId)
-
-  // Prefetch организации + первая страница клиентов — всё параллельно
-  const [{ data: organization }] = await Promise.all([
-    service.from('organizations').select('*').eq('id', activeOrgId).single(),
-  ])
-
-  // isAdmin из JWT — без DB roundtrip
-  const isAdmin = user.app_metadata?.is_admin === true
-
-  // Кладём в React Query cache — useOrganization() и useIsAdmin() найдут данные сразу
+  // ── Seed React Query cache with data we already have from JWT ─────────────
+  // useIsAdmin() and useOrganization() will find this instantly.
+  // Organization full data will be fetched client-side by useOrganization().
   const queryClient = new QueryClient()
-  if (organization) queryClient.setQueryData(['organization', activeOrgId], organization)
   queryClient.setQueryData(['is-admin'], isAdmin)
+  // Seed orgId so client hooks know it immediately
+  queryClient.setQueryData(['active-org-id'], orgId)
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <DashboardShell>
-        {children}
-      </DashboardShell>
+      <DashboardShell>{children}</DashboardShell>
     </HydrationBoundary>
   )
 }

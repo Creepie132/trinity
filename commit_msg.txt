@@ -1,0 +1,34 @@
+chore(stripe): complete removal of Stripe integration
+
+UI / State machine:
+- Removed 'stripe' from PaymentMethod type (now: 'cash' | 'link' only)
+- Removed 'stripe-form' step from UnifiedPaymentDialog state machine
+- Removed stripe from METHODS array and METHOD_ICONS
+- Removed stripe i18n keys (stripe, stripeDesc, successStripe) from both locales
+- Removed stripe-form block from handleSubmit (no more fetch to stripe-checkout)
+- Removed 'stripe' from validateModalData whitelist
+- Removed Smartphone import from lucide (unused)
+
+Files deleted:
+- src/components/payments/CreateStripePaymentDialog.tsx
+- src/components/payments/CreateSubscriptionDialog.tsx
+- src/components/modals/payments/CreateSubscriptionModal.tsx
+
+ModalStore / ModalManager:
+- Removed 'payment-create-subscription' from ModalType
+- Removed CreateSubscriptionModal from ModalManager
+
+Seed data:
+- Removed 'stripe' from paymentMethods array in seed-test-data
+
+Comments:
+- Fixed CompleteVisitPaymentDialog comment (Tranzila only, not Stripe)
+
+Config:
+- Removed STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+  STRIPE_WEBHOOK_SECRET from .env.example
+
+npm uninstall command (run manually):
+  npm uninstall stripe @stripe/stripe-js
+
+Build: exit code 0, 195 pages, zero TypeScript errors

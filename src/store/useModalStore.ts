@@ -30,7 +30,6 @@ export type ModalType =
   | 'quick-sale'
   // Payments — unified entry point
   | 'payment-unified'
-  | 'payment-create-subscription'
   | 'payment-details'
   // Services
   | 'service-create'

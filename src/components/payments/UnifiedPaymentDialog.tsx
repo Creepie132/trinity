@@ -4,7 +4,7 @@
  * UnifiedPaymentDialog — Master Component для всех платежей Trinity.
  *
  * State machine:
- *   'method-select' → 'cash-form' | 'link-form' | 'stripe-form' → 'success'
+ *   'method-select' → 'cash-form' | 'link-form' → 'success'
  *
  * Защиты:
  *   - Double-submit: useRef-флаг isSubmittingRef (логический замок, не UI)
@@ -28,14 +28,14 @@ import { useCreatePaymentLink } from '@/hooks/usePayments'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { toast } from 'sonner'
 import {
-  CreditCard, Banknote, Smartphone, Link, CheckCircle2,
+  CreditCard, Banknote, Link, CheckCircle2,
   Copy, ExternalLink, MessageCircle, Loader2, AlertCircle, X, ArrowLeft,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type PaymentMethod = 'cash' | 'link' | 'stripe'
-type Step = 'method-select' | 'cash-form' | 'link-form' | 'stripe-form' | 'success'
+export type PaymentMethod = 'cash' | 'link'
+type Step = 'method-select' | 'cash-form' | 'link-form' | 'success'
 
 /** Строгий тип для данных из ModalStore */
 export interface UnifiedPaymentModalData {
@@ -71,7 +71,7 @@ function validateModalData(raw: unknown): UnifiedPaymentModalData {
     clientId:      typeof d.clientId === 'string' ? d.clientId : undefined,
     clientName:    typeof d.clientName === 'string' ? d.clientName : undefined,
     visitId:       typeof d.visitId === 'string' ? d.visitId : undefined,
-    defaultMethod: ['cash', 'link', 'stripe'].includes(d.defaultMethod as string)
+    defaultMethod: ['cash', 'link'].includes(d.defaultMethod as string)
       ? (d.defaultMethod as PaymentMethod) : undefined,
     onSuccess:     typeof d.onSuccess === 'function'
       ? (d.onSuccess as () => void) : undefined,
@@ -85,7 +85,6 @@ const I18N = {
     title: 'תשלום חדש', selectMethod: 'בחר אמצעי תשלום',
     cash: 'מזומן', cashDesc: 'תשלום במזומן ישירות',
     link: 'קישור תשלום', linkDesc: 'קישור מאובטח ללקוח',
-    stripe: 'כרטיס אשראי', stripeDesc: 'תשלום עם Stripe',
     client: 'לקוח', selectClient: 'חפש לקוח...',
     amount: 'סכום (₪)', notes: 'הערות', description: 'תיאור',
     notesPlaceholder: 'הערות נוספות...', descPlaceholder: 'תיאור התשלום',
@@ -94,7 +93,6 @@ const I18N = {
     createLink: 'צור קישור',
     successCash: '✓ התשלום נרשם בהצלחה',
     successLink: '✓ הקישור נוצר בהצלחה',
-    successStripe: '✓ ממשיך לסטרייפ...',
     sendToClient: 'שלח ללקוח לתשלום מאובטח',
     copy: 'העתק', copied: 'הועתק!', openLink: 'פתח קישור',
     fillRequired: 'יש למלא את כל שדות החובה',
@@ -108,7 +106,6 @@ const I18N = {
     title: 'Новый платёж', selectMethod: 'Выберите способ оплаты',
     cash: 'Наличные', cashDesc: 'Оплата наличными напрямую',
     link: 'Ссылка на оплату', linkDesc: 'Безопасная ссылка клиенту',
-    stripe: 'Кредитная карта', stripeDesc: 'Оплата через Stripe',
     client: 'Клиент', selectClient: 'Поиск клиента...',
     amount: 'Сумма (₪)', notes: 'Заметки', description: 'Описание',
     notesPlaceholder: 'Дополнительные заметки...', descPlaceholder: 'Описание платежа',
@@ -117,7 +114,6 @@ const I18N = {
     createLink: 'Создать ссылку',
     successCash: '✓ Платёж успешно записан',
     successLink: '✓ Ссылка успешно создана',
-    successStripe: '✓ Переходим в Stripe...',
     sendToClient: 'Отправьте клиенту для безопасной оплаты',
     copy: 'Скопировать', copied: 'Скопировано!', openLink: 'Открыть ссылку',
     fillRequired: 'Заполните все обязательные поля',
@@ -135,15 +131,13 @@ const METHODS: {
   id: PaymentMethod
   gradient: string; glow: string; bg: string; border: string; color: string
 }[] = [
-  { id: 'cash',   gradient: 'linear-gradient(135deg,#22c55e,#16a34a)', glow: 'rgba(34,197,94,0.3)',   bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '#bbf7d0', color: '#15803d' },
-  { id: 'link',   gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', glow: 'rgba(139,92,246,0.3)', bg: 'linear-gradient(135deg,#faf5ff,#ede9fe)', border: '#ddd6fe', color: '#6d28d9' },
-  { id: 'stripe', gradient: 'linear-gradient(135deg,#6366f1,#4f46e5)', glow: 'rgba(99,102,241,0.35)', bg: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '#c7d2fe', color: '#4338ca' },
+  { id: 'cash', gradient: 'linear-gradient(135deg,#22c55e,#16a34a)', glow: 'rgba(34,197,94,0.3)',  bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '#bbf7d0', color: '#15803d' },
+  { id: 'link', gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', glow: 'rgba(139,92,246,0.3)', bg: 'linear-gradient(135deg,#faf5ff,#ede9fe)', border: '#ddd6fe', color: '#6d28d9' },
 ]
 
 const METHOD_ICONS: Record<PaymentMethod, React.ReactNode> = {
-  cash:   <Banknote size={22} />,
-  link:   <Link size={22} />,
-  stripe: <CreditCard size={22} />,
+  cash: <Banknote size={22} />,
+  link: <Link size={22} />,
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -214,11 +208,10 @@ export function UnifiedPaymentDialog({
   const canSubmit = !!selectedClient && isAmountValid
 
   const currentMethod: PaymentMethod | null =
-    step === 'cash-form'   ? 'cash'
-    : step === 'link-form'   ? 'link'
-    : step === 'stripe-form' ? 'stripe'
+    step === 'cash-form' ? 'cash'
+    : step === 'link-form' ? 'link'
     : step === 'success' && paymentLink ? 'link'
-    : step === 'success'     ? 'cash'
+    : step === 'success' ? 'cash'
     : null
 
   const methodCfg = METHODS.find(m => m.id === currentMethod) ?? null
@@ -301,34 +294,6 @@ export function UnifiedPaymentDialog({
         toast.success(t.successLink)
         safeData.onSuccess?.()
         setStep('success')
-        return
-      }
-
-      // ── STRIPE ────────────────────────────────────────────────────────────────
-      if (step === 'stripe-form') {
-        const response = await fetch('/api/payments/stripe-checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: amountNum,
-            currency: 'ILS',
-            clientName: `${selectedClient.first_name} ${selectedClient.last_name}`,
-            clientEmail: selectedClient.email ??
-              `${selectedClient.phone ?? selectedClient.id}@temp.com`,
-            clientId: selectedClient.id,
-            orgId,
-          }),
-        })
-        if (!response.ok) {
-          const errJson = await response.json().catch(() => ({}))
-          throw new Error((errJson as { error?: string }).error ?? `HTTP ${response.status}`)
-        }
-        const data = (await response.json()) as { url?: string }
-        if (!data.url) throw new Error('No checkout URL returned from Stripe API')
-        window.open(data.url, '_blank')
-        toast.success(t.successStripe)
-        safeData.onSuccess?.()
-        handleClose()   // Stripe: окно уже открыто в новой вкладке
         return
       }
 
@@ -534,7 +499,7 @@ export function UnifiedPaymentDialog({
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 15, fontWeight: 700, color: m.color, margin: '0 0 2px' }}>{t[m.id]}</p>
-              <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>{t[`${m.id}Desc` as 'cashDesc' | 'linkDesc' | 'stripeDesc']}</p>
+              <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>{t[`${m.id}Desc` as 'cashDesc' | 'linkDesc']}</p>
             </div>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: m.color, opacity: 0.5, flexShrink: 0, transform: isHe ? 'rotate(180deg)' : 'none' }}>
               <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -570,7 +535,7 @@ export function UnifiedPaymentDialog({
       </div>
     )
 
-    // ── Form (cash | link | stripe) ────────────────────────────────────────
+    // ── Form (cash | link) ────────────────────────────────────────────────────
     return (
       <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
 

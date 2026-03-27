@@ -189,7 +189,7 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
 
     setIsProcessing(true)
     try {
-      // For credit card (Tranzilla) or Stripe - create payment link
+      // For credit card (Tranzila) - create payment link
       if (paymentMethod === 'credit') {
         // Create Tranzilla payment link
         const response = await fetch('/api/payments/create-link', {

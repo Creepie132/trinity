@@ -28,7 +28,6 @@ import { TransferProductModal } from './products/TransferProductModal'
 
 // Payments — unified
 import { UnifiedPaymentModal } from './payments/UnifiedPaymentModal'
-import { CreateSubscriptionModal } from './payments/CreateSubscriptionModal'
 import { PaymentDetailsModal } from './payments/PaymentDetailsModal'
 
 // Services
@@ -93,7 +92,6 @@ export function ModalManager() {
 
       {/* Payments */}
       <UnifiedPaymentModal />
-      <CreateSubscriptionModal />
       <PaymentDetailsModal />
 
       {/* Services */}

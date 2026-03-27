@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     const phonesPrefixes = ['050', '052', '054']
     const serviceTypes = ['תספורת', 'צבע', 'החלקה', 'טיפול פנים', 'מניקור', 'פדיקור', 'תספורת + צבע', 'פגישה']
     const visitNotes = ['', 'שילמה במזומן', 'ביקשה תור חוזר', 'מרוצה מאוד', 'צריך מעקב', 'לקוח חדש', 'תזכורת למוצר']
-    const paymentMethods = ['credit_card', 'cash', 'bit', 'stripe', 'bank_transfer']
+    const paymentMethods = ['credit_card', 'cash', 'bit', 'bank_transfer']
     const durations = [30, 45, 60, 90]
 
     // Helper functions

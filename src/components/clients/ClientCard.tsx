@@ -6,6 +6,7 @@ import { getClientName, getClientInitials } from '@/lib/client-utils'
 import { useModalStore } from '@/store/useModalStore'
 import { ClientBottomSheet } from './ClientBottomSheet'
 import { useClientCardSettings } from './ClientCardSettingsModal'
+import { useMobileBackTrap } from '@/hooks/useMobileBackTrap'
 
 // ── Палитра аватаров ──────────────────────────────────────────────────────────
 const AVATAR_GRADIENTS = [
@@ -73,6 +74,13 @@ export function ClientCard({
   const [swipeX, setSwipeX]     = useState(0)
   const [action, setAction]     = useState<'call' | 'visit' | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+
+  // Mobile Back Button trap:
+  // — свайп-действие (swipeX !== 0): "Назад" сбрасывает свайп
+  // — шторка клиента (sheetOpen): "Назад" закрывает ClientBottomSheet
+  // LIFO: сначала сбрасывается свайп, потом закрывается шторка
+  useMobileBackTrap(Math.abs(swipeX) >= 10, () => setSwipeX(0))
+  useMobileBackTrap(sheetOpen, () => setSheetOpen(false))
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
   const isScrolling = useRef(false)

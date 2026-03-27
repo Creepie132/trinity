@@ -22,6 +22,7 @@
 import { ReactNode, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { ModalBottomSheet } from './ModalBottomSheet'
+import { useMobileBackTrap } from '@/hooks/useMobileBackTrap'
 
 interface TrinityModalShellProps {
   /** open/onClose — нужны для мобильного ModalBottomSheet */
@@ -62,6 +63,10 @@ export function TrinityModalShell({
 }: TrinityModalShellProps) {
   const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+
+  // Mobile Back Button trap — перехватывает аппаратную «Назад» и свайп-назад iOS/Android.
+  // Работает автоматически для всех модалок на базе TrinityModalShell.
+  useMobileBackTrap(open, onClose)
 
   useEffect(() => {
     setMounted(true)

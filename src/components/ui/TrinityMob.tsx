@@ -20,6 +20,7 @@
  */
 
 import { useRef, useState, useEffect, ReactNode } from 'react'
+import { useMobileBackTrap } from '@/hooks/useMobileBackTrap'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 import {
@@ -263,6 +264,15 @@ export function TrinityMob({
     setInSettings(false)
     onClose()
   }
+
+  // Mobile Back Button trap (после handleClose — используем его как closeFn):
+  // Уровень 1 — сам TrinityMob-дравер (isOpen).
+  // Уровень 2 — боковая шторка действий (drawerOpen).
+  // LIFO: первое «Назад» закрывает drawerOpen, второе — весь TrinityMob.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useMobileBackTrap(isOpen, handleClose)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useMobileBackTrap(drawerOpen, () => { setDrawerOpen(false); setInSettings(false) })
 
   // Вертикальный drag-to-close на ручке
   function onHandleTouchStart(e: React.TouchEvent) {

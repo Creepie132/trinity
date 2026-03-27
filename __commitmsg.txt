@@ -1,7 +1,0 @@
-perf: instant SPA navigation
-
-- dashboard/page.tsx: sync SC, no await, renders instantly on click
-- DashboardContent.tsx: remove fullscreen skeleton blocker
-- diary/page.tsx: useState/fetch -> useQuery staleTime 30s, optimistic updates
-- analytics/page.tsx: useState/fetch -> useQuery staleTime 30s, keepPreviousData
-- DashboardShell.tsx: add diary+analytics to prefetcher and hover map

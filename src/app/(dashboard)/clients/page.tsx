@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Search, Eye, Users, Phone, Calendar, TrendingUp, MessageCircle, Filter, Loader2, Download } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useQueryClient } from '@tanstack/react-query'
 import { ClientSummary } from '@/types/database'
 import { useModalStore } from '@/store/useModalStore'
@@ -85,31 +86,19 @@ export default function ClientsPage() {
   const [exportLoading, setExportLoading] = useState(false)
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
   const [draftClients, setDraftClients] = useState<Set<string>>(new Set())
   const [noVisitToday, setNoVisitToday] = useState(false)
-
   const { openModal } = useModalStore()
-
   const pageSize = 25
 
-  // Debounce search — 300ms, не мигаем интерфейсом при каждом символе
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery.length >= 2 ? searchQuery : '')
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [searchQuery])
+  // ── Debounce: инпут обновляется мгновенно, API дёргается через 350мс ──
+  const debouncedSearch = useDebounce(searchQuery, 350)
+  // Пустая строка или < 2 символов → не гоним текстовый поиск к БД
+  const activeSearch = debouncedSearch.length >= 2 ? debouncedSearch : ''
 
-  const activeSearch = debouncedSearch
   const { data: clientsData, isLoading, isFetching } = useClients(activeSearch, page, pageSize)
   const clients = clientsData?.data || []
-
-  // No client-side filtering needed — server does it
-  const filteredClients = clients
-  const paginatedClients = clients
-
   const totalCount = clientsData?.count || 0
   const clientCount = totalCount
   const totalPages = Math.ceil(totalCount / pageSize)
@@ -320,9 +309,9 @@ export default function ClientsPage() {
               </div>
             ))}
           </div>
-        ) : paginatedClients && paginatedClients.length > 0 ? (
+        ) : clients && clients.length > 0 ? (
           <div className="divide-y divide-gray-50 dark:divide-gray-800">
-            {paginatedClients.map((client) => {
+            {clients.map((client) => {
               const fullName = `${client.first_name} ${client.last_name}`.trim()
               const totalPaid = Number(client.total_paid || 0)
               return (
@@ -545,8 +534,8 @@ export default function ClientsPage() {
         {searchQuery && searchQuery.length >= 2 && (
           <div className="mt-4 px-4 text-sm text-gray-600 dark:text-gray-400">
             {language === 'he' 
-              ? `נמצאו ${filteredClients.length} לקוחות` 
-              : `Найдено ${filteredClients.length} клиентов`}
+              ? `נמצאו ${clients.length} לקוחות` 
+              : `Найдено ${clients.length} клиентов`}
           </div>
         )}
 

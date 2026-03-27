@@ -17,8 +17,9 @@ import { useMeetingMode } from '@/hooks/useMeetingMode'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoSectionBanner } from '@/components/demo/DemoSectionBanner'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
+import { useDebounce } from '@/hooks/useDebounce'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useModalStore } from '@/store/useModalStore'
 import { CalendarView } from '@/components/visits/CalendarView'
@@ -196,6 +197,8 @@ export default function VisitsPage() {
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
   const { openModal } = useModalStore()
   const [searchQuery, setSearchQuery] = useState('')
+  // Debounce: инпут мгновенный, API + queryKey обновляются через 350мс
+  const debouncedSearch = useDebounce(searchQuery, 350)
   const [dateFilter, setDateFilter] = useState<string>('week')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [eventTypeFilter, setEventTypeFilter] = useState<'all' | 'visit' | 'meeting'>(() => {
@@ -270,7 +273,7 @@ export default function VisitsPage() {
     }
   }, [orgId])
 
-  useEffect(() => { setPage(1) }, [dateFilter, statusFilter, searchQuery, eventTypeFilter])
+  useEffect(() => { setPage(1) }, [dateFilter, statusFilter, debouncedSearch, eventTypeFilter])
 
   function setEventType(v: 'all' | 'visit' | 'meeting') {
     setEventTypeFilter(v)
@@ -280,7 +283,7 @@ export default function VisitsPage() {
 
   // ── fetch ──────────────────────────────────────────────────────────────────
   const { data: visitsData, isLoading, refetch } = useQuery({
-    queryKey: ['visits', orgId, dateFilter, statusFilter, searchQuery, page, eventTypeFilter],
+    queryKey: ['visits', orgId, dateFilter, statusFilter, debouncedSearch, page, eventTypeFilter],
     queryFn: async () => {
       if (!orgId) return { data: [], count: 0 }
 
@@ -308,20 +311,21 @@ export default function VisitsPage() {
       const { data, error, count } = await query
       if (error) throw error
 
+      // Поиск применяем только если debounced значение >= 2 символов
       let filtered = data as Visit[]
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase()
+      if (debouncedSearch && debouncedSearch.length >= 2) {
+        const q = debouncedSearch.toLowerCase()
         filtered = filtered.filter((v: Visit) =>
           (v.clients?.first_name || '').toLowerCase().includes(q) ||
           (v.clients?.last_name || '').toLowerCase().includes(q) ||
-          (v.clients?.phone || '').includes(searchQuery)
+          (v.clients?.phone || '').includes(debouncedSearch)
         )
       }
       return { data: filtered, count: count || 0 }
     },
     enabled: !!orgId,
-    staleTime: 30_000,       // кеш свежий 30 сек — нет лишних refetch при переходах
-    placeholderData: (prev) => prev,  // показывает старые данные пока грузятся новые
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,  // не мигаем при смене фильтров
   })
 
   const visits = visitsData?.data || []

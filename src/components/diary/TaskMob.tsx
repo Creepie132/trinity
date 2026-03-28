@@ -370,13 +370,18 @@ export function TaskMob({ mode, task, isOpen, onClose, locale, onSuccess, onEdit
                 transform: drawerOpen ? (isRtl ? 'translateX(74%)' : 'translateX(-74%)') : 'translateX(0)',
                 touchAction: 'pan-y' }}>
 
-                {/* Swipe hint */}
-                <button onClick={() => setDrawerOpen(true)} style={{
-                  alignSelf: 'center', padding: '5px 11px', borderRadius: 14,
-                  border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)',
-                  color: 'rgba(255,255,255,0.4)', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {isRtl ? <>›&nbsp;{isHe ? 'החלק לפעולות' : 'Действия'}&nbsp;‹</> : <>‹&nbsp;{isHe ? 'פעולות' : 'Действия'}&nbsp;›</>}
-                </button>
+                {/* ── Кнопка "Действия" только для detail ── */}
+                {mode === 'detail' && (
+                  <button onClick={() => setDrawerOpen(true)} style={{
+                    alignSelf: 'center', padding: '6px 16px', borderRadius: 20,
+                    border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 600,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+                    letterSpacing: '.04em', transition: 'background .15s',
+                  }}>
+                    ⚡ {isHe ? 'פעולות' : 'Действия'}
+                  </button>
+                )}
 
                 {/* ── DETAIL: контент задачи ── */}
                 {mode === 'detail' && task && (
@@ -477,6 +482,31 @@ export function TaskMob({ mode, task, isOpen, onClose, locale, onSuccess, onEdit
                         transition: 'background .25s, box-shadow .25s',
                       }}>
                         <CheckSquare size={24} color="white" strokeWidth={2} />
+                      </div>
+                    </div>
+
+                    {/* ── Приоритет — 4 красивые кнопки ── */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
+                        {isHe ? 'עדיפות' : 'Срочность'}
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 7 }}>
+                        {(Object.entries(PRIORITY_CFG) as [Priority, typeof PRIORITY_CFG.low][]).map(([key, cfg]) => (
+                          <button key={key} type="button" onClick={() => setPriority(key)} style={{
+                            padding: '8px 4px', borderRadius: 10, cursor: 'pointer',
+                            border: `1.5px solid ${priority === key ? cfg.dot : '#e2e8f0'}`,
+                            background: priority === key ? `${cfg.dot}12` : '#f8fafc',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                            transition: 'all .15s', boxShadow: priority === key ? `0 2px 8px ${cfg.dot}30` : 'none',
+                          }}>
+                            <div style={{ width: 10, height: 10, borderRadius: '50%', background: cfg.dot,
+                              boxShadow: priority === key ? `0 0 6px ${cfg.dot}` : 'none',
+                              transition: 'box-shadow .15s' }} />
+                            <span style={{ fontSize: 10, fontWeight: priority === key ? 700 : 500, color: priority === key ? cfg.dot : '#94a3b8', lineHeight: 1 }}>
+                              {isHe ? cfg.he : cfg.ru}
+                            </span>
+                          </button>
+                        ))}
                       </div>
                     </div>
 
@@ -593,7 +623,7 @@ export function TaskMob({ mode, task, isOpen, onClose, locale, onSuccess, onEdit
                         style={{ width: '100%', padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 13, color: '#374151', background: '#f8fafc', outline: 'none', resize: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit' }} />
                     </div>
 
-                    {/* ── Кнопка сохранить (дублирует шторку для удобства) ── */}
+                    {/* ── Кнопка сохранить ── */}
                     <button onClick={handleSubmit} disabled={saving || !title.trim()}
                       style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none',
                         background: saving || !title.trim() ? '#e2e8f0' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
@@ -608,6 +638,16 @@ export function TaskMob({ mode, task, isOpen, onClose, locale, onSuccess, onEdit
                       {saving ? (isHe ? 'שומר...' : 'Сохранение...') : mode === 'edit'
                         ? (isHe ? 'שמור שינויים' : 'Сохранить изменения')
                         : (isHe ? 'צור משימה' : 'Создать задачу')}
+                    </button>
+
+                    {/* ── Кнопка Отмена ── */}
+                    <button onClick={handleClose}
+                      style={{ width: '100%', padding: '11px', borderRadius: 12,
+                        border: '1.5px solid #e2e8f0', background: 'transparent',
+                        color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        transition: 'background .15s',
+                      }}>
+                      {isHe ? 'ביטול' : 'Отмена'}
                     </button>
                   </div>
                 )}

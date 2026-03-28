@@ -353,7 +353,10 @@ export function UnifiedPaymentDialog({
           }),
         })
         if (!res.ok) { const err = await res.json(); throw new Error(err.error || t.errorGeneric) }
+        // ✅ Инвалидируем payments + sales (платёж меняет статус сделки partial→paid)
         queryClient.invalidateQueries({ queryKey: ['payments'] })
+        queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
+        queryClient.invalidateQueries({ queryKey: ['sales'] })
         toast.success(t.successCash)
         safeData.onSuccess?.()
         setStep('success')
@@ -378,6 +381,8 @@ export function UnifiedPaymentDialog({
         })
         if (!res.ok) { const err = await res.json(); throw new Error(err.error || t.errorGeneric) }
         queryClient.invalidateQueries({ queryKey: ['payments'] })
+        queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
+        queryClient.invalidateQueries({ queryKey: ['sales'] })
         toast.success(t.successCheck)
         safeData.onSuccess?.()
         setStep('success')
@@ -402,6 +407,8 @@ export function UnifiedPaymentDialog({
         })
         if (!res.ok) { const err = await res.json(); throw new Error(err.error || t.errorGeneric) }
         queryClient.invalidateQueries({ queryKey: ['payments'] })
+        queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
+        queryClient.invalidateQueries({ queryKey: ['sales'] })
         toast.success(t.successBank)
         safeData.onSuccess?.()
         setStep('success')
@@ -419,6 +426,8 @@ export function UnifiedPaymentDialog({
         })
         if (!result?.payment_link) throw new Error('No payment link returned from API')
         setPaymentLink(result.payment_link)
+        // invalidateQueries для link происходит в useCreatePaymentLink onSettled
+        queryClient.invalidateQueries({ queryKey: ['sales'] })
         toast.success(t.successLink)
         safeData.onSuccess?.()
         setStep('success')
@@ -560,12 +569,14 @@ export function UnifiedPaymentDialog({
 
   const mobileFooter =
     step === 'method-select' ? (
-      <button onClick={handleClose}
-        style={{ flex: 1, padding: '12px 18px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}>
-        {t.cancel}
-      </button>
+      <div style={{ display: 'flex', width: '100%' }}>
+        <button onClick={handleClose}
+          style={{ flex: 1, padding: '12px 18px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}>
+          {t.cancel}
+        </button>
+      </div>
     ) : step === 'success' ? (
-      <>
+      <div style={{ display: 'flex', gap: 10, width: '100%' }}>
         {paymentLink && selectedClient?.phone && (
           <button onClick={handleSendWhatsApp}
             style={{ flex: '0 0 auto', padding: '12px 16px', borderRadius: 10, border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#16a34a', fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -576,9 +587,10 @@ export function UnifiedPaymentDialog({
           style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: methodCfg?.gradient ?? 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
           {t.close}
         </button>
-      </>
+      </div>
     ) : (
-      <>
+      // ✅ Flex-контейнер на всю ширину — кнопки горизонтально на мобиле
+      <div style={{ display: 'flex', gap: 10, width: '100%' }}>
         <button onClick={handleBack} disabled={isLoading}
           style={{ flex: '0 0 auto', padding: '12px 18px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
           <ArrowLeft size={15} />{t.back}
@@ -589,7 +601,7 @@ export function UnifiedPaymentDialog({
             ? <><Loader2 size={15} className="animate-spin" />{t.saving}</>
             : <>{currentMethod ? METHOD_ICONS[currentMethod] : null}{step === 'link-form' ? t.createLink : t.save}</>}
         </button>
-      </>
+      </div>
     )
 
   // ─── Step content ───────────────────────────────────────────────────────────

@@ -127,6 +127,8 @@ export function useCreatePaymentLink() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['payments'] })
       qc.invalidateQueries({ queryKey: ['payments-stats'] })
+      // Платёж через ссылку может закрыть сделку (partial→paid)
+      qc.invalidateQueries({ queryKey: ['sales'] })
     },
   })
 }

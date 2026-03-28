@@ -265,14 +265,17 @@ export function TrinityMob({
     onClose()
   }
 
-  // Mobile Back Button trap (после handleClose — используем его как closeFn):
+  // Mobile Back Button trap — LIFO (3 уровня):
   // Уровень 1 — сам TrinityMob-дравер (isOpen).
-  // Уровень 2 — боковая шторка действий (drawerOpen).
-  // LIFO: первое «Назад» закрывает drawerOpen, второе — весь TrinityMob.
+  // Уровень 2 — шторка настроек карточки (inSettings) — закрывается первой.
+  // Уровень 3 — боковая шторка действий (drawerOpen) — закрывается второй.
+  // Финальное «Назад» → handleClose (весь компонент).
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useMobileBackTrap(isOpen, handleClose)
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  useMobileBackTrap(drawerOpen, () => { setDrawerOpen(false); setInSettings(false) })
+  useMobileBackTrap(drawerOpen, () => setDrawerOpen(false))
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useMobileBackTrap(inSettings, () => setInSettings(false))
 
   // Вертикальный drag-to-close на ручке
   function onHandleTouchStart(e: React.TouchEvent) {

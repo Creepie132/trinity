@@ -53,31 +53,29 @@ export function useMobileBackTrap(isOpen: boolean, closeFn: () => void) {
 
   useEffect(() => {
     // Не активен на десктопе
-    if (!isMobileRef.current) return
+    if (!isMobileRef.current) {
+      console.log('[BackTrap] SKIP (not mobile), id=', id, 'isOpen=', isOpen)
+      return
+    }
 
     if (isOpen && !registeredRef.current) {
-      // Переход false → true: регистрируем слой
+      console.log('[BackTrap] REGISTER id=', id)
       registeredRef.current = true
       registerLayer(id, () => closeFnRef.current())
 
     } else if (!isOpen && registeredRef.current) {
-      // Переход true → false (программное закрытие: крестик, Save, action-кнопка):
-      // ТОЛЬКО чистим стек. История браузера НЕ ТРОГАЕТСЯ.
+      console.log('[BackTrap] UNREGISTER id=', id)
       registeredRef.current = false
       unregisterLayer(id)
     }
 
-    // Cleanup при анмаунте компонента:
-    // Если компонент уничтожается пока isOpen=true (например, роут сменился) —
-    // чистим стек. История браузера НЕ ТРОГАЕТСЯ.
     return () => {
       if (registeredRef.current) {
+        console.log('[BackTrap] CLEANUP (unmount) id=', id)
         registeredRef.current = false
         unregisterLayer(id)
       }
     }
-  // id стабилен, isMobileRef — ref (не вызывает ре-рендер).
-  // Зависим только от isOpen.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 }

@@ -665,9 +665,30 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
         </>
       )}
       {step === 'success' && (
-        <button onClick={handleClose} style={{ padding:'11px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', background:'linear-gradient(135deg,#22c55e,#16a34a)', color:'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-          <CheckCircle2 size={14}/>{isHe?'סגור':'Закрыть'}
-        </button>
+        <>
+          {tranzilaLink && (
+            <>
+              <button onClick={() => window.open(tranzilaLink, '_blank')}
+                style={{ padding:'11px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', marginBottom:6, background:'linear-gradient(135deg,#8b5cf6,#7c3aed)', color:'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                <FileText size={14}/>{isHe?'פתח קישור':'Открыть ссылку'}
+              </button>
+              {(clientObj?.phone) && (
+                <button onClick={() => {
+                  let p = (clientObj.phone as string).replace(/\D/g, '')
+                  if (p.startsWith('0')) p = p.slice(1)
+                  const msg = isHe ? `קישור לתשלום: ${tranzilaLink}` : `Ссылка для оплаты: ${tranzilaLink}`
+                  window.open(`https://wa.me/972${p}?text=${encodeURIComponent(msg)}`, '_blank')
+                }}
+                  style={{ padding:'9px 14px', borderRadius:10, border:'0.5px solid rgba(34,197,94,0.3)', background:'rgba(34,197,94,0.1)', cursor:'pointer', width:'100%', color:'#34d399', fontSize:12, fontWeight:600, marginBottom:6, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                  <MessageCircle size={13}/>WhatsApp
+                </button>
+              )}
+            </>
+          )}
+          <button onClick={handleClose} style={{ padding:'8px 14px', borderRadius:9, border:'0.5px solid rgba(255,255,255,0.12)', background:'transparent', color:'rgba(255,255,255,0.4)', fontSize:12, cursor:'pointer' }}>
+            {isHe?'סגור':'Закрыть'}
+          </button>
+        </>
       )}
     </div>
   )
@@ -885,45 +906,34 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
 
           {/* ── SUCCESS ── */}
           {step === 'success' && (
-            <div style={{ padding:'32px 18px', textAlign:'center' }}>
-              <div style={{ width:60, height:60, borderRadius:'50%', background:'linear-gradient(135deg,#22c55e,#16a34a)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px', boxShadow:'0 6px 20px rgba(34,197,94,0.3)' }}>
-                <CheckCircle2 size={28} color="#fff" />
-              </div>
-              <p style={{ fontSize:18, fontWeight:700, color:'#15803d', marginBottom:6 }}>
-                {tranzilaLink
-                  ? (isHe?'✓ קישור לתשלום נוצר!':'✓ Ссылка на оплату создана!')
-                  : (isHe?'✓ העסקה נשמרה בהצלחה!':'✓ Сделка успешно сохранена!')}
-              </p>
-              {total > 0 && <p style={{ fontSize:24, fontWeight:900, color:'#16a34a' }}>₪{total.toLocaleString()}</p>}
-              {tranzilaLink && (
-                <div style={{ marginTop:20, display:'flex', flexDirection:'column', gap:10, alignItems:'center' }}>
-                  <p style={{ fontSize:12, color:'#64748b', marginBottom:4 }}>
+            <div style={{ padding:'20px 18px 24px', display:'flex', flexDirection:'column', gap:16 }}>
+              <div style={{ background:'linear-gradient(135deg,#f0fdf4,#dcfce7)', border:'1px solid #bbf7d0', borderRadius:16, padding:20, textAlign:'center' }}>
+                <div style={{ width:52, height:52, borderRadius:'50%', background:'linear-gradient(135deg,#22c55e,#16a34a)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px', boxShadow:'0 6px 16px rgba(34,197,94,0.3)' }}>
+                  <CheckCircle2 size={24} color="#fff"/>
+                </div>
+                <p style={{ fontSize:15, fontWeight:700, color:'#15803d', margin:'0 0 4px' }}>
+                  {tranzilaLink
+                    ? (isHe?'✓ הקישור לתשלום נוצר!':'✓ Ссылка на оплату создана!')
+                    : (isHe?'✓ העסקה נשמרה בהצלחה!':'✓ Сделка успешно сохранена!')}
+                </p>
+                {tranzilaLink && (
+                  <p style={{ fontSize:12, color:'#16a34a', margin:0 }}>
                     {isHe?'שלח ללקוח לתשלום מאובטח':'Отправьте клиенту для безопасной оплаты'}
                   </p>
-                  <div style={{ display:'flex', gap:8, width:'100%', maxWidth:460 }}>
-                    <input readOnly value={tranzilaLink} dir="ltr"
-                      style={{ flex:1, fontSize:12, padding:'9px 12px', border:'1px solid #e2e8f0', borderRadius:10, background:'#f8fafc', color:'#475569', outline:'none', minWidth:0 }} />
-                    <button onClick={() => { navigator.clipboard.writeText(tranzilaLink); toast.success(isHe?'הועתק':'Скопировано') }}
-                      style={{ flexShrink:0, padding:'9px 14px', borderRadius:10, border:'1px solid #e2e8f0', background:'#fff', cursor:'pointer', fontSize:12, fontWeight:600, color:'#475569', whiteSpace:'nowrap' }}>
-                      {isHe?'העתק':'Копировать'}
-                    </button>
-                  </div>
-                  <button onClick={() => window.open(tranzilaLink, '_blank')}
-                    style={{ width:'100%', maxWidth:460, padding:'10px', borderRadius:10, border:'none', background:'linear-gradient(135deg,#6366f1,#4f46e5)', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-                    🔗 {isHe?'פתח קישור תשלום':'Открыть ссылку оплаты'}
+                )}
+              </div>
+              {tranzilaLink && (
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <input readOnly value={tranzilaLink} dir="ltr"
+                    style={{ flex:1, fontSize:12, padding:'9px 12px', border:'1px solid #e2e8f0', borderRadius:10, background:'#f8fafc', color:'#475569', outline:'none', minWidth:0 }} />
+                  <button onClick={() => { navigator.clipboard.writeText(tranzilaLink); toast.success(isHe?'הועתק':'Скопировано') }}
+                    style={{ flexShrink:0, padding:'9px 14px', borderRadius:10, border:'1px solid #e2e8f0', background:'#fff', cursor:'pointer', fontSize:12, fontWeight:600, color:'#475569', whiteSpace:'nowrap' }}>
+                    {isHe?'העתק':'Скопировать'}
                   </button>
-                  {clientObj?.phone && (
-                    <button onClick={() => {
-                      let p = clientObj.phone.replace(/\D/g, '')
-                      if (p.startsWith('0')) p = p.slice(1)
-                      const msg = isHe ? `קישור לתשלום: ${tranzilaLink}` : `Ссылка для оплаты: ${tranzilaLink}`
-                      window.open(`https://wa.me/972${p}?text=${encodeURIComponent(msg)}`, '_blank')
-                    }}
-                      style={{ width:'100%', maxWidth:460, padding:'10px', borderRadius:10, border:'1px solid #bbf7d0', background:'#f0fdf4', color:'#16a34a', fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-                      💬 WhatsApp
-                    </button>
-                  )}
                 </div>
+              )}
+              {!tranzilaLink && total > 0 && (
+                <p style={{ textAlign:'center', fontSize:24, fontWeight:900, color:'#16a34a', margin:0 }}>₪{total.toLocaleString()}</p>
               )}
             </div>
           )}

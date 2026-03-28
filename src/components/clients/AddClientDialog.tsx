@@ -24,7 +24,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
   const { orgId, isLoading: authLoading, user } = useAuth()
   const { t, language } = useLanguage()
   const { isDemo } = useDemoMode()
-  const { data: clientsData, refetch: refetchClients } = useClients()
+  const { data: clientsData } = useClients()
   const clientCount = clientsData?.count || 0
   const queryClient = useQueryClient()
   const [formData, setFormData] = useState({
@@ -57,8 +57,9 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
     if (!formData.first_name || !formData.last_name || !formData.phone) return
     if (isDemo && clientCount >= 10) return
 
+    let newClient: any = null
     try {
-      const newClient = await addClient.mutateAsync({
+      newClient = await addClient.mutateAsync({
         first_name: formData.first_name,
         last_name: formData.last_name,
         phone: formData.phone,
@@ -70,35 +71,35 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
         description: formData.description || null,
         paint_code: hasPaintCode ? (formData.paint_code || null) : null,
       })
-
-      await queryClient.invalidateQueries({ queryKey: ['clients'] })
-      await refetchClients()
-
-      setFormData({
-        first_name: '',
-        last_name: '',
-        phone: '',
-        email: '',
-        address: '',
-        city: '',
-        date_of_birth: '',
-        notes: '',
-        description: '',
-        paint_code: '',
-      })
-      setShowDescription(false)
-      setHasPaintCode(false)
-
-      onOpenChange(false)
-
-      // Если передан onSuccess — вызываем с созданным клиентом
-      if (onSuccess && newClient) {
-        onSuccess(newClient)
-      }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
         console.error('[AddClientDialog] Error:', error)
       }
+      return
+    }
+
+    // Запускаем фоновый рефетч без await — не блокирует закрытие
+    queryClient.invalidateQueries({ queryKey: ['clients'] })
+
+    setFormData({
+      first_name: '',
+      last_name: '',
+      phone: '',
+      email: '',
+      address: '',
+      city: '',
+      date_of_birth: '',
+      notes: '',
+      description: '',
+      paint_code: '',
+    })
+    setShowDescription(false)
+    setHasPaintCode(false)
+
+    onOpenChange(false)
+
+    if (onSuccess && newClient) {
+      onSuccess(newClient)
     }
   }
 

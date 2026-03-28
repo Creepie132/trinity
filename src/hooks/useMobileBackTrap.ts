@@ -61,7 +61,13 @@ export function useMobileBackTrap(isOpen: boolean, closeFn: () => void) {
     if (isOpen && !registeredRef.current) {
       console.log('[BackTrap] REGISTER id=', id)
       registeredRef.current = true
-      registerLayer(id, () => closeFnRef.current())
+      registerLayer(id, () => {
+        // Вызывается из _handlePopState — слой уже убран из стека стором.
+        // Помечаем что регистрация снята, чтобы cleanup-effect не вызвал
+        // unregisterLayer повторно при анмаунте компонента.
+        registeredRef.current = false
+        closeFnRef.current()
+      })
 
     } else if (!isOpen && registeredRef.current) {
       console.log('[BackTrap] UNREGISTER id=', id)

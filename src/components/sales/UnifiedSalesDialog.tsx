@@ -342,6 +342,7 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
     setShowProposal(false)
     setClientSearch('')
     setClientResults([])
+    setTranzilaLink(null)
 
     // Preloaded product (inventory sell)
     if (sd.preloadedProduct) {
@@ -412,6 +413,9 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
   const updatePrice = (id: string, price: number) =>
     setItems(p => p.map(i => i.id === id ? { ...i, unit_price: Math.max(0, price) } : i))
 
+  // ── State для Tranzila ссылки (успех карточной оплаты) ──────────────────────
+  const [tranzilaLink, setTranzilaLink] = useState<string | null>(null)
+
   // ── "Оплатить" — открывает PaymentMethodModal ─────────────────────────────────
   const handlePayClick = useCallback(() => {
     if (!items.length) {
@@ -430,7 +434,7 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
     setPayModalOpen(false)
     setStep('checkout')
 
-    // Карта — создаём Tranzila ссылку и открываем её
+    // Карта — создаём Tranzila ссылку и показываем success экран со ссылкой
     if (method === 'card') {
       if (!clientId) {
         toast.error(isHe ? 'יש לבחור לקוח לתשלום בכרטיס' : 'Для оплаты картой выберите клиента')
@@ -447,15 +451,13 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
           },
         })
         if (res.payment_link) {
-          window.open(res.payment_link, '_blank')
-          toast.success(isHe ? 'קישור לתשלום נפתח' : 'Ссылка на оплату открыта')
-          // Сделку сохраняем как pending (pending payment)
+          setTranzilaLink(res.payment_link)
+          setStep('success')
           queryClient.invalidateQueries({ queryKey: ['payments'] })
-          onOpenChange(false)
         }
       } catch (err: any) {
         const msg = err?.message || (isHe ? 'שגיאה ביצירת קישור' : 'Ошибка создания ссылки')
-        toast.error(msg)
+        setErrorMsg(msg)
       } finally {
         setIsLoading(false)
       }
@@ -888,9 +890,41 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
                 <CheckCircle2 size={28} color="#fff" />
               </div>
               <p style={{ fontSize:18, fontWeight:700, color:'#15803d', marginBottom:6 }}>
-                {isHe?'✓ העסקה נשמרה בהצלחה!':'✓ Сделка успешно сохранена!'}
+                {tranzilaLink
+                  ? (isHe?'✓ קישור לתשלום נוצר!':'✓ Ссылка на оплату создана!')
+                  : (isHe?'✓ העסקה נשמרה בהצלחה!':'✓ Сделка успешно сохранена!')}
               </p>
               {total > 0 && <p style={{ fontSize:24, fontWeight:900, color:'#16a34a' }}>₪{total.toLocaleString()}</p>}
+              {tranzilaLink && (
+                <div style={{ marginTop:20, display:'flex', flexDirection:'column', gap:10, alignItems:'center' }}>
+                  <p style={{ fontSize:12, color:'#64748b', marginBottom:4 }}>
+                    {isHe?'שלח ללקוח לתשלום מאובטח':'Отправьте клиенту для безопасной оплаты'}
+                  </p>
+                  <div style={{ display:'flex', gap:8, width:'100%', maxWidth:460 }}>
+                    <input readOnly value={tranzilaLink} dir="ltr"
+                      style={{ flex:1, fontSize:12, padding:'9px 12px', border:'1px solid #e2e8f0', borderRadius:10, background:'#f8fafc', color:'#475569', outline:'none', minWidth:0 }} />
+                    <button onClick={() => { navigator.clipboard.writeText(tranzilaLink); toast.success(isHe?'הועתק':'Скопировано') }}
+                      style={{ flexShrink:0, padding:'9px 14px', borderRadius:10, border:'1px solid #e2e8f0', background:'#fff', cursor:'pointer', fontSize:12, fontWeight:600, color:'#475569', whiteSpace:'nowrap' }}>
+                      {isHe?'העתק':'Копировать'}
+                    </button>
+                  </div>
+                  <button onClick={() => window.open(tranzilaLink, '_blank')}
+                    style={{ width:'100%', maxWidth:460, padding:'10px', borderRadius:10, border:'none', background:'linear-gradient(135deg,#6366f1,#4f46e5)', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                    🔗 {isHe?'פתח קישור תשלום':'Открыть ссылку оплаты'}
+                  </button>
+                  {clientObj?.phone && (
+                    <button onClick={() => {
+                      let p = clientObj.phone.replace(/\D/g, '')
+                      if (p.startsWith('0')) p = p.slice(1)
+                      const msg = isHe ? `קישור לתשלום: ${tranzilaLink}` : `Ссылка для оплаты: ${tranzilaLink}`
+                      window.open(`https://wa.me/972${p}?text=${encodeURIComponent(msg)}`, '_blank')
+                    }}
+                      style={{ width:'100%', maxWidth:460, padding:'10px', borderRadius:10, border:'1px solid #bbf7d0', background:'#f0fdf4', color:'#16a34a', fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                      💬 WhatsApp
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

@@ -719,7 +719,7 @@ export default function PlansEditorPage() {
           </div>
 
           {/* List + Side Drawer — same layout as plans section above */}
-          <div className="flex overflow-hidden" style={{maxHeight: '280px'}}>
+          <div className="flex overflow-hidden" style={{minHeight: '320px', maxHeight: '420px'}}>
             {/* Setup rows list */}
             <div className="w-full md:w-[400px] flex-shrink-0 overflow-y-auto p-3 space-y-2">
               {(config.setup_options ?? []).map((opt, idx) => (

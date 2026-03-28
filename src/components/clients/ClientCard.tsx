@@ -77,10 +77,10 @@ export function ClientCard({
 
   // Mobile Back Button trap:
   // — свайп-действие (swipeX !== 0): "Назад" сбрасывает свайп
-  // — шторка клиента (sheetOpen): "Назад" закрывает ClientBottomSheet
-  // LIFO: сначала сбрасывается свайп, потом закрывается шторка
+  // — sheetOpen НЕ регистрируем здесь: TrinityMob внутри ClientBottomSheet
+  //   сам регистрирует свой слой (isOpen). Двойная регистрация создаёт
+  //   "мусорную" запись в истории → второй popstate уходит в Next.js роутер.
   useMobileBackTrap(Math.abs(swipeX) >= 10, () => setSwipeX(0))
-  useMobileBackTrap(sheetOpen, () => setSheetOpen(false))
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
   const isScrolling = useRef(false)

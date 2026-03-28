@@ -76,7 +76,8 @@ export default async function DashboardLayout({
 
   // Seed React Query cache — all client hooks find data instantly on mount
   const queryClient = new QueryClient()
-  queryClient.setQueryData(['is-admin'], isAdmin)
+  queryClient.setQueryData(['is-admin'],     isAdmin)  // legacy key (useIsAdmin)
+  queryClient.setQueryData(['is-admin-jwt'], isAdmin)  // fast key (useDemoMode → useIsAdminFast)
   queryClient.setQueryData(['active-org-id'], orgId)
   // Key matches useOrganization queryKey: ['organization', cookieOrgId ?? activeOrgId]
   // We seed both possible key variants to guarantee a cache hit

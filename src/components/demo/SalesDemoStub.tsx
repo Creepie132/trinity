@@ -7,7 +7,6 @@
 
 import { MessageCircle, Check } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { useState, useEffect } from 'react'
 import { WA_LINK, TRINITY_PLANS } from '@/lib/trinityPlans'
 
 const T = {
@@ -31,23 +30,14 @@ const T = {
 
 export function SalesDemoStub() {
   const { language } = useLanguage()
-  const [shimmer, setShimmer] = useState(false)
-  const [visible, setVisible] = useState(false)
+  // ⚡ Убраны: visible state + requestAnimationFrame + transition-opacity 500ms
+  // Контент рендерится СИНХРОННО — нет искусственных задержек
   const isHe = language === 'he'
   const t = T[isHe ? 'he' : 'ru']
   const dir = isHe ? 'rtl' : 'ltr'
 
-  useEffect(() => {
-    requestAnimationFrame(() => setVisible(true))
-    const id = setInterval(() => {
-      setShimmer(true)
-      setTimeout(() => setShimmer(false), 700)
-    }, 3000)
-    return () => clearInterval(id)
-  }, [])
-
   return (
-    <div dir={dir} className={`min-h-screen py-8 px-4 transition-opacity duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
+    <div dir={dir} className="min-h-screen py-8 px-4">
       {/* ── Hero ── */}
       <div className="text-center mb-8">
         <div className="relative inline-block mb-4">
@@ -118,11 +108,8 @@ export function SalesDemoStub() {
       {/* ── WhatsApp CTA ── */}
       <div className="max-w-sm mx-auto">
         <a href={WA_LINK} target="_blank" rel="noopener noreferrer"
-          className="relative inline-flex items-center justify-center gap-3 w-full py-4 rounded-2xl font-bold text-white text-base overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
+          className="inline-flex items-center justify-center gap-3 w-full py-4 rounded-2xl font-bold text-white text-base transition-all hover:scale-[1.02] active:scale-[0.98]"
           style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 4px 24px rgba(22,163,74,0.35)' }}>
-          <span className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${shimmer ? 'opacity-100' : 'opacity-0'}`}
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)' }} />
-          <span className="absolute inset-0 rounded-2xl border-2 border-green-300/50 animate-pulse pointer-events-none" />
           <MessageCircle size={20} />
           <span>{t.cta}</span>
         </a>

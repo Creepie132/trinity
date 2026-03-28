@@ -8,7 +8,7 @@
 import { MessageCircle } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
-import { ReactNode, useState, useEffect } from 'react'
+import { ReactNode } from 'react'
 
 const WA_LINK = 'https://wa.me/972544858586'
 
@@ -34,13 +34,8 @@ interface DemoStubProps {
 export function DemoStub({ config, children, forceShow }: DemoStubProps) {
   const { isDemo } = useDemoMode()
   const { language } = useLanguage()
-  const [shimmer, setShimmer] = useState(false)
+  // ⚡ Убран: shimmer interval — лишний setInterval при mount
   const isHe = language === 'he'
-
-  useEffect(() => {
-    const id = setInterval(() => { setShimmer(true); setTimeout(() => setShimmer(false), 700) }, 3000)
-    return () => clearInterval(id)
-  }, [])
 
   if (!isDemo && !forceShow) return <>{children}</>
 
@@ -75,11 +70,8 @@ export function DemoStub({ config, children, forceShow }: DemoStubProps) {
 
         {/* WhatsApp button */}
         <a href={WA_LINK} target="_blank" rel="noopener noreferrer"
-          className="relative inline-flex items-center justify-center gap-3 w-full py-4 rounded-2xl font-bold text-white text-base overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
+          className="inline-flex items-center justify-center gap-3 w-full py-4 rounded-2xl font-bold text-white text-base transition-all hover:scale-[1.02] active:scale-[0.98]"
           style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 4px 24px rgba(22,163,74,0.35)' }}>
-          <span className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${shimmer ? 'opacity-100' : 'opacity-0'}`}
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)' }}/>
-          <span className="absolute inset-0 rounded-2xl border-2 border-green-300/50 animate-pulse pointer-events-none"/>
           <MessageCircle size={20}/>
           <span>{isHe ? 'כתוב לנו ב-WhatsApp' : 'Написать в WhatsApp'}</span>
         </a>

@@ -175,7 +175,7 @@ function CityAutocomplete({ value, onChange, placeholder }: {
         onFocus={() => value.length >= 2 && setOpen(suggestions.length > 0)}
         placeholder={placeholder} className="h-10" dir="rtl" />
       {open && (
-        <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-auto text-sm">
+        <ul className="absolute z-[10000] mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-auto text-sm">
           {suggestions.map(city => (
             <li key={city} className="px-3 py-2 cursor-pointer hover:bg-indigo-50 text-gray-800" dir="rtl"
               onMouseDown={() => { onChange(city); setOpen(false) }}>{city}</li>
@@ -622,7 +622,7 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.duration')}</label>
                 <Select value={form.duration.toString()} onValueChange={v => setForm(p => ({ ...p, duration: parseInt(v) }))}>
                   <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" side="bottom" avoidCollisions={false}>
                     {DURATIONS.map(d => <SelectItem key={d.value} value={d.value.toString()}>{t(d.labelKey)}</SelectItem>)}
                   </SelectContent>
                 </Select>

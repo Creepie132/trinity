@@ -296,6 +296,21 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
     </div>
   )
 
+  // ── Mobile footer ─────────────────────────────────────────────────────────
+  const mobileFooter = (
+    <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+      <button onClick={onClose}
+        style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: 'var(--muted-foreground)', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+        {s.cancel}
+      </button>
+      <button onClick={handleSubmit} disabled={isPending || uploading}
+        style={{ flex: 2, padding: '12px 0', borderRadius: 12, border: 'none', cursor: (isPending || uploading) ? 'not-allowed' : 'pointer', background: (isPending || uploading) ? '#e2e8f0' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: (isPending || uploading) ? '#94a3b8' : '#fff', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        {isPending ? <Loader2 size={15} className="animate-spin" /> : mode === 'create' ? <PackagePlus size={15} /> : <Save size={15} />}
+        {isPending ? s.saving : mode === 'create' ? s.create : s.save}
+      </button>
+    </div>
+  )
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
@@ -313,6 +328,7 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
           }
           dir={dir}
           sidebarExtra={sidebar}
+          footerContent={mobileFooter}
         >
           <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
 

@@ -62,8 +62,26 @@ export function ProductDetailSheet({ open, onClose, product, onEdit }: ProductDe
   const getTransactionSign = (type: string) =>
     (type === 'purchase' || type === 'return') ? '+' : '-'
 
-  // ── Sidebar ────────────────────────────────────────────────────────────────
-  const sidebar = (
+  // ── Mobile footer — compact action buttons (не обрезаются на мобиле) ────────
+  const mobileFooter = (
+    <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+      <button onClick={() => { if (isDemo) return; onClose(); openModal('sale-unified', { preloadedProduct: product }) }}
+        disabled={product.quantity === 0 || isDemo}
+        style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', fontSize: 12, fontWeight: 600, cursor: (product.quantity === 0 || isDemo) ? 'not-allowed' : 'pointer', background: (product.quantity === 0 || isDemo) ? '#f1f5f9' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: (product.quantity === 0 || isDemo) ? '#94a3b8' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+        <ShoppingCart size={13} />{t('inventory.sell')}
+      </button>
+      <button onClick={() => setAddStockDialogOpen(true)}
+        style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '1.5px solid #bbf7d0', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+        <Plus size={13} />{t('inventory.addStock')}
+      </button>
+      {onEdit && (
+        <button onClick={() => { onEdit(product); onClose() }}
+          style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 12, fontWeight: 600, cursor: 'pointer', background: '#f8fafc', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          <Edit size={13} />{t('inventory.edit')}
+        </button>
+      )}
+    </div>
+  )
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       {/* Product image or icon */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
@@ -147,7 +165,7 @@ export function ProductDetailSheet({ open, onClose, product, onEdit }: ProductDe
       <Modal open={open} onClose={onClose} darkHeader showCloseButton={false} width="720px" dir={dir} contentClassName="!p-0">
         <TrinityModalShell open={open} onClose={onClose} icon={<Package />}
           title={product.name} subtitle={product.category || t('inventory.details')}
-          dir={dir} sidebarExtra={sidebar}>
+          dir={dir} sidebarExtra={sidebar} footerContent={mobileFooter}>
           <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
 
             {/* Description */}

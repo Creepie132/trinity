@@ -60,11 +60,13 @@ export const useUIStackStore = create<UIStackState>((set, get) => ({
     get()._attachListener()
     if (get().stack.some(l => l.id === id)) return
 
-    // Запоминаем текущий URL перед pushState
+    // Только на мобильных — десктоп не нуждается в перехвате
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) return
+
     const currentUrl = window.location.href
     window.history.pushState({ uiLayer: id }, '', currentUrl)
 
-    console.log('[UIStack] registerLayer:', id, 'url=', currentUrl)
+    console.log('[UIStack] registerLayer:', id)
     set(s => ({ stack: [...s.stack, { id, closeFn }], _currentUrl: currentUrl }))
   },
 

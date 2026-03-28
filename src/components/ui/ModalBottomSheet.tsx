@@ -20,7 +20,6 @@
 import { useEffect, useRef, useState, ReactNode, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
-import { useMobileBackTrap } from '@/hooks/useMobileBackTrap'
 
 interface ModalBottomSheetProps {
   open: boolean
@@ -51,10 +50,11 @@ export function ModalBottomSheet({
   const [mounted, setMounted]   = useState(false)
   const [visible, setVisible]   = useState(false)   // управляет translateY
 
-  // Mobile Back Button trap — аппаратная «Назад» закрывает этот bottom sheet.
-  // TrinityModalShell уже добавляет хук сверху; этот вызов для случаев прямого использования ModalBottomSheet.
-  // useUIStackStore сам защищает от двойной регистрации (проверка existing by id).
-  useMobileBackTrap(open, onClose)
+  // NOTE: BackTrap НЕ регистрируем здесь.
+  // TrinityModalShell уже регистрирует один слой для этого open/onClose.
+  // Двойная регистрация накапливает лишние слои в стеке → выкидывает на дашборд.
+  // Если ModalBottomSheet используется напрямую (без TrinityModalShell) —
+  // добавь useMobileBackTrap в том компоненте, который его монтирует.
   const [animating, setAnimating] = useState(false)
 
   const touchStartY  = useRef(0)

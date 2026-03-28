@@ -37,6 +37,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const {
       landing_plans,
+      setup_options,
       demo_setup_base,
       demo_module_price,
       demo_discount_threshold,
@@ -56,6 +57,7 @@ export async function PUT(request: NextRequest) {
       .from('pricing_config')
       .update({
         landing_plans,
+        setup_options,
         demo_setup_base,
         demo_module_price,
         demo_discount_threshold,

@@ -528,18 +528,24 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
         }),
       })
       // 3. Tranzila link (Israel only)
-      if (isIsrael && price > 0) {
-        const d = new Date(); d.setDate(d.getDate() + 30)
+      // SECURITY: передаём setupId, НЕ сумму — бэкенд сам считает цену из БД (anti-tampering)
+      if (isIsrael && type) {
         const res = await fetch('/api/demo/create-payment-link', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            setupAmount: price, monthlyAmount: planAmount,
+            setupId:      type,               // 'full' | 'standart' | 'self'
+            moduleCount:  selectedModules.size, // для расчёта скидки на бэке
+            monthlyAmount: planAmount,
             description: `Trinity CRM ${type} | ${form.firstName} ${form.lastName}`,
             email: form.email, plan,
           }),
         })
         const json = await res.json()
         if (json.url) setPaymentUrl(json.url)
+        // Обновляем отображаемую цену из ответа бэкенда (эталонная)
+        if (json.setupAmount && json.setupAmount !== price) {
+          setSetupFinalPrice(json.setupAmount)
+        }
       }
     } catch (e) { console.error('[DemoOrderModal]', e) }
     setSubmitting(false); setSubmitted(true)

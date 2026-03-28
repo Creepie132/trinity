@@ -459,69 +459,157 @@ export function TaskMob({ mode, task, isOpen, onClose, locale, onSuccess, onEdit
                   </>
                 )}
 
-                {/* ── CREATE / EDIT: форма ── */}
+                {/* ── CREATE / EDIT: светлая форма как AddClientDialog ── */}
                 {(mode === 'create' || mode === 'edit') && (
-                  <>
-                    {/* Заголовок */}
+                  <div style={{
+                    background: 'var(--color-background-primary, #fff)',
+                    borderRadius: 16, padding: '16px 14px',
+                    display: 'flex', flexDirection: 'column', gap: 14,
+                    boxShadow: '0 2px 16px rgba(0,0,0,0.18)',
+                  }}>
+                    {/* ── Аватар-иконка с живым приоритетом ── */}
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 2 }}>
+                      <div style={{
+                        width: 56, height: 56, borderRadius: 16, flexShrink: 0,
+                        background: `linear-gradient(135deg, ${PRIORITY_CFG[priority].dot}cc, ${PRIORITY_CFG[priority].dot}88)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: `0 4px 14px ${PRIORITY_CFG[priority].dot}44`,
+                        transition: 'background .25s, box-shadow .25s',
+                      }}>
+                        <CheckSquare size={24} color="white" strokeWidth={2} />
+                      </div>
+                    </div>
+
+                    {/* ── Заголовок задачи ── */}
                     <div>
-                      <label style={lbl}>{isHe ? 'כותרת *' : 'Заголовок *'}</label>
+                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>
+                        {isHe ? 'כותרת המשימה' : 'Заголовок задачи'} *
+                      </label>
                       <input value={title} onChange={e => setTitle(e.target.value)} dir={isRtl ? 'rtl' : 'ltr'}
-                        placeholder={isHe ? 'כותרת המשימה...' : 'Заголовок задачи...'}
-                        style={{ ...inp, fontSize: 15, fontWeight: 600 }} />
+                        placeholder={isHe ? 'כותרת...' : 'Заголовок...'}
+                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e2e8f0', borderRadius: 10,
+                          fontSize: 15, fontWeight: 600, color: '#1e293b', background: '#fff',
+                          outline: 'none', boxSizing: 'border-box' as const, transition: 'border-color .15s' }}
+                        onFocus={e => e.currentTarget.style.borderColor = '#6366f1'}
+                        onBlur={e => e.currentTarget.style.borderColor = '#e2e8f0'} />
                     </div>
-                    {/* Дедлайн + Время */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
+
+                    {/* ── Дедлайн + Время ── */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
-                        <label style={lbl}>{isHe ? 'תאריך יעד' : 'Дедлайн'}</label>
+                        <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>
+                          {isHe ? 'תאריך יעד' : 'Дедлайн'}
+                        </label>
                         <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                          min={new Date().toISOString().split('T')[0]} dir="ltr" style={inp} />
+                          min={new Date().toISOString().split('T')[0]} dir="ltr"
+                          style={{ width: '100%', padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 13, color: '#374151', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' as const }} />
                       </div>
                       <div>
-                        <label style={lbl}>{isHe ? 'שעה' : 'Время'}</label>
+                        <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>
+                          {isHe ? 'שעה' : 'Время'}
+                        </label>
                         <input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)}
-                          disabled={!dueDate} dir="ltr" style={{ ...inp, opacity: dueDate ? 1 : 0.4 }} />
+                          disabled={!dueDate} dir="ltr"
+                          style={{ width: '100%', padding: '9px 10px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 13, color: '#374151', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' as const, opacity: dueDate ? 1 : 0.4 }} />
                       </div>
                     </div>
-                    {/* Клиент */}
+
+                    {/* ── Клиент ── */}
                     <div>
-                      <label style={lbl}>{isHe ? 'לקוח' : 'Клиент'}</label>
+                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>
+                        {isHe ? 'לקוח' : 'Клиент'}
+                      </label>
                       <TrinitySearchDropdown data={clients} searchKeys={['first_name','last_name','phone']} minChars={0}
                         placeholder={isHe ? 'חיפוש לקוח...' : 'Поиск клиента...'}
                         onSelect={c => { setClientId(c.id); setClientName2(getClientName(c)); if (c.phone) setContactPhone(c.phone) }}
-                        renderItem={c => <div><p style={{ fontWeight: 600, fontSize: 13 }}>{getClientName(c)}</p>{c.phone && <p style={{ fontSize: 11, color: '#94a3b8' }}>{c.phone}</p>}</div>}
+                        renderItem={c => (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#818cf8,#a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                              {(getClientName(c)?.[0] || '?').toUpperCase()}
+                            </div>
+                            <div>
+                              <p style={{ fontWeight: 600, fontSize: 13, color: '#1e293b', margin: 0 }}>{getClientName(c)}</p>
+                              {c.phone && <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>{c.phone}</p>}
+                            </div>
+                          </div>
+                        )}
                         locale={locale} />
-                      {clientName && <p style={{ fontSize: 10, color: accentTxt, marginTop: 3 }}>✓ {clientName}</p>}
+                      {clientName && (
+                        <p style={{ fontSize: 11, color: '#6366f1', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Check size={10} />{clientName}
+                        </p>
+                      )}
                     </div>
-                    {/* Телефон */}
+
+                    {/* ── Телефон ── */}
                     <div>
-                      <label style={lbl}>{isHe ? 'טלפון' : 'Телефон'}</label>
+                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>
+                        {isHe ? 'טלפון' : 'Телефон'}
+                      </label>
                       <div style={{ display: 'flex', gap: 7 }}>
-                        <input type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)}
-                          dir="ltr" style={{ ...inp, flex: 1 }} />
+                        <input type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} dir="ltr"
+                          placeholder="+972-50-000-0000"
+                          style={{ flex: 1, padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 13, color: '#374151', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' as const }} />
                         {contactPhone && <>
-                          <button onClick={() => window.location.href = `tel:${contactPhone}`} style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(96,165,250,0.15)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Phone size={14} color="#60a5fa" /></button>
-                          <button onClick={() => window.open(`https://wa.me/${contactPhone.replace(/[^0-9]/g,'')}`, '_blank')} style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(34,197,94,0.15)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><MessageCircle size={14} color="#4ade80" /></button>
+                          <button onClick={() => window.location.href = `tel:${contactPhone}`}
+                            style={{ width: 38, height: 38, borderRadius: 10, background: '#eff6ff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Phone size={15} color="#3b82f6" />
+                          </button>
+                          <button onClick={() => window.open(`https://wa.me/${contactPhone.replace(/[^0-9]/g,'')}`, '_blank')}
+                            style={{ width: 38, height: 38, borderRadius: 10, background: '#f0fdf4', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <MessageCircle size={15} color="#22c55e" />
+                          </button>
                         </>}
                       </div>
                     </div>
-                    {/* Адрес */}
+
+                    {/* ── Адрес ── */}
                     <div>
-                      <label style={lbl}><MapPin size={9} style={{ display: 'inline', marginInlineEnd: 4 }} />{isHe ? 'כתובת' : 'Адрес'}</label>
+                      <label style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <MapPin size={10} color="#94a3b8" />{isHe ? 'כתובת' : 'Адрес'}
+                      </label>
                       <input value={address} onChange={e => setAddress(e.target.value)} dir="rtl"
-                        placeholder={isHe ? 'רחוב הרצל 12, תל אביב' : 'ул. Герцль 12, Тель-Авив'} style={inp} />
+                        placeholder={isHe ? 'רחוב הרצל 12, תל אביב' : 'ул. Герцль 12, Тель-Авив'}
+                        style={{ width: '100%', padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 13, color: '#374151', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' as const }} />
                     </div>
-                    {/* Напоминание */}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 11px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={reminder} onChange={e => setReminder(e.target.checked)} style={{ width: 15, height: 15, accentColor: '#6366f1' }} />
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)' }}>{isHe ? '🔔 תזכורת (2 שעות לפני)' : '🔔 Напоминание за 2 часа'}</span>
+
+                    {/* ── Напоминание ── */}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={reminder} onChange={e => setReminder(e.target.checked)}
+                        style={{ width: 15, height: 15, accentColor: '#6366f1' }} />
+                      <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
+                        {isHe ? '🔔 תזכורת (2 שעות לפני)' : '🔔 Напоминание за 2 часа'}
+                      </span>
                     </label>
-                    {/* Описание */}
+
+                    {/* ── Описание ── */}
                     <div>
-                      <label style={lbl}>{isHe ? 'תיאור' : 'Описание'}</label>
+                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>
+                        {isHe ? 'תיאור' : 'Описание'}
+                      </label>
                       <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
-                        dir={isRtl ? 'rtl' : 'ltr'} style={{ ...inp, resize: 'none' } as any} />
+                        dir={isRtl ? 'rtl' : 'ltr'}
+                        placeholder={isHe ? 'הערות למשימה...' : 'Заметки к задаче...'}
+                        style={{ width: '100%', padding: '9px 12px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 13, color: '#374151', background: '#f8fafc', outline: 'none', resize: 'none', boxSizing: 'border-box' as const, fontFamily: 'inherit' }} />
                     </div>
-                  </>
+
+                    {/* ── Кнопка сохранить (дублирует шторку для удобства) ── */}
+                    <button onClick={handleSubmit} disabled={saving || !title.trim()}
+                      style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none',
+                        background: saving || !title.trim() ? '#e2e8f0' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+                        color: saving || !title.trim() ? '#94a3b8' : '#fff',
+                        fontSize: 14, fontWeight: 700, cursor: saving || !title.trim() ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                        transition: 'background .2s', boxShadow: !title.trim() || saving ? 'none' : '0 4px 14px rgba(99,102,241,0.35)',
+                      }}>
+                      {saving
+                        ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                        : <CheckSquare size={16} />}
+                      {saving ? (isHe ? 'שומר...' : 'Сохранение...') : mode === 'edit'
+                        ? (isHe ? 'שמור שינויים' : 'Сохранить изменения')
+                        : (isHe ? 'צור משימה' : 'Создать задачу')}
+                    </button>
+                  </div>
                 )}
               </div>{/* end main panel */}
 

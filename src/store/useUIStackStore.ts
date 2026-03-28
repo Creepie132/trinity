@@ -51,13 +51,26 @@ export const useUIStackStore = create<UIStackState>((set, get) => ({
 
     window.addEventListener('popstate', (event: PopStateEvent) => {
       const state = event.state
-      console.log('[UIStack] popstate fired. state=', JSON.stringify(state), 'stack=', get().stack.map(l => l.id))
-      // Реагируем ТОЛЬКО на наши синтетические записи
-      if (state && typeof state === 'object' && 'uiLayer' in state) {
+      const stack = get().stack
+      console.log('[UIStack] popstate fired. state=', JSON.stringify(state), 'stack=', stack.map(l => l.id))
+
+      // Если наш стек непустой — это "Назад" пока открыт UI-слой.
+      // Перехватываем НЕЗАВИСИМО от state (Next.js пишет свой state на /clients).
+      if (stack.length > 0) {
+        console.log('[UIStack] stack has layers — intercepting, closing top layer')
         get()._handlePopState()
-      } else {
-        console.log('[UIStack] NOT our entry — letting Next.js handle it')
+        return
       }
+
+      // Стек пуст. Проверяем: наша ли это "мёртвая" запись?
+      if (state && typeof state === 'object' && 'uiLayer' in state) {
+        console.log('[UIStack] dead uiLayer entry — calling forward()')
+        window.history.forward()
+        return
+      }
+
+      // Не наша запись и стек пуст — нативная навигация Next.js
+      console.log('[UIStack] NOT our entry and stack empty — letting Next.js handle it')
     })
 
     set({ _listenerAttached: true })
@@ -90,7 +103,9 @@ export const useUIStackStore = create<UIStackState>((set, get) => ({
     console.log('[UIStack] _handlePopState. stack=', stack.map(l => l.id))
 
     if (stack.length === 0) {
-      console.log('[UIStack] stack empty — dead entry, calling forward()')
+      // Не должны сюда попасть — listener проверяет стек до вызова.
+      // На всякий случай: forward() чтобы не уйти на предыдущий URL.
+      console.log('[UIStack] _handlePopState called with empty stack — forward()')
       window.history.forward()
       return
     }

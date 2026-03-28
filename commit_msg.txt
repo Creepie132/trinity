@@ -1,15 +1,1 @@
-refactor: finalize unified sales architecture and remove legacy modals
-
-Deleted legacy files:
-- src/components/modals/clients/SaleModal.tsx (1453 lines)
-- src/components/sales/NewSaleModal.tsx (~600 lines)
-- src/components/sales/ProductCatalogModal.tsx (dead subcomponent)
-- src/components/sales/ProductDetailModal.tsx (dead subcomponent)
-
-ModalManager: removed SaleModal registration
-useModalStore: removed 'client-sale' ModalType (replaced by 'sale-unified')
-
-All sales entry points now route exclusively through:
-  openModal('sale-unified', { ... }) -> UnifiedSalesDialog -> POST /api/sales
-
-Build: exit code 0, 195 pages, zero TypeScript errors
+fix: isolate /worker into (worker) route group, eliminate layout bleed and server blocking

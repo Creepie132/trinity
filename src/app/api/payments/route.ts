@@ -4,15 +4,22 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { validateBody, createPaymentSchema } from '@/lib/validations'
 
 // GET /api/payments — список платежей для текущей организации
+// Query params: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), status, limit
 export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
     
     const { orgId } = auth
+    const { searchParams } = new URL(request.url)
+    const startDate = searchParams.get('startDate')
+    const endDate   = searchParams.get('endDate')
+    const status    = searchParams.get('status')
+    const limit     = Math.min(parseInt(searchParams.get('limit') || '1000', 10), 5000)
+
     const serviceSupabase = createSupabaseServiceClient()
 
-    const { data: payments, error } = await serviceSupabase
+    let query = serviceSupabase
       .from('payments')
       .select(`
         *,
@@ -25,7 +32,22 @@ export async function GET(request: NextRequest) {
       `)
       .eq('org_id', orgId)
       .order('created_at', { ascending: false })
-      .limit(1000)
+      .limit(limit)
+
+    // Фильтр по статусу
+    if (status) query = query.eq('status', status)
+
+    // Фильтр по датам — используем paid_at, fallback на created_at
+    // startDate → paid_at >= startDate 00:00:00 UTC
+    if (startDate) {
+      query = query.gte('paid_at', `${startDate}T00:00:00.000Z`)
+    }
+    // endDate → paid_at <= endDate 23:59:59 UTC
+    if (endDate) {
+      query = query.lte('paid_at', `${endDate}T23:59:59.999Z`)
+    }
+
+    const { data: payments, error } = await query
 
     if (error) {
       console.error('Payments query error:', error.message)

@@ -20,13 +20,13 @@ interface Props {
 
 const PAYMENT_METHODS = [
   { value: 'cash',          labelHe: 'מזומן',   labelRu: 'Наличные', icon: '💵', color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.3)'  },
-  { value: 'bit',           labelHe: 'ביט',     labelRu: 'BIT',      icon: '📱', color: '#f97316', bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.3)' },
   { value: 'credit_card',   labelHe: 'כרטיס',   labelRu: 'Карта',    icon: '💳', color: '#6366f1', bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)' },
   { value: 'bank_transfer', labelHe: 'העברה',   labelRu: 'Перевод',  icon: '🏦', color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)', border: 'rgba(14,165,233,0.3)' },
+  { value: 'check',         labelHe: "צ'ק",     labelRu: 'Чек',      icon: '📝', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)' },
 ]
 
 const METHOD_LABEL_HE: Record<string, string> = {
-  cash: 'מזומן', bit: 'ביט', credit_card: 'כרטיס', bank_transfer: 'העברה',
+  cash: 'מזומן', credit_card: 'כרטיס', bank_transfer: 'העברה', check: "צ'ק",
 }
 
 export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, initialTo }: Props) {
@@ -47,7 +47,7 @@ export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, 
     if (initialFrom !== undefined) setFromDate(initialFrom || firstOfMonth)
     if (initialTo   !== undefined) setToDate(initialTo   || today)
   }, [initialFrom, initialTo])
-  const [selectedMethods, setSelectedMethods] = useState<string[]>(['cash', 'bit', 'credit_card', 'bank_transfer'])
+  const [selectedMethods, setSelectedMethods] = useState<string[]>(['cash', 'credit_card', 'bank_transfer', 'check'])
   const [loading, setLoading] = useState(false)
 
   // Считаем сумму при изменении дат или методов
@@ -251,6 +251,27 @@ export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, 
             <p style={{ fontSize: 11, color: '#0369a1', margin: 0, lineHeight: 1.5 }}>
               {isHe ? 'הדוח יכלול תשלומים שהושלמו בלבד. הקובץ יישמר למשך יום אחד.' : 'В отчёт включаются только завершённые платежи. Файл сохраняется 1 день.'}
             </p>
+          </div>
+
+          {/* ── Mobile-only: period badge + PDF button (видны только на мобиле) ── */}
+          <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Period indicator */}
+            {fromDate && toDate && (
+              <div style={{ background: 'linear-gradient(135deg,#fffbeb,#fef3c7)', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#92400e' }}>{isHe ? 'תקופה' : 'Период'}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#d97706' }}>
+                  {new Date(fromDate).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
+                  {' — '}
+                  {new Date(toDate).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+            )}
+            {/* PDF button */}
+            <button onClick={handleGenerate} disabled={isLoading || selectedMethods.length === 0}
+              style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', cursor: (isLoading || selectedMethods.length === 0) ? 'not-allowed' : 'pointer', background: (isLoading || selectedMethods.length === 0) ? '#e2e8f0' : 'linear-gradient(135deg, #f59e0b, #d97706)', color: selectedMethods.length > 0 ? '#fff' : '#94a3b8', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              {isLoading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <FileText size={16} />}
+              {isLoading ? (isHe ? 'מייצר...' : 'Создаём...') : (isHe ? 'הפק PDF' : 'Создать PDF')}
+            </button>
           </div>
 
         </div>

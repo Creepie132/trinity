@@ -33,10 +33,10 @@ export interface PaymentReportData {
 }
 
 const methodColors: Record<string, string> = {
-  'מזומן': '#16a34a',
-  'ביט':   '#8b5cf6',
-  'כרטיס': '#2563eb',
-  'העברה': '#d97706',
+  'מזומן':  '#16a34a',
+  "צ'ק":    '#d97706',
+  'כרטיס':  '#2563eb',
+  'העברה':  '#0ea5e9',
 }
 
 function methodBadge(method: string): string {

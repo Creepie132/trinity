@@ -29,14 +29,19 @@ import { toast } from 'sonner'
 import {
   CreditCard, Banknote, Link, CheckCircle2,
   Copy, Loader2, AlertCircle, X, ArrowLeft, MessageCircle, ExternalLink,
+  FileCheck, Building2,
 } from 'lucide-react'
 import { PaymentSuccessView, PaymentSuccessSidebar } from '@/components/payments/PaymentSuccessView'
 import { TRINITY_PAYMENT_METHODS, type TrinityPaymentMethodId } from '@/lib/payment-methods'
+import {
+  CheckForm, BankTransferForm,
+  type CheckPaymentDetails, type BankTransferDetails,
+} from '@/components/payments/PaymentDetailForms'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type PaymentMethod = 'cash' | 'link'
-type Step = 'method-select' | 'cash-form' | 'link-form' | 'success'
+export type PaymentMethod = 'cash' | 'link' | 'check' | 'bank_transfer'
+type Step = 'method-select' | 'cash-form' | 'link-form' | 'check-form' | 'bank-form' | 'success'
 
 /** Строгий тип для данных из ModalStore */
 export interface UnifiedPaymentModalData {
@@ -91,6 +96,8 @@ const I18N = {
   he: {
     title: 'תשלום חדש', selectMethod: 'בחר אמצעי תשלום',
     cash: 'מזומן', cashDesc: 'תשלום במזומן ישירות',
+    check: "צ'ק", checkDesc: "תשלום בצ'ק עם פרטים",
+    bank_transfer: 'העברה בנקאית', bank_transferDesc: 'העברה ישירה עם אסמכתא',
     link: 'קישור תשלום', linkDesc: 'קישור מאובטח ללקוח',
     client: 'לקוח', selectClient: 'חפש לקוח...',
     amount: 'סכום (₪)', notes: 'הערות', description: 'תיאור',
@@ -100,10 +107,14 @@ const I18N = {
     createLink: 'צור קישור',
     successCash: '✓ התשלום נרשם בהצלחה',
     successLink: '✓ הקישור נוצר בהצלחה',
+    successCheck: "✓ הצ'קים נרשמו בהצלחה",
+    successBank: '✓ ההעברה נרשמה בהצלחה',
     sendToClient: 'שלח ללקוח לתשלום מאובטח',
     copy: 'העתק', copied: 'הועתק!', openLink: 'פתח קישור',
     fillRequired: 'יש למלא את כל שדות החובה',
     invalidAmount: 'הזן סכום תקין',
+    checkSumMismatch: "סכום הצ'קים אינו תואם לסכום הכולל",
+    bankRefRequired: 'נא להזין מספר עסקה',
     noPhone: 'אין מספר טלפון ללקוח',
     errorGeneric: 'שגיאה, נסה שוב',
     toPayLabel: 'לתשלום', paidLabel: 'שולם ✓',
@@ -112,6 +123,8 @@ const I18N = {
   ru: {
     title: 'Новый платёж', selectMethod: 'Выберите способ оплаты',
     cash: 'Наличные', cashDesc: 'Оплата наличными напрямую',
+    check: 'Чек', checkDesc: 'Оплата чеком с деталями',
+    bank_transfer: 'Банковский перевод', bank_transferDesc: 'Прямой перевод с квитанцией',
     link: 'Ссылка на оплату', linkDesc: 'Безопасная ссылка клиенту',
     client: 'Клиент', selectClient: 'Поиск клиента...',
     amount: 'Сумма (₪)', notes: 'Заметки', description: 'Описание',
@@ -121,10 +134,14 @@ const I18N = {
     createLink: 'Создать ссылку',
     successCash: '✓ Платёж успешно записан',
     successLink: '✓ Ссылка успешно создана',
+    successCheck: '✓ Чеки успешно записаны',
+    successBank: '✓ Перевод успешно записан',
     sendToClient: 'Отправьте клиенту для безопасной оплаты',
     copy: 'Скопировать', copied: 'Скопировано!', openLink: 'Открыть ссылку',
     fillRequired: 'Заполните все обязательные поля',
     invalidAmount: 'Введите корректную сумму',
+    checkSumMismatch: 'Сумма чеков не совпадает с итоговой суммой',
+    bankRefRequired: 'Введите номер транзакции',
     noPhone: 'У клиента нет номера телефона',
     errorGeneric: 'Ошибка, попробуйте ещё раз',
     toPayLabel: 'К оплате', paidLabel: 'Оплачено ✓',
@@ -138,13 +155,17 @@ const METHODS: {
   id: PaymentMethod
   gradient: string; glow: string; bg: string; border: string; color: string
 }[] = [
-  { id: 'cash', gradient: 'linear-gradient(135deg,#22c55e,#16a34a)', glow: 'rgba(34,197,94,0.3)',  bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '#bbf7d0', color: '#15803d' },
-  { id: 'link', gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', glow: 'rgba(139,92,246,0.3)', bg: 'linear-gradient(135deg,#faf5ff,#ede9fe)', border: '#ddd6fe', color: '#6d28d9' },
+  { id: 'cash',          gradient: 'linear-gradient(135deg,#22c55e,#16a34a)', glow: 'rgba(34,197,94,0.3)',   bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '#bbf7d0', color: '#15803d' },
+  { id: 'check',         gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', glow: 'rgba(245,158,11,0.3)', bg: 'linear-gradient(135deg,#fffbeb,#fef3c7)', border: '#fde68a', color: '#b45309' },
+  { id: 'bank_transfer', gradient: 'linear-gradient(135deg,#0ea5e9,#0284c7)', glow: 'rgba(14,165,233,0.3)', bg: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: '#bae6fd', color: '#0369a1' },
+  { id: 'link',          gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', glow: 'rgba(139,92,246,0.3)', bg: 'linear-gradient(135deg,#faf5ff,#ede9fe)', border: '#ddd6fe', color: '#6d28d9' },
 ]
 
 const METHOD_ICONS: Record<PaymentMethod, React.ReactNode> = {
-  cash: <Banknote size={22} />,
-  link: <Link size={22} />,
+  cash:          <Banknote size={22} />,
+  check:         <FileCheck size={22} />,
+  bank_transfer: <Building2 size={22} />,
+  link:          <Link size={22} />,
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -174,6 +195,12 @@ export function UnifiedPaymentDialog({
   const [notes, setNotes] = useState('')
   const [description, setDescription] = useState('')
 
+  // ── State для check/bank_transfer форм ───────────────────────────────────────
+  const [checkDetails, setCheckDetails] = useState<CheckPaymentDetails | null>(null)
+  const [checkValid, setCheckValid] = useState(false)
+  const [bankDetails, setBankDetails] = useState<BankTransferDetails | null>(null)
+  const [bankValid, setBankValid] = useState(false)
+
   // ── UI state ────────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -195,6 +222,8 @@ export function UnifiedPaymentDialog({
     setLinkCopied(false)
     setNotes('')
     setDescription('')
+    setCheckDetails(null); setCheckValid(false)
+    setBankDetails(null); setBankValid(false)
     // Предзаполнение суммы из сделки
     setAmount(sd.prefillAmount != null ? String(sd.prefillAmount) : '')
     // Предзаполнение клиента
@@ -212,10 +241,16 @@ export function UnifiedPaymentDialog({
   // ── Derived ──────────────────────────────────────────────────────────────────
   const amountNum = parseFloat(amount)
   const isAmountValid = !isNaN(amountNum) && amountNum > 0
-  const canSubmit = !!selectedClient && isAmountValid
+  const canSubmit = !!selectedClient && isAmountValid && (
+    step === 'check-form' ? checkValid :
+    step === 'bank-form'  ? bankValid  :
+    true
+  )
 
   const currentMethod: PaymentMethod | null =
     step === 'cash-form' ? 'cash'
+    : step === 'check-form' ? 'check'
+    : step === 'bank-form' ? 'bank_transfer'
     : step === 'link-form' ? 'link'
     : step === 'success' && paymentLink ? 'link'
     : step === 'success' ? 'cash'
@@ -226,22 +261,32 @@ export function UnifiedPaymentDialog({
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
   const handleClose = useCallback(() => {
-    if (isSubmittingRef.current) return   // нельзя закрыть во время транзакции
+    if (isSubmittingRef.current) return
     setAmount(''); setNotes(''); setDescription('')
     setSelectedClient(null); setErrorMsg(null)
     setPaymentLink(null); setLinkCopied(false)
+    setCheckDetails(null); setCheckValid(false)
+    setBankDetails(null); setBankValid(false)
     setStep('method-select')
     onOpenChange(false)
   }, [onOpenChange])
 
   const handleSelectMethod = useCallback((method: PaymentMethod) => {
     setErrorMsg(null)
-    setStep(`${method}-form` as Step)
+    const stepMap: Record<PaymentMethod, Step> = {
+      cash:          'cash-form',
+      link:          'link-form',
+      check:         'check-form',
+      bank_transfer: 'bank-form',
+    }
+    setStep(stepMap[method])
   }, [])
 
   const handleBack = useCallback(() => {
     if (isSubmittingRef.current) return
     setErrorMsg(null)
+    setCheckDetails(null); setCheckValid(false)
+    setBankDetails(null); setBankValid(false)
     setStep('method-select')
   }, [])
 
@@ -264,7 +309,7 @@ export function UnifiedPaymentDialog({
     setErrorMsg(null)
 
     try {
-      // ── CASH — через POST /api/payments (Zero Trust) ────────────────────
+      // ── CASH ────────────────────────────────────────────────────────────────
       if (step === 'cash-form') {
         const res = await fetch('/api/payments', {
           method: 'POST',
@@ -279,13 +324,57 @@ export function UnifiedPaymentDialog({
               `Наличные — ${selectedClient.first_name} ${selectedClient.last_name}`,
           }),
         })
-        if (!res.ok) {
-          const err = await res.json()
-          throw new Error(err.error || t.errorGeneric)
-        }
-        // ✅ React Query invalidate
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error || t.errorGeneric) }
         queryClient.invalidateQueries({ queryKey: ['payments'] })
         toast.success(t.successCash)
+        safeData.onSuccess?.()
+        setStep('success')
+        return
+      }
+
+      // ── CHECK ────────────────────────────────────────────────────────────────
+      if (step === 'check-form') {
+        if (!checkValid || !checkDetails) { toast.error(t.checkSumMismatch); isSubmittingRef.current = false; return }
+        const res = await fetch('/api/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id:      selectedClient.id,
+            amount:         amountNum,
+            payment_method: 'check',
+            status:         'pending',
+            visit_id:       safeData.visitId ?? null,
+            description:    `Чек — ${selectedClient.first_name} ${selectedClient.last_name}`,
+            payment_details: checkDetails,
+          }),
+        })
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error || t.errorGeneric) }
+        queryClient.invalidateQueries({ queryKey: ['payments'] })
+        toast.success(t.successCheck)
+        safeData.onSuccess?.()
+        setStep('success')
+        return
+      }
+
+      // ── BANK TRANSFER ────────────────────────────────────────────────────────
+      if (step === 'bank-form') {
+        if (!bankValid || !bankDetails) { toast.error(t.bankRefRequired); isSubmittingRef.current = false; return }
+        const res = await fetch('/api/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id:      selectedClient.id,
+            amount:         amountNum,
+            payment_method: 'bank_transfer',
+            status:         'completed',
+            visit_id:       safeData.visitId ?? null,
+            description:    `Перевод — ${bankDetails.reference}`,
+            payment_details: bankDetails,
+          }),
+        })
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error || t.errorGeneric) }
+        queryClient.invalidateQueries({ queryKey: ['payments'] })
+        toast.success(t.successBank)
         safeData.onSuccess?.()
         setStep('success')
         return
@@ -321,6 +410,7 @@ export function UnifiedPaymentDialog({
     step, selectedClient, isAmountValid, amountNum,
     notes, description, safeData, queryClient,
     createPaymentLinkMutation, t,
+    checkDetails, checkValid, bankDetails, bankValid,
   ])
 
   const handleCopyLink = useCallback(() => {
@@ -482,23 +572,27 @@ export function UnifiedPaymentDialog({
         <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
           {t.selectMethod}
         </p>
-        {METHODS.map((m) => (
-          <button key={m.id} onClick={() => handleSelectMethod(m.id)}
-            style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: m.bg, border: `1.5px solid ${m.border}`, borderRadius: 14, cursor: 'pointer', textAlign: isHe ? 'right' : 'left', transition: 'transform 0.15s, box-shadow 0.15s', width: '100%' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 24px ${m.glow}` }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = ''; (e.currentTarget as HTMLButtonElement).style.boxShadow = '' }}>
-            <div style={{ width: 46, height: 46, borderRadius: 13, background: m.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: `0 4px 14px ${m.glow}`, flexShrink: 0 }}>
-              {METHOD_ICONS[m.id]}
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 15, fontWeight: 700, color: m.color, margin: '0 0 2px' }}>{t[m.id]}</p>
-              <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>{t[`${m.id}Desc` as 'cashDesc' | 'linkDesc']}</p>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: m.color, opacity: 0.5, flexShrink: 0, transform: isHe ? 'rotate(180deg)' : 'none' }}>
-              <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        ))}
+        {METHODS.map((m) => {
+          const label = t[m.id as keyof typeof t] as string
+          const desc  = t[`${m.id}Desc` as keyof typeof t] as string
+          return (
+            <button key={m.id} onClick={() => handleSelectMethod(m.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: m.bg, border: `1.5px solid ${m.border}`, borderRadius: 14, cursor: 'pointer', textAlign: isHe ? 'right' : 'left', transition: 'transform 0.15s, box-shadow 0.15s', width: '100%' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 24px ${m.glow}` }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = ''; (e.currentTarget as HTMLButtonElement).style.boxShadow = '' }}>
+              <div style={{ width: 46, height: 46, borderRadius: 13, background: m.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: `0 4px 14px ${m.glow}`, flexShrink: 0 }}>
+                {METHOD_ICONS[m.id]}
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: m.color, margin: '0 0 2px' }}>{label}</p>
+                <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>{desc}</p>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: m.color, opacity: 0.5, flexShrink: 0, transform: isHe ? 'rotate(180deg)' : 'none' }}>
+                <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )
+        })}
       </div>
     )
 
@@ -511,6 +605,81 @@ export function UnifiedPaymentDialog({
         onClose={handleClose}
         locale={isHe ? 'he' : 'ru'}
       />
+    )
+
+    // ── Check form ──────────────────────────────────────────────────────────
+    if (step === 'check-form') return (
+      <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
+        {errorMsg && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12 }}>
+            <AlertCircle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: 1 }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#dc2626', margin: '0 0 2px' }}>{t.errorTitle}</p>
+              <p style={{ fontSize: 11, color: '#ef4444', margin: 0 }}>{errorMsg}</p>
+            </div>
+            <button onClick={() => setErrorMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}><X size={14} /></button>
+          </div>
+        )}
+        {/* Client */}
+        <div style={{ background: methodCfg?.bg ?? '#fffbeb', border: `1px solid ${methodCfg?.border ?? '#fde68a'}`, borderRadius: 14, padding: '14px 16px' }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: methodCfg?.color ?? '#b45309', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.client} *</label>
+          <ClientSearch orgId={searchOrgId} onSelect={c => setSelectedClient(c)} placeholder={t.selectClient} locale={language as 'he' | 'ru' | 'en'} value={selectedClient} />
+        </div>
+        {/* Amount */}
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '14px 16px' }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.amount} *</label>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', insetInlineStart: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 18, fontWeight: 700, color: methodCfg?.color ?? '#64748b', pointerEvents: 'none' }}>₪</span>
+            <Input type="number" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" disabled={isLoading}
+              style={{ paddingInlineStart: 36, fontSize: 18, fontWeight: 700, height: 48, border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff' }} />
+          </div>
+        </div>
+        {/* Checks */}
+        {isAmountValid && selectedClient && (
+          <CheckForm
+            totalAmount={amountNum}
+            disabled={isLoading}
+            locale={isHe ? 'he' : 'ru'}
+            onChange={(data, valid) => { setCheckDetails(data); setCheckValid(valid) }}
+          />
+        )}
+      </div>
+    )
+
+    // ── Bank transfer form ───────────────────────────────────────────────────
+    if (step === 'bank-form') return (
+      <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
+        {errorMsg && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12 }}>
+            <AlertCircle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: 1 }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#dc2626', margin: '0 0 2px' }}>{t.errorTitle}</p>
+              <p style={{ fontSize: 11, color: '#ef4444', margin: 0 }}>{errorMsg}</p>
+            </div>
+            <button onClick={() => setErrorMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}><X size={14} /></button>
+          </div>
+        )}
+        {/* Client */}
+        <div style={{ background: methodCfg?.bg ?? '#f0f9ff', border: `1px solid ${methodCfg?.border ?? '#bae6fd'}`, borderRadius: 14, padding: '14px 16px' }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: methodCfg?.color ?? '#0369a1', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.client} *</label>
+          <ClientSearch orgId={searchOrgId} onSelect={c => setSelectedClient(c)} placeholder={t.selectClient} locale={language as 'he' | 'ru' | 'en'} value={selectedClient} />
+        </div>
+        {/* Amount */}
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '14px 16px' }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.amount} *</label>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', insetInlineStart: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 18, fontWeight: 700, color: methodCfg?.color ?? '#64748b', pointerEvents: 'none' }}>₪</span>
+            <Input type="number" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" disabled={isLoading}
+              style={{ paddingInlineStart: 36, fontSize: 18, fontWeight: 700, height: 48, border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff' }} />
+          </div>
+        </div>
+        {/* Transfer details */}
+        <BankTransferForm
+          disabled={isLoading}
+          locale={isHe ? 'he' : 'ru'}
+          onChange={(data, valid) => { setBankDetails(data); setBankValid(valid) }}
+        />
+      </div>
     )
 
     // ── Form (cash | link) ────────────────────────────────────────────────────

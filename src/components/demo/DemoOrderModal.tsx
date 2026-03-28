@@ -5,7 +5,7 @@ import { X, ChevronRight, ChevronLeft, Check, Sparkles, Package, Zap,
   Settings2, Lock, ExternalLink, CreditCard, AlertCircle, Crown, Plus, Minus } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { validatePhone } from '@/lib/validations'
-import { usePricingPlans, type LandingPlan } from '@/hooks/usePricingPlans'
+import { usePricingPlans, type LandingPlan, type SetupOption, FALLBACK_SETUP_OPTIONS } from '@/hooks/usePricingPlans'
 
 export interface OrderForm {
   firstName: string; lastName: string; birthDate: string
@@ -379,18 +379,12 @@ const Step2 = memo((p: Step2Props) => {
 Step2.displayName = 'Step2'
 
 // ─── SetupPicker ──────────────────────────────────────────────────────────────
-const SetupPicker = memo(({ l, discountApplied, onSelect, onClose }: {
-  l: boolean; discountApplied: boolean
+// Опции онбординга читаются из БД через usePricingPlans().setupOptions
+const SetupPicker = memo(({ l, discountApplied, discountPct, onSelect, onClose, setupOptions }: {
+  l: boolean; discountApplied: boolean; discountPct: number
   onSelect: (t: SetupType, price: number) => void; onClose: () => void
+  setupOptions: SetupOption[]
 }) => {
-  const options = [
-    { id: 'full' as SetupType,     emoji: '🏆', titleRu: 'Full-setup',      titleHe: 'Full-setup',
-      descRu: 'Полная настройка, кастомные поля, категории, обучение', descHe: 'הגדרה מלאה, שדות מותאמים, קטגוריות, הדרכה', base: 2000 },
-    { id: 'standart' as SetupType, emoji: '⚙️', titleRu: 'Standart-setup', titleHe: 'Standart-setup',
-      descRu: 'Стандартная настройка без кастомизации, обучение', descHe: 'הגדרה סטנדרטית, ללא התאמה, הדרכה', base: 1300 },
-    { id: 'self' as SetupType,     emoji: '🚀', titleRu: 'Self-onboarding', titleHe: 'Self-onboarding',
-      descRu: 'Без настройки и обучения — Pay & Go', descHe: 'ללא הגדרה ו-ללא הדרכה — Pay & Go', base: 300 },
-  ]
   return (
     <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden" style={{ animation: 'modal-pop 0.3s cubic-bezier(0.34,1.3,0.64,1) both' }}>
@@ -403,27 +397,35 @@ const SetupPicker = memo(({ l, discountApplied, onSelect, onClose }: {
           {discountApplied && (
             <div className="mb-3 bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-xs text-green-700 flex items-center gap-2">
               <Sparkles size={12} className="text-green-500 flex-shrink-0"/>
-              {l ? '🎉 הנחה 15% על Full ו-Standart (5+ מודולים)!' : '🎉 Скидка 15% на Full и Standart (5+ модулей)!'}
+              {l
+                ? `🎉 הנחה ${discountPct}% על Full ו-Standart (5+ מודולים)!`
+                : `🎉 Скидка ${discountPct}% на Full и Standart (5+ модулей)!`}
             </div>
           )}
           <div className="space-y-2">
-            {options.map(opt => {
-              const final = calcSetup(opt.id, discountApplied)
+            {setupOptions.map(opt => {
+              const final = (discountApplied && opt.discount_eligible)
+                ? Math.round(opt.price * (1 - discountPct / 100))
+                : opt.price
               return (
-                <button key={String(opt.id)} onClick={() => onSelect(opt.id, final)}
+                <button key={opt.id} onClick={() => onSelect(opt.id as SetupType, final)}
                   className="w-full text-left p-3 rounded-2xl border-2 border-slate-200 hover:border-amber-400 hover:bg-amber-50 transition-all">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{opt.emoji}</span>
-                      <span className="font-bold text-slate-800 text-sm">{l ? opt.titleHe : opt.titleRu}</span>
+                      <span className="font-bold text-slate-800 text-sm">{l ? opt.title_he : opt.title_ru}</span>
                     </div>
                     <div className="text-right">
-                      {opt.id !== 'self' && discountApplied && <span className="text-xs line-through text-slate-400 mr-1">₪{opt.base}</span>}
+                      {discountApplied && opt.discount_eligible && (
+                        <span className="text-xs line-through text-slate-400 mr-1">₪{opt.price}</span>
+                      )}
                       <span className="font-extrabold text-amber-600">₪{final}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500 mt-1 ml-7">{l ? opt.descHe : opt.descRu}</p>
-                  {opt.id === 'self' && <p className="text-xs text-slate-400 mt-0.5 ml-7 italic">{l ? 'ללא הנחה' : 'Без скидки'}</p>}
+                  <p className="text-xs text-slate-500 mt-1 ml-7">{l ? opt.desc_he : opt.desc_ru}</p>
+                  {!opt.discount_eligible && (
+                    <p className="text-xs text-slate-400 mt-0.5 ml-7 italic">{l ? 'ללא הנחה' : 'Без скидки'}</p>
+                  )}
                 </button>
               )
             })}
@@ -439,7 +441,7 @@ SetupPicker.displayName = 'SetupPicker'
 export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { language } = useLanguage()
   const l = language === 'he'
-  const { plans: apiPlans } = usePricingPlans()  // динамические планы из БД
+  const { plans: apiPlans, setupOptions, discountPct } = usePricingPlans()  // динамические планы и сетап-опции из БД
   const [step, setStep]     = useState<1 | 2>(1)
   const [form, setForm]     = useState<OrderForm>({ firstName:'', lastName:'', birthDate:'', phone:'', street:'', city:'', country:'', email:'', notes:'', agreed: false })
   const [plan, setPlan]     = useState<string | null>(null)
@@ -584,7 +586,7 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
   // ─── Modal ────────────────────────────────────────────────────────────────────
   return (
     <>
-      {showSetupPicker && <SetupPicker l={l} discountApplied={discountApplied} onSelect={handleSetupSelect} onClose={() => setShowSetupPicker(false)}/>}
+      {showSetupPicker && <SetupPicker l={l} discountApplied={discountApplied} discountPct={discountPct} setupOptions={setupOptions} onSelect={handleSetupSelect} onClose={() => setShowSetupPicker(false)}/>}
       <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
         ref={overlayRef} onClick={e => e.target === overlayRef.current && onClose()}>
         <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"

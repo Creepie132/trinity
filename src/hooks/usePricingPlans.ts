@@ -20,13 +20,48 @@ export interface LandingPlan {
   is_popular: boolean
 }
 
+export interface SetupOption {
+  id: 'full' | 'standart' | 'self'
+  emoji: string
+  title_ru: string;  title_he: string
+  desc_ru: string;   desc_he: string
+  price: number          // базовая цена без скидки
+  discount_eligible: boolean  // false = скидка не применяется (self-onboarding)
+}
+
 export interface PricingConfig {
   landing_plans: LandingPlan[]
+  setup_options: SetupOption[]
   demo_setup_base: number
   demo_module_price: number
   demo_discount_threshold: number
   demo_discount_pct: number
 }
+
+// Fallback сетап-опции если БД пустая / не загрузилась
+export const FALLBACK_SETUP_OPTIONS: SetupOption[] = [
+  {
+    id: 'full', emoji: '🏆',
+    title_ru: 'Full-setup',      title_he: 'Full-setup',
+    desc_ru:  'Полная настройка, кастомные поля, категории, обучение',
+    desc_he:  'הגדרה מלאה, שדות מותאמים, קטגוריות, הדרכה',
+    price: 2000, discount_eligible: true,
+  },
+  {
+    id: 'standart', emoji: '⚙️',
+    title_ru: 'Standart-setup',  title_he: 'Standart-setup',
+    desc_ru:  'Стандартная настройка без кастомизации, обучение',
+    desc_he:  'הגדרה סטנדרטית, ללא התאמה, הדרכה',
+    price: 1300, discount_eligible: true,
+  },
+  {
+    id: 'self', emoji: '🚀',
+    title_ru: 'Self-onboarding', title_he: 'Self-onboarding',
+    desc_ru:  'Без настройки и обучения — Pay & Go',
+    desc_he:  'ללא הגדרה ו-ללא הדרכה — Pay & Go',
+    price: 300, discount_eligible: false,
+  },
+]
 
 // Fallback — показываем пока грузится API
 export const FALLBACK_PLANS: LandingPlan[] = [
@@ -96,5 +131,12 @@ export function usePricingPlans() {
       .finally(() => setLoading(false))
   }, [])
 
-  return { plans, config, loading, error }
+  const setupOptions = config?.setup_options?.length
+    ? config.setup_options
+    : FALLBACK_SETUP_OPTIONS
+
+  const discountPct = config?.demo_discount_pct ?? 15
+  const discountThreshold = config?.demo_discount_threshold ?? 5
+
+  return { plans, config, setupOptions, discountPct, discountThreshold, loading, error }
 }

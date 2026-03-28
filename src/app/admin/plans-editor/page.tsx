@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Package, Plus, Trash2, Save, Loader2, Check, X, GripVertical,
   ChevronRight, Settings2, Eye, EyeOff, AlertCircle, Languages,
+  Wrench, ToggleLeft, ToggleRight,
 } from 'lucide-react'
+import { type SetupOption, FALLBACK_SETUP_OPTIONS } from '@/hooks/usePricingPlans'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { toast } from 'sonner'
 
@@ -26,6 +28,7 @@ export interface LandingPlan {
 
 interface PricingConfig {
   landing_plans: LandingPlan[]
+  setup_options: SetupOption[]
   demo_setup_base: number
   demo_module_price: number
   demo_discount_threshold: number
@@ -369,6 +372,7 @@ export default function PlansEditorPage() {
   const [saving, setSaving] = useState(false)
   const [savedFlash, setSavedFlash] = useState(false)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
+  const [setupOpen, setSetupOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/pricing-config')
@@ -380,6 +384,13 @@ export default function PlansEditorPage() {
             is_popular: false, ...p,
           }))
         }
+        // Миграция: добавляем setup_options если нет в БД
+        if (!data?.setup_options || data.setup_options.length === 0) {
+          data.setup_options = FALLBACK_SETUP_OPTIONS
+        }
+        // Миграция: discount_pct/threshold дефолты
+        if (!data.demo_discount_pct)      data.demo_discount_pct      = 15
+        if (!data.demo_discount_threshold) data.demo_discount_threshold = 5
         setConfig(data)
       })
       .catch(() => toast.error(l ? 'שגיאה בטעינה' : 'Ошибка загрузки'))
@@ -392,6 +403,16 @@ export default function PlansEditorPage() {
       const plans = [...prev.landing_plans]
       plans[idx] = { ...plans[idx], [field]: val }
       return { ...prev, landing_plans: plans }
+    })
+  }, [])
+
+  // Обновление конкретного поля в setup_options[idx]
+  const updateSetupOption = useCallback((idx: number, field: keyof SetupOption, val: any) => {
+    setConfig(prev => {
+      if (!prev) return prev
+      const opts = [...(prev.setup_options ?? [])]
+      opts[idx] = { ...opts[idx], [field]: val }
+      return { ...prev, setup_options: opts }
     })
   }, [])
 
@@ -560,6 +581,122 @@ export default function PlansEditorPage() {
           )}
         </div>
       </div>
+
+      {/* ── Setup Options Editor ── */}
+      {config && (
+        <div className="flex-shrink-0 border-t border-slate-100 bg-white">
+          {/* Toggle header */}
+          <button
+            onClick={() => setSetupOpen(o => !o)}
+            className="w-full flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <Wrench size={15} className="text-amber-500" />
+              {l ? 'אפשרויות אונבורדינג (סטאפ)' : 'Виды онбординга (сетап)'}
+              <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-normal">
+                {config.setup_options?.length ?? 0} {l ? 'אפשרויות' : 'вариантов'}
+              </span>
+            </div>
+            {setupOpen
+              ? <ToggleRight size={18} className="text-amber-500" />
+              : <ToggleLeft size={18} className="text-slate-400" />}
+          </button>
+
+          {setupOpen && (
+            <div className="px-6 pb-5 space-y-3">
+              {/* Скидка */}
+              <div className="flex items-center gap-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+                <span className="text-xs font-semibold text-amber-700 whitespace-nowrap">
+                  {l ? 'הנחה (%) עם 5+ מודולים' : 'Скидка (%) при 5+ модулях'}
+                </span>
+                <input
+                  type="number" min={0} max={99}
+                  value={config.demo_discount_pct ?? 15}
+                  onChange={e => setConfig(c => c ? { ...c, demo_discount_pct: Number(e.target.value) } : c)}
+                  className="w-20 px-2 py-1 text-sm border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                />
+                <span className="text-xs text-amber-600">%</span>
+              </div>
+
+              {/* Список вариантов */}
+              {(config.setup_options ?? []).map((opt, idx) => (
+                <div key={opt.id} className="bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={opt.emoji}
+                      onChange={e => updateSetupOption(idx, 'emoji', e.target.value)}
+                      className="w-12 text-center px-1 py-1 text-lg border border-slate-200 rounded-lg bg-white"
+                    />
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex-1">
+                      {opt.id}
+                    </span>
+                    {/* Скидка применяется */}
+                    <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={opt.discount_eligible}
+                        onChange={e => updateSetupOption(idx, 'discount_eligible', e.target.checked)}
+                        className="rounded"
+                      />
+                      {l ? 'הנחה' : 'Скидка'}
+                    </label>
+                    {/* Цена */}
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-slate-400">₪</span>
+                      <input
+                        type="number" min={0}
+                        value={opt.price}
+                        onChange={e => updateSetupOption(idx, 'price', Number(e.target.value))}
+                        className="w-20 px-2 py-1 text-sm font-bold border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Названия RU / HE */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-semibold uppercase">RU название</label>
+                      <input
+                        value={opt.title_ru}
+                        onChange={e => updateSetupOption(idx, 'title_ru', e.target.value)}
+                        className="w-full mt-0.5 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                      />
+                    </div>
+                    <div dir="rtl">
+                      <label className="text-[10px] text-slate-400 font-semibold uppercase">HE שם</label>
+                      <input
+                        value={opt.title_he}
+                        onChange={e => updateSetupOption(idx, 'title_he', e.target.value)}
+                        className="w-full mt-0.5 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Описания RU / HE */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-slate-400 font-semibold uppercase">RU описание</label>
+                      <input
+                        value={opt.desc_ru}
+                        onChange={e => updateSetupOption(idx, 'desc_ru', e.target.value)}
+                        className="w-full mt-0.5 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                      />
+                    </div>
+                    <div dir="rtl">
+                      <label className="text-[10px] text-slate-400 font-semibold uppercase">HE תיאור</label>
+                      <input
+                        value={opt.desc_he}
+                        onChange={e => updateSetupOption(idx, 'desc_he', e.target.value)}
+                        className="w-full mt-0.5 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Alert: revalidation note ── */}
       <div className="flex-shrink-0 flex items-center gap-2 px-6 py-2 bg-blue-50 border-t border-blue-100 text-xs text-blue-600">

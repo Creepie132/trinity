@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Package, Plus, Trash2, Save, Loader2, Check, X, GripVertical,
   ChevronRight, Settings2, Eye, EyeOff, AlertCircle, Languages,
-  Wrench, ToggleLeft, ToggleRight,
+  Wrench,
 } from 'lucide-react'
 import { type SetupOption, FALLBACK_SETUP_OPTIONS } from '@/hooks/usePricingPlans'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -373,6 +373,7 @@ export default function PlansEditorPage() {
   const [savedFlash, setSavedFlash] = useState(false)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
   const [setupOpen, setSetupOpen] = useState(false)
+  const [selectedSetupIdx, setSelectedSetupIdx] = useState<number | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/pricing-config')
@@ -582,119 +583,165 @@ export default function PlansEditorPage() {
         </div>
       </div>
 
-      {/* ── Setup Options Editor ── */}
+      {/* ── Setup Options Editor — same pattern as plans ── */}
       {config && (
-        <div className="flex-shrink-0 border-t border-slate-100 bg-white">
-          {/* Toggle header */}
-          <button
-            onClick={() => setSetupOpen(o => !o)}
-            className="w-full flex items-center justify-between px-6 py-3 hover:bg-slate-50 transition-colors"
-          >
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <Wrench size={15} className="text-amber-500" />
-              {l ? 'אפשרויות אונבורדינג (סטאפ)' : 'Виды онбординга (сетап)'}
-              <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-normal">
-                {config.setup_options?.length ?? 0} {l ? 'אפשרויות' : 'вариантов'}
+        <div className="flex-shrink-0 border-t-4 border-slate-100 bg-white">
+          {/* Section header */}
+          <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <Wrench size={14} className="text-amber-500" />
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                {l ? 'אפשרויות אונבורדינג (סטאפ)' : 'Виды онбординга (сетап)'}
+              </span>
+              <span className="text-xs bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full font-semibold">
+                {config.setup_options?.length ?? 0}
               </span>
             </div>
-            {setupOpen
-              ? <ToggleRight size={18} className="text-amber-500" />
-              : <ToggleLeft size={18} className="text-slate-400" />}
-          </button>
+            {/* Discount % — compact inline */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400">{l ? 'הנחה 5+ מודולים:' : 'Скидка 5+ модулей:'}</span>
+              <input
+                type="number" min={0} max={99}
+                value={config.demo_discount_pct ?? 15}
+                onChange={e => setConfig(c => c ? { ...c, demo_discount_pct: Number(e.target.value) } : c)}
+                className="w-14 px-2 py-1 text-sm font-bold border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white text-center"
+              />
+              <span className="text-xs text-amber-600 font-semibold">%</span>
+            </div>
+          </div>
 
-          {setupOpen && (
-            <div className="px-6 pb-5 space-y-3">
-              {/* Скидка */}
-              <div className="flex items-center gap-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
-                <span className="text-xs font-semibold text-amber-700 whitespace-nowrap">
-                  {l ? 'הנחה (%) עם 5+ מודולים' : 'Скидка (%) при 5+ модулях'}
-                </span>
-                <input
-                  type="number" min={0} max={99}
-                  value={config.demo_discount_pct ?? 15}
-                  onChange={e => setConfig(c => c ? { ...c, demo_discount_pct: Number(e.target.value) } : c)}
-                  className="w-20 px-2 py-1 text-sm border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                />
-                <span className="text-xs text-amber-600">%</span>
-              </div>
-
-              {/* Список вариантов */}
+          {/* List + Side Drawer — same layout as plans section above */}
+          <div className="flex overflow-hidden" style={{maxHeight: '280px'}}>
+            {/* Setup rows list */}
+            <div className="w-full md:w-[400px] flex-shrink-0 overflow-y-auto p-3 space-y-2">
               {(config.setup_options ?? []).map((opt, idx) => (
-                <div key={opt.id} className="bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      value={opt.emoji}
-                      onChange={e => updateSetupOption(idx, 'emoji', e.target.value)}
-                      className="w-12 text-center px-1 py-1 text-lg border border-slate-200 rounded-lg bg-white"
-                    />
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex-1">
-                      {opt.id}
-                    </span>
-                    {/* Скидка применяется */}
-                    <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={opt.discount_eligible}
-                        onChange={e => updateSetupOption(idx, 'discount_eligible', e.target.checked)}
-                        className="rounded"
-                      />
-                      {l ? 'הנחה' : 'Скидка'}
-                    </label>
-                    {/* Цена */}
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-slate-400">₪</span>
-                      <input
-                        type="number" min={0}
-                        value={opt.price}
-                        onChange={e => updateSetupOption(idx, 'price', Number(e.target.value))}
-                        className="w-20 px-2 py-1 text-sm font-bold border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                      />
+                <div
+                  key={opt.id}
+                  onClick={() => setSelectedSetupIdx(selectedSetupIdx === idx ? null : idx)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all
+                    ${selectedSetupIdx === idx ? 'border-amber-400 bg-amber-50 shadow-sm' : 'border-slate-100 bg-white hover:border-slate-200'}`}
+                >
+                  {/* Emoji */}
+                  <span className="text-xl flex-shrink-0 w-8 text-center">{opt.emoji}</span>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-slate-800 text-sm">{opt.title_ru}</div>
+                    <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                      <span className="font-bold text-amber-600">₪{opt.price}</span>
+                      {opt.discount_eligible && (
+                        <span className="bg-green-100 text-green-600 text-[10px] px-1.5 py-0.5 rounded-full font-semibold">
+                          {l ? 'הנחה' : 'Скидка'}
+                        </span>
+                      )}
                     </div>
                   </div>
-
-                  {/* Названия RU / HE */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] text-slate-400 font-semibold uppercase">RU название</label>
-                      <input
-                        value={opt.title_ru}
-                        onChange={e => updateSetupOption(idx, 'title_ru', e.target.value)}
-                        className="w-full mt-0.5 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                      />
-                    </div>
-                    <div dir="rtl">
-                      <label className="text-[10px] text-slate-400 font-semibold uppercase">HE שם</label>
-                      <input
-                        value={opt.title_he}
-                        onChange={e => updateSetupOption(idx, 'title_he', e.target.value)}
-                        className="w-full mt-0.5 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Описания RU / HE */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] text-slate-400 font-semibold uppercase">RU описание</label>
-                      <input
-                        value={opt.desc_ru}
-                        onChange={e => updateSetupOption(idx, 'desc_ru', e.target.value)}
-                        className="w-full mt-0.5 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                      />
-                    </div>
-                    <div dir="rtl">
-                      <label className="text-[10px] text-slate-400 font-semibold uppercase">HE תיאור</label>
-                      <input
-                        value={opt.desc_he}
-                        onChange={e => updateSetupOption(idx, 'desc_he', e.target.value)}
-                        className="w-full mt-0.5 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                      />
-                    </div>
-                  </div>
+                  <ChevronRight size={16} className={`flex-shrink-0 transition-transform ${selectedSetupIdx === idx ? 'text-amber-500 rotate-90' : 'text-slate-300'}`} />
                 </div>
               ))}
             </div>
-          )}
+
+            {/* Setup Side Drawer */}
+            <div className={`flex-1 overflow-hidden border-l border-slate-100 transition-all duration-200 ${selectedSetupIdx !== null ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              {selectedSetupIdx !== null && (() => {
+                const opt = (config.setup_options ?? [])[selectedSetupIdx]
+                if (!opt) return null
+                return (
+                  <div className="flex flex-col h-full">
+                    {/* Drawer header */}
+                    <div className="flex items-center justify-between px-4 py-3 bg-amber-500 text-white flex-shrink-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{opt.emoji}</span>
+                        <span className="font-bold text-sm">{opt.title_ru}</span>
+                      </div>
+                      <button onClick={() => setSelectedSetupIdx(null)}
+                        className="w-7 h-7 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all">
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    {/* Drawer body */}
+                    <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-slate-50">
+                      {/* Emoji + Price + Discount row */}
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <label className="text-[10px] text-slate-400 font-semibold uppercase block mb-1">Emoji</label>
+                          <input
+                            value={opt.emoji}
+                            onChange={e => updateSetupOption(selectedSetupIdx, 'emoji', e.target.value)}
+                            className="w-14 text-center px-1 py-1.5 text-lg border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[10px] text-slate-400 font-semibold uppercase block mb-1">{l ? 'מחיר ₪' : 'Цена ₪'}</label>
+                          <input
+                            type="number" min={0}
+                            value={opt.price}
+                            onChange={e => updateSetupOption(selectedSetupIdx, 'price', Number(e.target.value))}
+                            className="w-full px-3 py-1.5 text-sm font-bold border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                          />
+                        </div>
+                        <div className="pt-5">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <div
+                              onClick={() => updateSetupOption(selectedSetupIdx, 'discount_eligible', !opt.discount_eligible)}
+                              className={`relative w-9 h-5 rounded-full transition-colors ${opt.discount_eligible ? 'bg-green-400' : 'bg-slate-200'}`}
+                            >
+                              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${opt.discount_eligible ? 'left-4' : 'left-0.5'}`} />
+                            </div>
+                            <span className="text-xs text-slate-500">{l ? 'הנחה' : 'Скидка'}</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* RU title + desc */}
+                      <div className="space-y-2">
+                        <div>
+                          <label className="text-[10px] text-slate-400 font-semibold uppercase">RU название</label>
+                          <input value={opt.title_ru} onChange={e => updateSetupOption(selectedSetupIdx, 'title_ru', e.target.value)}
+                            className="w-full mt-0.5 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 font-semibold uppercase">RU описание</label>
+                          <input value={opt.desc_ru} onChange={e => updateSetupOption(selectedSetupIdx, 'desc_ru', e.target.value)}
+                            className="w-full mt-0.5 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white" />
+                        </div>
+                      </div>
+
+                      {/* HE title + desc */}
+                      <div className="space-y-2" dir="rtl">
+                        <div>
+                          <label className="text-[10px] text-slate-400 font-semibold uppercase">HE שם</label>
+                          <input value={opt.title_he} onChange={e => updateSetupOption(selectedSetupIdx, 'title_he', e.target.value)}
+                            className="w-full mt-0.5 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-400 font-semibold uppercase">HE תיאור</label>
+                          <input value={opt.desc_he} onChange={e => updateSetupOption(selectedSetupIdx, 'desc_he', e.target.value)}
+                            className="w-full mt-0.5 px-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Drawer footer */}
+                    <div className="flex-shrink-0 px-4 py-3 bg-white border-t border-slate-100">
+                      <button onClick={() => setSelectedSetupIdx(null)}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-lg transition-all w-full justify-center">
+                        <Check size={14} /> {l ? 'סגור' : 'Готово'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+              {selectedSetupIdx === null && (
+                <div className="h-full flex items-center justify-center text-slate-300">
+                  <div className="text-center">
+                    <Wrench className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                    <p className="text-xs">{l ? 'בחר אפשרות לעריכה' : 'Выберите вариант для редактирования'}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

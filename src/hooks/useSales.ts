@@ -23,7 +23,7 @@ export interface Sale {
   sale_date: string
   total_amount: number
   paid_amount: number
-  status: 'new' | 'partial' | 'paid' | 'refunded' | 'cancelled'
+  status: 'new' | 'unpaid' | 'partial' | 'paid' | 'refunded' | 'cancelled'
   receipt_sent: boolean
   payment_method?: string | null
   notes: string | null
@@ -224,9 +224,11 @@ export function useCreateSale() {
         sale_date:      body.sale_date ?? new Date().toISOString().split('T')[0],
         total_amount:   totalAmount,
         paid_amount:    body.paid_amount ?? totalAmount,
-        status:         body.paid_amount != null && body.paid_amount < totalAmount
+        status:         body.paid_amount != null && body.paid_amount > 0 && body.paid_amount < totalAmount
                           ? 'partial'
-                          : 'paid',
+                          : body.paid_amount === 0 || body.paid_amount == null
+                            ? 'unpaid'
+                            : 'paid',
         receipt_sent:   false,
         payment_method: body.payment_method ?? null,
         notes:          body.notes ?? null,

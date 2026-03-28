@@ -1,13 +1,14 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import {
   Package, Wrench, Receipt, CheckCircle2, Clock,
-  AlertCircle, Ban, TrendingUp, Hash, ShoppingBag, CreditCard, Trash2,
+  AlertCircle, Ban, TrendingUp, Hash, ShoppingBag, CreditCard, Trash2, Wallet,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { TrinityMobDetailShell } from '@/components/ui/TrinityMobDetailShell'
+import { UnifiedPaymentDialog } from '@/components/payments/UnifiedPaymentDialog'
 import { Sale } from '@/hooks/useSales'
 import { useQueryClient } from '@tanstack/react-query'
 import { AdminDeleteButton } from '@/components/admin/AdminDeleteButton'
@@ -20,9 +21,11 @@ const T = {
     notes: 'הערות', close: 'סגור', unknown: 'לקוח לא ידוע',
     cash: 'מזומן', card: 'כרטיס', bit: 'ביט', transfer: 'העברה',
     paid_status: 'שולם', partial_status: 'חלקי', new_status: 'חדש',
+    unpaid_status: 'לא שולם',
     refunded_status: 'הוחזר', cancelled_status: 'בוטל',
     receipt_sent: 'חשבונית נשלחה', receipt_not_sent: 'חשבונית לא נשלחה',
     goToPayments: 'עבור לתשלומים', delete: 'מחק', actions: 'פעולות',
+    payBalance: 'שלם יתרה', payNow: 'שלם עכשיו',
   },
   ru: {
     title: 'Детали сделки', method: 'Оплата', items: 'Позиции',
@@ -30,9 +33,11 @@ const T = {
     notes: 'Примечания', close: 'Закрыть', unknown: 'Клиент не найден',
     cash: 'Наличные', card: 'Карта', bit: 'Bit', transfer: 'Перевод',
     paid_status: 'Оплачено', partial_status: 'Частично', new_status: 'Новая',
+    unpaid_status: 'Не оплачено',
     refunded_status: 'Возврат', cancelled_status: 'Отменено',
     receipt_sent: 'Чек отправлен', receipt_not_sent: 'Чек не выбит',
     goToPayments: 'Перейти в Платежи', delete: 'Удалить', actions: 'Действия',
+    payBalance: 'Оплатить остаток', payNow: 'Оплатить сейчас',
   },
 }
 
@@ -43,6 +48,7 @@ const METHOD_ICON: Record<string, string> = {
 const STATUS_CONFIG = {
   paid:      { icon: <CheckCircle2 size={12} />, color: '#34d399', bg: 'rgba(52,211,153,0.15)',  border: 'rgba(52,211,153,0.3)',  barColor: '#34d399' },
   partial:   { icon: <Clock size={12} />,         color: '#fbbf24', bg: 'rgba(251,191,36,0.15)',  border: 'rgba(251,191,36,0.3)',  barColor: '#fbbf24' },
+  unpaid:    { icon: <AlertCircle size={12} />,   color: '#f87171', bg: 'rgba(248,113,113,0.15)', border: 'rgba(248,113,113,0.3)', barColor: '#f87171' },
   new:       { icon: <AlertCircle size={12} />,   color: '#a78bfa', bg: 'rgba(167,139,250,0.15)', border: 'rgba(167,139,250,0.3)', barColor: '#a78bfa' },
   refunded:  { icon: <TrendingUp size={12} />,    color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', border: 'rgba(148,163,184,0.25)', barColor: '#94a3b8' },
   cancelled: { icon: <Ban size={12} />,            color: '#64748b', bg: 'rgba(100,116,139,0.1)', border: 'rgba(100,116,139,0.2)', barColor: '#64748b' },
@@ -73,6 +79,7 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [payDialogOpen, setPayDialogOpen] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -103,24 +110,28 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
   const [g1, g2]    = getGradient(clientName)
   const initials    = getInitials(clientName)
 
+  const needsPayment = sale.status === 'unpaid' || sale.status === 'partial'
+  const remaining    = Math.max(0, total - paid)
   const handleDelete = () => { onClose(); queryClient.invalidateQueries({ queryKey: ['sales'] }) }
+  const handlePayDialogClose = (open: boolean) => {
+    setPayDialogOpen(open)
+    if (!open) {
+      queryClient.invalidateQueries({ queryKey: ['sales'] })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+    }
+  }
 
-  // ── Общий мобильный контент (темный стиль) ────────────────────────────────
-  const mobContent = (
+  // ── Общий контент (тёмный стиль — используется и на мобиле и как основа) ──
+  const sharedContent = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* Amount hero */}
-      <div style={{ borderRadius: 16, padding: '18px 16px', textAlign: 'center',
-        background: `${st.color}18`, border: `1px solid ${st.color}30` }}>
-        <div style={{ fontSize: 40, fontWeight: 900, color: st.color, letterSpacing: '-2px', lineHeight: 1, marginBottom: 8 }}>
-          ₪{total.toLocaleString()}
-        </div>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px',
-          borderRadius: 20, background: `${st.color}20`, border: `1px solid ${st.color}40` }}>
+      <div style={{ borderRadius: 16, padding: '18px 16px', textAlign: 'center', background: `${st.color}18`, border: `1px solid ${st.color}30` }}>
+        <div style={{ fontSize: 40, fontWeight: 900, color: st.color, letterSpacing: '-2px', lineHeight: 1, marginBottom: 8 }}>₪{total.toLocaleString()}</div>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 20, background: `${st.color}20`, border: `1px solid ${st.color}40` }}>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: st.color }} />
           <span style={{ fontSize: 12, fontWeight: 700, color: st.color }}>{String(statusLabel)}</span>
         </div>
       </div>
-
       {/* Progress bar */}
       <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${paidPct}%`, background: `linear-gradient(90deg,${st.barColor}99,${st.barColor})`, borderRadius: 3 }} />
@@ -128,7 +139,6 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
         <span>{t.paid}: ₪{paid.toLocaleString()}</span><span>{paidPct}%</span>
       </div>
-
       {/* Balance */}
       {balance > 0 && (
         <div style={{ background: 'rgba(251,191,36,0.1)', border: '0.5px solid rgba(251,191,36,0.25)', borderRadius: 10, padding: '8px 12px', display: 'flex', justifyContent: 'space-between' }}>
@@ -136,7 +146,6 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
           <span style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24' }}>₪{balance.toLocaleString()}</span>
         </div>
       )}
-
       {/* Method + Receipt */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div style={{ borderRadius: 12, padding: '10px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -166,11 +175,8 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
               const isProduct = !!item.product_id
               const itemTotal = Number(item.total_price || item.quantity * item.unit_price)
               return (
-                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                  background: idx % 2 === 0 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.025)',
-                  borderTop: idx > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: isProduct ? 'rgba(217,119,6,0.2)' : 'rgba(124,58,237,0.2)' }}>
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: idx % 2 === 0 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.025)', borderTop: idx > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isProduct ? 'rgba(217,119,6,0.2)' : 'rgba(124,58,237,0.2)' }}>
                     {isProduct ? <Package size={13} color="#fbbf24" /> : <Wrench size={13} color="#a78bfa" />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -181,24 +187,20 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
                 </div>
               )
             })}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '9px 12px', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
               <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{t.total}</span>
               <span style={{ fontSize: 16, fontWeight: 900, color: st.color }}>₪{total.toLocaleString()}</span>
             </div>
           </div>
         </div>
       )}
-
       {/* Notes */}
       {sale.notes && (
-        <div style={{ padding: '10px 12px', borderRadius: 12,
-          background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
+        <div style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)' }}>
           <div style={{ fontSize: 9, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 5 }}>{t.notes}</div>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>{sale.notes}</div>
         </div>
       )}
-
       {/* ID */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 2px' }}>
         <Hash size={9} color="rgba(255,255,255,0.2)" />
@@ -207,32 +209,64 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
     </div>
   )
 
-  // ── Мобиль: TrinityMobDetailShell со свайп-шторкой действий ─────────────────
+  // ── PaymentDialog — общий для моб и десктоп ──────────────────────────────
+  const payDialog = (
+    <UnifiedPaymentDialog
+      open={payDialogOpen}
+      onOpenChange={handlePayDialogClose}
+      initialData={{
+        clientId:      sale.client_id || undefined,
+        clientName:    sale.clients ? `${sale.clients.first_name} ${sale.clients.last_name}`.trim() : undefined,
+        saleId:        sale.id,
+        prefillAmount: remaining,
+      }}
+    />
+  )
+
+  // ── МОБИЛЬ ────────────────────────────────────────────────────────────────
   if (mounted && isMobile) {
     const mobActions = [
-      { icon: <CreditCard size={13} />, label: t.goToPayments, onClick: () => { onClose(); router.push('/payments') }, variant: 'purple' as const, hidden: !sale.payment_id },
+      {
+        icon: <Wallet size={13} />,
+        label: sale.status === 'partial'
+          ? `${t.payBalance} ₪${remaining.toLocaleString()}`
+          : `${t.payNow} ₪${remaining.toLocaleString()}`,
+        onClick: () => setPayDialogOpen(true),
+        variant: 'green' as const,
+        hidden: !needsPayment,
+      },
+      {
+        icon: <CreditCard size={13} />,
+        label: t.goToPayments,
+        onClick: () => { onClose(); router.push('/payments') },
+        variant: 'purple' as const,
+        hidden: !sale.payment_id,
+      },
       { icon: <Trash2 size={13} />, label: t.delete, onClick: handleDelete, variant: 'danger' as const },
     ]
     return (
-      <TrinityMobDetailShell
-        open={true}
-        onClose={onClose}
-        title={clientName}
-        subtitle={`${sale.sale_date} · ${t.title}`}
-        avatarContent={initials || <ShoppingBag size={16} />}
-        avatarBg={`linear-gradient(135deg,${g1},${g2})`}
-        actions={mobActions}
-        actionsTitle={t.actions}
-        locale={locale}
-      >
-        {mobContent}
-      </TrinityMobDetailShell>
+      <>
+        <TrinityMobDetailShell
+          open={true}
+          onClose={onClose}
+          title={clientName}
+          subtitle={`${sale.sale_date} · ${t.title}`}
+          avatarContent={initials || <ShoppingBag size={16} />}
+          avatarBg={`linear-gradient(135deg,${g1},${g2})`}
+          actions={mobActions}
+          actionsTitle={t.actions}
+          locale={locale}
+        >
+          {sharedContent}
+        </TrinityMobDetailShell>
+        {payDialog}
+      </>
     )
   }
 
-  // ── Десктоп: TrinityModalShell ───────────────────────────────────────────────
+  // ── ДЕСКТОП sidebar ───────────────────────────────────────────────────────
   const sidebar = (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
         <div style={{ width: 56, height: 56, borderRadius: 16, background: `linear-gradient(135deg,${g1},${g2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 900, boxShadow: `0 6px 20px ${g2}55` }}>
           {initials || <ShoppingBag size={22} />}
@@ -264,9 +298,20 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
         <span style={{ fontSize: 18, lineHeight: 1 }}>{methodIcon}</span>
         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>{String(methodLabel)}</span>
       </div>
+      {/* Кнопка "Оплатить" — только для unpaid/partial */}
+      {needsPayment && (
+        <button onClick={() => setPayDialogOpen(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 10px', background: 'linear-gradient(135deg,#22c55e,#16a34a)', border: 'none', borderRadius: 10, marginBottom: 8, cursor: 'pointer', width: '100%', boxShadow: '0 3px 10px rgba(34,197,94,0.35)' }}>
+          <Wallet size={14} color="#fff" />
+          <div style={{ flex: 1, textAlign: 'start' }}>
+            <div style={{ fontSize: 12, color: '#fff', fontWeight: 700 }}>{sale.status === 'partial' ? t.payBalance : t.payNow}</div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>₪{remaining.toLocaleString()}</div>
+          </div>
+        </button>
+      )}
       {sale.payment_id && (
         <button onClick={() => { onClose(); router.push('/payments') }}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(99,102,241,0.12)', border: '0.5px solid rgba(99,102,241,0.3)', borderRadius: 10, marginBottom: 10, cursor: 'pointer', width: '100%' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(99,102,241,0.12)', border: '0.5px solid rgba(99,102,241,0.3)', borderRadius: 10, marginBottom: 8, cursor: 'pointer', width: '100%' }}>
           <CreditCard size={13} color="#818cf8" />
           <span style={{ fontSize: 11, color: '#818cf8', fontWeight: 500 }}>{t.goToPayments}</span>
         </button>
@@ -279,68 +324,77 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
     </div>
   )
 
-  return (
-    <Modal open={!!sale} onClose={onClose} darkHeader showCloseButton={false} width="700px" dir={dir} contentClassName="!p-0">
-      <TrinityModalShell open={!!sale} onClose={onClose} icon={<ShoppingBag />}
-        title={clientName} subtitle={t.title} dir={dir} sidebarExtra={sidebar}>
-        <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
-          <div className="grid grid-cols-2 gap-3">
-            <div style={{ background: 'linear-gradient(135deg,#f8faff,#eff2ff)', border: '0.5px solid #e0e7ff', borderRadius: 14, padding: '12px 14px' }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{t.method}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>{methodIcon}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{String(methodLabel)}</span>
-              </div>
-            </div>
-            <div style={{ background: sale.receipt_sent ? 'linear-gradient(135deg,#f0fdf4,#dcfce7)' : 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: `0.5px solid ${sale.receipt_sent ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 14, padding: '12px 14px' }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{t.receipt}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <Receipt size={16} color={sale.receipt_sent ? '#22c55e' : '#cbd5e1'} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: sale.receipt_sent ? '#16a34a' : '#94a3b8' }}>
-                  {sale.receipt_sent ? t.receipt_sent : t.receipt_not_sent}
-                </span>
-              </div>
-            </div>
-          </div>
-          {sale.sale_items && sale.sale_items.length > 0 && (
-            <div>
-              <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{t.items}</p>
-              <div style={{ border: '0.5px solid #e8edf4', borderRadius: 14, overflow: 'hidden', background: '#fff' }}>
-                {sale.sale_items.map((item, idx) => {
-                  const isProduct = !!item.product_id
-                  const itemTotal = Number(item.total_price || item.quantity * item.unit_price)
-                  return (
-                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderTop: idx > 0 ? '0.5px solid #f1f5f9' : 'none' }}>
-                      <div style={{ width: 34, height: 34, borderRadius: 10, background: isProduct ? '#fef3c7' : '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {isProduct ? <Package size={15} color="#d97706" /> : <Wrench size={15} color="#7c3aed" />}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{item.product_name}</p>
-                        <p style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0 0' }}>{item.quantity} × ₪{Number(item.unit_price).toLocaleString()}</p>
-                      </div>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: '#1e293b', flexShrink: 0 }}>₪{itemTotal.toLocaleString()}</span>
-                    </div>
-                  )
-                })}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'linear-gradient(90deg,#1e293b,#0f172a)', borderTop: '0.5px solid #e8edf4' }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t.total}</span>
-                  <span style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>₪{total.toLocaleString()}</span>
-                </div>
-              </div>
-            </div>
-          )}
-          {sale.notes && (
-            <div style={{ background: 'linear-gradient(135deg,#fffbeb,#fef3c7)', border: '0.5px solid #fde68a', borderRadius: 14, padding: '12px 14px' }}>
-              <p style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{t.notes}</p>
-              <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.6, margin: 0 }}>{sale.notes}</p>
-            </div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Hash size={10} color="#cbd5e1" />
-            <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#cbd5e1' }}>{sale.id}</span>
+  // ── ДЕСКТОП content ───────────────────────────────────────────────────────
+  const desktopContent = (
+    <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
+      <div className="grid grid-cols-2 gap-3">
+        <div style={{ background: 'linear-gradient(135deg,#f8faff,#eff2ff)', border: '0.5px solid #e0e7ff', borderRadius: 14, padding: '12px 14px' }}>
+          <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{t.method}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 20 }}>{methodIcon}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{String(methodLabel)}</span>
           </div>
         </div>
-      </TrinityModalShell>
-    </Modal>
+        <div style={{ background: sale.receipt_sent ? 'linear-gradient(135deg,#f0fdf4,#dcfce7)' : 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: `0.5px solid ${sale.receipt_sent ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 14, padding: '12px 14px' }}>
+          <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{t.receipt}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <Receipt size={16} color={sale.receipt_sent ? '#22c55e' : '#cbd5e1'} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: sale.receipt_sent ? '#16a34a' : '#94a3b8' }}>
+              {sale.receipt_sent ? t.receipt_sent : t.receipt_not_sent}
+            </span>
+          </div>
+        </div>
+      </div>
+      {sale.sale_items && sale.sale_items.length > 0 && (
+        <div>
+          <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{t.items}</p>
+          <div style={{ border: '0.5px solid #e8edf4', borderRadius: 14, overflow: 'hidden', background: '#fff' }}>
+            {sale.sale_items.map((item, idx) => {
+              const isProduct = !!item.product_id
+              const itemTotal = Number(item.total_price || item.quantity * item.unit_price)
+              return (
+                <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderTop: idx > 0 ? '0.5px solid #f1f5f9' : 'none' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: isProduct ? '#fef3c7' : '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {isProduct ? <Package size={15} color="#d97706" /> : <Wrench size={15} color="#7c3aed" />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{item.product_name}</p>
+                    <p style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0 0' }}>{item.quantity} × ₪{Number(item.unit_price).toLocaleString()}</p>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: '#1e293b', flexShrink: 0 }}>₪{itemTotal.toLocaleString()}</span>
+                </div>
+              )
+            })}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'linear-gradient(90deg,#1e293b,#0f172a)', borderTop: '0.5px solid #e8edf4' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t.total}</span>
+              <span style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>₪{total.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      {sale.notes && (
+        <div style={{ background: 'linear-gradient(135deg,#fffbeb,#fef3c7)', border: '0.5px solid #fde68a', borderRadius: 14, padding: '12px 14px' }}>
+          <p style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{t.notes}</p>
+          <p style={{ fontSize: 13, color: '#78350f', lineHeight: 1.6, margin: 0 }}>{sale.notes}</p>
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Hash size={10} color="#cbd5e1" />
+        <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#cbd5e1' }}>{sale.id}</span>
+      </div>
+    </div>
+  )
+
+  // ── RENDER ────────────────────────────────────────────────────────────────
+  return (
+    <>
+      <Modal open={!!sale} onClose={onClose} darkHeader showCloseButton={false} width="700px" dir={dir} contentClassName="!p-0">
+        <TrinityModalShell open={!!sale} onClose={onClose} icon={<ShoppingBag />}
+          title={clientName} subtitle={t.title} dir={dir} sidebarExtra={sidebar}>
+          {desktopContent}
+        </TrinityModalShell>
+      </Modal>
+      {payDialog}
+    </>
   )
 }

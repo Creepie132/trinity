@@ -21,7 +21,7 @@ const T = {
     newSale: 'מכירה חדשה', export: 'ייצוא', summary: 'סיכום',
     revenue: 'הכנסות', count: 'עסקאות', avg: 'ממוצע לעסקה',
     monthlyChart: 'לפי חודש',
-    all: 'הכל', paid: 'שולם', partial: 'חלקי', newStatus: 'חדש', draft: 'שמורה',
+    all: 'הכל', paid: 'שולם', partial: 'חלקי', newStatus: 'חדש', draft: 'שמורה', unpaid: 'לא שולם',
     filterAll: 'כל השיטות', cash: 'מזומן', card: 'כרטיס', bit: 'ביט',
     search: 'חיפוש לפי לקוח, מוצר...',
     syncNote: 'כל מכירה יוצרת אוטומטית רשומה בתשלומים',
@@ -37,7 +37,7 @@ const T = {
     newSale: 'Новая сделка', export: 'Экспорт', summary: 'Сводка',
     revenue: 'Выручка', count: 'Сделок', avg: 'Средний чек',
     monthlyChart: 'По месяцам',
-    all: 'Все', paid: 'Оплачено', partial: 'Частично', newStatus: 'Новая', draft: 'Сохранённые',
+    all: 'Все', paid: 'Оплачено', partial: 'Частично', newStatus: 'Новая', draft: 'Сохранённые', unpaid: 'Неоплаченные',
     filterAll: 'Все способы', cash: 'Наличные', card: 'Карта', bit: 'Bit',
     search: 'Поиск по клиенту, товару...',
     syncNote: 'Каждая продажа создаёт запись в разделе «Платежи»',
@@ -52,11 +52,12 @@ const T = {
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { dot: string; badge: string; border: string; label: { ru: string; he: string } }> = {
-  paid:      { dot: '#10b981', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800', border: '#10b981', label: { ru: 'Оплачено', he: 'שולם' } },
-  partial:   { dot: '#f59e0b', badge: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',         border: '#f59e0b', label: { ru: 'Частично', he: 'חלקי' } },
-  new:       { dot: '#8b5cf6', badge: 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800',   border: '#8b5cf6', label: { ru: 'Новая',    he: 'חדש' } },
-  refunded:  { dot: '#9ca3af', badge: 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',                  border: '#9ca3af', label: { ru: 'Возврат',  he: 'החזר' } },
-  cancelled: { dot: '#d1d5db', badge: 'bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700',                  border: '#e5e7eb', label: { ru: 'Отменена', he: 'בוטל' } },
+  paid:      { dot: '#10b981', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800', border: '#10b981', label: { ru: 'Оплачено',     he: 'שולם'   } },
+  partial:   { dot: '#f59e0b', badge: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',           border: '#f59e0b', label: { ru: 'Частично',     he: 'חלקי'   } },
+  unpaid:    { dot: '#f87171', badge: 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',                       border: '#f87171', label: { ru: 'Не оплачено', he: 'לא שולם' } },
+  new:       { dot: '#8b5cf6', badge: 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800',     border: '#8b5cf6', label: { ru: 'Новая',        he: 'חדש'    } },
+  refunded:  { dot: '#9ca3af', badge: 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',                    border: '#9ca3af', label: { ru: 'Возврат',      he: 'החזר'   } },
+  cancelled: { dot: '#d1d5db', badge: 'bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700',                    border: '#e5e7eb', label: { ru: 'Отменена',     he: 'בוטל'   } },
 }
 const AV_COLORS = [
   'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
@@ -535,12 +536,17 @@ function SalesContent() {
 
               {/* Табы статусов */}
               <div className="flex bg-gray-50 dark:bg-gray-700/40 border-b border-gray-100 dark:border-gray-700 px-2 overflow-x-auto scrollbar-hide">
-                {(['all','paid','partial','new','draft'] as const).map(s => (
+                {(['all','paid','partial','unpaid','new','draft'] as const).map(s => (
                   <button key={s} onClick={() => setStatusFilter(s)}
                     className={`flex-shrink-0 flex items-center gap-1.5 text-[11px] font-semibold py-3 px-3 border-b-2 transition-all whitespace-nowrap ${statusFilter === s ? 'border-amber-500 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600'}`}>
                     {s === 'draft' && <BookmarkCheck size={11} />}
-                    {s === 'all' ? t.all : s === 'paid' ? t.paid : s === 'partial' ? t.partial : s === 'new' ? t.newStatus : t.draft}
+                    {s === 'unpaid' && <span style={{ color: '#f87171', fontSize: 9 }}>⚠</span>}
+                    {s === 'all' ? t.all : s === 'paid' ? t.paid : s === 'partial' ? t.partial : s === 'unpaid' ? t.unpaid : s === 'new' ? t.newStatus : t.draft}
                     {s === 'draft' && drafts.length > 0 && <span className="bg-amber-500 text-white text-[8px] min-w-[14px] h-3.5 px-1 rounded-full flex items-center justify-center font-bold">{drafts.length}</span>}
+                    {s === 'unpaid' && (() => {
+                      const cnt = sales.filter((x: Sale) => x.status === 'unpaid' || x.status === 'partial').length
+                      return cnt > 0 ? <span className="bg-red-500 text-white text-[8px] min-w-[14px] h-3.5 px-1 rounded-full flex items-center justify-center font-bold">{cnt}</span> : null
+                    })()}
                   </button>
                 ))}
               </div>
@@ -703,12 +709,17 @@ function SalesContent() {
             </div>
           )}
           <div className="flex bg-gray-50 dark:bg-gray-700/40 border-b border-gray-100 dark:border-gray-700 px-2 overflow-x-auto scrollbar-hide">
-            {(['all','paid','partial','new','draft'] as const).map(s => (
+            {(['all','paid','partial','unpaid','new','draft'] as const).map(s => (
               <button key={s} onClick={() => setStatusFilter(s)}
                 className={`flex-shrink-0 flex items-center gap-1.5 text-[11px] font-semibold py-3 px-3 border-b-2 transition-all whitespace-nowrap ${statusFilter === s ? 'border-amber-500 text-gray-900' : 'border-transparent text-gray-400'}`}>
                 {s === 'draft' && <BookmarkCheck size={11} />}
-                {s === 'all' ? t.all : s === 'paid' ? t.paid : s === 'partial' ? t.partial : s === 'new' ? t.newStatus : t.draft}
+                {s === 'unpaid' && <span style={{ color: '#f87171', fontSize: 9 }}>⚠</span>}
+                {s === 'all' ? t.all : s === 'paid' ? t.paid : s === 'partial' ? t.partial : s === 'unpaid' ? t.unpaid : s === 'new' ? t.newStatus : t.draft}
                 {s === 'draft' && drafts.length > 0 && <span className="bg-amber-500 text-white text-[8px] min-w-[14px] h-3.5 px-1 rounded-full flex items-center justify-center font-bold">{drafts.length}</span>}
+                {s === 'unpaid' && (() => {
+                  const cnt = sales.filter((x: Sale) => x.status === 'unpaid' || x.status === 'partial').length
+                  return cnt > 0 ? <span className="bg-red-500 text-white text-[8px] min-w-[14px] h-3.5 px-1 rounded-full flex items-center justify-center font-bold">{cnt}</span> : null
+                })()}
               </button>
             ))}
           </div>

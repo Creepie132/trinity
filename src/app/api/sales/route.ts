@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     : (discount_value ?? 0)
   const total_amount = Math.max(0, subtotal - discountAmt)
   const paid = Number(paid_amount ?? total_amount)
-  const saleStatus = paid >= total_amount ? 'paid' : paid > 0 ? 'partial' : 'new'
+  const saleStatus = paid >= total_amount ? 'paid' : paid > 0 ? 'partial' : 'unpaid'
   const paymentStatus = paid >= total_amount ? 'completed' : 'pending'
 
   const { data: payment, error: pmErr } = await supabase

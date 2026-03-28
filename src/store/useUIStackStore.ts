@@ -4,22 +4,20 @@
  * useUIStackStore — глобальный менеджер UI-слоёв для кнопки "Назад".
  *
  * ═══════════════════════════════════════════════════════════════════
- * АРХИТЕКТУРА v3 — Balanced History
+ * АРХИТЕКТУРА v4 — replaceState на popstate
  * ═══════════════════════════════════════════════════════════════════
  *
- * ГЛАВНОЕ ПРАВИЛО: история браузера и UI-стек всегда синхронны.
+ * Проблема всех предыдущих версий:
+ *   history.forward() — асинхронный. К моменту его исполнения Next.js
+ *   App Router уже обработал popstate и сделал навигацию.
  *
- * ПРОБЛЕМА v2:
- *   unregisterLayer() не убирал синтетическую запись из истории.
- *   При программном закрытии (крестик) запись оставалась «мёртвой».
- *   Следующий popstate: стек пуст → return, но браузер уже ушёл
- *   на предыдущий реальный URL → Next.js делал переход на /dashboard.
- *
- * РЕШЕНИЕ v3:
- *   _synthCount отслеживает сколько синтетических записей сейчас
- *   живёт в истории браузера (включая «мёртвые» от unregisterLayer).
- *   При popstate на нашу запись, но стек пуст — «мёртвая» запись:
- *   немедленно делаем history.forward() чтобы вернуться на текущий URL.
+ * Решение v4:
+ *   При ОТКРЫТИИ: pushState({ uiLayer: id }) — добавляем запись.
+ *   При popstate (Назад нажата):
+ *     1. Синхронно делаем replaceState с текущим URL — перезаписываем
+ *        запись в истории обратно на нашу. URL не меняется.
+ *     2. Next.js видит popstate, но URL тот же → не делает навигацию.
+ *     3. Закрываем верхний UI-слой.
  *
  * ═══════════════════════════════════════════════════════════════════
  */
@@ -34,88 +32,69 @@ export interface UILayer {
 interface UIStackState {
   stack: UILayer[]
   _listenerAttached: boolean
+  _currentUrl: string
 
   registerLayer:   (id: string, closeFn: () => void) => void
   unregisterLayer: (id: string) => void
-  _handlePopState: () => void
+  _handlePopState: (event: PopStateEvent) => void
   _attachListener: () => void
 }
 
 export const useUIStackStore = create<UIStackState>((set, get) => ({
   stack: [],
   _listenerAttached: false,
+  _currentUrl: '',
 
   _attachListener: () => {
     if (get()._listenerAttached) return
     if (typeof window === 'undefined') return
 
     window.addEventListener('popstate', (event: PopStateEvent) => {
-      const state = event.state
-      const stack = get().stack
-      console.log('[UIStack] popstate fired. state=', JSON.stringify(state), 'stack=', stack.map(l => l.id))
-
-      // Если наш стек непустой — это "Назад" пока открыт UI-слой.
-      // Немедленно вызываем forward() чтобы нейтрализовать шаг назад
-      // ДО того как Next.js App Router обработает этот popstate.
-      // Потом закрываем верхний слой.
-      if (stack.length > 0) {
-        console.log('[UIStack] stack has layers — calling forward() then closing top layer')
-        window.history.forward()
-        get()._handlePopState()
-        return
-      }
-
-      // Стек пуст. Наша мёртвая запись?
-      if (state && typeof state === 'object' && 'uiLayer' in state) {
-        console.log('[UIStack] dead uiLayer entry — calling forward()')
-        window.history.forward()
-        return
-      }
-
-      // Не наша запись и стек пуст — нативная навигация Next.js
-      console.log('[UIStack] NOT our entry and stack empty — letting Next.js handle it')
-    })
+      get()._handlePopState(event)
+    }, true) // capture phase — раньше Next.js
 
     set({ _listenerAttached: true })
   },
 
   registerLayer: (id, closeFn) => {
     get()._attachListener()
+    if (get().stack.some(l => l.id === id)) return
 
-    // Защита от двойной регистрации одного и того же слоя
-    if (get().stack.some(l => l.id === id)) {
-      console.log('[UIStack] registerLayer DUPLICATE skipped:', id)
-      return
-    }
+    // Запоминаем текущий URL перед pushState
+    const currentUrl = window.location.href
+    window.history.pushState({ uiLayer: id }, '', currentUrl)
 
-    if (typeof window !== 'undefined') {
-      window.history.pushState({ uiLayer: id }, '')
-    }
-
-    console.log('[UIStack] registerLayer:', id, '→ stack size now', get().stack.length + 1)
-    set(s => ({ stack: [...s.stack, { id, closeFn }] }))
+    console.log('[UIStack] registerLayer:', id, 'url=', currentUrl)
+    set(s => ({ stack: [...s.stack, { id, closeFn }], _currentUrl: currentUrl }))
   },
 
   unregisterLayer: (id) => {
-    console.log('[UIStack] unregisterLayer:', id, '→ stack size now', get().stack.length - 1)
+    console.log('[UIStack] unregisterLayer:', id)
     set(s => ({ stack: s.stack.filter(l => l.id !== id) }))
   },
 
-  _handlePopState: () => {
-    const { stack } = get()
-    console.log('[UIStack] _handlePopState. stack=', stack.map(l => l.id))
+  _handlePopState: (event: PopStateEvent) => {
+    const { stack, _currentUrl } = get()
+    console.log('[UIStack] popstate. stack=', stack.map(l => l.id), 'state=', event.state)
 
     if (stack.length === 0) {
-      // Не должны сюда попасть — listener проверяет стек до вызова.
-      // На всякий случай: forward() чтобы не уйти на предыдущий URL.
-      console.log('[UIStack] _handlePopState called with empty stack — forward()')
-      window.history.forward()
+      // Наша мёртвая запись — восстанавливаем URL синхронно
+      if (event.state && typeof event.state === 'object' && 'uiLayer' in event.state) {
+        const url = _currentUrl || window.location.href
+        console.log('[UIStack] dead entry — replaceState back to', url)
+        window.history.replaceState(event.state, '', url)
+      }
       return
     }
 
-    // LIFO: закрываем верхний слой
+    // Синхронно восстанавливаем URL — Next.js не увидит изменения
+    const url = _currentUrl || window.location.href
+    console.log('[UIStack] intercepting — replaceState to', url)
+    window.history.replaceState({ uiLayer: stack[stack.length - 1].id }, '', url)
+
+    // Закрываем верхний слой
     const topLayer = stack[stack.length - 1]
-    console.log('[UIStack] closing top layer:', topLayer.id)
+    console.log('[UIStack] closing:', topLayer.id)
     set(s => ({ stack: s.stack.filter(l => l.id !== topLayer.id) }))
     topLayer.closeFn()
   },

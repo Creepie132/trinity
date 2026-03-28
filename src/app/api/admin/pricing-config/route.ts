@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
@@ -67,6 +68,12 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (error) throw error
+
+    // ── Инвалидация кэша ─────────────────────────────────────────
+    // Лендинг и админка получат свежие данные при следующей загрузке
+    revalidatePath('/landing')
+    revalidatePath('/admin/plans-editor')
+
     return NextResponse.json(data)
   } catch (err) {
     console.error('[pricing-config PUT]', err)

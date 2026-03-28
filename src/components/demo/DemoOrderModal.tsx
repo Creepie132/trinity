@@ -5,6 +5,7 @@ import { X, ChevronRight, ChevronLeft, Check, Sparkles, Package, Zap,
   Settings2, Lock, ExternalLink, CreditCard, AlertCircle, Crown, Plus, Minus } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { validatePhone } from '@/lib/validations'
+import { usePricingPlans, type LandingPlan } from '@/hooks/usePricingPlans'
 
 export interface OrderForm {
   firstName: string; lastName: string; birthDate: string
@@ -274,44 +275,59 @@ const CustomPicker = memo(({ l, selectedModules, setSelectedModules, discountApp
 CustomPicker.displayName = 'CustomPicker'
 
 // ─── Step2 ────────────────────────────────────────────────────────────────────
+// Цвет плана → Tailwind accent для PlanCard
+const COLOR_ACCENT: Record<string, string> = {
+  blue: 'blue', amber: 'amber', purple: 'purple', green: 'green',
+  navy: 'indigo', red: 'red',
+}
+const PLAN_ICONS: Record<string, React.ReactNode> = {
+  base:       <Package size={18} className="text-white" />,
+  pro:        <Zap size={18} className="text-white" />,
+  enterprise: <Crown size={18} className="text-white" />,
+  custom:     <Settings2 size={18} className="text-white" />,
+}
+
 interface Step2Props {
-  l: boolean; isIsrael: boolean; plan: 'base' | 'pro' | 'enterprise' | 'custom' | null
+  l: boolean; isIsrael: boolean; plan: string | null
   onPlan: (p: 'base' | 'pro' | 'enterprise' | 'custom') => void
   selectedModules: Set<string>; setSelectedModules: React.Dispatch<React.SetStateAction<Set<string>>>
   discountApplied: boolean; monthlyPrice: number
   staffCount: number; setStaffCount: (n: number) => void
   wantsPayments: boolean; setWantsPayments: (v: boolean) => void
+  apiPlans: LandingPlan[]
 }
 const Step2 = memo((p: Step2Props) => {
   const { l, isIsrael, plan, onPlan, selectedModules, setSelectedModules,
-    discountApplied, monthlyPrice, staffCount, setStaffCount, wantsPayments, setWantsPayments } = p
+    discountApplied, monthlyPrice, staffCount, setStaffCount, wantsPayments, setWantsPayments,
+    apiPlans } = p
+  const isCustom = plan === 'custom'
   return (
     <div className="flex flex-col gap-3 pt-2">
-      <PlanCard id="base" selected={plan === 'base'} onSelect={onPlan}
-        icon={<Package size={18} className="text-white"/>}
-        title="Base" price="₪199" priceNote={l ? '/חודש' : '/мес'} accent="blue"
-        badge={l ? 'פופולרי' : 'Популярный'}
-        features={l ? ['לקוחות','ביקורים / תורים','יומן ומשימות','מלאי']
-                    : ['Клиенты','Визиты / Записи','Дневник и задачи','Склад']}/>
-      <PlanCard id="pro" selected={plan === 'pro'} onSelect={onPlan}
-        icon={<Zap size={18} className="text-white"/>}
-        title="Pro" price="₪249" priceNote={l ? '/חודש' : '/мес'} accent="amber"
-        badge={l ? 'מומלץ' : 'Рекомендован'}
-        features={l ? ['הכל מ-Base','הזמנה אונליין','אנליטיקה ודוחות','SMS ותזכורות']
-                    : ['Всё из Base','Онлайн-запись','Статистика и отчёты','SMS и напоминания']}/>
-      <PlanCard id="enterprise" selected={plan === 'enterprise'} onSelect={onPlan}
-        icon={<Crown size={18} className="text-white"/>}
-        title="Enterprise" price="₪499" priceNote={l ? '/חודש' : '/мес'} accent="indigo"
-        badge={l ? 'עסקים גדולים' : 'Для бизнеса'}
-        features={l ? ['הכל מ-Pro','סניפים מרובים','מועדון נאמנות','עד 5 עובדים כלולים']
-                    : ['Всё из Base и Pro','Филиалы','Программа лояльности','До 5 работников включено']}/>
-      <PlanCard id="custom" selected={plan === 'custom'} onSelect={onPlan}
-        icon={<Settings2 size={18} className="text-white"/>}
-        title={l ? 'הגדרה אישית' : 'Инд. настройка'} price={l ? 'לפי בחירה' : 'По выбору'}
-        accent="purple"
-        features={l ? ['בחר מודולים לפי הצורך','הגדרות מותאמות אישית','תמיכה מועדפת','הנחה עד 15% על סטאפ (5+ מודולים)']
-                    : ['Выберите нужные модули','Индивидуальная конфигурация','Приоритетная поддержка','Скидка до 15% на setup от 5+ модулей']}/>
-      {plan === 'custom' && (
+      {apiPlans.map(ap => {
+        const accent = COLOR_ACCENT[ap.color] ?? 'blue'
+        const icon = PLAN_ICONS[ap.key] ?? <Package size={18} className="text-white" />
+        const badge = l ? ap.badge_he : ap.badge_ru
+        const features = l ? ap.features_he : ap.features_ru
+        const price = l ? ap.price_he : ap.price_ru
+        const period = l ? ap.period_he : ap.period_ru
+        const title = l ? ap.name_he : ap.name_ru
+        return (
+          <PlanCard
+            key={ap.key}
+            id={ap.key as any}
+            selected={plan === ap.key}
+            onSelect={onPlan}
+            icon={icon}
+            title={title}
+            price={price}
+            priceNote={period || undefined}
+            accent={accent}
+            badge={badge || undefined}
+            features={features}
+          />
+        )
+      })}
+      {isCustom && (
         <>
           <div className="bg-purple-50 border border-purple-200 rounded-xl px-3 py-2 text-xs text-purple-700 flex items-center gap-2">
             <Sparkles size={12} className="text-purple-500 flex-shrink-0"/>
@@ -323,7 +339,7 @@ const Step2 = memo((p: Step2Props) => {
             staffCount={staffCount} setStaffCount={setStaffCount}/>
         </>
       )}
-      {plan !== 'custom' && (
+      {!isCustom && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700 flex items-center gap-2">
           <Sparkles size={12} className="text-amber-500 flex-shrink-0"/>
           {l ? 'עם הגדרה אישית של 5+ מודולים — הנחה עד 15% על סטאפ Full ו-Standart'
@@ -423,9 +439,10 @@ SetupPicker.displayName = 'SetupPicker'
 export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { language } = useLanguage()
   const l = language === 'he'
+  const { plans: apiPlans } = usePricingPlans()  // динамические планы из БД
   const [step, setStep]     = useState<1 | 2>(1)
   const [form, setForm]     = useState<OrderForm>({ firstName:'', lastName:'', birthDate:'', phone:'', street:'', city:'', country:'', email:'', notes:'', agreed: false })
-  const [plan, setPlan]     = useState<'base' | 'pro' | 'enterprise' | 'custom' | null>(null)
+  const [plan, setPlan]     = useState<string | null>(null)
   const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set())
   const [staffCount, setStaffCount]           = useState(0)
   const [wantsPayments, setWantsPayments]     = useState(false)
@@ -442,8 +459,17 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
   const discountApplied = selectedModules.size >= 5
   const monthlyPrice    = calcMonthly(selectedModules.size)
   const staffMonthly    = calcStaffMonthly(staffCount)
-  const planAmount      = plan === 'base' ? 199 : plan === 'pro' ? 249 : plan === 'enterprise' ? 499
-    : monthlyPrice + staffMonthly
+  // Цена плана: читаем из динамических данных API
+  const planAmount      = (() => {
+    if (!plan || plan === 'custom') return monthlyPrice + staffMonthly
+    const found = apiPlans.find(p => p.key === plan)
+    if (found) {
+      const priceStr = found.price_ru.replace(/[^\d]/g, '')
+      const parsed = parseInt(priceStr, 10)
+      return isNaN(parsed) ? monthlyPrice + staffMonthly : parsed
+    }
+    return monthlyPrice + staffMonthly
+  })()
 
   const handlePlan = useCallback((p: 'base' | 'pro' | 'enterprise' | 'custom') => {
     setPlan(p); if (p !== 'custom') { setSelectedModules(new Set()); setStaffCount(0) }
@@ -586,7 +612,8 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
                 selectedModules={selectedModules} setSelectedModules={setSelectedModules}
                 discountApplied={discountApplied} monthlyPrice={monthlyPrice}
                 staffCount={staffCount} setStaffCount={setStaffCount}
-                wantsPayments={wantsPayments} setWantsPayments={setWantsPayments}/>}
+                wantsPayments={wantsPayments} setWantsPayments={setWantsPayments}
+                apiPlans={apiPlans}/>}
           </div>
           <div className="flex-shrink-0 px-6 py-4 border-t border-slate-100 flex gap-3">
             {step === 2 && (

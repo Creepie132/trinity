@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import DemoRegisterModal from '@/components/landing/DemoRegisterModal'
+import { usePricingPlans } from '@/hooks/usePricingPlans'
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────
 type LDir = 'ltr' | 'rtl'
@@ -254,6 +255,8 @@ export default function LandingPage() {
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoPlan, setDemoPlan] = useState('')
   const t = lang === 'ru' ? RU : HE
+  // Динамические планы из БД (fallback на хардкод если API недоступен)
+  const { plans: dbPlans } = usePricingPlans()
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20)
@@ -774,32 +777,53 @@ export default function LandingPage() {
           <h2>{t.priceH2a}<br /><em>{t.priceH2b}</em></h2>
           <p className="section-sub">{t.priceSub}</p>
           <div className="plans">
-            {t.plans.map((plan, i) => (
-              <div key={i} className={`plan${plan.popular ? ' popular' : ''}`}>
-                {plan.popular && <div className="popular-badge">{t.popularBadge}</div>}
-                <div className="plan-name">{plan.name}</div>
-                <div className="plan-price">
-                  {/^\d/.test(plan.price) ? <sup>₪</sup> : null}
-                  <span style={!/^\d/.test(plan.price) ? {fontSize:'clamp(22px,3vw,32px)',letterSpacing:'-0.5px'} : undefined}>
-                    {plan.price}
-                  </span>
+            {dbPlans.map((plan) => {
+              const name     = lang === 'ru' ? plan.name_ru     : plan.name_he
+              const price    = lang === 'ru' ? plan.price_ru    : plan.price_he
+              const period   = lang === 'ru' ? plan.period_ru   : plan.period_he
+              const badge    = lang === 'ru' ? plan.badge_ru    : plan.badge_he
+              const cta      = lang === 'ru' ? plan.cta_ru      : plan.cta_he
+              const features = lang === 'ru' ? plan.features_ru : plan.features_he
+              const subtitle = lang === 'ru' ? plan.subtitle_ru : plan.subtitle_he
+              const isPopular = plan.is_popular
+              // Извлекаем число из строки цены для рендера с sup-символом ₪
+              const priceNum = price.replace(/[₪\s]/g, '')
+              const isNumeric = /^\d+$/.test(priceNum)
+              return (
+                <div key={plan.key} className={`plan${isPopular ? ' popular' : ''}`}>
+                  {isPopular && badge && <div className="popular-badge">{badge}</div>}
+                  {!isPopular && badge && (
+                    <div style={{position:'absolute',top:'-14px',left:'50%',transform:'translateX(-50%)',
+                      background:'var(--amber-pale)',color:'var(--amber)',fontSize:'11px',fontWeight:700,
+                      letterSpacing:'1.5px',textTransform:'uppercase',padding:'4px 14px',borderRadius:'100px',
+                      border:'1px solid var(--border)',whiteSpace:'nowrap'}}>
+                      {badge}
+                    </div>
+                  )}
+                  <div className="plan-name">{name}</div>
+                  <div className="plan-price">
+                    {isNumeric ? <sup>₪</sup> : null}
+                    <span style={!isNumeric ? {fontSize:'clamp(22px,3vw,32px)',letterSpacing:'-0.5px'} : undefined}>
+                      {priceNum || price}
+                    </span>
+                  </div>
+                  <div className="plan-period">{period}</div>
+                  {subtitle && <div className="plan-usecase">{subtitle}</div>}
+                  <div className="plan-divider" />
+                  <ul className="plan-features">
+                    {features.map((f: string, j: number) => (
+                      <li key={j}><span className="check">✓</span> {f}</li>
+                    ))}
+                  </ul>
+                  <button
+                    className={`btn-plan ${isPopular ? 'btn-plan-fill' : 'btn-plan-outline'}`}
+                    onClick={() => { setDemoPlan(plan.key); setDemoOpen(true) }}
+                  >
+                    {cta || t.choosePlan}
+                  </button>
                 </div>
-                <div className="plan-period">{plan.period}</div>
-                <div className="plan-usecase">{plan.useCase}</div>
-                <div className="plan-divider"></div>
-                <ul className="plan-features">
-                  {plan.features.map((f, j) => (
-                    <li key={j}><span className="check">✓</span> {f}</li>
-                  ))}
-                </ul>
-                <button
-                  className={`btn-plan ${plan.popular ? 'btn-plan-fill' : 'btn-plan-outline'}`}
-                  onClick={() => { setDemoPlan(plan.name); setDemoOpen(true) }}
-                >
-                  {t.choosePlan}
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>

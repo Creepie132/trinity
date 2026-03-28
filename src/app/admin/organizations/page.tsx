@@ -455,6 +455,139 @@ function DeleteOrgModal({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+// ─── ActivateOrgButton ────────────────────────────────────────────────────────
+// Переводит организацию из demo/trial → active через /api/admin/organizations/[orgId]/activate
+// Данные клиентов, визитов и платежей НЕ удаляются
+
+const PLAN_OPTIONS = [
+  { value: 'base',       labelRu: 'Base (₪199/мес)',        labelHe: 'Base (₪199/חודש)' },
+  { value: 'pro',        labelRu: 'Pro (₪249/мес)',         labelHe: 'Pro (₪249/חודש)' },
+  { value: 'enterprise', labelRu: 'Enterprise (₪499/мес)', labelHe: 'Enterprise (₪499/חודש)' },
+]
+
+function ActivateOrgButton({
+  org, lang, onActivated,
+}: {
+  org: Organization; lang: 'he' | 'ru'
+  onActivated: () => void
+}) {
+  const l = lang === 'he'
+  const [open, setOpen] = useState(false)
+  const [plan, setPlan] = useState('pro')
+  const [loading, setLoading] = useState(false)
+
+  const handleActivate = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/organizations/${org.id}/activate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Ошибка')
+      toast.success(
+        l ? `הארגון הופעל בתוכנית ${plan}` : `Организация активирована: ${plan}`
+      )
+      setOpen(false)
+      onActivated()
+    } catch (err: any) {
+      toast.error(err.message || (l ? 'שגיאה' : 'Ошибка'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      {/* Кнопка активации */}
+      <button
+        onClick={() => setOpen(true)}
+        className="col-span-2 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-sm hover:shadow-md"
+      >
+        <CheckCircle className="w-4 h-4" />
+        {l ? 'הסר מצב דמו / הפעל' : 'Снять демо-режим / Активировать'}
+      </button>
+
+      {/* Модал подтверждения */}
+      {open && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white">
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="font-bold text-sm">
+                    {l ? 'הפעלת חשבון' : 'Активация аккаунта'}
+                  </span>
+                </div>
+                <button onClick={() => setOpen(false)}
+                  className="w-7 h-7 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all">
+                  <X className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Инфо */}
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 space-y-1">
+                <p className="font-semibold">{org.display_name || org.name}</p>
+                <p className="text-xs opacity-80">
+                  {l
+                    ? 'נתוני הלקוחות, ביקורים ותשלומים ישמרו בשלמותם'
+                    : 'Данные клиентов, визиты и платежи сохранятся полностью'
+                  }
+                </p>
+              </div>
+
+              {/* Выбор плана */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                  {l ? 'תוכנית' : 'План'}
+                </label>
+                <select
+                  value={plan}
+                  onChange={e => setPlan(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-sm bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                >
+                  {PLAN_OPTIONS.map(p => (
+                    <option key={p.value} value={p.value}>
+                      {l ? p.labelHe : p.labelRu}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Кнопки */}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  {l ? 'ביטול' : 'Отмена'}
+                </button>
+                <button
+                  onClick={handleActivate}
+                  disabled={loading}
+                  className="flex-[1.5] py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-all"
+                >
+                  {loading
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <CheckCircle className="w-4 h-4" />}
+                  {loading
+                    ? (l ? 'מפעיל...' : 'Активирую...')
+                    : (l ? 'הפעל' : 'Активировать')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function AdminOrganizationsPage() {
   const { language } = useLanguage()
   const l = language === 'he'
@@ -952,6 +1085,10 @@ export default function AdminOrganizationsPage() {
             className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-teal-50 text-teal-700 text-sm font-medium hover:bg-teal-100 border border-teal-200 transition-colors col-span-2">
             <Users className="w-4 h-4" />{l ? 'הוסף משתמש לארגון' : 'Добавить пользователя'}
           </button>
+          {/* Activate demo → active */}
+          {(org.subscription_status === 'demo' || org.subscription_status === 'trial') && (
+            <ActivateOrgButton org={org} lang={language} onActivated={() => { setSelectedOrg(null); loadData() }} />
+          )}
           {/* Delete button */}
           <button onClick={() => { setDeleteOrg(org); setDeleteOpen(true); setSelectedOrg(null) }}
             className="col-span-2 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 border border-red-200 transition-colors">

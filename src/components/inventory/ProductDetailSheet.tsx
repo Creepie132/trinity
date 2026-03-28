@@ -82,6 +82,9 @@ export function ProductDetailSheet({ open, onClose, product, onEdit }: ProductDe
       )}
     </div>
   )
+
+  // ── Sidebar ────────────────────────────────────────────────────────────────
+  const sidebar = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       {/* Product image or icon */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>

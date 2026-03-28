@@ -55,14 +55,17 @@ export const useUIStackStore = create<UIStackState>((set, get) => ({
       console.log('[UIStack] popstate fired. state=', JSON.stringify(state), 'stack=', stack.map(l => l.id))
 
       // Если наш стек непустой — это "Назад" пока открыт UI-слой.
-      // Перехватываем НЕЗАВИСИМО от state (Next.js пишет свой state на /clients).
+      // Немедленно вызываем forward() чтобы нейтрализовать шаг назад
+      // ДО того как Next.js App Router обработает этот popstate.
+      // Потом закрываем верхний слой.
       if (stack.length > 0) {
-        console.log('[UIStack] stack has layers — intercepting, closing top layer')
+        console.log('[UIStack] stack has layers — calling forward() then closing top layer')
+        window.history.forward()
         get()._handlePopState()
         return
       }
 
-      // Стек пуст. Проверяем: наша ли это "мёртвая" запись?
+      // Стек пуст. Наша мёртвая запись?
       if (state && typeof state === 'object' && 'uiLayer' in state) {
         console.log('[UIStack] dead uiLayer entry — calling forward()')
         window.history.forward()

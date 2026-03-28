@@ -3,12 +3,12 @@
 import { createPortal } from 'react-dom'
 import { useEffect, useState } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { CreditCard, Banknote, Smartphone, X } from 'lucide-react'
+import { CreditCard, Banknote, Building2, FileCheck, X } from 'lucide-react'
 
 interface PaymentMethodModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSelectMethod: (method: 'card' | 'cash' | 'bit') => void
+  onSelectMethod: (method: 'card' | 'cash' | 'check' | 'bank_transfer') => void
 }
 
 const METHODS = [
@@ -39,17 +39,30 @@ const METHODS = [
     color: '#15803d',
   },
   {
-    id: 'bit' as const,
-    labelHe: 'BIT',
-    labelRu: 'BIT',
-    descHe: 'תשלום דיגיטלי מהיר',
-    descRu: 'Быстрая цифровая оплата',
-    icon: <Smartphone size={22} />,
-    gradient: 'linear-gradient(135deg, #f97316, #ea580c)',
-    glow: 'rgba(249,115,22,0.3)',
-    bg: 'linear-gradient(135deg, #fff7ed, #ffedd5)',
-    border: '#fed7aa',
-    color: '#c2410c',
+    id: 'check' as const,
+    labelHe: "צ'ק",
+    labelRu: 'Чек',
+    descHe: "תשלום בצ'ק",
+    descRu: 'Оплата чеком',
+    icon: <FileCheck size={22} />,
+    gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+    glow: 'rgba(245,158,11,0.3)',
+    bg: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
+    border: '#fde68a',
+    color: '#b45309',
+  },
+  {
+    id: 'bank_transfer' as const,
+    labelHe: 'העברה בנקאית',
+    labelRu: 'Банковский перевод',
+    descHe: 'העברה ישירה לחשבון',
+    descRu: 'Прямой перевод на счёт',
+    icon: <Building2 size={22} />,
+    gradient: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+    glow: 'rgba(14,165,233,0.3)',
+    bg: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
+    border: '#bae6fd',
+    color: '#0369a1',
   },
 ]
 

@@ -421,14 +421,48 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
     setPayModalOpen(true)
   }, [items, isHe])
 
-  const handlePayMethodSelect = useCallback(async (method: 'card' | 'cash' | 'bit') => {
-    const methodMap: Record<string, string> = { card: 'credit', cash: 'cash', bit: 'bit' }
+  const handlePayMethodSelect = useCallback(async (method: 'card' | 'cash' | 'check' | 'bank_transfer') => {
+    const methodMap: Record<string, string> = {
+      card: 'credit', cash: 'cash', check: 'check', bank_transfer: 'bank_transfer',
+    }
     const finalMethod = methodMap[method] ?? 'cash'
-    setPayModalOpen(false)
-    // Устанавливаем метод и сразу сабмитим
     setPaymentMethod(finalMethod)
+    setPayModalOpen(false)
     setStep('checkout')
 
+    // Карта — создаём Tranzila ссылку и открываем её
+    if (method === 'card') {
+      if (!clientId) {
+        toast.error(isHe ? 'יש לבחור לקוח לתשלום בכרטיס' : 'Для оплаты картой выберите клиента')
+        return
+      }
+      setIsLoading(true)
+      try {
+        const res = await apiFetch<{ success: boolean; payment_link: string }>('/api/payments/create-link', {
+          method: 'POST',
+          json: {
+            client_id: clientId,
+            amount: total,
+            description: items.map(i => i.product_name).join(', ') || (isHe ? 'תשלום' : 'Оплата'),
+          },
+        })
+        if (res.payment_link) {
+          window.open(res.payment_link, '_blank')
+          toast.success(isHe ? 'קישור לתשלום נפתח' : 'Ссылка на оплату открыта')
+          // Сделку сохраняем как pending (pending payment)
+          queryClient.invalidateQueries({ queryKey: ['payments'] })
+          onOpenChange(false)
+        }
+      } catch (err: any) {
+        const msg = err?.message || (isHe ? 'שגיאה ביצירת קישור' : 'Ошибка создания ссылки')
+        toast.error(msg)
+      } finally {
+        setIsLoading(false)
+      }
+      return
+    }
+
+    // Остальные методы — стандартный сабмит
     if (isSubmittingRef.current) return
     isSubmittingRef.current = true
     setIsLoading(true)
@@ -445,7 +479,7 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
             unit_price:   i.unit_price,
           })),
           paid_amount:    total,
-          payment_method: PAYMENT_METHODS.find(m => m.value === finalMethod)?.apiValue ?? finalMethod,
+          payment_method: finalMethod,
           sale_date:      saleDate,
           notes:          saleNotes || undefined,
           ...(discount.value > 0 ? { discount_type: discount.type, discount_value: discount.value } : {}),
@@ -468,7 +502,7 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
       setIsLoading(false)
       isSubmittingRef.current = false
     }
-  }, [items, clientId, total, saleDate, saleNotes, discount, safeData, isHe, queryClient])
+  }, [items, clientId, total, saleDate, saleNotes, discount, safeData, isHe, queryClient, onOpenChange])
 
   // ── Submit — единственная точка записи ──────────────────────────────────────
   const handleSubmit = useCallback(async () => {
@@ -804,16 +838,14 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
                       </>)}
                       {/* CHECKOUT */}
                       {step === 'checkout' && (<>
-                        <div>
-                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">{isHe?'שיטת תשלום':'Способ оплаты'}</label>
-                          <div className="grid grid-cols-2 gap-2">
-                            {PAYMENT_METHODS.map(m => { const Icon = m.icon; return (
-                              <button key={m.value} onClick={() => setPaymentMethod(m.value)}
-                                className={`flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition ${paymentMethod === m.value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-600'}`}>
-                                <Icon size={15}/>{isHe ? m.labelHe : m.labelRu}
-                              </button>
-                            )})}
-                          </div>
+                        <div style={{ background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{isHe?'שיטת תשלום':'Способ оплаты'}</span>
+                          {(() => {
+                            const m = PAYMENT_METHODS.find(x => x.value === paymentMethod)
+                            if (!m) return null
+                            const Icon = m.icon
+                            return <span className="flex items-center gap-2 text-sm font-semibold text-gray-700"><Icon size={14}/>{isHe ? m.labelHe : m.labelRu}</span>
+                          })()}
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
@@ -1026,19 +1058,14 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
               )}
 
               {/* Payment method */}
-              <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">{isHe?'שיטת תשלום':'Способ оплаты'}</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PAYMENT_METHODS.map(m => {
-                    const Icon = m.icon
-                    return (
-                      <button key={m.value} onClick={() => setPaymentMethod(m.value)}
-                        className={`flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition ${paymentMethod === m.value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
-                        <Icon size={16}/>{isHe ? m.labelHe : m.labelRu}
-                      </button>
-                    )
-                  })}
-                </div>
+              <div style={{ background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{isHe?'שיטת תשלום':'Способ оплаты'}</span>
+                {(() => {
+                  const m = PAYMENT_METHODS.find(x => x.value === paymentMethod)
+                  if (!m) return null
+                  const Icon = m.icon
+                  return <span className="flex items-center gap-2 text-sm font-semibold text-gray-700"><Icon size={15}/>{isHe ? m.labelHe : m.labelRu}</span>
+                })()}
               </div>
 
               {/* Date + notes */}
@@ -1102,7 +1129,6 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
       </Modal>
       )} {/* end isMobile ternary */}
 
-      {/* PaymentMethodModal */}
       <PaymentMethodModal
         open={payModalOpen}
         onOpenChange={setPayModalOpen}

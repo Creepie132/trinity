@@ -36,7 +36,7 @@ export default function PaymentSettingsPage() {
 
   async function handleSave() {
     if (!orgId) return
-    // Всегда минимум один метод
+    // Всегда минимум один не-заблокированный метод
     const toSave = localEnabled.filter(k => {
       const m = methods.find(m => m.key === k)
       return m && !m.forcedOff
@@ -52,9 +52,15 @@ export default function PaymentSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled_payment_methods: toSave }),
       })
-      if (!res.ok) throw new Error('Failed to save')
-      // Инвалидируем кеш — все компоненты обновятся реактивно
-      await queryClient.invalidateQueries({ queryKey: ['payment-settings'] })
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}))
+        throw new Error(errBody?.error || `HTTP ${res.status}`)
+      }
+      // Инвалидируем оба кэша — настройки + диалог платежей
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['payment-settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['payments'] }),
+      ])
       toast.success(isHe ? 'שיטות התשלום נשמרו ✓' : 'Способы оплаты сохранены ✓')
     } catch (e: any) {
       toast.error(e.message || (isHe ? 'שגיאה' : 'Ошибка'))

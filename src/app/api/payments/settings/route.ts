@@ -3,7 +3,7 @@ import { getAuthContext } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
 
-/** GET /api/payments/settings — настройки платежей */
+/** GET /api/payments/settings */
 export async function GET() {
   try {
     const auth = await getAuthContext()
@@ -12,32 +12,35 @@ export async function GET() {
     const { orgId, supabase } = auth as any
     const { data, error } = await supabase
       .from('organizations')
-      .select('tranzila_terminal, tranzila_terminal_name, tranzila_password, tranzila_token_terminal, tranzila_token_password, enabled_payment_methods')
+      .select('tranzila_terminal, tranzila_password, tranzila_token_terminal, tranzila_token_password, enabled_payment_methods')
       .eq('id', orgId)
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const DEFAULT_METHODS = ['cash', 'card', 'bit', 'bank_transfer', 'check']
+    // Терминал подключён если tranzila_terminal задан и не пустой
+    const terminalConnected = !!(data?.tranzila_terminal?.trim())
 
-    // Терминал считается подключённым если задан tranzila_terminal ИЛИ tranzila_terminal_name
-    const terminalConnected = !!(data?.tranzila_terminal || data?.tranzila_terminal_name)
+    // Нормализуем: исторически дефолт мог содержать 'credit_card' — приводим к 'card'
+    const rawMethods: string[] = data?.enabled_payment_methods ?? ['cash', 'card', 'bit', 'bank_transfer', 'check']
+    const normalizedMethods = rawMethods.map((m: string) =>
+      m === 'credit_card' ? 'card' : m
+    )
 
     return NextResponse.json({
-      tranzila_terminal:          data?.tranzila_terminal || '',
-      tranzila_terminal_name:     data?.tranzila_terminal_name || '',
-      tranzila_password_set:      !!(data?.tranzila_password),
-      tranzila_token_terminal:    data?.tranzila_token_terminal || '',
+      tranzila_terminal:           data?.tranzila_terminal || '',
+      tranzila_password_set:       !!(data?.tranzila_password),
+      tranzila_token_terminal:     data?.tranzila_token_terminal || '',
       tranzila_token_password_set: !!(data?.tranzila_token_password),
-      terminal_connected:         terminalConnected,
-      enabled_payment_methods:    data?.enabled_payment_methods ?? DEFAULT_METHODS,
+      terminal_connected:          terminalConnected,
+      enabled_payment_methods:     normalizedMethods,
     })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-/** PUT /api/payments/settings — сохранить настройки */
+/** PUT /api/payments/settings */
 export async function PUT(request: NextRequest) {
   try {
     const auth = await getAuthContext()
@@ -65,8 +68,11 @@ export async function PUT(request: NextRequest) {
     if (tranzila_token_password !== undefined) {
       payload.tranzila_token_password = tranzila_token_password?.trim() || null
     }
-    if (Array.isArray(enabled_payment_methods)) {
-      payload.enabled_payment_methods = enabled_payment_methods
+    if (Array.isArray(enabled_payment_methods) && enabled_payment_methods.length > 0) {
+      // Нормализуем перед записью — никогда не сохраняем 'credit_card', только 'card'
+      payload.enabled_payment_methods = enabled_payment_methods.map((m: string) =>
+        m === 'credit_card' ? 'card' : m
+      )
     }
 
     if (Object.keys(payload).length === 0) {

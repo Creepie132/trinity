@@ -37,7 +37,6 @@ export interface PaymentMethodState {
 
 interface SettingsApiResponse {
   tranzila_terminal: string
-  tranzila_terminal_name: string
   terminal_connected: boolean
   tranzila_password_set: boolean
   tranzila_token_terminal: string
@@ -56,8 +55,8 @@ export function usePaymentMethodConfig() {
     staleTime: 60_000,
   })
 
-  // terminal_connected — серверный флаг (tranzila_terminal OR tranzila_terminal_name)
-  const hasTerminal = data?.terminal_connected ?? !!(data?.tranzila_terminal?.trim())
+  // terminal_connected приходит с сервера: !!(tranzila_terminal?.trim())
+  const hasTerminal = data?.terminal_connected ?? false
   const rawEnabled: string[] = data?.enabled_payment_methods ?? ALL_METHOD_KEYS
 
   const methods: PaymentMethodState[] = ALL_METHOD_KEYS.map(key => {

@@ -5,8 +5,59 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useFeatures } from '@/hooks/useFeatures'
 import { toast } from 'sonner'
-import { CreditCard, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react'
+import { CreditCard, Eye, EyeOff, ArrowRight, ArrowLeft, Banknote, Smartphone, Building2, FileText, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
+
+// ─── Конфиг методов оплаты ────────────────────────────────────────────────────
+const PAYMENT_METHODS = [
+  {
+    key: 'cash',
+    icon: <Banknote size={20} />,
+    color: '#16a34a',
+    bg: 'rgba(34,197,94,0.1)',
+    border: 'rgba(34,197,94,0.3)',
+    label: { ru: 'Наличные', he: 'מזומן' },
+    desc:  { ru: 'Оплата наличными с выдачей чека', he: 'תשלום במזומן עם קבלה' },
+  },
+  {
+    key: 'bit',
+    icon: <Smartphone size={20} />,
+    color: '#ea580c',
+    bg: 'rgba(249,115,22,0.1)',
+    border: 'rgba(249,115,22,0.3)',
+    label: { ru: 'Bit', he: 'ביט' },
+    desc:  { ru: 'Оплата через приложение Bit', he: 'תשלום דרך אפליקציית ביט' },
+  },
+  {
+    key: 'credit_card',
+    icon: <CreditCard size={20} />,
+    color: '#4f46e5',
+    bg: 'rgba(99,102,241,0.1)',
+    border: 'rgba(99,102,241,0.3)',
+    label: { ru: 'Кредитная карта', he: 'כרטיס אשראי' },
+    desc:  { ru: 'Онлайн-оплата через Tranzila', he: 'תשלום אונליין דרך Tranzila' },
+  },
+  {
+    key: 'bank_transfer',
+    icon: <Building2 size={20} />,
+    color: '#0284c7',
+    bg: 'rgba(14,165,233,0.1)',
+    border: 'rgba(14,165,233,0.3)',
+    label: { ru: 'Банковский перевод', he: 'העברה בנקאית' },
+    desc:  { ru: 'Перевод на банковский счёт', he: 'העברה לחשבון בנק' },
+  },
+  {
+    key: 'check',
+    icon: <FileText size={20} />,
+    color: '#7c3aed',
+    bg: 'rgba(124,58,237,0.1)',
+    border: 'rgba(124,58,237,0.3)',
+    label: { ru: 'Чек', he: "צ'ק" },
+    desc:  { ru: 'Оплата банковским чеком', he: "תשלום בצ'ק בנקאי" },
+  },
+] as const
+
+type MethodKey = typeof PAYMENT_METHODS[number]['key']
 
 interface RecurringPlan {
   id: string
@@ -24,7 +75,6 @@ const CYCLE_LABELS = {
   he: { monthly: 'חודשי', yearly: 'שנתי', custom: 'מותאם' },
   ru: { monthly: 'Ежемесячно', yearly: 'Ежегодно', custom: 'Кастомный' },
 }
-// TODO: cycleName — будет использоваться в фиче подписок
 
 export default function PaymentSettingsPage() {
   const { language } = useLanguage()
@@ -32,9 +82,9 @@ export default function PaymentSettingsPage() {
   const { orgId } = useAuth()
   const features = useFeatures()
 
-  // Terminal settings state
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingMethods, setSavingMethods] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [showTokenPass, setShowTokenPass] = useState(false)
   const [terminalForm, setTerminalForm] = useState({
@@ -43,16 +93,12 @@ export default function PaymentSettingsPage() {
     tranzila_token_terminal: '',
     tranzila_token_password: '',
   })
-  // Флаги — пароль уже сохранён на сервере (не показываем его клиенту)
   const [passwordSet, setPasswordSet] = useState(false)
   const [tokenPasswordSet, setTokenPasswordSet] = useState(false)
-
-  // TODO: recurring_plans state — будет добавлен при реализации фичи подписок
+  const [enabledMethods, setEnabledMethods] = useState<MethodKey[]>(['cash', 'bit', 'credit_card', 'bank_transfer', 'check'])
 
   useEffect(() => {
-    if (orgId) {
-      loadSettings()
-    }
+    if (orgId) loadSettings()
   }, [orgId])
 
   async function loadSettings() {
@@ -63,12 +109,15 @@ export default function PaymentSettingsPage() {
       const data = await res.json()
       setTerminalForm({
         tranzila_terminal: data.tranzila_terminal || '',
-        tranzila_password: '',  // пароль никогда не передаётся клиенту
+        tranzila_password: '',
         tranzila_token_terminal: data.tranzila_token_terminal || '',
         tranzila_token_password: '',
       })
       setPasswordSet(data.tranzila_password_set || false)
       setTokenPasswordSet(data.tranzila_token_password_set || false)
+      if (Array.isArray(data.enabled_payment_methods)) {
+        setEnabledMethods(data.enabled_payment_methods as MethodKey[])
+      }
     } catch (e) {
       console.error('Load payment settings error:', e)
     } finally {
@@ -83,24 +132,17 @@ export default function PaymentSettingsPage() {
       const payload: Record<string, string> = {
         tranzila_terminal: terminalForm.tranzila_terminal.trim(),
       }
-      // Пароль отправляем только если пользователь ввёл новый
-      if (terminalForm.tranzila_password.trim()) {
-        payload.tranzila_password = terminalForm.tranzila_password.trim()
-      }
+      if (terminalForm.tranzila_password.trim()) payload.tranzila_password = terminalForm.tranzila_password.trim()
       if (features.recurringEnabled) {
         payload.tranzila_token_terminal = terminalForm.tranzila_token_terminal.trim()
-        if (terminalForm.tranzila_token_password.trim()) {
-          payload.tranzila_token_password = terminalForm.tranzila_token_password.trim()
-        }
+        if (terminalForm.tranzila_token_password.trim()) payload.tranzila_token_password = terminalForm.tranzila_token_password.trim()
       }
       const res = await fetch('/api/payments/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('Failed to save')
       toast.success(isHe ? 'הגדרות נשמרו ✓' : 'Настройки сохранены ✓')
-      // Обновляем флаги паролей
       if (terminalForm.tranzila_password.trim()) setPasswordSet(true)
       if (terminalForm.tranzila_token_password.trim()) setTokenPasswordSet(true)
       setTerminalForm(f => ({ ...f, tranzila_password: '', tranzila_token_password: '' }))
@@ -111,14 +153,36 @@ export default function PaymentSettingsPage() {
     }
   }
 
-  // TODO: recurring_plans — таблица будет создана в фиче подписок
+  async function handleSaveMethods() {
+    if (!orgId) return
+    if (enabledMethods.length === 0) {
+      toast.error(isHe ? 'יש לבחור לפחות שיטת תשלום אחת' : 'Выберите хотя бы один способ оплаты')
+      return
+    }
+    setSavingMethods(true)
+    try {
+      const res = await fetch('/api/payments/settings', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled_payment_methods: enabledMethods }),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      toast.success(isHe ? 'שיטות התשלום נשמרו ✓' : 'Способы оплаты сохранены ✓')
+    } catch (e: any) {
+      toast.error(e.message || (isHe ? 'שגיאה' : 'Ошибка'))
+    } finally {
+      setSavingMethods(false)
+    }
+  }
 
+  function toggleMethod(key: MethodKey) {
+    setEnabledMethods(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    )
+  }
 
   function cycleName(plan: RecurringPlan) {
     const labels = CYCLE_LABELS[isHe ? 'he' : 'ru']
-    if (plan.billing_cycle === 'custom') {
-      return isHe ? `כל ${plan.custom_days} ימים` : `Каждые ${plan.custom_days} дней`
-    }
+    if (plan.billing_cycle === 'custom') return isHe ? `כל ${plan.custom_days} ימים` : `Каждые ${plan.custom_days} дней`
     return labels[plan.billing_cycle]
   }
 
@@ -148,7 +212,63 @@ export default function PaymentSettingsPage() {
       ) : (
         <div className="space-y-8">
 
-          {/* ═══ СЕКЦИЯ 1: Терминал Tranzila ═══ */}
+          {/* ═══ СЕКЦИЯ 1: Способы оплаты ═══ */}
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">{isHe ? 'שיטות תשלום' : 'Способы оплаты'}</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {isHe ? 'בחר אילו שיטות תשלום יוצגו ללקוחות ולעובדים' : 'Выберите, какие способы оплаты доступны при создании платежей'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              {PAYMENT_METHODS.map(method => {
+                const enabled = enabledMethods.includes(method.key)
+                const locale = isHe ? 'he' : 'ru'
+                return (
+                  <button key={method.key} type="button" onClick={() => toggleMethod(method.key)}
+                    className="flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all active:scale-[0.99]"
+                    style={{
+                      borderColor: enabled ? method.border : 'var(--border)',
+                      background: enabled ? method.bg : 'var(--card)',
+                    }}>
+                    {/* Иконка метода */}
+                    <div className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
+                      style={{ background: enabled ? `${method.color}20` : 'var(--muted)', color: enabled ? method.color : 'var(--muted-foreground)' }}>
+                      {method.icon}
+                    </div>
+                    {/* Текст */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm" style={{ color: enabled ? method.color : 'var(--foreground)' }}>
+                        {method.label[locale]}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{method.desc[locale]}</div>
+                    </div>
+                    {/* Чекбокс */}
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
+                      style={{
+                        borderColor: enabled ? method.color : 'var(--border)',
+                        background: enabled ? method.color : 'transparent',
+                      }}>
+                      {enabled && <CheckCircle2 size={14} color="white" />}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <button onClick={handleSaveMethods} disabled={savingMethods || enabledMethods.length === 0}
+              className="w-full py-3 rounded-xl font-medium text-sm text-white transition disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}>
+              {savingMethods
+                ? (isHe ? 'שומר...' : 'Сохранение...')
+                : (isHe ? 'שמור שיטות תשלום' : 'Сохранить способы оплаты')}
+            </button>
+          </div>
+
+          <hr className="border-border" />
+
+          {/* ═══ СЕКЦИЯ 2: Терминал Tranzila ═══ */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">{isHe ? 'טרמינל Tranzila' : 'Терминал Tranzila'}</h2>
 

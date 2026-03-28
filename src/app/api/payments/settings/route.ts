@@ -12,17 +12,20 @@ export async function GET() {
     const { orgId, supabase } = auth as any
     const { data, error } = await supabase
       .from('organizations')
-      .select('tranzila_terminal, tranzila_password, tranzila_token_terminal, tranzila_token_password')
+      .select('tranzila_terminal, tranzila_password, tranzila_token_terminal, tranzila_token_password, enabled_payment_methods')
       .eq('id', orgId)
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    const DEFAULT_METHODS = ['cash', 'bit', 'credit_card', 'bank_transfer', 'check']
 
     return NextResponse.json({
       tranzila_terminal: data?.tranzila_terminal || '',
       tranzila_password_set: !!(data?.tranzila_password),
       tranzila_token_terminal: data?.tranzila_token_terminal || '',
       tranzila_token_password_set: !!(data?.tranzila_token_password),
+      enabled_payment_methods: data?.enabled_payment_methods ?? DEFAULT_METHODS,
     })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -37,9 +40,9 @@ export async function PUT(request: NextRequest) {
 
     const { orgId, supabase } = auth as any
     const body = await request.json()
-    const { tranzila_terminal, tranzila_password, tranzila_token_terminal, tranzila_token_password } = body
+    const { tranzila_terminal, tranzila_password, tranzila_token_terminal, tranzila_token_password, enabled_payment_methods } = body
 
-    const payload: Record<string, string | null> = {
+    const payload: Record<string, any> = {
       tranzila_terminal: tranzila_terminal?.trim() || null,
     }
     if (tranzila_password !== undefined) {
@@ -50,6 +53,9 @@ export async function PUT(request: NextRequest) {
     }
     if (tranzila_token_password !== undefined) {
       payload.tranzila_token_password = tranzila_token_password?.trim() || null
+    }
+    if (Array.isArray(enabled_payment_methods)) {
+      payload.enabled_payment_methods = enabled_payment_methods
     }
 
     const { error } = await supabase

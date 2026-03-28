@@ -7,17 +7,11 @@ import { useUIStackStore } from '@/store/useUIStackStore'
  * useMobileBackTrap — перехват кнопки "Назад" для UI-слоёв.
  *
  * Регистрирует слой в useUIStackStore при isOpen=true.
+ * При нажатии "Назад" — стор вызывает closeFn и убирает слой.
+ * При программном закрытии — убирает слой без касания истории.
  *
- * Два сценария закрытия:
- *  1. Аппаратная «Назад» → _handlePopState вызывает closeFn напрямую.
- *     registeredRef сбрасывается → cleanup ничего не делает.
- *     programmatic=false → go(-1) не вызывается (popstate уже потратил запись).
- *
- *  2. Программное закрытие (крестик, backdrop) → isOpen становится false →
- *     unregisterLayer(id, programmatic=true) → go(-1) убирает pushState-запись.
- *     _skipNextPopState подавляет наш обработчик на этот go(-1).
- *
- * Итог: history.length == stack.length в любой момент.
+ * Намеренно НЕ проверяет isMobile — компоненты сами решают
+ * когда рендериться. Race condition с MediaQuery убран.
  */
 export function useMobileBackTrap(isOpen: boolean, closeFn: () => void) {
   const rawId = useId()
@@ -37,25 +31,22 @@ export function useMobileBackTrap(isOpen: boolean, closeFn: () => void) {
       console.log('[BackTrap] REGISTER', id)
       registeredRef.current = true
       registerLayer(id, () => {
-        // Вызван из _handlePopState (аппаратная «Назад»).
-        // Стор уже убрал слой из stack. Сбрасываем флаг.
-        // unregisterLayer НЕ вызываем — popstate уже "потратил" запись.
+        // closeFn вызван из _handlePopState — стор уже убрал слой.
+        // Сбрасываем флаг чтобы cleanup не вызвал unregister повторно.
         registeredRef.current = false
         closeFnRef.current()
       })
     } else if (!isOpen && registeredRef.current) {
-      // Программное закрытие — unregisterLayer с go(-1)
-      console.log('[BackTrap] UNREGISTER (programmatic)', id)
+      console.log('[BackTrap] UNREGISTER', id)
       registeredRef.current = false
-      unregisterLayer(id, true)
+      unregisterLayer(id)
     }
 
     return () => {
       if (registeredRef.current) {
-        // Unmount при открытом состоянии — тоже программное
         console.log('[BackTrap] CLEANUP', id)
         registeredRef.current = false
-        unregisterLayer(id, true)
+        unregisterLayer(id)
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

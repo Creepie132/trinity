@@ -130,10 +130,7 @@ export const createPaymentSchema = z.object({
   amount:         z.coerce.number()
                     .min(0.01, 'Amount must be > 0')
                     .max(1_000_000, 'Amount too large'),
-  payment_method: z.enum(PAYMENT_METHOD_VALUES).refine(
-                    (v) => PAYMENT_METHOD_VALUES.includes(v as any),
-                    { message: 'Invalid payment_method' }
-                  ),
+  payment_method: z.enum(PAYMENT_METHOD_VALUES).optional().default('credit_card'),
   visit_id:       z.string().uuid('Invalid visit_id').optional().nullable(),
   description:    z.string().max(500).optional().or(z.literal('')),
   status:         z.enum(['pending', 'completed', 'failed'])

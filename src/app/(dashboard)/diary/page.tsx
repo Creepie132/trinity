@@ -11,6 +11,7 @@ import { useFeatures } from '@/hooks/useFeatures'
 import { useModalStore } from '@/store/useModalStore'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { TaskDetailSheet } from '@/components/diary/TaskDetailSheet'
+import { TaskMob, type TaskMobTask } from '@/components/diary/TaskMob'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useDemoMode } from '@/hooks/useDemoMode'
@@ -439,6 +440,10 @@ export default function DiaryPage() {
   const [searchQuery,  setSearchQuery]  = useState('')
   const [sheetTask,    setSheetTask]    = useState<Task | null>(null)
   const [isSheetOpen,  setIsSheetOpen]  = useState(false)
+  // TaskMob — мобильные окна деталей/создания/редактирования
+  const [mobTask,      setMobTask]      = useState<Task | null>(null)
+  const [mobMode,      setMobMode]      = useState<'detail'|'create'|'edit'>('detail')
+  const [mobOpen,      setMobOpen]      = useState(false)
   const [showDone,     setShowDone]     = useState(false)
   const [activeBucket, setActiveBucket] = useState<Bucket | 'all'>('all')
   const { isDemo } = useDemoMode()
@@ -518,8 +523,12 @@ export default function DiaryPage() {
     refreshTasks()
   }
   function handleCardClick(task: Task) {
-    if (window.innerWidth < 768) { setSheetTask(task); setIsSheetOpen(true) }
-    else openModal('task-details', { task, locale: language as 'he' | 'ru' })
+    if (window.innerWidth < 768) {
+      // Мобиль → TaskMob detail
+      setMobTask(task); setMobMode('detail'); setMobOpen(true)
+    } else {
+      openModal('task-details', { task, locale: language as 'he' | 'ru' })
+    }
   }
   async function handleSheetStatusChange(taskId: string, rawStatus: string) {
     const status = (rawStatus === 'done' ? 'completed' : rawStatus) as Task['status']
@@ -541,7 +550,12 @@ export default function DiaryPage() {
     if (isDemo && tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled').length >= 5) {
       setDemoLimitOpen(true); return
     }
-    openModal('task-create', { onCreated: refreshTasks })
+    if (window.innerWidth < 768) {
+      // Мобиль → TaskMob create
+      setMobTask(null); setMobMode('create'); setMobOpen(true)
+    } else {
+      openModal('task-create', { onCreated: refreshTasks })
+    }
   }
 
   // ── Скелетон ─────────────────────────────────────────────────────────────
@@ -739,7 +753,7 @@ export default function DiaryPage() {
           <Plus className="w-6 h-6" />
         </button>
 
-        {/* TaskDetailSheet */}
+        {/* TaskDetailSheet — десктоп (только, мобиль теперь через TaskMob) */}
         <TaskDetailSheet
           task={sheetTask as any} isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)}
           onStatusChange={handleSheetStatusChange}
@@ -747,6 +761,18 @@ export default function DiaryPage() {
           onEdit={task => openModal('task-create', { editTask: task, onCreated: refreshTasks })}
           onDelete={handleSheetDelete}
           locale={language as 'he' | 'ru'} />
+
+        {/* TaskMob — мобильные окна деталей / создания / редактирования */}
+        <TaskMob
+          mode={mobMode}
+          task={mobTask as TaskMobTask | null}
+          isOpen={mobOpen}
+          onClose={() => setMobOpen(false)}
+          locale={language as 'he' | 'ru'}
+          onSuccess={refreshTasks}
+          onEdit={task => { setMobTask(task as any); setMobMode('edit'); }}
+          onClientClick={clientId => { setMobOpen(false); openModal('client-details', { id: clientId }) }}
+        />
         <DemoLimitModal open={demoLimitOpen} onClose={() => setDemoLimitOpen(false)} section="diary" />
       </div>
     </>

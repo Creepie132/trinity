@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const { client_id, amount, payment_method, visit_id, description, status, payment_details, amount_received } = data
     const service = createSupabaseServiceClient()
 
-    // 3. Ownership check — client_id должен принадлежать orgId
+    // 3. Ownership check — client_id должен принадлежать orgId (или его филиалу)
     const { data: client, error: clientErr } = await service
       .from('clients')
       .select('id, org_id')
@@ -76,16 +76,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 })
     }
 
-    // Клиент может принадлежать главной org или дочернему филиалу
-    // Используем существующую логику getRelatedOrgIds через прямую проверку
-    const { data: orgCheck } = await service
-      .from('clients')
-      .select('id')
-      .eq('id', client_id)
-      .or(`org_id.eq.${orgId},org_id.in.(select child_org_id from branches where parent_org_id='${orgId}')`)
-      .single()
+    // Шаг 1: прямая проверка — клиент принадлежит текущей org?
+    let clientBelongs = client.org_id === orgId
 
-    if (!orgCheck) {
+    // Шаг 2: если нет — проверяем через branches (activeOrgId может быть филиалом)
+    if (!clientBelongs) {
+      const { data: branch } = await service
+        .from('branches')
+        .select('child_org_id')
+        .or(`parent_org_id.eq.${orgId},child_org_id.eq.${orgId}`)
+        .eq('child_org_id', client.org_id)
+        .maybeSingle()
+
+      if (branch) {
+        clientBelongs = true
+      } else {
+        // Шаг 3: может клиент принадлежит parent org активного филиала?
+        const { data: parentBranch } = await service
+          .from('branches')
+          .select('parent_org_id')
+          .eq('child_org_id', orgId)
+          .maybeSingle()
+
+        if (parentBranch && client.org_id === parentBranch.parent_org_id) {
+          clientBelongs = true
+        }
+      }
+    }
+
+    if (!clientBelongs) {
+      console.error(`[payments] client ${client_id} org=${client.org_id} does not match orgId=${orgId}`)
       return NextResponse.json({ error: 'Client does not belong to your organization' }, { status: 403 })
     }
 

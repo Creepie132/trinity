@@ -166,3 +166,111 @@ export function useUpdateVisitStatus() {
     },
   })
 }
+
+
+// ── Create visit mutation ─────────────────────────────────────────────────────
+
+export interface CreateVisitPayload {
+  clientId:     string
+  serviceId?:   string | null
+  service?:     string
+  date:         string
+  time:         string
+  duration?:    number | null
+  price?:       string | number
+  quantity?:    number
+  notes?:       string
+  event_type?:  'visit' | 'meeting'
+  meeting_link?: string | null
+}
+
+export function useCreateVisit() {
+  const qc = useQueryClient()
+  const { activeOrgId } = useBranch()
+
+  return useMutation({
+    mutationFn: async (payload: CreateVisitPayload) => {
+      const res = await fetch('/api/visits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to create visit')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: visitsKeys.all(activeOrgId) })
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Ошибка создания визита')
+    },
+  })
+}
+
+// ── Update visit mutation ─────────────────────────────────────────────────────
+
+export interface UpdateVisitPayload {
+  id:               string
+  scheduled_at?:    string
+  service_id?:      string | null
+  duration_minutes?: number | null
+  notes?:           string
+  price?:           number | null
+  meeting_link?:    string | null
+}
+
+export function useUpdateVisit() {
+  const qc = useQueryClient()
+  const { activeOrgId } = useBranch()
+
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: UpdateVisitPayload) => {
+      const res = await fetch(`/api/visits/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to update visit')
+      }
+      return res.json()
+    },
+    // Optimistic update — мгновенно обновляем scheduled_at в UI
+    onMutate: async ({ id, ...payload }) => {
+      // Фильтруем optimistic IDs — никогда не пишем в БД temp ID
+      if (id.startsWith('optimistic-')) {
+        throw new Error('Cannot update visit with optimistic ID')
+      }
+      await qc.cancelQueries({ queryKey: visitsKeys.all(activeOrgId) })
+      const snapshot = qc.getQueriesData<VisitsResult>({ queryKey: visitsKeys.all(activeOrgId) })
+      qc.setQueriesData<VisitsResult>(
+        { queryKey: visitsKeys.all(activeOrgId) },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            data: old.data.map(v =>
+              v.id === id ? { ...v, ...payload } : v
+            ),
+          }
+        }
+      )
+      return { snapshot }
+    },
+    onError: (err: any, _vars, context) => {
+      if (context?.snapshot) {
+        context.snapshot.forEach(([queryKey, data]) => {
+          qc.setQueryData(queryKey, data)
+        })
+      }
+      toast.error(err.message || 'Ошибка сохранения визита')
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: visitsKeys.all(activeOrgId) })
+    },
+  })
+}

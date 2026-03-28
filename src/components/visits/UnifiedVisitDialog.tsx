@@ -34,6 +34,7 @@ import { useServices } from '@/hooks/useServices'
 import { useFeatures } from '@/hooks/useFeatures'
 import { apiFetch } from '@/lib/api-fetch'
 import { toast } from 'sonner'
+import { visitsKeys } from '@/hooks/useVisits'
 import {
   Users, Calendar, FileText, CheckCircle2, Clock,
   Scissors, MapPin, Video, Loader2, AlertCircle, X, Save,
@@ -347,7 +348,15 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
 
   // ── Close ────────────────────────────────────────────────────────────────────
   const handleClose = useCallback(() => {
+    // Не закрываем пока идёт submit — но этот guard только для внешних кликов.
+    // При programmatic close (из handleSubmit) isSubmittingRef уже сброшен.
     if (isSubmittingRef.current) return
+    setErrorMsg(null)
+    onOpenChange(false)
+  }, [onOpenChange])
+
+  // Закрытие после успешного submit — вызывается ПОСЛЕ сброса isSubmittingRef
+  const handleCloseAfterSuccess = useCallback(() => {
     setErrorMsg(null)
     onOpenChange(false)
   }, [onOpenChange])
@@ -428,10 +437,14 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
         toast.success(t('common.success'))
       }
 
-      // ✅ Шаг 5 — инвалидация кэша вместо window.location.reload()
-      queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === 'visits' })
+      // ✅ Инвалидация кэша через typed key factory (охватывает все ['visits', orgId, *])
+      queryClient.invalidateQueries({ queryKey: visitsKeys.all(activeOrgId) })
       safeData.onSuccess?.()
-      handleClose()
+
+      // Сначала снимаем замок, потом закрываем — иначе handleClose видит isSubmittingRef=true
+      isSubmittingRef.current = false
+      handleCloseAfterSuccess()
+      return  // выходим досрочно, finally не должен снова сбрасывать ref
 
     } catch (err: unknown) {
       // Форма НЕ сбрасывается при ошибке
@@ -440,11 +453,15 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
       console.error('[UnifiedVisitDialog] submit error:', err)
     } finally {
       setIsLoading(false)
-      isSubmittingRef.current = false
+      // isSubmittingRef сбрасывается здесь только при ошибке.
+      // При успехе — уже сброшен до handleCloseAfterSuccess().
+      if (isSubmittingRef.current) {
+        isSubmittingRef.current = false
+      }
     }
   }, [
-    isEditMode, canSubmit, orgId, form, isAppt, isHe, safeData,
-    handleClose, queryClient, t,
+    isEditMode, canSubmit, orgId, activeOrgId, form, isAppt, isHe, safeData,
+    handleCloseAfterSuccess, queryClient, t,
   ])
 
   // ─── Mobile footer ────────────────────────────────────────────────────────────

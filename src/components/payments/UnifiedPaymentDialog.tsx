@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { PaymentSuccessView, PaymentSuccessSidebar } from '@/components/payments/PaymentSuccessView'
 import { TRINITY_PAYMENT_METHODS, type TrinityPaymentMethodId } from '@/lib/payment-methods'
+import { usePaymentMethodConfig } from '@/hooks/usePaymentMethodConfig'
 import {
   CheckForm, BankTransferForm, CashForm, IL_CASH_LIMIT,
   type CheckPaymentDetails, type BankTransferDetails, type CashFormData,
@@ -178,6 +179,21 @@ export function UnifiedPaymentDialog({
   const searchOrgId = activeOrgId || ''
   const isHe = language === 'he'
   const t = I18N[language as 'he' | 'ru'] ?? I18N.ru
+
+  // Загружаем конфиг включённых методов (реактивно из /api/payments/settings)
+  const { enabledMethods: configMethods, isLoading: methodsLoading } = usePaymentMethodConfig()
+  // Методы, доступные в этом диалоге (пересечение с METHODS по ключу)
+  // Пока идёт загрузка — показываем все методы (graceful fallback)
+  const allowedMethodIds = new Set(
+    methodsLoading || configMethods.length === 0
+      ? METHODS.map(m => m.id)
+      : configMethods.map(m => m.key as string)
+  )
+  // card обрабатывается как 'link' в этом диалоге (async flow через Tranzila)
+  const visibleMethods = METHODS.filter(m => {
+    if (m.id === 'link') return allowedMethodIds.has('card') || allowedMethodIds.has('link')
+    return allowedMethodIds.has(m.id)
+  })
 
   const safeData = validateModalData(initialData)
   const queryClient = useQueryClient()
@@ -585,7 +601,7 @@ export function UnifiedPaymentDialog({
         <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
           {t.selectMethod}
         </p>
-        {METHODS.map((m) => {
+        {visibleMethods.map((m) => {
           const label = t[m.id as keyof typeof t] as string
           const desc  = t[`${m.id}Desc` as keyof typeof t] as string
           return (

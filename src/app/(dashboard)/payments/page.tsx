@@ -22,27 +22,12 @@ import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoStub, DemoStubConfig } from '@/components/demo/DemoStub'
+import { getCanonicalMethodCfg, normalizePaymentMethod } from '@/lib/payment-method-normalizer'
 
 const PAGE_SIZE = 20
 
-// ─── Методы оплаты: цвета, иконки, метки ────────────────────────────────────
-const METHOD_CFG: Record<string, { color: string; bg: string; label: { ru: string; he: string }; icon: string }> = {
-  cash:          { color: '#22c55e', bg: 'rgba(34,197,94,.12)',  label: { ru: 'Наличные',     he: 'מזומן'   }, icon: '₪'  },
-  bit:           { color: '#f97316', bg: 'rgba(249,115,22,.12)', label: { ru: 'Bit',          he: 'ביט'     }, icon: '📱' },
-  credit_card:   { color: '#6366f1', bg: 'rgba(99,102,241,.12)', label: { ru: 'Карта',        he: 'כרטיס'   }, icon: '💳' },
-  card:          { color: '#6366f1', bg: 'rgba(99,102,241,.12)', label: { ru: 'Карта',        he: 'כרטיס'   }, icon: '💳' },
-  visa:          { color: '#1a1f71', bg: 'rgba(26,31,113,.1)',   label: { ru: 'Visa',         he: 'Visa'    }, icon: '💳' },
-  mastercard:    { color: '#eb001b', bg: 'rgba(235,0,27,.1)',    label: { ru: 'Mastercard',   he: 'Mastercard'},icon: '💳'},
-  bank_transfer: { color: '#0ea5e9', bg: 'rgba(14,165,233,.12)', label: { ru: 'Перевод',      he: 'העברה'   }, icon: '🏦' },
-  transfer:      { color: '#0ea5e9', bg: 'rgba(14,165,233,.12)', label: { ru: 'Перевод',      he: 'העברה'   }, icon: '🏦' },
-  check:         { color: '#8b5cf6', bg: 'rgba(139,92,246,.12)', label: { ru: 'Чек',          he: "צ'ק"      }, icon: '📄' },
-  cheque:        { color: '#8b5cf6', bg: 'rgba(139,92,246,.12)', label: { ru: 'Чек',          he: "צ'ק"      }, icon: '📄' },
-  apple_pay:     { color: '#1d1d1f', bg: 'rgba(29,29,31,.1)',    label: { ru: 'Apple Pay',    he: 'Apple Pay'}, icon: '🍎' },
-  paybox:        { color: '#6d28d9', bg: 'rgba(109,40,217,.12)', label: { ru: 'PayBox',       he: 'PayBox'  }, icon: '📲' },
-}
-function getMethodCfg(m: string) {
-  return METHOD_CFG[m] || { color: '#94a3b8', bg: 'rgba(148,163,184,.12)', label: { ru: m, he: m }, icon: '💰' }
-}
+// ─── Методы оплаты: делегируем нормализатору (fixes дубли card/credit_card, transfer/bank_transfer) ──
+function getMethodCfg(m: string) { return getCanonicalMethodCfg(m) }
 
 // ─── BarChart (мини, как в Продажах) ─────────────────────────────────────────
 function MiniBarChart({ payments, locale }: { payments: any[]; locale: string }) {
@@ -256,18 +241,25 @@ function PaymentsContent() {
     })
   }, [filteredPayments, locale])
 
-  // Разбивка по методам — динамическая, все методы из данных
+  // Разбивка по методам — нормализуем сырые ключи БД, схлопываем дубли (card+credit, transfer+bank_transfer и т.д.)
   const methodBreakdown = useMemo(() => {
     if (!payments?.length) return []
     const total = payments.reduce((s: number, p: any) => s + Number(p.amount || 0), 0)
+    // Аккумулируем по каноническому ключу
     const map: Record<string, number> = {}
     payments.forEach((p: any) => {
-      const k = p.payment_method || p.method || 'other'
-      map[k] = (map[k] || 0) + Number(p.amount || 0)
+      const raw = p.payment_method || p.method || 'other'
+      const canonical = normalizePaymentMethod(raw)
+      map[canonical] = (map[canonical] || 0) + Number(p.amount || 0)
     })
     return Object.entries(map)
       .filter(([, amt]) => amt > 0)
-      .map(([k, amt]) => ({ ...getMethodCfg(k), key: k, amount: amt, pct: total > 0 ? Math.round((amt / total) * 100) : 0 }))
+      .map(([k, amt]) => ({
+        ...getMethodCfg(k),
+        key: k,
+        amount: amt,
+        pct: total > 0 ? Math.round((amt / total) * 100) : 0,
+      }))
       .sort((a, b) => b.amount - a.amount)
   }, [payments])
 
@@ -517,9 +509,10 @@ function PaymentsContent() {
                 <select value={methodFilter} onChange={e => setMethodFilter(e.target.value)}
                   className="text-xs border border-gray-100 dark:border-gray-600 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-400/20">
                   <option value="all">{locale === 'he' ? 'כל השיטות' : 'Все методы'}</option>
-                  {Object.entries(METHOD_CFG).filter(([k]) => !['card','transfer','cheque'].includes(k)).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label[locale as 'ru' | 'he']}</option>
-                  ))}
+                  {(['cash','card','bit','bank_transfer','check'] as const).map(k => {
+                    const cfg = getMethodCfg(k)
+                    return <option key={k} value={k}>{cfg.label[locale as 'ru' | 'he']}</option>
+                  })}
                 </select>
               </div>
 

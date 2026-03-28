@@ -28,8 +28,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   CreditCard, Banknote, Link, CheckCircle2,
-  Copy, ExternalLink, MessageCircle, Loader2, AlertCircle, X, ArrowLeft,
+  Copy, Loader2, AlertCircle, X, ArrowLeft, MessageCircle, ExternalLink,
 } from 'lucide-react'
+import { PaymentSuccessView, PaymentSuccessSidebar } from '@/components/payments/PaymentSuccessView'
+import { TRINITY_PAYMENT_METHODS, type TrinityPaymentMethodId } from '@/lib/payment-methods'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,7 +42,10 @@ type Step = 'method-select' | 'cash-form' | 'link-form' | 'success'
 export interface UnifiedPaymentModalData {
   clientId?: string
   clientName?: string
+  clientPhone?: string
   visitId?: string
+  saleId?: string          // ID уже созданной продажи
+  prefillAmount?: number   // Предзаполненная сумма (из сделки)
   defaultMethod?: PaymentMethod
   onSuccess?: () => void
 }
@@ -69,7 +74,10 @@ function validateModalData(raw: unknown): UnifiedPaymentModalData {
   return {
     clientId:      typeof d.clientId === 'string' ? d.clientId : undefined,
     clientName:    typeof d.clientName === 'string' ? d.clientName : undefined,
+    clientPhone:   typeof d.clientPhone === 'string' ? d.clientPhone : undefined,
     visitId:       typeof d.visitId === 'string' ? d.visitId : undefined,
+    saleId:        typeof d.saleId === 'string' ? d.saleId : undefined,
+    prefillAmount: typeof d.prefillAmount === 'number' ? d.prefillAmount : undefined,
     defaultMethod: ['cash', 'link'].includes(d.defaultMethod as string)
       ? (d.defaultMethod as PaymentMethod) : undefined,
     onSuccess:     typeof d.onSuccess === 'function'
@@ -185,15 +193,16 @@ export function UnifiedPaymentDialog({
     setErrorMsg(null)
     setPaymentLink(null)
     setLinkCopied(false)
-    setAmount('')
     setNotes('')
     setDescription('')
-    // Предзаполнение клиента если clientId передан через ModalStore
+    // Предзаполнение суммы из сделки
+    setAmount(sd.prefillAmount != null ? String(sd.prefillAmount) : '')
+    // Предзаполнение клиента
     if (sd.clientId && sd.clientName) {
       const parts = sd.clientName.trim().split(' ')
       const first_name = parts[0] ?? sd.clientName
       const last_name = parts.slice(1).join(' ')
-      setSelectedClient({ id: sd.clientId, first_name, last_name, phone: '' })
+      setSelectedClient({ id: sd.clientId, first_name, last_name, phone: sd.clientPhone || '' })
     } else {
       setSelectedClient(null)
     }
@@ -416,32 +425,14 @@ export function UnifiedPaymentDialog({
         </>
       )}
 
-      {/* Sidebar action buttons — success (link) */}
-      {step === 'success' && paymentLink && (
-        <>
-          <button onClick={() => window.open(paymentLink, '_blank')}
-            style={{ padding: '11px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%', background: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', color: '#fff', fontSize: 13, fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <ExternalLink size={14} />{t.openLink}
-          </button>
-          {selectedClient?.phone && (
-            <button onClick={handleSendWhatsApp}
-              style={{ padding: '9px 14px', borderRadius: 10, border: '0.5px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.1)', cursor: 'pointer', width: '100%', color: '#34d399', fontSize: 12, fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <MessageCircle size={13} />WhatsApp
-            </button>
-          )}
-          <button onClick={handleClose}
-            style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer' }}>
-            {t.close}
-          </button>
-        </>
-      )}
-
-      {/* Sidebar action buttons — success (cash) */}
-      {step === 'success' && !paymentLink && (
-        <button onClick={handleClose}
-          style={{ padding: '11px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', width: '100%', background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          <CheckCircle2 size={14} />{t.close}
-        </button>
+      {/* Sidebar action buttons — success */}
+      {step === 'success' && (
+        <PaymentSuccessSidebar
+          paymentLink={paymentLink}
+          clientPhone={selectedClient?.phone}
+          onClose={handleClose}
+          locale={isHe ? 'he' : 'ru'}
+        />
       )}
     </div>
   )
@@ -513,28 +504,13 @@ export function UnifiedPaymentDialog({
 
     // ── Success ────────────────────────────────────────────────────────────
     if (step === 'success') return (
-      <div style={{ padding: '20px 18px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '1px solid #bbf7d0', borderRadius: 16, padding: 20, textAlign: 'center' }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', boxShadow: '0 6px 16px rgba(34,197,94,0.3)' }}>
-            <CheckCircle2 size={24} color="#fff" />
-          </div>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#15803d', margin: '0 0 4px' }}>
-            {paymentLink ? t.successLink : t.successCash}
-          </p>
-          {paymentLink && <p style={{ fontSize: 12, color: '#16a34a', margin: 0 }}>{t.sendToClient}</p>}
-        </div>
-        {paymentLink && (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Input value={paymentLink} readOnly dir="ltr"
-              style={{ flex: 1, fontSize: 12, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10 }} />
-            <button onClick={handleCopyLink}
-              style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #e2e8f0', background: linkCopied ? '#f0fdf4' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: linkCopied ? '#16a34a' : '#475569', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
-              {linkCopied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
-              {linkCopied ? t.copied : t.copy}
-            </button>
-          </div>
-        )}
-      </div>
+      <PaymentSuccessView
+        paymentLink={paymentLink}
+        amount={amountNum}
+        clientPhone={selectedClient?.phone}
+        onClose={handleClose}
+        locale={isHe ? 'he' : 'ru'}
+      />
     )
 
     // ── Form (cash | link) ────────────────────────────────────────────────────

@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { PaymentMethodModal } from '@/components/payments/PaymentMethodModal'
+import { UnifiedPaymentDialog } from '@/components/payments/UnifiedPaymentDialog'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
@@ -29,6 +30,7 @@ import { useProducts } from '@/hooks/useProducts'
 import { useServices } from '@/hooks/useServices'
 import { apiFetch } from '@/lib/api-fetch'
 import { toast } from 'sonner'
+import { type TrinityPaymentMethodId, PAYMENT_METHOD_API_MAP, isCardMethod } from '@/lib/payment-methods'
 import {
   ShoppingBag, Plus, Minus, X, Percent, Search, ChevronLeft,
   CreditCard, Banknote, Smartphone, Building2,
@@ -416,6 +418,13 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
   // ── State для Tranzila ссылки (успех карточной оплаты) ──────────────────────
   const [tranzilaLink, setTranzilaLink] = useState<string | null>(null)
 
+  // ── State для UnifiedPaymentDialog (открывается после сохранения сделки) ────
+  const [payDialogOpen, setPayDialogOpen] = useState(false)
+  const [payDialogData, setPayDialogData] = useState<{
+    clientId?: string; clientName?: string; clientPhone?: string
+    saleId?: string; prefillAmount?: number
+  } | null>(null)
+
   // ── "Оплатить" — открывает PaymentMethodModal ─────────────────────────────────
   const handlePayClick = useCallback(() => {
     if (!items.length) {
@@ -425,52 +434,17 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
     setPayModalOpen(true)
   }, [items, isHe])
 
-  const handlePayMethodSelect = useCallback(async (method: 'card' | 'cash' | 'check' | 'bank_transfer') => {
-    const methodMap: Record<string, string> = {
-      card: 'credit', cash: 'cash', check: 'check', bank_transfer: 'bank_transfer',
-    }
-    const finalMethod = methodMap[method] ?? 'cash'
-    setPaymentMethod(finalMethod)
+  const handlePayMethodSelect = useCallback(async (method: TrinityPaymentMethodId) => {
     setPayModalOpen(false)
-    setStep('checkout')
 
-    // Карта — создаём Tranzila ссылку и показываем success экран со ссылкой
-    if (method === 'card') {
-      if (!clientId) {
-        toast.error(isHe ? 'יש לבחור לקוח לתשלום בכרטיס' : 'Для оплаты картой выберите клиента')
-        return
-      }
-      setIsLoading(true)
-      try {
-        const res = await apiFetch<{ success: boolean; payment_link: string }>('/api/payments/create-link', {
-          method: 'POST',
-          json: {
-            client_id: clientId,
-            amount: total,
-            description: items.map(i => i.product_name).join(', ') || (isHe ? 'תשלום' : 'Оплата'),
-          },
-        })
-        if (res.payment_link) {
-          setTranzilaLink(res.payment_link)
-          setStep('success')
-          queryClient.invalidateQueries({ queryKey: ['payments'] })
-        }
-      } catch (err: any) {
-        const msg = err?.message || (isHe ? 'שגיאה ביצירת קישור' : 'Ошибка создания ссылки')
-        setErrorMsg(msg)
-      } finally {
-        setIsLoading(false)
-      }
-      return
-    }
+    if (!items.length) return
 
-    // Остальные методы — стандартный сабмит
-    if (isSubmittingRef.current) return
-    isSubmittingRef.current = true
     setIsLoading(true)
     setErrorMsg(null)
+
     try {
-      await apiFetch<{ id: string; payment_id: string }>('/api/sales', {
+      // ── Шаг 1: Сохраняем сделку в БД ─────────────────────────────────────
+      const sale = await apiFetch<{ id: string; payment_id: string }>('/api/sales', {
         method: 'POST',
         json: {
           client_id:      clientId || undefined,
@@ -480,31 +454,42 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
             quantity:     i.quantity,
             unit_price:   i.unit_price,
           })),
-          paid_amount:    total,
-          payment_method: finalMethod,
+          paid_amount:    0, // Платёж ещё не совершён
+          payment_method: PAYMENT_METHOD_API_MAP[method],
           sale_date:      saleDate,
           notes:          saleNotes || undefined,
           ...(discount.value > 0 ? { discount_type: discount.type, discount_value: discount.value } : {}),
         },
       })
+
       if (safeData.visitId) {
         await apiFetch(`/api/visits/${safeData.visitId}/status`, { method: 'PATCH', json: { status: 'completed' } }).catch(() => {})
         queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === 'visits' })
       }
       if (clientId) { try { localStorage.removeItem(`draft_sale_${clientId}`) } catch {} }
       queryClient.invalidateQueries({ queryKey: ['sales'] })
-      queryClient.invalidateQueries({ queryKey: ['payments'] })
-      toast.success(isHe ? 'העסקה נשמרה!' : 'Сделка оплачена!')
-      safeData.onSuccess?.()
-      setStep('success')
+
+      // ── Шаг 2: Закрываем UnifiedSalesDialog ──────────────────────────────
+      onOpenChange(false)
+
+      // ── Шаг 3: Открываем UnifiedPaymentDialog с данными сделки ────────────
+      setPayDialogData({
+        clientId:     clientId || undefined,
+        clientName:   clientLabel || undefined,
+        clientPhone:  clientObj?.phone || undefined,
+        saleId:       sale.id,
+        prefillAmount: total,
+      })
+      setPayDialogOpen(true)
+
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : (isHe ? 'שגיאה, נסה שוב' : 'Ошибка, попробуйте снова')
       setErrorMsg(msg)
+      setStep('checkout')
     } finally {
       setIsLoading(false)
-      isSubmittingRef.current = false
     }
-  }, [items, clientId, total, saleDate, saleNotes, discount, safeData, isHe, queryClient, onOpenChange])
+  }, [items, clientId, clientLabel, clientObj, total, saleDate, saleNotes, discount, safeData, isHe, queryClient, onOpenChange])
 
   // ── Submit — единственная точка записи ──────────────────────────────────────
   const handleSubmit = useCallback(async () => {
@@ -1161,6 +1146,31 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
 
       {/* Item picker sheet */}
       <ItemPickerSheet isOpen={pickerOpen} onClose={() => setPickerOpen(false)} isHe={isHe} onAdd={addItem} />
+
+      {/* ── UnifiedPaymentDialog — глобальный процессор оплат ── */}
+      {payDialogOpen && payDialogData && (
+        <UnifiedPaymentDialog
+          open={payDialogOpen}
+          onOpenChange={(v) => {
+            setPayDialogOpen(v)
+            if (!v) {
+              setPayDialogData(null)
+              queryClient.invalidateQueries({ queryKey: ['payments'] })
+              queryClient.invalidateQueries({ queryKey: ['sales'] })
+              safeData.onSuccess?.()
+            }
+          }}
+          initialData={{
+            clientId:      payDialogData.clientId,
+            clientName:    payDialogData.clientName,
+            clientPhone:   payDialogData.clientPhone,
+            saleId:        payDialogData.saleId,
+            prefillAmount: payDialogData.prefillAmount,
+          }}
+        />
+      )}
+
+      {/* Quick-add mini modal */}
 
       {/* Quick-add mini modal */}
       {quickOpen && (

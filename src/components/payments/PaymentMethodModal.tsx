@@ -3,68 +3,17 @@
 import { createPortal } from 'react-dom'
 import { useEffect, useState } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { CreditCard, Banknote, Building2, FileCheck, X } from 'lucide-react'
+import { X } from 'lucide-react'
+import {
+  PAYMENT_METHODS_FOR_MODAL,
+  type TrinityPaymentMethodId,
+} from '@/lib/payment-methods'
 
 interface PaymentMethodModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSelectMethod: (method: 'card' | 'cash' | 'check' | 'bank_transfer') => void
+  onSelectMethod: (method: TrinityPaymentMethodId) => void
 }
-
-const METHODS = [
-  {
-    id: 'card' as const,
-    labelHe: 'כרטיס אשראי',
-    labelRu: 'Кредитная карта',
-    descHe: 'תשלום מאובטח עם Tranzila',
-    descRu: 'Безопасная оплата через Tranzila',
-    icon: <CreditCard size={22} />,
-    gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-    glow: 'rgba(99,102,241,0.35)',
-    bg: 'linear-gradient(135deg, #eef2ff, #e0e7ff)',
-    border: '#c7d2fe',
-    color: '#4338ca',
-  },
-  {
-    id: 'cash' as const,
-    labelHe: 'מזומן',
-    labelRu: 'Наличные',
-    descHe: 'תשלום במזומן ישירות',
-    descRu: 'Оплата наличными напрямую',
-    icon: <Banknote size={22} />,
-    gradient: 'linear-gradient(135deg, #22c55e, #16a34a)',
-    glow: 'rgba(34,197,94,0.3)',
-    bg: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
-    border: '#bbf7d0',
-    color: '#15803d',
-  },
-  {
-    id: 'check' as const,
-    labelHe: "צ'ק",
-    labelRu: 'Чек',
-    descHe: "תשלום בצ'ק",
-    descRu: 'Оплата чеком',
-    icon: <FileCheck size={22} />,
-    gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-    glow: 'rgba(245,158,11,0.3)',
-    bg: 'linear-gradient(135deg, #fffbeb, #fef3c7)',
-    border: '#fde68a',
-    color: '#b45309',
-  },
-  {
-    id: 'bank_transfer' as const,
-    labelHe: 'העברה בנקאית',
-    labelRu: 'Банковский перевод',
-    descHe: 'העברה ישירה לחשבון',
-    descRu: 'Прямой перевод на счёт',
-    icon: <Building2 size={22} />,
-    gradient: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
-    glow: 'rgba(14,165,233,0.3)',
-    bg: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
-    border: '#bae6fd',
-    color: '#0369a1',
-  },
-]
 
 export function PaymentMethodModal({ open, onOpenChange, onSelectMethod }: PaymentMethodModalProps) {
   const { language } = useLanguage()
@@ -119,7 +68,7 @@ export function PaymentMethodModal({ open, onOpenChange, onSelectMethod }: Payme
 
         {/* Methods */}
         <div style={{ padding: '16px 16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {METHODS.map((m, i) => (
+          {PAYMENT_METHODS_FOR_MODAL.map((m, i) => (
             <button
               key={m.id}
               onClick={() => { onSelectMethod(m.id); onOpenChange(false) }}

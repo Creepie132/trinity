@@ -30,20 +30,19 @@ export async function POST(request: NextRequest) {
     }
 
     const { org_id } = authResult.data
-    // Service role — bypasses RLS, необходим для impersonation (суперадмин действует от имени чужого org)
     const supabase = createSupabaseServiceClient()
 
     const body = await request.json()
-    
+
     // ✅ Zod validation
     const { data, error: validationError } = validateBody(createPaymentSchema, body)
     if (validationError || !data) {
       return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
     }
 
-    const { client_id, amount, description, visit_id } = data
+    const { client_id, amount, description, visit_id, sale_id } = data
 
-    // SECURITY FIX: Verify client belongs to user's organization
+    // SECURITY: Verify client belongs to user's organization
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('id, org_id')
@@ -58,21 +57,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Создаём payment с org_id
+    // Создаём payment — включаем sale_id для последующего обновления статуса сделки
+    // триггером trg_recalculate_sale_status (AFTER UPDATE OF status ON payments)
     const { data: payment, error: dbError } = await supabase
       .from('payments')
-      .insert([
-        {
-          org_id,
-          client_id,
-          visit_id: visit_id || null,
-          amount,
-          currency: 'ILS',
-          status: 'pending',
-          provider: 'tranzila',
-          payment_method: 'credit_card',
-        },
-      ])
+      .insert([{
+        org_id,
+        client_id,
+        visit_id:        visit_id || null,
+        sale_id:         sale_id  || null,
+        amount,
+        currency:        'ILS',
+        status:          'pending',
+        provider:        'tranzila',
+        payment_method:  'credit_card',
+      }])
       .select()
       .single()
 
@@ -91,8 +90,7 @@ export async function POST(request: NextRequest) {
       .eq('id', org_id)
       .single()
 
-    // SECURITY: Validate that organization has its own terminal configured
-    // Never use platform owner credentials as fallback for client org payments
+    // SECURITY: Never use platform owner credentials as fallback
     if (!org?.tranzila_terminal) {
       return NextResponse.json(
         { error: 'Платёжный терминал не настроен для вашей организации. Обратитесь к администратору.' },
@@ -100,30 +98,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate Tranzila payment link
     const origin = request.nextUrl.origin
 
     const tranzilaResult = await createTranzilaPaymentLink({
       amount,
       description: description || 'תשלום',
-      paymentId: payment.id,
-      successUrl: `${origin}/api/payments/tranzila-success`,
-      failUrl: `${origin}/api/payments/tranzila-failed`,
-      terminal: org.tranzila_terminal,
-      password: org.tranzila_password || undefined,
+      paymentId:   payment.id,
+      successUrl:  `${origin}/api/payments/tranzila-success`,
+      failUrl:     `${origin}/api/payments/tranzila-failed`,
+      terminal:    org.tranzila_terminal,
+      password:    org.tranzila_password || undefined,
     })
 
     const paymentLink = tranzilaResult.url
 
-    console.log('Tranzila result:', JSON.stringify(tranzilaResult))
-    console.log('Payment link to save:', paymentLink)
-    console.log('Payment ID:', payment.id)
-
     // Update payment record with link
     const { error: updateError } = await supabase
       .from('payments')
-      .update({ 
-        payment_link: paymentLink,
+      .update({
+        payment_link:   paymentLink,
         transaction_id: null,
       })
       .eq('id', payment.id)
@@ -136,32 +129,32 @@ export async function POST(request: NextRequest) {
     // ✅ Audit log
     await logAudit({
       org_id,
-      user_id: authResult.data.user.id,
+      user_id:    authResult.data.user.id,
       user_email: authResult.data.email,
-      action: "create",
-      entity_type: "payment",
-      entity_id: payment.id,
-      new_data: { amount, currency: 'ILS', client_id: data.client_id },
+      action:     'create',
+      entity_type: 'payment',
+      entity_id:  payment.id,
+      new_data:   { amount, currency: 'ILS', client_id: data.client_id, sale_id: sale_id ?? null },
       ip_address: getClientIp(request),
     })
 
     // Push notification
     await queuePushNotification({
       org_id,
-      user_id: authResult.data.user.id,
-      type: 'new_payment',
-      title: '💰 תשלום חדש',
-      body: `₪${amount}`,
-      link: '/payments',
+      user_id:      authResult.data.user.id,
+      type:         'new_payment',
+      title:        '💰 תשלום חדש',
+      body:         `₪${amount}`,
+      link:         '/payments',
       reference_id: payment.id,
     })
 
     return NextResponse.json({
-      success: true,
-      payment_id: payment.id,
+      success:      true,
+      payment_id:   payment.id,
       payment_link: paymentLink,
       amount,
-      currency: 'ILS',
+      currency:     'ILS',
     })
   } catch (error: any) {
     console.error('Create payment link error:', error)

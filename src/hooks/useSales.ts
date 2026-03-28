@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useBranch } from '@/contexts/BranchContext'
 import { useRealtimeSync } from '@/hooks/useRealtimeSync'
@@ -57,10 +58,26 @@ export const salesKeys = {
 
 export function useSales(filters?: SalesFilters) {
   const { activeOrgId } = useBranch()
+  const qc = useQueryClient()
+
   useRealtimeSync({ table: 'sales', orgId: activeOrgId, queryKey: ['sales'] })
 
+  // ── Инвалидация при возврате пользователя на вкладку ─────────────────────
+  // Когда пользователь оплачивает через Tranzila (внешняя страница/iframe)
+  // и возвращается обратно — триггер уже обновил БД, но React Query кэш
+  // устарел. visibilitychange инвалидирует его мгновенно.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        qc.invalidateQueries({ queryKey: salesKeys.all(activeOrgId) })
+        qc.invalidateQueries({ queryKey: ['payments'] })
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [qc, activeOrgId])
+
   return useQuery({
-    // ✅ null вместо undefined — стабильный ключ, совместимый с prefetch
     queryKey: salesKeys.list(activeOrgId, filters ?? null),
     queryFn: async () => {
       const params = new URLSearchParams()
@@ -78,9 +95,9 @@ export function useSales(filters?: SalesFilters) {
       if (!res.ok) throw new Error('Failed to fetch sales')
       return res.json() as Promise<Sale[]>
     },
-    enabled:          !!activeOrgId,
-    staleTime:         30_000,
-    placeholderData:   (prev: any) => prev, // нет мигания при смене фильтров
+    enabled:        !!activeOrgId,
+    staleTime:       30_000,
+    placeholderData: (prev: any) => prev,
   })
 }
 
@@ -141,31 +158,21 @@ export function useToggleReceipt() {
       return res.json()
     },
 
-    // ── 1. onMutate: flip receipt_sent мгновенно ──────────────────────────────
     onMutate: async ({ id, receipt_sent }) => {
       await qc.cancelQueries({ queryKey: salesKeys.all(activeOrgId) })
-
-      const snapshot = qc.getQueriesData<Sale[]>({
-        queryKey: salesKeys.all(activeOrgId),
-      })
-
+      const snapshot = qc.getQueriesData<Sale[]>({ queryKey: salesKeys.all(activeOrgId) })
       qc.setQueriesData<Sale[]>(
         { queryKey: salesKeys.all(activeOrgId) },
         (old) => old?.map(s => s.id === id ? { ...s, receipt_sent } : s)
       )
-
       return { snapshot }
     },
 
-    // ── 2. onError: откат ─────────────────────────────────────────────────────
     onError: (err: any, _vars, context) => {
-      context?.snapshot?.forEach(([queryKey, data]) => {
-        qc.setQueryData(queryKey, data)
-      })
+      context?.snapshot?.forEach(([queryKey, data]) => qc.setQueryData(queryKey, data))
       toast.error(err.message || 'Ошибка обновления чека')
     },
 
-    // ── 3. onSettled: фоновая сверка ──────────────────────────────────────────
     onSettled: () => {
       qc.invalidateQueries({ queryKey: salesKeys.all(activeOrgId) })
     },
@@ -204,17 +211,11 @@ export function useCreateSale() {
       return res.json() as Promise<{ sale: Sale }>
     },
 
-    // ── 1. onMutate: вставить временную запись в начало списка ───────────────
     onMutate: async (body) => {
       await qc.cancelQueries({ queryKey: salesKeys.all(activeOrgId) })
+      const snapshot = qc.getQueriesData<Sale[]>({ queryKey: salesKeys.all(activeOrgId) })
 
-      const snapshot = qc.getQueriesData<Sale[]>({
-        queryKey: salesKeys.all(activeOrgId),
-      })
-
-      const totalAmount = body.items.reduce(
-        (s, i) => s + i.quantity * i.unit_price, 0
-      )
+      const totalAmount = body.items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
       const optimistic: Sale = {
         id:             `optimistic-${Date.now()}`,
         org_id:         activeOrgId ?? '',
@@ -243,24 +244,18 @@ export function useCreateSale() {
         })),
       }
 
-      // Вставляем в начало каждого активного списка продаж
       qc.setQueriesData<Sale[]>(
         { queryKey: salesKeys.all(activeOrgId) },
         (old) => (old ? [optimistic, ...old] : [optimistic])
       )
-
       return { snapshot, optimisticId: optimistic.id }
     },
 
-    // ── 2. onError: откат ─────────────────────────────────────────────────────
     onError: (err: any, _vars, context) => {
-      context?.snapshot?.forEach(([queryKey, data]) => {
-        qc.setQueryData(queryKey, data)
-      })
+      context?.snapshot?.forEach(([queryKey, data]) => qc.setQueryData(queryKey, data))
       toast.error(err.message || 'Ошибка создания продажи')
     },
 
-    // ── 3. onSettled: фоновая сверка с БД ────────────────────────────────────
     onSettled: () => {
       qc.invalidateQueries({ queryKey: salesKeys.all(activeOrgId) })
       qc.invalidateQueries({ queryKey: ['payments'] })

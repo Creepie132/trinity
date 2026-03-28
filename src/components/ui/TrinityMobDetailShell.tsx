@@ -20,6 +20,7 @@ import { useRef, useState, useEffect, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { useMobileBackTrap } from '@/hooks/useMobileBackTrap'
 
 export interface MobDetailAction {
   icon: ReactNode
@@ -71,6 +72,11 @@ export function TrinityMobDetailShell({
 
   const [mounted, setMounted]     = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  // Mobile Back Button trap — LIFO:
+  // Первое «Назад» закрывает шторку действий (drawerOpen), второе — весь компонент (open).
+  useMobileBackTrap(open, handleClose)
+  useMobileBackTrap(drawerOpen, () => setDrawerOpen(false))
 
   // Вертикальный drag-to-close
   const y = useMotionValue(0)

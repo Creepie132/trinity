@@ -3,6 +3,7 @@
 import { useEffect, useRef, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
+import { useMobileBackTrap } from '@/hooks/useMobileBackTrap'
 
 interface TrinityBottomDrawerProps {
   isOpen: boolean
@@ -28,6 +29,10 @@ export function TrinityBottomDrawer({
   const contentRef = useRef<HTMLDivElement>(null)
   const drawerHeight = useRef(0)
   const isMounted = useRef(false)
+
+  // Mobile Back Button trap — аппаратная «Назад» закрывает этот drawer.
+  // Работает только на мобильных < 768px; на десктопе — no-op.
+  useMobileBackTrap(isOpen, onClose)
 
   // Track client-side mount for portal
   useEffect(() => {

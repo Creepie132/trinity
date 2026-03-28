@@ -31,6 +31,7 @@ import { useProducts } from '@/hooks/useProducts'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api-fetch'
+import { useMobileBackTrap } from '@/hooks/useMobileBackTrap'
 
 // ─── Типы ──────────────────────────────────────────────────────────────────────
 
@@ -132,6 +133,17 @@ export function VisitDetailMob({
   const [addingId, setAddingId] = useState<string | null>(null)
   const [addingCustom, setAddingCustom] = useState(false)
   const [mounted, setMounted] = useState(false)
+
+  // Mobile Back Button trap — LIFO (3 уровня):
+  // 1. isOpen        → handleClose (закрыть весь компонент)
+  // 2. drawerOpen    → закрыть шторку действий
+  // 3. addMode       → закрыть шторку добавления услуги/товара
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useMobileBackTrap(isOpen, handleClose)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useMobileBackTrap(drawerOpen, () => setDrawerOpen(false))
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useMobileBackTrap(addMode !== null, () => setAddMode(null))
 
   // Framer motion — drag-to-close
   const y = useMotionValue(0)

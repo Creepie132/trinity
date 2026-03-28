@@ -215,8 +215,13 @@ export function WorkerShellInner({ children }: { children: React.ReactNode }) {
   useEffect(() => { setDrawerOpen(false) }, [pathname])
 
   useEffect(() => {
-    if (!authLoading) setShowOnboarding(!isOwner && !isSalesAgent)
-  }, [authLoading, isOwner, isSalesAgent])
+    // Ждём окончания загрузки — не показываем онбординг пока данные не готовы
+    if (authLoading) return
+    // Продажник (isSalesAgent) или owner — онбординг не нужен
+    // Если роль ещё не определена — тоже не показываем
+    if (!role && !isSalesAgent) return
+    setShowOnboarding(!isOwner && !isSalesAgent)
+  }, [authLoading, isOwner, isSalesAgent, role])
 
   const handleLogout = async () => {
     const supabase = createSupabaseBrowserClient()

@@ -838,15 +838,6 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
                       </>)}
                       {/* CHECKOUT */}
                       {step === 'checkout' && (<>
-                        <div style={{ background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{isHe?'שיטת תשלום':'Способ оплаты'}</span>
-                          {(() => {
-                            const m = PAYMENT_METHODS.find(x => x.value === paymentMethod)
-                            if (!m) return null
-                            const Icon = m.icon
-                            return <span className="flex items-center gap-2 text-sm font-semibold text-gray-700"><Icon size={14}/>{isHe ? m.labelHe : m.labelRu}</span>
-                          })()}
-                        </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="text-xs font-semibold text-gray-500 uppercase mb-1.5 block">{isHe?'תאריך':'Дата'}</label>
@@ -1056,17 +1047,6 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
                   <button onClick={() => setErrorMsg(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'#ef4444', padding:0 }}><X size={14}/></button>
                 </div>
               )}
-
-              {/* Payment method */}
-              <div style={{ background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:12, padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{isHe?'שיטת תשלום':'Способ оплаты'}</span>
-                {(() => {
-                  const m = PAYMENT_METHODS.find(x => x.value === paymentMethod)
-                  if (!m) return null
-                  const Icon = m.icon
-                  return <span className="flex items-center gap-2 text-sm font-semibold text-gray-700"><Icon size={15}/>{isHe ? m.labelHe : m.labelRu}</span>
-                })()}
-              </div>
 
               {/* Date + notes */}
               <div className="grid grid-cols-2 gap-3">

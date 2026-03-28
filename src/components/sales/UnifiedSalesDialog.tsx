@@ -18,8 +18,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
+import { motion, AnimatePresence } from 'framer-motion'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
+import { PaymentMethodModal } from '@/components/payments/PaymentMethodModal'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
@@ -31,7 +33,7 @@ import {
   ShoppingBag, Plus, Minus, X, Percent, Search, ChevronLeft,
   CreditCard, Banknote, Smartphone, Building2,
   Wrench, Package, Zap, AlertCircle, CheckCircle2, FileText,
-  Download, MessageCircle,
+  Download, MessageCircle, Wallet,
 } from 'lucide-react'
 import type { Product } from '@/types/inventory'
 import { useGeneratePDF } from '@/lib/pdf/use-generate-pdf'
@@ -307,9 +309,20 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
   const [quickOpen, setQuickOpen]   = useState(false)
   const [quickName, setQuickName]   = useState('')
   const [quickPrice, setQuickPrice] = useState('')
+  const [payModalOpen, setPayModalOpen] = useState(false)
+  const [isMobile, setIsMobile]     = useState(false)
 
   // ── Double-submit guard ──────────────────────────────────────────────────────
   const isSubmittingRef = useRef(false)
+
+  // ── Mobile detection ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    setIsMobile(mq.matches)
+    const h = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', h)
+    return () => mq.removeEventListener('change', h)
+  }, [])
 
   // ── Products for search ──────────────────────────────────────────────────────
   const { data: allProducts = [] } = useProducts()
@@ -398,6 +411,64 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
 
   const updatePrice = (id: string, price: number) =>
     setItems(p => p.map(i => i.id === id ? { ...i, unit_price: Math.max(0, price) } : i))
+
+  // ── "Оплатить" — открывает PaymentMethodModal ─────────────────────────────────
+  const handlePayClick = useCallback(() => {
+    if (!items.length) {
+      toast.error(isHe ? 'הוסף לפחות פריט אחד' : 'Добавьте хотя бы одну позицию')
+      return
+    }
+    setPayModalOpen(true)
+  }, [items, isHe])
+
+  const handlePayMethodSelect = useCallback(async (method: 'card' | 'cash' | 'bit') => {
+    const methodMap: Record<string, string> = { card: 'credit', cash: 'cash', bit: 'bit' }
+    const finalMethod = methodMap[method] ?? 'cash'
+    setPayModalOpen(false)
+    // Устанавливаем метод и сразу сабмитим
+    setPaymentMethod(finalMethod)
+    setStep('checkout')
+
+    if (isSubmittingRef.current) return
+    isSubmittingRef.current = true
+    setIsLoading(true)
+    setErrorMsg(null)
+    try {
+      await apiFetch<{ id: string; payment_id: string }>('/api/sales', {
+        method: 'POST',
+        json: {
+          client_id:      clientId || undefined,
+          items:          items.map(i => ({
+            product_id:   i.product_id || undefined,
+            product_name: i.product_name,
+            quantity:     i.quantity,
+            unit_price:   i.unit_price,
+          })),
+          paid_amount:    total,
+          payment_method: PAYMENT_METHODS.find(m => m.value === finalMethod)?.apiValue ?? finalMethod,
+          sale_date:      saleDate,
+          notes:          saleNotes || undefined,
+          ...(discount.value > 0 ? { discount_type: discount.type, discount_value: discount.value } : {}),
+        },
+      })
+      if (safeData.visitId) {
+        await apiFetch(`/api/visits/${safeData.visitId}/status`, { method: 'PATCH', json: { status: 'completed' } }).catch(() => {})
+        queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === 'visits' })
+      }
+      if (clientId) { try { localStorage.removeItem(`draft_sale_${clientId}`) } catch {} }
+      queryClient.invalidateQueries({ queryKey: ['sales'] })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      toast.success(isHe ? 'העסקה נשמרה!' : 'Сделка оплачена!')
+      safeData.onSuccess?.()
+      setStep('success')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : (isHe ? 'שגיאה, נסה שוב' : 'Ошибка, попробуйте снова')
+      setErrorMsg(msg)
+    } finally {
+      setIsLoading(false)
+      isSubmittingRef.current = false
+    }
+  }, [items, clientId, total, saleDate, saleNotes, discount, safeData, isHe, queryClient])
 
   // ── Submit — единственная точка записи ──────────────────────────────────────
   const handleSubmit = useCallback(async () => {
@@ -536,12 +607,21 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
       <div style={{ height:'0.5px', background:'rgba(255,255,255,0.08)', margin:'0 0 10px' }}/>
       {step !== 'success' && (
         <>
+          {/* Оплатить — только на шаге checkout */}
+          {step === 'checkout' && (
+            <button onClick={handlePayClick} disabled={isLoading}
+              style={{ padding:'11px 14px', borderRadius:10, border:'none', cursor: isLoading?'not-allowed':'pointer', width:'100%', marginBottom:6, background: !isLoading ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'rgba(255,255,255,0.08)', color:'#fff', fontSize:13, fontWeight:700, transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+              <Wallet size={14}/>
+              {isLoading ? (isHe?'שומר...':'Сохраняем...') : (isHe?'שלם':'Оплатить')}
+              {total > 0 && !isLoading && ` · ₪${total.toLocaleString()}`}
+            </button>
+          )}
           <button onClick={step === 'cart' ? () => setStep('checkout') : handleSubmit}
             disabled={(step === 'cart' && items.length === 0) || (step === 'checkout' && isLoading)}
             style={{ padding:'11px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', marginBottom:6, background: items.length > 0 && !isLoading ? 'linear-gradient(135deg,#4a6fa5,#3b5998)' : 'rgba(255,255,255,0.08)', color: items.length > 0 ? '#fff' : 'rgba(255,255,255,0.25)', fontSize:13, fontWeight:700, transition:'all 0.2s' }}>
             {isLoading ? (isHe?'שומר...':'Сохраняем...')
               : step === 'cart' ? (isHe?'להמשיך לתשלום →':'К оплате →')
-              : `${isHe?'שמור עסקה':'Сохранить'}${total>0?` · ₪${total.toLocaleString()}`:''}`}
+              : (isHe?'שמור עסקה':'Сохранить сделку')}
           </button>
           <button onClick={handleClose} style={{ padding:'8px 14px', borderRadius:9, border:'0.5px solid rgba(255,255,255,0.12)', background:'transparent', color:'rgba(255,255,255,0.4)', fontSize:12, cursor:'pointer' }}>
             {isHe?'ביטול':'Отмена'}
@@ -574,12 +654,16 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
   ) : (
     <>
       <button onClick={() => setStep('cart')} disabled={isLoading}
-        style={{ flex:'0 0 auto', padding:'12px 18px', borderRadius:10, border:'1px solid rgba(0,0,0,0.1)', background:'transparent', color:'#64748b', fontSize:14, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+        style={{ flex:'0 0 auto', padding:'11px 14px', borderRadius:10, border:'1px solid rgba(0,0,0,0.1)', background:'transparent', color:'#64748b', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', gap:5 }}>
         <ChevronLeft size={15}/>{isHe?'חזור':'Назад'}
       </button>
       <button onClick={handleSubmit} disabled={isLoading}
-        style={{ flex:1, padding:'12px', borderRadius:10, border:'none', cursor: isLoading?'not-allowed':'pointer', background: isLoading?'#e2e8f0':'linear-gradient(135deg,#4a6fa5,#3b5998)', color: isLoading?'#94a3b8':'#fff', fontSize:14, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-        {isLoading ? (isHe?'שומר...':'Сохраняем...') : `${isHe?'שמור':'Сохранить'}${total>0?` · ₪${total.toLocaleString()}`:''}`}
+        style={{ flex:1, padding:'11px', borderRadius:10, border:'none', cursor: isLoading?'not-allowed':'pointer', background: isLoading?'#e2e8f0':'linear-gradient(135deg,#4a6fa5,#3b5998)', color: isLoading?'#94a3b8':'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
+        {isLoading ? (isHe?'שומר...':'Сохраняем...') : (isHe?'שמור':'Сохранить')}
+      </button>
+      <button onClick={handlePayClick} disabled={isLoading}
+        style={{ flex:1, padding:'11px', borderRadius:10, border:'none', cursor: isLoading?'not-allowed':'pointer', background: isLoading?'#e2e8f0':'linear-gradient(135deg,#22c55e,#16a34a)', color: isLoading?'#94a3b8':'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
+        <Wallet size={14}/>{isHe?'שלם':'Оплатить'}{total>0&&!isLoading?` ₪${total.toLocaleString()}`:''}
       </button>
     </>
   )
@@ -597,11 +681,182 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <>
-      <Modal open={open} onClose={handleClose} darkHeader showCloseButton={false} width="860px" dir={dir} contentClassName="!p-0">
-        <TrinityModalShell open={open} onClose={handleClose}
-          icon={<ShoppingBag />} title={isHe?'עסקה חדשה':'Новая сделка'}
-          subtitle={clientLabel || (isHe?'בחר לקוח':'Выберите клиента')}
-          dir={dir} sidebarExtra={sidebar} footerContent={footerContent}>
+      {/* ── МОБИЛЬНЫЙ BOTTOM DRAWER (TrinityMob стиль) ── */}
+      {isMobile ? (
+        <AnimatePresence>
+          {open && (
+            <>
+              <motion.div key="sale-mob-overlay" className="fixed inset-0 bg-black/50"
+                style={{ zIndex: 9998 }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: .2 }} onClick={handleClose} />
+              <motion.div key="sale-mob-drawer"
+                className="fixed bottom-0 left-0 right-0 flex flex-col"
+                style={{ zIndex: 9999, height: 'calc(100dvh - 3rem)', background: '#1a2333', borderRadius: '20px 20px 0 0', border: '1px solid rgba(255,255,255,0.07)', borderBottom: 'none', overflow: 'hidden' }}
+                dir={dir}
+                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 400, damping: 40 }}>
+                {/* Ручка */}
+                <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+                  <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
+                </div>
+                {/* Header */}
+                <div className="flex items-center gap-3 px-4 pb-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ width:38, height:38, borderRadius:12, background:'linear-gradient(135deg,#f59e0b,#d97706)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <ShoppingBag size={18} color="#fff"/>
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:'white' }}>{isHe?'עסקה חדשה':'Новая сделка'}</div>
+                    <div style={{ fontSize:10, color:'rgba(255,255,255,0.4)' }}>{clientLabel || (isHe?'בחר לקוח':'Выберите клиента')}</div>
+                  </div>
+                  {total > 0 && (
+                    <div style={{ textAlign:'center', background:'rgba(52,211,153,0.12)', border:'0.5px solid rgba(52,211,153,0.3)', borderRadius:10, padding:'4px 10px' }}>
+                      <div style={{ fontSize:15, fontWeight:800, color:'#34d399' }}>₪{total.toLocaleString()}</div>
+                    </div>
+                  )}
+                  <button onClick={handleClose} style={{ width:26, height:26, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.6)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
+                </div>
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto" style={{ background:'#fff' }}>
+                  {step === 'success' && (
+                    <div style={{ padding:'40px 20px', textAlign:'center' }}>
+                      <div style={{ width:60, height:60, borderRadius:'50%', background:'linear-gradient(135deg,#22c55e,#16a34a)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                        <CheckCircle2 size={28} color="#fff"/>
+                      </div>
+                      <p style={{ fontSize:18, fontWeight:700, color:'#15803d', marginBottom:6 }}>{isHe?'✓ העסקה נשמרה!':'✓ Сделка сохранена!'}</p>
+                      {total > 0 && <p style={{ fontSize:24, fontWeight:900, color:'#16a34a' }}>₪{total.toLocaleString()}</p>}
+                    </div>
+                  )}
+                  {(step === 'cart' || step === 'checkout') && (
+                    <div className="px-4 py-4 space-y-4">
+                      {errorMsg && (
+                        <div style={{ display:'flex', gap:10, padding:'10px 12px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10 }}>
+                          <AlertCircle size={14} style={{ color:'#ef4444', flexShrink:0, marginTop:1 }}/>
+                          <p style={{ fontSize:12, color:'#ef4444', margin:0 }}>{errorMsg}</p>
+                          <button onClick={() => setErrorMsg(null)} style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer', color:'#ef4444' }}><X size={12}/></button>
+                        </div>
+                      )}
+                      {/* Шаг таб */}
+                      <div style={{ display:'flex', gap:6, background:'#f1f5f9', borderRadius:10, padding:4 }}>
+                        {(['cart','checkout'] as const).map(s => (
+                          <button key={s} onClick={() => { if (s === 'checkout' && !items.length) return; setStep(s) }}
+                            style={{ flex:1, padding:'7px', borderRadius:7, border:'none', cursor:'pointer', fontSize:12, fontWeight:600, background: step === s ? '#fff' : 'transparent', color: step === s ? '#1e293b' : '#94a3b8', boxShadow: step === s ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', transition:'all .15s' }}>
+                            {s === 'cart' ? (isHe?'🛒 סל':'🛒 Корзина') : (isHe?'💳 תשלום':'💳 Оплата')}
+                          </button>
+                        ))}
+                      </div>
+                      {/* CART */}
+                      {step === 'cart' && (<>
+                        {!safeData.clientId && (
+                          <div className="relative">
+                            {clientLabel ? (
+                              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                                <span className="text-sm font-medium text-amber-800">{clientLabel}</span>
+                                <button onClick={() => { setClientLabel(''); setClientId(null); setClientObj(null) }}><X size={14} className="text-amber-400"/></button>
+                              </div>
+                            ) : (
+                              <div className="relative">
+                                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"/>
+                                <input value={clientSearch} onChange={e => setClientSearch(e.target.value)}
+                                  placeholder={isHe?'חיפוש לקוח...':'Поиск клиента...'}
+                                  className="w-full ps-9 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                                {clientResults.length > 0 && (
+                                  <div className="absolute top-full mt-1 w-full bg-white border border-gray-100 rounded-xl shadow-lg z-20 max-h-40 overflow-y-auto">
+                                    {clientResults.map((c: any) => (
+                                      <button key={c.id} onClick={() => { setClientId(c.id); setClientLabel(`${c.first_name} ${c.last_name}`.trim()); setClientObj(c); setClientSearch(''); setClientResults([]) }}
+                                        className="w-full text-start px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-0">
+                                        <span className="font-medium">{c.first_name} {c.last_name}</span>
+                                        {c.phone && <span className="ms-2 text-xs text-gray-400">{c.phone}</span>}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {items.length > 0 && (
+                          <div className="space-y-2">
+                            {items.map(item => (
+                              <div key={item.id} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2.5">
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0 ${TYPE_BADGE[item.type]}`}>{TYPE_LABEL[item.type]}</span>
+                                <span className="flex-1 text-sm font-medium truncate">{item.product_name}</span>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <button onClick={() => updateQty(item.id, -1)} className="w-6 h-6 rounded-md bg-gray-200 text-gray-500 text-xs font-bold flex items-center justify-center">−</button>
+                                  <span className="w-5 text-center text-xs font-medium">{item.quantity}</span>
+                                  <button onClick={() => updateQty(item.id, +1)} className="w-6 h-6 rounded-md bg-gray-200 text-gray-500 text-xs font-bold flex items-center justify-center">+</button>
+                                </div>
+                                <span className="text-sm font-bold text-gray-600 flex-shrink-0">₪{(item.quantity * item.unit_price).toLocaleString()}</span>
+                                <button onClick={() => removeItem(item.id)} className="text-gray-300 hover:text-red-400"><X size={13}/></button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <button onClick={() => setPickerOpen(true)}
+                          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-sm font-semibold">
+                          <Plus size={15}/>{isHe?'+ הוסף פריט':'+ Добавить позицию'}
+                        </button>
+                        {items.length > 0 && (
+                          <div className="flex justify-between text-base font-bold text-green-700 bg-green-50 rounded-xl px-4 py-3 border-2 border-green-200">
+                            <span>{isHe?'סה״כ':'Итого'}</span><span>₪{total.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </>)}
+                      {/* CHECKOUT */}
+                      {step === 'checkout' && (<>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">{isHe?'שיטת תשלום':'Способ оплаты'}</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {PAYMENT_METHODS.map(m => { const Icon = m.icon; return (
+                              <button key={m.value} onClick={() => setPaymentMethod(m.value)}
+                                className={`flex items-center gap-2 p-3 rounded-xl border-2 text-sm font-medium transition ${paymentMethod === m.value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-600'}`}>
+                                <Icon size={15}/>{isHe ? m.labelHe : m.labelRu}
+                              </button>
+                            )})}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 uppercase mb-1.5 block">{isHe?'תאריך':'Дата'}</label>
+                            <input type="date" value={saleDate} onChange={e => setSaleDate(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none" />
+                          </div>
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 uppercase mb-1.5 block">{isHe?'הערות':'Примечания'}</label>
+                            <input type="text" value={saleNotes} onChange={e => setSaleNotes(e.target.value)} placeholder={isHe?'הערות...':'Заметки...'} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none" />
+                          </div>
+                        </div>
+                        <div className="border border-gray-100 rounded-xl overflow-hidden">
+                          {items.map(item => (
+                            <div key={item.id} className="flex items-center gap-3 px-3 py-2 border-b last:border-0 bg-white">
+                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${TYPE_BADGE[item.type]}`}>{TYPE_LABEL[item.type]}</span>
+                              <span className="flex-1 text-sm truncate">{item.product_name}</span>
+                              <span className="text-sm font-bold">₪{(item.quantity * item.unit_price).toFixed(2)}</span>
+                            </div>
+                          ))}
+                          <div className="flex justify-between px-3 py-2.5 bg-slate-800">
+                            <span className="text-xs text-white/60 uppercase">{isHe?'סה״כ':'Итого'}</span>
+                            <span className="text-base font-black text-white">₪{total.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </>)}
+                    </div>
+                  )}
+                </div>
+                {/* Footer */}
+                <div style={{ flexShrink:0, display:'flex', gap:8, padding:'12px 16px', background:'#fff', borderTop:'1px solid #f1f5f9' }}>
+                  {footerContent}
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      ) : (
+        /* ── DESKTOP Modal ── */
+        <Modal open={open} onClose={handleClose} darkHeader showCloseButton={false} width="860px" dir={dir} contentClassName="!p-0">
+          <TrinityModalShell open={open} onClose={handleClose}
+            icon={<ShoppingBag />} title={isHe?'עסקה חדשה':'Новая сделка'}
+            subtitle={clientLabel || (isHe?'בחר לקוח':'Выберите клиента')}
+            dir={dir} sidebarExtra={sidebar} footerContent={footerContent}>
 
           {/* ── SUCCESS ── */}
           {step === 'success' && (
@@ -845,6 +1100,14 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
 
         </TrinityModalShell>
       </Modal>
+      )} {/* end isMobile ternary */}
+
+      {/* PaymentMethodModal */}
+      <PaymentMethodModal
+        open={payModalOpen}
+        onOpenChange={setPayModalOpen}
+        onSelectMethod={handlePayMethodSelect}
+      />
 
       {/* Item picker sheet */}
       <ItemPickerSheet isOpen={pickerOpen} onClose={() => setPickerOpen(false)} isHe={isHe} onAdd={addItem} />

@@ -21,7 +21,6 @@ import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
-import { PaymentMethodModal } from '@/components/payments/PaymentMethodModal'
 import { UnifiedPaymentDialog } from '@/components/payments/UnifiedPaymentDialog'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
@@ -30,10 +29,8 @@ import { useProducts } from '@/hooks/useProducts'
 import { useServices } from '@/hooks/useServices'
 import { apiFetch } from '@/lib/api-fetch'
 import { toast } from 'sonner'
-import { type TrinityPaymentMethodId, PAYMENT_METHOD_API_MAP, isCardMethod } from '@/lib/payment-methods'
 import {
-  ShoppingBag, Plus, Minus, X, Percent, Search, ChevronLeft,
-  CreditCard, Banknote, Smartphone, Building2,
+  ShoppingBag, Plus, X, Percent, Search, ChevronLeft,
   Wrench, Package, Zap, AlertCircle, CheckCircle2, FileText,
   Download, MessageCircle, Wallet,
 } from 'lucide-react'
@@ -99,15 +96,6 @@ export function validateSaleModalData(raw: unknown): UnifiedSaleModalData {
 }
 
 function uid() { return Math.random().toString(36).slice(2, 10) }
-
-// ─── Payment methods ──────────────────────────────────────────────────────────
-
-const PAYMENT_METHODS = [
-  { value: 'cash',   labelHe: 'מזומן',          labelRu: 'Наличные',   icon: Banknote,   apiValue: 'cash' },
-  { value: 'bit',    labelHe: 'Bit',             labelRu: 'Bit',        icon: Smartphone, apiValue: 'bit' },
-  { value: 'credit', labelHe: 'אשראי',           labelRu: 'Карта',      icon: CreditCard, apiValue: 'credit' },
-  { value: 'bank',   labelHe: 'העברה בנקאית',   labelRu: 'Перевод',    icon: Building2,  apiValue: 'bank_transfer' },
-]
 
 // ─── ItemPickerSheet ──────────────────────────────────────────────────────────
 
@@ -299,7 +287,6 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
   const [clientResults, setClientResults] = useState<any[]>([])
 
   // ── Checkout ─────────────────────────────────────────────────────────────────
-  const [paymentMethod, setPaymentMethod] = useState('cash')
   const [saleDate, setSaleDate]           = useState(() => new Date().toISOString().slice(0, 10))
   const [saleNotes, setSaleNotes]         = useState('')
   const [showProposal, setShowProposal]   = useState(false)
@@ -311,7 +298,6 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
   const [quickOpen, setQuickOpen]   = useState(false)
   const [quickName, setQuickName]   = useState('')
   const [quickPrice, setQuickPrice] = useState('')
-  const [payModalOpen, setPayModalOpen] = useState(false)
   const [isMobile, setIsMobile]     = useState(false)
 
   // ── Double-submit guard ──────────────────────────────────────────────────────
@@ -338,13 +324,11 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
     setDiscount({ type: 'percent', value: 0 })
     setShowDiscount(false)
     setDiscountInput('')
-    setPaymentMethod('cash')
     setSaleDate(new Date().toISOString().slice(0, 10))
     setSaleNotes('')
     setShowProposal(false)
     setClientSearch('')
     setClientResults([])
-    setTranzilaLink(null)
 
     // Preloaded product (inventory sell)
     if (sd.preloadedProduct) {
@@ -415,9 +399,6 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
   const updatePrice = (id: string, price: number) =>
     setItems(p => p.map(i => i.id === id ? { ...i, unit_price: Math.max(0, price) } : i))
 
-  // ── State для Tranzila ссылки (успех карточной оплаты) ──────────────────────
-  const [tranzilaLink, setTranzilaLink] = useState<string | null>(null)
-
   // ── State для UnifiedPaymentDialog (открывается после сохранения сделки) ────
   const [payDialogOpen, setPayDialogOpen] = useState(false)
   const [payDialogData, setPayDialogData] = useState<{
@@ -425,25 +406,18 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
     saleId?: string; prefillAmount?: number
   } | null>(null)
 
-  // ── "Оплатить" — открывает PaymentMethodModal ─────────────────────────────────
-  const handlePayClick = useCallback(() => {
+  // ── "Оплатить" — сохраняет сделку → открывает UnifiedPaymentDialog ───────────
+  const handlePayAndCheckout = useCallback(async () => {
     if (!items.length) {
       toast.error(isHe ? 'הוסף לפחות פריט אחד' : 'Добавьте хотя бы одну позицию')
       return
     }
-    setPayModalOpen(true)
-  }, [items, isHe])
-
-  const handlePayMethodSelect = useCallback(async (method: TrinityPaymentMethodId) => {
-    setPayModalOpen(false)
-
-    if (!items.length) return
-
+    if (isSubmittingRef.current) return
+    isSubmittingRef.current = true
     setIsLoading(true)
     setErrorMsg(null)
 
     try {
-      // ── Шаг 1: Сохраняем сделку в БД ─────────────────────────────────────
       const sale = await apiFetch<{ id: string; payment_id: string }>('/api/sales', {
         method: 'POST',
         json: {
@@ -454,8 +428,8 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
             quantity:     i.quantity,
             unit_price:   i.unit_price,
           })),
-          paid_amount:    0, // Платёж ещё не совершён
-          payment_method: PAYMENT_METHOD_API_MAP[method],
+          paid_amount:    0,
+          payment_method: 'cash', // default — реальный метод выбирается в UnifiedPaymentDialog
           sale_date:      saleDate,
           notes:          saleNotes || undefined,
           ...(discount.value > 0 ? { discount_type: discount.type, discount_value: discount.value } : {}),
@@ -469,15 +443,13 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
       if (clientId) { try { localStorage.removeItem(`draft_sale_${clientId}`) } catch {} }
       queryClient.invalidateQueries({ queryKey: ['sales'] })
 
-      // ── Шаг 2: Закрываем UnifiedSalesDialog ──────────────────────────────
+      // Закрываем диалог сделки и сразу открываем процессор оплат
       onOpenChange(false)
-
-      // ── Шаг 3: Открываем UnifiedPaymentDialog с данными сделки ────────────
       setPayDialogData({
-        clientId:     clientId || undefined,
-        clientName:   clientLabel || undefined,
-        clientPhone:  clientObj?.phone || undefined,
-        saleId:       sale.id,
+        clientId:      clientId || undefined,
+        clientName:    clientLabel || undefined,
+        clientPhone:   clientObj?.phone || undefined,
+        saleId:        sale.id,
         prefillAmount: total,
       })
       setPayDialogOpen(true)
@@ -485,9 +457,9 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : (isHe ? 'שגיאה, נסה שוב' : 'Ошибка, попробуйте снова')
       setErrorMsg(msg)
-      setStep('checkout')
     } finally {
       setIsLoading(false)
+      isSubmittingRef.current = false
     }
   }, [items, clientId, clientLabel, clientObj, total, saleDate, saleNotes, discount, safeData, isHe, queryClient, onOpenChange])
 
@@ -516,7 +488,7 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
             unit_price:   i.unit_price,
           })),
           paid_amount:    total,
-          payment_method: PAYMENT_METHODS.find(m => m.value === paymentMethod)?.apiValue ?? paymentMethod,
+          payment_method: 'cash',
           sale_date:      saleDate,
           notes:          saleNotes || undefined,
           ...(discount.value > 0 ? {
@@ -557,7 +529,7 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
       isSubmittingRef.current = false
     }
   }, [
-    items, clientId, total, paymentMethod, saleDate, saleNotes,
+    items, clientId, total, saleDate, saleNotes,
     discount, safeData, isHe, queryClient,
   ])
 
@@ -630,7 +602,7 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
         <>
           {/* Оплатить — только на шаге checkout */}
           {step === 'checkout' && (
-            <button onClick={handlePayClick} disabled={isLoading}
+            <button onClick={handlePayAndCheckout} disabled={isLoading}
               style={{ padding:'11px 14px', borderRadius:10, border:'none', cursor: isLoading?'not-allowed':'pointer', width:'100%', marginBottom:6, background: !isLoading ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'rgba(255,255,255,0.08)', color:'#fff', fontSize:13, fontWeight:700, transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
               <Wallet size={14}/>
               {isLoading ? (isHe?'שומר...':'Сохраняем...') : (isHe?'שלם':'Оплатить')}
@@ -650,30 +622,9 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
         </>
       )}
       {step === 'success' && (
-        <>
-          {tranzilaLink && (
-            <>
-              <button onClick={() => window.open(tranzilaLink, '_blank')}
-                style={{ padding:'11px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', marginBottom:6, background:'linear-gradient(135deg,#8b5cf6,#7c3aed)', color:'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-                <FileText size={14}/>{isHe?'פתח קישור':'Открыть ссылку'}
-              </button>
-              {(clientObj?.phone) && (
-                <button onClick={() => {
-                  let p = (clientObj.phone as string).replace(/\D/g, '')
-                  if (p.startsWith('0')) p = p.slice(1)
-                  const msg = isHe ? `קישור לתשלום: ${tranzilaLink}` : `Ссылка для оплаты: ${tranzilaLink}`
-                  window.open(`https://wa.me/972${p}?text=${encodeURIComponent(msg)}`, '_blank')
-                }}
-                  style={{ padding:'9px 14px', borderRadius:10, border:'0.5px solid rgba(34,197,94,0.3)', background:'rgba(34,197,94,0.1)', cursor:'pointer', width:'100%', color:'#34d399', fontSize:12, fontWeight:600, marginBottom:6, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-                  <MessageCircle size={13}/>WhatsApp
-                </button>
-              )}
-            </>
-          )}
-          <button onClick={handleClose} style={{ padding:'8px 14px', borderRadius:9, border:'0.5px solid rgba(255,255,255,0.12)', background:'transparent', color:'rgba(255,255,255,0.4)', fontSize:12, cursor:'pointer' }}>
-            {isHe?'סגור':'Закрыть'}
-          </button>
-        </>
+        <button onClick={handleClose} style={{ padding:'11px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', background:'linear-gradient(135deg,#22c55e,#16a34a)', color:'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+          <CheckCircle2 size={14}/>{isHe?'סגור':'Закрыть'}
+        </button>
       )}
     </div>
   )
@@ -703,7 +654,7 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
         style={{ flex:1, padding:'11px', borderRadius:10, border:'none', cursor: isLoading?'not-allowed':'pointer', background: isLoading?'#e2e8f0':'linear-gradient(135deg,#4a6fa5,#3b5998)', color: isLoading?'#94a3b8':'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
         {isLoading ? (isHe?'שומר...':'Сохраняем...') : (isHe?'שמור':'Сохранить')}
       </button>
-      <button onClick={handlePayClick} disabled={isLoading}
+      <button onClick={handlePayAndCheckout} disabled={isLoading}
         style={{ flex:1, padding:'11px', borderRadius:10, border:'none', cursor: isLoading?'not-allowed':'pointer', background: isLoading?'#e2e8f0':'linear-gradient(135deg,#22c55e,#16a34a)', color: isLoading?'#94a3b8':'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
         <Wallet size={14}/>{isHe?'שלם':'Оплатить'}{total>0&&!isLoading?` ₪${total.toLocaleString()}`:''}
       </button>
@@ -891,35 +842,14 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
 
           {/* ── SUCCESS ── */}
           {step === 'success' && (
-            <div style={{ padding:'20px 18px 24px', display:'flex', flexDirection:'column', gap:16 }}>
-              <div style={{ background:'linear-gradient(135deg,#f0fdf4,#dcfce7)', border:'1px solid #bbf7d0', borderRadius:16, padding:20, textAlign:'center' }}>
-                <div style={{ width:52, height:52, borderRadius:'50%', background:'linear-gradient(135deg,#22c55e,#16a34a)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px', boxShadow:'0 6px 16px rgba(34,197,94,0.3)' }}>
-                  <CheckCircle2 size={24} color="#fff"/>
-                </div>
-                <p style={{ fontSize:15, fontWeight:700, color:'#15803d', margin:'0 0 4px' }}>
-                  {tranzilaLink
-                    ? (isHe?'✓ הקישור לתשלום נוצר!':'✓ Ссылка на оплату создана!')
-                    : (isHe?'✓ העסקה נשמרה בהצלחה!':'✓ Сделка успешно сохранена!')}
-                </p>
-                {tranzilaLink && (
-                  <p style={{ fontSize:12, color:'#16a34a', margin:0 }}>
-                    {isHe?'שלח ללקוח לתשלום מאובטח':'Отправьте клиенту для безопасной оплаты'}
-                  </p>
-                )}
+            <div style={{ padding:'32px 18px', textAlign:'center' }}>
+              <div style={{ width:60, height:60, borderRadius:'50%', background:'linear-gradient(135deg,#22c55e,#16a34a)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px', boxShadow:'0 6px 20px rgba(34,197,94,0.3)' }}>
+                <CheckCircle2 size={28} color="#fff"/>
               </div>
-              {tranzilaLink && (
-                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                  <input readOnly value={tranzilaLink} dir="ltr"
-                    style={{ flex:1, fontSize:12, padding:'9px 12px', border:'1px solid #e2e8f0', borderRadius:10, background:'#f8fafc', color:'#475569', outline:'none', minWidth:0 }} />
-                  <button onClick={() => { navigator.clipboard.writeText(tranzilaLink); toast.success(isHe?'הועתק':'Скопировано') }}
-                    style={{ flexShrink:0, padding:'9px 14px', borderRadius:10, border:'1px solid #e2e8f0', background:'#fff', cursor:'pointer', fontSize:12, fontWeight:600, color:'#475569', whiteSpace:'nowrap' }}>
-                    {isHe?'העתק':'Скопировать'}
-                  </button>
-                </div>
-              )}
-              {!tranzilaLink && total > 0 && (
-                <p style={{ textAlign:'center', fontSize:24, fontWeight:900, color:'#16a34a', margin:0 }}>₪{total.toLocaleString()}</p>
-              )}
+              <p style={{ fontSize:18, fontWeight:700, color:'#15803d', marginBottom:6 }}>
+                {isHe?'✓ העסקה נשמרה בהצלחה!':'✓ Сделка успешно сохранена!'}
+              </p>
+              {total > 0 && <p style={{ fontSize:24, fontWeight:900, color:'#16a34a' }}>₪{total.toLocaleString()}</p>}
             </div>
           )}
 
@@ -1137,12 +1067,6 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
         </TrinityModalShell>
       </Modal>
       )} {/* end isMobile ternary */}
-
-      <PaymentMethodModal
-        open={payModalOpen}
-        onOpenChange={setPayModalOpen}
-        onSelectMethod={handlePayMethodSelect}
-      />
 
       {/* Item picker sheet */}
       <ItemPickerSheet isOpen={pickerOpen} onClose={() => setPickerOpen(false)} isHe={isHe} onAdd={addItem} />

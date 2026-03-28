@@ -182,14 +182,11 @@ export function UnifiedPaymentDialog({
 
   // Загружаем конфиг включённых методов (реактивно из /api/payments/settings)
   const { enabledMethods: configMethods, isLoading: methodsLoading } = usePaymentMethodConfig()
-  // Методы, доступные в этом диалоге (пересечение с METHODS по ключу)
-  // Пока идёт загрузка — показываем все методы (graceful fallback)
   const allowedMethodIds = new Set(
     methodsLoading || configMethods.length === 0
       ? METHODS.map(m => m.id)
       : configMethods.map(m => m.key as string)
   )
-  // card обрабатывается как 'link' в этом диалоге (async flow через Tranzila)
   const visibleMethods = METHODS.filter(m => {
     if (m.id === 'link') return allowedMethodIds.has('card') || allowedMethodIds.has('link')
     return allowedMethodIds.has(m.id)
@@ -243,9 +240,7 @@ export function UnifiedPaymentDialog({
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
     setCashData(null); setCashValid(false)
-    // Предзаполнение суммы из сделки
     setAmount(sd.prefillAmount != null ? String(sd.prefillAmount) : '')
-    // Предзаполнение клиента
     if (sd.clientId && sd.clientName) {
       const parts = sd.clientName.trim().split(' ')
       const first_name = parts[0] ?? sd.clientName
@@ -312,9 +307,8 @@ export function UnifiedPaymentDialog({
     setStep('method-select')
   }, [])
 
-  /** Единственная точка записи в БД — через защищённый API, не суpabase-browser */
+  /** Единственная точка записи в БД — через защищённый API, не supabase-browser */
   const handleSubmit = useCallback(async () => {
-    // ── Double-submit: логический замок ────────────────────────────────────
     if (isSubmittingRef.current) return
     isSubmittingRef.current = true
 
@@ -346,14 +340,13 @@ export function UnifiedPaymentDialog({
             payment_method:  'cash',
             status:          'completed',
             visit_id:        safeData.visitId ?? null,
+            sale_id:         safeData.saleId ?? null,
             description:     cashData?.notes?.trim() ||
               `Наличные — ${selectedClient.first_name} ${selectedClient.last_name}`,
-            // amount_received/change хранятся в payment_details (сервер строит)
             amount_received: cashData?.amount_received ?? null,
           }),
         })
         if (!res.ok) { const err = await res.json(); throw new Error(err.error || t.errorGeneric) }
-        // ✅ Инвалидируем payments + sales (платёж меняет статус сделки partial→paid)
         queryClient.invalidateQueries({ queryKey: ['payments'] })
         queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
         queryClient.invalidateQueries({ queryKey: ['sales'] })
@@ -370,12 +363,13 @@ export function UnifiedPaymentDialog({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            client_id:      selectedClient.id,
-            amount:         amountNum,
-            payment_method: 'check',
-            status:         'pending',
-            visit_id:       safeData.visitId ?? null,
-            description:    `Чек — ${selectedClient.first_name} ${selectedClient.last_name}`,
+            client_id:       selectedClient.id,
+            amount:          amountNum,
+            payment_method:  'check',
+            status:          'pending',
+            visit_id:        safeData.visitId ?? null,
+            sale_id:         safeData.saleId ?? null,
+            description:     `Чек — ${selectedClient.first_name} ${selectedClient.last_name}`,
             payment_details: checkDetails,
           }),
         })
@@ -396,12 +390,13 @@ export function UnifiedPaymentDialog({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            client_id:      selectedClient.id,
-            amount:         amountNum,
-            payment_method: 'bank_transfer',
-            status:         'completed',
-            visit_id:       safeData.visitId ?? null,
-            description:    `Перевод — ${bankDetails.reference}`,
+            client_id:       selectedClient.id,
+            amount:          amountNum,
+            payment_method:  'bank_transfer',
+            status:          'completed',
+            visit_id:        safeData.visitId ?? null,
+            sale_id:         safeData.saleId ?? null,
+            description:     `Перевод — ${bankDetails.reference}`,
             payment_details: bankDetails,
           }),
         })
@@ -423,10 +418,10 @@ export function UnifiedPaymentDialog({
           description: description.trim() ||
             `Оплата — ${selectedClient.first_name} ${selectedClient.last_name}`,
           visit_id: safeData.visitId,
+          sale_id:  safeData.saleId,
         })
         if (!result?.payment_link) throw new Error('No payment link returned from API')
         setPaymentLink(result.payment_link)
-        // invalidateQueries для link происходит в useCreatePaymentLink onSettled
         queryClient.invalidateQueries({ queryKey: ['sales'] })
         toast.success(t.successLink)
         safeData.onSuccess?.()
@@ -435,7 +430,6 @@ export function UnifiedPaymentDialog({
       }
 
     } catch (err: unknown) {
-      // ── Ошибка: форма НЕ сбрасывается, только показываем banner ─────────
       const msg = err instanceof Error ? err.message : t.errorGeneric
       setErrorMsg(msg)
       console.error('[UnifiedPaymentDialog] submit error:', err)
@@ -589,7 +583,6 @@ export function UnifiedPaymentDialog({
         </button>
       </div>
     ) : (
-      // ✅ Flex-контейнер на всю ширину — кнопки горизонтально на мобиле
       <div style={{ display: 'flex', gap: 10, width: '100%' }}>
         <button onClick={handleBack} disabled={isLoading}
           style={{ flex: '0 0 auto', padding: '12px 18px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -664,12 +657,10 @@ export function UnifiedPaymentDialog({
             <button onClick={() => setErrorMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}><X size={14} /></button>
           </div>
         )}
-        {/* Client */}
         <div style={{ background: methodCfg?.bg ?? '#fffbeb', border: `1px solid ${methodCfg?.border ?? '#fde68a'}`, borderRadius: 14, padding: '14px 16px' }}>
           <label style={{ fontSize: 10, fontWeight: 700, color: methodCfg?.color ?? '#b45309', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.client} *</label>
           <ClientSearch orgId={searchOrgId} onSelect={c => setSelectedClient(c)} placeholder={t.selectClient} locale={language as 'he' | 'ru' | 'en'} value={selectedClient} />
         </div>
-        {/* Amount */}
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '14px 16px' }}>
           <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.amount} *</label>
           <div style={{ position: 'relative' }}>
@@ -678,7 +669,6 @@ export function UnifiedPaymentDialog({
               style={{ paddingInlineStart: 36, fontSize: 18, fontWeight: 700, height: 48, border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff' }} />
           </div>
         </div>
-        {/* Checks */}
         {isAmountValid && selectedClient && (
           <CheckForm
             totalAmount={amountNum}
@@ -703,12 +693,10 @@ export function UnifiedPaymentDialog({
             <button onClick={() => setErrorMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}><X size={14} /></button>
           </div>
         )}
-        {/* Client */}
         <div style={{ background: methodCfg?.bg ?? '#f0f9ff', border: `1px solid ${methodCfg?.border ?? '#bae6fd'}`, borderRadius: 14, padding: '14px 16px' }}>
           <label style={{ fontSize: 10, fontWeight: 700, color: methodCfg?.color ?? '#0369a1', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.client} *</label>
           <ClientSearch orgId={searchOrgId} onSelect={c => setSelectedClient(c)} placeholder={t.selectClient} locale={language as 'he' | 'ru' | 'en'} value={selectedClient} />
         </div>
-        {/* Amount */}
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '14px 16px' }}>
           <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.amount} *</label>
           <div style={{ position: 'relative' }}>
@@ -717,7 +705,6 @@ export function UnifiedPaymentDialog({
               style={{ paddingInlineStart: 36, fontSize: 18, fontWeight: 700, height: 48, border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff' }} />
           </div>
         </div>
-        {/* Transfer details */}
         <BankTransferForm
           disabled={isLoading}
           locale={isHe ? 'he' : 'ru'}

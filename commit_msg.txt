@@ -1,1 +1,1 @@
-fix: restore /worker/pipeline page.tsx to (worker) route group
+fix: eliminate phantom payment on sale creation, wire sale_id to payments, recalculate sale status  

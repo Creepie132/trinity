@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
   }
 
-  const { client_id, items, paid_amount, payment_method, sale_date, notes, discount_type, discount_value } = body
+  const { client_id, items, sale_date, notes, discount_type, discount_value } = body
 
   const supabase = createSupabaseServiceClient()
 
@@ -99,59 +99,38 @@ export async function POST(req: NextRequest) {
     ? subtotal * ((discount_value ?? 0) / 100)
     : (discount_value ?? 0)
   const total_amount = Math.max(0, subtotal - discountAmt)
-  const paid = Number(paid_amount ?? total_amount)
-  const saleStatus = paid >= total_amount ? 'paid' : paid > 0 ? 'partial' : 'unpaid'
-  const paymentStatus = paid >= total_amount ? 'completed' : 'pending'
 
-  const { data: payment, error: pmErr } = await supabase
-    .from('payments')
-    .insert({
-      org_id: activeOrgId,
-      client_id: client_id || null,
-      amount: total_amount,
-      status: paymentStatus,
-      payment_method: payment_method || 'cash',
-      paid_at: paid > 0 ? new Date().toISOString() : null,
-      description: `Sale ${sale_date || new Date().toISOString().slice(0, 10)}`,
-    })
-    .select('id')
-    .single()
-  if (pmErr) return NextResponse.json({ error: pmErr.message }, { status: 500 })
-
+  // ── Сделка создаётся ЧИСТОЙ: без платежа, status = 'unpaid', paid_amount = 0.
+  // Запись в таблицу payments создаётся ТОЛЬКО через POST /api/payments
+  // при реальной инициации оплаты конкретным методом.
   const { data: sale, error: saleErr } = await supabase
     .from('sales')
     .insert({
-      org_id: activeOrgId,
-      client_id: client_id || null,
-      staff_id: user.id,
-      payment_id: payment.id,
-      sale_date: sale_date || new Date().toISOString().slice(0, 10),
+      org_id:         activeOrgId,
+      client_id:      client_id || null,
+      staff_id:       user.id,
+      payment_id:     null,
+      sale_date:      sale_date || new Date().toISOString().slice(0, 10),
       total_amount,
-      paid_amount: paid,
-      status: saleStatus,
-      payment_method: payment_method || 'cash',
-      notes: notes || null,
+      paid_amount:    0,
+      status:         'unpaid',
+      payment_method: null,
+      notes:          notes || null,
     })
     .select('id')
     .single()
   if (saleErr) return NextResponse.json({ error: saleErr.message }, { status: 500 })
 
   const saleItems = items.map(i => ({
-    sale_id: sale.id,
-    org_id: activeOrgId,
-    product_id: i.product_id || null,
+    sale_id:      sale.id,
+    org_id:       activeOrgId,
+    product_id:   i.product_id || null,
     product_name: i.product_name,
-    quantity: i.quantity,
-    unit_price: i.unit_price,
+    quantity:     i.quantity,
+    unit_price:   i.unit_price,
   }))
   const { error: itemsErr } = await supabase.from('sale_items').insert(saleItems)
   if (itemsErr) return NextResponse.json({ error: itemsErr.message }, { status: 500 })
-
-  // ── Bidirectional link: set payment.sale_id ────────────────────────────
-  await supabase
-    .from('payments')
-    .update({ sale_id: sale.id })
-    .eq('id', payment.id)
 
   // ── Склад: списываем товары (только те у которых есть product_id) ──────────
   const productItems = items.filter(i => i.product_id)
@@ -169,14 +148,14 @@ export async function POST(req: NextRequest) {
       const newQty = Math.max(0, product.quantity - item.quantity)
 
       await supabase.from('inventory_transactions').insert({
-        org_id: activeOrgId,
-        product_id: item.product_id,
-        type: 'sale',
-        quantity: item.quantity,
-        price_per_unit: item.unit_price,
-        total_price: item.quantity * item.unit_price,
-        related_payment_id: payment.id,
-        notes: `Продажа #${sale.id.slice(0, 8)}`,
+        org_id:            activeOrgId,
+        product_id:        item.product_id,
+        type:              'sale',
+        quantity:          item.quantity,
+        price_per_unit:    item.unit_price,
+        total_price:       item.quantity * item.unit_price,
+        related_payment_id: null,
+        notes:             `Продажа #${sale.id.slice(0, 8)}`,
       })
 
       await supabase
@@ -187,5 +166,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ id: sale.id, payment_id: payment.id }, { status: 201 })
+  // Возвращаем только id сделки — payment_id создаётся позже через POST /api/payments
+  return NextResponse.json({ id: sale.id }, { status: 201 })
 }

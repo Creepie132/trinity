@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-// ── UUID helper ──────────────────────────────────────────────────────────────────────────────
+// ── UUID helper ────────────────────────────────────────────────────────────────
 // Имя нарочно, чтобы ошибка 'инвалидный UUID' перехватывалась на сервере
 // до обращения к БД, а не приходила из Supabase.
 const strictUuid = z.string().uuid('Invalid UUID — optimistic IDs are not accepted')
@@ -17,7 +17,6 @@ export const createClientSchema = z.object({
 })
 
 // Обновление клиента (PUT /api/clients/[id])
-// id валидируется отдельно в route params, здесь опциональные поля body
 export const updateClientSchema = z.object({
   first_name:    z.string().min(1).max(100).optional(),
   last_name:     z.string().max(100).optional().or(z.literal('')),
@@ -36,11 +35,11 @@ export const createVisitSchema = z.object({
   // strictUuid — отклонит 'optimistic-...' задолго до Supabase
   clientId: strictUuid,
   service: z.string().max(500).optional().nullable(),
-  serviceId: z.string().optional().nullable(), // UUID или текст, может быть null для встречи
+  serviceId: z.string().optional().nullable(),
   date: z.string().min(1),
   time: z.string().min(1),
   duration: z.coerce.number().int().max(480).optional().nullable(),
-  price: z.string().optional().nullable(), // Может быть null/пустой строкой для встречи
+  price: z.string().optional().nullable(),
   quantity: z.coerce.number().int().min(1, 'Количество не может быть меньше 1').max(999).default(1),
   notes: z.string().max(2000).optional().or(z.literal("")).nullable(),
   event_type: z.enum(['visit', 'meeting']).default('visit'),
@@ -63,11 +62,9 @@ export const createSaleSchema = z.object({
   discount_type:  z.enum(['percent', 'amount']).optional(),
   discount_value: z.coerce.number().min(0).max(100_000).optional(),
 }).superRefine((data, ctx) => {
-  // Проверяем что скидка в процентах не превышает 100%
   if (data.discount_type === 'percent' && (data.discount_value ?? 0) > 100) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Discount percent cannot exceed 100', path: ['discount_value'] })
   }
-  // Проверяем что paid_amount не превышает сумму товаров с учётом скидки
   const subtotal = data.items.reduce((s, i) => s + i.quantity * i.unit_price, 0)
   const discountAmt = data.discount_type === 'percent'
     ? subtotal * ((data.discount_value ?? 0) / 100)
@@ -80,41 +77,38 @@ export const createSaleSchema = z.object({
 
 // Обновление визита (PUT)
 export const updateVisitSchema = z.object({
-  scheduled_at: z.string().datetime({ offset: true }).optional(),
-  service_id:   z.string().uuid().optional().nullable(),
+  scheduled_at:     z.string().datetime({ offset: true }).optional(),
+  service_id:       z.string().uuid().optional().nullable(),
   duration_minutes: z.coerce.number().int().min(5).max(480).optional().nullable(),
-  notes:  z.string().max(2000).optional().nullable(),
-  price:  z.coerce.number().min(0).max(100000).optional().nullable(),
+  notes:            z.string().max(2000).optional().nullable(),
+  price:            z.coerce.number().min(0).max(100000).optional().nullable(),
 })
 
-// ── Допустимые методы оплаты (единый источник истины) ──────────────────────────
+// ── Допустимые методы оплаты (единый источник истины) ─────────────────────────
 export const PAYMENT_METHOD_VALUES = ['cash', 'bit', 'credit', 'credit_card', 'bank', 'bank_transfer', 'check'] as const
 export type PaymentMethodValue = typeof PAYMENT_METHOD_VALUES[number]
 
-// ── Допустимые категории расходов (единый источник истины) ─────────────────────
+// ── Допустимые категории расходов (единый источник истины) ────────────────────
 export const EXPENSE_CATEGORY_VALUES = [
   'supplies', 'food', 'transport', 'utilities',
   'equipment', 'marketing', 'rent', 'salary', 'other',
 ] as const
 export type ExpenseCategoryValue = typeof EXPENSE_CATEGORY_VALUES[number]
 
-// ── Phone utilities ──────────────────────────────────────────────────────────
+// ── Phone utilities ────────────────────────────────────────────────────────────
 /**
  * Нормализует телефон к E.164 для единого хранения в БД.
- * Используется в API-обработчиках перед вставкой в Supabase.
- * Это обеспечивает совместимость с SMS-модулем и WhatsApp.
  */
 export function normalizePhoneE164(raw: string): string {
   const digits = raw.replace(/[^\d+]/g, '')
-  if (/^05\d{8}$/.test(digits))     return '+972' + digits.slice(1) // Israeli local
-  if (/^\+\d{10,15}$/.test(digits)) return digits                   // уже E.164
-  if (/^972\d{9}$/.test(digits))    return '+' + digits             // без +
-  return raw.trim()                                                  // fallback
+  if (/^05\d{8}$/.test(digits))     return '+972' + digits.slice(1)
+  if (/^\+\d{10,15}$/.test(digits)) return digits
+  if (/^972\d{9}$/.test(digits))    return '+' + digits
+  return raw.trim()
 }
 
 /**
  * Фронтенд-совместимая валидация: Israeli 05X + международный формат.
- * Экспортируется для переиспользования в DemoOrderModal и API.
  */
 export function validatePhone(phone: string): boolean {
   const cleaned = phone.replace(/[\s\-()]/g, '')
@@ -126,18 +120,20 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD
 
 // Платежи — создание (POST /api/payments)
 export const createPaymentSchema = z.object({
-  client_id:      z.string().uuid('Invalid client_id'),
-  amount:         z.coerce.number()
-                    .min(0.01, 'Amount must be > 0')
-                    .max(1_000_000, 'Amount too large'),
-  payment_method: z.enum(PAYMENT_METHOD_VALUES).optional().default('credit_card'),
-  visit_id:       z.string().uuid('Invalid visit_id').optional().nullable(),
-  description:    z.string().max(500).optional().or(z.literal('')),
-  status:         z.enum(['pending', 'completed', 'failed'])
-                    .optional()
-                    .default('completed'),
-  payment_details: z.record(z.string(), z.unknown()).optional().nullable(), // JSONB для check/bank_transfer
-  // amount_received — только для cash (для расчёта сдачи, хранится в payment_details)
+  client_id:       z.string().uuid('Invalid client_id'),
+  amount:          z.coerce.number()
+                     .min(0.01, 'Amount must be > 0')
+                     .max(1_000_000, 'Amount too large'),
+  payment_method:  z.enum(PAYMENT_METHOD_VALUES).optional().default('credit_card'),
+  visit_id:        z.string().uuid('Invalid visit_id').optional().nullable(),
+  // ── sale_id: привязка платежа к сделке; при наличии POST /api/payments
+  //    пересчитывает sales.paid_amount и sales.status автоматически.
+  sale_id:         z.string().uuid('Invalid sale_id').optional().nullable(),
+  description:     z.string().max(500).optional().or(z.literal('')),
+  status:          z.enum(['pending', 'completed', 'failed'])
+                     .optional()
+                     .default('completed'),
+  payment_details: z.record(z.string(), z.unknown()).optional().nullable(),
   amount_received: z.coerce.number().min(0).optional().nullable(),
 }).superRefine((data, ctx) => {
   // Израильский лимит наличных: 6000 ₪ (Закон об ограничении наличных расчётов)
@@ -169,10 +165,7 @@ export const createExpenseSchema = z.object({
 export const updateExpenseSchema = z.object({
   id:           z.string().uuid('Invalid expense id'),
   vendor:       z.string().min(1).max(200).optional(),
-  amount:       z.coerce.number()
-                  .min(0.01, 'Amount must be > 0')
-                  .max(10_000_000)
-                  .optional(),
+  amount:       z.coerce.number().min(0.01).max(10_000_000).optional(),
   expense_date: isoDate.optional(),
   category:     z.enum(EXPENSE_CATEGORY_VALUES).optional(),
   description:  z.string().max(1000).optional().or(z.literal('')),
@@ -191,41 +184,41 @@ export const createSmsSchema = z.object({
 
 // Бронирование (публичное)
 export const createBookingSchema = z.object({
-  service_id: z.string().uuid().optional(),
-  service_name: z.string().min(1).max(200),
-  client_name: z.string().min(1).max(200),
-  client_phone: z.string().min(7).max(20),
-  client_email: z.string().email().optional().or(z.literal("")),
-  scheduled_at: z.string().min(1),
+  service_id:       z.string().uuid().optional(),
+  service_name:     z.string().min(1).max(200),
+  client_name:      z.string().min(1).max(200),
+  client_phone:     z.string().min(7).max(20),
+  client_email:     z.string().email().optional().or(z.literal("")),
+  scheduled_at:     z.string().min(1),
   duration_minutes: z.number().int().min(5).max(480).optional(),
-  price: z.number().min(0).max(100000).optional(),
-  notes: z.string().max(2000).nullish().default(''),
+  price:            z.number().min(0).max(100000).optional(),
+  notes:            z.string().max(2000).nullish().default(''),
 })
 
 // Услуги
 export const createServiceSchema = z.object({
-  name: z.string().min(1).max(200),
-  name_ru: z.string().max(200).optional().or(z.literal("")),
-  description: z.string().max(1000).optional().or(z.literal("")),
-  price: z.number().min(0).max(100000).optional(),
+  name:             z.string().min(1).max(200),
+  name_ru:          z.string().max(200).optional().or(z.literal("")),
+  description:      z.string().max(1000).optional().or(z.literal("")),
+  price:            z.number().min(0).max(100000).optional(),
   duration_minutes: z.number().int().min(5).max(480).optional(),
-  color: z.string().max(20).optional().or(z.literal("")),
-  is_active: z.boolean().optional(),
+  color:            z.string().max(20).optional().or(z.literal("")),
+  is_active:        z.boolean().optional(),
 })
 
 // Товары
 export const createProductSchema = z.object({
-  name: z.string().min(1).max(200),
-  description: z.string().max(1000).optional().or(z.literal("")),
-  barcode: z.string().max(100).optional().or(z.literal("")),
-  sku: z.string().max(100).optional().or(z.literal("")),
-  category: z.string().max(100).optional().or(z.literal("")),
+  name:           z.string().min(1).max(200),
+  description:    z.string().max(1000).optional().or(z.literal("")),
+  barcode:        z.string().max(100).optional().or(z.literal("")),
+  sku:            z.string().max(100).optional().or(z.literal("")),
+  category:       z.string().max(100).optional().or(z.literal("")),
   purchase_price: z.number().min(0).optional(),
-  sell_price: z.number().min(0.01), // Required
-  quantity: z.number().int().min(0).optional(),
-  min_quantity: z.number().int().min(0).optional(),
-  unit: z.string().max(50).optional().or(z.literal("")),
-  image_url: z.string().max(500).optional().or(z.literal("")),
+  sell_price:     z.number().min(0.01),
+  quantity:       z.number().int().min(0).optional(),
+  min_quantity:   z.number().int().min(0).optional(),
+  unit:           z.string().max(50).optional().or(z.literal("")),
+  image_url:      z.string().max(500).optional().or(z.literal("")),
 })
 
 // Листинг визитов (GET /api/visits/list)
@@ -250,9 +243,9 @@ export const sellProductSchema = z.object({
 
 // Контактная форма
 export const contactFormSchema = z.object({
-  name: z.string().min(1).max(200),
-  email: z.string().email(),
-  phone: z.string().min(7).max(20).optional(),
+  name:    z.string().min(1).max(200),
+  email:   z.string().email(),
+  phone:   z.string().min(7).max(20).optional(),
   message: z.string().min(1).max(5000),
 })
 

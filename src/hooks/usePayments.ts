@@ -18,6 +18,7 @@ interface CreatePaymentLinkParams {
   amount: number
   description?: string
   visit_id?: string
+  sale_id?: string   // ← привязка платёж-ссылки к сделке
 }
 
 interface PaymentsFilters {
@@ -48,8 +49,6 @@ export function usePayments(clientId?: string, filters?: PaymentsFilters) {
   return useQuery({
     queryKey: ['payments', activeOrgId, clientId, filters],
     queryFn: async () => {
-      // ✅ Единый fetch — данные кэшируются под ключом ['payments', activeOrgId]
-      // usePaymentsStats читает из того же кэша через ['payments-raw', activeOrgId]
       const allPayments: any[] = await fetchAllPayments()
 
       // Client-side filters
@@ -66,13 +65,11 @@ export function usePayments(clientId?: string, filters?: PaymentsFilters) {
       return data.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
     },
     staleTime:       30_000,
-    placeholderData: (prev: any) => prev, // нет мигания при смене фильтров
+    placeholderData: (prev: any) => prev,
   })
 }
 
 // ─── usePaymentsStats ──────────────────────────────────────────────────────
-// ✅ НЕТ второго fetch — читает из кэша через отдельный queryKey,
-//    но использует тот же fetchAllPayments (дедуплицируется React Query).
 
 export function usePaymentsStats() {
   const { activeOrgId } = useBranch()
@@ -80,9 +77,6 @@ export function usePaymentsStats() {
   return useQuery({
     queryKey: ['payments-stats', activeOrgId],
     queryFn: async () => {
-      // React Query автоматически дедуплицирует параллельные вызовы одного queryFn.
-      // Оба usePayments и usePaymentsStats вызывают fetchAllPayments одновременно —
-      // в flight будет только ОДИН реальный HTTP-запрос.
       const allPayments: any[] = await fetchAllPayments()
 
       const now = new Date()
@@ -127,14 +121,12 @@ export function useCreatePaymentLink() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['payments'] })
       qc.invalidateQueries({ queryKey: ['payments-stats'] })
-      // Платёж через ссылку может закрыть сделку (partial→paid)
       qc.invalidateQueries({ queryKey: ['sales'] })
     },
   })
 }
 
 // ─── usePayment (single) ───────────────────────────────────────────────────
-// ✅ Убран прямой supabase.from('payments') — теперь через /api/payments/[id]
 
 export function usePayment(id?: string) {
   return useQuery({

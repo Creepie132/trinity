@@ -37,12 +37,10 @@ export async function GET(request: NextRequest) {
     // Фильтр по статусу
     if (status) query = query.eq('status', status)
 
-    // Фильтр по датам — используем paid_at, fallback на created_at
-    // startDate → paid_at >= startDate 00:00:00 UTC
+    // Фильтр по датам — используем paid_at
     if (startDate) {
       query = query.gte('paid_at', `${startDate}T00:00:00.000Z`)
     }
-    // endDate → paid_at <= endDate 23:59:59 UTC
     if (endDate) {
       query = query.lte('paid_at', `${endDate}T23:59:59.999Z`)
     }
@@ -67,8 +65,9 @@ export async function GET(request: NextRequest) {
  *
  * Zero Trust:
  *   - orgId только из getAuthContext() — никаких client-side заголовков
- *   - ownership check: client_id и visit_id должны принадлежать этому orgId
+ *   - ownership check: client_id, visit_id, sale_id должны принадлежать этому orgId
  *   - Zod-валидация: amount > 0, payment_method из enum, uuid форматы
+ *   - После создания платежа пересчитывает статус связанной сделки (sale_id)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -84,7 +83,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
     }
 
-    const { client_id, amount, payment_method, visit_id, description, status, payment_details, amount_received } = data
+    const { client_id, amount, payment_method, visit_id, sale_id, description, status, payment_details, amount_received } = data
     const service = createSupabaseServiceClient()
 
     // 3. Ownership check — client_id должен принадлежать orgId (или его филиалу)
@@ -145,6 +144,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 4b. Ownership check — sale_id (если передан)
+    if (sale_id) {
+      const { data: saleCheck } = await service
+        .from('sales')
+        .select('id')
+        .eq('id', sale_id)
+        .eq('org_id', orgId)
+        .single()
+
+      if (!saleCheck) {
+        return NextResponse.json({ error: 'Sale not found or does not belong to your organization' }, { status: 403 })
+      }
+    }
+
     // 5. Округляем сумму до 2 знаков (защита от float drift)
     const roundedAmount = Math.round(amount * 100) / 100
 
@@ -163,18 +176,19 @@ export async function POST(request: NextRequest) {
     const { data: payment, error: insertErr } = await service
       .from('payments')
       .insert({
-        org_id:               orgId,
+        org_id:              orgId,
         client_id,
-        amount:               roundedAmount,
+        amount:              roundedAmount,
         payment_method,
-        status:               status ?? 'completed',
-        visit_id:             visit_id ?? null,
-        description:          description?.trim() || null,
-        paid_at:              status === 'completed' ? new Date().toISOString() : null,
-        provider:             'cash',
-        payment_details:      finalDetails,
+        status:              status ?? 'completed',
+        visit_id:            visit_id ?? null,
+        sale_id:             sale_id ?? null,
+        description:         description?.trim() || null,
+        paid_at:             (status ?? 'completed') === 'completed' ? new Date().toISOString() : null,
+        provider:            'cash',
+        payment_details:     finalDetails,
         // received_by_user_id — только для наличных, берём из токена (не с клиента!)
-        received_by_user_id:  payment_method === 'cash' ? auth.user.id : null,
+        received_by_user_id: payment_method === 'cash' ? auth.user.id : null,
       })
       .select()
       .single()
@@ -182,6 +196,50 @@ export async function POST(request: NextRequest) {
     if (insertErr) {
       console.error('[API] POST /api/payments insert error:', insertErr)
       return NextResponse.json({ error: insertErr.message }, { status: 500 })
+    }
+
+    // ── 8. Если платёж привязан к сделке — пересчитываем статус сделки ──────
+    // Срабатывает только для completed-платежей (не pending/чеков в ожидании).
+    // sale_id ownership уже проверен выше в блоке 4b.
+    if (sale_id && payment.status === 'completed') {
+      const { data: saleData } = await service
+        .from('sales')
+        .select('id, total_amount, payment_id, payment_method')
+        .eq('id', sale_id)
+        .eq('org_id', orgId)
+        .single()
+
+      if (saleData) {
+        // Суммируем ВСЕ completed-платежи этой сделки (включая только что созданный)
+        const { data: salePayments } = await service
+          .from('payments')
+          .select('amount')
+          .eq('sale_id', sale_id)
+          .eq('org_id', orgId)
+          .eq('status', 'completed')
+
+        const totalPaid = (salePayments ?? []).reduce(
+          (sum: number, p: { amount: number }) => sum + Number(p.amount), 0
+        )
+        const newPaidAmount = Math.round(totalPaid * 100) / 100
+        const newStatus =
+          newPaidAmount >= Number(saleData.total_amount) ? 'paid'
+          : newPaidAmount > 0 ? 'partial'
+          : 'unpaid'
+
+        // Обновляем сделку: paid_amount, status, payment_id (первый платёж), payment_method
+        await service
+          .from('sales')
+          .update({
+            paid_amount:    newPaidAmount,
+            status:         newStatus,
+            // Сохраняем ссылку на первый платёж (если ещё не установлена)
+            payment_id:     saleData.payment_id ?? payment.id,
+            payment_method: saleData.payment_method ?? payment_method,
+          })
+          .eq('id', sale_id)
+          .eq('org_id', orgId)
+      }
     }
 
     return NextResponse.json({ payment }, { status: 201 })

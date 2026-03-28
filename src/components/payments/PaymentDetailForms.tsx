@@ -365,3 +365,161 @@ export function BankTransferForm({ disabled, onChange, locale }: BankTransferFor
     </div>
   )
 }
+
+// ─── CashForm ────────────────────────────────────────────────────────────────────
+
+/** Израильский лимит наличных расчётов бизнес→клиент (Закон 5776-2016) */
+export const IL_CASH_LIMIT = 6000
+
+export interface CashFormData {
+  notes: string
+  amount_received: number | null  // Получено на руки
+  change_amount: number           // Сдача (вычисляется)
+}
+
+interface CashFormProps {
+  totalAmount: number       // итоговая сумма к оплате
+  disabled?: boolean
+  onChange: (data: CashFormData, valid: boolean) => void
+  locale: 'he' | 'ru'
+}
+
+const CFG_CASH = {
+  gradient: 'linear-gradient(135deg,#22c55e,#16a34a)',
+  color: '#15803d', border: '#bbf7d0', bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)',
+  accent: '#22c55e',
+}
+
+const CFG_WARN = {
+  bg: '#fef2f2', border: '#fecaca', color: '#dc2626', iconColor: '#ef4444',
+}
+
+export function CashForm({ totalAmount, disabled, onChange, locale }: CashFormProps) {
+  const isHe = locale === 'he'
+  const [notes, setNotes] = useState('')
+  const [receivedRaw, setReceivedRaw] = useState('')
+
+  const received = parseFloat(receivedRaw) || 0
+  const change = received > 0 ? Math.max(0, received - totalAmount) : 0
+  const exceedsLimit = totalAmount > IL_CASH_LIMIT
+  const receivedInsufficient = received > 0 && received < totalAmount
+
+  const notify = useCallback((n: string, rec: string) => {
+    const r = parseFloat(rec) || 0
+    const c = r > 0 ? Math.max(0, r - totalAmount) : 0
+    const data: CashFormData = { notes: n, amount_received: r > 0 ? r : null, change_amount: c }
+    // Валидно если: не превышает лимит и либо received пустой, либо достаточен
+    const valid = !exceedsLimit && (rec === '' || r >= totalAmount)
+    onChange(data, valid)
+  }, [totalAmount, exceedsLimit, onChange])
+
+  const handleNotes = (v: string) => { setNotes(v); notify(v, receivedRaw) }
+  const handleReceived = (v: string) => { setReceivedRaw(v); notify(notes, v) }
+
+  const L = {
+    he: {
+      limitWarning: `חריגה ממגבלת מזומן חוקית! לפי חוק הגבלת מזומן (2016), מקסימום ₪6,000 לעסקה.`,
+      limitLink: 'קרא עוד על החוק',
+      received: 'התקבל במזומן (₪)',
+      change: 'עודף',
+      receivedHint: 'הזן הסכום שנמסר בפועל',
+      insufficientWarning: 'הסכום שהתקבל נמוך מסכום התשלום',
+      notes: 'הערות',
+      notesPlaceholder: 'הערות לתשלום...',
+    },
+    ru: {
+      limitWarning: `Превышен законный лимит наличных! По закону Израиля об ограничении наличных (2016), максимум ₪6,000 за сделку.`,
+      limitLink: 'Подробнее о законе',
+      received: 'Получено наличными (₪)',
+      change: 'Сдача',
+      receivedHint: 'Введите фактически полученную сумму',
+      insufficientWarning: 'Полученная сумма меньше суммы платежа',
+      notes: 'Заметки',
+      notesPlaceholder: 'Примечания к платежу...',
+    },
+  }
+  const t = L[isHe ? 'he' : 'ru']
+
+  const fieldStyle: React.CSSProperties = {
+    width: '100%', padding: '9px 12px', borderRadius: 10,
+    border: `1.5px solid ${CFG_CASH.border}`, background: '#f0fdf4',
+    fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#0c4a00',
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+      {/* ── Лимит 6000 ₪ — строгое предупреждение ── */}
+      {exceedsLimit && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', background: CFG_WARN.bg, border: `2px solid ${CFG_WARN.border}`, borderRadius: 12 }}>
+          <AlertCircle size={18} style={{ color: CFG_WARN.iconColor, flexShrink: 0, marginTop: 1 }} />
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: CFG_WARN.color, margin: '0 0 4px' }}>
+              {t.limitWarning}
+            </p>
+            <a
+              href="https://www.gov.il/he/Departments/DynamicCollectors/laws-regulations?subject=%D7%97%D7%95%D7%A7+%D7%94%D7%92%D7%91%D7%9C%D7%AA+%D7%9E%D7%96%D7%95%D7%9E%D7%9F"
+              target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 11, color: CFG_WARN.color, textDecoration: 'underline', fontWeight: 600 }}>
+              {t.limitLink} →
+            </a>
+          </div>
+        </div>
+      )}
+
+      <div style={{ background: CFG_CASH.bg, border: `1.5px solid ${CFG_CASH.border}`, borderRadius: 14, padding: '14px 14px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+        {/* ── Калькулятор сдачи ── */}
+        <div>
+          <label style={{ fontSize: 10, fontWeight: 700, color: CFG_CASH.color, display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            {t.received}
+          </label>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', insetInlineStart: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, fontWeight: 700, color: CFG_CASH.color, pointerEvents: 'none' }}>₪</span>
+            <input
+              type="number" min="0" step="0.01"
+              value={receivedRaw}
+              onChange={e => handleReceived(e.target.value)}
+              placeholder={totalAmount.toFixed(2)}
+              disabled={disabled}
+              style={{ ...fieldStyle, paddingInlineStart: 32, fontSize: 18, fontWeight: 700, height: 48, borderColor: receivedInsufficient ? '#fca5a5' : CFG_CASH.border }}
+            />
+          </div>
+          {receivedRaw && (
+            <p style={{ fontSize: 11, color: '#64748b', margin: '3px 0 0 2px' }}>{t.receivedHint}</p>
+          )}
+          {receivedInsufficient && (
+            <p style={{ fontSize: 12, color: '#ef4444', fontWeight: 600, margin: '4px 0 0 2px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <AlertCircle size={12}/>{t.insufficientWarning}
+            </p>
+          )}
+        </div>
+
+        {/* ── Сдача — крупно и жирно ── */}
+        {received >= totalAmount && received > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#fff', borderRadius: 12, border: '2px solid #bbf7d0', boxShadow: '0 2px 8px rgba(34,197,94,0.12)' }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#15803d' }}>{t.change}</span>
+            <span style={{ fontSize: 28, fontWeight: 900, color: '#16a34a', letterSpacing: '-1px' }}>
+              ₪{change.toFixed(2)}
+            </span>
+          </div>
+        )}
+
+        {/* ── Заметки ── */}
+        <div>
+          <label style={{ fontSize: 10, fontWeight: 700, color: CFG_CASH.color, display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            {t.notes}
+          </label>
+          <textarea
+            value={notes}
+            onChange={e => handleNotes(e.target.value)}
+            placeholder={t.notesPlaceholder}
+            rows={2}
+            disabled={disabled}
+            style={{ ...fieldStyle, resize: 'none' }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}

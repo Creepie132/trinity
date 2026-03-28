@@ -34,8 +34,8 @@ import {
 import { PaymentSuccessView, PaymentSuccessSidebar } from '@/components/payments/PaymentSuccessView'
 import { TRINITY_PAYMENT_METHODS, type TrinityPaymentMethodId } from '@/lib/payment-methods'
 import {
-  CheckForm, BankTransferForm,
-  type CheckPaymentDetails, type BankTransferDetails,
+  CheckForm, BankTransferForm, CashForm, IL_CASH_LIMIT,
+  type CheckPaymentDetails, type BankTransferDetails, type CashFormData,
 } from '@/components/payments/PaymentDetailForms'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -195,11 +195,13 @@ export function UnifiedPaymentDialog({
   const [notes, setNotes] = useState('')
   const [description, setDescription] = useState('')
 
-  // ── State для check/bank_transfer форм ───────────────────────────────────────
+  // ── State для check/bank_transfer/cash форм ─────────────────────────────────
   const [checkDetails, setCheckDetails] = useState<CheckPaymentDetails | null>(null)
   const [checkValid, setCheckValid] = useState(false)
   const [bankDetails, setBankDetails] = useState<BankTransferDetails | null>(null)
   const [bankValid, setBankValid] = useState(false)
+  const [cashData, setCashData] = useState<CashFormData | null>(null)
+  const [cashValid, setCashValid] = useState(false)
 
   // ── UI state ────────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(false)
@@ -224,6 +226,7 @@ export function UnifiedPaymentDialog({
     setDescription('')
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
+    setCashData(null); setCashValid(false)
     // Предзаполнение суммы из сделки
     setAmount(sd.prefillAmount != null ? String(sd.prefillAmount) : '')
     // Предзаполнение клиента
@@ -244,6 +247,7 @@ export function UnifiedPaymentDialog({
   const canSubmit = !!selectedClient && isAmountValid && (
     step === 'check-form' ? checkValid :
     step === 'bank-form'  ? bankValid  :
+    step === 'cash-form'  ? cashValid && amountNum <= IL_CASH_LIMIT :
     true
   )
 
@@ -267,6 +271,7 @@ export function UnifiedPaymentDialog({
     setPaymentLink(null); setLinkCopied(false)
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
+    setCashData(null); setCashValid(false)
     setStep('method-select')
     onOpenChange(false)
   }, [onOpenChange])
@@ -287,6 +292,7 @@ export function UnifiedPaymentDialog({
     setErrorMsg(null)
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
+    setCashData(null); setCashValid(false)
     setStep('method-select')
   }, [])
 
@@ -311,17 +317,23 @@ export function UnifiedPaymentDialog({
     try {
       // ── CASH ────────────────────────────────────────────────────────────────
       if (step === 'cash-form') {
+        if (amountNum > IL_CASH_LIMIT) {
+          toast.error(t.invalidAmount)
+          isSubmittingRef.current = false; return
+        }
         const res = await fetch('/api/payments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            client_id:      selectedClient.id,
-            amount:         amountNum,
-            payment_method: 'cash',
-            status:         'completed',
-            visit_id:       safeData.visitId ?? null,
-            description:    notes.trim() ||
+            client_id:       selectedClient.id,
+            amount:          amountNum,
+            payment_method:  'cash',
+            status:          'completed',
+            visit_id:        safeData.visitId ?? null,
+            description:     cashData?.notes?.trim() ||
               `Наличные — ${selectedClient.first_name} ${selectedClient.last_name}`,
+            // amount_received/change хранятся в payment_details (сервер строит)
+            amount_received: cashData?.amount_received ?? null,
           }),
         })
         if (!res.ok) { const err = await res.json(); throw new Error(err.error || t.errorGeneric) }
@@ -411,6 +423,7 @@ export function UnifiedPaymentDialog({
     notes, description, safeData, queryClient,
     createPaymentLinkMutation, t,
     checkDetails, checkValid, bankDetails, bankValid,
+    cashData, cashValid,
   ])
 
   const handleCopyLink = useCallback(() => {
@@ -600,8 +613,11 @@ export function UnifiedPaymentDialog({
     if (step === 'success') return (
       <PaymentSuccessView
         paymentLink={paymentLink}
+        isCash={currentMethod === 'cash'}
         amount={amountNum}
+        changeAmount={cashData?.change_amount}
         clientPhone={selectedClient?.phone}
+        clientName={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : undefined}
         onClose={handleClose}
         locale={isHe ? 'he' : 'ru'}
       />
@@ -682,11 +698,9 @@ export function UnifiedPaymentDialog({
       </div>
     )
 
-    // ── Form (cash | link) ────────────────────────────────────────────────────
-    return (
+    // ── Cash form ───────────────────────────────────────────────────────────────
+    if (step === 'cash-form') return (
       <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
-
-        {/* Error banner — форма НЕ сбрасывается */}
         {errorMsg && (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12 }}>
             <AlertCircle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: 1 }} />
@@ -694,58 +708,63 @@ export function UnifiedPaymentDialog({
               <p style={{ fontSize: 13, fontWeight: 600, color: '#dc2626', margin: '0 0 2px' }}>{t.errorTitle}</p>
               <p style={{ fontSize: 11, color: '#ef4444', margin: 0 }}>{errorMsg}</p>
             </div>
-            <button onClick={() => setErrorMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}>
-              <X size={14} />
-            </button>
+            <button onClick={() => setErrorMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}><X size={14} /></button>
           </div>
         )}
-
-        {/* Client */}
-        <div style={{ background: methodCfg?.bg ?? 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: `1px solid ${methodCfg?.border ?? '#e2e8f0'}`, borderRadius: 14, padding: '14px 16px' }}>
-          <label style={{ fontSize: 10, fontWeight: 700, color: methodCfg?.color ?? '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-            {t.client} *
-          </label>
-          <ClientSearch orgId={searchOrgId} onSelect={c => setSelectedClient(c)}
-            placeholder={t.selectClient} locale={language as 'he' | 'ru' | 'en'} value={selectedClient} />
+        <div style={{ background: methodCfg?.bg ?? '#f0fdf4', border: `1px solid ${methodCfg?.border ?? '#bbf7d0'}`, borderRadius: 14, padding: '14px 16px' }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: methodCfg?.color ?? '#15803d', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.client} *</label>
+          <ClientSearch orgId={searchOrgId} onSelect={c => setSelectedClient(c)} placeholder={t.selectClient} locale={language as 'he' | 'ru' | 'en'} value={selectedClient} />
         </div>
-
-        {/* Amount */}
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '14px 16px' }}>
-          <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-            {t.amount} *
-          </label>
+          <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.amount} *</label>
           <div style={{ position: 'relative' }}>
             <span style={{ position: 'absolute', insetInlineStart: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 18, fontWeight: 700, color: methodCfg?.color ?? '#64748b', pointerEvents: 'none' }}>₪</span>
-            <Input type="number" step="0.01" min="0" value={amount}
-              onChange={e => setAmount(e.target.value)} placeholder="0.00"
-              disabled={isLoading}
+            <Input type="number" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" disabled={isLoading}
+              style={{ paddingInlineStart: 36, fontSize: 18, fontWeight: 700, height: 48, border: `1.5px solid ${isAmountValid && amountNum > IL_CASH_LIMIT ? '#fca5a5' : '#e2e8f0'}`, borderRadius: 10, background: '#fff' }} />
+          </div>
+        </div>
+        {isAmountValid && selectedClient && (
+          <CashForm
+            totalAmount={amountNum}
+            disabled={isLoading}
+            locale={isHe ? 'he' : 'ru'}
+            onChange={(data, valid) => { setCashData(data); setCashValid(valid) }}
+          />
+        )}
+      </div>
+    )
+
+    // ── Link form ────────────────────────────────────────────────────────────
+    return (
+      <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
+        {errorMsg && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12 }}>
+            <AlertCircle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: 1 }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#dc2626', margin: '0 0 2px' }}>{t.errorTitle}</p>
+              <p style={{ fontSize: 11, color: '#ef4444', margin: 0 }}>{errorMsg}</p>
+            </div>
+            <button onClick={() => setErrorMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}><X size={14} /></button>
+          </div>
+        )}
+        <div style={{ background: methodCfg?.bg ?? 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: `1px solid ${methodCfg?.border ?? '#e2e8f0'}`, borderRadius: 14, padding: '14px 16px' }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: methodCfg?.color ?? '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.client} *</label>
+          <ClientSearch orgId={searchOrgId} onSelect={c => setSelectedClient(c)} placeholder={t.selectClient} locale={language as 'he' | 'ru' | 'en'} value={selectedClient} />
+        </div>
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '14px 16px' }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.amount} *</label>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', insetInlineStart: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 18, fontWeight: 700, color: methodCfg?.color ?? '#64748b', pointerEvents: 'none' }}>₪</span>
+            <Input type="number" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" disabled={isLoading}
               style={{ paddingInlineStart: 36, fontSize: 18, fontWeight: 700, height: 48, border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff' }} />
           </div>
         </div>
-
-        {/* Notes — only cash */}
-        {step === 'cash-form' && (
-          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '14px 16px' }}>
-            <label style={{ fontSize: 10, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              {t.notes}
-            </label>
-            <Textarea value={notes} onChange={e => setNotes(e.target.value)}
-              placeholder={t.notesPlaceholder} rows={3} disabled={isLoading}
-              style={{ border: '1px solid #fde68a', borderRadius: 10, background: '#fffbeb', resize: 'none', fontSize: 13 }} />
-          </div>
-        )}
-
-        {/* Description — only link */}
-        {step === 'link-form' && (
-          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '14px 16px' }}>
-            <label style={{ fontSize: 10, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
-              {t.description}
-            </label>
-            <Textarea value={description} onChange={e => setDescription(e.target.value)}
-              placeholder={t.descPlaceholder} rows={3} disabled={isLoading}
-              style={{ border: '1px solid #fde68a', borderRadius: 10, background: '#fffbeb', resize: 'none', fontSize: 13 }} />
-          </div>
-        )}
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '14px 16px' }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.description}</label>
+          <Textarea value={description} onChange={e => setDescription(e.target.value)}
+            placeholder={t.descPlaceholder} rows={3} disabled={isLoading}
+            style={{ border: '1px solid #fde68a', borderRadius: 10, background: '#fffbeb', resize: 'none', fontSize: 13 }} />
+        </div>
       </div>
     )
   }

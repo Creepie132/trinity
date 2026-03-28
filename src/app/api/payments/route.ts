@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
     }
 
-    const { client_id, amount, payment_method, visit_id, description, status } = data
+    const { client_id, amount, payment_method, visit_id, description, status, payment_details, amount_received } = data
     const service = createSupabaseServiceClient()
 
     // 3. Ownership check — client_id должен принадлежать orgId
@@ -106,19 +106,33 @@ export async function POST(request: NextRequest) {
     // 5. Округляем сумму до 2 знаков (защита от float drift)
     const roundedAmount = Math.round(amount * 100) / 100
 
-    // 6. Создаём платёж
+    // 6. Строим payment_details — для наличных добавляем amount_received и change
+    let finalDetails = payment_details ?? null
+    if (payment_method === 'cash' && amount_received != null) {
+      const change = Math.round((amount_received - roundedAmount) * 100) / 100
+      finalDetails = {
+        ...((finalDetails as object) ?? {}),
+        amount_received,
+        change_amount: change >= 0 ? change : 0,
+      }
+    }
+
+    // 7. Создаём платёж
     const { data: payment, error: insertErr } = await service
       .from('payments')
       .insert({
-        org_id:         orgId,
+        org_id:               orgId,
         client_id,
-        amount:         roundedAmount,
+        amount:               roundedAmount,
         payment_method,
-        status:         status ?? 'completed',
-        visit_id:       visit_id ?? null,
-        description:    description?.trim() || null,
-        paid_at:        status === 'completed' ? new Date().toISOString() : null,
-        provider:       'cash',
+        status:               status ?? 'completed',
+        visit_id:             visit_id ?? null,
+        description:          description?.trim() || null,
+        paid_at:              status === 'completed' ? new Date().toISOString() : null,
+        provider:             'cash',
+        payment_details:      finalDetails,
+        // received_by_user_id — только для наличных, берём из токена (не с клиента!)
+        received_by_user_id:  payment_method === 'cash' ? auth.user.id : null,
       })
       .select()
       .single()

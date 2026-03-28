@@ -136,6 +136,18 @@ export const createPaymentSchema = z.object({
   status:         z.enum(['pending', 'completed', 'failed'])
                     .optional()
                     .default('completed'),
+  payment_details: z.record(z.string(), z.unknown()).optional().nullable(), // JSONB для check/bank_transfer
+  // amount_received — только для cash (для расчёта сдачи, хранится в payment_details)
+  amount_received: z.coerce.number().min(0).optional().nullable(),
+}).superRefine((data, ctx) => {
+  // Израильский лимит наличных: 6000 ₪ (Закон об ограничении наличных расчётов)
+  if (data.payment_method === 'cash' && data.amount > 6000) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Cash payment exceeds Israeli legal limit of ₪6,000 (Law 5776-2016)',
+      path: ['amount'],
+    })
+  }
 })
 
 // Расходы — создание (POST /api/expenses)

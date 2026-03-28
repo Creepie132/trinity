@@ -1,1 +1,1 @@
-fix: isolate /worker into (worker) route group, eliminate layout bleed and server blocking
+fix: restore /worker/pipeline page.tsx to (worker) route group

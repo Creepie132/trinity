@@ -57,3 +57,4 @@ __commit_out.txt
 __grep_out.txt
 deploy.bat
 queryClient.invalidateQueries*
+build_out.txt  

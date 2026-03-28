@@ -1,119 +1,70 @@
 'use client'
 
+/**
+ * TaskDetailsModal — враппер для модалки деталей задачи.
+ * Использует TaskDetailSheet (TrinityModalShell) вместо устаревшего TaskDesktopPanel.
+ * Мутации через React Query invalidation — без window.location.reload().
+ */
+
 import { useModalStore } from '@/store/useModalStore'
-import { TaskDesktopPanel } from '@/components/diary/TaskDesktopPanel'
-import { useState, useEffect } from 'react'
+import { TaskDetailSheet } from '@/components/diary/TaskDetailSheet'
+import { useQueryClient } from '@tanstack/react-query'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 export function TaskDetailsModal() {
-  const { isModalOpen, closeModal, getModalData } = useModalStore()
-  
+  const { isModalOpen, closeModal, getModalData, openModal } = useModalStore()
+  const queryClient = useQueryClient()
+  const supabase = createSupabaseBrowserClient()
+
   const isOpen = isModalOpen('task-details')
-  const data = getModalData('task-details')
+  const data   = getModalData('task-details')
+  const locale = (data?.locale || 'he') as 'he' | 'ru'
 
-  const [clients, setClients] = useState<any[]>([])
-  const [visits, setVisits] = useState<any[]>([])
-
-  useEffect(() => {
-    if (isOpen) {
-      loadData()
-    }
-  }, [isOpen])
-
-  async function loadData() {
-    try {
-      const [clientsRes, visitsRes] = await Promise.all([
-        fetch('/api/clients'),
-        fetch('/api/visits'),
-      ])
-      
-      if (clientsRes.ok) {
-        const clientsData = await clientsRes.json()
-        setClients(clientsData)
-      }
-      
-      if (visitsRes.ok) {
-        const visitsData = await visitsRes.json()
-        setVisits(visitsData)
-      }
-    } catch (error) {
-      console.error('Failed to load data:', error)
-    }
+  async function refresh() {
+    await queryClient.invalidateQueries({ queryKey: ['tasks-diary'] })
   }
 
-  async function handleStatusChange(taskId: string, newStatus: string) {
-    try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      })
-
-      if (response.ok) {
-        closeModal('task-details')
-        // Reload page to reflect changes
-        window.location.reload()
-      }
-    } catch (error) {
-      console.error('Failed to update task status:', error)
-    }
-  }
-
-  function handleEdit(task: any) {
-    const { openModal } = useModalStore.getState()
+  async function handleStatusChange(taskId: string, rawStatus: string) {
+    const status = rawStatus === 'done' ? 'completed' : rawStatus
+    // Optimistic update
+    queryClient.setQueryData<any[]>(['tasks-diary'], (old = []) =>
+      old.map((t: any) => t.id === taskId ? { ...t, status } : t))
+    await supabase.from('tasks').update({ status }).eq('id', taskId)
     closeModal('task-details')
-    openModal('task-create', {
-      editTask: task,
-      onCreated: () => window.location.reload(),
-    })
+    refresh()
   }
 
   async function handleDelete(taskId: string) {
-    try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'DELETE',
-      })
-      if (response.ok) {
-        closeModal('task-details')
-        window.location.reload()
-      }
-    } catch (error) {
-      console.error('Failed to delete task:', error)
-    }
+    // Optimistic update
+    queryClient.setQueryData<any[]>(['tasks-diary'], (old = []) =>
+      old.filter((t: any) => t.id !== taskId))
+    await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' })
+    closeModal('task-details')
+    refresh()
+  }
+
+  function handleEdit(task: any) {
+    closeModal('task-details')
+    openModal('task-create', { editTask: task, onCreated: refresh })
   }
 
   function handleClientClick(clientId: string) {
-    const { openModal } = useModalStore.getState()
-    const client = clients.find((c: any) => c.id === clientId)
-    if (client) {
-      openModal('client-details', { client, locale: data?.locale || 'he' })
-    }
-  }
-
-  function handleVisitClick(visitId: string) {
-    const { openModal } = useModalStore.getState()
-    const visit = visits.find((v: any) => v.id === visitId)
-    if (visit) {
-      openModal('visit-unified', { mode: 'edit', visit })
-    }
+    closeModal('task-details')
+    openModal('client-details', { id: clientId })
   }
 
   if (!data?.task) return null
 
-  const locale = (data?.locale || 'he') as 'he' | 'ru'
-
   return (
-    <TaskDesktopPanel
+    <TaskDetailSheet
       task={data.task}
       isOpen={isOpen}
       onClose={() => closeModal('task-details')}
-      locale={locale}
-      clients={clients}
-      visits={visits}
       onStatusChange={handleStatusChange}
-      onClientClick={handleClientClick}
-      onVisitClick={handleVisitClick}
-      onEdit={handleEdit}
       onDelete={handleDelete}
+      onEdit={handleEdit}
+      onClientClick={handleClientClick}
+      locale={locale}
     />
   )
 }

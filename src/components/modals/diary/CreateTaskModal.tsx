@@ -9,6 +9,7 @@ import { Phone, MessageCircle, Loader2, Plus, MapPin, AlertCircle, CheckSquare }
 import { getClientName } from '@/lib/client-utils'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { apiFetch } from '@/lib/api-fetch'
+import { useMobileBackTrap } from '@/hooks/useMobileBackTrap'
 
 interface OrgUser  { user_id: string; full_name: string; role: string; email?: string }
 interface Client   { id: string; first_name?: string; last_name?: string; name?: string; phone: string; email: string }
@@ -129,6 +130,10 @@ export function CreateTaskModal() {
     setDescription(''); setSelectedClientName(''); setSelectedUserName(''); setReminder(false)
     closeModal('task-create')
   }
+
+  // Mobile back button trap — закрывает модалку при аппаратной "Назад"
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useMobileBackTrap(isOpen, handleClose)
 
   async function handleSubmit() {
     if (!title.trim()) { alert(isHe ? 'נא למלא כותרת' : 'Заполните заголовок'); return }

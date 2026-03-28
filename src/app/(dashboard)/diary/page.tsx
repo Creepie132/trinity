@@ -86,19 +86,50 @@ function TaskRow({ task, lang, dateLocale, onComplete, onDelete, onClick }: Task
   const isDone = task.status === 'completed' || task.status === 'cancelled'
   const [menuOpen, setMenuOpen] = useState(false)
   const [completing, setCompleting] = useState(false)
+
+  // ── Swipe-to-complete с жёстким порогом и lock по направлению ──────────────
   const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
   const [swipe, setSwipe] = useState(0)
   const [swiping, setSwiping] = useState(false)
+  const dirLocked = useRef<'h' | 'v' | null>(null)   // horizontal / vertical / null
+  const SWIPE_THRESHOLD = 38   // px по X чтобы начать горизонтальный свайп
+  const COMPLETE_THRESHOLD = 70 // px до срабатывания "готово"
 
-  function onTouchStart(e: React.TouchEvent) { touchStartX.current = e.touches[0].clientX; setSwiping(true) }
-  function onTouchMove(e: React.TouchEvent) {
-    if (!swiping) return
-    const dx = e.touches[0].clientX - touchStartX.current
-    setSwipe(Math.max(0, Math.min(dx, 90)))
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+    dirLocked.current = null
+    setSwiping(false)
   }
+
+  function onTouchMove(e: React.TouchEvent) {
+    const dx = e.touches[0].clientX - touchStartX.current
+    const dy = e.touches[0].clientY - touchStartY.current
+    const absDx = Math.abs(dx)
+    const absDy = Math.abs(dy)
+
+    // Lock направление после первых 8px движения
+    if (!dirLocked.current && (absDx > 8 || absDy > 8)) {
+      dirLocked.current = absDx > absDy ? 'h' : 'v'
+    }
+
+    // Только горизонтальный свайп вправо (открыть "готово") — не менее 30px по X
+    if (dirLocked.current === 'h' && dx > SWIPE_THRESHOLD && !isDone) {
+      e.preventDefault()  // запрещаем scroll браузеру
+      setSwiping(true)
+      setSwipe(Math.min(dx - SWIPE_THRESHOLD, 90))
+    }
+  }
+
   async function onTouchEnd() {
-    if (swipe > 60 && !isDone) { setCompleting(true); await onComplete(task.id) }
-    setSwipe(0); setSwiping(false)
+    if (swiping && swipe > COMPLETE_THRESHOLD - SWIPE_THRESHOLD && !isDone) {
+      setCompleting(true)
+      await onComplete(task.id)
+    }
+    setSwipe(0)
+    setSwiping(false)
+    dirLocked.current = null
   }
 
   return (
@@ -118,6 +149,8 @@ function TaskRow({ task, lang, dateLocale, onComplete, onDelete, onClick }: Task
           borderRadius: 12, padding: '10px 12px', cursor: 'pointer', opacity: isDone ? 0.5 : 1,
           borderInlineStart: `3px solid ${isDone ? 'transparent' : (PRIORITY_DOT[task.priority] || '#3b82f6')}`,
           animation: 'slideInRow .3s ease both',
+          // pan-y разрешает браузеру вертикальный скролл; при lock на 'h' мы вызываем e.preventDefault()
+          touchAction: 'pan-y',
         }}
         onClick={() => !menuOpen && onClick(task)}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>

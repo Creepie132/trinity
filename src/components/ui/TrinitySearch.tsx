@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect, ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Search, X } from 'lucide-react'
 
 // ============================================
@@ -146,16 +147,18 @@ export function TrinitySearchDropdown<T extends Record<string, any>>({
 }: TrinitySearchDropdownProps<T>) {
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
+  const [dropRect, setDropRect] = useState<DOMRect | null>(null)
+  const [mounted, setMounted] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const wrapRef  = useRef<HTMLDivElement>(null)
   const isRTL = locale === 'he'
   const defaultPlaceholder = isRTL ? 'חיפוש...' : 'Поиск...'
 
+  useEffect(() => { setMounted(true) }, [])
+
   const filtered = useMemo(() => {
-    // minChars=0: show all when query is empty; otherwise require minChars
     if (query.length > 0 && query.length < minChars) return []
     if (query.length === 0) return minChars === 0 ? data.slice(0, 10) : []
-
     const q = query.toLowerCase()
     return data.filter((item) =>
       searchKeys.some((key) => {
@@ -163,13 +166,24 @@ export function TrinitySearchDropdown<T extends Record<string, any>>({
         if (val == null) return false
         return String(val).toLowerCase().includes(q)
       })
-    ).slice(0, 10) // максимум 10 результатов
+    ).slice(0, 10)
   }, [data, query, searchKeys, minChars])
+
+  // Пересчитываем позицию при открытии — через rAF чтобы дождаться layout
+  useEffect(() => {
+    if (!isOpen || !wrapRef.current) return
+    const recalc = () => {
+      if (wrapRef.current) setDropRect(wrapRef.current.getBoundingClientRect())
+    }
+    recalc()
+    const raf = requestAnimationFrame(recalc)
+    return () => cancelAnimationFrame(raf)
+  }, [isOpen, query])
 
   // Закрыть dropdown при клике вне
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
         setIsOpen(false)
       }
     }
@@ -183,65 +197,62 @@ export function TrinitySearchDropdown<T extends Record<string, any>>({
     setIsOpen(false)
   }
 
-  return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
-      <Search
-        size={18}
-        className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none ${
-          isRTL ? 'right-3' : 'left-3'
-        }`}
-      />
+  const showDropdown = isOpen && mounted && dropRect &&
+    (query.length === 0 ? minChars === 0 : query.length >= minChars)
 
-      <input
-        ref={inputRef}
-        type="text"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value)
-          setIsOpen(true)
-        }}
+  // Показываем вниз если есть место (200px), иначе вверх
+  const spaceBelow = dropRect ? window.innerHeight - dropRect.bottom : 300
+  const dropUp = spaceBelow < 220
+
+  const dropdown = showDropdown ? createPortal(
+    <div style={{
+      position: 'fixed',
+      top:   dropUp ? undefined : dropRect!.bottom + 4,
+      bottom: dropUp ? window.innerHeight - dropRect!.top + 4 : undefined,
+      left:  dropRect!.left,
+      width: dropRect!.width,
+      zIndex: 10000,
+      background: 'var(--color-background-primary, #fff)',
+      border: '1px solid var(--color-border-secondary, #e2e8f0)',
+      borderRadius: 12,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+      maxHeight: 220,
+      overflowY: 'auto',
+    }}>
+      {filtered.length === 0 ? (
+        <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '12px 16px' }}>
+          {isRTL ? 'לא נמצאו תוצאות' : 'Ничего не найдено'}
+        </p>
+      ) : (
+        filtered.map((item, i) => (
+          <div key={i} onMouseDown={() => handleSelect(item)}
+            style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: i < filtered.length - 1 ? '0.5px solid var(--color-border-tertiary,#f1f5f9)' : 'none' }}
+            className="hover:bg-muted/50 transition">
+            {renderItem(item)}
+          </div>
+        ))
+      )}
+    </div>,
+    document.body
+  ) : null
+
+  return (
+    <div className={`relative ${className}`} ref={wrapRef}>
+      <Search size={18}
+        className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none ${isRTL ? 'right-3' : 'left-3'}`} />
+      <input ref={inputRef} type="text" value={query}
+        onChange={e => { setQuery(e.target.value); setIsOpen(true) }}
         onFocus={() => setIsOpen(true)}
         placeholder={placeholder || defaultPlaceholder}
-        className={`w-full py-3 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition ${
-          isRTL ? 'pr-10 pl-10' : 'pl-10 pr-10'
-        }`}
-        dir={isRTL ? 'rtl' : 'ltr'}
-      />
-
+        className={`w-full py-2.5 rounded-xl border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition ${isRTL ? 'pr-10 pl-10' : 'pl-10 pr-10'}`}
+        dir={isRTL ? 'rtl' : 'ltr'} />
       {query && (
-        <button
-          onClick={() => {
-            setQuery('')
-            setIsOpen(false)
-          }}
-          className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition ${
-            isRTL ? 'left-3' : 'right-3'
-          }`}
-        >
+        <button onClick={() => { setQuery(''); setIsOpen(false) }}
+          className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition ${isRTL ? 'left-3' : 'right-3'}`}>
           <X size={18} />
         </button>
       )}
-
-      {/* Dropdown с результатами - ВВЕРХ на мобильном, ВНИЗ на десктопе */}
-      {isOpen && (query.length === 0 ? minChars === 0 : query.length >= minChars) && (
-        <div className="absolute z-[9100] w-full bg-card border rounded-xl shadow-lg max-h-60 overflow-y-auto bottom-full mb-1 md:bottom-auto md:top-full md:mb-0 md:mt-1">
-          {filtered.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              {isRTL ? 'לא נמצאו תוצאות' : 'Ничего не найдено'}
-            </p>
-          ) : (
-            filtered.map((item, i) => (
-              <div
-                key={i}
-                onClick={() => handleSelect(item)}
-                className="px-4 py-3 hover:bg-muted/50 cursor-pointer transition border-b border-muted last:border-0"
-              >
-                {renderItem(item)}
-              </div>
-            ))
-          )}
-        </div>
-      )}
+      {dropdown}
     </div>
   )
 }

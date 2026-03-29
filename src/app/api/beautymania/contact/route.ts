@@ -37,7 +37,7 @@ const bmContactSchema = z.object({
 
 // ─── Recipient — Aneta's email ────────────────────────────────────────────────
 // Change this to Aneta's real email if needed
-const ANETA_EMAIL = process.env.BEAUTYMANIA_EMAIL ?? 'beautymania.aneta@gmail.com'
+const ANETA_EMAIL = process.env.BEAUTYMANIA_EMAIL ?? 'anetamarinina@gmail.com'
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {

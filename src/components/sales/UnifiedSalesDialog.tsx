@@ -82,11 +82,16 @@ interface DiscountState { type: 'percent' | 'amount'; value: number }
 
 // ─── Payload validator ────────────────────────────────────────────────────────
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export function validateSaleModalData(raw: unknown): UnifiedSaleModalData {
   if (!raw || typeof raw !== 'object') return {}
   const d = raw as Record<string, unknown>
+  // Защита: clientId должен быть строго валидным UUID, иначе игнорируем
+  const rawClientId = typeof d.clientId === 'string' ? d.clientId : undefined
+  const safeClientId = rawClientId && UUID_RE.test(rawClientId) ? rawClientId : undefined
   return {
-    clientId:         typeof d.clientId === 'string' ? d.clientId : undefined,
+    clientId:         safeClientId,
     clientName:       typeof d.clientName === 'string' ? d.clientName : undefined,
     preloadedItems:   Array.isArray(d.preloadedItems) ? d.preloadedItems as PreloadedItem[] : undefined,
     preloadedProduct: d.preloadedProduct as Product | undefined,

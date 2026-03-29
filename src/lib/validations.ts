@@ -48,7 +48,14 @@ export const createVisitSchema = z.object({
 
 // Создание продажи (POST /api/sales)
 export const createSaleSchema = z.object({
-  client_id: z.string().uuid().optional().nullable(),
+  // Принимаем валидный UUID, null, undefined, или пустую строку (= нет клиента).
+  // Пустая строка и невалидные строки нормализуются в null на уровне route.ts.
+  client_id: z.union([
+    z.string().uuid('client_id: Invalid UUID'),
+    z.string().max(0),   // пустая строка → нет клиента
+    z.null(),
+    z.undefined(),
+  ]).optional().nullable(),
   items: z.array(z.object({
     product_id:   z.string().uuid().optional().nullable(),
     product_name: z.string().min(1).max(500),

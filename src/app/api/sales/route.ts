@@ -89,7 +89,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: validationError || 'Validation failed' }, { status: 400 })
   }
 
-  const { client_id, items, sale_date, notes, discount_type, discount_value } = body
+  const { client_id: rawClientId, items, sale_date, notes, discount_type, discount_value } = body
+
+  // Нормализация: пустая строка или невалидный UUID → null (без клиента)
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const client_id = (rawClientId && UUID_RE.test(rawClientId)) ? rawClientId : null
 
   const supabase = createSupabaseServiceClient()
 

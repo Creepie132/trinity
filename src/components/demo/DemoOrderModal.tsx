@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { X, ChevronRight, ChevronLeft, Check, Sparkles, Package, Zap,
-  Settings2, Lock, ExternalLink, CreditCard, AlertCircle, Crown, Plus, Minus } from 'lucide-react'
+  Settings2, Lock, ExternalLink, CreditCard, AlertCircle, Crown, Plus, Minus,
+  Pencil, User, Phone, Mail } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { validatePhone } from '@/lib/validations'
 import { usePricingPlans, type LandingPlan, type SetupOption, FALLBACK_SETUP_OPTIONS } from '@/hooks/usePricingPlans'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 export interface OrderForm {
   firstName: string; lastName: string; birthDate: string
@@ -72,17 +74,106 @@ const FormField = memo(({ label, value, onChange, type = 'text', placeholder }: 
 ))
 FormField.displayName = 'FormField'
 
-// ─── Step1 ────────────────────────────────────────────────────────────────────
-const Step1 = memo(({ form, setForm, l }: { form: OrderForm; setForm: React.Dispatch<React.SetStateAction<OrderForm>>; l: boolean }) => {
-  const set = useCallback((key: keyof OrderForm) => (v: string) => setForm(f => ({ ...f, [key]: v })), [setForm])
+// ─── ConfirmStep — просмотр данных без редактирования ────────────────────────
+const ConfirmStep = memo(({ form, l, onEdit, onCancel, onConfirm }: {
+  form: OrderForm
+  l: boolean
+  onEdit: () => void
+  onCancel: () => void
+  onConfirm: () => void
+}) => {
+  const rows = [
+    { icon: <User size={14} className="text-amber-500"/>,  label: l ? 'שם' : 'Имя',           value: `${form.firstName} ${form.lastName}`.trim() },
+    { icon: <Phone size={14} className="text-amber-500"/>, label: l ? 'טלפון' : 'Телефон',     value: form.phone },
+    { icon: <Mail size={14} className="text-amber-500"/>,  label: 'Email',                      value: form.email },
+  ]
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Заголовок */}
+      <div className="text-center pt-2">
+        <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-amber-100">
+          <User size={24} className="text-amber-500"/>
+        </div>
+        <h3 className="font-bold text-slate-800 text-lg">
+          {l ? 'אמת את הפרטים שלך' : 'Подтвердите ваши данные'}
+        </h3>
+        <p className="text-sm text-slate-400 mt-1">
+          {l ? 'הפרטים ייעברו לצוות Trinity CRM' : 'Эти данные будут переданы команде Trinity CRM'}
+        </p>
+      </div>
+
+      {/* Данные — только чтение */}
+      <div className="bg-slate-50 rounded-2xl border border-slate-200 divide-y divide-slate-200 overflow-hidden">
+        {rows.map((row, i) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-3.5">
+            <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center flex-shrink-0 shadow-sm">
+              {row.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{row.label}</p>
+              <p className="text-sm font-semibold text-slate-800 mt-0.5 truncate">{row.value || '—'}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Предупреждение */}
+      <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700 flex items-start gap-2">
+        <AlertCircle size={13} className="text-blue-400 flex-shrink-0 mt-0.5"/>
+        <span>{l
+          ? 'הנציג שלנו ייצור עמך קשר בתוך 24 שעות לאחר שליחת הבקשה.'
+          : 'Наш представитель свяжется с вами в течение 24 часов после отправки заявки.'
+        }</span>
+      </div>
+
+      {/* Три кнопки */}
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={onCancel}
+          className="flex-1 py-2.5 rounded-xl border-2 border-slate-200 text-slate-500 text-sm font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95"
+        >
+          {l ? 'ביטול' : 'Отменить'}
+        </button>
+        <button
+          onClick={onEdit}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-amber-200 text-amber-600 text-sm font-semibold hover:bg-amber-50 transition-all active:scale-95"
+        >
+          <Pencil size={13}/>
+          {l ? 'שנה' : 'Изменить'}
+        </button>
+        <button
+          onClick={onConfirm}
+          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm font-bold shadow-lg shadow-amber-200/60 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-1.5"
+        >
+          {l ? 'המשך' : 'Продолжить'}
+          <ChevronRight size={15}/>
+        </button>
+      </div>
+    </div>
+  )
+})
+ConfirmStep.displayName = 'ConfirmStep'
+
+// ─── EditStep — редактирование данных ─────────────────────────────────────────
+const EditStep = memo(({ form, setForm, l }: {
+  form: OrderForm
+  setForm: React.Dispatch<React.SetStateAction<OrderForm>>
+  l: boolean
+}) => {
+  const set = useCallback((key: keyof OrderForm) => (v: string) =>
+    setForm(f => ({ ...f, [key]: v })), [setForm])
+
   return (
     <div className="flex flex-col gap-4">
+      <p className="text-sm text-slate-500">
+        {l ? 'ערוך את הפרטים שלך:' : 'Отредактируйте ваши данные:'}
+      </p>
       <div className="grid grid-cols-2 gap-3">
         <FormField label={l ? 'שם פרטי' : 'Имя'} value={form.firstName} onChange={set('firstName')}/>
         <FormField label={l ? 'שם משפחה' : 'Фамилия'} value={form.lastName} onChange={set('lastName')}/>
       </div>
-      <FormField label={l ? 'תאריך לידה' : 'Дата рождения'} value={form.birthDate} onChange={set('birthDate')} type="date"/>
-      {/* Телефон — обязательное поле */}
+      {/* Телефон */}
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
           {l ? 'טלפון' : 'Номер телефона'} <span className="text-red-400">*</span>
@@ -91,7 +182,7 @@ const Step1 = memo(({ form, setForm, l }: { form: OrderForm; setForm: React.Disp
           type="tel"
           value={form.phone}
           onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-          className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all placeholder:text-slate-300 ${
+          className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all ${
             form.phone && !validatePhone(form.phone) ? 'border-red-300 bg-red-50' : 'border-slate-200'
           }`}
           placeholder={l ? '05X-XXXXXXX' : '05X-XXXXXXX или +972...'}
@@ -102,38 +193,28 @@ const Step1 = memo(({ form, setForm, l }: { form: OrderForm; setForm: React.Disp
           </p>
         )}
       </div>
-      <FormField label={l ? 'רחוב' : 'Улица'} value={form.street} onChange={set('street')}/>
-      <div className="grid grid-cols-2 gap-3">
-        <FormField label={l ? 'עיר' : 'Город'} value={form.city} onChange={set('city')}/>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{l ? 'מדינה' : 'Страна'} *</label>
-          <select value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all">
-            <option value="">— {l ? 'בחר' : 'Выбрать'} —</option>
-            {(l ? COUNTRIES_HE : COUNTRIES_RU).map(c => <option key={c}>{c}</option>)}
-          </select>
-        </div>
-      </div>
       <FormField label="Email" value={form.email} onChange={set('email')} type="email"/>
+      {/* Страна */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{l ? 'הערות לאדמין' : 'Заметки для администратора'}</label>
+        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{l ? 'מדינה' : 'Страна'}</label>
+        <select value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))}
+          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all">
+          <option value="">— {l ? 'בחר' : 'Выбрать'} —</option>
+          {(l ? COUNTRIES_HE : COUNTRIES_RU).map(c => <option key={c}>{c}</option>)}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          {l ? 'הערות לאדמין' : 'Заметки для администратора'}
+        </label>
         <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2}
           className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all resize-none placeholder:text-slate-300"
           placeholder={l ? 'הערות נוספות...' : 'Дополнительные пожелания...'}/>
       </div>
-      <label className="flex items-start gap-3 cursor-pointer group" onClick={() => setForm(f => ({ ...f, agreed: !f.agreed }))}>
-        <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-all ${form.agreed ? 'bg-amber-500 border-amber-500' : 'border-slate-300 group-hover:border-amber-400'}`}>
-          {form.agreed && <Check size={12} className="text-white" strokeWidth={3}/>}
-        </div>
-        <span className="text-xs text-slate-500 leading-relaxed">
-          {l ? 'אני מסכים/ה לתנאי השימוש ולמדיניות הפרטיות של Trinity CRM ולאיסוף נתוניי האישיים.'
-             : 'Я соглашаюсь с условиями использования и политикой конфиденциальности Trinity CRM, а также с обработкой моих персональных данных.'}
-        </span>
-      </label>
     </div>
   )
 })
-Step1.displayName = 'Step1'
+EditStep.displayName = 'EditStep'
 
 // ─── PlanCard ─────────────────────────────────────────────────────────────────
 const PlanCard = memo(({ id, icon, title, price, priceNote, features, accent, badge, selected, onSelect }: {
@@ -441,9 +522,10 @@ SetupPicker.displayName = 'SetupPicker'
 export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { language } = useLanguage()
   const l = language === 'he'
-  const { plans: apiPlans, setupOptions, discountPct } = usePricingPlans()  // динамические планы и сетап-опции из БД
+  const { plans: apiPlans, setupOptions, discountPct } = usePricingPlans()
   const [step, setStep]     = useState<1 | 2>(1)
-  const [form, setForm]     = useState<OrderForm>({ firstName:'', lastName:'', birthDate:'', phone:'', street:'', city:'', country:'', email:'', notes:'', agreed: false })
+  const [editing, setEditing] = useState(false)   // true = редактирование, false = подтверждение
+  const [form, setForm]     = useState<OrderForm>({ firstName:'', lastName:'', birthDate:'', phone:'', street:'', city:'', country:'', email:'', notes:'', agreed: true })
   const [plan, setPlan]     = useState<string | null>(null)
   const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set())
   const [staffCount, setStaffCount]           = useState(0)
@@ -456,6 +538,35 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
   const [paymentUrl, setPaymentUrl]           = useState<string | null>(null)
   const overlayRef  = useRef<HTMLDivElement>(null)
   const abandonSent = useRef(false)
+
+  // ── Загружаем данные пользователя при открытии ──────────────────────────
+  useEffect(() => {
+    if (!open) return
+    const load = async () => {
+      try {
+        const sb = createSupabaseBrowserClient()
+        const { data: { user } } = await sb.auth.getUser()
+        if (!user) return
+
+        // Берём из org_users (там first_name, last_name, phone)
+        const orgId = user.app_metadata?.org_id
+        const { data: orgUser } = orgId
+          ? await sb.from('org_users').select('first_name, last_name, phone, email').eq('user_id', user.id).eq('org_id', orgId).maybeSingle()
+          : await sb.from('org_users').select('first_name, last_name, phone, email').eq('user_id', user.id).maybeSingle()
+
+        setForm(f => ({
+          ...f,
+          firstName: orgUser?.first_name || f.firstName,
+          lastName:  orgUser?.last_name  || f.lastName,
+          phone:     orgUser?.phone      || f.phone,
+          email:     orgUser?.email      || user.email || f.email,
+          country:   f.country || (l ? 'ישראל' : 'Израиль'),
+          agreed:    true,
+        }))
+      } catch {}
+    }
+    load()
+  }, [open, l])
 
   const isIsrael        = form.country === (l ? 'ישראל' : 'Израиль')
   const discountApplied = selectedModules.size >= 5
@@ -479,7 +590,7 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
 
   useEffect(() => {
     if (!open) {
-      setStep(1); setSubmitted(false); setPlan(null); setPaymentUrl(null)
+      setStep(1); setEditing(false); setSubmitted(false); setPlan(null); setPaymentUrl(null)
       setSelectedModules(new Set()); setWantsPayments(false)
       setShowSetupPicker(false); setSetupType(null); setSetupFinalPrice(0)
       setStaffCount(0); abandonSent.current = false
@@ -496,7 +607,8 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
     }
   }, [open, submitted, form])
 
-  const canProceed = !!(form.firstName && form.lastName && form.email && form.phone && validatePhone(form.phone) && form.country && form.agreed)
+  // agreed всегда true (пользователь уже подтвердил при регистрации)
+  const canProceed = !!(form.firstName && form.lastName && form.email && form.phone && validatePhone(form.phone))
   const canSubmit  = !!(plan && (plan !== 'custom' || selectedModules.size > 0)) && !submitting
 
   const handleSendClick = () => { if (canSubmit) setShowSetupPicker(true) }
@@ -602,7 +714,9 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
             <div className="px-6 pt-5 pb-3 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">
-                  {step === 1 ? (l ? '📋 פרטי הזמנה' : '📋 Оформление заказа') : (l ? '📦 בחר תוכנית' : '📦 Выбор пакета')}
+                  {step === 1
+                    ? (editing ? (l ? '✏️ עריכת פרטים' : '✏️ Редактирование') : (l ? '✅ אמת פרטים' : '✅ Подтверждение'))
+                    : (l ? '📦 בחר תוכנית' : '📦 Выбор пакета')}
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">{l ? `שלב ${step} מתוך 2` : `Шаг ${step} из 2`}</p>
               </div>
@@ -615,27 +729,67 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
             </div>
           </div>
           <div className="overflow-y-auto flex-1 px-6 pb-4">
-            {step === 1 ? <Step1 form={form} setForm={setForm} l={l}/> :
+            {step === 1 ? (
+              editing ? (
+                <EditStep form={form} setForm={setForm} l={l}/>
+              ) : (
+                <ConfirmStep
+                  form={form}
+                  l={l}
+                  onEdit={() => setEditing(true)}
+                  onCancel={onClose}
+                  onConfirm={() => { if (canProceed) setStep(2) }}
+                />
+              )
+            ) : (
               <Step2 l={l} isIsrael={isIsrael} plan={plan} onPlan={handlePlan}
                 selectedModules={selectedModules} setSelectedModules={setSelectedModules}
                 discountApplied={discountApplied} monthlyPrice={monthlyPrice}
                 staffCount={staffCount} setStaffCount={setStaffCount}
                 wantsPayments={wantsPayments} setWantsPayments={setWantsPayments}
-                apiPlans={apiPlans}/>}
+                apiPlans={apiPlans}/>
+            )}
           </div>
           <div className="flex-shrink-0 px-6 py-4 border-t border-slate-100 flex gap-3">
-            {step === 2 && (
-              <button onClick={() => setStep(1)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-all">
-                <ChevronLeft size={16}/>{l ? 'חזרה' : 'Назад'}
-              </button>
+            {/* Шаг 1 — подтверждение: кнопки внутри ConfirmStep, тут пусто */}
+            {step === 1 && !editing && null}
+
+            {/* Шаг 1 — редактирование */}
+            {step === 1 && editing && (
+              <>
+                <button
+                  onClick={() => setEditing(false)}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-all"
+                >
+                  <ChevronLeft size={16}/>{l ? 'חזרה' : 'Назад'}
+                </button>
+                <button
+                  disabled={!canProceed}
+                  onClick={() => { if (canProceed) setEditing(false) }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-all hover:scale-[1.02] disabled:hover:scale-100 shadow-lg shadow-amber-200"
+                >
+                  <Check size={15}/>{l ? 'שמור' : 'Сохранить'}
+                </button>
+              </>
             )}
-            <button disabled={step === 1 ? !canProceed : !canSubmit}
-              onClick={() => step === 1 ? setStep(2) : handleSendClick()}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-all hover:scale-[1.02] disabled:hover:scale-100 shadow-lg shadow-amber-200">
-              {submitting ? <span className="animate-spin inline-block">⟳</span> :
-                step === 1 ? <>{l ? 'הבא' : 'Далее'}<ChevronRight size={16}/></> :
-                <>{l ? 'שלח הזמנה' : 'Отправить заявку'}<Sparkles size={14}/></>}
-            </button>
+
+            {/* Шаг 2 */}
+            {step === 2 && (
+              <>
+                <button onClick={() => setStep(1)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-all">
+                  <ChevronLeft size={16}/>{l ? 'חזרה' : 'Назад'}
+                </button>
+                <button
+                  disabled={!canSubmit}
+                  onClick={handleSendClick}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-all hover:scale-[1.02] disabled:hover:scale-100 shadow-lg shadow-amber-200"
+                >
+                  {submitting
+                    ? <span className="animate-spin inline-block">⟳</span>
+                    : <>{l ? 'שלח הזמנה' : 'Отправить заявку'}<Sparkles size={14}/></>}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

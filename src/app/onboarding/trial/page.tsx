@@ -273,7 +273,8 @@ export default function TrialOnboardingPage() {
       // Обновляем сессию чтобы JWT получил org_id
       await supabase.auth.refreshSession().catch(() => {})
       try { localStorage.setItem('trinity_demo_start_tour', '1') } catch {}
-      router.push('/dashboard')
+      // Hard redirect — обязателен чтобы layout перезагрузился с новым JWT+org_id
+      window.location.href = '/dashboard'
     } catch (err: any) {
       submitting.current = false
       setErrMsg(err.message || t.err_generic)

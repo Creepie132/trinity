@@ -88,9 +88,12 @@ export function useDemoLanguagePicker() {
         if (!(org?.features as any)?.is_demo) return
         setIsDemo(true)
         langPickerOrgId.current = orgId
-        // Show picker if no lang chosen yet — check both specific and fallback keys
+        // Не показываем если язык уже выбран — проверяем все три ключа
         const key = `demo_lang_${orgId}`
-        const alreadyChosen = localStorage.getItem(key) || localStorage.getItem('demo_lang_selected')
+        const alreadyChosen =
+          localStorage.getItem(key) ||
+          localStorage.getItem('demo_lang_selected') ||
+          localStorage.getItem('trinity-language')
         if (!alreadyChosen) setShow(true)
       } catch {}
     }
@@ -98,21 +101,17 @@ export function useDemoLanguagePicker() {
   }, [])
 
   const handleSelect = async (lang: 'he' | 'ru') => {
-    // Save lang with REAL orgId — wait until it's available
-    // If orgId still empty (race condition), use a fallback universal key
     const orgId = langPickerOrgId.current
+    // Пишем ОБА ключа — и org-специфичный и универсальный
     if (orgId) {
       localStorage.setItem(`demo_lang_${orgId}`, lang)
     }
-    // Always write to universal demo key as fallback
     localStorage.setItem('demo_lang_selected', lang)
-    // Set the app language (key LanguageContext reads)
     localStorage.setItem('trinity-language', lang)
+    // Скрываем сразу — больше не показываем до reload
     setShow(false)
-    // Small delay so setShow(false) renders before reload
     setTimeout(() => window.location.reload(), 50)
   }
 
-  // Show if demo AND (orgId-specific key not set OR fallback not set)
   return { show: show && isDemo, handleSelect }
 }

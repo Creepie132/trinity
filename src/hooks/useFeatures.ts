@@ -90,6 +90,7 @@ export function useFeatures(): Features {
 
   const modules = (organization.features as any)?.modules
   const status = organization.subscription_status
+  const isDemo = (organization.features as any)?.is_demo === true || (organization.features as any)?.is_trial === true
   const isActive = status === 'active' || status === 'manual' || status === 'demo' || status === 'trial'
 
   if (modules) {
@@ -118,22 +119,22 @@ export function useFeatures(): Features {
     }
   }
 
-  // Fallback для org без modules
+  // Fallback для org без modules — для demo/trial показываем всё
   return {
     hasClients:       true,
     hasVisits:        true,
-    hasSales:         false,
-    hasPayments:      false,
-    hasInventory:     false,
+    hasSales:         isDemo,
+    hasPayments:      isDemo,
+    hasInventory:     isDemo,
     hasDiary:         true,
-    hasAnalytics:     false,
+    hasAnalytics:     isDemo,
     hasBranches:      organization.branches_enabled ?? false,
     hasSubscriptions: false,
     hasBooking:       false,
-    hasWhatsapp:      false,
+    hasWhatsapp:      isDemo,
     hasSms:           false,
-    hasStatistics:    false,
-    hasReports:       false,
+    hasStatistics:    isDemo,
+    hasReports:       isDemo,
     hasLoyalty:       false,
     paymentsEnabled:  organization.payments_enabled ?? true,
     recurringEnabled: organization.recurring_enabled === true,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSubscriptionPaymentUrl } from '@/lib/tranzila'
+import { createClient } from '@/lib/supabase/server'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import type { SetupOption } from '@/hooks/usePricingPlans'
 
@@ -15,9 +16,9 @@ import type { SetupOption } from '@/hooks/usePricingPlans'
 export async function POST(request: NextRequest) {
   try {
     const {
-      setupId,          // 'full' | 'standart' | 'self' — ID из БД
-      monthlyAmount,    // ежемесячная подписка (приходит с фронта, не цена сетапа)
-      moduleCount,      // для расчёта скидки
+      setupId,
+      monthlyAmount,
+      moduleCount,
       description,
       email,
       plan,
@@ -27,8 +28,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'setupId is required' }, { status: 400 })
     }
 
-    // ── Читаем цены из БД (единый источник правды) ──────────────────────────
+    // ── Читаем реальный org_id из сессии (anti-tampering) ───────────────────
+    const supabaseUser = await createClient()
+    const { data: { user } } = await supabaseUser.auth.getUser()
     const service = createSupabaseServiceClient()
+
+    // Берём org_id из сессии — если нет сессии, берём из app_metadata
+    let orgIdForPayment = user?.app_metadata?.org_id as string | undefined
+    if (!orgIdForPayment && user?.id) {
+      const { data: orgUser } = await service
+        .from('org_users').select('org_id').eq('user_id', user.id).maybeSingle()
+      orgIdForPayment = orgUser?.org_id
+    }
+    // Fallback: временный ID (для неавторизованного флоу из лендинга)
+    const paymentOrgId = orgIdForPayment ?? `demo-${Date.now()}`
+
+    // ── Читаем цены из БД (единый источник правды) ──────────────────────────
     const { data: configRow, error: configErr } = await service
       .from('pricing_config')
       .select('setup_options, demo_discount_pct, demo_discount_threshold')
@@ -77,8 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Генерируем ссылку Tranzila ───────────────────────────────────────────
-    const baseUrl    = process.env.NEXT_PUBLIC_APP_URL || 'https://ambersol.co.il'
-    const tempId     = `demo-${Date.now()}`
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ambersol.co.il'
 
     // Подписка стартует через 30 дней (после сетап-платежа)
     const d = new Date(); d.setDate(d.getDate() + 30)
@@ -92,7 +106,7 @@ export async function POST(request: NextRequest) {
       amount:        setupAmount,
       recurSum:      monthlyAmount ? Number(monthlyAmount) : undefined,
       recurStartDate,
-      orgId:         tempId,
+      orgId:         paymentOrgId,
       orgName:       description || `Trinity CRM — ${plan}`,
       plan:          plan || undefined,
       ownerEmail:    email  || undefined,

@@ -50,12 +50,6 @@ export function useDemoMode() {
     ? featuresClientLimit
     : (isDemo ? 10 : null)
 
-  const daysLeft = isDemo && (organization as any)?.subscription_expires_at
-    ? Math.max(0, Math.ceil(
-        (new Date((organization as any).subscription_expires_at).getTime() - Date.now())
-        / (1000 * 60 * 60 * 24)
-      ))
-    : null
-
-  return { isDemo, isLoading, plan, clientLimit, daysLeft }
+  // Демо бессрочный — daysLeft всегда null (нет срока истечения)
+  return { isDemo, isLoading, plan, clientLimit, daysLeft: null }
 }

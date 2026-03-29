@@ -63,27 +63,12 @@ function ExpiredOverlay({ locale }: { locale: string }) {
 }
 
 // ─── Top sticky banner ────────────────────────────────────────────────────────
-function DemoTopBanner({ locale, expiresAt }: { locale: string; expiresAt: string | null }) {
+function DemoTopBanner({ locale }: { locale: string }) {
   const [dismissed, setDismissed] = useState(false)
   const [pulse, setPulse] = useState(false)
   const [orderOpen, setOrderOpen] = useState(false)
   const [btnShimmer, setBtnShimmer] = useState(false)
   const l = locale === 'he'
-
-  const [timeLeft, setTimeLeft] = useState('')
-  useEffect(() => {
-    if (!expiresAt) return
-    const update = () => {
-      const diff = new Date(expiresAt).getTime() - Date.now()
-      if (diff <= 0) { setTimeLeft(l ? 'פג' : 'Истёк'); return }
-      const h = Math.floor(diff / 3600000)
-      const m = Math.floor((diff % 3600000) / 60000)
-      setTimeLeft(l ? `${h}ש' ${m}ד' נשאר` : `Осталось ${h}ч ${m}м`)
-    }
-    update()
-    const t = setInterval(update, 60000)
-    return () => clearInterval(t)
-  }, [expiresAt, l])
 
   useEffect(() => {
     const t = setInterval(() => { setPulse(true); setTimeout(() => setPulse(false), 800) }, 7000)
@@ -125,13 +110,9 @@ function DemoTopBanner({ locale, expiresAt }: { locale: string; expiresAt: strin
             <span className="text-xs bg-red-400/30 text-red-100 border border-red-400/50 px-2 py-0.5 rounded-full font-medium animate-pulse flex-shrink-0">
               DEMO
             </span>
-            {/* Лимит клиентов — НЕ тестовые цифры визитов/задач */}
             <span className="text-xs text-red-200 hidden md:inline whitespace-nowrap">
               {l ? '10 לקוחות · 15 ביקורים · 5 מוצרים · 5 משימות' : '10 клиентов · 15 визитов · 5 товаров · 5 задач'}
             </span>
-            {timeLeft && (
-              <span className="text-xs text-red-300/70 flex-shrink-0 hidden sm:inline">⏱ {timeLeft}</span>
-            )}
           </div>
 
           <button onClick={() => setOrderOpen(true)}
@@ -171,9 +152,11 @@ export function DemoBannerGlobal() {
   const isDemo = !!(org.features as any)?.is_demo
   if (!isDemo) return null
 
+  // Демо бессрочный — показываем баннер всегда, без таймера истечения.
+  // ExpiredOverlay срабатывает только если subscription_expires_at явно задан и истёк
   const expiresAt = (org as any).subscription_expires_at ?? null
-  const isExpired = isDemo && expiresAt ? new Date(expiresAt) < new Date() : false
+  const isExpired = expiresAt ? new Date(expiresAt) < new Date() : false
 
   if (isExpired) return <ExpiredOverlay locale={language}/>
-  return <DemoTopBanner locale={language} expiresAt={expiresAt}/>
+  return <DemoTopBanner locale={language}/>
 }

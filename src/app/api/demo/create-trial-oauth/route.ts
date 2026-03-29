@@ -85,6 +85,9 @@ export async function POST(request: NextRequest) {
 
     // ── 5. Создаём организацию ─────────────────────────────────────────────
     const orgId = crypto.randomUUID()
+    // Демо бессрочный — нет subscription_expires_at.
+    // Доступ ограничен лимитами (10 клиентов / 15 визитов / 5 товаров / 5 задач).
+    // Переход на подписку снимает все ограничения и сохраняет все данные.
 
     const { error: orgError } = await service.from('organizations').insert({
       id:          orgId,
@@ -96,13 +99,18 @@ export async function POST(request: NextRequest) {
       owner_phone: cleanPhone,
       plan:        'pro',
       subscription_status: 'demo',
+      // subscription_expires_at намеренно не устанавливаем — демо бессрочный
       is_trial:    true,
-      trial_started_at:  new Date().toISOString(),
-      billing_status:    'trial',
+      trial_started_at: new Date().toISOString(),
+      billing_status:   'trial',
       features: {
         is_demo:              true,
         is_trial:             true,
-        client_limit:         30,
+        client_limit:         10,
+        visit_limit:          15,
+        visit_active_limit:   3,
+        product_limit:        5,
+        task_limit:           5,
         whatsapp:             true,
         sms:                  true,
         loyalty:              true,

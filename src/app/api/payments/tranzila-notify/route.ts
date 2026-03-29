@@ -15,7 +15,7 @@ const supabase = createClient(
  *
  * Параметры от Tranzila:
  *   Response         — '000' = успех
- *   cField1          — org_id (мы передавали его в первом платеже)
+ *   cField1          — org_id (передаётся при первом платеже)
  *   sum              — сумма списания
  *   ConfirmationCode — код подтверждения
  *   index            — ID транзакции
@@ -51,14 +51,11 @@ export async function POST(request: NextRequest) {
 
   if (responseCode !== '000') {
     console.error('[tranzila-notify] Recurring charge failed for org:', orgId, '| Response:', responseCode)
-    await supabase
-      .from('organizations')
-      .update({ billing_status: 'failed' })
-      .eq('id', orgId)
+    await supabase.from('organizations').update({ billing_status: 'failed' }).eq('id', orgId)
     return NextResponse.json({ ok: false, reason: 'charge_failed' })
   }
 
-  // ── Update subscription ──────────────────────────────────────────────────
+  // ── 1. Обновляем статус подписки ─────────────────────────────────────────
   const nextBilling = new Date()
   nextBilling.setDate(nextBilling.getDate() + 30)
   const nextBillingStr = nextBilling.toISOString().split('T')[0]
@@ -66,13 +63,11 @@ export async function POST(request: NextRequest) {
   const { error } = await supabase
     .from('organizations')
     .update({
-      subscription_status:  'active',
-      billing_status:       'paid',
-      billing_due_date:     nextBillingStr,
-      last_billing_date:    new Date().toISOString().split('T')[0],
-      subscription_expires_at: new Date(
-        nextBilling.getTime() + 3 * 24 * 60 * 60 * 1000
-      ).toISOString(),
+      subscription_status:     'active',
+      billing_status:          'paid',
+      billing_due_date:        nextBillingStr,
+      last_billing_date:       new Date().toISOString().split('T')[0],
+      subscription_expires_at: new Date(nextBilling.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
     })
     .eq('id', orgId)
 
@@ -81,10 +76,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, reason: 'db_error' })
   }
 
-  // ── Create Tranzila receipt ──────────────────────────────────────────────
+  // ── 2. Снимаем демо-лимиты (read-modify-write на features JSONB) ──────────
+  // Демо → активная подписка: is_demo=false, лимиты убираем (null = без ограничений)
+  try {
+    const { data: orgRow } = await supabase
+      .from('organizations')
+      .select('features')
+      .eq('id', orgId)
+      .single()
+
+    if (orgRow?.features) {
+      const updatedFeatures = {
+        ...(orgRow.features as object),
+        is_demo:           false,
+        is_trial:          false,
+        client_limit:      null,
+        visit_limit:       null,
+        visit_active_limit: null,
+        product_limit:     null,
+        task_limit:        null,
+      }
+      await supabase
+        .from('organizations')
+        .update({ features: updatedFeatures })
+        .eq('id', orgId)
+      console.log('[tranzila-notify] Demo limits removed for org:', orgId)
+    }
+  } catch (featErr) {
+    // Некритично — подписка уже активирована
+    console.error('[tranzila-notify] Features update failed (non-fatal):', featErr)
+  }
+
+  // ── 3. Создаём квитанцию Tranzila ────────────────────────────────────────
   if (amount > 0) {
     try {
-      // Get org name + owner email for receipt
       const { data: org } = await supabase
         .from('organizations')
         .select('name, owner_email, owner_name')
@@ -94,16 +119,11 @@ export async function POST(request: NextRequest) {
       const receipt = await createReceipt({
         clientName:    org?.owner_name  ?? org?.name ?? 'לקוח',
         clientEmail:   org?.owner_email ?? undefined,
-        items: [{
-          name:       `Trinity CRM — מנוי חודשי`,
-          quantity:   1,
-          unit_price: amount,
-        }],
+        items: [{ name: 'Trinity CRM — מנוי חודשי', quantity: 1, unit_price: amount }],
         totalAmount:   amount,
         paymentMethod: 'credit_card',
       })
 
-      // Store document_id in the payments record for this transaction
       await supabase
         .from('payments')
         .update({ tranzila_document_id: receipt.documentId })
@@ -112,8 +132,7 @@ export async function POST(request: NextRequest) {
 
       console.log('[tranzila-notify] ✅ Receipt created:', receipt.documentId, '| doc#', receipt.documentNum)
     } catch (receiptErr) {
-      // Non-fatal — subscription was updated successfully
-      console.error('[tranzila-notify] Receipt creation failed:', receiptErr)
+      console.error('[tranzila-notify] Receipt creation failed (non-fatal):', receiptErr)
     }
   }
 

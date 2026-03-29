@@ -45,13 +45,9 @@ const CSRF_EXEMPT_PREFIXES = [
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // ── 1. Public paths — no auth needed ──────────────────────────────────────
   if (isPublicPath(pathname)) return NextResponse.next()
 
-  // ── 2. API routes — skip access-check, protected by getAuthContext() ──────
-  //    Only do session validation + CSRF here, NOT subscription checks
   const isApiRoute = pathname.startsWith('/api/')
-
   let response = NextResponse.next()
 
   const supabase = createServerClient(
@@ -69,7 +65,6 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // ── 3. Auth check — getSession() reads JWT, NO DB roundtrip ───────────────
   let session = null
   try {
     const result = await supabase.auth.getSession()
@@ -91,61 +86,41 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // ── 4. CSRF — only for mutating API calls ─────────────────────────────────
   if (isApiRoute && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     const isExempt = CSRF_EXEMPT_PREFIXES.some(p => pathname.startsWith(p))
     if (!isExempt) {
       const origin = req.headers.get('origin')
       const isVercelPreview = origin?.includes('vercel.app') && origin?.includes('trinity')
       if (origin && !ALLOWED_ORIGINS.has(origin) && !isVercelPreview) {
-        console.warn('[middleware] CSRF blocked:', { origin, pathname })
         return NextResponse.json({ error: 'CSRF: Invalid origin' }, { status: 403 })
       }
     }
   }
 
-  // ── 5. API routes stop here — no subscription check needed ────────────────
   if (isApiRoute) return response
-
-  // ── 6. Admin routes — skip subscription check ────────────────────────────
   if (pathname.startsWith('/admin')) return response
-
-  // ── 6b. Worker (sales agent) routes — skip org/subscription check ─────────
-  // Продажники не привязаны к org — пропускаем если есть сессия
   if (pathname.startsWith('/worker')) return response
 
-  // ── 6c-manager. Manager role — JWT fast-path, zero DB roundtrip ────────────
-  // org_role is set in app_metadata when user is invited as manager.
-  // DB fallback only when JWT doesn't have it (legacy accounts).
   const MANAGER_ALLOWED_PREFIXES = ['/worker', '/clients', '/diary']
   const isManagerAllowed = MANAGER_ALLOWED_PREFIXES.some(p => pathname.startsWith(p))
 
   if (!isManagerAllowed) {
-    // Fast-path: read from JWT (no DB)
     const roleFromJWT = session.user.app_metadata?.org_role as string | undefined
     if (roleFromJWT === 'manager') {
       return NextResponse.redirect(new URL('/worker/dashboard', req.url))
     }
-    // Slow-path: only for legacy accounts without org_role in JWT
-    // Skip if we already know they're not a manager (JWT has a different role)
     if (!roleFromJWT) {
       try {
         const { data: orgRow } = await supabase
-          .from('org_users')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
+          .from('org_users').select('role')
+          .eq('user_id', session.user.id).maybeSingle()
         if (orgRow?.role === 'manager') {
           return NextResponse.redirect(new URL('/worker/dashboard', req.url))
         }
-      } catch {
-        // Не блокируем при ошибке
-      }
+      } catch {}
     }
   }
 
-  // ── 6c. /inbox — ТОЛЬКО для системного администратора (is_admin) ──────────
-  // Раздел доступен только владельцу платформы. Все остальные → /dashboard
   if (pathname.startsWith('/inbox')) {
     const isAdmin = session.user.app_metadata?.is_admin === true
     if (!isAdmin) {
@@ -156,34 +131,25 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ── 7. Subscription / access check — page routes only ────────────────────
-  // ⚡ PERF: Cache result in a short-lived cookie (5 min) to avoid DB on every nav.
   const SUB_CACHE_COOKIE = 'trinity_sub_ok'
-  const subCacheVal = req.cookies.get(SUB_CACHE_COOKIE)?.value
-  const subCacheOrgId = subCacheVal?.split(':')[0]
-  const subCacheTs    = parseInt(subCacheVal?.split(':')[1] ?? '0', 10)
-  const SUB_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+  const subCacheVal    = req.cookies.get(SUB_CACHE_COOKIE)?.value
+  const subCacheOrgId  = subCacheVal?.split(':')[0]
+  const subCacheTs     = parseInt(subCacheVal?.split(':')[1] ?? '0', 10)
+  const SUB_CACHE_TTL  = 5 * 60 * 1000
 
   try {
-    // is_admin from JWT app_metadata — NO DB query, reads from token
     const isAdmin = session.user.app_metadata?.is_admin === true
     if (isAdmin) return response
 
     const jwtOrgId = session.user.app_metadata?.org_id as string | undefined
 
-    // Use cache if same org and not expired
-    if (
-      jwtOrgId &&
-      subCacheOrgId === jwtOrgId &&
-      Date.now() - subCacheTs < SUB_CACHE_TTL
-    ) {
+    if (jwtOrgId && subCacheOrgId === jwtOrgId && Date.now() - subCacheTs < SUB_CACHE_TTL) {
       return response
     }
 
     let org: any = null
 
     if (jwtOrgId) {
-      // Single DB query — only subscription fields, no joins
       const { data } = await supabase
         .from('organizations')
         .select('subscription_status, subscription_expires_at, features')
@@ -191,7 +157,6 @@ export async function middleware(req: NextRequest) {
         .single()
       org = data
     } else {
-      // Fallback: user doesn't have org_id in JWT yet (first login edge case)
       const { data: orgUser } = await supabase
         .from('org_users')
         .select('org_id, organizations(subscription_status, subscription_expires_at, features)')
@@ -223,51 +188,61 @@ export async function middleware(req: NextRequest) {
         new Date(org.subscription_expires_at) > now)
     )
 
-    if (!hasAccess && !isExpired && pathname !== '/access-pending') {
-      return NextResponse.redirect(new URL('/access-pending', req.url))
+    // ── Fallback: JWT org не даёт доступа → ищем любую рабочую орг ───────────
+    // Кейс: Google OAuth создал новую орг status=none при повторном входе,
+    // но у пользователя уже есть рабочая demo-орг с другим org_id.
+    if (!hasAccess && !isExpired) {
+      try {
+        const { data: rows } = await supabase
+          .from('org_users')
+          .select('org_id, organizations(subscription_status)')
+          .eq('user_id', session.user.id)
+
+        const workingOrg = (rows ?? []).find((r: any) => {
+          const s = (r.organizations as any)?.subscription_status
+          return s === 'active' || s === 'demo' || s === 'manual'
+        })
+
+        if (workingOrg) {
+          // Рабочая орг найдена — сбрасываем кэш и пускаем.
+          // custom_access_token_hook выдаст правильный org_id при следующем обновлении токена.
+          const fwdResponse = NextResponse.next()
+          fwdResponse.cookies.delete(SUB_CACHE_COOKIE)
+          return fwdResponse
+        }
+      } catch {}
+
+      if (pathname !== '/access-pending') {
+        return NextResponse.redirect(new URL('/access-pending', req.url))
+      }
     }
 
     // ── Module access control ────────────────────────────────────────────────
     if (hasAccess && org?.features?.modules) {
       const modules = org.features.modules as Record<string, boolean>
       const MODULE_ROUTES: Record<string, string> = {
-        '/payments': 'payments',
-        '/inventory': 'inventory',
-        '/sms': 'sms',
-        '/stats': 'statistics',
-        '/reports': 'reports',
-        '/subscriptions': 'subscriptions',
-        '/booking': 'booking',
-        '/settings/booking': 'booking',
-        '/loyalty': 'loyalty',
+        '/payments': 'payments', '/inventory': 'inventory',
+        '/sms': 'sms', '/stats': 'statistics', '/reports': 'reports',
+        '/subscriptions': 'subscriptions', '/booking': 'booking',
+        '/settings/booking': 'booking', '/loyalty': 'loyalty',
       }
       for (const [route, moduleKey] of Object.entries(MODULE_ROUTES)) {
         if (pathname.startsWith(route)) {
           const hasModule = moduleKey === 'booking'
             ? (modules.booking === true || modules.online_booking === true)
             : modules[moduleKey] === true
-          if (!hasModule) {
-            return NextResponse.redirect(new URL('/dashboard', req.url))
-          }
+          if (!hasModule) return NextResponse.redirect(new URL('/dashboard', req.url))
         }
       }
     }
 
-    // ⚡ Set subscription cache cookie — skip DB on next navigations for 5 min
-    if (hasAccess) {
-      const jwtOrgIdForCache = session.user.app_metadata?.org_id as string | undefined
-      if (jwtOrgIdForCache) {
-        response.cookies.set(SUB_CACHE_COOKIE, `${jwtOrgIdForCache}:${Date.now()}`, {
-          httpOnly: true,
-          sameSite: 'lax',
-          maxAge: SUB_CACHE_TTL / 1000,
-          path: '/',
-        })
-      }
+    if (hasAccess && jwtOrgId) {
+      response.cookies.set(SUB_CACHE_COOKIE, `${jwtOrgId}:${Date.now()}`, {
+        httpOnly: true, sameSite: 'lax', maxAge: SUB_CACHE_TTL / 1000, path: '/',
+      })
     }
   } catch (error) {
     console.error('[middleware] Access check error:', error)
-    // Allow on error — don't block legitimate users
   }
 
   return response

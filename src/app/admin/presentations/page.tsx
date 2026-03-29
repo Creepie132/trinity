@@ -26,7 +26,7 @@ export default function PresentationsPage() {
   const isHe = language === 'he'
 
   return (
-    <div className="space-y-6 pb-8" dir={isHe ? 'rtl' : 'ltr'}>
+    <div className="space-y-6 pb-8 px-4 md:px-0" dir={isHe ? 'rtl' : 'ltr'}>
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
           <Monitor className="w-6 h-6 text-indigo-500" />

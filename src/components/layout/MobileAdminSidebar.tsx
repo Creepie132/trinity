@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Megaphone, Settings, ArrowLeft, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, FlaskConical, UserCheck, Mail } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, ArrowLeft, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, FlaskConical, UserCheck, Mail, Monitor } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import {
@@ -83,6 +83,11 @@ export function MobileAdminSidebar({ isOpen, onClose }: MobileAdminSidebarProps)
       name: language === 'he' ? 'הזמנות' : 'Приглашения',
       href: '/admin/invitations',
       icon: Mail,
+    },
+    {
+      name: language === 'he' ? 'מצגות' : 'Презентации',
+      href: '/admin/presentations',
+      icon: Monitor,
     },
   ]
 

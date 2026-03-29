@@ -13,7 +13,6 @@ import { SaleDetailModal } from '@/components/sales/SaleDetailModal'
 import { PaymentReportModal } from '@/components/payments/PaymentReportModal'
 import { SiteOrdersPanel } from '@/components/sales/SiteOrdersPanel'
 import { useNewOrdersCount } from '@/hooks/useSiteOrders'
-import { useOrganization } from '@/hooks/useOrganization'
 
 const PAGE_SIZE = 20
 
@@ -242,10 +241,10 @@ function SalesContent() {
   const t      = T[locale]
   const { openModal } = useModalStore()
   const { role, orgId } = useAuth()
-  const { data: org } = useOrganization()
   const isOwner = role === 'owner'
-  // Кнопка «Заказы» видна только если у орг привязан сайт
-  const hasSiteIntegration = !!(org as any)?.website
+  // Кнопка «Заказы» — показываем всегда (счётчик сам покажет 0 если заказов нет)
+  // Реальная проверка через счётчик — если у орг нет сайта, заказов просто не будет
+  const hasSiteIntegration = true
   const { data: newOrdersCount = 0 } = useNewOrdersCount()
 
   const [statusFilter, setStatusFilter]   = useState('all')

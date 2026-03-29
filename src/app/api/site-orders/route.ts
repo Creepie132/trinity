@@ -8,7 +8,9 @@ const PAGE_SIZE = 20
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext(req)
   if ('error' in auth) return auth.error
-  const { orgId } = auth
+  // Используем mainOrgId — заказы всегда хранятся на главной орг,
+  // а не на активной ветке (филиале)
+  const { mainOrgId } = auth
 
   const { searchParams } = new URL(req.url)
   const page   = Math.max(0, parseInt(searchParams.get('page') || '0'))
@@ -16,10 +18,19 @@ export async function GET(req: NextRequest) {
 
   const supabase = createSupabaseServiceClient()
 
+  // Ищем заказы по всем org_id к которым имеет доступ пользователь
+  // (mainOrgId + все дочерние ветки через branches)
+  const { data: branches } = await supabase
+    .from('branches')
+    .select('child_org_id')
+    .eq('parent_org_id', mainOrgId)
+
+  const orgIds = [mainOrgId, ...(branches ?? []).map((b: any) => b.child_org_id)]
+
   let query = supabase
     .from('site_orders')
     .select('*', { count: 'exact' })
-    .eq('org_id', orgId)
+    .in('org_id', orgIds)
     .order('created_at', { ascending: false })
     .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 

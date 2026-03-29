@@ -20,6 +20,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/cron/',
   '/api/webhooks/',
   '/api/register/',
+  '/api/beautymania/',
 ]
 
 function isPublicPath(pathname: string): boolean {

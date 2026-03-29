@@ -118,15 +118,6 @@ const ConfirmStep = memo(({ form, l, onEdit, onCancel, onConfirm }: {
         ))}
       </div>
 
-      {/* Предупреждение */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700 flex items-start gap-2">
-        <AlertCircle size={13} className="text-blue-400 flex-shrink-0 mt-0.5"/>
-        <span>{l
-          ? 'הנציג שלנו ייצור עמך קשר בתוך 24 שעות לאחר שליחת הבקשה.'
-          : 'Наш представитель свяжется с вами в течение 24 часов после отправки заявки.'
-        }</span>
-      </div>
-
       {/* Три кнопки */}
       <div className="flex gap-2 pt-1">
         <button
@@ -672,8 +663,7 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
         <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-200">
           <Check size={36} className="text-white" strokeWidth={2.5}/>
         </div>
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">{l ? 'תודה!' : 'Спасибо!'}</h2>
-        <p className="text-slate-500 text-sm mb-4">{l ? 'הבקשה שלך התקבלה. ניצור איתך קשר תוך 24 שעות.' : 'Ваша заявка получена. Мы свяжемся с вами в течение 24 часов.'}</p>
+        <h2 className="text-2xl font-bold text-slate-800 mb-4">{l ? 'תודה!' : 'Спасибо!'}</h2>
         {setupType && (
           <div className="mb-4 bg-slate-50 rounded-xl px-4 py-3 text-sm text-left space-y-1">
             <div className="flex justify-between"><span className="text-slate-500">{l ? 'תוכנית:' : 'Пакет:'}</span><span className="font-bold">{plan}</span></div>
@@ -786,7 +776,7 @@ export function DemoOrderModal({ open, onClose }: { open: boolean; onClose: () =
                 >
                   {submitting
                     ? <span className="animate-spin inline-block">⟳</span>
-                    : <>{l ? 'שלח הזמנה' : 'Отправить заявку'}<Sparkles size={14}/></>}
+                    : <>{l ? 'בצע הזמנה' : 'Оформить'}<Sparkles size={14}/></>}
                 </button>
               </>
             )}

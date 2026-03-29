@@ -8,7 +8,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // org_id передаём прямо в URL — надёжно и просто
   const orgId = req.nextUrl.searchParams.get('org_id')
   if (!orgId) {
     return NextResponse.json({ error: 'org_id required' }, { status: 400 })
@@ -21,7 +20,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  // Логируем payload для отладки
   console.log('[whapi webhook] payload keys:', Object.keys(payload))
   console.log('[whapi webhook] messages count:', payload?.messages?.length ?? 0)
 
@@ -33,7 +31,7 @@ export async function POST(req: NextRequest) {
   // Обрабатываем статусы доставки/прочтения
   for (const status of statuses) {
     const whapiMsgId = status.id
-    const newStatus = status.status // delivered, read, failed
+    const newStatus = status.status
     if (!whapiMsgId || !newStatus) continue
     await supabase
       .from('wa_messages')
@@ -42,7 +40,7 @@ export async function POST(req: NextRequest) {
       .eq('org_id', orgId)
   }
 
-  // Typing indicator — обновляем поле в разговоре
+  // Typing indicator
   const typingEvents: any[] = payload?.presences ?? []
   for (const event of typingEvents) {
     const phone = normalizePhone(event.chat_id ?? '')
@@ -58,43 +56,58 @@ export async function POST(req: NextRequest) {
   if (messages.length === 0 && statuses.length === 0) return NextResponse.json({ ok: true })
 
   for (const msg of messages) {
-    if (msg.from_me === true || msg.type === 'status') continue
-    const phone = normalizePhone(msg.from ?? msg.chat_id ?? '')
+    // Пропускаем системные broadcast/story
+    if (msg.type === 'status') continue
+
+    const isOutgoing = msg.from_me === true
+
+    // Входящее: msg.from = телефон клиента
+    // Исходящее: msg.chat_id = телефон клиента (кому отправили)
+    const rawPhone = isOutgoing
+      ? (msg.chat_id ?? msg.to ?? '')
+      : (msg.from ?? msg.chat_id ?? '')
+
+    const phone = normalizePhone(rawPhone)
     if (!phone) continue
-    await processInboundMessage(supabase, msg, phone, orgId)
+
+    await processMessage(supabase, msg, phone, orgId, isOutgoing)
   }
 
   return NextResponse.json({ ok: true })
 }
 
-// Нормализуем телефон в локальный израильский формат
 // 972524024447@s.whatsapp.net → 0524024447
 function normalizePhone(raw: string): string {
-  let phone = raw.replace('@s.whatsapp.net', '').replace(/\D/g, '')
+  let phone = raw.replace(/@.+/, '').replace(/\D/g, '')
   if (phone.startsWith('972')) phone = '0' + phone.slice(3)
   return phone
 }
 
-async function processInboundMessage(supabase: any, msg: any, phone: string, orgId: string) {
+async function processMessage(
+  supabase: any,
+  msg: any,
+  phone: string,
+  orgId: string,
+  isOutgoing: boolean,
+) {
   const body = msg.text?.body ?? msg.caption ?? ''
-  const contactName = msg.from_name ?? msg.notify ?? msg.pushname ?? null
+  const contactName = isOutgoing ? null : (msg.from_name ?? msg.notify ?? msg.pushname ?? null)
   const whapiMsgId = msg.id ?? null
 
-  console.log(`[whapi] inbound from ${phone}, body: "${body}", msgId: ${whapiMsgId}`)
+  console.log(`[whapi] ${isOutgoing ? 'outgoing' : 'inbound'} ${phone}, body: "${body}", msgId: ${whapiMsgId}`)
 
-  // Upsert разговора
+  const upsertData: Record<string, any> = {
+    org_id: orgId,
+    phone,
+    last_message_at: new Date().toISOString(),
+    last_message_text: body.slice(0, 200),
+  }
+  // Имя контакта обновляем только для входящих
+  if (contactName) upsertData.contact_name = contactName
+
   const { data: conversation, error: convError } = await supabase
     .from('wa_conversations')
-    .upsert(
-      {
-        org_id: orgId,
-        phone,
-        contact_name: contactName,
-        last_message_at: new Date().toISOString(),
-        last_message_text: body.slice(0, 200),
-      },
-      { onConflict: 'org_id,phone' }
-    )
+    .upsert(upsertData, { onConflict: 'org_id,phone' })
     .select('id, unread_count')
     .single()
 
@@ -103,13 +116,15 @@ async function processInboundMessage(supabase: any, msg: any, phone: string, org
     return
   }
 
-  // Увеличить счётчик непрочитанных
-  await supabase
-    .from('wa_conversations')
-    .update({ unread_count: (conversation.unread_count ?? 0) + 1 })
-    .eq('id', conversation.id)
+  // Счётчик непрочитанных — только входящие
+  if (!isOutgoing) {
+    await supabase
+      .from('wa_conversations')
+      .update({ unread_count: (conversation.unread_count ?? 0) + 1 })
+      .eq('id', conversation.id)
+  }
 
-  // Сохранить сообщение
+  // Idempotent: onConflict whapi_message_id ignoreDuplicates
   const { error: msgError } = await supabase
     .from('wa_messages')
     .upsert(
@@ -117,15 +132,15 @@ async function processInboundMessage(supabase: any, msg: any, phone: string, org
         conversation_id: conversation.id,
         org_id: orgId,
         whapi_message_id: whapiMsgId,
-        direction: 'inbound',
+        direction: isOutgoing ? 'outbound' : 'inbound',
         message_type: msg.type ?? 'text',
         body,
         media_url: msg.image?.link ?? msg.audio?.link ?? msg.document?.link ?? null,
-        status: 'received',
+        status: isOutgoing ? 'sent' : 'received',
       },
-      { onConflict: 'whapi_message_id', ignoreDuplicates: true }
+      { onConflict: 'whapi_message_id', ignoreDuplicates: true },
     )
 
   if (msgError) console.error('[whapi] message insert error:', msgError)
-  else console.log('[whapi] message saved OK')
+  else console.log(`[whapi] ${isOutgoing ? 'outgoing' : 'inbound'} message saved OK`)
 }

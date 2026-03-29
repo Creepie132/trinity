@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import DemoRegisterModal from '@/components/landing/DemoRegisterModal'
 import { usePricingPlans } from '@/hooks/usePricingPlans'
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────
@@ -252,8 +251,6 @@ export default function LandingPage() {
   const [lang, setLang] = useState<'ru' | 'he'>('ru')
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [demoOpen, setDemoOpen] = useState(false)
-  const [demoPlan, setDemoPlan] = useState('')
   const t = lang === 'ru' ? RU : HE
   // Динамические планы из БД (fallback на хардкод если API недоступен)
   const { plans: dbPlans } = usePricingPlans()
@@ -815,12 +812,13 @@ export default function LandingPage() {
                       <li key={j}><span className="check">✓</span> {f}</li>
                     ))}
                   </ul>
-                  <button
+                  <a
+                    href="/demo/try"
                     className={`btn-plan ${isPopular ? 'btn-plan-fill' : 'btn-plan-outline'}`}
-                    onClick={() => { setDemoPlan(plan.key); setDemoOpen(true) }}
+                    style={{display:'block',textAlign:'center'}}
                   >
                     {cta || t.choosePlan}
-                  </button>
+                  </a>
                 </div>
               )
             })}
@@ -880,15 +878,6 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* DEMO MODAL */}
-      {demoOpen && (
-        <DemoRegisterModal
-          lang={lang}
-          planName={demoPlan}
-          planKey={demoPlan.toLowerCase()}
-          onClose={() => setDemoOpen(false)}
-        />
-      )}
     </div>
   )
 }

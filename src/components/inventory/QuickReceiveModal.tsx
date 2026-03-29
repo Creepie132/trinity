@@ -69,10 +69,13 @@ export function QuickReceiveModal({ products, locale, onClose }: QuickReceiveMod
           })
         })
       )
-      // ✅ React Query invalidate — не refetch(), не reload()
-      queryClient.invalidateQueries({ queryKey: ['products'] })
+      // ✅ Закрываем сначала — потом инвалидируем чтобы список был виден при рефетче
       toast.success(l ? 'הסחורה התקבלה בהצלחה' : 'Товар принят на склад')
       onClose()
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['products'] })
+        queryClient.invalidateQueries({ queryKey: ['inventory-transactions'] })
+      }, 50)
     } catch (err: any) {
       toast.error(err.message || (l ? 'שגיאה' : 'Ошибка'))
     } finally {

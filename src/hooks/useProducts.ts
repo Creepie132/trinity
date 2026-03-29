@@ -37,7 +37,7 @@ export function useProducts(searchQuery?: string) {
       const data = await response.json()
       return data.products as Product[]
     },
-    staleTime: 30_000, // ✅ был 0 — данные теперь свежи 30 сек, нет лишних refetch при mount
+    staleTime: 0, // ✅ 0ms — данные сразу устаревают после invalidateQueries → мгновенный рефетч
   })
 }
 
@@ -122,6 +122,8 @@ export function useCreateProduct() {
     },
 
     onSettled: () => {
+      // Инвалидируем и точный ключ (с orgId) и общий префикс — двойная гарантия
+      queryClient.invalidateQueries({ queryKey: ['products', activeOrgId] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
     },
   })
@@ -182,6 +184,7 @@ export function useUpdateProduct() {
 
     // ── 3. onSettled: фоновая сверка ──────────────────────────────────────────
     onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['products', activeOrgId] })
       qc.invalidateQueries({ queryKey: ['products'] })
     },
   })
@@ -238,6 +241,7 @@ export function useDeleteProduct() {
 
     // ── 3. onSettled: фоновая сверка ─────────────────────────────────────────
     onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['products', activeOrgId] })
       qc.invalidateQueries({ queryKey: ['products'] })
     },
   })

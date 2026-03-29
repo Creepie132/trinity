@@ -242,9 +242,13 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
         if (!res.ok) { const err = await res.json(); throw new Error(err.error || s.error) }
       }
       toast.success(s.success)
-      // ✅ React Query invalidate — NO reload(), NO refetch()
-      queryClient.invalidateQueries({ queryKey: ['products'] })
+      // ✅ Сначала закрываем — потом инвалидируем, чтобы список обновился
+      // когда компонент уже виден (не в фоне за модалкой)
       onClose()
+      // Небольшая задержка чтобы модалка успела закрыться до рефетча
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['products'] })
+      }, 50)
     } catch (err: any) {
       toast.error(err.message || s.error)
     } finally {

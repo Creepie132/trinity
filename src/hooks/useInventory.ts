@@ -69,10 +69,9 @@ export function useCreateTransaction() {
       }
     },
     onSuccess: (data) => {
-      // Invalidate transaction history
+      // Инвалидируем точный ключ (с orgId) + общий префикс — двойная гарантия
       queryClient.invalidateQueries({ queryKey: ['inventory-transactions'] })
-
-      // Invalidate products list (quantity changed)
+      queryClient.invalidateQueries({ queryKey: ['products', activeOrgId] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
 
       // Invalidate specific product (if tracking it)

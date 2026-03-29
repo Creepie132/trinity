@@ -422,6 +422,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
             autoPlay
             loop
             playsInline
+            muted
             style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 16, boxShadow: '0 0 60px rgba(255,220,0,0.5)' }}
             onClick={(e) => e.stopPropagation()}
           />

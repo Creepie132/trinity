@@ -8,6 +8,7 @@ import { ClientBottomSheet } from '@/components/clients/ClientBottomSheet'
 import { TrinityNotificationIcon } from './TrinityNotificationIcon'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useModalStore } from '@/store/useModalStore'
+import { OrderDetailModal } from '@/components/sales/OrderDetailModal'
 
 interface NotificationMetadata {
   invited_user_email?: string
@@ -368,6 +369,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   const bellRef = useRef<HTMLDivElement | null>(null)
   const { openModal } = useModalStore()
   const [mobileClient, setMobileClient] = useState<any>(null)
+  const [orderModalId, setOrderModalId] = useState<string | null>(null)
 
   const l = translations[locale]
   const supabase = createSupabaseBrowserClient()
@@ -617,10 +619,8 @@ export function NotificationBell({ locale }: NotificationBellProps) {
                   const client = await res.json()
                   setIsOpen(false)
                   if (window.innerWidth < 768) {
-                    // Мобиле — ClientBottomSheet
                     setMobileClient(client)
                   } else {
-                    // Десктоп — модалка
                     openModal('client-details', { client, locale })
                   }
                 } catch { /* ignore */ }
@@ -628,6 +628,21 @@ export function NotificationBell({ locale }: NotificationBellProps) {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors border border-amber-200 dark:border-amber-800/40"
             >
               <span>👤</span>{locale === 'he' ? 'פתח כרטיס לקוח' : 'Открыть карточку'}
+            </button>
+          </div>
+        )}
+
+        {/* ── new_order — открыть детали заказа ───────────────────────── */}
+        {n.type === 'new_order' && n.reference_id && (
+          <div className="mt-2 ms-5">
+            <button
+              onClick={() => {
+                setIsOpen(false)
+                setOrderModalId(n.reference_id!)
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 text-xs font-semibold hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors border border-violet-200 dark:border-violet-800/40"
+            >
+              <span>🛍️</span>{locale === 'he' ? 'פתח הזמנה' : 'Открыть заказ'}
             </button>
           </div>
         )}
@@ -715,6 +730,12 @@ export function NotificationBell({ locale }: NotificationBellProps) {
           locale={locale as 'he' | 'ru'}
         />
       )}
+      {/* Детали заказа с сайта из уведомления */}
+      <OrderDetailModal
+        orderId={orderModalId}
+        open={!!orderModalId}
+        onClose={() => setOrderModalId(null)}
+      />
     </>
   )
 }

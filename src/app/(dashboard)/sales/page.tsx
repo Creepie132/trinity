@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import { Plus, Download, Search, ShoppingBag, BookmarkCheck, Trash2, Loader2, FileText, X, SlidersHorizontal, BarChart2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Download, Search, ShoppingBag, BookmarkCheck, Trash2, Loader2, FileText, X, SlidersHorizontal, BarChart2, ChevronLeft, ChevronRight, PackageSearch } from 'lucide-react'
 import { useModalStore } from '@/store/useModalStore'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
@@ -11,6 +11,9 @@ import { useSales, useSalesChart, useSaleStats, useToggleReceipt, Sale, SaleChar
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SaleDetailModal } from '@/components/sales/SaleDetailModal'
 import { PaymentReportModal } from '@/components/payments/PaymentReportModal'
+import { SiteOrdersPanel } from '@/components/sales/SiteOrdersPanel'
+import { useNewOrdersCount } from '@/hooks/useSiteOrders'
+import { useOrganization } from '@/hooks/useOrganization'
 
 const PAGE_SIZE = 20
 
@@ -239,7 +242,11 @@ function SalesContent() {
   const t      = T[locale]
   const { openModal } = useModalStore()
   const { role, orgId } = useAuth()
+  const { data: org } = useOrganization()
   const isOwner = role === 'owner'
+  // Кнопка «Заказы» видна только если у орг привязан сайт
+  const hasSiteIntegration = !!(org as any)?.website
+  const { data: newOrdersCount = 0 } = useNewOrdersCount()
 
   const [statusFilter, setStatusFilter]   = useState('all')
   const [methodFilter, setMethodFilter]   = useState('all')
@@ -252,6 +259,7 @@ function SalesContent() {
   const [draftKey, setDraftKey]           = useState(0)
   const [reportOpen, setReportOpen]       = useState(false)
   const [deskPage, setDeskPage]           = useState(0)
+  const [showOrders, setShowOrders]       = useState(false)
 
   // Сброс страницы при смене фильтров
   useEffect(() => { setDeskPage(0) }, [statusFilter, methodFilter, search, dateFrom, dateTo])
@@ -337,6 +345,23 @@ function SalesContent() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 transition-colors">
               <BarChart2 className="w-4 h-4" />{t.summary}
             </button>
+            {/* Кнопка «Заказы с сайта» — только если есть сайт-интеграция */}
+            {hasSiteIntegration && (
+              <button onClick={() => setShowOrders(v => !v)}
+                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+                  showOrders
+                    ? 'bg-violet-600 text-white border-violet-600 shadow-md'
+                    : 'border-violet-300 dark:border-violet-700 text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100'
+                }`}>
+                <PackageSearch className="w-4 h-4" />
+                {locale === 'he' ? 'הזמנות' : 'Заказы'}
+                {newOrdersCount > 0 && (
+                  <span className="absolute -top-1.5 -end-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {newOrdersCount}
+                  </span>
+                )}
+              </button>
+            )}
             {isOwner && (
               <button onClick={handleExport} disabled={exportLoading}
                 className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 relative overflow-hidden transition-all hover:shadow-md disabled:opacity-50"
@@ -370,6 +395,14 @@ function SalesContent() {
           <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 block mb-3">{t.monthlyChart}</span>
           <BarChart chartPoints={chartPoints} locale={locale} />
         </div>
+
+        {/* ── MOBILE: панель заказов с сайта (если открыта) ── */}
+        {showOrders && hasSiteIntegration && (
+          <div className="md:hidden bg-white dark:bg-gray-800 rounded-2xl border border-violet-200 dark:border-violet-800 overflow-hidden"
+            style={{ minHeight: 300 }}>
+            <SiteOrdersPanel locale={locale} />
+          </div>
+        )}
 
         {/* ══════════════════════════════════════════════════════════════════
             КОНЦЕПТ A — SPLIT LAYOUT (только десктоп)
@@ -666,6 +699,14 @@ function SalesContent() {
               )}
             </div>{/* end скроллируемая зона */}
           </div>{/* end правая панель */}
+
+          {/* ══ ПАНЕЛЬ ЗАКАЗОВ С САЙТА (скользит справа) ══ */}
+          {showOrders && (
+            <div className="flex flex-col border-s border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0"
+              style={{ width: 'clamp(300px, 28vw, 380px)', animation: 'slideInRow 0.25s ease both' }}>
+              <SiteOrdersPanel locale={locale} />
+            </div>
+          )}
         </div>{/* end split layout */}
 
         {/* ── MOBILE список ── */}

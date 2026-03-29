@@ -91,6 +91,28 @@ export async function POST(request: NextRequest) {
 
     const totalPrice = (product.sell_price ?? 0) * quantity
 
+    // ── Сохранить заказ в site_orders ─────────────────────────────────────────
+    const { data: siteOrder } = await service
+      .from('site_orders')
+      .insert({
+        org_id:         BM_ORG_ID,
+        customer_name:  name,
+        customer_phone: phone || null,
+        customer_email: email,
+        items: [{
+          product_id:   product_id,
+          product_name: product_name,
+          quantity:     quantity,
+          unit_price:   product.sell_price ?? 0,
+        }],
+        total_amount: totalPrice,
+        status:       'new',
+        notes:        message || null,
+        source:       'beautymania',
+      })
+      .select('id')
+      .single()
+
     // ── Create notification in Trinity for Aneta ──────────────────────────────
     await service.from('notifications').insert({
       org_id:       BM_ORG_ID,
@@ -98,8 +120,8 @@ export async function POST(request: NextRequest) {
       type:         'new_order',
       title:        `🛍️ Новый заказ с сайта`,
       body:         `${name} заказал(а) ${product_name} × ${quantity}${phone ? ` · ${phone}` : ''}`,
-      link:         '/inventory',
-      reference_id: product_id,
+      link:         '/sales',
+      reference_id: siteOrder?.id ?? null,
       is_read:      false,
     })
 

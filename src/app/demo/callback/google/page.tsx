@@ -1,13 +1,12 @@
 'use client'
 
 /**
- * /demo/callback/google
+ * /demo/callback/google — Trial Registration Form
  *
- * Flow:
- *   Step 1 → LangPicker
- *   Step 2 → TrialForm (имя, фамилия, email, телефон, бизнес)
- *   Step 3 → Loading (POST /api/demo/create-trial)
- *   Step 4 → signInWithPassword → /dashboard
+ * Step 1 → LangPicker
+ * Step 2 → TrialForm (имя, фамилия, email*, телефон*, название бизнеса*)
+ * Step 3 → Loading
+ * Step 4 → signInWithPassword → /dashboard
  */
 
 import { useState, useRef, useEffect } from 'react'
@@ -21,21 +20,19 @@ import {
 type Step = 'lang' | 'form' | 'loading' | 'error'
 type Lang = 'he' | 'ru'
 
-// ─── i18n ─────────────────────────────────────────────────────────────────────
 const T = {
   he: {
-    tagline:      '14 יום ניסיון חינם',
     step:         'שלב 2 מתוך 2',
     title:        'פרטי ההרשמה',
-    subtitle:     'מלאו את הפרטים כדי ליצור את חשבון הניסיון שלכם',
+    subtitle:     'מלאו את הפרטים ליצירת חשבון',
     first_name:   'שם פרטי',      first_name_ph:   'ישראל',
     last_name:    'שם משפחה',     last_name_ph:    'ישראלי',
     email:        'אימייל',        email_ph:        'you@example.com',
     phone:        'טלפון',         phone_ph:        '050-000-0000',
     business:     'שם העסק',      business_ph:     'מספרת מעוף',
-    submit:       'יצירת חשבון ניסיון',
+    submit:       'יצירת חשבון',
     submitting:   'יוצר חשבון...',
-    free_note:    'ללא כרטיס אשראי · ביטול בכל עת',
+    limit_note:   'עד 30 לקוחות בגרסת הניסיון',
     back:         'שנה שפה',
     err_req:      'שדה חובה',
     err_phone:    'מספר לא תקין',
@@ -43,25 +40,23 @@ const T = {
     err_exists:   'מספר זה כבר רשום. נסה מספר אחר.',
     err_generic:  'שגיאה, נסה שוב',
     retry:        'נסה שוב',
-    // progress labels
     p1: 'יוצר חשבון משתמש...',
     p2: 'מגדיר את הארגון שלך...',
-    p3: 'ממלא נתוני דמו...',
+    p3: 'מכין את המערכת...',
     p4: 'פותח Trinity CRM...',
   },
   ru: {
-    tagline:      '14 дней бесплатно',
     step:         'Шаг 2 из 2',
     title:        'Данные для регистрации',
-    subtitle:     'Заполните форму — и ваша CRM будет готова за минуту',
+    subtitle:     'Заполните форму — система будет готова за минуту',
     first_name:   'Имя',           first_name_ph:   'Иван',
     last_name:    'Фамилия',       last_name_ph:    'Иванов',
     email:        'Email',          email_ph:        'you@example.com',
     phone:        'Телефон',        phone_ph:        '054-000-0000',
     business:     'Название бизнеса', business_ph:  'Beauty Studio',
-    submit:       'Создать пробный аккаунт',
+    submit:       'Создать аккаунт',
     submitting:   'Создаём аккаунт...',
-    free_note:    'Без карты · Отменить можно в любой момент',
+    limit_note:   'До 30 клиентов в пробной версии',
     back:         'Сменить язык',
     err_req:      'Обязательное поле',
     err_phone:    'Неверный номер',
@@ -71,7 +66,7 @@ const T = {
     retry:        'Попробовать снова',
     p1: 'Создаём аккаунт...',
     p2: 'Настраиваем организацию...',
-    p3: 'Наполняем данными...',
+    p3: 'Готовим систему...',
     p4: 'Открываем Trinity CRM...',
   },
 } as const
@@ -80,7 +75,6 @@ const T = {
 function LangPicker({ onSelect }: { onSelect: (l: Lang) => void }) {
   return (
     <div className="w-full max-w-xs">
-      {/* Logo */}
       <div className="text-center mb-8">
         <div className="relative inline-block mb-3">
           <div className="absolute inset-0 bg-amber-500/30 rounded-2xl animate-ping" />
@@ -89,18 +83,14 @@ function LangPicker({ onSelect }: { onSelect: (l: Lang) => void }) {
           </div>
         </div>
         <h1 className="text-xl font-bold text-white">Trinity CRM</h1>
-        <p className="text-white/50 text-xs mt-1">14 дней бесплатно · חינם 14 יום</p>
       </div>
-
       <div className="bg-white rounded-3xl shadow-2xl p-6">
         <p className="text-gray-600 font-semibold text-center mb-5">
           בחר שפה / Выберите язык
         </p>
         <div className="space-y-3">
-          {/* Hebrew */}
           <button onClick={() => onSelect('he')}
-            className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-100
-              hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
+            className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
             <span className="text-2xl">🇮🇱</span>
             <div className="flex-1 text-right" dir="rtl">
               <p className="font-bold text-gray-900">עברית</p>
@@ -108,10 +98,8 @@ function LangPicker({ onSelect }: { onSelect: (l: Lang) => void }) {
             </div>
             <ArrowRight size={16} className="text-gray-300 group-hover:text-blue-400 transition-colors rotate-180" />
           </button>
-          {/* Russian */}
           <button onClick={() => onSelect('ru')}
-            className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-100
-              hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
+            className="w-full flex items-center gap-3 p-4 rounded-2xl border-2 border-gray-100 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
             <span className="text-2xl">🇷🇺</span>
             <div className="flex-1 text-left">
               <p className="font-bold text-gray-900">Русский</p>
@@ -125,40 +113,30 @@ function LangPicker({ onSelect }: { onSelect: (l: Lang) => void }) {
   )
 }
 
-// ─── Input field ──────────────────────────────────────────────────────────────
-function FormField({
-  label, icon, error, children,
-}: { label: string; icon: React.ReactNode; error?: string; children: React.ReactNode }) {
+// ─── Field + Input ────────────────────────────────────────────────────────────
+function Field({ label, icon, error, children }: { label: string; icon: React.ReactNode; error?: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-        <span className="text-amber-500">{icon}</span>
-        {label}
+        <span className="text-amber-500">{icon}</span>{label}
       </label>
       {children}
-      {error && (
-        <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-          <span>⚠</span> {error}
-        </p>
-      )}
+      {error && <p className="text-xs text-red-500 mt-1">⚠ {error}</p>}
     </div>
   )
 }
 
-function FieldInput(props: React.InputHTMLAttributes<HTMLInputElement> & { hasError?: boolean }) {
+function FInput(props: React.InputHTMLAttributes<HTMLInputElement> & { hasError?: boolean }) {
   const { hasError, className, ...rest } = props
   return (
-    <input
-      {...rest}
-      className={[
-        'w-full px-3.5 py-3 rounded-xl text-gray-900 text-sm placeholder-gray-400',
-        'border-2 transition-all duration-150 focus:outline-none',
-        hasError
-          ? 'border-red-300 bg-red-50 focus:border-red-400'
-          : 'border-gray-200 bg-white hover:border-gray-300 focus:border-amber-400 focus:bg-white',
-        className ?? '',
-      ].join(' ')}
-    />
+    <input {...rest} className={[
+      'w-full px-3.5 py-3 rounded-xl text-gray-900 text-sm placeholder-gray-400',
+      'border-2 transition-all duration-150 focus:outline-none',
+      hasError
+        ? 'border-red-300 bg-red-50 focus:border-red-400'
+        : 'border-gray-200 bg-white hover:border-gray-300 focus:border-amber-400',
+      className ?? '',
+    ].join(' ')} />
   )
 }
 
@@ -167,58 +145,38 @@ function LoadingScreen({ lang }: { lang: Lang }) {
   const t = T[lang]
   const steps = [t.p1, t.p2, t.p3, t.p4]
   const [cur, setCur] = useState(0)
-
   useEffect(() => {
-    const timers = steps.map((_, i) => setTimeout(() => setCur(i), i * 1800))
+    const timers = steps.map((_, i) => setTimeout(() => setCur(i), i * 1600))
     return () => timers.forEach(clearTimeout)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
   return (
     <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm text-center">
-      {/* Animated logo */}
       <div className="relative w-16 h-16 mx-auto mb-5">
         <div className="absolute inset-0 bg-amber-500/25 rounded-2xl animate-ping" />
         <div className="relative w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/30">
           <Sparkles size={26} className="text-white" />
         </div>
       </div>
-
       <h2 className="text-lg font-bold text-gray-900 mb-1">Trinity CRM</h2>
       <p className="text-sm text-gray-400 mb-5">
         {lang === 'he' ? 'מכין את המערכת שלך...' : 'Готовим систему для вас...'}
       </p>
-
-      {/* Progress bar */}
       <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-5">
-        <div
-          className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-700"
-          style={{ width: `${((cur + 1) / steps.length) * 100}%` }}
-        />
+        <div className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-700"
+          style={{ width: `${((cur + 1) / steps.length) * 100}%` }} />
       </div>
-
-      {/* Steps */}
       <div className="space-y-2.5 text-left">
         {steps.map((label, i) => (
           <div key={i} className="flex items-center gap-3">
-            <div className={[
-              'w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold transition-all',
-              i < cur  ? 'bg-green-500 text-white'  :
-              i === cur ? 'bg-amber-500 text-white'  :
-              'bg-gray-100 text-gray-400',
+            <div className={['w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold transition-all',
+              i < cur ? 'bg-green-500 text-white' : i === cur ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-400',
             ].join(' ')}>
-              {i < cur  ? <Check size={11} strokeWidth={3} /> :
-               i === cur ? <Loader2 size={11} className="animate-spin" /> :
-               <span className="text-[10px]">{i + 1}</span>}
+              {i < cur ? <Check size={11} strokeWidth={3} /> : i === cur ? <Loader2 size={11} className="animate-spin" /> : <span className="text-[10px]">{i+1}</span>}
             </div>
-            <span className={[
-              'text-sm transition-all',
-              i < cur   ? 'text-green-600 font-medium' :
-              i === cur  ? 'text-gray-900 font-semibold' :
-              'text-gray-400',
-            ].join(' ')}>
-              {label}
-            </span>
+            <span className={['text-sm transition-all',
+              i < cur ? 'text-green-600 font-medium' : i === cur ? 'text-gray-900 font-semibold' : 'text-gray-400',
+            ].join(' ')}>{label}</span>
           </div>
         ))}
       </div>
@@ -226,20 +184,16 @@ function LoadingScreen({ lang }: { lang: Lang }) {
   )
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function DemoCallbackPage() {
   const router   = useRouter()
   const supabase = createSupabaseBrowserClient()
-
-  const [step, setStep]         = useState<Step>('lang')
-  const [lang, setLang]         = useState<Lang>('ru')
-  const [errors, setErrors]     = useState<Record<string, string>>({})
-  const [errMsg, setErrMsg]     = useState('')
-  const submitting               = useRef(false)
-
-  const [form, setForm] = useState({
-    first_name: '', last_name: '', email: '', phone: '', business_name: '',
-  })
+  const [step, setStep]     = useState<Step>('lang')
+  const [lang, setLang]     = useState<Lang>('ru')
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [errMsg, setErrMsg] = useState('')
+  const submitting           = useRef(false)
+  const [form, setForm] = useState({ first_name:'', last_name:'', email:'', phone:'', business_name:'' })
 
   const t   = T[lang]
   const isHe = lang === 'he'
@@ -260,15 +214,10 @@ export default function DemoCallbackPage() {
     const e: Record<string, string> = {}
     if (!form.first_name.trim())    e.first_name    = t.err_req
     if (!form.last_name.trim())     e.last_name      = t.err_req
+    if (!form.email.trim())         e.email          = t.err_req
+    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = t.err_email
+    if (form.phone.replace(/\D/g,'').length < 9) e.phone = t.err_phone
     if (!form.business_name.trim()) e.business_name  = t.err_req
-
-    const cleanPhone = form.phone.replace(/\D/g, '')
-    if (cleanPhone.length < 9)      e.phone          = t.err_phone
-
-    if (form.email.trim() && !/\S+@\S+\.\S+/.test(form.email)) {
-      e.email = t.err_email
-    }
-
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -277,37 +226,25 @@ export default function DemoCallbackPage() {
     if (!validate() || submitting.current) return
     submitting.current = true
     setStep('loading')
-
     try {
       const res = await fetch('/api/demo/create-trial', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ ...form, language: lang }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, language: lang }),
       })
       const data = await res.json()
-
       if (!res.ok) {
         if (data.error === 'PHONE_EXISTS') {
           submitting.current = false
           setErrors({ phone: t.err_exists })
-          setStep('form')
-          return
+          setStep('form'); return
         }
         throw new Error(data.message || data.error || t.err_generic)
       }
-
-      // Auto-login
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email:    data.email,
-        password: data.password,
-      })
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
       if (signInErr) throw new Error(signInErr.message)
-
       await supabase.auth.refreshSession().catch(() => {})
       try { localStorage.setItem('trinity_demo_start_tour', '1') } catch {}
-
       router.push('/dashboard')
-
     } catch (err: any) {
       submitting.current = false
       setErrMsg(err.message || t.err_generic)
@@ -316,121 +253,83 @@ export default function DemoCallbackPage() {
   }
 
   return (
-    <div dir={dir}
-      className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden"
+    <div dir={dir} className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden"
       style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)' }}>
-
-      {/* Background glow */}
       <div className="absolute top-1/3 left-1/4 w-80 h-80 bg-amber-500/8 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/3 right-1/4 w-64 h-64 bg-blue-500/8 rounded-full blur-3xl pointer-events-none" />
 
-      {/* ── Step 1: Language ── */}
       {step === 'lang' && <LangPicker onSelect={handleLangSelect} />}
 
-      {/* ── Step 2: Form ── */}
       {step === 'form' && (
         <div className="w-full max-w-md">
-          {/* Header badge */}
           <div className="flex items-center justify-center gap-2 mb-5">
             <div className="w-8 h-8 bg-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30">
               <Sparkles size={16} className="text-white" />
             </div>
             <span className="text-white font-semibold text-sm">Trinity CRM</span>
-            <span className="text-white/40 text-sm">·</span>
-            <span className="text-amber-400 text-sm font-medium">{t.tagline}</span>
           </div>
 
-          {/* Card */}
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-
-            {/* Card header */}
-            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 px-6 pt-6 pb-5">
-              <div className="flex items-center justify-between mb-3">
+            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 px-6 pt-5 pb-4">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-white/40 font-medium tracking-wide">{t.step}</span>
-                {/* Step dots */}
                 <div className="flex gap-1.5">
-                  <div className="w-6 h-1.5 rounded-full bg-amber-500/40" />
-                  <div className="w-6 h-1.5 rounded-full bg-amber-500" />
+                  <div className="w-5 h-1.5 rounded-full bg-amber-500/30" />
+                  <div className="w-5 h-1.5 rounded-full bg-amber-500" />
                 </div>
               </div>
-              <h2 className="text-white font-bold text-xl leading-tight">{t.title}</h2>
-              <p className="text-white/55 text-xs mt-1">{t.subtitle}</p>
+              <h2 className="text-white font-bold text-xl">{t.title}</h2>
+              <p className="text-white/50 text-xs mt-0.5">{t.subtitle}</p>
             </div>
 
-            {/* Form body */}
-            <div className="px-6 py-5 space-y-4">
-
-              {/* Row: имя + фамилия */}
+            <div className="px-6 py-5 space-y-3.5">
               <div className="grid grid-cols-2 gap-3">
-                <FormField label={t.first_name} icon={<User size={11}/>} error={errors.first_name}>
-                  <FieldInput
-                    value={form.first_name} onChange={set('first_name')}
-                    placeholder={t.first_name_ph} hasError={!!errors.first_name} autoFocus />
-                </FormField>
-                <FormField label={t.last_name} icon={<User size={11}/>} error={errors.last_name}>
-                  <FieldInput
-                    value={form.last_name} onChange={set('last_name')}
-                    placeholder={t.last_name_ph} hasError={!!errors.last_name} />
-                </FormField>
+                <Field label={t.first_name} icon={<User size={11}/>} error={errors.first_name}>
+                  <FInput value={form.first_name} onChange={set('first_name')} placeholder={t.first_name_ph} hasError={!!errors.first_name} autoFocus />
+                </Field>
+                <Field label={t.last_name} icon={<User size={11}/>} error={errors.last_name}>
+                  <FInput value={form.last_name} onChange={set('last_name')} placeholder={t.last_name_ph} hasError={!!errors.last_name} />
+                </Field>
               </div>
 
-              {/* Email */}
-              <FormField label={t.email} icon={<Mail size={11}/>} error={errors.email}>
-                <FieldInput
-                  type="email" value={form.email} onChange={set('email')}
-                  placeholder={t.email_ph} hasError={!!errors.email} />
-              </FormField>
+              <Field label={t.email} icon={<Mail size={11}/>} error={errors.email}>
+                <FInput type="email" value={form.email} onChange={set('email')} placeholder={t.email_ph} hasError={!!errors.email} />
+              </Field>
 
-              {/* Телефон */}
-              <FormField label={t.phone} icon={<Phone size={11}/>} error={errors.phone}>
-                <FieldInput
-                  type="tel" value={form.phone} onChange={set('phone')}
-                  placeholder={t.phone_ph} hasError={!!errors.phone} />
-              </FormField>
+              <Field label={t.phone} icon={<Phone size={11}/>} error={errors.phone}>
+                <FInput type="tel" value={form.phone} onChange={set('phone')} placeholder={t.phone_ph} hasError={!!errors.phone} />
+              </Field>
 
-              {/* Название бизнеса */}
-              <FormField label={t.business} icon={<Building2 size={11}/>} error={errors.business_name}>
-                <FieldInput
-                  value={form.business_name} onChange={set('business_name')}
-                  placeholder={t.business_ph} hasError={!!errors.business_name} />
-              </FormField>
+              <Field label={t.business} icon={<Building2 size={11}/>} error={errors.business_name}>
+                <FInput value={form.business_name} onChange={set('business_name')} placeholder={t.business_ph} hasError={!!errors.business_name} />
+              </Field>
 
-              {/* CTA */}
               <button onClick={handleSubmit}
-                className="w-full mt-1 py-4 rounded-2xl text-white font-bold text-sm
-                  flex items-center justify-center gap-2 transition-all duration-200
-                  hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full mt-1 py-4 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
                 style={{ background: 'linear-gradient(135deg, #f59e0b, #ea580c)' }}>
                 {t.submit}
                 {isHe ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>}
               </button>
 
-              {/* Free note */}
-              <p className="text-center text-gray-400 text-xs pb-1">{t.free_note}</p>
+              <p className="text-center text-gray-400 text-xs pb-1">{t.limit_note}</p>
             </div>
           </div>
 
-          {/* Back to lang */}
           <button onClick={() => setStep('lang')}
             className="mt-4 w-full text-center text-white/35 hover:text-white/60 text-xs transition-colors flex items-center justify-center gap-1">
-            {isHe ? <ChevronRight size={12}/> : <ChevronLeft size={12}/>}
-            {t.back}
+            {isHe ? <ChevronRight size={12}/> : <ChevronLeft size={12}/>}{t.back}
           </button>
         </div>
       )}
 
-      {/* ── Step 3: Loading ── */}
       {step === 'loading' && <LoadingScreen lang={lang} />}
 
-      {/* ── Error ── */}
       {step === 'error' && (
         <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm text-center">
           <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">⚠️</span>
           </div>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">
-            {isHe ? 'משהו השתבש' : 'Что-то пошло не так'}
-          </h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">{isHe ? 'משהו השתבש' : 'Что-то пошло не так'}</h2>
           <p className="text-gray-500 text-sm mb-5">{errMsg}</p>
           <div className="flex gap-3">
             <button onClick={() => { setStep('form'); setErrMsg('') }}

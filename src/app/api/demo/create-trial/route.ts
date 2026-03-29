@@ -7,6 +7,10 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
  * Атомарно создаёт Auth user + org + org_users.
  * Возвращает { email, password } — фронт делает signInWithPassword.
  * Seed данных — non-blocking (void).
+ *
+ * FIX: organizations.name уникален по lower(name).
+ * Используем `{business_name} #{phone_suffix}` как internal name,
+ * отображаемое название берётся из features.business_info.display_name.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +30,12 @@ export async function POST(request: NextRequest) {
     const service      = createSupabaseServiceClient()
     const trialEmail   = `trial-${cleanPhone}@trinity-trial.internal`
     const trialPass    = crypto.randomUUID()
+
+    // Уникальный суффикс — последние 4 цифры телефона + миллисекунды
+    // Пример: "Beauty Studio #1586-8234" — читаемо и уникально
+    const phoneSuffix  = cleanPhone.slice(-4)
+    const timeSuffix   = Date.now().toString().slice(-4)
+    const uniqueOrgName = `${business_name.trim()} #${phoneSuffix}${timeSuffix}`
 
     // ── 1. Auth user ────────────────────────────────────────────────────────
     const { data: authData, error: authError } = await service.auth.admin.createUser({
@@ -59,8 +69,13 @@ export async function POST(request: NextRequest) {
     const trialExpires = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
 
     const { error: orgError } = await service.from('organizations').insert({
-      id: orgId, name: business_name.trim(),
-      owner_email: trialEmail, owner_name: `${first_name} ${last_name}`, owner_phone: cleanPhone,
+      id:    orgId,
+      // uniqueOrgName — гарантированно уникален благодаря phone+time суффиксу
+      // display_name (в features) — чистое название бизнеса для UI
+      name:  uniqueOrgName,
+      owner_email: trialEmail,
+      owner_name:  `${first_name} ${last_name}`,
+      owner_phone: cleanPhone,
       plan: 'pro', subscription_status: 'demo',
       is_trial: true, trial_started_at: new Date().toISOString(),
       trial_expires_at: trialExpires, billing_status: 'trial',
@@ -68,7 +83,11 @@ export async function POST(request: NextRequest) {
         is_demo: true, is_trial: true, client_limit: null,
         whatsapp: true, sms: true, loyalty: true, pipeline: true,
         onboarding_completed: true, language,
-        business_info: { owner_name: `${first_name} ${last_name}`, display_name: business_name },
+        business_info: {
+          owner_name:   `${first_name} ${last_name}`,
+          // display_name — что показывается в UI (без суффикса)
+          display_name: business_name.trim(),
+        },
         modules: {
           clients: true, visits: true, payments: true, analytics: true,
           inventory: true, subscriptions: true, booking: false,
@@ -91,13 +110,12 @@ export async function POST(request: NextRequest) {
 
     if (ouError) {
       await service.auth.admin.deleteUser(user.id).catch(() => {})
-      // Rollback org — unwrap Promise правильно (не .catch() на builder)
       try { await service.from('organizations').delete().eq('id', orgId) } catch {}
       console.error('[create-trial] org_users:', ouError)
       return NextResponse.json({ error: 'Failed to link user: ' + ouError.message }, { status: 500 })
     }
 
-    // ── 4. user_active_branch (некритично) ──────────────────────────────────
+    // ── 4. user_active_branch ────────────────────────────────────────────────
     try {
       await service.from('user_active_branch').upsert(
         { user_id: user.id, active_org_id: orgId },
@@ -125,7 +143,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ─── Seed: компактные демо-данные (non-blocking) ──────────────────────────────
+// ─── Seed демо-данных (non-blocking) ─────────────────────────────────────────
 async function seedDemoData(service: any, orgId: string, userId: string, _lang: string) {
   try {
     const pick  = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
@@ -168,9 +186,8 @@ async function seedDemoData(service: any, orgId: string, userId: string, _lang: 
       const svc = pick(svcList.length ? svcList : [{ name: 'Стрижка', price: 180 }])
       const isToday = i >= 22
       return {
-        org_id: orgId, client_id: pick(cIds),
-        service_type: svc.name,
-        scheduled_at: isToday ? ts(0, 9 + (i - 22) * 3, 0) : ts(rand(1,40), rand(9,18), pick([0,30])),
+        org_id: orgId, client_id: pick(cIds), service_type: svc.name,
+        scheduled_at: isToday ? ts(0, 9 + (i-22)*3, 0) : ts(rand(1,40), rand(9,18), pick([0,30])),
         duration_minutes: pick([30,45,60,90]),
         price: svc.price, quantity: 1,
         status: (isToday && i === 24) ? 'scheduled' : 'completed',

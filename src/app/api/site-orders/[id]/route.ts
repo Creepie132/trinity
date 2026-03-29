@@ -5,18 +5,19 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 // GET /api/site-orders/[id]
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await getAuthContext(req)
   if ('error' in auth) return auth.error
   const { orgId } = auth
+  const { id } = await params
 
   const supabase = createSupabaseServiceClient()
 
   const { data, error } = await supabase
     .from('site_orders')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('org_id', orgId)
     .single()
 
@@ -41,11 +42,12 @@ export async function GET(
 // PATCH /api/site-orders/[id] — обновить статус
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await getAuthContext(req)
   if ('error' in auth) return auth.error
   const { orgId } = auth
+  const { id } = await params
 
   const body = await req.json()
   const { status, sale_id, client_id } = body
@@ -60,7 +62,7 @@ export async function PATCH(
   const { data, error } = await supabase
     .from('site_orders')
     .update(update)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('org_id', orgId)
     .select()
     .single()

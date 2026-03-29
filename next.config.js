@@ -56,6 +56,15 @@ module.exports = {
         ],
       },
       {
+        // Видео из /public — правильный Content-Type + поддержка Range-запросов для стриминга
+        source: '/:path*.(mp4|webm|ogg)',
+        headers: [
+          { key: 'Content-Type', value: 'video/mp4' },
+          { key: 'Accept-Ranges', value: 'bytes' },
+          { key: 'Cache-Control', value: 'public, max-age=604800' },
+        ],
+      },
+      {
         // API routes — no cache by default
         source: '/api/:path*',
         headers: [

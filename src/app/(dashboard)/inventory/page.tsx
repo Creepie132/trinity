@@ -20,6 +20,7 @@ import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoSectionBanner } from '@/components/demo/DemoSectionBanner'
 import { DemoLimitModal } from '@/components/demo/DemoLimitModal'
 import { ProductDetailSheet } from '@/components/inventory/ProductDetailSheet'
+import { BeautymaniaShopBanner } from '@/components/inventory/BeautymaniaShopBanner'
 import { toast } from 'sonner'
 
 // ─── Swipe Row (мобиль) ──────────────────────────────────────────────────────
@@ -284,6 +285,9 @@ export default function InventoryPage() {
 
       {isDemo && <DemoSectionBanner section="inventory" used={products.length} />}
       <DemoLimitModal open={demoLimitOpen} onClose={() => setDemoLimitOpen(false)} section="inventory" />
+
+      {/* ── Beautymania shop banner ── */}
+      <BeautymaniaShopBanner locale={locale} />
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-6">

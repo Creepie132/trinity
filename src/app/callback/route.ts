@@ -141,8 +141,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // ── Demo flow: /demo/try passes ?next=/demo/activate ─────────────────────
-  // Redirect to /demo/callback/google which shows progress UI + calls API
+  // ── Trial onboarding flow ─────────────────────────────────────────────────
+  // /demo/try passes ?next=/onboarding/trial → после OAuth идём на форму
+  if (nextParam === '/onboarding/trial') {
+    return NextResponse.redirect(`${origin}/onboarding/trial`)
+  }
+
+  // Legacy: /demo/try passes ?next=/demo/activate
   if (nextParam === '/demo/activate') {
     return NextResponse.redirect(`${origin}/demo/callback/google`)
   }
@@ -161,84 +166,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 
-  // 3) Truly new user (no pending invitations, no existing org) → create new organization
-  console.log('[Callback] New user with no org, creating organization...')
-
-  try {
-    // Generate unique org name
-    const suffix = Math.random().toString(36).substring(2, 6)
-    const orgName = `${user.email?.split('@')[0] || 'user'}_${suffix}`
-
-    console.log('[Callback] Creating organization:', orgName)
-
-    // Create organization
-    const { data: newOrg, error: orgError } = await supabaseAdmin
-      .from('organizations')
-      .insert({
-        name: orgName,
-        email: user.email,
-        subscription_status: 'none',
-        features: {
-          business_info: {
-            display_name: orgName,
-            owner_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            mobile: '',
-            email: user.email || '',
-            address: '',
-            city: '',
-            business_type: 'other',
-            description: 'Автоматически созданная организация',
-          },
-          modules: {
-            clients: true,
-            visits: false,
-            booking: false,
-            inventory: false,
-            payments: false,
-            sms: false,
-            subscriptions: false,
-            statistics: false,
-            reports: false,
-            telegram: false,
-            loyalty: false,
-            birthday: false,
-          },
-        },
-      })
-      .select('id')
-      .single()
-
-    if (orgError) {
-      console.error('[Callback] Organization creation error:', orgError)
-      return NextResponse.redirect(`${origin}/onboarding/business-info`)
-    }
-
-    console.log('[Callback] Organization created:', newOrg.id)
-
-    // Add user to org_users as owner
-    const { error: linkError } = await supabaseAdmin
-      .from('org_users')
-      .insert({
-        user_id: user.id,
-        org_id: newOrg.id,
-        email: user.email || '',
-        role: 'owner',
-      })
-
-    if (linkError) {
-      console.error('[Callback] User link error:', linkError)
-      // Rollback: delete organization
-      await supabaseAdmin.from('organizations').delete().eq('id', newOrg.id)
-      return NextResponse.redirect(`${origin}/onboarding/business-info`)
-    }
-
-    console.log('[Callback] User linked as owner to new organization')
-    return NextResponse.redirect(`${origin}/dashboard`)
-
-  } catch (error) {
-    console.error('[Callback] Auto-create organization error:', error)
-    return NextResponse.redirect(`${origin}/onboarding/business-info`)
-  }
+  // 3) Truly new user — нет орга → Auth-First Trial onboarding
+  // Пользователь прошёл Google OAuth, но у него нет организации.
+  // Отправляем на форму сбора данных: имя, телефон, название бизнеса.
+  console.log('[Callback] New user with no org → /onboarding/trial')
+  return NextResponse.redirect(`${origin}/onboarding/trial`)
 }
 
 // Non-blocking: notify all system admins when an invited user joins an org

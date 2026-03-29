@@ -10,8 +10,9 @@ const PUBLIC_PATH_SET = new Set([
 ])
 
 const PUBLIC_PATH_PREFIXES = [
-  '/demo', '/onboarding/', '/book/', '/invite/', '/register/', '/.well-known',
-  '/api/demo/', '/api/payments/webhook', '/api/payments/stripe-webhook',
+  '/demo', '/book/', '/invite/', '/register/', '/.well-known',
+  '/api/demo/register', '/api/demo/activate', '/api/demo/create-trial',
+  // create-trial-oauth НЕ здесь — требует сессию!
   '/api/payments/tranzila/webhook', '/api/payments/tranzila-success',
   '/api/payments/tranzila-failed', '/api/payments/cardcom-success',
   '/api/payments/tranzila/success', '/api/payments/callback',
@@ -100,6 +101,8 @@ export async function middleware(req: NextRequest) {
   if (isApiRoute) return response
   if (pathname.startsWith('/admin')) return response
   if (pathname.startsWith('/worker')) return response
+  // /onboarding/trial — пользователь авторизован, но орга ещё нет: пропускаем проверку подписки
+  if (pathname.startsWith('/onboarding/trial')) return response
 
   const MANAGER_ALLOWED_PREFIXES = ['/worker', '/clients', '/diary']
   const isManagerAllowed = MANAGER_ALLOWED_PREFIXES.some(p => pathname.startsWith(p))

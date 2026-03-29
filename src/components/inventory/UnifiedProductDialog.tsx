@@ -6,16 +6,12 @@
  * Mode 'create': создание нового товара.
  * Mode 'edit':   редактирование существующего (product prop обязателен).
  *
- * Trinity Standard compliance:
- * ✅ Zero Trust API  — все мутации через /api/...  (НЕТ прямых supabase.from())
- * ✅ Secure upload   — изображения через POST /api/products/upload-image
- * ✅ Anti-Race       — isSubmittingRef блокирует двойной submit
- * ✅ React Query     — queryClient.invalidateQueries() вместо refetch()/reload()
- * ✅ Singleton       — вызывается через useModalStore('product-unified')
+ * ✅ Optimistic Updates — использует useCreateProduct / useUpdateProduct
+ *    которые содержат onMutate → мгновенное обновление UI за 0ms,
+ *    без ожидания ответа сервера.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { PackagePlus, Package, Camera, Upload, X, Loader2, Save } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -28,6 +24,7 @@ import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { BarcodeScanner } from './BarcodeScannerLazy'
 import type { Product, CreateProductDTO, UpdateProductDTO } from '@/types/inventory'
+import { useCreateProduct, useUpdateProduct } from '@/hooks/useProducts'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -41,17 +38,9 @@ export interface UnifiedProductDialogProps {
 }
 
 interface ProductForm {
-  name: string
-  description: string
-  barcode: string
-  sku: string
-  category: string
-  purchase_price: number | undefined
-  sell_price: number
-  quantity: number
-  min_quantity: number
-  unit: string
-  image_url: string | undefined
+  name: string; description: string; barcode: string; sku: string; category: string
+  purchase_price: number | undefined; sell_price: number; quantity: number
+  min_quantity: number; unit: string; image_url: string | undefined
 }
 
 const EMPTY_FORM: ProductForm = {
@@ -106,7 +95,6 @@ const I18N = {
 }
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
-
 const fieldBox = (color = '#e2e8f0', bg = '#f8fafc'): React.CSSProperties => ({
   background: bg, border: `1.5px solid ${color}`, borderRadius: 14, padding: '12px 14px',
 })
@@ -120,58 +108,49 @@ const inputSt = (color = '#1e293b', size = 14): React.CSSProperties => ({
 })
 
 // ── Main Component ────────────────────────────────────────────────────────────
-
 export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedProductDialogProps) {
   const { language } = useLanguage()
   const s = I18N[language === 'he' ? 'he' : 'ru']
   const isHe = language === 'he'
   const dir = isHe ? 'rtl' : 'ltr'
-  const queryClient = useQueryClient()
+
+  // ✅ Optimistic hooks — onMutate обновляет кэш за 0ms без ожидания сервера
+  const createProduct = useCreateProduct()
+  const updateProduct = useUpdateProduct()
 
   const [form, setFormState] = useState<ProductForm>(EMPTY_FORM)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
-  const [isPending, setIsPending] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
 
   // ✅ Anti-race condition lock
   const isSubmittingRef = useRef(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const isPending = createProduct.isPending || updateProduct.isPending
+
   const set = useCallback((patch: Partial<ProductForm>) => {
     setFormState(prev => ({ ...prev, ...patch }))
   }, [])
 
-  // Sync when open/product changes
   useEffect(() => {
     if (!open) return
-    if (mode === 'edit' && product) {
-      setFormState(productToForm(product))
-    } else {
-      setFormState(EMPTY_FORM)
-    }
+    if (mode === 'edit' && product) setFormState(productToForm(product))
+    else setFormState(EMPTY_FORM)
     setImagePreview(null)
     isSubmittingRef.current = false
   }, [open, mode, product])
 
-  // ✅ Secure image upload — through server, NOT supabase-browser
+  // ✅ Secure image upload — через сервер, не supabase-browser
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    const ALLOWED = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'])
-    if (!ALLOWED.has(file.type)) {
-      toast.error(isHe ? 'יש להעלות קובץ תמונה' : 'Загрузите файл изображения (JPG/PNG/GIF/WebP)')
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error(isHe ? 'גודל התמונה חורג מ-5MB' : 'Размер изображения превышает 5MB')
-      return
-    }
+    const ALLOWED = new Set(['image/jpeg','image/jpg','image/png','image/gif','image/webp'])
+    if (!ALLOWED.has(file.type)) { toast.error(isHe ? 'יש להעלות קובץ תמונה' : 'Загрузите файл изображения'); return }
+    if (file.size > 5 * 1024 * 1024) { toast.error(isHe ? 'גודל התמונה חורג מ-5MB' : 'Размер превышает 5MB'); return }
     setUploading(true)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
+      const fd = new FormData(); fd.append('file', file)
       const res = await fetch('/api/products/upload-image', { method: 'POST', body: fd })
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Upload failed') }
       const { url } = await res.json()
@@ -181,23 +160,22 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
     } catch (err: any) {
       toast.error(err.message || (isHe ? 'שגיאה בהעלאת התמונה' : 'Ошибка загрузки'))
     } finally {
-      setUploading(false)
-    }
+      setUploading(false) }
   }
 
   const handleRemoveImage = () => {
-    set({ image_url: undefined })
-    setImagePreview(null)
+    set({ image_url: undefined }); setImagePreview(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  // ✅ Submit with isSubmittingRef anti-race lock
+  // ✅ handleSubmit — использует optimistic hooks
+  // onMutate внутри хука обновляет кэш МГНОВЕННО (0ms), до ответа сервера
+  // onSettled делает фоновый рефетч для синхронизации с БД (реальный id, created_at)
   const handleSubmit = async () => {
-    if (isSubmittingRef.current) return
+    if (isSubmittingRef.current || isPending) return
     if (!form.name.trim() || !form.sell_price) { toast.error(s.fillRequired); return }
-
     isSubmittingRef.current = true
-    setIsPending(true)
+
     try {
       if (mode === 'create') {
         const body: CreateProductDTO = {
@@ -213,12 +191,9 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
           unit: form.unit || 'יחידה',
           image_url: form.image_url,
         }
-        const res = await fetch('/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
-        if (!res.ok) { const err = await res.json(); throw new Error(err.error || s.error) }
+        // ✅ onMutate внутри хука добавляет товар в кэш ДО отправки на сервер
+        // Пользователь видит товар МГНОВЕННО — модалка закрывается сразу
+        await createProduct.mutateAsync(body)
       } else {
         if (!product?.id) throw new Error('No product id for edit')
         const body: UpdateProductDTO = {
@@ -234,25 +209,16 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
           unit: form.unit,
           image_url: form.image_url,
         }
-        const res = await fetch(`/api/products/${product.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
-        if (!res.ok) { const err = await res.json(); throw new Error(err.error || s.error) }
+        // ✅ onMutate внутри хука обновляет товар в кэше мгновенно
+        await updateProduct.mutateAsync({ id: product.id, data: body })
       }
       toast.success(s.success)
-      // ✅ Сначала закрываем — потом инвалидируем, чтобы список обновился
-      // когда компонент уже виден (не в фоне за модалкой)
+      // Закрываем сразу — optimistic update уже обновил список
       onClose()
-      // Небольшая задержка чтобы модалка успела закрыться до рефетча
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['products'] })
-      }, 50)
     } catch (err: any) {
+      // onError в хуке уже сделал rollback кэша
       toast.error(err.message || s.error)
     } finally {
-      setIsPending(false)
       isSubmittingRef.current = false
     }
   }
@@ -288,8 +254,7 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
           background: (isPending || uploading) ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
           color: '#fff', fontSize: 13, fontWeight: 700, marginBottom: 6,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-        {isPending
-          ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+        {isPending ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
           : mode === 'create' ? <PackagePlus size={14} /> : <Save size={14} />}
         {isPending ? s.saving : mode === 'create' ? s.create : s.save}
       </button>
@@ -300,7 +265,6 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
     </div>
   )
 
-  // ── Mobile footer ─────────────────────────────────────────────────────────
   const mobileFooter = (
     <div style={{ display: 'flex', gap: 10, width: '100%' }}>
       <button onClick={onClose}
@@ -308,7 +272,10 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
         {s.cancel}
       </button>
       <button onClick={handleSubmit} disabled={isPending || uploading}
-        style={{ flex: 2, padding: '12px 0', borderRadius: 12, border: 'none', cursor: (isPending || uploading) ? 'not-allowed' : 'pointer', background: (isPending || uploading) ? '#e2e8f0' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: (isPending || uploading) ? '#94a3b8' : '#fff', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        style={{ flex: 2, padding: '12px 0', borderRadius: 12, border: 'none', cursor: (isPending || uploading) ? 'not-allowed' : 'pointer',
+          background: (isPending || uploading) ? '#e2e8f0' : 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+          color: (isPending || uploading) ? '#94a3b8' : '#fff', fontSize: 14, fontWeight: 600,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
         {isPending ? <Loader2 size={15} className="animate-spin" /> : mode === 'create' ? <PackagePlus size={15} /> : <Save size={15} />}
         {isPending ? s.saving : mode === 'create' ? s.create : s.save}
       </button>
@@ -324,25 +291,14 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
           open={open} onClose={onClose}
           icon={mode === 'create' ? <PackagePlus /> : <Package />}
           title={mode === 'create' ? s.createTitle : s.editTitle}
-          subtitle={
-            form.name ||
-            (mode === 'create'
-              ? (isHe ? 'מוצר חדש' : 'Новый товар')
-              : (product?.name || ''))
-          }
-          dir={dir}
-          sidebarExtra={sidebar}
-          footerContent={mobileFooter}
-        >
+          subtitle={form.name || (mode === 'create' ? (isHe ? 'מוצר חדש' : 'Новый товар') : (product?.name || ''))}
+          dir={dir} sidebarExtra={sidebar} footerContent={mobileFooter}>
           <div style={{ padding: '20px 18px 24px' }} className="space-y-4">
 
             {/* Name */}
             <div style={fieldBox()}>
-              <label style={labelSt()}>
-                {s.name} <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <Input value={form.name} onChange={e => set({ name: e.target.value })}
-                placeholder={s.name} style={inputSt('#1e293b', 15)} />
+              <label style={labelSt()}>{s.name} <span style={{ color: '#ef4444' }}>*</span></label>
+              <Input value={form.name} onChange={e => set({ name: e.target.value })} placeholder={s.name} style={inputSt('#1e293b', 15)} />
             </div>
 
             {/* Image upload */}
@@ -351,8 +307,7 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 {(imagePreview || form.image_url) ? (
                   <div style={{ position: 'relative', width: 56, height: 56, borderRadius: 12, overflow: 'hidden', border: '2px solid #e2e8f0', flexShrink: 0 }}>
-                    <img src={imagePreview || form.image_url || ''} alt="preview"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={imagePreview || form.image_url || ''} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <button type="button" onClick={handleRemoveImage}
                       style={{ position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: '#ef4444', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                       <X size={10} color="#fff" />
@@ -364,12 +319,10 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
-                  <input ref={fileInputRef} type="file" accept="image/*"
-                    onChange={handleImageUpload} disabled={uploading} style={{ display: 'none' }} />
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} style={{ display: 'none' }} />
                   <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
                     style={{ width: '100%', padding: '8px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff', fontSize: 12, fontWeight: 600, color: '#475569', cursor: uploading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <Upload size={13} />
-                    {uploading ? s.uploading : s.uploadPhoto}
+                    <Upload size={13} />{uploading ? s.uploading : s.uploadPhoto}
                   </button>
                   <p style={{ fontSize: 10, color: '#94a3b8', margin: '5px 0 0' }}>{s.photoHint}</p>
                 </div>
@@ -381,9 +334,7 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
               <div style={fieldBox()}>
                 <label style={labelSt()}>{s.barcode}</label>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <Input value={form.barcode} onChange={e => set({ barcode: e.target.value })}
-                    placeholder={s.barcode}
-                    style={{ ...inputSt('#334155', 13), flex: 1 }} />
+                  <Input value={form.barcode} onChange={e => set({ barcode: e.target.value })} placeholder={s.barcode} style={{ ...inputSt('#334155', 13), flex: 1 }} />
                   <button type="button" onClick={() => setScannerOpen(true)}
                     style={{ width: 28, height: 28, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
                     <Camera size={13} color="#64748b" />
@@ -392,8 +343,7 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
               </div>
               <div style={fieldBox()}>
                 <label style={labelSt()}>{s.sku}</label>
-                <Input value={form.sku} onChange={e => set({ sku: e.target.value })}
-                  placeholder={s.sku} style={inputSt('#334155', 13)} />
+                <Input value={form.sku} onChange={e => set({ sku: e.target.value })} placeholder={s.sku} style={inputSt('#334155', 13)} />
               </div>
             </div>
 
@@ -402,23 +352,15 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
               <div style={fieldBox('#ddd6fe', 'linear-gradient(135deg,#f5f3ff,#ede9fe)')}>
                 <label style={labelSt('#6d28d9')}>{s.category}</label>
                 <Select value={form.category} onValueChange={v => set({ category: v })}>
-                  <SelectTrigger className="w-full border-0 bg-transparent shadow-none focus:ring-0 px-0 text-[13px] font-semibold text-purple-700 h-auto">
-                    <SelectValue placeholder={s.category} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                  </SelectContent>
+                  <SelectTrigger className="w-full border-0 bg-transparent shadow-none focus:ring-0 px-0 text-[13px] font-semibold text-purple-700 h-auto"><SelectValue placeholder={s.category} /></SelectTrigger>
+                  <SelectContent>{categories.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div style={fieldBox('#bbf7d0', 'linear-gradient(135deg,#f0fdf4,#dcfce7)')}>
                 <label style={labelSt('#15803d')}>{s.unit}</label>
                 <Select value={form.unit} onValueChange={v => set({ unit: v })}>
-                  <SelectTrigger className="w-full border-0 bg-transparent shadow-none focus:ring-0 px-0 text-[13px] font-semibold text-green-700 h-auto">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
-                  </SelectContent>
+                  <SelectTrigger className="w-full border-0 bg-transparent shadow-none focus:ring-0 px-0 text-[13px] font-semibold text-green-700 h-auto"><SelectValue /></SelectTrigger>
+                  <SelectContent>{units.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
@@ -426,8 +368,7 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
             {/* Description */}
             <div style={fieldBox('#fde68a', '#fffbeb')}>
               <label style={labelSt('#92400e')}>{s.description}</label>
-              <Textarea value={form.description} onChange={e => set({ description: e.target.value })}
-                placeholder={s.description} rows={2}
+              <Textarea value={form.description} onChange={e => set({ description: e.target.value })} placeholder={s.description} rows={2}
                 style={{ border: 'none', background: 'transparent', padding: 0, fontSize: 13, color: '#78350f', resize: 'none', outline: 'none', boxShadow: 'none', width: '100%' }} />
             </div>
 
@@ -436,46 +377,34 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
               <div style={fieldBox()}>
                 <label style={labelSt()}>{s.purchasePrice}</label>
                 <Input type="number" step="0.01" value={form.purchase_price ?? ''}
-                  onChange={e => set({ purchase_price: e.target.value ? parseFloat(e.target.value) : undefined })}
-                  placeholder="0.00" style={inputSt('#475569', 15)} />
+                  onChange={e => set({ purchase_price: e.target.value ? parseFloat(e.target.value) : undefined })} placeholder="0.00" style={inputSt('#475569', 15)} />
               </div>
               <div style={fieldBox('#bbf7d0', 'linear-gradient(135deg,#f0fdf4,#dcfce7)')}>
-                <label style={labelSt('#15803d')}>
-                  {s.sellPrice} <span style={{ color: '#ef4444' }}>*</span>
-                </label>
+                <label style={labelSt('#15803d')}>{s.sellPrice} <span style={{ color: '#ef4444' }}>*</span></label>
                 <Input type="number" step="0.01" value={form.sell_price || ''}
-                  onChange={e => set({ sell_price: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00" style={inputSt('#16a34a', 15)} />
+                  onChange={e => set({ sell_price: parseFloat(e.target.value) || 0 })} placeholder="0.00" style={inputSt('#16a34a', 15)} />
               </div>
             </div>
 
             {/* Quantity + Min */}
             <div className="grid grid-cols-2 gap-3">
               <div style={fieldBox('#bfdbfe', 'linear-gradient(135deg,#eff6ff,#dbeafe)')}>
-                <label style={labelSt('#1d4ed8')}>
-                  {s.quantity} <span style={{ color: '#ef4444' }}>*</span>
-                </label>
+                <label style={labelSt('#1d4ed8')}>{s.quantity} <span style={{ color: '#ef4444' }}>*</span></label>
                 <Input type="number" value={form.quantity || ''}
-                  onChange={e => set({ quantity: parseInt(e.target.value) || 0 })}
-                  placeholder="0" style={inputSt('#1d4ed8', 15)} />
+                  onChange={e => set({ quantity: parseInt(e.target.value) || 0 })} placeholder="0" style={inputSt('#1d4ed8', 15)} />
               </div>
               <div style={fieldBox('#fde68a', 'linear-gradient(135deg,#fefce8,#fef9c3)')}>
                 <label style={labelSt('#92400e')}>{s.minQuantity}</label>
                 <Input type="number" value={form.min_quantity || ''}
-                  onChange={e => set({ min_quantity: parseInt(e.target.value) || 0 })}
-                  placeholder="0" style={inputSt('#d97706', 15)} />
+                  onChange={e => set({ min_quantity: parseInt(e.target.value) || 0 })} placeholder="0" style={inputSt('#d97706', 15)} />
               </div>
             </div>
-
           </div>
         </TrinityModalShell>
       </Modal>
 
-      <BarcodeScanner
-        open={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onScan={barcode => { set({ barcode }); setScannerOpen(false) }}
-      />
+      <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)}
+        onScan={barcode => { set({ barcode }); setScannerOpen(false) }} />
     </>
   )
 }

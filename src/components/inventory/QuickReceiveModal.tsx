@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { PackagePlus, Search, TrendingUp, Plus, Minus, X, Check } from 'lucide-react'
 import type { Product } from '@/types/inventory'
+import { useBranch } from '@/contexts/BranchContext'
 
 interface QuickReceiveModalProps {
   products: Product[]
@@ -25,6 +26,7 @@ interface QuickReceiveModalProps {
 export function QuickReceiveModal({ products, locale, onClose }: QuickReceiveModalProps) {
   const l = locale === 'he'
   const queryClient = useQueryClient()
+  const { activeOrgId } = useBranch()
 
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [search, setSearch] = useState('')
@@ -56,8 +58,24 @@ export function QuickReceiveModal({ products, locale, onClose }: QuickReceiveMod
 
     isSubmittingRef.current = true
     setSaving(true)
+
+    // ✅ OPTIMISTIC UPDATE — обновляем кэш мгновенно ДО отправки на сервер
+    const previousProducts = queryClient.getQueryData<Product[]>(['products', activeOrgId])
+    await queryClient.cancelQueries({ queryKey: ['products', activeOrgId] })
+
+    queryClient.setQueryData<Product[]>(
+      ['products', activeOrgId],
+      (old) => old?.map(p => {
+        const delta = quantities[p.id]
+        return delta ? { ...p, quantity: p.quantity + delta } : p
+      })
+    )
+
+    // Закрываем сразу — пользователь видит обновлённые количества мгновенно
+    onClose()
+
     try {
-      // ✅ Zero Trust: через /api/products/[id] PATCH
+      // Отправляем на сервер в фоне
       await Promise.all(
         items.map(({ id, qty }) => {
           const product = products.find(p => p.id === id)
@@ -69,14 +87,15 @@ export function QuickReceiveModal({ products, locale, onClose }: QuickReceiveMod
           })
         })
       )
-      // ✅ Закрываем сначала — потом инвалидируем чтобы список был виден при рефетче
       toast.success(l ? 'הסחורה התקבלה בהצלחה' : 'Товар принят на склад')
-      onClose()
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['products'] })
-        queryClient.invalidateQueries({ queryKey: ['inventory-transactions'] })
-      }, 50)
+      // Финальная синхронизация с БД
+      queryClient.invalidateQueries({ queryKey: ['products', activeOrgId] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
     } catch (err: any) {
+      // Откат при ошибке
+      if (previousProducts !== undefined) {
+        queryClient.setQueryData(['products', activeOrgId], previousProducts)
+      }
       toast.error(err.message || (l ? 'שגיאה' : 'Ошибка'))
     } finally {
       setSaving(false)

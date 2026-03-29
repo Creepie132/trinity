@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { Input } from '@/components/ui/input'
@@ -41,6 +42,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
   })
   const [showDescription, setShowDescription] = useState(false)
   const [hasPaintCode, setHasPaintCode] = useState(false)
+  const [showEasterEgg, setShowEasterEgg] = useState(false)
 
   const addClient = useAddClient()
   const [cardSettings] = useClientCardSettings()
@@ -81,6 +83,13 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
     // Запускаем фоновый рефетч без await — не блокирует закрытие
     queryClient.invalidateQueries({ queryKey: ['clients'] })
 
+    // 🦆 Easter egg
+    const fn = formData.first_name.trim().toLowerCase()
+    const ln = formData.last_name.trim().toLowerCase()
+    if (fn === 'techno' && ln === 'duck') {
+      setShowEasterEgg(true)
+    }
+
     setFormData({
       first_name: '',
       last_name: '',
@@ -105,7 +114,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
 
   const isSubmitDisabled = addClient.isPending || authLoading || !orgId || (isDemo && clientCount >= 10)
 
-  return (
+  const dialog = (
     <Modal
       open={open}
       onClose={() => onOpenChange(false)}
@@ -393,5 +402,38 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
       </form>
       </TrinityModalShell>
     </Modal>
+  )
+
+  return (
+    <>
+      {dialog}
+      {showEasterEgg && typeof document !== 'undefined' && createPortal(
+        <div
+          onClick={() => setShowEasterEgg(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 99999,
+            background: 'rgba(0,0,0,0.92)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          <video
+            src="/videos/technoduck.mp4"
+            autoPlay
+            loop
+            playsInline
+            style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 16, boxShadow: '0 0 60px rgba(255,220,0,0.5)' }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div style={{
+            position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)',
+            color: 'rgba(255,255,255,0.5)', fontSize: 13,
+          }}>
+            🦆 нажми куда угодно, чтобы закрыть
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   )
 }

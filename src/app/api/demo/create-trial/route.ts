@@ -4,18 +4,23 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 /**
  * POST /api/demo/create-trial
  *
- * Атомарно создаёт Auth user + org + org_users.
- * Возвращает { email, password } — фронт делает signInWithPassword.
- * Seed данных — non-blocking (void).
+ * Body: { first_name, last_name, email?, phone, business_name, language? }
  *
- * FIX: organizations.name уникален по lower(name).
- * Используем `{business_name} #{phone_suffix}` как internal name,
- * отображаемое название берётся из features.business_info.display_name.
+ * Атомарно: Auth user + org (is_trial=true, 14d) + org_users + branch + JWT.
+ * Seed — non-blocking.
+ * Returns: { email: trialEmail, password } для signInWithPassword на фронте.
+ *
+ * FIX: org.name = `{business_name} #{phone4}{time4}` — обходит unique constraint.
+ * UI показывает features.business_info.display_name (чистое название).
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { first_name, last_name, phone, business_name, language = 'ru' } = body
+    const {
+      first_name, last_name, phone, business_name,
+      email: userEmail = '',
+      language = 'ru',
+    } = body
 
     if (!first_name?.trim())    return NextResponse.json({ error: 'first_name required' }, { status: 400 })
     if (!last_name?.trim())     return NextResponse.json({ error: 'last_name required' }, { status: 400 })
@@ -27,24 +32,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid phone number' }, { status: 400 })
     }
 
-    const service      = createSupabaseServiceClient()
-    const trialEmail   = `trial-${cleanPhone}@trinity-trial.internal`
-    const trialPass    = crypto.randomUUID()
+    const service    = createSupabaseServiceClient()
+    const trialEmail = `trial-${cleanPhone}@trinity-trial.internal`
+    const trialPass  = crypto.randomUUID()
 
-    // Уникальный суффикс — последние 4 цифры телефона + миллисекунды
-    // Пример: "Beauty Studio #1586-8234" — читаемо и уникально
-    const phoneSuffix  = cleanPhone.slice(-4)
-    const timeSuffix   = Date.now().toString().slice(-4)
-    const uniqueOrgName = `${business_name.trim()} #${phoneSuffix}${timeSuffix}`
+    // Уникальное внутреннее имя org (обходит organizations_name_unique)
+    const suffix        = `${cleanPhone.slice(-4)}${Date.now().toString().slice(-4)}`
+    const uniqueOrgName = `${business_name.trim()} #${suffix}`
+    // Публичное имя (что видит пользователь в UI)
+    const displayName   = business_name.trim()
+    const ownerFullName = `${first_name.trim()} ${last_name.trim()}`
 
     // ── 1. Auth user ────────────────────────────────────────────────────────
     const { data: authData, error: authError } = await service.auth.admin.createUser({
-      email: trialEmail, password: trialPass, email_confirm: true,
+      email:          trialEmail,
+      password:       trialPass,
+      email_confirm:  true,
       user_metadata: {
-        first_name, last_name,
-        full_name:     `${first_name} ${last_name}`,
+        first_name:    first_name.trim(),
+        last_name:     last_name.trim(),
+        full_name:     ownerFullName,
         phone:         cleanPhone,
-        business_name, language, is_trial: true,
+        contact_email: userEmail.trim() || null, // реальный email пользователя (опционально)
+        business_name: displayName,
+        language,
+        is_trial:      true,
       },
     })
 
@@ -69,24 +81,28 @@ export async function POST(request: NextRequest) {
     const trialExpires = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
 
     const { error: orgError } = await service.from('organizations').insert({
-      id:    orgId,
-      // uniqueOrgName — гарантированно уникален благодаря phone+time суффиксу
-      // display_name (в features) — чистое название бизнеса для UI
-      name:  uniqueOrgName,
-      owner_email: trialEmail,
-      owner_name:  `${first_name} ${last_name}`,
-      owner_phone: cleanPhone,
-      plan: 'pro', subscription_status: 'demo',
-      is_trial: true, trial_started_at: new Date().toISOString(),
-      trial_expires_at: trialExpires, billing_status: 'trial',
+      id:              orgId,
+      name:            uniqueOrgName,   // уникальное (с суффиксом), хранится в БД
+      email:           userEmail.trim() || null,
+      phone:           cleanPhone,
+      owner_email:     trialEmail,
+      owner_name:      ownerFullName,
+      owner_phone:     cleanPhone,
+      plan:            'pro',
+      subscription_status: 'demo',
+      is_trial:        true,
+      trial_started_at: new Date().toISOString(),
+      trial_expires_at: trialExpires,
+      billing_status:  'trial',
       features: {
         is_demo: true, is_trial: true, client_limit: null,
         whatsapp: true, sms: true, loyalty: true, pipeline: true,
         onboarding_completed: true, language,
         business_info: {
-          owner_name:   `${first_name} ${last_name}`,
-          // display_name — что показывается в UI (без суффикса)
-          display_name: business_name.trim(),
+          owner_name:    ownerFullName,
+          display_name:  displayName,   // чистое название для UI
+          contact_email: userEmail.trim() || null,
+          phone:         cleanPhone,
         },
         modules: {
           clients: true, visits: true, payments: true, analytics: true,
@@ -102,10 +118,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create org: ' + orgError.message }, { status: 500 })
     }
 
-    // ── 3. org_users ────────────────────────────────────────────────────────
+    // ── 3. org_users ─────────────────────────────────────────────────────────
     const { error: ouError } = await service.from('org_users').insert({
-      user_id: user.id, org_id: orgId, email: trialEmail,
-      role: 'owner', first_name, last_name, phone: cleanPhone,
+      user_id:    user.id,
+      org_id:     orgId,
+      email:      trialEmail,
+      role:       'owner',
+      first_name: first_name.trim(),
+      last_name:  last_name.trim(),
+      phone:      cleanPhone,
     })
 
     if (ouError) {
@@ -123,17 +144,20 @@ export async function POST(request: NextRequest) {
       )
     } catch {}
 
-    // ── 5. app_metadata → org_id в JWT ──────────────────────────────────────
+    // ── 5. JWT: org_id в app_metadata ────────────────────────────────────────
     await service.auth.admin.updateUserById(user.id, {
       app_metadata: { org_id: orgId },
     }).catch(e => console.warn('[create-trial] updateUserById:', e))
 
-    // ── 6. Seed (non-blocking) ───────────────────────────────────────────────
-    void seedDemoData(service, orgId, user.id, language)
+    // ── 6. Seed (non-blocking) ────────────────────────────────────────────────
+    void seedDemoData(service, orgId, user.id)
 
     return NextResponse.json({
-      ok: true, org_id: orgId,
-      email: trialEmail, password: trialPass,
+      ok:           true,
+      org_id:       orgId,
+      email:        trialEmail,
+      password:     trialPass,
+      display_name: displayName,
       trial_expires: trialExpires,
     }, { status: 201 })
 
@@ -143,14 +167,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ─── Seed демо-данных (non-blocking) ─────────────────────────────────────────
-async function seedDemoData(service: any, orgId: string, userId: string, _lang: string) {
+// ─── Seed ─────────────────────────────────────────────────────────────────────
+async function seedDemoData(service: any, orgId: string, userId: string) {
   try {
-    const pick  = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
-    const rand  = (a: number, b: number) => Math.floor(Math.random() * (b - a + 1)) + a
-    const ts = (daysAgo: number, h = 10, m = 0) => {
-      const d = new Date(); d.setDate(d.getDate() - daysAgo); d.setHours(h, m, 0, 0)
-      return d.toISOString()
+    const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)]
+    const rand = (a: number, b: number) => Math.floor(Math.random() * (b - a + 1)) + a
+    const ts   = (d: number, h = 10, m = 0) => {
+      const dt = new Date(); dt.setDate(dt.getDate() - d); dt.setHours(h, m, 0, 0)
+      return dt.toISOString()
     }
 
     const NAMES: [string, string][] = [
@@ -161,7 +185,6 @@ async function seedDemoData(service: any, orgId: string, userId: string, _lang: 
       ['Алиса','Павлова'],['Рита','Захарова'],['Вера','Тихонова'],
     ]
     const PFX = ['050','052','054','058']
-
     const { data: clients } = await service.from('clients').insert(
       NAMES.map(([fn, ln]) => ({
         org_id: orgId, first_name: fn, last_name: ln,
@@ -177,21 +200,20 @@ async function seedDemoData(service: any, orgId: string, userId: string, _lang: 
       { name:'Маникюр', price:220 }, { name:'Укладка', price:150 },
       { name:'Тонирование', price:350 }, { name:'Ламинирование', price:600 },
     ]
-    const { data: services } = await service.from('services').insert(
+    const { data: svcs } = await service.from('services').insert(
       SVCS.map(s => ({ org_id: orgId, name: s.name, name_ru: s.name, price: s.price, is_active: true }))
     ).select('id, name, price')
-    const svcList: any[] = services || []
+    const svcList: any[] = svcs || []
 
     const visitRows = Array.from({ length: 25 }, (_, i) => {
-      const svc = pick(svcList.length ? svcList : [{ name: 'Стрижка', price: 180 }])
+      const svc = pick(svcList.length ? svcList : [{ name:'Стрижка', price:180 }])
       const isToday = i >= 22
       return {
         org_id: orgId, client_id: pick(cIds), service_type: svc.name,
-        scheduled_at: isToday ? ts(0, 9 + (i-22)*3, 0) : ts(rand(1,40), rand(9,18), pick([0,30])),
+        scheduled_at: isToday ? ts(0, 9+(i-22)*3, 0) : ts(rand(1,40), rand(9,18), pick([0,30])),
         duration_minutes: pick([30,45,60,90]),
         price: svc.price, quantity: 1,
-        status: (isToday && i === 24) ? 'scheduled' : 'completed',
-        notes: '',
+        status: (isToday && i === 24) ? 'scheduled' : 'completed', notes: '',
       }
     })
     const { data: visits } = await service.from('visits').insert(visitRows)
@@ -215,6 +237,6 @@ async function seedDemoData(service: any, orgId: string, userId: string, _lang: 
     ]).catch(() => {})
 
   } catch (e: any) {
-    console.warn('[create-trial] seed error (non-critical):', e?.message)
+    console.warn('[create-trial] seed error:', e?.message)
   }
 }

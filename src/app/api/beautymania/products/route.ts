@@ -2,36 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { ratelimitPublic, getClientIp } from '@/lib/ratelimit'
 
-// ─── CORS ─────────────────────────────────────────────────────────────────────
-const ALLOWED_ORIGINS = [
-  'https://beautymania.co.il',
-  'https://www.beautymania.co.il',
-  'http://localhost:3000',
-  'http://127.0.0.1:5500',
-  'http://localhost:5500',
-]
-
-function corsHeaders(origin: string | null): Record<string, string> {
-  const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+// ─── CORS — публичный read-only endpoint, разрешаем все origins ───────────────
+function corsHeaders(): Record<string, string> {
   return {
-    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Vary': 'Origin',
   }
 }
 
-export async function OPTIONS(request: NextRequest) {
-  return new NextResponse(null, { status: 204, headers: corsHeaders(request.headers.get('origin')) })
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders() })
 }
 
 // ─── Beautymania org config ───────────────────────────────────────────────────
-const BM_ORG_ID  = '1e77c781-3848-4b16-a623-693de123c6bc'
+const BM_ORG_ID = '1e77c781-3848-4b16-a623-693de123c6bc'
 
 // ─── GET /api/beautymania/products ────────────────────────────────────────────
 export async function GET(request: NextRequest) {
-  const origin = request.headers.get('origin')
-  const headers = corsHeaders(origin)
+  const headers = corsHeaders()
 
   try {
     try {

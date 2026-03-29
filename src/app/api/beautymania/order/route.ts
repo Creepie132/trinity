@@ -8,15 +8,20 @@ import { z } from 'zod'
 const ALLOWED_ORIGINS = [
   'https://beautymania.co.il',
   'https://www.beautymania.co.il',
+  'https://bm-site-eight.vercel.app',
   'http://localhost:3000',
   'http://127.0.0.1:5500',
   'http://localhost:5500',
 ]
 
 function corsHeaders(origin: string | null): Record<string, string> {
-  const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  // Разрешаем любой vercel preview + основные домены
+  const isAllowed = !origin ||
+    ALLOWED_ORIGINS.includes(origin) ||
+    origin.endsWith('.vercel.app')
+  const allowOrigin = isAllowed ? (origin || '*') : ALLOWED_ORIGINS[0]
   return {
-    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Vary': 'Origin',

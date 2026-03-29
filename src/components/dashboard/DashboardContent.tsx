@@ -284,7 +284,8 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
       const { data: org, error } = await supabase.from('organizations').select('name, features').eq('id', orgId).single()
       if (error || !org) return { showOnboarding: false, organizationName: '', ownerName: '' }
       return {
-        showOnboarding: !org.features?.onboarding_completed,
+        // Never show onboarding for demo/trial orgs — they are pre-configured
+        showOnboarding: !org.features?.onboarding_completed && !org.features?.is_demo && !(org.features as any)?.is_trial,
         organizationName: org.name || '',
         ownerName: (org.features as any)?.business_info?.owner_name || '',
       }

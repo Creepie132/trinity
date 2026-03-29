@@ -127,7 +127,7 @@ function DemoTopBanner({ locale, expiresAt }: { locale: string; expiresAt: strin
             </span>
             {/* Лимит клиентов — НЕ тестовые цифры визитов/задач */}
             <span className="text-xs text-red-200 hidden md:inline whitespace-nowrap">
-              {l ? 'גרסת ניסיון · עד 30 לקוחות' : 'Пробная версия · до 30 клиентов'}
+              {l ? '10 לקוחות · 15 ביקורים · 5 מוצרים · 5 משימות' : '10 клиентов · 15 визитов · 5 товаров · 5 задач'}
             </span>
             {timeLeft && (
               <span className="text-xs text-red-300/70 flex-shrink-0 hidden sm:inline">⏱ {timeLeft}</span>

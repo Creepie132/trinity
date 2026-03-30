@@ -16,6 +16,8 @@ import {
   subMonths,
   addWeeks,
   subWeeks,
+  addDays,
+  subDays,
   startOfWeek,
   endOfWeek,
   isToday,
@@ -53,7 +55,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
   const isRTL = language === 'he'
   const isHe = language === 'he'
 
-  const [viewMode, setViewMode] = useState<'month' | 'week'>('week')
+  const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('week')
   const [currentDate, setCurrentDate] = useState<Date | null>(null)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const weekScrollRef = useRef<HTMLDivElement>(null)
@@ -64,9 +66,9 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
     setSelectedDay(now)
   }, [])
 
-  // Scroll week view to current time on mount
+  // Scroll week/day view to current time on mount
   useEffect(() => {
-    if (viewMode === 'week' && weekScrollRef.current && currentDate) {
+    if ((viewMode === 'week' || viewMode === 'day') && weekScrollRef.current && currentDate) {
       const hour = new Date().getHours()
       const scrollTo = Math.max(0, (hour - 8) * HOUR_HEIGHT - 80)
       weekScrollRef.current.scrollTop = scrollTo
@@ -135,17 +137,21 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
   // Navigation
   const goBack = () => {
     if (viewMode === 'month') setCurrentDate(subMonths(currentDate, 1))
-    else setCurrentDate(subWeeks(currentDate, 1))
+    else if (viewMode === 'week') setCurrentDate(subWeeks(currentDate, 1))
+    else { const d = subDays(currentDate, 1); setCurrentDate(d); setSelectedDay(d) }
   }
   const goForward = () => {
     if (viewMode === 'month') setCurrentDate(addMonths(currentDate, 1))
-    else setCurrentDate(addWeeks(currentDate, 1))
+    else if (viewMode === 'week') setCurrentDate(addWeeks(currentDate, 1))
+    else { const d = addDays(currentDate, 1); setCurrentDate(d); setSelectedDay(d) }
   }
   const goToday = () => { setCurrentDate(new Date()); setSelectedDay(new Date()) }
 
   const headerTitle = viewMode === 'month'
     ? format(currentDate, 'MMMM yyyy')
-    : `${format(weekStart, 'd MMM')} — ${format(weekEnd, 'd MMM yyyy')}`
+    : viewMode === 'week'
+    ? `${format(weekStart, 'd MMM')} — ${format(weekEnd, 'd MMM yyyy')}`
+    : format(currentDate, 'EEEE, d MMMM yyyy')
 
   // ── Week view: position visit block ─────────────────────────────────────
   const getVisitTopOffset = (visit: any): number => {
@@ -340,8 +346,19 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
             {/* View toggle */}
             <div className="flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
               <button
-                onClick={() => setViewMode('week')}
+                onClick={() => setViewMode('day')}
                 className={`h-8 px-3 text-xs font-semibold transition flex items-center gap-1 ${
+                  viewMode === 'day'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Clock size={12} />
+                {isHe ? 'יום' : 'День'}
+              </button>
+              <button
+                onClick={() => setViewMode('week')}
+                className={`h-8 px-3 text-xs font-semibold transition flex items-center gap-1 border-l border-gray-200 dark:border-gray-600 ${
                   viewMode === 'week'
                     ? 'bg-blue-600 text-white'
                     : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -552,6 +569,193 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                   )
                 })}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── DAY VIEW ────────────────────────────────────────────────────── */}
+        {viewMode === 'day' && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+
+            {/* Day header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+              <div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">
+                  {dayNamesFull[currentDate.getDay()]}
+                </p>
+                <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  {format(currentDate, 'd MMMM yyyy')}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl px-3 py-1.5 text-center">
+                  <p className="text-xs text-blue-400 dark:text-blue-500">{isHe ? 'ביקורים' : 'Визитов'}</p>
+                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {getVisitsForDay(currentDate).length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Time grid — single column */}
+            <div ref={weekScrollRef} className="overflow-y-auto" style={{ maxHeight: '600px' }}>
+              <div className="relative flex" style={{ minHeight: `${HOURS.length * HOUR_HEIGHT}px` }}>
+
+                {/* Hour labels */}
+                <div className="relative flex-shrink-0 border-e border-gray-100 dark:border-gray-700" style={{ width: 52 }}>
+                  {HOURS.map((hour) => (
+                    <div
+                      key={hour}
+                      className="absolute w-full flex items-start justify-center"
+                      style={{ top: (hour - 8) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
+                    >
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium mt-[-6px] leading-none">
+                        {hour.toString().padStart(2, '0')}:00
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Single day column */}
+                {(() => {
+                  const dayVisits = getVisitsForDay(currentDate)
+                  const isTodayCol = isToday(currentDate)
+                  return (
+                    <div
+                      className={`relative flex-1 ${isTodayCol ? 'bg-blue-50/40 dark:bg-blue-900/10' : ''}`}
+                      style={{ minHeight: `${HOURS.length * HOUR_HEIGHT}px` }}
+                    >
+                      {/* Clickable hour slots */}
+                      {HOURS.map((hour) => (
+                        <div
+                          key={`slot-${hour}`}
+                          className="absolute w-full hover:bg-blue-50/60 dark:hover:bg-blue-900/10 transition-colors cursor-pointer group/slot"
+                          style={{ top: (hour - 8) * HOUR_HEIGHT, height: HOUR_HEIGHT, zIndex: 1 }}
+                          onClick={() => {
+                            const dt = new Date(currentDate)
+                            dt.setHours(hour, 0, 0, 0)
+                            onDateClick(dt)
+                          }}
+                        >
+                          <span className="absolute left-2 top-1 text-[10px] text-blue-400 opacity-0 group-hover/slot:opacity-100 transition-opacity select-none">
+                            {hour.toString().padStart(2, '0')}:00
+                          </span>
+                        </div>
+                      ))}
+
+                      {/* Hour lines */}
+                      {HOURS.map((hour) => (
+                        <div
+                          key={hour}
+                          className="absolute w-full border-t border-gray-100 dark:border-gray-700/60"
+                          style={{ top: (hour - 8) * HOUR_HEIGHT }}
+                        />
+                      ))}
+                      {/* Half-hour lines */}
+                      {HOURS.map((hour) => (
+                        <div
+                          key={`h${hour}`}
+                          className="absolute w-full border-t border-gray-50 dark:border-gray-700/30 border-dashed"
+                          style={{ top: (hour - 8) * HOUR_HEIGHT + HOUR_HEIGHT / 2 }}
+                        />
+                      ))}
+
+                      {/* Current time indicator */}
+                      {isTodayCol && (() => {
+                        const now = new Date()
+                        const topPx = (now.getHours() - 8) * HOUR_HEIGHT + (now.getMinutes() / 60) * HOUR_HEIGHT
+                        if (topPx < 0 || topPx > HOURS.length * HOUR_HEIGHT) return null
+                        return (
+                          <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: topPx }}>
+                            <div className="relative flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 -ms-1" />
+                              <div className="flex-1 h-px bg-red-500" />
+                            </div>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Visit blocks — wider, more detail */}
+                      {dayVisits.map((visit, vi) => {
+                        const color = getEventAccent(visit)
+                        const top = getVisitTopOffset(visit)
+                        const height = getVisitHeight(visit)
+                        const clientName = getClientName(visit)
+                        const serviceName = getServiceName(visit)
+                        const time = format(new Date(visit.scheduled_at), 'HH:mm')
+                        const dur = visit.duration_minutes || visit.services?.duration_minutes || 0
+                        const isInProgress = visit.status === 'in_progress'
+                        const isMeeting = isMeetingVisit(visit)
+                        return (
+                          <div
+                            key={visit.id}
+                            onClick={(e) => { e.stopPropagation(); onVisitClick(visit) }}
+                            className="absolute rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all hover:z-30 active:scale-[0.99]"
+                            style={{
+                              top: top + 1,
+                              height: height - 2,
+                              left: 8,
+                              right: 8,
+                              backgroundColor: color + '1a',
+                              borderLeft: `4px solid ${color}`,
+                              zIndex: 10 + vi,
+                            }}
+                          >
+                            <div className="px-3 py-1.5 h-full flex flex-col justify-start overflow-hidden">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xs font-bold leading-tight" style={{ color }}>
+                                  {time}
+                                  {dur > 0 && <span className="ms-1 font-medium opacity-70">· {dur}{isHe ? "ד'" : 'м'}</span>}
+                                  {isInProgress && <span className="ms-1 inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
+                                </p>
+                                <span style={{ color }} className="flex-shrink-0">
+                                  {isMeeting ? <Video size={10} /> : <MapPin size={10} />}
+                                </span>
+                              </div>
+                              {height > 30 && (
+                                <p className="text-sm font-bold leading-tight text-gray-800 dark:text-gray-100 truncate mt-0.5">
+                                  {clientName || '—'}
+                                </p>
+                              )}
+                              {height > 50 && serviceName && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight truncate mt-0.5">
+                                  {serviceName}
+                                </p>
+                              )}
+                              {height > 70 && (visit.price || 0) > 0 && (
+                                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                  ₪{visit.price}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      {/* Empty state */}
+                      {dayVisits.length === 0 && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <Clock size={32} className="text-gray-200 dark:text-gray-700 mb-2" />
+                          <p className="text-sm text-gray-300 dark:text-gray-600 font-medium">
+                            {isHe ? 'אין ביקורים' : 'Нет визитов'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
+            {/* Add visit button */}
+            <div className="p-3 border-t border-gray-100 dark:border-gray-700">
+              <button
+                onClick={() => onDateClick(currentDate)}
+                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition flex items-center justify-center gap-1.5"
+              >
+                <Plus size={15} />
+                {isHe ? 'ביקור חדש' : 'Новый визит'}
+              </button>
             </div>
           </div>
         )}

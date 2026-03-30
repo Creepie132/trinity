@@ -141,7 +141,7 @@ function parseDateFromScheduledAt(scheduledAt?: string) {
 const emptyForm = () => ({
   clientId: '', serviceId: '', service: '',
   date: getDefaultDate(), time: getDefaultTime(),
-  duration: 60, price: '', quantity: 1, notes: '', city: '', address: '', meeting_link: '',
+  duration: 60, price: '', quantity: '' as string | number, notes: '', city: '', address: '', meeting_link: '',
   meetingPurpose: '', isOnline: false, reminderHours: [] as number[],
 })
 
@@ -428,7 +428,7 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
             date: form.date, time: form.time,
             duration:   isAppt ? null : form.duration,
             price:      isAppt ? '0' : form.price,
-            quantity:   isAppt ? 1 : form.quantity,
+            quantity:   isAppt ? 1 : (parseInt(String(form.quantity)) || 1),
             notes,
             event_type: isAppt ? 'meeting' : 'visit',
             meeting_link: isAppt && form.isOnline ? (form.meeting_link || null) : null,
@@ -567,8 +567,15 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
                   </Select>
                 </div>
                 {!isEditMode && (
-                  <input type="number" min={1} max={999} value={form.quantity}
-                    onChange={e => setForm(p => ({ ...p, quantity: Math.max(1, Math.min(999, parseInt(e.target.value)||1)) }))}
+                  <input type="number" min={1} max={999}
+                    value={form.quantity === '' ? '' : form.quantity}
+                    placeholder="1"
+                    onChange={e => {
+                      const raw = e.target.value
+                      if (raw === '') { setForm(p => ({ ...p, quantity: '' })); return }
+                      const n = Math.max(1, Math.min(999, parseInt(raw) || 1))
+                      setForm(p => ({ ...p, quantity: n }))
+                    }}
                     className="h-10 w-14 rounded-md border border-input bg-background px-2 text-sm text-center font-semibold" />
                 )}
               </div>

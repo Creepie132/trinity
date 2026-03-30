@@ -46,6 +46,8 @@ interface TrinityModalShellProps {
   footerContent?: ReactNode
   /** RTL / LTR */
   dir?: 'rtl' | 'ltr'
+  /** Клик по заголовку (имени клиента) */
+  onTitleClick?: () => void
 }
 
 export function TrinityModalShell({
@@ -60,6 +62,7 @@ export function TrinityModalShell({
   sidebarExtra,
   footerContent,
   dir = 'ltr',
+  onTitleClick,
 }: TrinityModalShellProps) {
   const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -190,7 +193,16 @@ export function TrinityModalShell({
         </div>
 
         {/* Title */}
-        <p style={{ fontSize: 15, fontWeight: 600, color: '#fff', margin: '0 0 4px', lineHeight: 1.3 }}>
+        <p
+          onClick={onTitleClick}
+          style={{
+            fontSize: 15, fontWeight: 600, color: '#fff', margin: '0 0 4px', lineHeight: 1.3,
+            cursor: onTitleClick ? 'pointer' : 'default',
+            textDecoration: onTitleClick ? 'underline' : 'none',
+            textDecorationColor: 'rgba(255,255,255,0.3)',
+            textUnderlineOffset: 3,
+          }}
+        >
           {title}
         </p>
         {subtitle && (

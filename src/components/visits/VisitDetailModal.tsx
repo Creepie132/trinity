@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useVisitServices, useRemoveVisitService } from '@/hooks/useVisitServices'
 import { useQueryClient } from '@tanstack/react-query'
+import { useModalStore } from '@/store/useModalStore'
 import { toast } from 'sonner'
 import { apiFetch } from '@/lib/api-fetch'
 import { useState, useEffect } from 'react'
@@ -73,6 +74,11 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const visitServices = visitServicesFromHook ?? visit?.visit_services ?? []
   const removeVisitService = useRemoveVisitService(visit?.id || '')
   const queryClient = useQueryClient()
+  const { openModal } = useModalStore()
+
+  const openClientCard = () => {
+    if (visit?.client_id) openModal('client-details', { clientId: visit.client_id })
+  }
 
   const [priceOffset, setPriceOffset] = useState(0)
   const [viewMode, setViewMode] = useState<ViewMode>('main')
@@ -629,6 +635,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           title={clientName}
           subtitle={subTitle}
           dir={dir}
+          onTitleClick={openClientCard}
           sidebarExtra={subSidebarContent}
           footerContent={
             <button onClick={() => setViewMode('main')}
@@ -650,6 +657,7 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           title={clientName}
           subtitle={displayServiceName || (isHe ? 'פרטי ביקור' : 'Детали визита')}
           dir={dir}
+          onTitleClick={openClientCard}
           sidebarExtra={sidebarContent}
           footerContent={
             <div style={{ display: 'flex', gap: 8, width: '100%' }}>

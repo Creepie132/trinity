@@ -294,7 +294,10 @@ export function VisitDetailMob({
                 fontSize: 13, fontWeight: 700, color: 'white',
               }}>{getInitials(clientName)}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{clientName}</div>
+                <div
+                  onClick={() => { if (visit?.client_id) openModal('client-details', { clientId: visit.client_id }) }}
+                  style={{ fontSize: 14, fontWeight: 600, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'rgba(255,255,255,0.35)', textUnderlineOffset: 2 }}
+                >{clientName}</div>
                 <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.42)' }}>
                   {displayServiceName || (isHe ? 'פרטי ביקור' : 'Детали визита')}
                 </div>

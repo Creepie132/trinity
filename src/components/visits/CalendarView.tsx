@@ -162,10 +162,62 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
   }
 
   const getVisitHeight = (visit: any): number => {
-    // visit.duration_minutes is the authoritative value (set at booking time)
-    // fall back to service default only if visit has no own duration
     const dur = visit.duration_minutes || visit.services?.duration_minutes || 30
     return Math.max((dur / 60) * HOUR_HEIGHT, 28)
+  }
+
+  // ── Collision layout: returns {colIndex, totalCols} per visit id ─────────
+  // Groups overlapping visits and splits them into side-by-side columns.
+  const computeColumns = (dayVisits: any[]): Map<string, { col: number; total: number }> => {
+    const result = new Map<string, { col: number; total: number }>()
+    if (!dayVisits.length) return result
+
+    // Build sorted list with start/end times in minutes from midnight
+    const items = dayVisits.map(v => {
+      const start = new Date(v.scheduled_at)
+      const startMin = start.getHours() * 60 + start.getMinutes()
+      const dur = v.duration_minutes || v.services?.duration_minutes || 30
+      return { id: v.id, startMin, endMin: startMin + dur }
+    })
+
+    // Greedy column assignment: assign each visit to the first column
+    // where it doesn't overlap with the previous visit in that column
+    const columns: { endMin: number }[][] = []
+
+    for (const item of items) {
+      let placed = false
+      for (let c = 0; c < columns.length; c++) {
+        const col = columns[c]
+        const lastInCol = col[col.length - 1]
+        if (lastInCol.endMin <= item.startMin) {
+          col.push(item)
+          result.set(item.id, { col: c, total: -1 }) // total filled later
+          placed = true
+          break
+        }
+      }
+      if (!placed) {
+        columns.push([item])
+        result.set(item.id, { col: columns.length - 1, total: -1 })
+      }
+    }
+
+    // Now determine "total" — max columns that overlap at any given moment
+    // For each visit, find how many columns are "active" during its time range
+    for (const item of items) {
+      let maxCols = 1
+      for (const other of items) {
+        if (other.id === item.id) continue
+        // overlap check
+        if (other.startMin < item.endMin && other.endMin > item.startMin) {
+          maxCols = Math.max(maxCols, (result.get(other.id)?.col ?? 0) + 1)
+        }
+      }
+      const entry = result.get(item.id)!
+      result.set(item.id, { col: entry.col, total: Math.max(columns.length, maxCols) })
+    }
+
+    return result
   }
 
   // ── render ───────────────────────────────────────────────────────────────
@@ -452,6 +504,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                   const dayVisits = getVisitsForDay(day)
                   const isTodayCol = isToday(day)
                   const isSelectedCol = selectedDay && isSameDay(day, selectedDay)
+                  const layout = computeColumns(dayVisits)
 
                   return (
                     <div
@@ -528,14 +581,20 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                         const serviceName = getServiceName(visit)
                         const isInProgress = visit.status === 'in_progress'
                         const isMeeting = isMeetingVisit(visit)
+                        const { col, total } = layout.get(visit.id) ?? { col: 0, total: 1 }
+                        const pct = 100 / total
+                        const leftPct = col * pct
+                        const GAP = total > 1 ? 1 : 0.5
                         return (
                           <div
                             key={visit.id}
                             onClick={(e) => { e.stopPropagation(); onVisitClick(visit) }}
-                            className="absolute left-0.5 right-0.5 rounded-lg overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all hover:z-30 active:scale-[0.97]"
+                            className="absolute rounded-lg overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all hover:z-30 active:scale-[0.97]"
                             style={{
                               top: top + 1,
                               height: height - 2,
+                              left: `calc(${leftPct}% + ${GAP}px)`,
+                              width: `calc(${pct}% - ${GAP * 2}px)`,
                               backgroundColor: color + '22',
                               borderLeft: `3px solid ${color}`,
                               zIndex: 10 + vi,
@@ -556,7 +615,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                                   {clientName || '—'}
                                 </p>
                               )}
-                              {height > 52 && serviceName && (
+                              {height > 52 && serviceName && total <= 2 && (
                                 <p className="text-[9px] text-gray-500 dark:text-gray-400 leading-tight truncate">
                                   {serviceName}
                                 </p>
@@ -620,6 +679,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                 {(() => {
                   const dayVisits = getVisitsForDay(currentDate)
                   const isTodayCol = isToday(currentDate)
+                  const layout = computeColumns(dayVisits)
                   return (
                     <div
                       className={`relative flex-1 ${isTodayCol ? 'bg-blue-50/40 dark:bg-blue-900/10' : ''}`}
@@ -686,6 +746,10 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                         const dur = visit.duration_minutes || visit.services?.duration_minutes || 0
                         const isInProgress = visit.status === 'in_progress'
                         const isMeeting = isMeetingVisit(visit)
+                        const { col, total } = layout.get(visit.id) ?? { col: 0, total: 1 }
+                        const pct = 100 / total
+                        const leftPct = col * pct
+                        const GAP = 4
                         return (
                           <div
                             key={visit.id}
@@ -694,8 +758,8 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                             style={{
                               top: top + 1,
                               height: height - 2,
-                              left: 8,
-                              right: 8,
+                              left: `calc(${leftPct}% + ${GAP}px)`,
+                              width: `calc(${pct}% - ${GAP * 2}px)`,
                               backgroundColor: color + '1a',
                               borderLeft: `4px solid ${color}`,
                               zIndex: 10 + vi,
@@ -705,7 +769,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                               <div className="flex items-center gap-1.5">
                                 <p className="text-xs font-bold leading-tight" style={{ color }}>
                                   {time}
-                                  {dur > 0 && <span className="ms-1 font-medium opacity-70">· {dur}{isHe ? "ד'" : 'м'}</span>}
+                                  {dur > 0 && total === 1 && <span className="ms-1 font-medium opacity-70">· {dur}{isHe ? "ד'" : 'м'}</span>}
                                   {isInProgress && <span className="ms-1 inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
                                 </p>
                                 <span style={{ color }} className="flex-shrink-0">
@@ -717,12 +781,12 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                                   {clientName || '—'}
                                 </p>
                               )}
-                              {height > 50 && serviceName && (
+                              {height > 50 && serviceName && total <= 2 && (
                                 <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight truncate mt-0.5">
                                   {serviceName}
                                 </p>
                               )}
-                              {height > 70 && (visit.price || 0) > 0 && (
+                              {height > 70 && (visit.price || 0) > 0 && total === 1 && (
                                 <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
                                   ₪{visit.price}
                                 </p>

@@ -203,7 +203,10 @@ export default function VisitsPage() {
     if (typeof window === 'undefined') return 'all'
     return (localStorage.getItem('trinity_visit_type_filter') as 'all' | 'visit' | 'meeting') || 'all'
   })
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>(() => {
+    if (typeof window === 'undefined') return 'list'
+    return (localStorage.getItem('trinity_visits_view') as 'list' | 'calendar') || 'list'
+  })
   const [cancelledOpen, setCancelledOpen] = useState(false)
   const [serviceColors, setServiceColors] = useState<Record<string, string>>({})
   const [page, setPage] = useState(1)
@@ -513,7 +516,7 @@ export default function VisitsPage() {
           <Button
             variant={viewMode === 'list' ? 'default' : 'ghost'}
             size="sm"
-            onClick={() => setViewMode('list')}
+            onClick={() => { setViewMode('list'); localStorage.setItem('trinity_visits_view', 'list') }}
             className={viewMode === 'list' ? 'bg-theme-primary text-white' : 'text-gray-700 dark:text-gray-300'}
           >
             <List className="w-4 h-4 ml-2" />
@@ -522,7 +525,7 @@ export default function VisitsPage() {
           <Button
             variant={viewMode === 'calendar' ? 'default' : 'ghost'}
             size="sm"
-            onClick={() => setViewMode('calendar')}
+            onClick={() => { setViewMode('calendar'); localStorage.setItem('trinity_visits_view', 'calendar') }}
             className={viewMode === 'calendar' ? 'bg-theme-primary text-white' : 'text-gray-700 dark:text-gray-300'}
           >
             <CalendarDays className="w-4 h-4 ml-2" />

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, ArrowLeft, Palette } from 'lucide-react'
+import { Check, ArrowLeft, Palette, List, CalendarDays } from 'lucide-react'
 import Link from 'next/link'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useTheme, THEMES, ThemeId, ThemeDefinition } from '@/contexts/ThemeContext'
@@ -212,6 +212,16 @@ export default function DisplayPage() {
   const isHe = language === 'he'
   const [preview, setPreview] = useState<ThemeDefinition | null>(null)
 
+  const [visitsView, setVisitsView] = useState<'list' | 'calendar'>(() => {
+    if (typeof window === 'undefined') return 'list'
+    return (localStorage.getItem('trinity_visits_view') as 'list' | 'calendar') || 'list'
+  })
+
+  const handleVisitsView = (v: 'list' | 'calendar') => {
+    setVisitsView(v)
+    localStorage.setItem('trinity_visits_view', v)
+  }
+
   const handleApply = async () => {
     if (!preview) return
     await setTheme(preview.id as ThemeId)
@@ -263,6 +273,52 @@ export default function DisplayPage() {
           ? `ערכת הנושא הפעילה: ${activeTheme.nameHe}`
           : `Активная тема: ${activeTheme.nameRu}`}
       </p>
+
+      {/* ── Visits default view ────────────────────────────────────────── */}
+      <div className="pt-2">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2.5 rounded-xl" style={{ background: `${activeTheme.accent}15` }}>
+            <CalendarDays className="w-5 h-5" style={{ color: activeTheme.accent }}/>
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+              {isHe ? 'תצוגת ברירת מחדל לביקורים' : 'Начальный экран визитов'}
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {isHe ? 'בחר איזו תצוגה תיפתח בכניסה לביקורים' : 'Выберите вид, который открывается при входе в визиты'}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          {([
+            { value: 'list',     labelRu: 'Список',    labelHe: 'רשימה',   Icon: List },
+            { value: 'calendar', labelRu: 'Календарь', labelHe: 'לוח שנה', Icon: CalendarDays },
+          ] as const).map(({ value, labelRu, labelHe, Icon }) => {
+            const active = visitsView === value
+            return (
+              <button
+                key={value}
+                onClick={() => handleVisitsView(value)}
+                className="flex-1 flex flex-col items-center gap-2 py-4 px-3 rounded-xl border-2 transition-all"
+                style={{
+                  borderColor: active ? activeTheme.accent : '#e5e7eb',
+                  background: active ? `${activeTheme.accent}0d` : 'white',
+                }}
+              >
+                <Icon className="w-6 h-6" style={{ color: active ? activeTheme.accent : '#9ca3af' }} />
+                <span className="text-sm font-semibold" style={{ color: active ? activeTheme.accent : '#6b7280' }}>
+                  {isHe ? labelHe : labelRu}
+                </span>
+                {active && (
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: activeTheme.accent }}>
+                    <Check className="w-3 h-3 text-white" />
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {/* Preview modal */}
       {preview && (

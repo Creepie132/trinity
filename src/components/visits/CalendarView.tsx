@@ -46,8 +46,8 @@ const defaultColors: Record<string, string> = {
   other: '#8b5cf6',
 }
 
-// Hours to display in week view
-const HOURS = Array.from({ length: 15 }, (_, i) => i + 8) // 8:00 — 22:00
+// Hours to display in week/day view — full day 00:00 – 23:00
+const HOURS = Array.from({ length: 24 }, (_, i) => i) // 0:00 — 23:00
 const HOUR_HEIGHT = 64 // px per hour
 
 export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors }: CalendarViewProps) {
@@ -70,7 +70,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
   useEffect(() => {
     if ((viewMode === 'week' || viewMode === 'day') && weekScrollRef.current && currentDate) {
       const hour = new Date().getHours()
-      const scrollTo = Math.max(0, (hour - 8) * HOUR_HEIGHT - 80)
+      const scrollTo = Math.max(0, hour * HOUR_HEIGHT - 80)
       weekScrollRef.current.scrollTop = scrollTo
     }
   }, [viewMode, currentDate])
@@ -158,7 +158,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
     const dt = new Date(visit.scheduled_at)
     const hour = dt.getHours()
     const min = dt.getMinutes()
-    return (hour - 8) * HOUR_HEIGHT + (min / 60) * HOUR_HEIGHT
+    return hour * HOUR_HEIGHT + (min / 60) * HOUR_HEIGHT
   }
 
   const getVisitHeight = (visit: any): number => {
@@ -490,7 +490,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                     <div
                       key={hour}
                       className="absolute w-full flex items-start justify-center"
-                      style={{ top: (hour - 8) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
+                      style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
                     >
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium mt-[-6px] leading-none">
                         {hour.toString().padStart(2, '0')}:00
@@ -522,7 +522,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                         <div
                           key={`slot-${hour}`}
                           className="absolute w-full hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors cursor-pointer group/slot"
-                          style={{ top: (hour - 8) * HOUR_HEIGHT, height: HOUR_HEIGHT, zIndex: 1 }}
+                          style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT, zIndex: 1 }}
                           onClick={(e) => {
                             e.stopPropagation()
                             const dt = new Date(day)
@@ -541,7 +541,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                         <div
                           key={hour}
                           className="absolute w-full border-t border-gray-100 dark:border-gray-700/60"
-                          style={{ top: (hour - 8) * HOUR_HEIGHT }}
+                          style={{ top: hour * HOUR_HEIGHT }}
                         />
                       ))}
                       {/* Half-hour lines */}
@@ -549,14 +549,14 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                         <div
                           key={`h${hour}`}
                           className="absolute w-full border-t border-gray-50 dark:border-gray-700/30 border-dashed"
-                          style={{ top: (hour - 8) * HOUR_HEIGHT + HOUR_HEIGHT / 2 }}
+                          style={{ top: hour * HOUR_HEIGHT + HOUR_HEIGHT / 2 }}
                         />
                       ))}
 
                       {/* Current time indicator */}
                       {isTodayCol && (() => {
                         const now = new Date()
-                        const topPx = (now.getHours() - 8) * HOUR_HEIGHT + (now.getMinutes() / 60) * HOUR_HEIGHT
+                        const topPx = now.getHours() * HOUR_HEIGHT + (now.getMinutes() / 60) * HOUR_HEIGHT
                         if (topPx < 0 || topPx > HOURS.length * HOUR_HEIGHT) return null
                         return (
                           <div
@@ -666,7 +666,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                     <div
                       key={hour}
                       className="absolute w-full flex items-start justify-center"
-                      style={{ top: (hour - 8) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
+                      style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
                     >
                       <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium mt-[-6px] leading-none">
                         {hour.toString().padStart(2, '0')}:00
@@ -690,7 +690,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                         <div
                           key={`slot-${hour}`}
                           className="absolute w-full hover:bg-blue-50/60 dark:hover:bg-blue-900/10 transition-colors cursor-pointer group/slot"
-                          style={{ top: (hour - 8) * HOUR_HEIGHT, height: HOUR_HEIGHT, zIndex: 1 }}
+                          style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT, zIndex: 1 }}
                           onClick={() => {
                             const dt = new Date(currentDate)
                             dt.setHours(hour, 0, 0, 0)
@@ -708,7 +708,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                         <div
                           key={hour}
                           className="absolute w-full border-t border-gray-100 dark:border-gray-700/60"
-                          style={{ top: (hour - 8) * HOUR_HEIGHT }}
+                          style={{ top: hour * HOUR_HEIGHT }}
                         />
                       ))}
                       {/* Half-hour lines */}
@@ -716,14 +716,14 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                         <div
                           key={`h${hour}`}
                           className="absolute w-full border-t border-gray-50 dark:border-gray-700/30 border-dashed"
-                          style={{ top: (hour - 8) * HOUR_HEIGHT + HOUR_HEIGHT / 2 }}
+                          style={{ top: hour * HOUR_HEIGHT + HOUR_HEIGHT / 2 }}
                         />
                       ))}
 
                       {/* Current time indicator */}
                       {isTodayCol && (() => {
                         const now = new Date()
-                        const topPx = (now.getHours() - 8) * HOUR_HEIGHT + (now.getMinutes() / 60) * HOUR_HEIGHT
+                        const topPx = now.getHours() * HOUR_HEIGHT + (now.getMinutes() / 60) * HOUR_HEIGHT
                         if (topPx < 0 || topPx > HOURS.length * HOUR_HEIGHT) return null
                         return (
                           <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: topPx }}>

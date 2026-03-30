@@ -510,8 +510,8 @@ export default function VisitsPage() {
         />
       )}
 
-      {/* ── View toggle ── */}
-      <div className="flex justify-center">
+      {/* ── View toggle + Default toggle ── */}
+      <div className="flex items-center justify-center gap-3 flex-wrap">
         <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1">
           <Button
             variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -532,6 +532,26 @@ export default function VisitsPage() {
             {t('visits.calendarView')}
           </Button>
         </div>
+
+        {/* Default view toggle */}
+        <button
+          onClick={() => {
+            const current = localStorage.getItem('trinity_visits_view') || 'list'
+            // toggle between list and calendar as default
+            const next = current === 'list' ? 'calendar' : 'list'
+            localStorage.setItem('trinity_visits_view', next)
+            setViewMode(next)
+          }}
+          title={isHe ? 'בחר תצוגת ברירת מחדל' : 'Установить вид по умолчанию'}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400 hover:border-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors bg-white dark:bg-gray-800"
+        >
+          <span>{isHe ? '★ ברירת מחדל:' : '★ По умолчанию:'}</span>
+          <span className="font-semibold text-gray-700 dark:text-gray-200">
+            {viewMode === 'list'
+              ? (isHe ? 'רשימה' : 'Список')
+              : (isHe ? 'לוח שנה' : 'Календарь')}
+          </span>
+        </button>
       </div>
 
       {/* ── Calendar view ── */}

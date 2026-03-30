@@ -176,7 +176,7 @@ export default function RegisterPage() {
   const validate = (): boolean => {
     const errors: FieldErrors = {}
     if (!form.first_name.trim()) errors.first_name = t.required
-    if (!form.last_name.trim()) errors.last_name = t.required
+    // last_name is optional
     if (!form.phone.trim()) {
       errors.phone = t.required
     } else if (!isValidIsraeliPhone(form.phone)) {

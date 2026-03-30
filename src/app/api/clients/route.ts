@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     const clientData = {
       ...body,
       first_name: body.first_name || body.name?.split(' ')[0] || '',
-      last_name: body.last_name || body.name?.split(' ').slice(1).join(' ') || '',
+      last_name: body.last_name || body.name?.split(' ').slice(1).join(' ') || null,
       org_id: orgId,
     }
     delete clientData.name

@@ -56,14 +56,14 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault()
 
-    if (!formData.first_name || !formData.last_name || !formData.phone) return
+    if (!formData.first_name || !formData.phone) return
     if (isDemo && clientCount >= 10) return
 
     let newClient: any = null
     try {
       newClient = await addClient.mutateAsync({
         first_name: formData.first_name,
-        last_name: formData.last_name,
+        last_name: formData.last_name || null,
         phone: formData.phone,
         email: formData.email || null,
         address: formData.address || null,
@@ -234,7 +234,6 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
                 value={formData.last_name}
                 onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                 placeholder={t('clients.lastName')}
-                required
               />
             </div>
           </div>

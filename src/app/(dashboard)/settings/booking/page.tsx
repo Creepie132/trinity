@@ -942,51 +942,52 @@ function RegistrationLinkCard({
           <Switch checked={enabled} onCheckedChange={setEnabled} />
         </div>
 
-        {enabled && (
-          <>
-            {/* Link display */}
-            <div className="p-3 bg-muted rounded-lg">
-              <span className="text-xs text-muted-foreground block mb-1">
-                {language === 'he' ? 'קישור לשיתוף:' : 'Ссылка для клиентов:'}
-              </span>
-              <div className="flex items-center gap-2">
-                <code className="text-sm font-mono font-medium break-all flex-1">
-                  {orgSlug ? `ambersol.co.il/register/${orgSlug}` : '...'}
-                </code>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={copyLink}
-                  disabled={!orgSlug}
-                  className="flex-shrink-0"
-                >
-                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                </Button>
-              </div>
-            </div>
+        {/* Link display — always visible */}
+        <div className="p-3 bg-muted rounded-lg">
+          <span className="text-xs text-muted-foreground block mb-1">
+            {language === 'he' ? 'קישור לשיתוף:' : 'Ссылка для клиентов:'}
+          </span>
+          <div className="flex items-center gap-2">
+            <code className={`text-sm font-mono font-medium break-all flex-1 ${!enabled ? 'opacity-50' : ''}`}>
+              {orgSlug ? `ambersol.co.il/register/${orgSlug}` : '...'}
+            </code>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={copyLink}
+              disabled={!orgSlug}
+              className="flex-shrink-0"
+            >
+              {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+            </Button>
+          </div>
+          {!enabled && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              {language === 'he' ? 'הרשמה מושבתת כרגע' : 'Регистрация сейчас отключена'}
+            </p>
+          )}
+        </div>
 
-            {/* Privacy Policy URL */}
-            <div className="space-y-2">
-              <Label htmlFor="privacy-url">
-                {language === 'he' ? 'קישור לתנאי השימוש (אופציונלי)' : 'Ссылка на пользовательское соглашение (опционально)'}
-              </Label>
-              <Input
-                id="privacy-url"
-                type="url"
-                value={privacyUrl}
-                onChange={e => setPrivacyUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full"
-                dir="ltr"
-              />
-              <p className="text-xs text-muted-foreground">
-                {language === 'he'
-                  ? 'הלקוח יראה קישור לתנאי השימוש בטופס ההרשמה'
-                  : 'Клиент увидит ссылку на соглашение в форме регистрации'}
-              </p>
-            </div>
-          </>
-        )}
+        {/* Privacy Policy URL */}
+        <div className="space-y-2">
+          <Label htmlFor="privacy-url">
+            {language === 'he' ? 'קישור לתנאי השימוש (אופציונלי)' : 'Ссылка на пользовательское соглашение (опционально)'}
+          </Label>
+          <Input
+            id="privacy-url"
+            type="url"
+            value={privacyUrl}
+            onChange={e => setPrivacyUrl(e.target.value)}
+            placeholder="https://..."
+            className="w-full"
+            dir="ltr"
+          />
+          <p className="text-xs text-muted-foreground">
+            {language === 'he'
+              ? 'הלקוח יראה קישור לתנאי השימוש בטופס ההרשמה'
+              : 'Клиент увидит ссылку на соглашение в форме регистрации'}
+          </p>
+        </div>
 
         {/* Save */}
         <div className="flex justify-end pt-1">

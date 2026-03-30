@@ -117,7 +117,7 @@ export function ActiveVisitCard({ visit, onFinish }: ActiveVisitCardProps) {
     });
   };
 
-  const clientName = `${visit.clients?.first_name} ${visit.clients?.last_name}`;
+  const clientName = `${visit.clients?.first_name || ''} ${visit.clients?.last_name || ''}`.trim();
   
   // Get service name from services table or fallback to service_type
   const getServiceName = () => {

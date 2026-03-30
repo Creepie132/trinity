@@ -106,7 +106,7 @@ export function ClientSearch({
     return 'No clients found';
   };
 
-  const getClientDisplay = (client: Client) => `${client.first_name} ${client.last_name}`;
+  const getClientDisplay = (client: Client) => `${client.first_name || ''} ${client.last_name || ''}`.trim();
 
   // Dropdown через portal в document.body — выходит за любой overflow:hidden/clip
   const showDropdown = isOpen && searchQuery.length >= 2 && mounted && dropdownRect;

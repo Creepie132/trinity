@@ -66,7 +66,7 @@ function getGradient(name: string) {
   return AVATAR_GRADIENTS[(name.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length]
 }
 function getClientName(sale: Sale, t: typeof T['ru']) {
-  if (sale.clients) return `${sale.clients.first_name} ${sale.clients.last_name}`.trim()
+  if (sale.clients) return `${sale.clients.first_name || ''} ${sale.clients.last_name || ''}`.trim().trim()
   return t.unknown
 }
 

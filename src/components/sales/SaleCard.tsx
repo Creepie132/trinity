@@ -28,7 +28,7 @@ function clientInitials(sale: Sale) {
 
 function clientName(sale: Sale, locale: 'he' | 'ru') {
   if (sale.clients) {
-    return `${sale.clients.first_name} ${sale.clients.last_name}`.trim()
+    return `${sale.clients.first_name || ''} ${sale.clients.last_name || ''}`.trim()
   }
   return locale === 'he' ? 'לקוח לא ידוע' : 'Клиент не найден'
 }

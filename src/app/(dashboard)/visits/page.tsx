@@ -187,6 +187,7 @@ export default function VisitsPage() {
   const { t, language } = useLanguage()
   const meetingMode = useMeetingMode()
   const { orgId: authOrgId, role } = useAuth()
+  const { user } = useAuth()
   const { activeOrgId } = useBranch()
   const orgId = activeOrgId || authOrgId
   const isWorker = role !== null && role !== 'owner'
@@ -208,6 +209,10 @@ export default function VisitsPage() {
     return (localStorage.getItem('trinity_visits_view') as 'list' | 'calendar') || 'list'
   })
   const [cancelledOpen, setCancelledOpen] = useState(false)
+  const [showCompleted, setShowCompleted] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    return (localStorage.getItem('trinity_visits_show_completed') ?? 'true') === 'true'
+  })
   const [serviceColors, setServiceColors] = useState<Record<string, string>>({})
   const [page, setPage] = useState(1)
   const [newVisitNotify, setNewVisitNotify] = useState<any>(null)
@@ -278,6 +283,21 @@ export default function VisitsPage() {
     setEventTypeFilter(v)
     localStorage.setItem('trinity_visit_type_filter', v)
     setPage(1)
+  }
+
+  useEffect(() => {
+    if (!user?.id) return
+    const key = `trinity_visits_show_completed_${user.id}`
+    const saved = localStorage.getItem(key)
+    if (saved !== null) setShowCompleted(saved === 'true')
+  }, [user?.id])
+
+  function toggleShowCompleted() {
+    const next = !showCompleted
+    setShowCompleted(next)
+    const key = user?.id ? `trinity_visits_show_completed_${user.id}` : 'trinity_visits_show_completed'
+    localStorage.setItem(key, String(next))
+    localStorage.setItem('trinity_visits_show_completed', String(next))
   }
 
   // ── fetch — через useVisits (Zero Trust: нет прямых supabase вызовов) ──────
@@ -728,6 +748,24 @@ export default function VisitsPage() {
                   </button>
                 )
               })}
+              <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
+              {/* Тумблер завершённых */}
+              <button
+                onClick={toggleShowCompleted}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  showCompleted
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                <CheckCircle className="w-3 h-3" />
+                {isHe ? 'הושלמו' : 'Завершённые'}
+                {!showCompleted && completedVisits.length > 0 && (
+                  <span className="bg-emerald-200 text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200 rounded-full px-1.5 text-[10px] font-bold">
+                    {completedVisits.length}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 

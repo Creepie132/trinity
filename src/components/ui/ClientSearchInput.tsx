@@ -77,7 +77,7 @@ export function ClientSearchInput({
   }, [])
 
   function handleSelect(client: Client) {
-    const fullName = `${client.first_name} ${client.last_name}`.trim()
+    const fullName = `${client.first_name || ''} ${client.last_name || ''}`.trim()
     onSelect(fullName, client.phone || '')
     setQuery('')
     setIsOpen(false)
@@ -166,7 +166,7 @@ export function ClientSearchInput({
                     <User size={16} className="text-muted-foreground flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-foreground">
-                        {client.first_name} {client.last_name}
+                        {`${client.first_name || ''} ${client.last_name || ''}`.trim()}
                       </div>
                       {client.phone && (
                         <div className="text-xs text-muted-foreground mt-0.5">

@@ -228,7 +228,10 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const sidebarContent = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-        <div style={{ width: 60, height: 60, borderRadius: 14, background: `linear-gradient(135deg, ${g1}, ${g2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 900, boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
+        <div
+          onClick={openClientCard}
+          title={isHe ? 'פתח כרטיס לקוח' : 'Открыть карточку клиента'}
+          style={{ width: 60, height: 60, borderRadius: 14, background: `linear-gradient(135deg, ${g1}, ${g2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 900, boxShadow: '0 4px 16px rgba(0,0,0,0.25)', cursor: 'pointer' }}>
           {getInitials(clientName)}
         </div>
       </div>
@@ -584,7 +587,10 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
   const subSidebarContent = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-        <div style={{ width: 60, height: 60, borderRadius: 14, background: `linear-gradient(135deg, ${g1}, ${g2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 900, boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
+        <div
+          onClick={openClientCard}
+          title={isHe ? 'פתח כרטיס לקוח' : 'Открыть карточку клиента'}
+          style={{ width: 60, height: 60, borderRadius: 14, background: `linear-gradient(135deg, ${g1}, ${g2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 900, boxShadow: '0 4px 16px rgba(0,0,0,0.25)', cursor: 'pointer' }}>
           {getInitials(clientName)}
         </div>
       </div>

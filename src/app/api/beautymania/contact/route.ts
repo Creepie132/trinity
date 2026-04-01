@@ -13,10 +13,8 @@ const ALLOWED_ORIGINS = [
 ]
 
 function corsHeaders(origin: string | null): Record<string, string> {
-  const isAllowed = !origin ||
-    ALLOWED_ORIGINS.includes(origin) ||
-    origin.endsWith('.vercel.app')
-  const allowOrigin = isAllowed ? (origin || '*') : ALLOWED_ORIGINS[0]
+  const isAllowed = !origin || ALLOWED_ORIGINS.includes(origin)
+  const allowOrigin = isAllowed ? (origin || ALLOWED_ORIGINS[0]) : ALLOWED_ORIGINS[0]
   return {
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',

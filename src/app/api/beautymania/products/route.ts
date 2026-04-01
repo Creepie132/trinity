@@ -16,7 +16,7 @@ export async function OPTIONS() {
 }
 
 // ─── Beautymania org config ───────────────────────────────────────────────────
-const BM_ORG_ID = '1e77c781-3848-4b16-a623-693de123c6bc'
+const BM_ORG_ID = process.env.BEAUTYMANIA_ORG_ID ?? '1e77c781-3848-4b16-a623-693de123c6bc'
 
 // ─── GET /api/beautymania/products ────────────────────────────────────────────
 export async function GET(request: NextRequest) {

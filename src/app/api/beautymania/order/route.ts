@@ -15,11 +15,8 @@ const ALLOWED_ORIGINS = [
 ]
 
 function corsHeaders(origin: string | null): Record<string, string> {
-  // Разрешаем любой vercel preview + основные домены
-  const isAllowed = !origin ||
-    ALLOWED_ORIGINS.includes(origin) ||
-    origin.endsWith('.vercel.app')
-  const allowOrigin = isAllowed ? (origin || '*') : ALLOWED_ORIGINS[0]
+  const isAllowed = !origin || ALLOWED_ORIGINS.includes(origin)
+  const allowOrigin = isAllowed ? (origin || ALLOWED_ORIGINS[0]) : ALLOWED_ORIGINS[0]
   return {
     'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -33,9 +30,9 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const BM_ORG_ID   = '1e77c781-3848-4b16-a623-693de123c6bc'
-const ANETA_USER_ID = '0be0d9ad-d88e-4e7f-aee2-d2b171e03c58'
-const ANETA_EMAIL   = process.env.BEAUTYMANIA_EMAIL ?? 'anetamarinina@gmail.com'
+const BM_ORG_ID     = process.env.BEAUTYMANIA_ORG_ID  ?? '1e77c781-3848-4b16-a623-693de123c6bc'
+const ANETA_USER_ID = process.env.BEAUTYMANIA_USER_ID ?? '0be0d9ad-d88e-4e7f-aee2-d2b171e03c58'
+const ANETA_EMAIL   = process.env.BEAUTYMANIA_EMAIL   ?? 'anetamarinina@gmail.com'
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 const orderSchema = z.object({
@@ -72,10 +69,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errors }, { status: 400, headers })
     }
 
-    const { product_id, product_name, quantity, name, email, phone, message } = result.data
+    const { product_id, quantity, name, email, phone, message } = result.data
     const service = createSupabaseServiceClient()
 
-    // Verify product belongs to Beautymania and is in stock
+    // Verify product belongs to Beautymania, is active and has enough stock
     const { data: product } = await service
       .from('products')
       .select('id, name, sell_price, quantity')
@@ -89,6 +86,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Product not available' }, { status: 404, headers })
     }
 
+    // Check stock is sufficient for requested quantity
+    if (product.quantity < quantity) {
+      return NextResponse.json({ error: 'Insufficient stock' }, { status: 409, headers })
+    }
+
+    // Use product_name from DB — never trust client-supplied name
+    const product_name = product.name
     const totalPrice = (product.sell_price ?? 0) * quantity
 
     // ── Сохранить заказ в site_orders ─────────────────────────────────────────

@@ -149,13 +149,22 @@ export function useRealtimeSync<T = Record<string, unknown>>({
   // Stable string representation of queryKey — used both in channel name and deps
   const keyStr = Array.isArray(queryKey) ? queryKey.join(':') : String(queryKey)
 
+  // Unique instance ID per hook mount — prevents "cannot add postgres_changes
+  // after subscribe()" when React remounts the component (Strict Mode double
+  // mount, orgId null→value transition). Each mount gets its own channel name
+  // so Supabase never gets a second .on() call on an already-subscribed channel.
+  const instanceId = useRef(`${Date.now()}-${Math.random().toString(36).slice(2, 7)}`)
+
   useEffect(() => {
     if (!enabled || !orgId) return
 
     // ── Channel setup ──────────────────────────────────────────────────────
-    // Unique per (table, org, queryKey) — prevents collisions when multiple
-    // hooks subscribe to the same table with different queryKeys
-    const channelName = `realtime:${table}:${orgId}:${keyStr}`
+    // NOTE: no 'realtime:' prefix — Supabase JS does NOT add one internally.
+    // We were creating 'realtime:clients:...' and then React Strict Mode /
+    // orgId re-render would find the same-named channel still subscribed
+    // → "cannot add postgres_changes after subscribe()" crash.
+    // instanceId makes every mount unique, cleanup removes it before next mount.
+    const channelName = `${table}:${orgId}:${keyStr}:${instanceId.current}`
 
     // Build the channel and register all requested events
     let channel = supabase.channel(channelName)
@@ -211,6 +220,7 @@ export function useRealtimeSync<T = Record<string, unknown>>({
     // events.join is intentional — array identity changes on every render,
     // string comparison is the correct way to detect actual event set changes
     // keyStr included so channel is recreated if queryKey changes
+    // instanceId.current is a ref — stable across renders, not a dep
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [table, orgId, enabled, debounceMs, queryClient, events.join(','), keyStr, filterColumn])
 }

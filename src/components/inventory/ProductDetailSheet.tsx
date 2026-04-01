@@ -16,6 +16,7 @@ import { AddStockDialog } from './AddStockDialog'
 import { TransferRequestDialog } from './TransferRequestDialog'
 import { useModalStore } from '@/store/useModalStore'
 import { useDemoMode } from '@/hooks/useDemoMode'
+import { ProductRelationsManager } from './ProductRelationsManager'
 
 interface ProductDetailSheetProps {
   open: boolean
@@ -245,6 +246,11 @@ export function ProductDetailSheet({ open, onClose, product, onEdit }: ProductDe
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Cross-sell relations */}
+            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
+              <ProductRelationsManager productId={product.id} />
             </div>
 
           </div>

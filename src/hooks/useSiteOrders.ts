@@ -16,7 +16,7 @@ export interface SiteOrder {
   customer_email: string | null
   items:          SiteOrderItem[]
   total_amount:   number
-  status:         'new' | 'processing' | 'completed' | 'cancelled'
+  status:         'new' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
   notes:          string | null
   source:         string
   sale_id:        string | null

@@ -14,23 +14,24 @@ import { ShoppingBag, Package, Phone, ChevronLeft, ChevronRight, Clock, CheckCir
 const T = {
   ru: {
     title: 'Заказы с сайта', empty: 'Нет заказов', emptyDesc: 'Заказы с вашего сайта появятся здесь',
-    all: 'Все', new: 'Новые', processing: 'В обработке', completed: 'Оформлены', cancelled: 'Отменены',
+    all: 'Все', new: 'Новые', confirmed: 'Подтверждены', shipped: 'Отправлены', delivered: 'Доставлены', cancelled: 'Отменены',
     total: 'Итого', from: 'от', prev: 'Назад', next: 'Вперёд', page: 'стр.',
-    statuses: { new: 'Новый', processing: 'В обработке', completed: 'Оформлен', cancelled: 'Отменён' },
+    statuses: { new: 'Новый', confirmed: 'Подтверждён', shipped: 'Отправлен', delivered: 'Доставлен', cancelled: 'Отменён' },
   },
   he: {
     title: 'הזמנות מהאתר', empty: 'אין הזמנות', emptyDesc: 'הזמנות מהאתר שלך יופיעו כאן',
-    all: 'הכל', new: 'חדש', processing: 'בטיפול', completed: 'הושלם', cancelled: 'בוטל',
+    all: 'הכל', new: 'חדש', confirmed: 'אושר', shipped: 'נשלח', delivered: 'נמסר', cancelled: 'בוטל',
     total: 'סה״כ', from: 'מ-', prev: 'הקודם', next: 'הבא', page: 'עמ׳',
-    statuses: { new: 'חדש', processing: 'בטיפול', completed: 'הושלם', cancelled: 'בוטל' },
+    statuses: { new: 'חדש', confirmed: 'אושר', shipped: 'נשלח', delivered: 'נמסר', cancelled: 'בוטל' },
   },
 }
 
-const STATUS_CFG = {
-  new:        { icon: Clock,        dot: '#8b5cf6', badge: 'bg-violet-50 text-violet-700 border-violet-200' },
-  processing: { icon: Loader2,      dot: '#f59e0b', badge: 'bg-amber-50 text-amber-700 border-amber-200'   },
-  completed:  { icon: CheckCircle2, dot: '#10b981', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  cancelled:  { icon: XCircle,      dot: '#ef4444', badge: 'bg-red-50 text-red-600 border-red-200'         },
+const STATUS_CFG: Record<string, { icon: any; dot: string; badge: string }> = {
+  new:       { icon: Clock,        dot: '#8b5cf6', badge: 'bg-violet-50 text-violet-700 border-violet-200' },
+  confirmed: { icon: CheckCircle2, dot: '#3b82f6', badge: 'bg-blue-50 text-blue-700 border-blue-200'       },
+  shipped:   { icon: Loader2,      dot: '#f59e0b', badge: 'bg-amber-50 text-amber-700 border-amber-200'    },
+  delivered: { icon: CheckCircle2, dot: '#10b981', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  cancelled: { icon: XCircle,      dot: '#ef4444', badge: 'bg-red-50 text-red-600 border-red-200'          },
 }
 
 function OrderRow({ order, locale, onClick }: { order: SiteOrder; locale: string; onClick: () => void }) {
@@ -56,7 +57,7 @@ function OrderRow({ order, locale, onClick }: { order: SiteOrder; locale: string
       <div className="text-right flex-shrink-0">
         <div className="text-sm font-bold text-gray-900">₪{Number(order.total_amount).toFixed(0)}</div>
         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold border whitespace-nowrap inline-flex items-center gap-1 ${cfg.badge}`}>
-          <Icon size={9} className={order.status === 'processing' ? 'animate-spin' : ''} />
+          <Icon size={9} className={order.status === 'shipped' ? 'animate-pulse' : ''} />
           {t.statuses[order.status]}
         </span>
       </div>
@@ -84,11 +85,12 @@ export function SiteOrdersPanel({ locale }: SiteOrdersPanelProps) {
   const pages    = Math.ceil(total / pageSize) || 1
 
   const tabs = [
-    { key: 'all',        label: t.all },
-    { key: 'new',        label: t.new },
-    { key: 'processing', label: t.processing },
-    { key: 'completed',  label: t.completed },
-    { key: 'cancelled',  label: t.cancelled },
+    { key: 'all',       label: t.all },
+    { key: 'new',       label: t.new },
+    { key: 'confirmed', label: t.confirmed },
+    { key: 'shipped',   label: t.shipped },
+    { key: 'delivered', label: t.delivered },
+    { key: 'cancelled', label: t.cancelled },
   ]
 
   return (

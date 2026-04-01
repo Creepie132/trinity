@@ -23,6 +23,7 @@ import {
   ShoppingBag, Phone, Mail, MessageCircle, X,
   Package, ChevronLeft, ChevronRight, UserPlus,
   CheckCircle2, Clock, XCircle, Loader2, User,
+  Truck, PackageCheck, Send,
 } from 'lucide-react'
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────
@@ -32,33 +33,44 @@ const T = {
     customer: 'Покупатель', phone: 'Телефон', email: 'Email',
     items: 'Товары', notes: 'Комментарий', source: 'Источник',
     total: 'Итого', status: 'Статус', created: 'Дата',
-    process: 'Оформить сделку', cancel: 'Отменить',
+    process: 'Оформить сделку', cancel: 'Отменить заказ',
     clientFound: 'Клиент найден в базе', clientNotFound: 'Клиент не в базе',
     addClient: 'Добавить в CRM', page: 'стр.', prev: '← Пред', next: 'След →',
-    statuses: { new: 'Новый', processing: 'В обработке', completed: 'Оформлен', cancelled: 'Отменён' },
+    statuses: { new: 'Новый', confirmed: 'Подтверждён', shipped: 'Отправлен', delivered: 'Доставлен', cancelled: 'Отменён' },
     loading: 'Загрузка...', noItems: 'Нет товаров',
     whatsapp: 'WhatsApp',
+    confirm: 'Подтвердить',
+    ship: 'Отправлен',
+    deliver: 'Доставлен',
+    sendWa: 'Отправить WA',
+    cancelOrder: 'Отменить',
   },
   he: {
     title: 'הזמנה מהאתר', from: 'מ-', close: 'סגור',
     customer: 'לקוח', phone: 'טלפון', email: 'אימייל',
     items: 'פריטים', notes: 'הערה', source: 'מקור',
     total: 'סה״כ', status: 'סטטוס', created: 'תאריך',
-    process: 'פתח עסקה', cancel: 'בטל',
+    process: 'פתח עסקה', cancel: 'בטל הזמנה',
     clientFound: 'לקוח קיים במערכת', clientNotFound: 'לקוח לא נמצא',
     addClient: 'הוסף ל-CRM', page: 'עמ׳', prev: '→ הקודם', next: 'הבא ←',
-    statuses: { new: 'חדש', processing: 'בטיפול', completed: 'הושלם', cancelled: 'בוטל' },
+    statuses: { new: 'חדש', confirmed: 'אושר', shipped: 'נשלח', delivered: 'נמסר', cancelled: 'בוטל' },
     loading: 'טוען...', noItems: 'אין פריטים',
     whatsapp: 'WhatsApp',
+    confirm: 'אשר',
+    ship: 'נשלח',
+    deliver: 'נמסר',
+    sendWa: 'שלח WA',
+    cancelOrder: 'בטל',
   },
 }
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
-const STATUS_CFG = {
-  new:        { icon: Clock,        color: 'text-violet-600', bg: 'bg-violet-50 border-violet-200' },
-  processing: { icon: Loader2,      color: 'text-amber-600',  bg: 'bg-amber-50 border-amber-200' },
-  completed:  { icon: CheckCircle2, color: 'text-emerald-600',bg: 'bg-emerald-50 border-emerald-200' },
-  cancelled:  { icon: XCircle,      color: 'text-red-500',    bg: 'bg-red-50 border-red-200' },
+// ─── Status config ─────────────────────────────────────────────────────────────
+const STATUS_CFG: Record<string, { icon: any; color: string; bg: string }> = {
+  new:       { icon: Clock,        color: 'text-violet-600',  bg: 'bg-violet-50 border-violet-200'  },
+  confirmed: { icon: CheckCircle2, color: 'text-blue-600',    bg: 'bg-blue-50 border-blue-200'      },
+  shipped:   { icon: Truck,        color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200'    },
+  delivered: { icon: PackageCheck, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200'},
+  cancelled: { icon: XCircle,      color: 'text-red-500',     bg: 'bg-red-50 border-red-200'        },
 }
 
 interface OrderDetailModalProps {
@@ -121,6 +133,7 @@ export function OrderDetailModal({ orderId, open, onClose }: OrderDetailModalPro
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted]   = useState(false)
   const [saleOpen, setSaleOpen] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
@@ -134,6 +147,25 @@ export function OrderDetailModal({ orderId, open, onClose }: OrderDetailModalPro
 
   const statusCfg = STATUS_CFG[order?.status ?? 'new']
   const StatusIcon = statusCfg.icon
+
+  // ── Обновить статус заказа ───────────────────────────────────────────────
+  const handleStatusChange = async (newStatus: string, sendWa = true) => {
+    if (!order) return
+    setUpdatingStatus(true)
+    try {
+      await apiFetch(`/api/site-orders/${order.id}`, {
+        method: 'PATCH',
+        json: { status: newStatus, send_wa: sendWa },
+      })
+      await queryClient.invalidateQueries({ queryKey: ['site-orders'] })
+      await queryClient.invalidateQueries({ queryKey: ['site-order', orderId] })
+      toast.success(t.statuses[newStatus as keyof typeof t.statuses] || newStatus)
+    } catch {
+      toast.error('Ошибка обновления статуса')
+    } finally {
+      setUpdatingStatus(false)
+    }
+  }
 
   // ── Открыть UnifiedSalesDialog с данными заказа ──────────────────────────
   const handleProcess = () => {
@@ -199,7 +231,7 @@ export function OrderDetailModal({ orderId, open, onClose }: OrderDetailModalPro
       {/* Статус + дата */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${statusCfg.bg} ${statusCfg.color}`}>
-          <StatusIcon size={13} className={order.status === 'processing' ? 'animate-spin' : ''} />
+          <StatusIcon size={13} className={order.status === 'shipped' ? 'animate-pulse' : ''} />
           {t.statuses[order.status]}
         </span>
         <span className="text-xs text-gray-400">
@@ -283,12 +315,44 @@ export function OrderDetailModal({ orderId, open, onClose }: OrderDetailModalPro
   ) : null
 
   // ── Кнопки футера ────────────────────────────────────────────────────────
-  const footerContent = order && order.status !== 'completed' && order.status !== 'cancelled' ? (
-    <button onClick={handleProcess} disabled={!order}
-      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white"
-      style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
-      <ShoppingBag size={16}/>{t.process}
-    </button>
+  const footerContent = order && order.status !== 'delivered' && order.status !== 'cancelled' ? (
+    <div className="flex gap-2 w-full flex-wrap">
+      {/* Основная кнопка следующего статуса */}
+      {order.status === 'new' && (
+        <button onClick={() => handleStatusChange('confirmed')} disabled={updatingStatus}
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition">
+          {updatingStatus ? <Loader2 size={14} className="animate-spin"/> : <CheckCircle2 size={14}/>}
+          {t.confirm}
+        </button>
+      )}
+      {order.status === 'confirmed' && (
+        <button onClick={() => handleStatusChange('shipped')} disabled={updatingStatus}
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 transition">
+          {updatingStatus ? <Loader2 size={14} className="animate-spin"/> : <Truck size={14}/>}
+          {t.ship}
+        </button>
+      )}
+      {order.status === 'shipped' && (
+        <button onClick={() => handleStatusChange('delivered')} disabled={updatingStatus}
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition">
+          {updatingStatus ? <Loader2 size={14} className="animate-spin"/> : <PackageCheck size={14}/>}
+          {t.deliver}
+        </button>
+      )}
+      {/* Оформить сделку (только для новых и подтверждённых) */}
+      {(order.status === 'new' || order.status === 'confirmed') && (
+        <button onClick={handleProcess} disabled={!order}
+          className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl text-sm font-bold text-white"
+          style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
+          <ShoppingBag size={14}/>{t.process}
+        </button>
+      )}
+      {/* Отмена */}
+      <button onClick={() => handleStatusChange('cancelled')} disabled={updatingStatus}
+        className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl text-sm font-bold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 disabled:opacity-50 transition">
+        <XCircle size={14}/>{t.cancelOrder}
+      </button>
+    </div>
   ) : null
 
   // ── DESKTOP ──────────────────────────────────────────────────────────────
@@ -315,11 +379,37 @@ export function OrderDetailModal({ orderId, open, onClose }: OrderDetailModalPro
                 </div>
                 <div style={{ fontSize:10, color:'rgba(255,255,255,0.4)', textAlign:'center', marginBottom:4 }}>{order.items?.length || 0} поз.</div>
                 <div style={{ height:'0.5px', background:'rgba(255,255,255,0.08)', margin:'0 0 8px' }}/>
-                {order.status !== 'completed' && order.status !== 'cancelled' && (
-                  <button onClick={handleProcess}
-                    style={{ padding:'11px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginBottom:6 }}>
-                    <ShoppingBag size={14}/>{t.process}
-                  </button>
+                {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                  <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                    {order.status === 'new' && (
+                      <button onClick={() => handleStatusChange('confirmed')} disabled={updatingStatus}
+                        style={{ padding:'10px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', background:'#3b82f6', color:'#fff', fontSize:12, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                        <CheckCircle2 size={13}/>{t.confirm}
+                      </button>
+                    )}
+                    {order.status === 'confirmed' && (
+                      <button onClick={() => handleStatusChange('shipped')} disabled={updatingStatus}
+                        style={{ padding:'10px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', background:'#f59e0b', color:'#fff', fontSize:12, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                        <Truck size={13}/>{t.ship}
+                      </button>
+                    )}
+                    {order.status === 'shipped' && (
+                      <button onClick={() => handleStatusChange('delivered')} disabled={updatingStatus}
+                        style={{ padding:'10px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', background:'#10b981', color:'#fff', fontSize:12, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                        <PackageCheck size={13}/>{t.deliver}
+                      </button>
+                    )}
+                    {(order.status === 'new' || order.status === 'confirmed') && (
+                      <button onClick={handleProcess}
+                        style={{ padding:'10px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'#fff', fontSize:12, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                        <ShoppingBag size={13}/>{t.process}
+                      </button>
+                    )}
+                    <button onClick={() => handleStatusChange('cancelled')} disabled={updatingStatus}
+                      style={{ padding:'8px 14px', borderRadius:9, border:'1px solid rgba(239,68,68,0.3)', background:'rgba(239,68,68,0.08)', color:'#ef4444', fontSize:11, cursor:'pointer', fontWeight:600 }}>
+                      {t.cancelOrder}
+                    </button>
+                  </div>
                 )}
                 <button onClick={onClose} style={{ padding:'8px 14px', borderRadius:9, border:'0.5px solid rgba(255,255,255,0.12)', background:'transparent', color:'rgba(255,255,255,0.4)', fontSize:12, cursor:'pointer' }}>
                   {t.close}

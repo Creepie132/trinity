@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Bell, Smartphone, Calendar, CreditCard, UserPlus, Cake, Clock, Package } from 'lucide-react'
+import { ArrowRight, Bell, Smartphone, Calendar, CreditCard, UserPlus, Cake, Clock, Package, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -99,6 +99,10 @@ export default function NotificationsPage() {
   const [telegramEnabled, setTelegramEnabled] = useState(false)
   const [chatId, setChatId] = useState('')
 
+  // WA alerts state
+  const [notifyOrdersWa, setNotifyOrdersWa] = useState(false)
+  const [notificationPhone, setNotificationPhone] = useState('')
+
   // Push state
   const {
     permissionState,
@@ -115,13 +119,15 @@ export default function NotificationsPage() {
       try {
         const { data, error } = await supabase
           .from('organizations')
-          .select('telegram_chat_id, telegram_notifications')
+          .select('telegram_chat_id, telegram_notifications, notify_new_orders_wa, notification_phone')
           .eq('id', orgId)
           .single()
         if (error) throw error
         if (data) {
           setTelegramEnabled(data.telegram_notifications || false)
           setChatId(data.telegram_chat_id || '')
+          setNotifyOrdersWa(data.notify_new_orders_wa || false)
+          setNotificationPhone(data.notification_phone || '')
         }
       } catch {
         toast.error(isHe ? 'שגיאה בטעינת הגדרות' : 'Ошибка загрузки настроек')
@@ -138,7 +144,12 @@ export default function NotificationsPage() {
     try {
       const { error } = await supabase
         .from('organizations')
-        .update({ telegram_notifications: telegramEnabled, telegram_chat_id: chatId || null })
+        .update({
+          telegram_notifications: telegramEnabled,
+          telegram_chat_id: chatId || null,
+          notify_new_orders_wa: notifyOrdersWa,
+          notification_phone: notificationPhone || null,
+        })
         .eq('id', orgId)
       if (error) throw error
       toast.success(isHe ? 'הגדרות נשמרו!' : 'Настройки сохранены!')
@@ -285,6 +296,62 @@ export default function NotificationsPage() {
                 {isHe
                   ? '💡 במכשיר iOS — יש להתקין את האפליקציה על מסך הבית כדי לקבל התראות'
                   : '💡 На iOS — установите приложение на главный экран для получения уведомлений'}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── WA ALERTS — новые заказы с сайта ── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+              <MessageCircle className="w-4 h-4 text-green-600" />
+            </div>
+            {isHe ? 'התראות WhatsApp — הזמנות מהאתר' : 'WhatsApp-алерты — заказы с сайта'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div dir={dir}>
+              <p className="text-sm font-medium text-gray-900">
+                {isHe ? 'שלח WhatsApp על הזמנה חדשה' : 'Отправлять WA при новом заказе'}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {isHe ? 'כשמגיעה הזמנה חדשה מהאתר — שלח הודעה לנייד' : 'Мгновенное уведомление в WhatsApp при заказе с сайта'}
+              </p>
+            </div>
+            <Switch checked={notifyOrdersWa} onCheckedChange={setNotifyOrdersWa} />
+          </div>
+          {notifyOrdersWa && (
+            <div dir={dir}>
+              <Label htmlFor="notif-phone" className="text-sm font-medium">
+                {isHe ? 'מספר טלפון לקבלת התראות' : 'Телефон для получения алертов'}
+              </Label>
+              <Input
+                id="notif-phone"
+                value={notificationPhone}
+                onChange={(e) => setNotificationPhone(e.target.value)}
+                placeholder={isHe ? '05XXXXXXXX' : '+972 / 05XXXXXXXX'}
+                className="font-mono mt-1.5"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                {isHe
+                  ? 'אם ריק — ישלח לבעל הארגון. פורמט: 0512345678 או 972512345678'
+                  : 'Если пусто — отправляется владельцу. Формат: 0512345678 или 972512345678'}
+              </p>
+            </div>
+          )}
+          {notifyOrdersWa && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3" dir={dir}>
+              <p className="text-xs text-green-800 font-medium mb-1">
+                {isHe ? 'פורמט ההודעה:' : 'Формат сообщения:'}
+              </p>
+              <p className="text-xs text-green-700 font-mono whitespace-pre-line">
+                {isHe
+                  ? '🔔 הזמנה חדשה מהאתר!\nמוצר: [שם מוצר]\nסכום: ₪[סכום]\nעבור לCRM לטיפול.'
+                  : '🔔 Новый заказ с сайта!\nТовар: [Название]\nСумма: ₪[Сумма]\nПерейдите в CRM для обработки.'}
               </p>
             </div>
           )}

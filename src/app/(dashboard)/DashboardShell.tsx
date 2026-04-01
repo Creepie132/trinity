@@ -14,6 +14,7 @@ import { DemoBannerGlobal } from '@/components/demo/DemoBannerGlobal'
 import { DemoLimitGuardProvider } from '@/components/demo/DemoLimitGuard'
 import { DemoLanguagePicker, useDemoLanguagePicker } from '@/components/demo/DemoLanguagePicker'
 import { WaNotificationProvider } from '@/components/wa/WaNotificationProvider'
+import { SiteOrdersRealtimeProvider } from '@/components/providers/SiteOrdersRealtimeProvider'
 import { ClientProviders } from '@/components/providers/ClientProviders'
 import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
@@ -191,6 +192,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
 
   return (
     <WaNotificationProvider>
+      <SiteOrdersRealtimeProvider />
       <DemoLimitGuardProvider>
         <DashboardPrefetcher />
         {showLangPicker && <DemoLanguagePicker onSelect={handleLangSelect}/>}

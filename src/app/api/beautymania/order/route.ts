@@ -66,8 +66,60 @@ async function sendWaToClient(
       body: JSON.stringify({ to: `${normalized}@s.whatsapp.net`, body: message }),
     })
   } catch (err) {
-    // Не-критичная ошибка — логируем, не бросаем
     console.error('[Beautymania Order] WhatsApp send failed:', err)
+  }
+}
+
+// ─── Fire-and-forget WA алерт владельцу ──────────────────────────────────────
+// Проверяет notify_new_orders_wa в organizations и отправляет если включено.
+// Никогда не бросает — не влияет на основной поток создания заказа.
+async function sendOwnerWaAlert(
+  service: ReturnType<typeof createSupabaseServiceClient>,
+  orgId: string,
+  productName: string,
+  totalPrice: number,
+  customerName: string
+): Promise<void> {
+  // 1. Читаем настройки организации
+  const { data: org } = await service
+    .from('organizations')
+    .select('notify_new_orders_wa, notification_phone')
+    .eq('id', orgId)
+    .single()
+
+  if (!org?.notify_new_orders_wa) return
+
+  // 2. Определяем телефон получателя
+  const phone = org.notification_phone
+  if (!phone) return // нет номера — пропускаем
+
+  // 3. Читаем API-ключ Whapi
+  const { data: apiKey } = await service.rpc('get_wa_api_key', { p_org_id: orgId })
+  if (!apiKey) return
+
+  const normalized = normalizePhone(phone)
+  if (!normalized) return
+
+  // 4. Отправляем (таймаут 8 секунд)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 8000)
+  try {
+    const message =
+      `🔔 Новый заказ с сайта!\n` +
+      `Товар: ${productName}\n` +
+      `Сумма: ₪${totalPrice.toFixed(0)}\n` +
+      `Клиент: ${customerName}\n` +
+      `Перейдите в CRM для обработки.`
+
+    await fetch('https://gate.whapi.cloud/messages/text', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({ to: `${normalized}@s.whatsapp.net`, body: message }),
+    })
+    console.log('[Beautymania Order] Owner WA alert sent to', normalized)
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -177,6 +229,12 @@ export async function POST(request: NextRequest) {
         `Мы свяжемся с вами в ближайшее время для подтверждения доставки. 💛`
       await sendWaToClient(service, BM_ORG_ID, phone, waMessage)
     }
+
+    // ── 5b. WhatsApp владельцу (алерт), если включено в настройках ───────────
+    // Запускаем fire-and-forget — не блокируем основной поток
+    sendOwnerWaAlert(service, BM_ORG_ID, product_name, totalPrice, name).catch(err =>
+      console.error('[Beautymania Order] Owner WA alert failed (non-critical):', err)
+    )
 
     // ── 6. Email Анете ────────────────────────────────────────────────────────
     await resend.emails.send({

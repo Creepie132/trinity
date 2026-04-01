@@ -14,7 +14,7 @@ import {
   Shield, Pencil, CreditCard, Eye, Package,
   Clock, TrendingUp, Users, Calendar, BarChart3,
   Wifi, WifiOff, AlertTriangle, Trash2, EyeOff, Edit3, Check, Leaf, Receipt,
-  ChevronDown,
+  ChevronDown, Globe,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/switch'
@@ -37,6 +37,7 @@ interface Organization {
   tranzila_card_token?: string; tranzila_card_last4?: string; tranzila_card_expiry?: string
   payments_enabled?: boolean; recurring_enabled?: boolean; branches_enabled?: boolean
   last_seen_at?: string | null; created_at?: string
+  has_storefront?: boolean
 }
 
 interface AccessRequest {
@@ -588,6 +589,54 @@ function ActivateOrgButton({
   )
 }
 
+// ─── StorefrontToggle ─────────────────────────────────────────────────────────
+// Включает/выключает has_storefront для организации прямо из панели детали.
+// Вызывает /api/admin/organizations/features (PUT) — тот же эндпоинт что для модулей.
+
+function StorefrontToggle({
+  org, lang, onToggled,
+}: {
+  org: Organization; lang: 'he' | 'ru'
+  onToggled: (val: boolean) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const current = org.has_storefront === true
+
+  const handleToggle = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/admin/organizations/features', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_id: org.id, has_storefront: !current }),
+      })
+      if (!res.ok) throw new Error()
+      onToggled(!current)
+      toast.success(!current
+        ? (lang === 'he' ? '✅ מודול האתר הופעל' : '✅ Модуль «Сайт» включён')
+        : (lang === 'he' ? 'מודול האתר כובה' : 'Модуль «Сайт» отключён')
+      )
+    } catch {
+      toast.error(lang === 'he' ? 'שגיאה' : 'Ошибка')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleToggle}
+      disabled={loading}
+      className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${current ? 'bg-teal-500' : 'bg-gray-300'} disabled:opacity-60`}
+    >
+      {loading
+        ? <Loader2 className="absolute inset-0 m-auto w-3.5 h-3.5 text-white animate-spin" />
+        : <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${current ? 'left-6' : 'left-1'}`} />
+      }
+    </button>
+  )
+}
+
 export default function AdminOrganizationsPage() {
   const { language } = useLanguage()
   const l = language === 'he'
@@ -1089,6 +1138,21 @@ export default function AdminOrganizationsPage() {
           {(org.subscription_status === 'demo' || org.subscription_status === 'trial') && (
             <ActivateOrgButton org={org} lang={language} onActivated={() => { setSelectedOrg(null); loadData() }} />
           )}
+          {/* has_storefront toggle */}
+          <div className="col-span-2 flex items-center justify-between p-3 rounded-xl bg-teal-50 border border-teal-100">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-teal-600" />
+              <div>
+                <p className="text-sm font-semibold text-teal-800">{l ? 'מודול אתר' : 'Модуль «Сайт»'}</p>
+                <p className="text-xs text-teal-500">{l ? 'בלוג + ניהול תוכן' : 'Блог + управление контентом'}</p>
+              </div>
+            </div>
+            <StorefrontToggle org={org} lang={language} onToggled={(val) => {
+              const updated = { ...org, has_storefront: val }
+              setSelectedOrg(updated)
+              setOrgs(prev => prev.map(o => o.id === org.id ? updated : o))
+            }} />
+          </div>
           {/* Delete button */}
           <button onClick={() => { setDeleteOrg(org); setDeleteOpen(true); setSelectedOrg(null) }}
             className="col-span-2 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100 border border-red-200 transition-colors">

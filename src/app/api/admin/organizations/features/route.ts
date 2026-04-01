@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest) {
 
     // Get request body
     const body = await request.json()
-    const { org_id, features, plan, subscription_update, owner_email, payments_enabled, recurring_enabled, branches_enabled, tranzila_token_terminal, tranzila_token_password, billing_amount } = body
+    const { org_id, features, plan, subscription_update, owner_email, payments_enabled, recurring_enabled, branches_enabled, tranzila_token_terminal, tranzila_token_password, billing_amount, has_storefront } = body
 
     console.log('=== UPDATE ORGANIZATION ===')
     console.log('org_id:', org_id)
@@ -238,7 +238,12 @@ export async function PUT(request: NextRequest) {
 
     // billing_amount: null = бесплатно (∞), число = сумма списания
     if (billing_amount !== undefined) {
-      updateData.billing_amount = billing_amount  // null или число
+      updateData.billing_amount = billing_amount
+    }
+
+    // has_storefront: включает/выключает CMS-модуль «Сайт» в клиентском сайдбаре
+    if (has_storefront !== undefined) {
+      updateData.has_storefront = has_storefront
     }
     
     if (subscription_update) {

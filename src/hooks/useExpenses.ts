@@ -3,7 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useBranch } from '@/contexts/BranchContext'
-import { useRealtimeSync } from '@/hooks/useRealtimeSync'
+
+// NOTE: useRealtimeSync removed — centralised in GlobalRealtimeSync (ClientProviders.tsx)
 
 export interface Expense {
   id: string
@@ -52,14 +53,7 @@ export function useExpenses(month?: string, category?: string) {
   const { activeOrgId } = useBranch()
   const queryClient = useQueryClient()
 
-  useRealtimeSync({
-    table: 'expenses',
-    orgId: activeOrgId,
-    queryKey: ['expenses'],
-    onEvent: () => {
-      queryClient.invalidateQueries({ queryKey: expensesKeys.stats() })
-    },
-  })
+  // RT subscription centralised in GlobalRealtimeSync — no duplicate channels
 
   return useQuery<Expense[]>({
     queryKey: expensesKeys.list(month, category),

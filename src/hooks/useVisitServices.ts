@@ -1,11 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useBranch } from '@/contexts/BranchContext'
-import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import type { VisitService, CreateVisitServiceDTO } from '@/types/visits'
 
+// NOTE: useRealtimeSync removed — centralised in GlobalRealtimeSync (ClientProviders.tsx)
+
 export function useVisitServices(visitId: string) {
-  const { activeOrgId } = useBranch()
-  useRealtimeSync({ table: 'visit_services', orgId: activeOrgId, queryKey: ['visit-services'] })
   return useQuery({
     queryKey: ['visit-services', visitId],
     queryFn: async () => {
@@ -15,7 +13,6 @@ export function useVisitServices(visitId: string) {
         throw new Error(error.error || 'Failed to fetch visit services')
       }
       const data = await response.json()
-      // API returns array directly (not { services: [] })
       return (Array.isArray(data) ? data : data.services ?? []) as VisitService[]
     },
     enabled: !!visitId,
@@ -24,7 +21,6 @@ export function useVisitServices(visitId: string) {
 
 export function useAddVisitService(visitId: string) {
   const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: async (service: CreateVisitServiceDTO) => {
       const response = await fetch(`/api/visits/${visitId}/services`, {
@@ -32,14 +28,11 @@ export function useAddVisitService(visitId: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(service),
       })
-
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to add service')
       }
-
-      const data = await response.json()
-      return data.service as VisitService
+      return (await response.json()).service as VisitService
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visit-services', visitId] })
@@ -50,18 +43,15 @@ export function useAddVisitService(visitId: string) {
 
 export function useRemoveVisitService(visitId: string) {
   const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: async (serviceId: string) => {
       const response = await fetch(`/api/visits/${visitId}/services/${serviceId}`, {
         method: 'DELETE',
       })
-
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to remove service')
       }
-
       return { serviceId }
     },
     onSuccess: () => {
@@ -73,7 +63,6 @@ export function useRemoveVisitService(visitId: string) {
 
 export function useUpdateVisitStatus(visitId: string) {
   const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: async (status: 'in_progress' | 'completed' | 'cancelled') => {
       const response = await fetch(`/api/visits/${visitId}/status`, {
@@ -81,14 +70,11 @@ export function useUpdateVisitStatus(visitId: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       })
-
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to update status')
       }
-
-      const data = await response.json()
-      return data.visit
+      return (await response.json()).visit
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['visits'] })

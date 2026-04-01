@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Payment } from '@/types/database'
 import { useBranch } from '@/contexts/BranchContext'
-import { useRealtimeSync } from '@/hooks/useRealtimeSync'
+
+// NOTE: useRealtimeSync removed — centralised in GlobalRealtimeSync (ClientProviders.tsx)
 
 // ─── Shared fetch helper ───────────────────────────────────────────────────
 // Единственный вызов /api/payments — используется и usePayments и usePaymentsStats.
@@ -36,15 +37,7 @@ export function usePayments(clientId?: string, filters?: PaymentsFilters) {
   const { activeOrgId } = useBranch()
   const queryClient = useQueryClient()
 
-  // ONE channel — invalidates payments-stats via onEvent
-  useRealtimeSync({
-    table: 'payments',
-    orgId: activeOrgId,
-    queryKey: ['payments'],
-    onEvent: () => {
-      queryClient.invalidateQueries({ queryKey: ['payments-stats'], exact: false })
-    },
-  })
+  // RT subscription centralised in GlobalRealtimeSync — no duplicate channels
 
   return useQuery({
     queryKey: ['payments', activeOrgId, clientId, filters],

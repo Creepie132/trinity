@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useQuery, keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { Client, ClientSummary } from '@/types/database'
@@ -5,34 +6,31 @@ import { toast } from 'sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { apiFetch } from '@/lib/api-fetch'
 import { useBranch } from '@/contexts/BranchContext'
-import { useRealtimeSync, RealtimePayload } from '@/hooks/useRealtimeSync'
+
+// NOTE: useRealtimeSync removed from useClients — this hook is called from 7+
+// components simultaneously. Each call was creating a duplicate channel with
+// the same name → Supabase "cannot add postgres_changes after subscribe()".
+// Centralised subscription lives in GlobalRealtimeSync (ClientProviders.tsx).
+// Kira animation uses the trinity:new-client CustomEvent dispatched from there.
 
 export function useClients(
   searchQuery?: string,
   page: number = 1,
   pageSize: number = 25,
-  onClientInsert?: () => void,   // optional callback — used by Kira animation
+  onClientInsert?: () => void,   // optional callback — kept for API compat (Kira)
 ) {
   const { orgId: authOrgId } = useAuth()
   const { activeOrgId, mainOrgId, isOrgResolved } = useBranch()
   const orgId = activeOrgId || mainOrgId || authOrgId
 
-  // ── Realtime sync ────────────────────────────────────────────────────────
-  // Single subscription per (table, org) — prevents Supabase "mismatch
-  // between server and client bindings" when multiple components subscribe
-  // to the same table+filter with different channel names.
-  // Kira animation piggybacks via onClientInsert callback.
-  useRealtimeSync({
-    table: 'clients',
-    orgId: mainOrgId,
-    queryKey: ['clients'],
-    enabled: !!mainOrgId && isOrgResolved,
-    onEvent: (payload: RealtimePayload) => {
-      if (payload.eventType === 'INSERT') {
-        onClientInsert?.()
-      }
-    },
-  })
+  // Kira animation: listen for CustomEvent dispatched from GlobalRealtimeSync
+  // (avoids duplicate channels when useClients is called from 7+ components)
+  useEffect(() => {
+    if (!onClientInsert) return
+    const handler = () => onClientInsert()
+    window.addEventListener('trinity:new-client', handler)
+    return () => window.removeEventListener('trinity:new-client', handler)
+  }, [onClientInsert])
 
   return useQuery({
     queryKey: ['clients', orgId, searchQuery, page, pageSize],

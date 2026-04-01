@@ -52,67 +52,74 @@ const UpdateBanner = dynamic(
   { ssr: false }
 )
 
-// ── Single RT subscriptions for shared tables ─────────────────────────────────
+// ── Single RT subscriptions for ALL tables ───────────────────────────────────
+// ONE channel per table per session. All hooks (useClients, usePayments, etc.)
+// had useRealtimeSync inside them → called from N components → N duplicate
+// channels with the same name → Supabase error. Fixed: everything here only.
 function GlobalRealtimeSync() {
   const { orgId, user } = useAuth()
   const { activeOrgId } = useBranch()
   const queryClient = useQueryClient()
   const router = useRouter()
   const pathname = usePathname()
+  const userId = user?.id ?? null
 
-  // products — used by SaleModal, VisitDetailMob, InventoryPage, DashboardContent, etc.
-  useRealtimeSync({ table: 'products',  orgId: activeOrgId, queryKey: ['products']  })
-  // services — used by CreateVisitDialog, SaleModal, VisitDetailMob, settings, etc.
-  useRealtimeSync({ table: 'services',  orgId: orgId,       queryKey: ['services']  })
+  const dispatch = (event: string, detail?: unknown) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(event, detail ? { detail } : undefined))
+    }
+  }
 
-  // organizations — useOrganization() is called from 15+ components simultaneously.
-  // Centralised here to prevent "cannot add postgres_changes after subscribe()" error.
+  // ── Per-org tables ────────────────────────────────────────────────────────
+  useRealtimeSync({ table: 'products',  orgId: activeOrgId, queryKey: ['products'] })
+  useRealtimeSync({ table: 'services',  orgId: orgId,       queryKey: ['services'] })
+  useRealtimeSync({ table: 'sales',     orgId: activeOrgId, queryKey: ['sales'],
+    onEvent: () => queryClient.invalidateQueries({ queryKey: ['payments-stats'], exact: false }) })
+  useRealtimeSync({ table: 'payments',  orgId: activeOrgId, queryKey: ['payments'],
+    onEvent: ({ eventType, new: row }) => {
+      queryClient.invalidateQueries({ queryKey: ['payments-stats'], exact: false })
+      if (eventType === 'INSERT') {
+        const s = (row as any)?.status
+        if (s === 'completed' || s === 'success') dispatch('trinity:new-payment')
+      }
+    }})
+  useRealtimeSync({ table: 'expenses',  orgId: activeOrgId, queryKey: ['expenses'],
+    onEvent: () => queryClient.invalidateQueries({ queryKey: ['expenses-stats'] }) })
+  useRealtimeSync({ table: 'visits',    orgId: activeOrgId, queryKey: ['visits'],
+    onEvent: ({ eventType, new: row }) => {
+      if (eventType === 'INSERT') dispatch('trinity:new-visit')
+      if (eventType === 'UPDATE' && (row as any)?.status === 'cancelled') dispatch('trinity:cancel-visit')
+    }})
+  useRealtimeSync({ table: 'clients',   orgId: orgId,       queryKey: ['clients'],
+    onEvent: ({ eventType }) => {
+      if (eventType === 'INSERT') dispatch('trinity:new-client')
+    }})
+  useRealtimeSync({ table: 'visit_services',        orgId: activeOrgId, queryKey: ['visit-services'] })
+  useRealtimeSync({ table: 'inventory_transactions', orgId: activeOrgId, queryKey: ['inventory-transactions'] })
+
+  // ── organizations — 15+ consumers, one channel ───────────────────────────
   useRealtimeSync({
-    table: 'organizations',
-    orgId: activeOrgId,
-    queryKey: ['organization'],
-    events: ['UPDATE'],
-    filterColumn: 'id',   // organizations table uses id, not org_id
+    table: 'organizations', orgId: activeOrgId,
+    queryKey: ['organization'], events: ['UPDATE'], filterColumn: 'id',
     onEvent: (payload: RealtimePayload) => {
       queryClient.invalidateQueries({ queryKey: ['organization'] })
-      const newModules = (payload.new as any)?.features?.modules || {}
-      const moduleRoutes: Record<string, string> = {
-        '/payments':      'payments',
-        '/inventory':     'inventory',
-        '/sms':           'sms',
-        '/stats':         'statistics',
-        '/reports':       'reports',
-        '/subscriptions': 'subscriptions',
-        '/booking':       'booking',
+      const mods = (payload.new as any)?.features?.modules || {}
+      const routes: Record<string, string> = {
+        '/payments': 'payments', '/inventory': 'inventory', '/sms': 'sms',
+        '/stats': 'statistics', '/reports': 'reports',
+        '/subscriptions': 'subscriptions', '/booking': 'booking',
       }
-      for (const [route, moduleKey] of Object.entries(moduleRoutes)) {
-        if (pathname.startsWith(route) && !newModules[moduleKey]) {
-          router.push('/dashboard')
-          break
-        }
+      for (const [route, key] of Object.entries(routes)) {
+        if (pathname.startsWith(route) && !mods[key]) { router.push('/dashboard'); break }
       }
     },
   })
 
-  // notifications — NotificationBell renders in BOTH Sidebar AND MobileHeader simultaneously.
-  // Two components with same channel name = Supabase error.
-  // Centralise here: on INSERT dispatch CustomEvent so both bells can react
-  // without creating competing channels.
-  const userId = user?.id ?? null
+  // ── notifications — renders in Sidebar + MobileHeader simultaneously ─────
   useRealtimeSync({
-    table: 'notifications',
-    orgId: userId,            // filter: user_id=eq.${userId}
-    queryKey: ['notifications'],
-    events: ['INSERT'],
-    filterColumn: 'user_id', // notifications are per-user, not per-org
-    onEvent: (payload: RealtimePayload) => {
-      // Dispatch to all mounted NotificationBell instances via CustomEvent
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('trinity:new-notification', { detail: payload.new })
-        )
-      }
-    },
+    table: 'notifications', orgId: userId,
+    queryKey: ['notifications'], events: ['INSERT'], filterColumn: 'user_id',
+    onEvent: (payload: RealtimePayload) => dispatch('trinity:new-notification', payload.new),
   })
 
   return null

@@ -3,8 +3,9 @@
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useBranch } from '@/contexts/BranchContext'
-import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 import { toast } from 'sonner'
+
+// NOTE: useRealtimeSync removed — centralised in GlobalRealtimeSync (ClientProviders.tsx)
 
 export interface SaleItem {
   id: string
@@ -60,7 +61,7 @@ export function useSales(filters?: SalesFilters) {
   const { activeOrgId } = useBranch()
   const qc = useQueryClient()
 
-  useRealtimeSync({ table: 'sales', orgId: activeOrgId, queryKey: ['sales'] })
+  // RT subscription centralised in GlobalRealtimeSync — no duplicate channels
 
   // ── Инвалидация при возврате пользователя на вкладку ─────────────────────
   // Когда пользователь оплачивает через Tranzila (внешняя страница/iframe)

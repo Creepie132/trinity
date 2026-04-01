@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { Badge } from '@/components/ui/badge'
@@ -750,7 +750,12 @@ export default function AdminOrganizationsPage() {
       const { createSupabaseBrowserClient } = await import('@/lib/supabase-browser')
       const supabaseBrowser = createSupabaseBrowserClient()
       const { data: { session } } = await supabaseBrowser.auth.getSession()
-      if (!session?.access_token) { toast.error('Нет сессии'); return }
+      let accessToken = session?.access_token
+      if (!accessToken) {
+        const { data: refreshData } = await supabaseBrowser.auth.refreshSession()
+        accessToken = refreshData.session?.access_token
+      }
+      if (!accessToken) { toast.error(l ? '\u05d0\u05d9\u05df \u05e1\u05e9\u05df \u05e4\u05e2\u05d9\u05dc, \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9' : '\u041d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439 \u0441\u0435\u0441\u0441\u0438\u0438 \u2014 \u043f\u0435\u0440\u0435\u0437\u0430\u0439\u0434\u0438\u0442\u0435'); return }
 
       // Сохраняем текущий org до переключения (для корректного выхода)
       const currentActiveOrg = localStorage.getItem('trinity_active_branch')
@@ -759,7 +764,7 @@ export default function AdminOrganizationsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ orgId: org.id }),
       })

@@ -149,22 +149,16 @@ export function useRealtimeSync<T = Record<string, unknown>>({
   // Stable string representation of queryKey — used both in channel name and deps
   const keyStr = Array.isArray(queryKey) ? queryKey.join(':') : String(queryKey)
 
-  // Unique instance ID per hook mount — prevents "cannot add postgres_changes
-  // after subscribe()" when React remounts the component (Strict Mode double
-  // mount, orgId null→value transition). Each mount gets its own channel name
-  // so Supabase never gets a second .on() call on an already-subscribed channel.
-  const instanceId = useRef(`${Date.now()}-${Math.random().toString(36).slice(2, 7)}`)
-
   useEffect(() => {
     if (!enabled || !orgId) return
 
     // ── Channel setup ──────────────────────────────────────────────────────
-    // NOTE: no 'realtime:' prefix — Supabase JS does NOT add one internally.
-    // We were creating 'realtime:clients:...' and then React Strict Mode /
-    // orgId re-render would find the same-named channel still subscribed
-    // → "cannot add postgres_changes after subscribe()" crash.
-    // instanceId makes every mount unique, cleanup removes it before next mount.
-    const channelName = `${table}:${orgId}:${keyStr}:${instanceId.current}`
+    // Each effect run gets a unique suffix so that when orgId changes
+    // (null → real value) or React Strict Mode double-invokes the effect,
+    // the new channel has a different name from the previous one.
+    // The cleanup below removes the channel before the next run.
+    const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    const channelName = `${table}:${orgId}:${keyStr}:${runId}`
 
     // Build the channel and register all requested events
     let channel = supabase.channel(channelName)

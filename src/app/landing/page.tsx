@@ -246,12 +246,110 @@ const HE: LangData = {
   choosePlan: 'בחר →',
 }
 
+const EN: LangData = {
+  dir: 'ltr',
+  langBtn: 'Русский',
+  navFeatures: 'Features',
+  navPricing: 'Pricing',
+  navHow: 'How it works',
+  navCta: 'Login →',
+  badge: 'Business Management · Israel',
+  h1a: 'Clients never disappear. Bookings never get lost.',
+  h1b: 'Chaos — over.',
+  heroSub: 'Trinity is the nervous system of your business. Clients, bookings, analytics and WhatsApp reminders — all in one place. Live in one day.',
+  ctaPrimary: 'Try for free →',
+  ctaSecondary: 'See features',
+  stat1n: '90', stat1u: '%', stat1l: 'WhatsApp open rate',
+  stat2n: '5',  stat2u: 'min', stat2l: 'to launch the system',
+  stat3n: '0',  stat3u: '₪',   stat3l: 'hidden fees',
+  marqueeItems: ['Beauty salons','Cosmetology clinics','Furniture stores','Flower shops','Medical offices','Photography studios','Auto repair shops','Veterinary clinics'],
+  probLabel: 'Sound familiar?',
+  probH2a: 'Your business grows,',
+  probH2b: "but chaos doesn't shrink",
+  probSub: 'Most business owners face the same problems every single day',
+  problems: [
+    { icon: '📋', title: 'Records get lost', text: "Notebooks, phone notes, memory — clients fall through the cracks and don't come back" },
+    { icon: '📵', title: 'SMS? Nobody reads it', text: "You sent a reminder — client didn't show. Because SMS is opened by 3 in 10. WhatsApp — 9 in 10" },
+    { icon: '📊', title: "No idea what's working", text: "Who's your best client? What brings the most revenue? Without a system — just guesses" },
+  ],
+  featLabel: 'Features',
+  featH2a: 'Everything you need —',
+  featH2b: 'in one place',
+  featSub: 'No clutter. Only what you actually use every day',
+  features: [
+    { icon: '👥', title: 'Client database', text: 'Full history for every client: visits, preferences, spending, notes. All in one profile.', tag: 'Always at hand' },
+    { icon: '📅', title: 'Appointment calendar', text: 'Convenient calendar with reminders. Client books — system reminds them via WhatsApp automatically.', tag: 'Auto-reminders' },
+    { icon: '💬', title: 'WhatsApp marketing', text: 'Send promotions, greetings and reminders directly via WhatsApp. 90% open rate. We help connect WhatsApp Business API.', tag: 'Up to 90% open rate' },
+    { icon: '📦', title: 'Stock & supplies', text: 'Track inventory levels. System reminds when to reorder. Auto-deduct on sale.', tag: 'Smart tracking' },
+    { icon: '💰', title: 'Sales & payments', text: 'Log payments, see debts, track revenue. Full picture for any time period.', tag: 'Transparency' },
+    { icon: '📈', title: 'Analytics', text: 'Revenue per day, month, year. Best clients. Most profitable services. One tap.', tag: 'Data-driven decisions' },
+  ],
+  trustLabel: 'Security',
+  trustH2a: 'Your data —',
+  trustH2b: 'yours only',
+  trustSub: "You're trusting us with your client base — we take that seriously.",
+  trustItems: [
+    { icon: '🔐', title: 'SSL/TLS encryption', text: 'All data transmitted over a secure protocol. No one can intercept it.' },
+    { icon: '💾', title: 'Daily backups', text: 'Automatic backup every day. Your data will never be lost.' },
+    { icon: '🇮🇱', title: 'Compliance', text: 'We operate in accordance with Israeli Privacy Protection law (Privacy Protection Authority).' },
+    { icon: '🚫', title: 'No ads', text: 'Your client database is never shared with third parties or used for advertising. Ever.' },
+  ],
+  howLabel: 'How it works',
+  howH2a: 'Live in',
+  howH2b: 'one day',
+  howSub: 'We come, set up, train. You just start working.',
+  steps: [
+    { n: '1', title: 'Meeting & demo', text: 'We show the system live, answer all questions. No commitment.' },
+    { n: '2', title: 'Setup', text: 'We come and configure everything for your business. Transfer existing data.' },
+    { n: '3', title: 'Training', text: 'We explain how to use it. You and your staff are ready in a few hours.' },
+    { n: '4', title: "You're live", text: 'We stay in touch. Any question — just write. System updates automatically.' },
+  ],
+  priceLabel: 'Pricing',
+  priceH2a: 'Honest prices.',
+  priceH2b: 'No surprises.',
+  priceSub: 'Pay only for what you use. No hidden fees.',
+  plans: [
+    { name: 'Base',       price: '199',        popular: false, period: '/month', useCase: 'For those just starting to get organised',   features: ['Clients', 'Visits / Bookings', 'Calendar & tasks', 'Inventory'] },
+    { name: 'Pro',        price: '249',        popular: true,  period: '/month', useCase: 'For those who want to grow and earn more',   features: ['Everything in Base', 'Online booking', 'Stats & reports', 'SMS & reminders'] },
+    { name: 'Enterprise', price: '499',        popular: false, period: '/month', useCase: 'For multiple locations or a large team',     features: ['Everything in Base & Pro', 'Branches', 'Loyalty program', 'Up to 5 staff included'] },
+    { name: 'Custom',     price: 'Your choice', popular: false, period: '',      useCase: 'Pick only the modules you need',             features: ['Choose needed modules', 'Custom config', 'Priority support', 'Up to 15% off 5+ modules'] },
+  ],
+  popularBadge: 'Popular',
+  setupNote: 'Setup: self-service — free · online (Zoom) — ',
+  setupNote2: ' · on-site visit — ',
+  setupNote3: '',
+  testiLabel: 'Reviews',
+  testiH2a: 'What our',
+  testiH2b: 'clients say',
+  testiSub: 'Real business owners on working with Trinity',
+  reviews: [
+    { text: "I used to manage everything in a notebook and kept losing clients. Now the system reminds them via WhatsApp — far fewer no-shows.", name: 'Aneta', role: 'Owner, Beautymania salon', avatar: 'A' },
+    { text: 'Vlad came and set everything up in one day. Now I can see who my best client is and how much each service earns. It changes everything.', name: 'Ksenia', role: 'Owner, Hair Rehab', avatar: 'K' },
+  ],
+  ctaH2a: 'Ready to bring order',
+  ctaH2b: 'to your business?',
+  ctaSub: "Write to us — we'll show the system live. No commitment.",
+  ctaWA: 'Message on WhatsApp →',
+  ctaPrice: 'See pricing',
+  footerLinks: ['Features','Pricing','Support','Contact'],
+  footerCopy: '© 2025 Amber Solutions. All rights reserved.',
+  choosePlan: 'Choose →',
+}
+
+type Lang = 'ru' | 'he' | 'en'
+const LANG_MAP: Record<Lang, LangData> = { ru: RU, he: HE, en: EN }
+const LANG_CYCLE: Record<Lang, { next: Lang; label: string }> = {
+  ru: { next: 'he', label: 'עברית' },
+  he: { next: 'en', label: 'English' },
+  en: { next: 'ru', label: 'Русский' },
+}
+
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function LandingPage() {
-  const [lang, setLang] = useState<'ru' | 'he'>('ru')
+  const [lang, setLang] = useState<Lang>('ru')
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const t = lang === 'ru' ? RU : HE
+  const t = LANG_MAP[lang]
   // Динамические планы из БД (fallback на хардкод если API недоступен)
   const { plans: dbPlans } = usePricingPlans()
 
@@ -263,7 +361,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     document.documentElement.setAttribute('dir', t.dir)
-    document.documentElement.setAttribute('lang', lang)
+    document.documentElement.setAttribute('lang', lang === 'en' ? 'en' : lang === 'he' ? 'he' : 'ru')
   }, [lang, t.dir])
 
   // Фикс белого пространства под футером — Tailwind base делает html белым
@@ -369,6 +467,7 @@ export default function LandingPage() {
         .mobile-menu.open { display:flex; }
         .mobile-menu a { color:var(--text-mid); text-decoration:none; font-size:16px; font-weight:500; }
         .mobile-menu .btn-nav { text-align:center; }
+        .mobile-menu .btn-lang { width:100%; text-align:center; font-size:15px; padding:10px 14px; }
 
         /* ─── Hero ───────────────────────────────────────────────────────── */
         .hero {
@@ -626,7 +725,7 @@ export default function LandingPage() {
           <a href="#how">{t.navHow}</a>
         </div>
         <div className="nav-right">
-          <button className="btn-lang" onClick={() => setLang(lang === 'ru' ? 'he' : 'ru')}>{t.langBtn}</button>
+          <button className="btn-lang" onClick={() => setLang(LANG_CYCLE[lang].next)}>{LANG_CYCLE[lang].label}</button>
           <a href="/login" className="btn-nav desktop-only">{t.navCta}</a>
           <button className="burger" onClick={() => setMobileOpen(o => !o)} aria-label="Menu">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -645,6 +744,7 @@ export default function LandingPage() {
         <a href="#pricing"  onClick={() => setMobileOpen(false)}>{t.navPricing}</a>
         <a href="#how"      onClick={() => setMobileOpen(false)}>{t.navHow}</a>
         <a href="/login"  onClick={() => setMobileOpen(false)} className="btn-nav">{t.navCta}</a>
+        <button className="btn-lang" onClick={() => { setLang(LANG_CYCLE[lang].next); setMobileOpen(false) }}>{LANG_CYCLE[lang].label}</button>
       </div>
 
       {/* HERO */}
@@ -775,13 +875,13 @@ export default function LandingPage() {
           <p className="section-sub">{t.priceSub}</p>
           <div className="plans">
             {dbPlans.map((plan) => {
-              const name     = lang === 'ru' ? plan.name_ru     : plan.name_he
-              const price    = lang === 'ru' ? plan.price_ru    : plan.price_he
-              const period   = lang === 'ru' ? plan.period_ru   : plan.period_he
-              const badge    = lang === 'ru' ? plan.badge_ru    : plan.badge_he
-              const cta      = lang === 'ru' ? plan.cta_ru      : plan.cta_he
-              const features = lang === 'ru' ? plan.features_ru : plan.features_he
-              const subtitle = lang === 'ru' ? plan.subtitle_ru : plan.subtitle_he
+              const name     = lang === 'he' ? plan.name_he     : plan.name_ru
+              const price    = lang === 'he' ? plan.price_he    : plan.price_ru
+              const period   = lang === 'he' ? plan.period_he   : plan.period_ru
+              const badge    = lang === 'he' ? plan.badge_he    : plan.badge_ru
+              const cta      = lang === 'he' ? plan.cta_he      : plan.cta_ru
+              const features = lang === 'he' ? plan.features_he : plan.features_ru
+              const subtitle = lang === 'he' ? plan.subtitle_he : plan.subtitle_ru
               const isPopular = plan.is_popular
               // Извлекаем число из строки цены для рендера с sup-символом ₪
               const priceNum = price.replace(/[₪\s]/g, '')

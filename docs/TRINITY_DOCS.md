@@ -796,3 +796,43 @@ chore: конфиг, зависимости
 *Документация обновлена: 01.04.2026*
 *Версия Next.js: 16.1.6 (Turbopack)*
 *Supabase project: tjryzcqvsavtllahjyrj*
+
+---
+
+### Дополнение 01.04.2026 (вечер) — Модуль блога + security fixes
+
+#### Модуль блога Beautymania
+
+**Таблица `blog_posts`** (миграция `create_blog_posts`):
+- Поля: `id`, `org_id`, `title`, `slug`, `cover_image`, `content_html`, `excerpt`, `published`, `published_at`, `created_at`, `updated_at`
+- Уникальный constraint: `(org_id, slug)` — slug уникален в рамках org
+- Триггер `blog_posts_set_updated_at`: автообновление `updated_at` + автозаполнение `published_at` при первой публикации
+- RLS: read для членов org (включая черновики), write только owner/admin, anon видит только `published=true`
+
+**Публичный API:**
+- `GET /api/beautymania/blog?limit=10&offset=0` — список опубликованных статей (без `content_html`), пагинация, кэш 60с
+- `GET /api/beautymania/blog/[slug]` — одна статья с полным HTML, валидация slug, кэш 120с
+- Оба роута: жёсткий `BM_ORG_ID`, rate limit, CORS `*`, только `published=true`
+
+**Страница `/admin/blog`:**
+- TipTap rich-text редактор (Bold, Italic, H2, H3, BulletList, OrderedList, Link, Undo/Redo)
+- Автогенерация slug из заголовка (транслитерация кириллицы)
+- Поле обложки с превью, excerpt, toggle publish/draft
+- Список статей: inline toggle публикации, редактирование, удаление
+- Пункт "Блог Beautymania" в AdminSidebar (иконка BookOpen)
+
+**vercel.json:** добавлен `"installCommand": "npm install --legacy-peer-deps"` для корректной установки devDependencies на Vercel.
+
+#### Security fixes (миграции)
+
+**`fix_rls_demo_sessions_pricing_config`:**
+- `demo_sessions`: включён RLS, политика `service_role` only
+- `pricing_config`: включён RLS, публичное чтение + `service_role` для записи
+
+**`fix_function_search_path`:**
+- Установлен `SET search_path = ''` для 27 функций — защита от search_path injection
+- Затронуты: все `updated_at` триггеры, `get_user_org_ids`, `get_wa_api_key`, `custom_access_token_hook`, `delete_organization_completely` и другие
+
+**Оставшиеся warnings (не требуют действий):**
+- `pg_net`, `pg_trgm` в public schema — системные расширения Supabase, нельзя перенести
+- `auth_leaked_password_protection` — включить в Supabase Dashboard → Auth → Password Protection

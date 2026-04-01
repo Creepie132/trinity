@@ -153,27 +153,29 @@ export function useRealtimeSync<T = Record<string, unknown>>({
     if (!enabled || !orgId) return
 
     // ── Channel setup ──────────────────────────────────────────────────────
-    // Problem: supabase.removeChannel() is ASYNC (uses WebSocket teardown).
-    // React does NOT await the cleanup function — it fires the new effect
-    // immediately after calling cleanup. This means a new .on() call can
-    // arrive on a channel that is still in "subscribed" state.
+    // Problem: supabase.removeChannel() is ASYNC (WebSocket teardown).
+    // React fires the new effect immediately after calling cleanup, so a
+    // new .on() can arrive on a channel still in "subscribed" state.
     //
-    // Solution: use a STABLE channel name per (table, orgId, queryKey) and
-    // check if that channel already exists before creating a new one.
-    // If it exists and is already subscribed → reuse it (just update the ref).
-    // If it exists but is NOT subscribed → remove it first, then recreate.
-    // This avoids the "cannot add postgres_changes after subscribe()" error.
+    // Fix: use a STABLE channel name per (table, orgId, queryKey).
+    // If the channel already exists AND is subscribed → reuse it and return
+    // a cleanup that properly removes it (not a no-op!).
+    // If the channel exists but is NOT yet subscribed → remove it synchronously
+    // before creating a new one to avoid the "cannot add callbacks after subscribe()" error.
     const channelName = `${table}:${orgId}:${keyStr}`
 
     // Check if channel already exists in Supabase's internal registry
     const existing = supabase.getChannels().find(c => c.topic === `realtime:${channelName}`)
-    if (existing) {
-      // Channel already subscribed from a previous render — nothing to do.
-      // cleanup will remove it when orgId actually changes.
-      return
-    }
 
-    // Build the channel and register all requested events
+    if (existing) {
+      // Reuse the already-subscribed channel.
+      // We MUST return a cleanup that removes it, so React can properly
+      // tear it down when orgId changes (not a no-op!).
+      return () => {
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        supabase.removeChannel(existing)
+      }
+    }
 
     // Build the channel and register all requested events
     let channel = supabase.channel(channelName)
@@ -229,7 +231,6 @@ export function useRealtimeSync<T = Record<string, unknown>>({
     // events.join is intentional — array identity changes on every render,
     // string comparison is the correct way to detect actual event set changes
     // keyStr included so channel is recreated if queryKey changes
-    // instanceId.current is a ref — stable across renders, not a dep
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [table, orgId, enabled, debounceMs, queryClient, events.join(','), keyStr, filterColumn])
 }

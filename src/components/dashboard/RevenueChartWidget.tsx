@@ -91,7 +91,7 @@ export function RevenueChartWidget({ data, locale }: RevenueChartWidgetProps) {
               const isToday = i === data.length - 1
               return (
                 <div key={i} className="flex-1 text-center">
-                  <span className={`text-[10px] font-medium ${isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
+                  <span className={`text-[10px] font-medium ${isToday ? 'text-indigo-600' : 'text-slate-400'}`} suppressHydrationWarning>
                     {isToday
                       ? (l ? 'היום' : 'Сег')
                       : new Date(d.date).toLocaleDateString(l ? 'he-IL' : 'ru-RU', { weekday: 'short' })}

@@ -1,0 +1,798 @@
+# Trinity CRM — Полная документация
+> Amber Solutions · ambersol.co.il · Последнее обновление: 01.04.2026
+
+---
+
+## 📋 Содержание
+
+1. [Обзор проекта](#1-обзор-проекта)
+2. [Инфраструктура](#2-инфраструктура)
+3. [Архитектура](#3-архитектура)
+4. [База данных — таблицы и схема](#4-база-данных)
+5. [RLS и безопасность](#5-rls-и-безопасность)
+6. [Аутентификация и роли](#6-аутентификация-и-роли)
+7. [Ветки (филиалы)](#7-ветки-филиалы)
+8. [Платежи и Tranzila](#8-платежи-и-tranzila)
+9. [WhatsApp (Whapi)](#9-whatsapp-whapi)
+10. [Лендинг /landing](#10-лендинг-landing)
+11. [UI-компоненты](#11-ui-компоненты)
+12. [Демо-режим](#13-демо-режим)
+13. [Beautymania интеграция](#14-beautymania-интеграция)
+14. [Kira AI агент](#15-kira-ai-агент)
+15. [Правила разработки](#16-правила-разработки)
+16. [Changelog — апрель 2026](#17-changelog)
+
+---
+
+## 1. Обзор проекта
+
+**Trinity CRM** — SaaS CRM-платформа для малого бизнеса в Израиле: салоны, барбершопы, клиники, автомастерские, юристы, риелторы.
+
+| Параметр | Значение |
+|---|---|
+| Продукт | Trinity CRM |
+| Домен | https://ambersol.co.il |
+| GitHub | github.com/Creepie132/trinity |
+| Локальный путь | `F:\Amber_solutions_Kira\Trinity` |
+| Stack | Next.js App Router, Supabase, TypeScript, Tailwind CSS |
+| Деплой | Vercel |
+| Текущие клиенты | Beautymania (Анета), Hair Rehab (Ксения) |
+
+### Тарифные планы
+
+| План | Цена | Назначение |
+|---|---|---|
+| Base | ₪199/мес | Старт, клиенты, визиты, склад |
+| Pro | ₪249/мес | + онлайн-запись, статистика, SMS |
+| Enterprise | ₪499/мес | + филиалы, лояльность, до 5 сотрудников |
+| Custom | по выбору | Индивидуальные модули |
+| Настройка | ₪500 разово | Выезд + настройка + обучение |
+
+---
+
+## 2. Инфраструктура
+
+### Vercel
+| Параметр | Значение |
+|---|---|
+| Team ID | `team_LMjQcFhJbvsscDS6v1qU2If9` |
+| Project ID | `prj_4LI8wdySl50XqA52ymhhC4IcY8JI` |
+| Build Machine | Basic |
+| Preview URL | push в `main` |
+| Production | `git push origin main:production` |
+
+### Supabase
+| Параметр | Значение |
+|---|---|
+| Project ID | `tjryzcqvsavtllahjyrj` |
+| Region | eu-central-1 |
+| Realtime | включён для `wa_conversations`, `wa_messages`, `site_orders` |
+
+### Переменные окружения (`.env.local`)
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+TRANZILA_TERMINAL_ID=ambersolt
+TRANZILA_TERMINAL_PASSWORD=
+TRANZILA_TOKEN_TERMINAL=ambersolttok
+TRANZILA_TOKEN_PASSWORD=
+TRANZILA_PUBLIC_KEY=
+TRANZILA_PRIVATE_KEY=
+WHAPI_API_KEY=
+WHAPI_INSTANCE_ID=
+CRON_SECRET=
+NEXT_PUBLIC_APP_URL=https://www.ambersol.co.il
+```
+
+### Деплой-процедура (ОБЯЗАТЕЛЬНО)
+```powershell
+# 1. Чистый билд
+npm run build     # должен завершиться без ошибок
+
+# 2. Коммит и пуш (preview)
+git add -A
+git commit -m "feat: описание"
+git push origin main
+
+# 3. Выход в production
+git push origin main:production
+```
+**Никогда не деплоить вслепую без чистого билда.**
+
+---
+
+## 3. Архитектура
+
+### Стек
+- **Frontend**: Next.js 16 App Router, React 18, TypeScript
+- **Стили**: Tailwind CSS, shadcn/ui, Lucide React
+- **Состояние**: React Query (TanStack Query v5), Zustand (минимально)
+- **Backend**: Next.js API Routes (serverless)
+- **БД**: Supabase (PostgreSQL 15 + RLS + Realtime)
+- **Auth**: Supabase Auth (email/password + Google OAuth)
+- **Storage**: Supabase Storage (фото клиентов, документы)
+- **Деплой**: Vercel
+
+### Структура директорий
+```
+src/
+├── app/
+│   ├── (dashboard)/          # Основные страницы приложения
+│   │   ├── clients/          # База клиентов
+│   │   ├── diary/            # Дневник записей
+│   │   ├── payments/         # Платежи
+│   │   ├── inventory/        # Склад
+│   │   ├── sales/            # Продажи
+│   │   ├── finances/         # Финансы
+│   │   ├── inbox/            # WhatsApp inbox
+│   │   ├── office/           # Кабинет руководителя
+│   │   └── settings/         # Настройки
+│   ├── (worker)/             # Изолированный раздел для сотрудников
+│   │   ├── worker/           # Дашборд сотрудника
+│   │   ├── worker/pipeline/  # Kanban пайплайн
+│   │   └── worker/meetings/  # Встречи
+│   ├── admin/                # Панель суперадмина
+│   ├── api/                  # API маршруты
+│   ├── landing/              # Лендинг (публичный)
+│   ├── demo/                 # Демо-режим
+│   └── login/                # Аутентификация
+├── components/
+│   ├── ui/                   # Базовые UI (Modal, WizardModal, etc.)
+│   ├── modals/               # Модальные окна фич
+│   ├── payments/             # PaymentDetailsDrawer, etc.
+│   ├── visits/               # CompleteVisitPaymentDialog
+│   └── providers/            # React провайдеры
+├── hooks/                    # Custom hooks
+├── lib/                      # Утилиты и сервисы
+│   ├── auth-helpers.ts       # getAuthContext()
+│   ├── supabase/             # Supabase clients
+│   ├── tranzila.ts           # Tranzila payment links
+│   ├── tranzila-invoices.ts  # Tranzila Invoices API
+│   └── tranzila-webhook.ts   # Webhook security
+├── contexts/                 # React Contexts
+└── types/                    # TypeScript типы
+```
+
+
+---
+
+## 4. База данных
+
+### Ключевые таблицы
+
+| Таблица | Назначение | Ключевые колонки |
+|---|---|---|
+| `organizations` | Одна запись = один клиент Trinity | id, name, features(jsonb), plan, subscription_status |
+| `org_users` | Членство пользователей в org | user_id, org_id, role |
+| `branches` | Филиал → родительская org | id, parent_org_id, child_org_id |
+| `user_active_branch` | Активная ветка пользователя | user_id, active_org_id |
+| `clients` | CRM-клиенты бизнеса | id, org_id, first_name, last_name, phone, email |
+| `visits` | Записи/визиты | id, org_id, client_id, staff_id, started_at, status |
+| `payments` | Платежи | id, org_id, client_id, amount, status, tranzila_document_id |
+| `products` | Товары/материалы | id, org_id, name, price, stock_quantity |
+| `inventory_transactions` | Движение склада | id, org_id, product_id, type, quantity |
+| `sales` | Продажи | id, org_id, client_id, total_amount, status |
+| `sale_items` | Позиции продажи | id, sale_id, org_id, product_id, quantity, price |
+| `site_orders` | Заказы с сайта Beautymania | id, org_id, client_id, sale_id, status |
+| `wa_conversations` | WhatsApp чаты | id, org_id, client_id, phone, status |
+| `wa_messages` | Сообщения WA | id, conversation_id, org_id, body, direction |
+| `wa_integrations` | Настройки WA | id, org_id, provider_type, instance_id |
+| `wa_send_log` | Лог отправок WA | id, org_id, client_id, status |
+| `deals` | Сделки (CRM) | id, org_id, client_id, assigned_to, stage_id |
+| `deal_stages` | Этапы воронки | id, org_id, name, position |
+| `work_shifts` | Смены сотрудников | id, org_id, user_id, started_at |
+| `audit_log` | Аудит действий | id, org_id, action, entity_type, entity_id |
+| `staff_permissions` | Права сотрудников | id, org_id, user_id, permissions(jsonb) |
+| `push_subscriptions` | Web push подписки | id, org_id, user_id, subscription(jsonb) |
+| `revenue_logs` | Доходы сотрудников | id, org_id, worker_id, amount |
+| `expenses` | Расходы | id, org_id, amount, category |
+| `impersonation_sessions` | Сессии impersonation | id, admin_id, target_org_id, token |
+| `org_receipt_settings` | Настройки квитанций | id, org_id, provider, document_type, is_enabled |
+
+### FK-индексы (добавлены 01.04.2026)
+После аудита Supabase advisories добавлены 15 недостающих индексов на FK-колонки:
+- `client_photos(visit_id)`, `deals(org_id, stage_id)`
+- `outbound_queue(org_id, client_id)`, `product_relations(org_id, product_id, related_id)`
+- `sale_items(product_id)`, `sales(payment_id)`
+- `site_orders(org_id, client_id, sale_id)`, `wa_conversations(client_id)`
+- `wa_messages(conversation_id)`, `work_shifts(org_id)`
+
+---
+
+## 5. RLS и безопасность
+
+### Принцип
+
+**Каждая таблица имеет RLS.** Данные одного клиента никогда не попадают к другому. Авторизация только через `auth.uid()` внутри политик — никаких client-side заголовков.
+
+### RLS initplan оптимизация (01.04.2026)
+
+Во всех RLS-политиках (34 политики на 30+ таблицах) заменены вызовы:
+- `auth.uid()` → `(SELECT auth.uid())`
+- `auth.role()` → `(SELECT auth.role())`
+
+**Причина**: PostgreSQL вычисляет `auth.uid()` на каждую строку (O(n)). С `SELECT` — один раз на запрос (O(1)). Эффект заметен на больших таблицах.
+
+### Паттерн политики (правильный)
+
+```sql
+-- ✅ Правильно — один вызов на запрос
+CREATE POLICY "org_isolation" ON public.payments
+  AS PERMISSIVE FOR ALL
+  USING (org_id IN (
+    SELECT org_users.org_id FROM org_users
+    WHERE org_users.user_id = (SELECT auth.uid())
+  ));
+
+-- ❌ Неправильно — вызов на каждую строку
+USING (org_id IN (
+  SELECT org_id FROM org_users
+  WHERE user_id = auth.uid()
+));
+```
+
+### Таблицы с `service_role_only`
+- `payment_attempts` — только сервер
+- `impersonation_sessions` — только сервер
+
+### Multiple permissive policies (исправлено 01.04.2026)
+
+Устранены overlapping политики на таблицах:
+- **`staff_permissions`**: удалены дубли `staff_view_own_permissions`, `owner_manages_permissions`
+- **`inventory_transactions`**: удалены старые `inventory_select`, `inventory_insert` (через `get_user_org_ids()`)
+- **`branches`, `deal_stages`, `deal_tags`, `product_relations`, `sales_plans`**: ALL-политики разбиты на INSERT/UPDATE/DELETE чтобы не перекрываться с SELECT
+
+### Удалённые дублирующие индексы (01.04.2026)
+
+```sql
+-- Дубли audit_log
+idx_audit_date  → дубль idx_audit_log_created_at
+idx_audit_org   → дубль idx_audit_log_org_id
+
+-- 43 неиспользуемых индекса из Supabase advisories
+-- (idx_deals_assigned_last_contact, idx_products_name_trgm, и др.)
+```
+
+---
+
+## 6. Аутентификация и роли
+
+### Основной хелпер
+
+```typescript
+// src/lib/auth-helpers.ts
+const auth = await getAuthContext()
+// Возвращает: { user, orgId, activeOrgId, role, isAdmin }
+```
+
+- `orgId` — основная org пользователя
+- `activeOrgId` — активная ветка (читается из `user_active_branch`, НЕ из заголовков)
+- `isAdmin` — суперадмин Amber Solutions (проверяется через JWT, `useIsAdminFast`)
+- `role` — роль в org: `owner` | `admin` | `staff`
+
+### Клиенты Supabase
+
+| Файл | Использование |
+|---|---|
+| `src/lib/supabase/server.ts` | Cookie-based client (для обычных запросов с RLS) |
+| `src/lib/supabase-service.ts` | Service role (обходит RLS, только после проверки auth) |
+
+### Роли пользователей
+
+| Роль | Доступ |
+|---|---|
+| `owner` | Полный доступ к org, управление настройками, staff |
+| `admin` | Управление клиентами, платежами, данными |
+| `staff` | Ограниченный доступ через `staff_permissions` |
+| `worker` | Изолированный раздел `/worker` — только свои данные |
+| superadmin | Через `admin_users` таблицу — полный доступ ко всем org |
+
+### Impersonation (суперадмин)
+
+```
+admin_users.is_admin = true → может работать от имени любой org
+Логируется в impersonation_sessions + audit_log
+```
+
+### Worker раздел (изолированный)
+- Route group: `src/app/(worker)/`
+- Layout: JWT-only, без RLS
+- Хук: `useIsAdminFast` — проверка JWT без сетевого запроса
+- Особенность: hardware back button поддержка (LIFO стек навигации)
+
+---
+
+## 7. Ветки (филиалы)
+
+### Архитектура
+
+```
+organizations (parent)
+    └── branches
+            └── organizations (child — отдельный org_id)
+```
+
+| Компонент | Назначение |
+|---|---|
+| `branches` таблица | Связь parent_org_id → child_org_id |
+| `user_active_branch` | Активная ветка пользователя (server truth) |
+| `BranchContext.tsx` | Client-side кэш в localStorage |
+| `POST /api/set-active-branch` | Сохранение выбора в БД |
+
+### Данные по контексту
+
+| Тип данных | Скоп | Механизм |
+|---|---|---|
+| Clients | Shared (mainOrgId) | Без branch-контекста |
+| Visits | Per activeOrgId | Service role + user_active_branch |
+| Payments | Per activeOrgId | Service role + user_active_branch |
+| Products | Per activeOrgId | Service role + user_active_branch |
+| Dashboard | Per activeOrgId | useBranch() hook |
+
+---
+
+## 8. Платежи и Tranzila
+
+### Tranzila — библиотеки
+
+| Файл | Назначение |
+|---|---|
+| `src/lib/tranzila.ts` | Создание платёжных ссылок (DirectNG iframe) |
+| `src/lib/tranzila-invoices.ts` | Генерация документов (Invoices API) |
+| `src/lib/tranzila-webhook.ts` | Безопасность вебхуков (подпись, IP) |
+
+### Типы документов Tranzila
+
+| Код API | Тип в коде | Иврит |
+|---|---|---|
+| `IR` | `receipt_invoice` | חשבונית מס קבלה (default) |
+| `RE` | `receipt` | קבלה |
+| `IN` | `invoice` | חשבונית מס |
+
+**Default везде**: `receipt_invoice` (חשבונית מס קבלה). Меняется через `org_receipt_settings.document_type`.
+
+### Терминалы
+
+| Переменная | Назначение |
+|---|---|
+| `TRANZILA_TERMINAL_ID` | Основной платёжный терминал (`ambersolt`) |
+| `TRANZILA_TOKEN_TERMINAL` | Token-терминал для рекуррентных платежей |
+| `tranzila_invoice_terminal` | Отдельный терминал для документов (на уровне org) |
+
+**Приоритет терминала для документов**: `org.tranzila_invoice_terminal` → `org.tranzila_terminal` → `env.TRANZILA_TERMINAL_ID`
+
+### Точки генерации документов
+
+#### 1. `/api/payments/[id]/send-receipt` — ручная отправка
+- **Триггер**: кнопка "Отправить квитанцию" в PaymentDetailsDrawer
+- **Функции**: `createReceipt()` → `getReceiptPdf()`
+- **Канал**: WhatsApp (Meta Cloud API) + email
+- **Идемпотентность**: проверяет `payment.tranzila_document_id`
+
+#### 2. `/api/payments/[id]/auto-send-receipt` — автоматическая (cron)
+- **Триггер**: автоматически после оплаты (Bearer CRON_SECRET)
+- **Поддерживает**: Tranzila и Morning (Green Invoice)
+- **Канал**: WhatsApp (Whapi)
+
+#### 3. `/api/payments/tranzila-notify` — рекуррентные платежи
+- **Триггер**: callback от Tranzila My Billing (ежемесячное списание)
+- **Тип документа**: жёстко `receipt_invoice`
+- **Назначение**: подписки клиентов Trinity
+
+#### 4. `/api/payments/tranzila-success` (функция `sendSubscriptionEmail`)
+- **Триггер**: redirect после успешной оплаты через iframe
+- **Назначение**: онбординг нового клиента Trinity
+- **Функция**: `createTranzilaInvoice()` (deprecated → `createReceipt()`)
+
+#### 5. `/api/payments/tranzila/webhook` — старый webhook
+- **Триггер**: POST от Tranzila (form-urlencoded)
+- **Безопасность**: IP whitelist (62.219.85.140/141/148), идемпотентность
+- **Функция**: `createTranzilaInvoice()` (deprecated)
+
+#### 6. `/api/payments/[id]/tranzila-pdf` — скачивание PDF
+- **Триггер**: кнопка "Скачать PDF" в PaymentDetailsDrawer
+- **Функция**: только `getReceiptPdf()`, документ не создаётся
+
+#### 7. `/api/payments/[id]/receipt` — локальная HTML-квитанция
+- **Независимая система**, не использует Tranzila Invoices API
+- **Функция**: `generateReceipt()` из `src/lib/generate-receipt.ts`
+
+### ⚠️ Важные замечания
+1. `createTranzilaInvoice()` помечена `@deprecated`. Два места ещё используют её: `tranzila/webhook` и `tranzila-success`. Нужно мигрировать на `createReceipt()`.
+2. В `/api/payments/tranzila-notify` терминал не передаётся — используется глобальный `TRANZILA_TERMINAL_ID`. Gap если у клиента отдельный `tranzila_invoice_terminal`.
+3. Morning (Green Invoice) подключён в `auto-send-receipt` как альтернатива (тип 400 = קבלה).
+
+---
+
+## 9. WhatsApp (Whapi)
+
+### Архитектура
+
+```
+Whapi.cloud → POST /api/webhooks/whapi
+                        ↓
+               wa_conversations + wa_messages
+                        ↓
+               /inbox (UI с Realtime)
+```
+
+### Таблицы
+- `wa_conversations` — один чат = одна запись
+- `wa_messages` — сообщения (direction: `in` / `out`)
+- `wa_integrations` — настройки интеграции (vault_secret_id для API key)
+- `wa_send_log` — лог всех отправок
+- `wa_trigger_settings` — настройки авто-триггеров
+- `outbound_queue` — очередь исходящих
+
+### Ключевые особенности
+- **Realtime sync**: Supabase Realtime + polling fallback (5 сек)
+- **Оптимистичные обновления**: сообщение появляется сразу, до подтверждения
+- **Звуковые уведомления**: `public/sounds/notification.wav`
+- **GlobalRealtimeSync**: предотвращает дублирование WS-каналов
+- **Webhook**: `POST /api/webhooks/whapi?token=trinity_whapi_secret_2026`
+- **Два направления**: входящие (webhook) + исходящие (API)
+
+### API маршруты
+| Маршрут | Назначение |
+|---|---|
+| `GET /api/wa-inbox/conversations` | Список чатов |
+| `POST /api/wa-inbox/send` | Отправить сообщение |
+| `GET /api/wa-inbox/[id]` | Сообщения чата |
+| `POST /api/wa-inbox/[id]/create-client` | Создать клиента из чата |
+| `POST /api/wa-inbox/[id]/create-visit` | Создать визит из чата |
+| `POST /api/webhooks/whapi` | Входящие сообщения от Whapi |
+
+### WA-напоминания о визитах
+- Cron: `GET /api/cron/reminders`
+- Шаблоны: `wa_trigger_settings` (время, текст)
+- Отправка через Whapi API
+
+---
+
+## 10. Лендинг /landing
+
+### Расположение
+`src/app/landing/page.tsx` — Next.js страница (статическая)
+
+### Языки
+| Язык | Направление | Цикл переключения |
+|---|---|---|
+| RU (русский) | LTR | → HE |
+| HE (иврит) | RTL | → EN |
+| EN (английский) | LTR | → RU |
+
+**Переключатель**: кнопка `btn-lang` в nav. Цикл: RU → HE → EN → RU.
+
+### Компоненты страницы
+1. **Nav** — логотип, ссылки, `btn-lang`, кнопка входа, бургер (мобильный)
+2. **Mobile menu** — открывается по бургеру, включает переключатель языка (добавлен 01.04.2026)
+3. **Hero** — заголовок, CTA, статистика (90% WhatsApp, 5 мин запуск, 0₪ комиссий)
+4. **Marquee** — бегущая строка с типами бизнесов
+5. **Problem** — три боли клиента
+6. **Features** — 6 ключевых возможностей
+7. **Trust** — безопасность (SSL, backup, соответствие закону)
+8. **How it works** — 4 шага запуска
+9. **Pricing** — 4 тарифных плана (из БД через `usePricingPlans`)
+10. **Testimonials** — отзывы Анеты и Ксении
+11. **CTA** — финальный призыв к действию
+12. **Footer**
+
+### Планы из БД
+Цены берутся из Supabase через хук `usePricingPlans`. Fallback на хардкод если API недоступен.
+
+### Мобильная адаптация
+- `@media (max-width: 900px)` — tablet: скрывается nav-links, показывается бургер
+- `@media (max-width: 480px)` — mobile: центрирование, вертикальные кнопки
+- `@media (max-height: 800px/650px)` — короткие экраны (ноутбуки)
+
+---
+
+## 11. UI-компоненты
+
+### Modal.tsx — базовый движок
+`src/components/ui/Modal.tsx`
+- Перетаскиваемый + закрепляемый
+- Поддержка RTL/LTR
+- Размеры: sm/md/lg/xl/full через `clamp()`
+- **Не импортировать напрямую** в компонентах фич — использовать через TrinityModalShell или WizardModal
+
+### TrinityModalShell — стандарт для обычных модалок
+`src/components/ui/TrinityModalShell.tsx`
+
+```tsx
+<Modal open={open} onClose={onClose} darkHeader width="680px">
+  <TrinityModalShell icon={<UserPlus/>} title="Новый клиент" subtitle="Заполните данные">
+    {formContent}
+  </TrinityModalShell>
+</Modal>
+```
+
+### WizardModal — многошаговые диалоги
+`src/components/ui/WizardModal.tsx`
+
+**Всегда используй для любого многошагового диалога.**
+
+```tsx
+<WizardModal
+  open={open} onClose={onClose}
+  title="Заголовок" steps={steps} currentStep={step}
+  onNext={() => setStep(n => n+1)} onBack={() => setStep(n => n-1)}
+  canProceed={isValid} onSubmit={handleSubmit}
+  dir="rtl" size="lg"
+>
+  {step === 1 && <StepOne />}
+  {step === 2 && <StepTwo />}
+</WizardModal>
+```
+
+Визуальный стиль: тёмно-синий градиент хедер, hex-логотип, шаговые индикаторы.
+
+### ModalBottomSheet — мобильный паттерн
+Для мобильных устройств (<768px) — bottom sheet вместо центрированного модала.
+
+### Размеры модалок
+
+| size | max-width |
+|---|---|
+| sm | clamp(320px, 90vw, 384px) |
+| md | clamp(320px, 90vw, 448px) |
+| lg | clamp(320px, 85vw, 512px) |
+| xl | clamp(320px, 85vw, 576px) |
+| full | clamp(320px, 80vw, 896px) |
+
+### Адаптивность (правило)
+**Все страницы Trinity обязаны поддерживать:**
+- Mobile: < 768px
+- Tablet: 768–1024px
+- Desktop: > 1024px
+
+---
+
+## 12. Демо-режим
+
+### Архитектура
+
+Демо-режим даёт потенциальным клиентам ограниченный доступ к Trinity без оплаты.
+
+- **Триггер**: `/demo/try` → Google OAuth → автоматическая активация
+- **Признак**: `organizations.features.is_demo = true`
+- **Лимиты**: `client_limit`, `visit_limit`, `product_limit`, `task_limit` в features(jsonb)
+- **Отслеживание**: `demo_sessions` таблица (expires_at, is_active)
+- **Seed-данные**: автоматически генерируются тестовые записи
+
+### Защита лимитов
+```typescript
+// Типизированный error class
+class LimitExceededError extends Error { ... }
+
+// Перехват в MutationCache.subscribe()
+// Показывает UI с предложением обновить план
+```
+
+### Снятие лимитов
+При успешном платеже через Tranzila webhook — `is_demo: false`, все лимиты → `null`.
+
+---
+
+## 13. Beautymania интеграция
+
+### Сайт
+- **Репозиторий**: `Creepie132/bm-site`
+- **Локальный путь**: `F:\Amber_solutions_Kira\bm_site`
+- **Stack**: HTML/CSS/JS (статический)
+- **Дизайн**: чёрный + золото
+- **URL**: beautymania.co.il
+
+### API маршруты (в Trinity)
+| Маршрут | Назначение |
+|---|---|
+| `GET /api/beautymania/products` | Каталог товаров для сайта |
+| `GET /api/beautymania/related` | Связанные товары |
+| `POST /api/beautymania/order` | Создание заказа → Trinity CRM |
+| `POST /api/beautymania/contact` | Форма обратной связи |
+
+### Цикл заказа
+```
+Клиент на beautymania.co.il → POST /api/beautymania/order
+  → создаётся site_orders запись
+  → WA-алерт владельцу (Анете) через Whapi
+  → In-App push уведомление в Trinity
+  → Realtime обновление /sales страницы
+```
+
+### Уведомления о заказах (02.04.2026)
+- **WA-алерт**: настраивается в Trinity → Настройки → Уведомления
+  - `organizations.notify_new_orders_wa` (boolean)
+  - `organizations.notification_phone` (номер получателя)
+- **In-App**: Supabase Realtime на `site_orders`, toast + звук
+- **Провайдер**: `SiteOrdersRealtimeProvider.tsx` в DashboardShell
+
+### Статусы заказов
+`new` → `confirmed` → `shipped` → `delivered` | `cancelled`
+
+При каждой смене статуса → WA клиенту (4 шаблона).
+
+---
+
+## 14. Kira AI агент
+
+### Концепция
+- **Что**: AI-ассистент для клиентов Trinity (в приложении + WhatsApp бот)
+- **LLM**: OpenAI GPT-4o (не Claude — бан Anthropic из-за OpenClaw)
+- **OCR**: Gemini уже используется
+- **Домен**: kira.ambersol.co.il (планируется)
+
+### Архитектура (планируется)
+```
+WhatsApp (Whapi) → incoming webhook
+  → Trinity backend → OpenAI GPT-4o
+  → ответ клиенту через Whapi
+```
+
+### Требования к ToS
+- Бот должен представляться как AI: "Я Кира, AI-ассистент Trinity"
+- Нельзя общаться с людьми без раскрытия что это AI
+- Причина бана OpenClaw: бот говорил с Анетой без уведомления
+
+---
+
+## 15. Правила разработки
+
+### Engineering Protocol (ОБЯЗАТЕЛЕН)
+
+**Фаза 1 — Сканирование (Zero-Assumption)**
+- Перед любым кодом — читать реальные файлы
+- Не дублировать существующий функционал
+
+**Фаза 2 — Проектирование**
+- Валидация входящих данных
+- Обработка ошибок
+- Оценка регрессии
+
+**Фаза 3 — Валидация**
+- Ошибка устранена?
+- TypeScript/БД/UI целы?
+- Нет костылей?
+
+**Фаза 4 — Отчёт**
+```
+Проверено: [файлы/модули]
+Регрессия: [нет/описание]
+Безопасность: [защищено]
+```
+
+### Правила кода
+```
+ЗАПРЕЩЕНО:
+- monkey-patching глобалов
+- temp-скрипты (_push.js, _patch.js)
+- костыли вместо архитектуры
+
+ОБЯЗАТЕЛЬНО:
+- нативные механизмы (MutationCache, Context, React Query)
+- типизированные error-классы
+- стандартный git
+```
+
+### Commit формат
+```
+feat: новая функция
+fix: исправление бага
+refactor: рефакторинг
+chore: конфиг, зависимости
+```
+
+### Правила UI
+- TrinityModalShell — стандарт для всех модалок (кроме явно кастомных)
+- При изменении UI — только добавление/исправление, никогда не удалять элементы без явной просьбы
+
+### Checklist перед каждым API route
+- [ ] `getAuthContext()` вызван первым
+- [ ] Пользователь аутентифицирован (401 если нет)
+- [ ] `activeOrgId` из БД, не из заголовков
+- [ ] Все запросы фильтруются по `org_id`
+- [ ] Service role только после проверки auth
+- [ ] Нет sensitive данных в логах
+
+### Checklist перед деплоем
+```
+1. npm run build  — должен быть ЧИСТЫМ (0 ошибок, 0 warnings TypeScript)
+2. Перечитать изменённый файл — проверить корректность кода
+3. git commit + push
+4. Мониторить Vercel dashboard
+```
+
+---
+
+## 16. Changelog
+
+---
+
+### 01.04.2026 — Оптимизация БД (RLS + индексы + политики)
+
+#### Задача 1: RLS initplan оптимизация
+**Миграция**: `rls_initplan_optimization`
+
+Заменены все голые вызовы `auth.uid()` → `(SELECT auth.uid())` и `auth.role()` → `(SELECT auth.role())` в **34 политиках** на **30+ таблицах**:
+
+`inventory_transactions`, `branches`, `user_active_branch`, `payment_attempts`, `transfer_requests`, `work_shifts`, `audit_log`, `impersonation_sessions`, `staff_permissions`, `push_subscriptions`, `revenue_logs`, `client_subscriptions`, `worker_notes`, `subscription_charges`, `organizations`, `sales`, `sale_items`, `wa_integrations`, `outbound_queue`, `wa_send_log`, `wa_trigger_settings`, `expenses`, `wa_conversations`, `wa_messages`, `deal_stages`, `deals`, `deal_tags`, `sales_plans`, `call_records`, `communication_log`, `worker_dashboard_settings`, `client_photos`, `site_orders`, `product_relations`
+
+#### Задача 2: Дублирующие индексы audit_log
+**Миграция**: `drop_duplicate_audit_log_indexes`
+
+Удалены: `idx_audit_date`, `idx_audit_org`
+
+#### Задача 3: Неиспользуемые индексы
+**Миграция**: `drop_unused_indexes`
+
+Удалены 43 индекса по Supabase performance advisories.
+
+#### Задача 4: Missing FK индексы
+**Миграция**: `add_missing_fk_indexes`
+
+Добавлены 15 индексов для FK-колонок без покрытия (см. раздел 4).
+
+#### Задача 5: Multiple permissive policies
+**Миграция**: `fix_multiple_permissive_policies`
+
+- `staff_permissions`: удалены дубли SELECT и ALL
+- `inventory_transactions`: удалены старые политики через `get_user_org_ids()`
+- `branches`, `deal_stages`, `deal_tags`, `product_relations`, `sales_plans`: ALL → INSERT/UPDATE/DELETE
+
+#### Задача 6: Лендинг — переключатель языка в мобильном меню
+**Коммит**: `7ae040b` — `feat: lang-switcher in mobile menu landing`
+
+Добавлена кнопка `btn-lang` в `mobile-menu`. Теперь переключение языка доступно как на desktop, так и на мобильных устройствах.
+
+Страница `/landing` уже содержала: три языка (RU/HE/EN), цикл переключения, бургер-меню.
+
+#### Задача 7: Tranzila audit
+Проведён полный аудит всех точек вызова Tranzila. Выявлено:
+- 7 точек генерации документов (6 через Tranzila + 1 локальная HTML)
+- Функция `createTranzilaInvoice()` помечена `@deprecated` — использована ещё в 2 местах
+- Gap: в `/tranzila-notify` не передаётся `tranzila_invoice_terminal`
+- Рекомендация: мигрировать `tranzila/webhook` и `tranzila-success` на `createReceipt()` напрямую
+
+---
+
+### 02.04.2026 — Уведомления о заказах Beautymania
+(см. `docs/CLAUDE.md` для деталей)
+
+- WA-алерт владельцу при новом заказе
+- In-App Realtime уведомления
+- Настройки уведомлений в Trinity
+- Полный UI-цикл заказов (статусы + WA клиенту)
+
+---
+
+### Ранние изменения (краткая история)
+
+| Период | Что сделано |
+|---|---|
+| 2025 Q1 | Основа: multi-tenant Supabase, RLS, org_id изоляция |
+| 2025 Q2 | Tranzila интеграция, WhatsApp напоминания, Green Invoice |
+| 2025 Q3 | Демо-режим, admin панель, impersonation |
+| 2025 Q4 | Мобильный UI (TrinityMob, ModalBottomSheet), Worker раздел |
+| 2026 Q1 | WhatsApp Inbox (Whapi), Кабинет руководителя, Beautymania сайт |
+| 2026 Q1 | Sales plans, Deal stages, Auth-First onboarding, Push уведомления |
+
+---
+
+## 📎 Связанные файлы
+
+| Файл | Назначение |
+|---|---|
+| `docs/TRINITY_DOCS.md` | **Этот файл** — полная документация |
+| `docs/CLAUDE.md` | Changelog последних сессий |
+| `docs/SKILL.md` | Skill для AI-ассистента (Modal, WizardModal) |
+| `docs/INVITATION_SYSTEM.md` | Система приглашений |
+| `supabase/RELATIONSHIPS.md` | Связи таблиц |
+| `supabase/SCHEMA_EXPORT.sql` | Экспорт схемы |
+| `KNOWLEDGE_BASE.md` | Исторические заметки |
+
+---
+
+*Документация обновлена: 01.04.2026*
+*Версия Next.js: 16.1.6 (Turbopack)*
+*Supabase project: tjryzcqvsavtllahjyrj*

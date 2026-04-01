@@ -6,14 +6,15 @@
  * for tables that are used by multiple hooks simultaneously.
  *
  * ⚠️ ANTI-PATTERN PREVENTION:
- * useProducts(), useServices() are called from 8+ components at once.
- * Each call used to create its own RT channel → Supabase "mismatch between
- * server and client bindings" error. Fix: remove RT from those hooks,
- * subscribe ONCE here instead.
+ * useProducts(), useServices(), useOrganization() are called from many
+ * components at once. Each call used to create its own RT channel →
+ * Supabase "cannot add postgres_changes callbacks after subscribe()" error.
+ * Fix: remove RT from those hooks, subscribe ONCE here instead.
  */
 import dynamic from 'next/dynamic'
-import { usePathname } from 'next/navigation'
-import { useRealtimeSync } from '@/hooks/useRealtimeSync'
+import { usePathname, useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { useRealtimeSync, RealtimePayload } from '@/hooks/useRealtimeSync'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
 
@@ -51,11 +52,46 @@ const UpdateBanner = dynamic(
 function GlobalRealtimeSync() {
   const { orgId } = useAuth()
   const { activeOrgId } = useBranch()
+  const queryClient = useQueryClient()
+  const router = useRouter()
+  const pathname = usePathname()
 
   // products — used by SaleModal, VisitDetailMob, InventoryPage, DashboardContent, etc.
   useRealtimeSync({ table: 'products',  orgId: activeOrgId, queryKey: ['products']  })
   // services — used by CreateVisitDialog, SaleModal, VisitDetailMob, settings, etc.
   useRealtimeSync({ table: 'services',  orgId: orgId,       queryKey: ['services']  })
+
+  // organizations — useOrganization() is called from 15+ components simultaneously.
+  // Centralised here to prevent "cannot add postgres_changes after subscribe()" error.
+  useRealtimeSync({
+    table: 'organizations',
+    orgId: activeOrgId,
+    queryKey: ['organization'],
+    events: ['UPDATE'],
+    filterColumn: 'id',   // organizations table uses id, not org_id
+    onEvent: (payload: RealtimePayload) => {
+      // Invalidate all org-related queries
+      queryClient.invalidateQueries({ queryKey: ['organization'] })
+
+      // Redirect if the currently-viewed module was disabled remotely
+      const newModules = (payload.new as any)?.features?.modules || {}
+      const moduleRoutes: Record<string, string> = {
+        '/payments':      'payments',
+        '/inventory':     'inventory',
+        '/sms':           'sms',
+        '/stats':         'statistics',
+        '/reports':       'reports',
+        '/subscriptions': 'subscriptions',
+        '/booking':       'booking',
+      }
+      for (const [route, moduleKey] of Object.entries(moduleRoutes)) {
+        if (pathname.startsWith(route) && !newModules[moduleKey]) {
+          router.push('/dashboard')
+          break
+        }
+      }
+    },
+  })
 
   return null
 }

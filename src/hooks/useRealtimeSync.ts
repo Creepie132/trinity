@@ -111,6 +111,14 @@ export interface UseRealtimeSyncOptions<T = Record<string, unknown>> {
    * API route be the source of truth — that goes through RLS + auth checks.
    */
   onEvent?: (payload: RealtimePayload<T>) => void
+
+  /**
+   * Column name used in the Realtime filter expression.
+   * Default: 'org_id' (works for all regular tables).
+   * Use 'id' for the organizations table itself (filtered by primary key).
+   * Example: filterColumn='id' → filter: `id=eq.${orgId}`
+   */
+  filterColumn?: string
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
@@ -123,6 +131,7 @@ export function useRealtimeSync<T = Record<string, unknown>>({
   enabled = true,
   debounceMs = 300,
   onEvent,
+  filterColumn = 'org_id',
 }: UseRealtimeSyncOptions<T>): void {
   const queryClient = useQueryClient()
 
@@ -161,7 +170,7 @@ export function useRealtimeSync<T = Record<string, unknown>>({
           table,
           // org_id filter: Realtime pre-filters at DB level — only this org's rows
           // are delivered over the WebSocket. RLS is the real enforcement.
-          filter: `org_id=eq.${orgId}`,
+          filter: `${filterColumn}=eq.${orgId}`,
         },
         (payload: { new: T; old: Partial<T> }) => {
           // 1. Fire custom callback (toasts, optimistic hints)
@@ -203,5 +212,5 @@ export function useRealtimeSync<T = Record<string, unknown>>({
     // string comparison is the correct way to detect actual event set changes
     // keyStr included so channel is recreated if queryKey changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, orgId, enabled, debounceMs, queryClient, events.join(','), keyStr])
+  }, [table, orgId, enabled, debounceMs, queryClient, events.join(','), keyStr, filterColumn])
 }

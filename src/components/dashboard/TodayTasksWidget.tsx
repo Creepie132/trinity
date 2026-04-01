@@ -169,7 +169,7 @@ function SwipeableTask({ task, locale, onDone, onCancel, onClick }: SwipeableTas
               isBurning ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'
             }`}>{task.title}</p>
           </div>
-          <div className="flex items-center gap-1 text-xs text-gray-400">
+          <div className="flex items-center gap-1 text-xs text-gray-400" suppressHydrationWarning>
             {task.due_date ? (
               <>
                 <Clock className="w-3 h-3" />

@@ -88,7 +88,7 @@ export function TodayVisitsWidget({ visits, locale, onVisitClick }: TodayVisitsW
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
                     {nextVisit.clients ? `${nextVisit.clients.first_name || ''} ${nextVisit.clients.last_name || ''}`.trim() : '—'}
                   </p>
-                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5" suppressHydrationWarning>
                     <Clock className="w-3 h-3" />
                     {new Date(nextVisit.scheduled_at).toLocaleDateString(l ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
                     {' · '}
@@ -134,7 +134,7 @@ export function TodayVisitsWidget({ visits, locale, onVisitClick }: TodayVisitsW
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${status.dot}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{name}</p>
-                    <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <div className="flex items-center gap-1 text-xs text-gray-400" suppressHydrationWarning>
                       <Clock className="w-3 h-3" />
                       {time}
                       {v.service_name && <span>· {v.service_name}</span>}

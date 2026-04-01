@@ -382,14 +382,20 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   }, [])
 
   const fetchNotifications = useCallback(async () => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8000)
     try {
-      const res = await fetch('/api/notifications?unread_only=false')
+      const res = await fetch('/api/notifications?unread_only=false', { signal: controller.signal })
       if (res.ok) {
         const data: Notification[] = await res.json()
         setNotifications(data)
         setUnreadCount(data.filter(n => !n.is_read).length)
       }
-    } catch (e) { console.error(e) }
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') console.error(e)
+    } finally {
+      clearTimeout(timeoutId)
+    }
   }, [])
 
   async function markAllRead() {
@@ -461,7 +467,9 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   // Realtime
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
+    let cancelled = false
     supabase.auth.getUser().then(({ data }) => {
+      if (cancelled) return
       const userId = data?.user?.id ?? null
       if (!userId) return
       channel = supabase.channel(`notifications:${userId}`)
@@ -473,7 +481,10 @@ export function NotificationBell({ locale }: NotificationBellProps) {
         })
         .subscribe()
     })
-    return () => { if (channel) supabase.removeChannel(channel) }
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
+    }
   }, [])
 
   async function rejectInvitation(notifId: string, userId: string, orgId: string) {

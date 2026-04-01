@@ -58,8 +58,21 @@ export async function getAuthContext(request?: NextRequest): Promise<AuthContext
     }
   )
 
-  // Верификация токена на сервере
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  // Верификация токена на сервере (таймаут 10 сек — защита от Supabase timeout)
+  let user: User | null = null
+  let authError: Error | null = null
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('auth_timeout')), 10000)
+    )
+    const authPromise = supabase.auth.getUser().then(({ data, error }) => {
+      if (error) throw error
+      return data.user
+    })
+    user = await Promise.race([authPromise, timeoutPromise])
+  } catch (e: any) {
+    authError = e
+  }
 
   if (authError || !user) {
     return { 

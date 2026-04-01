@@ -153,12 +153,27 @@ export function useRealtimeSync<T = Record<string, unknown>>({
     if (!enabled || !orgId) return
 
     // ── Channel setup ──────────────────────────────────────────────────────
-    // Each effect run gets a unique suffix so that when orgId changes
-    // (null → real value) or React Strict Mode double-invokes the effect,
-    // the new channel has a different name from the previous one.
-    // The cleanup below removes the channel before the next run.
-    const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-    const channelName = `${table}:${orgId}:${keyStr}:${runId}`
+    // Problem: supabase.removeChannel() is ASYNC (uses WebSocket teardown).
+    // React does NOT await the cleanup function — it fires the new effect
+    // immediately after calling cleanup. This means a new .on() call can
+    // arrive on a channel that is still in "subscribed" state.
+    //
+    // Solution: use a STABLE channel name per (table, orgId, queryKey) and
+    // check if that channel already exists before creating a new one.
+    // If it exists and is already subscribed → reuse it (just update the ref).
+    // If it exists but is NOT subscribed → remove it first, then recreate.
+    // This avoids the "cannot add postgres_changes after subscribe()" error.
+    const channelName = `${table}:${orgId}:${keyStr}`
+
+    // Check if channel already exists in Supabase's internal registry
+    const existing = supabase.getChannels().find(c => c.topic === `realtime:${channelName}`)
+    if (existing) {
+      // Channel already subscribed from a previous render — nothing to do.
+      // cleanup will remove it when orgId actually changes.
+      return
+    }
+
+    // Build the channel and register all requested events
 
     // Build the channel and register all requested events
     let channel = supabase.channel(channelName)

@@ -402,8 +402,10 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
 
   return (
     <>
-      {/* ▼ id="demo-step-dashboard" — якорь для тура driver.js */}
-      <div id="demo-step-dashboard" className="p-4 md:p-6">
+      {/* suppressHydrationWarning on root div prevents React #418 from
+          date/time-dependent content that differs between SSR (UTC) and
+          client (Israel UTC+3): greeting text, formatted dates, shift timers */}
+      <div id="demo-step-dashboard" className="p-4 md:p-6" suppressHydrationWarning>
         <GreetingHeader ownerName={onboardingData?.ownerName || ''} todayVisitsCount={todayVisits.length} locale={locale} />
         <ActivityStrip visitsToday={todayVisits.length} visitsDone={(todayVisits as any[]).filter((v: any) => v.status === 'completed').length} tasksOpen={todayTasks.length} tasksUrgent={todayTasks.filter((t: any) => t.priority === 'urgent').length} revenueToday={revenueToday} locale={locale} />
         <LowStockAlert locale={locale} />

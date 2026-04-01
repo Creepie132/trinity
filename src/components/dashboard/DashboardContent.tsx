@@ -195,10 +195,15 @@ function ActivityStrip({ visitsToday, visitsDone, tasksOpen, tasksUrgent, revenu
 
 function GreetingHeader({ ownerName, todayVisitsCount, locale }: { ownerName: string; todayVisitsCount: number; locale: string }) {
   const l = locale === 'he'
-  const hour = new Date().getHours()
-  const greeting = l ? (hour < 12 ? 'בוקר טוב' : hour < 17 ? 'צהריים טובים' : 'ערב טוב') : (hour < 12 ? 'Доброе утро' : hour < 17 ? 'Добрый день' : 'Добрый вечер')
+  // Use state to avoid SSR/client hydration mismatch (server=UTC, client=Israel UTC+3)
+  const [greeting, setGreeting] = useState('')
+  const [today, setToday] = useState('')
+  useEffect(() => {
+    const hour = new Date().getHours()
+    setGreeting(l ? (hour < 12 ? 'בוקר טוב' : hour < 17 ? 'צהריים טובים' : 'ערב טוב') : (hour < 12 ? 'Доброе утро' : hour < 17 ? 'Добрый день' : 'Добрый вечер'))
+    setToday(new Date().toLocaleDateString(l ? 'he-IL' : 'ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }))
+  }, [l])
   const firstName = ownerName?.split(' ')[0] || ''
-  const today = new Date().toLocaleDateString(l ? 'he-IL' : 'ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })
   return (
     <div className="mb-5 flex items-start justify-between flex-wrap gap-2">
       <div>

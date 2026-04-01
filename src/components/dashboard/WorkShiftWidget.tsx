@@ -182,7 +182,7 @@ export function WorkShiftWidget() {
                     {t.started}: {formatTime(shift.started_at, locale)}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400" suppressHydrationWarning>
                   <Timer className="w-3 h-3" />
                   {formatDuration(Math.floor((Date.now() - new Date(shift.started_at).getTime()) / 1000))}
                 </div>

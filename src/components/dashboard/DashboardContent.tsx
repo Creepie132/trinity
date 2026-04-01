@@ -207,8 +207,10 @@ function GreetingHeader({ ownerName, todayVisitsCount, locale }: { ownerName: st
   return (
     <div className="mb-5 flex items-start justify-between flex-wrap gap-2">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">{greeting}{firstName ? `, ${firstName}` : ''} 👋</h2>
-        <p className="text-sm text-gray-500 mt-0.5 capitalize">{today}</p>
+        <h2 className="text-xl font-bold text-gray-900" suppressHydrationWarning>
+          {greeting}{firstName ? `, ${firstName}` : ''} 👋
+        </h2>
+        <p className="text-sm text-gray-500 mt-0.5 capitalize" suppressHydrationWarning>{today}</p>
       </div>
       {todayVisitsCount > 0 && (
         <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-xl border border-blue-100">

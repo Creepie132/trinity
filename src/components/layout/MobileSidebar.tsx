@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, BarChart3, Briefcase, Shield, Home, LogOut, Settings, Calendar, Package, BookOpen, ShoppingBag, PiggyBank, MessageCircle } from 'lucide-react'
+import { Users, CreditCard, BarChart3, Briefcase, Shield, Home, LogOut, Settings, Calendar, Package, BookOpen, ShoppingBag, PiggyBank, MessageCircle, Globe } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
 import { useHasWorkers } from '@/hooks/useHasWorkers'
 import { useMobileMenuPrefetch, useTouchPrefetch } from '@/hooks/useMobilePrefetch'
+import { useOrganization } from '@/hooks/useOrganization'
 
 // ─── NavLink — Link с touch prefetch для мгновенной навигации на мобиле ──────
 function NavLink({ href, onClick, className, children }: {
@@ -50,6 +51,8 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const sidebarSide = 'right'
   const isOwner = role === 'owner'
   const showOffice = isOwner && hasWorkers !== false
+  const { data: organization } = useOrganization()
+  const hasStorefront = organization?.has_storefront === true
 
   // ⚡ При открытии меню — prefetch RSC payload + RQ данных для всех разделов
   useMobileMenuPrefetch(isOpen)

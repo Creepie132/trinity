@@ -29,6 +29,7 @@ export interface Organization {
   payments_enabled?: boolean
   recurring_enabled?: boolean
   branches_enabled?: boolean
+  has_storefront?: boolean
 }
 
 /** Читает activeOrgId из cookie (синхронно, без запроса) */

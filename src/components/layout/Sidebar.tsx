@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Users, CreditCard, BarChart3, Briefcase, Shield, Home, LogOut, Calendar, Settings, BookOpen, Package, UserPlus, CalendarPlus, ShoppingCart, ShoppingBag, PiggyBank, MessageCircle } from 'lucide-react'
+import { Users, CreditCard, BarChart3, Briefcase, Shield, Home, LogOut, Calendar, Settings, BookOpen, Package, UserPlus, CalendarPlus, ShoppingCart, ShoppingBag, PiggyBank, MessageCircle, Globe } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { useFeatures } from '@/hooks/useFeatures'
@@ -20,6 +20,7 @@ import { useClients } from '@/hooks/useClients'
 import { useQuery } from '@tanstack/react-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useBranch } from '@/contexts/BranchContext'
+import { useOrganization } from '@/hooks/useOrganization'
 
 const baseNavigation = [
   { name_he: 'דשבורד', name_ru: 'Дашборд', href: '/dashboard', icon: Home, requireFeature: null },
@@ -57,6 +58,8 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const [demoSaleOpen, setDemoSaleOpen] = useState(false)
   const [demoClientOpen, setDemoClientOpen] = useState(false)
   const [demoVisitOpen, setDemoVisitOpen] = useState(false)
+  const { data: organization } = useOrganization()
+  const hasStorefront = organization?.has_storefront === true
 
   // Count visits for demo limit check (total + active simultaneous)
   const { activeOrgId } = useBranch()
@@ -183,6 +186,30 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
             </Link>
           )
         })}
+
+        {/* Сайт — только если has_storefront === true */}
+        {hasStorefront && (
+          <>
+            <Separator className="my-2 bg-gray-200 dark:bg-slate-700" />
+            <Link href="/website/blog" prefetch={true}
+              className={cn(
+                'flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group',
+                pathname.startsWith('/website')
+                  ? 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-lg shadow-teal-500/30 scale-[1.02]'
+                  : 'text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:shadow-md active:scale-[0.98] border border-teal-100 dark:border-teal-800/40'
+              )}>
+              <div className={cn('p-1.5 rounded-lg transition-colors',
+                pathname.startsWith('/website') ? 'bg-white/20' : 'bg-teal-100 dark:bg-teal-900/30')}>
+                <Globe className={cn('w-5 h-5 flex-shrink-0',
+                  pathname.startsWith('/website') ? 'text-white' : 'text-teal-600 dark:text-teal-400')} />
+              </div>
+              <span className="flex-1 font-semibold">
+                {language === 'he' ? '🌐 אתר' : '🌐 Сайт'}
+              </span>
+              {pathname.startsWith('/website') && <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />}
+            </Link>
+          </>
+        )}
 
         {/* Кабинет руководителя — только owner + есть workers */}
         {showOffice && (

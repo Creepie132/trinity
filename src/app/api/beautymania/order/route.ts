@@ -37,13 +37,19 @@ const ANETA_EMAIL   = process.env.BEAUTYMANIA_EMAIL   ?? 'anetamarinina@gmail.co
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 const orderSchema = z.object({
-  product_id: z.string().uuid(),
+  product_id:   z.string().uuid(),
   product_name: z.string().min(1).max(200),
-  quantity:   z.coerce.number().int().min(1).max(999).default(1),
-  name:       z.string().min(1).max(200),
-  email:      z.string().email(),
-  phone:      z.string().min(7).max(30).optional().or(z.literal('')),
-  message:    z.string().max(2000).optional().or(z.literal('')),
+  quantity:     z.coerce.number().int().min(1).max(999).default(1),
+  name:         z.string().min(1).max(200),
+  email:        z.string().email(),
+  phone:        z.string().min(7).max(30).optional().or(z.literal('')),
+  message:      z.string().max(2000).optional().or(z.literal('')),
+  // Traffic attribution — опциональны, бэкенд никогда не доверяет
+  // этим данным критически, но принимает для аналитики
+  utm_source:   z.string().max(100).optional().or(z.literal('')),
+  utm_medium:   z.string().max(100).optional().or(z.literal('')),
+  utm_campaign: z.string().max(200).optional().or(z.literal('')),
+  referrer:     z.string().max(500).optional().or(z.literal('')),
 })
 
 // ─── WhatsApp helper ──────────────────────────────────────────────────────────
@@ -147,7 +153,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errors }, { status: 400, headers })
     }
 
-    const { product_id, quantity, name, email, phone, message } = result.data
+    const { product_id, quantity, name, email, phone, message,
+            utm_source, utm_medium, utm_campaign, referrer } = result.data
     const service = createSupabaseServiceClient()
 
     // ── 1. Verify product: belongs to BM, active, has stock ──────────────────
@@ -204,6 +211,11 @@ export async function POST(request: NextRequest) {
         status:       'new',
         notes:        message || null,
         source:       'beautymania',
+        // Traffic attribution — нормализуем: пустая строка → 'direct'
+        utm_source:   utm_source   || 'direct',
+        utm_medium:   utm_medium   || 'direct',
+        utm_campaign: utm_campaign || null,
+        referrer:     referrer     || 'direct',
       })
       .select('id')
       .single()

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 import { ratelimitPublic, getClientIp } from '@/lib/ratelimit'
+import { normalizePhone } from '@/lib/wa/phone'
 import { z } from 'zod'
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
@@ -36,14 +37,39 @@ const ANETA_EMAIL   = process.env.BEAUTYMANIA_EMAIL   ?? 'anetamarinina@gmail.co
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 const orderSchema = z.object({
-  product_id:   z.string().uuid(),
+  product_id: z.string().uuid(),
   product_name: z.string().min(1).max(200),
-  quantity:     z.coerce.number().int().min(1).max(999).default(1),
-  name:         z.string().min(1).max(200),
-  email:        z.string().email(),
-  phone:        z.string().min(7).max(30).optional().or(z.literal('')),
-  message:      z.string().max(2000).optional().or(z.literal('')),
+  quantity:   z.coerce.number().int().min(1).max(999).default(1),
+  name:       z.string().min(1).max(200),
+  email:      z.string().email(),
+  phone:      z.string().min(7).max(30).optional().or(z.literal('')),
+  message:    z.string().max(2000).optional().or(z.literal('')),
 })
+
+// ─── WhatsApp helper ──────────────────────────────────────────────────────────
+async function sendWaToClient(
+  service: ReturnType<typeof createSupabaseServiceClient>,
+  orgId: string,
+  phone: string,
+  message: string
+): Promise<void> {
+  try {
+    const normalized = normalizePhone(phone)
+    if (!normalized) return
+
+    const { data: apiKey } = await service.rpc('get_wa_api_key', { p_org_id: orgId })
+    if (!apiKey) return
+
+    await fetch('https://gate.whapi.cloud/messages/text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({ to: `${normalized}@s.whatsapp.net`, body: message }),
+    })
+  } catch (err) {
+    // Не-критичная ошибка — логируем, не бросаем
+    console.error('[Beautymania Order] WhatsApp send failed:', err)
+  }
+}
 
 // ─── POST /api/beautymania/order ──────────────────────────────────────────────
 export async function POST(request: NextRequest) {
@@ -72,7 +98,7 @@ export async function POST(request: NextRequest) {
     const { product_id, quantity, name, email, phone, message } = result.data
     const service = createSupabaseServiceClient()
 
-    // Verify product belongs to Beautymania, is active and has enough stock
+    // ── 1. Verify product: belongs to BM, active, has stock ──────────────────
     const { data: product } = await service
       .from('products')
       .select('id, name, sell_price, quantity')
@@ -86,16 +112,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Product not available' }, { status: 404, headers })
     }
 
-    // Check stock is sufficient for requested quantity
     if (product.quantity < quantity) {
       return NextResponse.json({ error: 'Insufficient stock' }, { status: 409, headers })
     }
 
-    // Use product_name from DB — never trust client-supplied name
+    // product_name берётся из БД — клиент не может подменить
     const product_name = product.name
     const totalPrice = (product.sell_price ?? 0) * quantity
 
-    // ── Сохранить заказ в site_orders ─────────────────────────────────────────
+    // ── 2. Списать товар со склада (атомарно через decrement) ─────────────────
+    const { error: stockError } = await service
+      .from('products')
+      .update({ quantity: product.quantity - quantity })
+      .eq('id', product_id)
+      .eq('org_id', BM_ORG_ID)
+      .eq('quantity', product.quantity) // optimistic lock — защита от race condition
+
+    if (stockError) {
+      // Оптимистичный лок не прошёл — товар уже выкуплен параллельным запросом
+      console.error('[Beautymania Order] Stock update failed (race condition):', stockError)
+      return NextResponse.json({ error: 'Product just sold out, please refresh' }, { status: 409, headers })
+    }
+
+    // ── 3. Сохранить заказ в site_orders ─────────────────────────────────────
     const { data: siteOrder } = await service
       .from('site_orders')
       .insert({
@@ -104,10 +143,10 @@ export async function POST(request: NextRequest) {
         customer_phone: phone || null,
         customer_email: email,
         items: [{
-          product_id:   product_id,
-          product_name: product_name,
-          quantity:     quantity,
-          unit_price:   product.sell_price ?? 0,
+          product_id,
+          product_name,
+          quantity,
+          unit_price: product.sell_price ?? 0,
         }],
         total_amount: totalPrice,
         status:       'new',
@@ -117,19 +156,29 @@ export async function POST(request: NextRequest) {
       .select('id')
       .single()
 
-    // ── Create notification in Trinity for Aneta ──────────────────────────────
+    // ── 4. Уведомление Анете в Trinity ───────────────────────────────────────
     await service.from('notifications').insert({
       org_id:       BM_ORG_ID,
       user_id:      ANETA_USER_ID,
       type:         'new_order',
-      title:        `🛍️ Новый заказ с сайта`,
-      body:         `${name} заказал(а) ${product_name} × ${quantity}${phone ? ` · ${phone}` : ''}`,
+      title:        '🛍️ Новый заказ с сайта',
+      body:         `${name} — ${product_name} × ${quantity}${phone ? ` · ${phone}` : ''}`,
       link:         '/sales',
       reference_id: siteOrder?.id ?? null,
       is_read:      false,
     })
 
-    // ── Send email to Aneta ───────────────────────────────────────────────────
+    // ── 5. WhatsApp клиенту — подтверждение заказа ────────────────────────────
+    if (phone) {
+      const waMessage =
+        `✅ Заказ принят!\n\n` +
+        `Привет, ${name}! Ваш заказ в Beautymania получен.\n\n` +
+        `🛍️ ${product_name} × ${quantity} = ₪${totalPrice.toFixed(0)}\n\n` +
+        `Мы свяжемся с вами в ближайшее время для подтверждения доставки. 💛`
+      await sendWaToClient(service, BM_ORG_ID, phone, waMessage)
+    }
+
+    // ── 6. Email Анете ────────────────────────────────────────────────────────
     await resend.emails.send({
       from:    'Beautymania <notifications@ambersol.co.il>',
       to:      ANETA_EMAIL,
@@ -163,8 +212,8 @@ export async function POST(request: NextRequest) {
       `,
     })
 
-    console.log('[Beautymania Order] Order placed:', product_name, 'by', name)
-    return NextResponse.json({ success: true }, { headers })
+    console.log('[Beautymania Order] Order placed:', product_name, 'qty:', quantity, 'by:', name, '| stock left:', product.quantity - quantity)
+    return NextResponse.json({ success: true, order_id: siteOrder?.id }, { headers })
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error'

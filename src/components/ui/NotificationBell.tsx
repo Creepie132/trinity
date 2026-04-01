@@ -6,7 +6,6 @@ import { Bell, CheckCheck, Phone, MessageCircle, Check, X, Trash2 } from 'lucide
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { ClientBottomSheet } from '@/components/clients/ClientBottomSheet'
 import { TrinityNotificationIcon } from './TrinityNotificationIcon'
-import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useModalStore } from '@/store/useModalStore'
 import { OrderDetailModal } from '@/components/sales/OrderDetailModal'
 
@@ -372,7 +371,6 @@ export function NotificationBell({ locale }: NotificationBellProps) {
   const [orderModalId, setOrderModalId] = useState<string | null>(null)
 
   const l = translations[locale]
-  const supabase = createSupabaseBrowserClient()
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024)
@@ -464,28 +462,25 @@ export function NotificationBell({ locale }: NotificationBellProps) {
     return () => clearInterval(interval)
   }, [fetchNotifications])
 
-  // Realtime
+  // Realtime — централизованная подписка находится в GlobalRealtimeSync (ClientProviders).
+  // NotificationBell просто слушает CustomEvent 'trinity:new-notification',
+  // который диспатчится оттуда при INSERT. Это предотвращает дублирование
+  // канала когда NotificationBell рендерится одновременно в Sidebar + MobileHeader.
   useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null
-    let cancelled = false
-    supabase.auth.getUser().then(({ data }) => {
-      if (cancelled) return
-      const userId = data?.user?.id ?? null
-      if (!userId) return
-      channel = supabase.channel(`notifications:${userId}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload) => {
-          const newNotif = payload.new as Notification
-          setNotifications(prev => [newNotif, ...prev])
-          setUnreadCount(prev => prev + 1)
-          playNotificationSound()
-        })
-        .subscribe()
-    })
-    return () => {
-      cancelled = true
-      if (channel) supabase.removeChannel(channel)
+    const handler = (e: Event) => {
+      const notif = (e as CustomEvent).detail as Notification | undefined
+      if (notif) {
+        setNotifications(prev => [notif, ...prev])
+        setUnreadCount(prev => prev + 1)
+      } else {
+        // fallback — просто рефетчим
+        fetchNotifications()
+      }
+      playNotificationSound()
     }
-  }, [])
+    window.addEventListener('trinity:new-notification', handler)
+    return () => window.removeEventListener('trinity:new-notification', handler)
+  }, [fetchNotifications])
 
   async function rejectInvitation(notifId: string, userId: string, orgId: string) {
     try {

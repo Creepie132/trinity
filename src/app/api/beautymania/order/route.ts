@@ -3,6 +3,7 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 import { ratelimitPublic, getClientIp } from '@/lib/ratelimit'
 import { normalizePhone } from '@/lib/wa/phone'
+import { dispatchNotification } from '@/lib/dispatch-notification'
 import { z } from 'zod'
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
@@ -283,6 +284,18 @@ export async function POST(request: NextRequest) {
     })
 
     console.log('[Beautymania Order] Order placed:', product_name, 'qty:', quantity, 'by:', name, '| stock left:', product.quantity - quantity)
+
+    // Dispatch Telegram + Push notification to Aneta (fire-and-forget)
+    void dispatchNotification({
+      event_type: 'new_order',
+      org_id: BM_ORG_ID,
+      payload: {
+        title: '🛒 הזמנה חדשה מהאתר!',
+        body: `${product_name} ×${quantity} — ₪${totalPrice}`,
+        url: '/site-orders',
+      },
+    })
+
     return NextResponse.json({ success: true, order_id: siteOrder?.id }, { headers })
 
   } catch (err: unknown) {

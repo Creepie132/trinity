@@ -2,6 +2,7 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { enforceDemoLimit } from '@/lib/demo-limits'
+import { dispatchNotification } from '@/lib/dispatch-notification'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -123,6 +124,17 @@ export async function POST(req: NextRequest) {
       console.error('Insert error:', insertError)
       return NextResponse.json({ error: String(insertError) }, { status: 500 })
     }
+
+    // Dispatch Telegram notification (fire-and-forget)
+    void dispatchNotification({
+      event_type: 'new_client',
+      org_id: orgId,
+      payload: {
+        title: '👤 לקוח חדש',
+        body: `${clientData.first_name ?? ''} ${clientData.last_name ?? ''}`.trim() || 'לקוח חדש',
+        url: '/clients',
+      },
+    })
 
     return NextResponse.json(client, { status: 201 })
   } catch (error: any) {

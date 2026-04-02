@@ -6,10 +6,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Trinity CRM | מערכת ניהול לקוחות',
     description: 'ניהול לקוחות, תורים ו-WhatsApp בפלטפורמה אחת.',
-    url: 'https://ambersol.co.il/landing',
+    url: 'https://ambersol.co.il',
     type: 'website',
   },
   alternates: {
-    canonical: 'https://ambersol.co.il/landing',
+    // canonical указывает на корень — именно он будет в индексе Google
+    canonical: 'https://ambersol.co.il',
   },
 }

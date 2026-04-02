@@ -1,10 +1,11 @@
-// ─── SoundManager — Web Audio API based, tasteful & short ───────────────────
-// Generates sounds procedurally — no external files needed.
-// Fallback to /sounds/Notification.mp3 if already unlocked by NotificationBell.
+// ─── SoundManager — Web Audio API + MP3 fallback ────────────────────────────
+// Strategy:
+// 1. Try Web Audio API synthesis (no files needed, works after user gesture)
+// 2. If AudioContext is blocked/missing → fallback to /sounds/Notification.mp3
+// 3. MP3 fallback always tried so sound works even before first click
 
 import type { ToastVariant, ToastPriority } from './types'
 
-// Reuse AudioContext that NotificationBell may have already created
 declare global {
   interface Window {
     _trinityAudioCtx?: AudioContext
@@ -12,6 +13,7 @@ declare global {
   }
 }
 
+// ── AudioContext management ───────────────────────────────────────────────────
 function getCtx(): AudioContext | null {
   if (typeof window === 'undefined') return null
   if (!window._trinityAudioCtx) {
@@ -24,94 +26,103 @@ function getCtx(): AudioContext | null {
   return window._trinityAudioCtx
 }
 
-function resume(ctx: AudioContext) {
-  if (ctx.state === 'suspended') ctx.resume().catch(() => {})
-}
-
-// Unlock on first user gesture — same pattern as NotificationBell
-if (typeof window !== 'undefined' && !window._trinityAudioUnlocked) {
+// Unlock AudioContext on ANY user gesture (needed for Web Audio API)
+if (typeof window !== 'undefined') {
   const unlock = () => {
     window._trinityAudioUnlocked = true
-    getCtx()
-    window.removeEventListener('click', unlock)
-    window.removeEventListener('touchstart', unlock)
-    window.removeEventListener('keydown', unlock)
+    const ctx = getCtx()
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
   }
-  window.addEventListener('click', unlock, { once: true })
-  window.addEventListener('touchstart', unlock, { once: true })
-  window.addEventListener('keydown', unlock, { once: true })
+  window.addEventListener('click',      unlock, { passive: true })
+  window.addEventListener('touchstart', unlock, { passive: true })
+  window.addEventListener('keydown',    unlock, { passive: true })
+  window.addEventListener('pointerdown',unlock, { passive: true })
 }
 
-// ── Sound recipes — pure synthesis, no files ──────────────────────────────
+// ── MP3 fallback — works even without user gesture unlock ────────────────────
+function playMp3Fallback(volume = 0.5) {
+  try {
+    const audio = new Audio('/sounds/Notification.mp3')
+    audio.volume = volume
+    const p = audio.play()
+    if (p) p.catch(() => {})
+  } catch {}
+}
+
+// ── Web Audio synthesis ───────────────────────────────────────────────────────
 function playTone(
-  ctx: AudioContext,
-  frequency: number,
-  type: OscillatorType,
-  gainPeak: number,
-  duration: number,
-  startDelay = 0,
-  fadeStart?: number,
+  ctx: AudioContext, freq: number, type: OscillatorType,
+  gainPeak: number, dur: number, delay = 0,
 ) {
-  const osc = ctx.createOscillator()
-  const gain = ctx.createGain()
-  osc.connect(gain)
-  gain.connect(ctx.destination)
-  osc.type = type
-  osc.frequency.setValueAtTime(frequency, ctx.currentTime + startDelay)
-  gain.gain.setValueAtTime(0, ctx.currentTime + startDelay)
-  gain.gain.linearRampToValueAtTime(gainPeak, ctx.currentTime + startDelay + 0.01)
-  const fadeAt = fadeStart ?? (ctx.currentTime + startDelay + duration - 0.05)
-  gain.gain.setValueAtTime(gainPeak, fadeAt)
-  gain.gain.linearRampToValueAtTime(0, ctx.currentTime + startDelay + duration)
-  osc.start(ctx.currentTime + startDelay)
-  osc.stop(ctx.currentTime + startDelay + duration + 0.01)
+  try {
+    const osc  = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = type
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay)
+    gain.gain.setValueAtTime(0, ctx.currentTime + delay)
+    gain.gain.linearRampToValueAtTime(gainPeak, ctx.currentTime + delay + 0.015)
+    gain.gain.setValueAtTime(gainPeak, ctx.currentTime + delay + dur - 0.04)
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + delay + dur)
+    osc.start(ctx.currentTime + delay)
+    osc.stop(ctx.currentTime + delay + dur + 0.01)
+  } catch {}
 }
 
-// Soft two-note ding — info / success / normal
-function playChime(ctx: AudioContext, gain = 0.18) {
-  playTone(ctx, 880, 'sine', gain, 0.25, 0)
-  playTone(ctx, 1108, 'sine', gain * 0.7, 0.2, 0.12)
+function playChime(ctx: AudioContext) {
+  playTone(ctx, 880,  'sine', 0.18, 0.25, 0)
+  playTone(ctx, 1108, 'sine', 0.12, 0.20, 0.13)
 }
 
-// Warm single pop — payment / client
-function playPop(ctx: AudioContext, gain = 0.22) {
-  playTone(ctx, 660, 'sine', gain, 0.15, 0)
-  playTone(ctx, 880, 'sine', gain * 0.5, 0.1, 0.08)
+function playPop(ctx: AudioContext) {
+  playTone(ctx, 660, 'sine', 0.22, 0.15, 0)
+  playTone(ctx, 880, 'sine', 0.10, 0.10, 0.09)
 }
 
-// Subtle alert — warning / high priority
-function playAlert(ctx: AudioContext, gain = 0.2) {
-  playTone(ctx, 440, 'triangle', gain, 0.12, 0)
-  playTone(ctx, 440, 'triangle', gain, 0.12, 0.18)
+function playAlert(ctx: AudioContext) {
+  playTone(ctx, 440, 'triangle', 0.20, 0.12, 0)
+  playTone(ctx, 440, 'triangle', 0.20, 0.12, 0.20)
 }
 
-// Urgent pulse — critical / error
-function playUrgent(ctx: AudioContext, gain = 0.25) {
-  playTone(ctx, 330, 'square', gain * 0.3, 0.08, 0)
-  playTone(ctx, 440, 'square', gain * 0.3, 0.08, 0.12)
-  playTone(ctx, 550, 'square', gain * 0.3, 0.08, 0.24)
+function playUrgent(ctx: AudioContext) {
+  playTone(ctx, 330, 'square', 0.08, 0.08, 0)
+  playTone(ctx, 440, 'square', 0.08, 0.08, 0.13)
+  playTone(ctx, 550, 'square', 0.08, 0.08, 0.26)
 }
 
+// ── Public API ────────────────────────────────────────────────────────────────
 export function playNotificationSound(
   variant: ToastVariant,
   priority: ToastPriority,
 ): void {
-  const ctx = getCtx()
-  if (!ctx || !window._trinityAudioUnlocked) return
-  resume(ctx)
+  if (typeof window === 'undefined') return
 
-  if (priority === 'urgent' || variant === 'critical') {
-    playUrgent(ctx)
+  const ctx = getCtx()
+  const unlocked = !!window._trinityAudioUnlocked
+
+  // Try Web Audio if context is ready and unlocked
+  if (ctx && unlocked && ctx.state === 'running') {
+    if (priority === 'urgent' || variant === 'critical') { playUrgent(ctx); return }
+    if (priority === 'high'   || variant === 'warning' || variant === 'error') { playAlert(ctx); return }
+    if (variant === 'payment' || variant === 'client')  { playPop(ctx);    return }
+    playChime(ctx)
     return
   }
-  if (priority === 'high' || variant === 'warning' || variant === 'error') {
-    playAlert(ctx)
+
+  // Try to resume suspended context
+  if (ctx && unlocked && ctx.state === 'suspended') {
+    ctx.resume().then(() => {
+      if (priority === 'urgent' || variant === 'critical') { playUrgent(ctx); return }
+      if (priority === 'high'   || variant === 'warning' || variant === 'error') { playAlert(ctx); return }
+      if (variant === 'payment' || variant === 'client')  { playPop(ctx);    return }
+      playChime(ctx)
+    }).catch(() => playMp3Fallback())
     return
   }
-  if (variant === 'payment' || variant === 'client') {
-    playPop(ctx)
-    return
-  }
-  // info, success, visit, task, system
-  playChime(ctx)
+
+  // Fallback: HTML Audio — works even before user gesture in some browsers
+  playMp3Fallback(0.5)
 }

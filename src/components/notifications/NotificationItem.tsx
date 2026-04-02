@@ -1,6 +1,5 @@
 'use client'
 // ─── NotificationItem ────────────────────────────────────────────────────────
-// Premium animated toast card. Linear / Stripe aesthetic.
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
@@ -11,7 +10,6 @@ import {
 import type { ToastItem } from './types'
 import { useNotificationStore } from './NotificationStore'
 
-// ── Variant config ────────────────────────────────────────────────────────────
 const VARIANT_CONFIG = {
   success:  { icon: CheckCircle2,  color: '#10b981', bg: '#f0fdf4', border: '#bbf7d0', text: '#065f46' },
   error:    { icon: XCircle,       color: '#ef4444', bg: '#fef2f2', border: '#fecaca', text: '#991b1b' },
@@ -32,10 +30,10 @@ const PRIORITY_RING: Record<string, string> = {
 }
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
-function ProgressBar({
-  duration, isPaused, color, onExpire,
-}: { duration: number; isPaused: boolean; color: string; onExpire: () => void }) {
-  const [progress, setProgress]   = useState(100)
+function ProgressBar({ duration, isPaused, color, onExpire }: {
+  duration: number; isPaused: boolean; color: string; onExpire: () => void
+}) {
+  const [progress, setProgress] = useState(100)
   const startRef   = useRef(Date.now())
   const elapsedRef = useRef(0)
   const rafRef     = useRef(0)
@@ -62,7 +60,7 @@ function ProgressBar({
   if (duration === 0) return null
   return (
     <div className="absolute bottom-0 left-0 right-0 h-[2.5px] overflow-hidden rounded-b-2xl bg-black/5">
-      <div style={{ width: `${progress}%`, backgroundColor: color, height: '100%', opacity: 0.6 }} />
+      <div style={{ width: `${progress}%`, backgroundColor: color, height: '100%', opacity: 0.55 }} />
     </div>
   )
 }
@@ -70,7 +68,7 @@ function ProgressBar({
 // ── NotificationItem ──────────────────────────────────────────────────────────
 interface NotificationItemProps {
   toast:      ToastItem
-  index:      number   // 0 = topmost (newest)
+  index:      number
   total:      number
   isExpanded: boolean
 }
@@ -80,13 +78,12 @@ export function NotificationItem({ toast, index, total, isExpanded }: Notificati
   const cfg     = VARIANT_CONFIG[toast.variant]
   const IconCmp = cfg.icon
 
-  // Stacking physics
-  const stackY       = isExpanded ? 0    : index * 7
-  const stackScale   = isExpanded ? 1    : 1 - index * 0.04
-  const stackOpacity = isExpanded ? 1    : index === 0 ? 1 : index === 1 ? 0.82 : index === 2 ? 0.6 : 0.35
+  const stackY       = isExpanded ? 0 : index * 7
+  const stackScale   = isExpanded ? 1 : 1 - index * 0.04
+  const stackOpacity = isExpanded ? 1 : index === 0 ? 1 : index === 1 ? 0.82 : index === 2 ? 0.6 : 0.35
 
   const cardStyle: React.CSSProperties = {
-    transform:  toast.isExiting
+    transform: toast.isExiting
       ? 'translateX(calc(100% + 28px))'
       : `translateY(${stackY}px) scale(${stackScale})`,
     opacity: toast.isExiting ? 0 : stackOpacity,
@@ -94,12 +91,12 @@ export function NotificationItem({ toast, index, total, isExpanded }: Notificati
     transition: toast.isExiting
       ? 'transform 0.32s cubic-bezier(0.4,0,1,1), opacity 0.25s ease'
       : 'transform 0.42s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease',
-    pointerEvents: (index === 0 || isExpanded) ? 'auto' : 'none',
+    pointerEvents:   (index === 0 || isExpanded) ? 'auto' : 'none',
     backgroundColor: cfg.bg,
     borderColor:     cfg.border,
     boxShadow: [
-      '0 4px 16px rgba(0,0,0,0.08)',
-      '0 1px 3px rgba(0,0,0,0.06)',
+      '0 4px 20px rgba(0,0,0,0.10)',
+      '0 1px 4px rgba(0,0,0,0.06)',
       PRIORITY_RING[toast.priority],
     ].filter(Boolean).join(', '),
   }
@@ -113,21 +110,20 @@ export function NotificationItem({ toast, index, total, isExpanded }: Notificati
       onMouseLeave={() => resumeToast(toast.id)}
       className="absolute bottom-0 left-0 right-0 rounded-2xl border flex flex-col overflow-hidden select-none"
     >
-      {/* ── Body ───────────────────────────────────────────────────── */}
-      <div className="flex items-start gap-3 p-4 pb-3">
+      {/* ── Body ─────────────────────────────────────────────────── */}
+      <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+
         {/* Icon */}
-        <div
-          className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center mt-0.5"
-          style={{ backgroundColor: cfg.color + '1a' }}
-        >
+        <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center mt-0.5"
+          style={{ backgroundColor: cfg.color + '1a' }}>
           {toast.icon
             ? <span className="text-lg leading-none">{toast.icon}</span>
             : <IconCmp size={17} style={{ color: cfg.color }} strokeWidth={2.2} />
           }
         </div>
 
-        {/* Text */}
-        <div className="flex-1 min-w-0 pt-0.5">
+        {/* Text — right-pad so close button doesn't overlap */}
+        <div className="flex-1 min-w-0 pt-0.5 pr-8">
           <p className="text-[13px] font-semibold leading-snug" style={{ color: cfg.text }}>
             {toast.title}
           </p>
@@ -138,21 +134,30 @@ export function NotificationItem({ toast, index, total, isExpanded }: Notificati
             </p>
           )}
         </div>
-
-        {/* Close */}
-        <button
-          onClick={() => _startExit(toast.id)}
-          className="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center
-                     opacity-35 hover:opacity-65 transition-opacity -mt-0.5 -mr-0.5"
-          aria-label="Закрыть"
-        >
-          <X size={13} style={{ color: cfg.text }} />
-        </button>
       </div>
 
-      {/* ── Actions ────────────────────────────────────────────────── */}
+      {/* ── Close button — top-right, large hit target ────────────── */}
+      <button
+        onClick={() => _startExit(toast.id)}
+        aria-label="Закрыть"
+        title="Закрыть"
+        style={{ color: cfg.text }}
+        className="
+          absolute top-3 right-3
+          w-7 h-7 rounded-lg
+          flex items-center justify-center
+          bg-black/5 hover:bg-black/12
+          opacity-60 hover:opacity-100
+          transition-all duration-150
+          active:scale-90
+        "
+      >
+        <X size={14} strokeWidth={2.5} />
+      </button>
+
+      {/* ── Actions ──────────────────────────────────────────────── */}
       {(toast.action || toast.secondaryAction) && (
-        <div className="flex items-center gap-2 px-4 pb-3.5 -mt-0.5">
+        <div className="flex items-center gap-2 px-4 pb-4 -mt-0.5">
           {toast.action && (
             <button
               onClick={() => { toast.action!.onClick(); _startExit(toast.id) }}
@@ -174,7 +179,7 @@ export function NotificationItem({ toast, index, total, isExpanded }: Notificati
         </div>
       )}
 
-      {/* ── Progress bar ───────────────────────────────────────────── */}
+      {/* ── Progress bar ─────────────────────────────────────────── */}
       <ProgressBar
         duration={toast.duration}
         isPaused={toast.isPaused}

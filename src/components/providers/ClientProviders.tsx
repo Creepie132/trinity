@@ -21,6 +21,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRealtimeSync, RealtimePayload } from '@/hooks/useRealtimeSync'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
+import { ToastStack } from '@/components/notifications/ToastStack'
 
 const ConditionalChatWidget = dynamic(
   () => import('@/components/ConditionalChatWidget'),
@@ -53,9 +54,6 @@ const UpdateBanner = dynamic(
 )
 
 // ── Single RT subscriptions for ALL tables ───────────────────────────────────
-// ONE channel per table per session. All hooks (useClients, usePayments, etc.)
-// had useRealtimeSync inside them → called from N components → N duplicate
-// channels with the same name → Supabase error. Fixed: everything here only.
 function GlobalRealtimeSync() {
   const { orgId, user } = useAuth()
   const { activeOrgId } = useBranch()
@@ -70,7 +68,6 @@ function GlobalRealtimeSync() {
     }
   }
 
-  // ── Per-org tables ────────────────────────────────────────────────────────
   useRealtimeSync({ table: 'products',  orgId: activeOrgId, queryKey: ['products'] })
   useRealtimeSync({ table: 'services',  orgId: orgId,       queryKey: ['services'] })
   useRealtimeSync({ table: 'sales',     orgId: activeOrgId, queryKey: ['sales'],
@@ -97,7 +94,6 @@ function GlobalRealtimeSync() {
   useRealtimeSync({ table: 'visit_services',        orgId: activeOrgId, queryKey: ['visit-services'] })
   useRealtimeSync({ table: 'inventory_transactions', orgId: activeOrgId, queryKey: ['inventory-transactions'] })
 
-  // ── organizations — 15+ consumers, one channel ───────────────────────────
   useRealtimeSync({
     table: 'organizations', orgId: activeOrgId,
     queryKey: ['organization'], events: ['UPDATE'], filterColumn: 'id',
@@ -115,7 +111,6 @@ function GlobalRealtimeSync() {
     },
   })
 
-  // ── notifications — renders in Sidebar + MobileHeader simultaneously ─────
   useRealtimeSync({
     table: 'notifications', orgId: userId,
     queryKey: ['notifications'], events: ['INSERT'], filterColumn: 'user_id',
@@ -128,7 +123,6 @@ function GlobalRealtimeSync() {
 export function ClientProviders() {
   const pathname = usePathname()
 
-  // Landing страница изолирована — не подключаем CRM-виджеты
   if (pathname === '/landing') return null
 
   return (
@@ -140,6 +134,8 @@ export function ClientProviders() {
       <PWAInstallBanner />
       <PushNotificationPrompt />
       <ConditionalChatWidget />
+      {/* ── Trinity Toast Notification Stack ─────────────────────── */}
+      <ToastStack />
     </>
   )
 }

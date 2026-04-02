@@ -1,8 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, Bell, Smartphone, Calendar, CreditCard, UserPlus, Cake, Clock, Package, MessageCircle } from 'lucide-react'
+import {
+  ArrowRight, Bell, Smartphone, Calendar, CreditCard,
+  UserPlus, Cake, Clock, Package, MessageCircle, Shield,
+  Bot, ChevronRight, Loader2,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,21 +20,37 @@ import { useDemoMode } from '@/hooks/useDemoMode'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { usePushSettings, type PushSettings } from '@/hooks/usePushSettings'
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface NotifChannels {
+  push: boolean
+  telegram: boolean
+  email: boolean
+}
+
+interface NotificationPreferences {
+  [eventKey: string]: NotifChannels
+}
+
+const DEFAULT_CHANNELS: NotifChannels = { push: true, telegram: false, email: false }
+
 // ─── Push event config ────────────────────────────────────────────────────────
 
-interface PushEventConfig {
-  key: keyof PushSettings
+interface EventConfig {
+  key: string
   icon: React.ElementType
   labelHe: string
   labelRu: string
   descHe: string
   descRu: string
+  group: 'visits' | 'shop' | 'whatsapp_ai' | 'security'
 }
 
-const PUSH_EVENTS: PushEventConfig[] = [
+const EVENTS: EventConfig[] = [
   {
     key: 'new_visit',
     icon: Calendar,
+    group: 'visits',
     labelHe: 'ביקור / הזמנה חדשה',
     labelRu: 'Новый визит / бронь',
     descHe: 'כשנוצרת הזמנה — ידנית או דרך קישור',
@@ -39,71 +59,150 @@ const PUSH_EVENTS: PushEventConfig[] = [
   {
     key: 'visit_reminder',
     icon: Clock,
+    group: 'visits',
     labelHe: 'תזכורות ביקור',
     labelRu: 'Напоминания о визите',
-    descHe: '4ש׳ / שעה / 30 דק׳ לפני; 10 דק׳ / שעה אחרי אם לא הסתיים',
-    descRu: 'За 4ч/1ч/30мин до; через 10мин/1ч после если не завершён',
+    descHe: '4ש׳ / שעה / 30 דק׳ לפני',
+    descRu: 'За 4ч / 1ч / 30мин до визита',
+  },
+  {
+    key: 'birthday',
+    icon: Cake,
+    group: 'visits',
+    labelHe: 'יום הולדת',
+    labelRu: 'День рождения',
+    descHe: 'ביום הולדת של לקוח',
+    descRu: 'В день рождения клиента',
+  },
+  {
+    key: 'new_client',
+    icon: UserPlus,
+    group: 'visits',
+    labelHe: 'לקוח חדש',
+    labelRu: 'Новый клиент',
+    descHe: 'כשמתווסף לקוח חדש',
+    descRu: 'При добавлении нового клиента',
   },
   {
     key: 'new_payment',
     icon: CreditCard,
+    group: 'shop',
     labelHe: 'תשלום חדש',
     labelRu: 'Новый платёж',
     descHe: 'כשמתקבל תשלום מלקוח',
     descRu: 'При получении платежа от клиента',
   },
   {
-    key: 'task_mentions',
-    icon: Bell,
-    labelHe: 'משימות',
-    labelRu: 'Задачи',
-    descHe: 'הקצאה, ציון, ביצוע, דדליין, פג תוקף',
-    descRu: 'Назначение, упоминание, выполнение, дедлайн, просрочка',
-  },
-  {
     key: 'stock_alerts',
     icon: Package,
+    group: 'shop',
     labelHe: 'התראות מלאי',
     labelRu: 'Уведомления о складе',
-    descHe: 'מוצר מגיע לסף נמוך או נגמר לגמרי',
+    descHe: 'מוצר מגיע לסף נמוך או נגמר',
     descRu: 'Товар заканчивается или закончился',
   },
   {
-    key: 'new_client',
-    icon: UserPlus,
-    labelHe: 'לקוח חדש',
-    labelRu: 'Новый клиент',
-    descHe: 'כשמתווסף לקוח חדש למערכת',
-    descRu: 'При добавлении нового клиента',
+    key: 'new_order',
+    icon: MessageCircle,
+    group: 'shop',
+    labelHe: 'הזמנה חדשה מהאתר',
+    labelRu: 'Новый заказ с сайта',
+    descHe: 'הזמנה שהגיעה דרך האתר שלך',
+    descRu: 'Заказ пришёл через ваш сайт',
   },
   {
-    key: 'birthday',
-    icon: Cake,
-    labelHe: 'יום הולדת',
-    labelRu: 'День рождения',
-    descHe: 'ביום הולדת של לקוח',
-    descRu: 'В день рождения клиента',
+    key: 'ai_fallback',
+    icon: Bot,
+    group: 'whatsapp_ai',
+    labelHe: 'Kira AI — לא הצליח לענות',
+    labelRu: 'Kira AI — не смог ответить',
+    descHe: 'כשה-AI לא הצליח לענות ללקוח',
+    descRu: 'Когда AI не справился с вопросом клиента',
+  },
+  {
+    key: 'task_mentions',
+    icon: Bell,
+    group: 'whatsapp_ai',
+    labelHe: 'משימות',
+    labelRu: 'Задачи',
+    descHe: 'הקצאה, ציון, ביצוע, דדליין',
+    descRu: 'Назначение, выполнение, дедлайн',
+  },
+  {
+    key: 'security_login',
+    icon: Shield,
+    group: 'security',
+    labelHe: 'כניסה חדשה לחשבון',
+    labelRu: 'Новый вход в аккаунт',
+    descHe: 'כניסה ממכשיר או דפדפן חדש',
+    descRu: 'Вход с нового устройства или браузера',
   },
 ]
+
+const GROUPS = [
+  {
+    key: 'visits' as const,
+    icon: Calendar,
+    labelHe: 'ביקורים',
+    labelRu: 'Визиты',
+    color: 'indigo',
+  },
+  {
+    key: 'shop' as const,
+    icon: Package,
+    labelHe: 'מכירות ומלאי',
+    labelRu: 'Продажи и склад',
+    color: 'emerald',
+  },
+  {
+    key: 'whatsapp_ai' as const,
+    icon: Bot,
+    labelHe: 'WhatsApp / AI',
+    labelRu: 'WhatsApp / AI',
+    color: 'violet',
+  },
+  {
+    key: 'security' as const,
+    icon: Shield,
+    labelHe: 'אבטחה',
+    labelRu: 'Безопасность',
+    color: 'rose',
+  },
+]
+
+// Color map for groups
+const GROUP_COLORS: Record<string, string> = {
+  indigo: 'bg-indigo-100 text-indigo-600',
+  emerald: 'bg-emerald-100 text-emerald-600',
+  violet: 'bg-violet-100 text-violet-600',
+  rose: 'bg-rose-100 text-rose-600',
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function NotificationsPage() {
   const router = useRouter()
   const { dir, language } = useLanguage()
   const { orgId } = useAuth()
+  const { isDemo } = useDemoMode()               // ← ФИКС: хук теперь вверху компонента
   const supabase = createSupabaseBrowserClient()
   const isHe = language === 'he'
 
-  // Telegram state
+  // ── State ──────────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [telegramEnabled, setTelegramEnabled] = useState(false)
   const [chatId, setChatId] = useState('')
+  const [savingTelegram, setSavingTelegram] = useState(false)
 
-  // WA alerts state
+  // WA alerts
   const [notifyOrdersWa, setNotifyOrdersWa] = useState(false)
   const [notificationPhone, setNotificationPhone] = useState('')
 
-  // Push state
+  // notification_preferences (multi-channel)
+  const [prefs, setPrefs] = useState<NotificationPreferences>({})
+  const [savingPref, setSavingPref] = useState<string | null>(null)
+
+  // Push
   const {
     permissionState,
     isSubscribed,
@@ -111,23 +210,37 @@ export default function NotificationsPage() {
     subscribe,
     unsubscribe,
   } = usePushNotifications()
+
   const { settings: pushSettings, saving: pushSaving, updateSetting } = usePushSettings()
 
+  const pushActive = permissionState === 'granted' && isSubscribed
+  const pushDenied = permissionState === 'denied'
+  const pushUnsupported = permissionState === 'unsupported'
+
+  // ── Load ───────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const loadSettings = async () => {
-      if (!orgId) return
+    if (!orgId) return
+    const load = async () => {
       try {
-        const { data, error } = await supabase
-          .from('organizations')
-          .select('telegram_chat_id, telegram_notifications, notify_new_orders_wa, notification_phone')
-          .eq('id', orgId)
-          .single()
-        if (error) throw error
-        if (data) {
-          setTelegramEnabled(data.telegram_notifications || false)
-          setChatId(data.telegram_chat_id || '')
-          setNotifyOrdersWa(data.notify_new_orders_wa || false)
-          setNotificationPhone(data.notification_phone || '')
+        const [orgRes, prefsRes] = await Promise.all([
+          supabase
+            .from('organizations')
+            .select('telegram_chat_id, telegram_notifications, notify_new_orders_wa, notification_phone')
+            .eq('id', orgId)
+            .single(),
+          fetch('/api/notifications/preferences'),
+        ])
+
+        if (orgRes.data) {
+          setTelegramEnabled(orgRes.data.telegram_notifications ?? false)
+          setChatId(orgRes.data.telegram_chat_id ?? '')
+          setNotifyOrdersWa(orgRes.data.notify_new_orders_wa ?? false)
+          setNotificationPhone(orgRes.data.notification_phone ?? '')
+        }
+
+        if (prefsRes.ok) {
+          const json = await prefsRes.json()
+          setPrefs(json.preferences ?? {})
         }
       } catch {
         toast.error(isHe ? 'שגיאה בטעינת הגדרות' : 'Ошибка загрузки настроек')
@@ -135,12 +248,13 @@ export default function NotificationsPage() {
         setLoading(false)
       }
     }
-    loadSettings()
+    load()
   }, [orgId])
 
-  const handleSaveTelegram = async () => {
+  // ── Telegram save ──────────────────────────────────────────────────────────
+  const handleSaveTelegram = useCallback(async () => {
     if (!orgId) return
-    setSaving(true)
+    setSavingTelegram(true)
     try {
       const { error } = await supabase
         .from('organizations')
@@ -156,32 +270,66 @@ export default function NotificationsPage() {
     } catch {
       toast.error(isHe ? 'שגיאה בשמירה' : 'Ошибка сохранения')
     } finally {
-      setSaving(false)
+      setSavingTelegram(false)
     }
-  }
+  }, [orgId, telegramEnabled, chatId, notifyOrdersWa, notificationPhone, isHe])
 
-  const handleTogglePush = async () => {
+  // ── Multi-channel pref toggle (Optimistic) ─────────────────────────────────
+  const handleTogglePref = useCallback(async (
+    eventKey: string,
+    channel: keyof NotifChannels,
+    value: boolean
+  ) => {
+    const prevPrefs = prefs
+    // Optimistic update
+    setPrefs(prev => ({
+      ...prev,
+      [eventKey]: {
+        ...(prev[eventKey] ?? DEFAULT_CHANNELS),
+        [channel]: value,
+      },
+    }))
+    setSavingPref(`${eventKey}:${channel}`)
+    try {
+      const res = await fetch('/api/notifications/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventKey, channel, value }),
+      })
+      if (!res.ok) throw new Error('save failed')
+    } catch {
+      setPrefs(prevPrefs) // revert
+      toast.error(isHe ? 'שגיאה בשמירה' : 'Ошибка сохранения')
+    } finally {
+      setSavingPref(null)
+    }
+  }, [prefs, isHe])
+
+  // ── Push master toggle ─────────────────────────────────────────────────────
+  const handleTogglePush = useCallback(async () => {
     if (isSubscribed) {
       await unsubscribe()
       toast.success(isHe ? 'התראות כובו' : 'Уведомления отключены')
     } else {
       const ok = await subscribe()
       if (ok) toast.success(isHe ? 'התראות הופעלו!' : 'Уведомления включены!')
-      else toast.error(isHe ? 'לא ניתן להפעיל התראות' : 'Не удалось включить уведомления')
+      else toast.error(isHe ? 'לא ניתן להפעיל' : 'Не удалось включить')
     }
-  }
+  }, [isSubscribed, subscribe, unsubscribe, isHe])
 
+  // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="text-gray-400">...</div></div>
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      </div>
+    )
   }
 
-  const { isDemo } = useDemoMode()
-  const pushDenied = permissionState === 'denied'
-  const pushUnsupported = permissionState === 'unsupported'
-  const pushActive = permissionState === 'granted' && isSubscribed
-
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-2xl mx-auto space-y-6 p-4">
+    <div className="max-w-2xl mx-auto space-y-6 p-4 pb-16">
+
       {/* Header */}
       <div className="flex items-center gap-4">
         <button
@@ -195,51 +343,49 @@ export default function NotificationsPage() {
             {isHe ? 'התראות' : 'Уведомления'}
           </h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            {isHe ? 'נהל את ההתראות שלך' : 'Управляйте уведомлениями'}
+            {isHe ? 'ניהול ערוצי ההתראות שלך' : 'Управление каналами уведомлений'}
           </p>
         </div>
       </div>
 
-      {/* Описание раздела — всегда видно, в т.ч. в демо */}
+      {/* Intro banner */}
       <div className="rounded-2xl p-4 bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 shadow-md">
           <Bell className="w-5 h-5 text-white" />
         </div>
-        <div>
+        <div dir={dir}>
           <p className="font-semibold text-gray-900 text-sm">
             {isHe ? 'מה אפשר לקבל כאן?' : 'Что настраивается здесь?'}
           </p>
           <p className="text-xs text-gray-600 mt-1 leading-relaxed">
             {isHe
-              ? 'Push-התראות לדפדפן/מכשיר על ביקורים, תשלומים, משימות ומלאי — ועדכוני Telegram בזמן אמת. הכל ניתן להגדרה בנפרד.'
-              : 'Push-уведомления в браузер/устройство о визитах, платежах, задачах и складе — и Telegram-обновления в реальном времени. Всё настраивается по отдельности.'}
+              ? 'Push לדפדפן, Telegram ואימייל — לכל אירוע בנפרד. כל שינוי נשמר מיידית.'
+              : 'Push в браузер, Telegram и Email — для каждого события отдельно. Каждое изменение сохраняется мгновенно.'}
           </p>
         </div>
       </div>
 
-      {/* ── PUSH NOTIFICATIONS ── */}
+      {/* ── Push Master Toggle ── */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
               <Smartphone className="w-4 h-4 text-indigo-600" />
             </div>
-            {isHe ? 'התראות Push' : 'Push уведомления'}
+            {isHe ? 'Push — מכשיר זה' : 'Push — это устройство'}
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-
-          {/* Master toggle — enable/disable push */}
-          <div className="flex items-center justify-between py-2 border-b border-gray-100">
+        <CardContent>
+          <div className="flex items-center justify-between py-2">
             <div dir={dir}>
               <p className="text-sm font-medium text-gray-900">
                 {isHe ? 'התראות במכשיר' : 'Уведомления на устройстве'}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
                 {pushUnsupported
-                  ? (isHe ? 'לא נתמך בדפדפן זה' : 'Не поддерживается в этом браузере')
+                  ? (isHe ? 'לא נתמך בדפדפן זה' : 'Не поддерживается')
                   : pushDenied
-                  ? (isHe ? 'חסום — אפשר בהגדרות הדפדפן' : 'Заблокировано — разрешите в настройках браузера')
+                  ? (isHe ? 'חסום — אפשר בהגדרות הדפדפן' : 'Заблокировано — разрешите в браузере')
                   : pushActive
                   ? (isHe ? 'פעיל על המכשיר הזה' : 'Активно на этом устройстве')
                   : (isHe ? 'לא מופעל' : 'Не активировано')}
@@ -251,58 +397,100 @@ export default function NotificationsPage() {
               disabled={pushLoading || pushUnsupported || pushDenied}
             />
           </div>
-
-          {/* Per-event toggles — only shown when push is active */}
-          {pushActive && (
-            <div className="space-y-1">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3" dir={dir}>
-                {isHe ? 'קבל התראה על:' : 'Получать уведомления о:'}
-              </p>
-              {PUSH_EVENTS.map((event) => {
-                const Icon = event.icon
-                return (
-                  <div
-                    key={event.key}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3" dir={dir}>
-                      <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        <Icon className="w-4 h-4 text-gray-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {isHe ? event.labelHe : event.labelRu}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {isHe ? event.descHe : event.descRu}
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={pushSettings[event.key]}
-                      onCheckedChange={(val) => updateSetting(event.key, val)}
-                      disabled={pushSaving}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Hint for iOS users */}
           {permissionState === 'prompt' && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3" dir={dir}>
+            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3" dir={dir}>
               <p className="text-xs text-amber-800">
                 {isHe
-                  ? '💡 במכשיר iOS — יש להתקין את האפליקציה על מסך הבית כדי לקבל התראות'
-                  : '💡 На iOS — установите приложение на главный экран для получения уведомлений'}
+                  ? '💡 iOS: יש להתקין את האפליקציה על מסך הבית לפני הפעלת התראות'
+                  : '💡 iOS: установите приложение на главный экран для получения уведомлений'}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* ── WA ALERTS — новые заказы с сайта ── */}
+      {/* ── Event Groups (multi-channel) ── */}
+      {GROUPS.map((group) => {
+        const groupEvents = EVENTS.filter(e => e.group === group.key)
+        const GroupIcon = group.icon
+        const colorClass = GROUP_COLORS[group.color]
+
+        return (
+          <Card key={group.key}>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colorClass}`}>
+                  <GroupIcon className="w-4 h-4" />
+                </div>
+                {isHe ? group.labelHe : group.labelRu}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1 p-0 px-6 pb-4">
+              {/* Channel header */}
+              <div className="flex items-center justify-end gap-4 mb-2 pr-1">
+                <span className="text-xs text-gray-400 w-8 text-center">Push</span>
+                <span className="text-xs text-gray-400 w-8 text-center">TG</span>
+              </div>
+              {groupEvents.map((event) => {
+                const Icon = event.icon
+                const pref = prefs[event.key] ?? DEFAULT_CHANNELS
+                const isSavingThis = savingPref?.startsWith(event.key)
+                return (
+                  <div
+                    key={event.key}
+                    className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0" dir={dir}>
+                      <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <Icon className="w-3.5 h-3.5 text-gray-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {isHe ? event.labelHe : event.labelRu}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {isHe ? event.descHe : event.descRu}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 flex-shrink-0 ml-3">
+                      {/* Push toggle — uses existing usePushSettings for legacy compat */}
+                      <div className="w-8 flex justify-center">
+                        {(event.key as keyof PushSettings) in pushSettings ? (
+                          <Switch
+                            checked={pushSettings[event.key as keyof PushSettings]}
+                            onCheckedChange={(v) => updateSetting(event.key as keyof PushSettings, v)}
+                            disabled={pushSaving || !pushActive}
+                            className="scale-90"
+                          />
+                        ) : (
+                          <Switch
+                            checked={pref.push}
+                            onCheckedChange={(v) => handleTogglePref(event.key, 'push', v)}
+                            disabled={!!isSavingThis || !pushActive}
+                            className="scale-90"
+                          />
+                        )}
+                      </div>
+                      {/* Telegram toggle */}
+                      <div className="w-8 flex justify-center">
+                        <Switch
+                          checked={pref.telegram}
+                          onCheckedChange={(v) => handleTogglePref(event.key, 'telegram', v)}
+                          disabled={!!isSavingThis || !telegramEnabled}
+                          className="scale-90"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+        )
+      })}
+
+      {/* ── WhatsApp alerts ── */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -319,7 +507,7 @@ export default function NotificationsPage() {
                 {isHe ? 'שלח WhatsApp על הזמנה חדשה' : 'Отправлять WA при новом заказе'}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
-                {isHe ? 'כשמגיעה הזמנה חדשה מהאתר — שלח הודעה לנייד' : 'Мгновенное уведомление в WhatsApp при заказе с сайта'}
+                {isHe ? 'הזמנה מהאתר → הודעה מיידית' : 'Заказ с сайта → мгновенное сообщение'}
               </p>
             </div>
             <Switch checked={notifyOrdersWa} onCheckedChange={setNotifyOrdersWa} />
@@ -327,7 +515,7 @@ export default function NotificationsPage() {
           {notifyOrdersWa && (
             <div dir={dir}>
               <Label htmlFor="notif-phone" className="text-sm font-medium">
-                {isHe ? 'מספר טלפון לקבלת התראות' : 'Телефон для получения алертов'}
+                {isHe ? 'מספר טלפון לקבלת התראות' : 'Телефон для алертов'}
               </Label>
               <Input
                 id="notif-phone"
@@ -337,33 +525,19 @@ export default function NotificationsPage() {
                 className="font-mono mt-1.5"
               />
               <p className="text-xs text-gray-400 mt-1">
-                {isHe
-                  ? 'אם ריק — ישלח לבעל הארגון. פורמט: 0512345678 או 972512345678'
-                  : 'Если пусто — отправляется владельцу. Формат: 0512345678 или 972512345678'}
-              </p>
-            </div>
-          )}
-          {notifyOrdersWa && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3" dir={dir}>
-              <p className="text-xs text-green-800 font-medium mb-1">
-                {isHe ? 'פורמט ההודעה:' : 'Формат сообщения:'}
-              </p>
-              <p className="text-xs text-green-700 font-mono whitespace-pre-line">
-                {isHe
-                  ? '🔔 הזמנה חדשה מהאתר!\nמוצר: [שם מוצר]\nסכום: ₪[סכום]\nעבור לCRM לטיפול.'
-                  : '🔔 Новый заказ с сайта!\nТовар: [Название]\nСумма: ₪[Сумма]\nПерейдите в CRM для обработки.'}
+                {isHe ? 'ריק = בעל הארגון. פורמט: 0512345678' : 'Пусто = владелец. Формат: 0512345678'}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* ── TELEGRAM ── */}
+      {/* ── Telegram ── */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Bell className="w-4 h-4 text-blue-600" />
+              <ChevronRight className="w-4 h-4 text-blue-600" />
             </div>
             Telegram
           </CardTitle>
@@ -372,7 +546,7 @@ export default function NotificationsPage() {
           <div className="flex items-center justify-between">
             <div dir={dir}>
               <p className="text-sm font-medium text-gray-900">
-                {isHe ? 'התראות Telegram' : 'Уведомления Telegram'}
+                {isHe ? 'התראות Telegram' : 'Уведомления в Telegram'}
               </p>
               <p className="text-xs text-gray-500">
                 {isHe ? 'קבל עדכונים ישירות ב-Telegram' : 'Получайте обновления прямо в Telegram'}
@@ -380,7 +554,6 @@ export default function NotificationsPage() {
             </div>
             <Switch checked={telegramEnabled} onCheckedChange={setTelegramEnabled} />
           </div>
-
           {telegramEnabled && (
             <div className="space-y-3">
               <div dir={dir}>
@@ -400,7 +573,7 @@ export default function NotificationsPage() {
                 <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
                   <li>{isHe ? 'חפש' : 'Найди'} <code className="bg-blue-100 px-1 rounded">@userinfobot</code> {isHe ? 'ב-Telegram' : 'в Telegram'}</li>
                   <li>{isHe ? 'שלח' : 'Отправь'} <code className="bg-blue-100 px-1 rounded">/start</code></li>
-                  <li>{isHe ? 'העתק את ה-Chat ID מהתשובה' : 'Скопируй Chat ID из ответа'}</li>
+                  <li>{isHe ? 'העתק את ה-Chat ID' : 'Скопируй Chat ID из ответа'}</li>
                 </ol>
               </div>
             </div>
@@ -408,10 +581,13 @@ export default function NotificationsPage() {
         </CardContent>
       </Card>
 
-      {/* Save Telegram */}
+      {/* Save button */}
       <div className="flex justify-end">
-        <Button onClick={handleSaveTelegram} disabled={saving}>
-          {saving ? '...' : (isHe ? 'שמור' : 'Сохранить')}
+        <Button onClick={handleSaveTelegram} disabled={savingTelegram}>
+          {savingTelegram
+            ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            : null}
+          {isHe ? 'שמור הגדרות' : 'Сохранить настройки'}
         </Button>
       </div>
     </div>

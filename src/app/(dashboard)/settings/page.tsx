@@ -113,7 +113,7 @@ export default function SettingsPage() {
   return (
     <div id="demo-step-settings" className="h-full" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Page header */}
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
           {pageTitle}
         </h1>
@@ -122,10 +122,30 @@ export default function SettingsPage() {
         </p>
       </div>
 
+      {/* ── Mobile: horizontal scrollable chips (только < md) ── */}
+      <div className="flex md:hidden gap-1.5 overflow-x-auto pb-2 mb-4 scrollbar-none -mx-4 px-4">
+        {filteredCategories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveTab(cat.id)}
+            className={`
+              flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all
+              ${activeTab === cat.id
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400'
+              }
+            `}
+          >
+            <cat.icon className="w-3.5 h-3.5 flex-shrink-0" />
+            {isRTL ? cat.label.he : cat.label.ru}
+          </button>
+        ))}
+      </div>
+
       {/* Layout: sidebar tabs + content + right widgets */}
       <div className="flex gap-6 items-start">
 
-        {/* ── Left: Vertical tabs ── */}
+        {/* ── Left: Vertical tabs (только md+) ── */}
         <aside className="hidden md:flex flex-col gap-1 w-48 flex-shrink-0 sticky top-4">
           {filteredCategories.map((cat) => (
             <TabButton
@@ -137,26 +157,6 @@ export default function SettingsPage() {
             />
           ))}
         </aside>
-
-        {/* ── Mobile: horizontal tabs ── */}
-        <div className="flex md:hidden gap-1 overflow-x-auto pb-1 w-full scrollbar-none">
-          {filteredCategories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveTab(cat.id)}
-              className={`
-                flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all
-                ${activeTab === cat.id
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                  : 'bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-gray-400'
-                }
-              `}
-            >
-              <cat.icon className="w-3.5 h-3.5" />
-              {isRTL ? cat.label.he : cat.label.ru}
-            </button>
-          ))}
-        </div>
 
         {/* ── Center: Bento grid ── */}
         <div className="flex-1 min-w-0">

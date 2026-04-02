@@ -8,6 +8,7 @@ import {
 } from '@/lib/tranzila-webhook'
 import { sendSubscriptionWelcomeEmail } from '@/lib/resend'
 import { sendTelegramMessage } from '@/lib/telegram'
+import { queuePushToTrinityAdmin } from '@/lib/push-notify'
 
 // ─── Серверные конфиги тарифов ────────────────────────────────────────────────
 // Единый источник правды: цена, модули, лимиты.
@@ -296,7 +297,37 @@ export async function POST(request: NextRequest) {
     console.error('[Tranzila] Email receipt failed (non-fatal):', emailErr)
   }
 
-  // ── 12. Cookie для клиентского flash-message ──────────────────────────────
+  // ── 12. Telegram-уведомление владельцу Trinity об успешной оплате ───────────
+  try {
+    const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID
+    if (adminChatId) {
+      const tgMsg = [
+        `💰 <b>Новая оплата подписки!</b>`,
+        `Орг: <b>${orgRow?.name ?? data.orgId}</b>`,
+        `Email: <code>${data.orgId}</code>`,
+        `Тариф: <b>${planField ?? 'base'}</b>`,
+        `Сумма: <b>₪${paidAmount}</b>`,
+        `Карта: ****${cardLast4 ?? '????'}`,
+        `Следующее списание: <b>${nextBillingDate.toISOString().split('T')[0]}</b>`,
+        `TxID: <code>${data.transactionId}</code>`,
+      ].join('\n')
+      sendTelegramMessage(adminChatId, tgMsg).catch(e =>
+        console.error('[Tranzila] Admin Telegram notification failed:', e)
+      )
+    }
+  } catch (tgErr) {
+    console.error('[Tranzila] Admin Telegram (non-fatal):', tgErr)
+  }
+
+  // ── 12а. Trinity in-app уведомление для суперадмина ──────────────────────
+  queuePushToTrinityAdmin({
+    type:   'payment_received',
+    title:  `💰 Новая оплата: ${orgRow?.name ?? 'Организация'}`,
+    body:   `₪${paidAmount} · Тариф ${planField ?? 'base'} · Карта ****${cardLast4 ?? '????'} · Следующее списание ${nextBillingDate.toISOString().split('T')[0]}`,
+    link:   '/admin/organizations',
+  }).catch(e => console.error('[Tranzila] Admin in-app notification failed:', e))
+
+  // ── 13. Cookie для клиентского flash-message ──────────────────────────────
   const response = NextResponse.json({
     success: true, org_id: data.orgId, message: 'Organization activated',
   })

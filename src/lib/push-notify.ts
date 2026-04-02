@@ -44,6 +44,27 @@ export async function queuePushNotification(params: PushNotifParams): Promise<vo
 }
 
 /**
+ * Queue push notification to Trinity super-admin (Vlad).
+ * Uses TRINITY_ADMIN_USER_ID + TRINITY_ADMIN_ORG_ID env vars — fire-and-forget, never throws.
+ * Useful for system-level events: new payment, fraud, etc.
+ */
+export async function queuePushToTrinityAdmin(
+  params: Omit<PushNotifParams, 'user_id' | 'org_id'>
+): Promise<void> {
+  const adminUserId = process.env.TRINITY_ADMIN_USER_ID
+  const adminOrgId  = process.env.TRINITY_ADMIN_ORG_ID
+  if (!adminUserId || !adminOrgId) {
+    console.warn('[queuePushToTrinityAdmin] TRINITY_ADMIN_USER_ID or TRINITY_ADMIN_ORG_ID not set — skipping')
+    return
+  }
+  await queuePushNotification({
+    ...params,
+    user_id: adminUserId,
+    org_id:  adminOrgId,
+  })
+}
+
+/**
  * Queue push to ALL owners of an org.
  * Useful for events triggered by non-authenticated sources (public booking, cron).
  */

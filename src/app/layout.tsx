@@ -80,7 +80,7 @@ export const metadata: Metadata = {
     shortcut: '/logo.png',
   },
   verification: {
-    // google: 'YOUR_GOOGLE_SITE_VERIFICATION_CODE', // Добавить после верификации в GSC
+    google: 'TWdfL_u_VuTW1uGlwmo80fC1YhcNKfSZxfiqiuimEA4',
   },
 };
 

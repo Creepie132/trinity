@@ -3,6 +3,9 @@
   "functions": {
     "src/app/api/products/upload-image/route.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/kira/cron/route.ts": {
+      "maxDuration": 300
     }
   },
   "crons": [
@@ -33,6 +36,10 @@
     {
       "path": "/api/cron/push-events",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/kira/cron",
+      "schedule": "30 6 * * *"
     }
   ]
 }

@@ -68,7 +68,6 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: t('nav.finances'), href: '/finances', icon: PiggyBank, requireFeature: 'finances' },
     { name: t('nav.analytics'), href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
-    { name: t('nav.worker'), href: '/worker', icon: Briefcase, requireFeature: null },
   { name: t('nav.settings'), href: '/settings', icon: Settings, requireFeature: null },
   ]
 

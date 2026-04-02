@@ -7,30 +7,25 @@ import { Send, Loader2, Sparkles, Bell } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { KiraWave } from '@/components/kira/KiraWave'
 import type { KiraWaveState } from '@/components/kira/KiraWave'
+import { DebtWidget } from '@/components/kira/ui/DebtWidget'
 
-interface KiraChatPanelProps {
-  orgId: string
-}
-
+interface KiraChatPanelProps { orgId: string }
 type HistoryMessage = { role: 'user' | 'assistant'; content: string }
 
-// Клиентский Supabase только для Realtime (anon key, RLS защищает данные)
 const supabaseRealtime = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
 export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
-  const scrollRef  = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const [text, setText]               = useState('')
   const [sessionId, setSessionId]     = useState<string | null>(null)
   const [sessionReady, setReady]      = useState(false)
   const [initMsgs, setInitMsgs]       = useState<HistoryMessage[]>([])
-  const [proactiveBadge, setBadge]    = useState(false) // красный бейдж
-  const [proactiveMsg, setProactive]  = useState<string | null>(null) // текст уведомления
+  const [proactiveBadge, setBadge]    = useState(false)
+  const [proactiveMsg, setProactive]  = useState<string | null>(null)
 
-
-  // Init session on mount
   useEffect(() => {
     fetch('/api/kira/session', { method: 'POST' })
       .then(r => r.json())
@@ -41,50 +36,31 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
       .finally(() => setReady(true))
   }, [orgId])
 
-  // Realtime подписка на проактивные сообщения от Киры (cron)
   useEffect(() => {
     if (!sessionId) return
-
     const channel = supabaseRealtime
       .channel(`kira-proactive-${sessionId}`)
-      .on(
-        'postgres_changes',
-        {
-          event:  'INSERT',
-          schema: 'public',
-          table:  'kira_messages',
-          filter: `session_id=eq.${sessionId}`,
-        },
-        (payload) => {
-          const msg = payload.new as { role: string; content: string; is_proactive: boolean }
-          if (msg.is_proactive && msg.role === 'assistant') {
-            // Показываем бейдж и текст уведомления
-            setBadge(true)
-            setProactive(msg.content)
-          }
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'kira_messages',
+        filter: `session_id=eq.${sessionId}`,
+      }, (payload) => {
+        const msg = payload.new as { role: string; content: string; is_proactive: boolean }
+        if (msg.is_proactive && msg.role === 'assistant') {
+          setBadge(true)
+          setProactive(msg.content)
         }
-      )
+      })
       .subscribe()
-
     return () => { supabaseRealtime.removeChannel(channel) }
   }, [sessionId])
 
-  const dismissProactive = useCallback(() => {
-    setBadge(false)
-    setProactive(null)
-  }, [])
-
+  const dismissProactive = useCallback(() => { setBadge(false); setProactive(null) }, [])
 
   const { messages, sendMessage, status, error } = useChat({
-    transport: new DefaultChatTransport({
-      api: '/api/kira',
-      body: { sessionId, orgId },
-    }),
+    transport: new DefaultChatTransport({ api: '/api/kira', body: { sessionId, orgId } }),
     messages: initMsgs.map((m, i) => ({
-      id: `hist-${i}`,
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-      parts: [{ type: 'text' as const, text: m.content }],
+      id: `hist-${i}`, role: m.role as 'user' | 'assistant',
+      content: m.content, parts: [{ type: 'text' as const, text: m.content }],
     })),
   })
 
@@ -98,10 +74,11 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
   const handleSend = () => {
     const trimmed = text.trim()
     if (!trimmed || isLoading) return
-    dismissProactive() // скрыть уведомление при отправке
+    dismissProactive()
     sendMessage({ role: 'user', content: trimmed, parts: [{ type: 'text', text: trimmed }] })
     setText('')
   }
+
 
   if (!sessionReady) {
     return (
@@ -111,11 +88,10 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
     )
   }
 
-
   return (
     <div className="rounded-2xl overflow-hidden flex flex-col" style={{ background: '#1e2027', minHeight: 0 }}>
 
-      {/* Волна + заголовок */}
+      {/* Волна */}
       <div className="relative flex flex-col items-center px-3 pt-4 pb-2 flex-shrink-0" style={{ background: '#1e2027' }}>
         <div className="absolute inset-0 opacity-20"
           style={{ background: 'radial-gradient(circle at 50% 90%, rgba(40,80,255,0.4) 0%, transparent 70%)' }} />
@@ -127,29 +103,25 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
           </span>
           <span className="w-1.5 h-1.5 rounded-full animate-pulse"
             style={{ background: isLoading ? '#a78bfa' : '#34d399' }} />
-          {/* Красный бейдж — есть проактивное сообщение */}
-          {proactiveBadge && (
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          )}
+          {proactiveBadge && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
         </div>
       </div>
 
-      {/* Баннер проактивного сообщения от Киры */}
+      {/* Баннер проактивного сообщения */}
       {proactiveMsg && (
         <div className="mx-3 mt-2 rounded-xl px-3 py-2.5 flex gap-2 items-start flex-shrink-0"
           style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.3)' }}>
           <Bell className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: 'rgba(165,180,252,0.9)' }} />
-          <p className="text-xs leading-relaxed flex-1" style={{ color: 'rgba(220,220,255,0.85)' }}>
-            {proactiveMsg}
-          </p>
+          <p className="text-xs leading-relaxed flex-1" style={{ color: 'rgba(220,220,255,0.85)' }}>{proactiveMsg}</p>
           <button onClick={dismissProactive} className="flex-shrink-0 text-xs opacity-40 hover:opacity-70 transition-opacity"
-            style={{ color: 'white' }}>✕</button>
+            style={{ color: 'white' }}>x</button>
         </div>
       )}
 
+
       {/* Сообщения */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2"
-        style={{ maxHeight: 220, minHeight: 80, scrollbarWidth: 'thin', scrollbarColor: 'rgba(99,102,241,0.2) transparent' }}>
+        style={{ maxHeight: 260, minHeight: 80, scrollbarWidth: 'thin', scrollbarColor: 'rgba(99,102,241,0.2) transparent' }}>
 
         {messages.length === 0 && !isLoading && (
           <p className="text-center text-xs py-4" style={{ color: 'rgba(255,255,255,0.2)' }}>
@@ -158,16 +130,39 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
         )}
 
         {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className="max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed"
-              style={msg.role === 'user'
-                ? { background: 'rgba(99,102,241,0.3)', color: 'rgba(255,255,255,0.9)', borderBottomRightRadius: 4 }
-                : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.75)', borderBottomLeftRadius: 4 }
-              }>
-              {msg.content}
-            </div>
+          <div key={msg.id} className={`flex flex-col gap-1.5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+            {(msg.parts ?? [{ type: 'text', text: msg.content }]).map((part: any, i: number) => {
+              // Текст
+              if (part.type === 'text' && part.text) {
+                return (
+                  <div key={i} className="max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed"
+                    style={msg.role === 'user'
+                      ? { background: 'rgba(99,102,241,0.3)', color: 'rgba(255,255,255,0.9)', borderBottomRightRadius: 4 }
+                      : { background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.75)', borderBottomLeftRadius: 4 }
+                    }>
+                    {part.text}
+                  </div>
+                )
+              }
+              // Generative UI: getDebts — результат готов
+              if (part.type === 'tool-getDebts' && part.state === 'output-available') {
+                return <div key={i} className="w-full"><DebtWidget result={part.output} /></div>
+              }
+              // Любой tool — загружается
+              if (part.type?.startsWith('tool-') && (part.state === 'input-available' || part.state === 'input-streaming')) {
+                return (
+                  <div key={i} className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-lg"
+                    style={{ background: 'rgba(99,102,241,0.12)', color: 'rgba(130,170,255,0.6)' }}>
+                    <span className="w-1.5 h-1.5 rounded-full animate-pulse bg-indigo-400" />
+                    Анализирую данные...
+                  </div>
+                )
+              }
+              return null
+            })}
           </div>
         ))}
+
 
         {isLoading && (
           <div className="flex justify-start">

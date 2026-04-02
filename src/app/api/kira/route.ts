@@ -11,13 +11,15 @@ export const maxDuration = 60
 
 const HISTORY_LIMIT = 20
 
-const SYSTEM_PROMPT = `Тебя зовут Кира. Ты интеллектуальный ассистент CRM-системы Trinity от компании Amber Solutions.
-Ты помогаешь владельцу бизнеса управлять процессами: клиентами, визитами, финансами, командой.
-Отвечай кратко, профессионально и дружелюбно. Всегда в женском роде.
-Никогда не используй markdown-заголовки (# ## ###). Пиши просто, как в разговоре.
-Ты знаешь, что Trinity CRM — это израильская система для сервисных бизнесов.
-Если пользователь спрашивает о конкретном клиенте или выручке — обязательно используй доступные инструменты для получения точных данных из базы, прежде чем отвечать. Никогда не выдумывай цифры.
-Не представляйся при каждом сообщении — только если тебя спросят, кто ты.`
+const SYSTEM_PROMPT = [
+  'Тебя зовут Кира. Ты интеллектуальный ассистент CRM-системы Trinity от компании Amber Solutions.',
+  'Ты помогаешь владельцу бизнеса управлять процессами: клиентами, визитами, финансами, командой.',
+  'Отвечай кратко, профессионально и дружелюбно. Всегда в женском роде.',
+  'Никогда не используй markdown-заголовки (# ## ###). Пиши просто, как в разговоре.',
+  'Ты знаешь, что Trinity CRM — это израильская система для сервисных бизнесов.',
+  'Если пользователь спрашивает о клиенте, выручке или долгах — используй инструменты. Никогда не выдумывай цифры.',
+  'Не представляйся при каждом сообщении — только если спросят, кто ты.',
+].join('\n')
 
 export async function POST(request: NextRequest) {
   const auth = await getAuthContext(request)
@@ -39,8 +41,6 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseServiceClient()
 
-
-  // История
   let historyMessages: { role: 'user' | 'assistant'; content: string }[] = []
   if (sessionId) {
     const { data: session } = await supabase
@@ -59,13 +59,11 @@ export async function POST(request: NextRequest) {
   const messagesForAI = lastUserMsg ? [...historyMessages, lastUserMsg] : historyMessages
 
   // ── Tool: getClientSummary ───────────────────────────────────────────────
-  const clientSchema = z.object({
-    query: z.string().describe('Имя, фамилия или телефон клиента для поиска'),
-  })
-
   const getClientSummary = {
-    description: 'Поиск информации о клиенте по имени или телефону. Возвращает контактные данные и общую сумму покупок (LTV).',
-    inputSchema: zodSchema(clientSchema),
+    description: 'Find client by name or phone. Returns contacts and lifetime value (LTV).',
+    inputSchema: zodSchema(z.object({
+      query: z.string().describe('Client name or phone number'),
+    })),
     execute: async ({ query }: { query: string }) => {
       const term = `%${query.replace(/[%_\\]/g, '\\$&')}%`
       const { data, error } = await supabase
@@ -74,23 +72,18 @@ export async function POST(request: NextRequest) {
         .eq('org_id', orgId)
         .or(`first_name.ilike.${term},last_name.ilike.${term},phone.ilike.${term}`)
         .limit(5)
-
-      if (error || !data?.length) return { found: false, message: 'Клиент не найден' }
-
+      if (error || !data?.length) return { found: false, message: 'Client not found' }
       const clientIds = data.map(c => c.id)
       const { data: pmts } = await supabase
         .from('payments').select('client_id, amount')
         .eq('org_id', orgId).eq('status', 'completed').in('client_id', clientIds)
-
       const ltv: Record<string, number> = {}
       for (const p of pmts ?? []) ltv[p.client_id] = (ltv[p.client_id] ?? 0) + Number(p.amount)
-
       return {
         found: true,
         clients: data.map(c => ({
           name: `${c.first_name} ${c.last_name ?? ''}`.trim(),
-          phone: c.phone ?? '—',
-          email: c.email ?? '—',
+          phone: c.phone ?? '—', email: c.email ?? '—',
           loyalty_points: c.loyalty_balance ?? 0,
           ltv_ils: Math.round((ltv[c.id] ?? 0) * 100) / 100,
           notes: c.notes ?? '',
@@ -101,13 +94,11 @@ export async function POST(request: NextRequest) {
 
 
   // ── Tool: getRevenueStats ────────────────────────────────────────────────
-  const revenueSchema = z.object({
-    period: z.enum(['today', 'week', 'month']).describe('Период: today — сегодня, week — эта неделя, month — этот месяц'),
-  })
-
   const getRevenueStats = {
-    description: 'Получение финансовой статистики (выручка, количество платежей) за период.',
-    inputSchema: zodSchema(revenueSchema),
+    description: 'Get revenue stats (total, count, avg check) for today / week / month.',
+    inputSchema: zodSchema(z.object({
+      period: z.enum(['today', 'week', 'month']),
+    })),
     execute: async ({ period }: { period: 'today' | 'week' | 'month' }) => {
       const now = new Date()
       let from: Date
@@ -119,18 +110,14 @@ export async function POST(request: NextRequest) {
       } else {
         from = new Date(now.getFullYear(), now.getMonth(), 1)
       }
-
       const { data, error } = await supabase
         .from('payments').select('amount')
         .eq('org_id', orgId).eq('status', 'completed')
         .gte('paid_at', from.toISOString()).lte('paid_at', now.toISOString())
-
-      if (error) return { error: 'Не удалось получить данные' }
-
+      if (error) return { error: 'Could not fetch data' }
       const total = (data ?? []).reduce((s, p) => s + Number(p.amount), 0)
       const count = data?.length ?? 0
-      const label = period === 'today' ? 'сегодня' : period === 'week' ? 'за эту неделю' : 'за этот месяц'
-
+      const label = period === 'today' ? 'today' : period === 'week' ? 'this week' : 'this month'
       return {
         period: label,
         revenue_ils: Math.round(total * 100) / 100,
@@ -140,12 +127,44 @@ export async function POST(request: NextRequest) {
     },
   }
 
-  // ── Стриминг ─────────────────────────────────────────────────────────────
+
+  // ── Tool: getDebts (Generative UI) ───────────────────────────────────────
+  const getDebts = {
+    description: 'Get list of clients with outstanding debts (unpaid/partial sales). Used to render DebtWidget in UI.',
+    inputSchema: zodSchema(z.object({
+      limit: z.number().optional().describe('Max records, default 10'),
+    })),
+    execute: async ({ limit = 10 }: { limit?: number }) => {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('id, total_amount, paid_amount, clients(id, first_name, last_name, phone)')
+        .eq('org_id', orgId)
+        .in('status', ['unpaid', 'partial'])
+        .order('total_amount', { ascending: false })
+        .limit(limit)
+      if (error || !data?.length) return { found: false, debts: [] }
+      return {
+        found: true,
+        debts: (data as any[]).map(s => {
+          const client = s.clients
+          const debt = Math.round((Number(s.total_amount) - Number(s.paid_amount ?? 0)) * 100) / 100
+          return {
+            id:     s.id,
+            name:   `${client?.first_name ?? ''} ${client?.last_name ?? ''}`.trim() || 'Unknown',
+            phone:  client?.phone ?? '',
+            amount: debt,
+          }
+        }),
+      }
+    },
+  }
+
+  // ── Stream ───────────────────────────────────────────────────────────────
   const result = streamText({
     model: openai('gpt-4o-mini'),
     system: SYSTEM_PROMPT,
     messages: messagesForAI,
-    tools: { getClientSummary, getRevenueStats },
+    tools: { getClientSummary, getRevenueStats, getDebts },
     stopWhen: stepCountIs(3),
     maxOutputTokens: 1024,
     onFinish: async ({ text }) => {
@@ -157,7 +176,5 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  return result.toTextStreamResponse()
+  return result.toUIMessageStreamResponse()
 }
-
-

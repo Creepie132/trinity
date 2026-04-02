@@ -303,15 +303,19 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
   const [quickOpen, setQuickOpen]   = useState(false)
   const [quickName, setQuickName]   = useState('')
   const [quickPrice, setQuickPrice] = useState('')
-  const [isMobile, setIsMobile]     = useState(false)
+  // ── Mobile detection — синхронно при монтировании, без useEffect ─────────────
+  // useState(false) + useEffect создаёт race condition на мобильном:
+  // при первом рендере компонент думает что он десктоп → рендерит Modal вместо
+  // bottom drawer → модал не виден (overflow/z-index) → "ничего не происходит".
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  )
 
   // ── Double-submit guard ──────────────────────────────────────────────────────
   const isSubmittingRef = useRef(false)
 
-  // ── Mobile detection ─────────────────────────────────────────────────────────
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)')
-    setIsMobile(mq.matches)
     const h = (e: MediaQueryListEvent) => setIsMobile(e.matches)
     mq.addEventListener('change', h)
     return () => mq.removeEventListener('change', h)

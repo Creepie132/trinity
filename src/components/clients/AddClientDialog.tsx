@@ -15,6 +15,68 @@ import { RefreshCw, Loader2, User, FileText, Paintbrush, UserPlus } from 'lucide
 import { useQueryClient } from '@tanstack/react-query'
 import { useClientCardSettings } from '@/components/clients/ClientCardSettingsModal'
 
+// ─── Easter Egg ───────────────────────────────────────────────────────────────
+function EasterEggOverlay({ onClose }: { onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [started, setStarted] = useState(false)
+
+  const handlePlay = () => {
+    const v = videoRef.current
+    if (!v) return
+    v.muted = false
+    v.play().catch(() => { v.muted = true; v.play().catch(() => {}) })
+    setStarted(true)
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        background: 'rgba(0,0,0,0.93)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer',
+      }}
+    >
+      <div onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
+        <video
+          ref={videoRef}
+          src="/videos/technoduck.mp4"
+          loop
+          playsInline
+          muted
+          style={{
+            display: 'block', maxWidth: '90vw', maxHeight: '85vh',
+            borderRadius: 16, boxShadow: '0 0 60px rgba(255,220,0,0.5)',
+          }}
+        />
+        {/* Большая кнопка Play — пока не нажата (нужна для мобильных) */}
+        {!started && (
+          <button
+            onClick={handlePlay}
+            style={{
+              position: 'absolute', inset: 0, margin: 'auto',
+              width: 80, height: 80, borderRadius: '50%',
+              background: 'rgba(0,0,0,0.7)', border: '3px solid rgba(255,255,255,0.8)',
+              color: '#fff', fontSize: 32, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            ▶
+          </button>
+        )}
+      </div>
+      <div style={{
+        position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+        color: 'rgba(255,255,255,0.35)', fontSize: 12, whiteSpace: 'nowrap',
+      }}>
+        🦆 тап за пределами видео — закрыть
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Dialog ───────────────────────────────────────────────────────────────
 interface AddClientDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -43,8 +105,6 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
   const [showDescription, setShowDescription] = useState(false)
   const [hasPaintCode, setHasPaintCode] = useState(false)
   const [showEasterEgg, setShowEasterEgg] = useState(false)
-  const [eggMuted, setEggMuted] = useState(true)
-  const eggVideoRef = useRef<HTMLVideoElement>(null)
 
   const addClient = useAddClient()
   const [cardSettings] = useClientCardSettings()
@@ -409,66 +469,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
     <>
       {dialog}
       {showEasterEgg && typeof document !== 'undefined' && createPortal(
-        <div
-          onClick={() => setShowEasterEgg(false)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 99999,
-            background: 'rgba(0,0,0,0.92)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-          }}
-        >
-          {/* Контейнер видео — клик НЕ закрывает */}
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}
-          >
-            <video
-              ref={eggVideoRef}
-              src="/videos/technoduck.mp4"
-              autoPlay
-              loop
-              playsInline
-              muted={eggMuted}
-              style={{
-                display: 'block',
-                maxWidth: '90vw',
-                maxHeight: '85vh',
-                borderRadius: 16,
-                boxShadow: '0 0 60px rgba(255,220,0,0.5)',
-              }}
-            />
-            {/* Кнопка звука */}
-            <button
-              onClick={() => {
-                const newMuted = !eggMuted
-                setEggMuted(newMuted)
-                if (eggVideoRef.current) {
-                  eggVideoRef.current.muted = newMuted
-                  // На мобильных нужно явно вызвать play() после взаимодействия
-                  if (eggVideoRef.current.paused) {
-                    eggVideoRef.current.play().catch(() => {})
-                  }
-                }
-              }}
-              style={{
-                position: 'absolute', bottom: 12, right: 12,
-                background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.3)',
-                borderRadius: 8, color: '#fff', padding: '6px 10px',
-                fontSize: 18, cursor: 'pointer', lineHeight: 1,
-              }}
-              title={eggMuted ? 'Включить звук' : 'Выключить звук'}
-            >
-              {eggMuted ? '🔇' : '🔊'}
-            </button>
-          </div>
-          <div style={{
-            position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-            color: 'rgba(255,255,255,0.4)', fontSize: 12, whiteSpace: 'nowrap',
-          }}>
-            🦆 нажми за пределами видео, чтобы закрыть
-          </div>
-        </div>,
+        <EasterEggOverlay onClose={() => setShowEasterEgg(false)} />,
         document.body
       )}
     </>

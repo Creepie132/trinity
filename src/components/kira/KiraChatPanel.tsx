@@ -18,7 +18,9 @@ const supabaseRealtime = createClient(
 )
 
 export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef      = useRef<HTMLDivElement>(null)
+  // Ref для sessionId — читается при каждом запросе, не при монтировании
+  const sessionIdRef   = useRef<string | null>(null)
   const [text, setText]              = useState('')
   const [sessionId, setSessionId]    = useState<string | null>(null)
   const [sessionReady, setReady]     = useState(false)
@@ -26,9 +28,14 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
   const [proactiveMsg, setProactive] = useState<string | null>(null)
 
 
-  // useChat — инициализируем без initialMessages, вольём историю через setMessages
+  // body — ФУНКЦИЯ, читает актуальный sessionIdRef при каждом запросе
+  // Это решает проблему stale closure: транспорт создаётся один раз,
+  // но body вычисляется свежим при каждой отправке
   const { messages, sendMessage, setMessages, status, error } = useChat({
-    transport: new DefaultChatTransport({ api: '/api/kira', body: { sessionId, orgId } }),
+    transport: new DefaultChatTransport({
+      api: '/api/kira',
+      body: () => ({ sessionId: sessionIdRef.current, orgId }),
+    }),
   })
 
   // ── Инициализация сессии + гидратация истории ─────────────────────────
@@ -37,10 +44,10 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
       .then(r => r.json())
       .then(d => {
         if (d.sessionId) {
+          // Обновляем и ref (читается в body транспорта) и state (для Realtime)
+          sessionIdRef.current = d.sessionId
           setSessionId(d.sessionId)
 
-          // setMessages — правильный способ влить историю в ai@6
-          // Строго соответствует интерфейсу UIMessage
           const historyMsgs = (d.messages as HistoryMessage[] ?? []).map((m, i) => ({
             id:      `hist-${i}`,
             role:    m.role as 'user' | 'assistant',
@@ -217,5 +224,3 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
     </div>
   )
 }
-
-

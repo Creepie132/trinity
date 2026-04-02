@@ -1092,3 +1092,40 @@ Cron использует `generateText` (не `streamText`) — нам не н�
 | Выручка | `payments` (status=completed) | вчера |
 | Долги | `sales` (status unpaid/partial) | все активные |
 | Дни рождения | `clients.date_of_birth` LIKE `%-MM-DD` | сегодня |
+
+### Уровень 5 — Generative UI (Исполнитель)
+
+**Дата:** 02.04.2026
+**Коммит:** `640c3d3`
+
+#### Суть
+Кира переходит из режима советника в режим исполнителя. Вместо текстового ответа она рендерит интерактивные React-компоненты прямо в чате.
+
+#### Ключевое изменение протокола
+`toTextStreamResponse()` → `toUIMessageStreamResponse()` — без этого `message.parts` с tool invocations не доходят до клиента.
+
+#### Новый инструмент: `getDebts`
+Запрашивает `sales` с `status IN ('unpaid','partial')`, JOIN с `clients`. Возвращает `{ found, debts: [{ id, name, phone, amount }] }`.
+
+#### Generative UI: `DebtWidget.tsx`
+`src/components/kira/ui/DebtWidget.tsx` — клиентский компонент.
+- Карточка с красной рамкой, заголовок с общей суммой долга
+- Список должников: имя, телефон, сумма
+- Кнопка "Напомнить" (WhatsApp иконка) → `toast.success()` — заглушка
+- После нажатия кнопка переключается в "Отправлено" (зелёный CheckCircle)
+
+#### Рендер в `KiraChatPanel`
+`message.parts` вместо `message.content`. Логика по типу части:
+- `part.type === 'text'` → обычный текстовый пузырь
+- `part.type === 'tool-getDebts'` + `state === 'output-available'` → `<DebtWidget result={part.output} />`
+- `part.type?.startsWith('tool-')` + `state === 'input-available'` → пульсирующий индикатор "Анализирую данные..."
+
+#### `ai@6` — типы tool parts
+| Состояние | Значение |
+|---|---|
+| `input-streaming` | Модель генерирует аргументы |
+| `input-available` | Аргументы готовы, execute запущен |
+| `output-available` | execute вернул результат |
+
+#### Следующий шаг (заглушка → реальный WA)
+`DebtWidget` → кнопка "Напомнить" → `POST /api/sms/send` или `POST /api/wa-inbox/send` с `phone` клиента.

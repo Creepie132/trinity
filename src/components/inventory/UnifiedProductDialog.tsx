@@ -11,9 +11,9 @@
  *    без ожидания ответа сервера.
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useId } from 'react'
 import { toast } from 'sonner'
-import { PackagePlus, Package, Camera, Upload, X, Loader2, Save } from 'lucide-react'
+import { PackagePlus, Package, Camera, Upload, X, Loader2, Save, Plus } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -29,6 +29,14 @@ import { useCreateProduct, useUpdateProduct } from '@/hooks/useProducts'
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type ProductDialogMode = 'create' | 'edit'
+
+interface ProductCategory {
+  id: string
+  value: string
+  label_ru: string
+  label_he: string
+  is_default: boolean
+}
 
 export interface UnifiedProductDialogProps {
   open: boolean
@@ -74,6 +82,7 @@ const I18N = {
     fillRequired: 'יש למלא שדות חובה', success: 'הושלם בהצלחה', error: 'שגיאה',
     catBeauty: 'יופי', catHair: 'שיער', catNails: 'ציפורניים',
     catEquipment: 'ציוד', catOther: 'אחר',
+    addCategory: '+ חדש', addCategoryPlaceholder: 'שם קטגוריה חדשה', addCategoryBtn: 'הוסף',
     unitPiece: 'יחידה', unitKg: 'ק"ג', unitLiter: 'ליטר', unitPkg: 'אריזה',
     sellPriceLabel: 'מחיר מכירה',
   },
@@ -89,6 +98,7 @@ const I18N = {
     fillRequired: 'Заполните обязательные поля', success: 'Готово', error: 'Ошибка',
     catBeauty: 'Красота', catHair: 'Волосы', catNails: 'Ногти',
     catEquipment: 'Оборудование', catOther: 'Прочее',
+    addCategory: '+ Новый', addCategoryPlaceholder: 'Название категории', addCategoryBtn: 'Добавить',
     unitPiece: 'Штука', unitKg: 'Кг', unitLiter: 'Литр', unitPkg: 'Упаковка',
     sellPriceLabel: 'Цена продажи',
   },
@@ -118,6 +128,44 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
   const createProduct = useCreateProduct()
   const updateProduct = useUpdateProduct()
 
+  // ── Dynamic categories ──────────────────────────────────────────────────────
+  const [categories, setCategories] = useState<ProductCategory[]>([])
+  const [addCatMode, setAddCatMode] = useState(false)
+  const [newCatLabel, setNewCatLabel] = useState('')
+  const [addingCat, setAddingCat] = useState(false)
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const res = await fetch('/api/products/categories')
+      if (!res.ok) return
+      const { categories: cats } = await res.json()
+      setCategories(cats ?? [])
+    } catch { /* silent */ }
+  }, [])
+
+  const handleAddCategory = async () => {
+    const label = newCatLabel.trim()
+    if (!label || addingCat) return
+    setAddingCat(true)
+    try {
+      const res = await fetch('/api/products/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label_ru: label }),
+      })
+      if (!res.ok) throw new Error()
+      const { category } = await res.json()
+      setCategories(prev => [...prev, category])
+      setFormState(prev => ({ ...prev, category: category.value }))
+      setNewCatLabel('')
+      setAddCatMode(false)
+    } catch {
+      toast.error(isHe ? 'שגיאה בהוספת קטגוריה' : 'Ошибка создания категории')
+    } finally {
+      setAddingCat(false)
+    }
+  }
+
   const [form, setFormState] = useState<ProductForm>(EMPTY_FORM)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -138,8 +186,11 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
     if (mode === 'edit' && product) setFormState(productToForm(product))
     else setFormState(EMPTY_FORM)
     setImagePreview(null)
+    setAddCatMode(false)
+    setNewCatLabel('')
     isSubmittingRef.current = false
-  }, [open, mode, product])
+    loadCategories()
+  }, [open, mode, product, loadCategories])
 
   // ✅ Secure image upload — через сервер, не supabase-browser
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,11 +274,16 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
     }
   }
 
-  const categories = [
-    { value: 'beauty', label: s.catBeauty }, { value: 'hair', label: s.catHair },
-    { value: 'nails', label: s.catNails }, { value: 'equipment', label: s.catEquipment },
-    { value: 'other', label: s.catOther },
-  ]
+  const categoryOptions = categories.length > 0
+    ? categories.map(c => ({ value: c.value, label: isHe ? c.label_he : c.label_ru }))
+    : [
+        { value: 'beauty',    label: s.catBeauty },
+        { value: 'hair',      label: s.catHair },
+        { value: 'body',      label: isHe ? 'גוף' : 'Тело' },
+        { value: 'nails',     label: s.catNails },
+        { value: 'equipment', label: s.catEquipment },
+        { value: 'other',     label: s.catOther },
+      ]
   const units = [
     { value: 'יחידה', label: s.unitPiece }, { value: 'קילוגרם', label: s.unitKg },
     { value: 'ליטר', label: s.unitLiter }, { value: 'אריזה', label: s.unitPkg },
@@ -351,10 +407,40 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
             <div className="grid grid-cols-2 gap-3">
               <div style={fieldBox('#ddd6fe', 'linear-gradient(135deg,#f5f3ff,#ede9fe)')}>
                 <label style={labelSt('#6d28d9')}>{s.category}</label>
-                <Select value={form.category} onValueChange={v => set({ category: v })}>
-                  <SelectTrigger className="w-full border-0 bg-transparent shadow-none focus:ring-0 px-0 text-[13px] font-semibold text-purple-700 h-auto"><SelectValue placeholder={s.category} /></SelectTrigger>
-                  <SelectContent>{categories.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
-                </Select>
+                {addCatMode ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      autoFocus
+                      value={newCatLabel}
+                      onChange={e => setNewCatLabel(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleAddCategory(); if (e.key === 'Escape') { setAddCatMode(false); setNewCatLabel('') } }}
+                      placeholder={s.addCategoryPlaceholder}
+                      style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 13, fontWeight: 600, color: '#6d28d9', outline: 'none' }}
+                    />
+                    <button type="button" onClick={handleAddCategory} disabled={addingCat || !newCatLabel.trim()}
+                      style={{ padding: '3px 8px', borderRadius: 6, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', opacity: (!newCatLabel.trim() || addingCat) ? 0.5 : 1 }}>
+                      {addingCat ? '...' : s.addCategoryBtn}
+                    </button>
+                    <button type="button" onClick={() => { setAddCatMode(false); setNewCatLabel('') }}
+                      style={{ padding: '3px 6px', borderRadius: 6, border: 'none', background: 'transparent', color: '#94a3b8', fontSize: 11, cursor: 'pointer' }}>
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                      <Select value={form.category} onValueChange={v => set({ category: v })}>
+                        <SelectTrigger className="w-full border-0 bg-transparent shadow-none focus:ring-0 px-0 text-[13px] font-semibold text-purple-700 h-auto"><SelectValue placeholder={s.category} /></SelectTrigger>
+                        <SelectContent>{categoryOptions.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <button type="button" onClick={() => setAddCatMode(true)}
+                      title={s.addCategory}
+                      style={{ width: 26, height: 26, borderRadius: 7, border: '1.5px solid #c4b5fd', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                      <Plus size={13} color="#7c3aed" />
+                    </button>
+                  </div>
+                )}
               </div>
               <div style={fieldBox('#bbf7d0', 'linear-gradient(135deg,#f0fdf4,#dcfce7)')}>
                 <label style={labelSt('#15803d')}>{s.unit}</label>

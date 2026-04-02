@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Eye, X, Trash2, AlertTriangle, Loader2, LogOut } from 'lucide-react'
 import { stopImpersonation } from '@/actions/impersonation'
 import { supabase } from '@/lib/supabase'
@@ -140,7 +139,6 @@ function PurgeModal({ orgName, orgId, onClose }: { orgName: string; orgId: strin
  * Больше НЕ использует localStorage — сессия админа защищена.
  */
 export function ImpersonationBanner() {
-  const router = useRouter()
   const [state, setState] = useState<ImpersonationState | null>(null)
   const [visible, setVisible] = useState(true)
   const [showPurge, setShowPurge] = useState(false)

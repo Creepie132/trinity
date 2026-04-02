@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
@@ -43,6 +43,8 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
   const [showDescription, setShowDescription] = useState(false)
   const [hasPaintCode, setHasPaintCode] = useState(false)
   const [showEasterEgg, setShowEasterEgg] = useState(false)
+  const [eggMuted, setEggMuted] = useState(true)
+  const eggVideoRef = useRef<HTMLVideoElement>(null)
 
   const addClient = useAddClient()
   const [cardSettings] = useClientCardSettings()
@@ -416,20 +418,55 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
             cursor: 'pointer',
           }}
         >
-          <video
-            src="/videos/technoduck.mp4"
-            autoPlay
-            loop
-            playsInline
-            muted
-            style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 16, boxShadow: '0 0 60px rgba(255,220,0,0.5)' }}
+          {/* Контейнер видео — клик НЕ закрывает */}
+          <div
             onClick={(e) => e.stopPropagation()}
-          />
+            style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}
+          >
+            <video
+              ref={eggVideoRef}
+              src="/videos/technoduck.mp4"
+              autoPlay
+              loop
+              playsInline
+              muted={eggMuted}
+              style={{
+                display: 'block',
+                maxWidth: '90vw',
+                maxHeight: '85vh',
+                borderRadius: 16,
+                boxShadow: '0 0 60px rgba(255,220,0,0.5)',
+              }}
+            />
+            {/* Кнопка звука */}
+            <button
+              onClick={() => {
+                const newMuted = !eggMuted
+                setEggMuted(newMuted)
+                if (eggVideoRef.current) {
+                  eggVideoRef.current.muted = newMuted
+                  // На мобильных нужно явно вызвать play() после взаимодействия
+                  if (eggVideoRef.current.paused) {
+                    eggVideoRef.current.play().catch(() => {})
+                  }
+                }
+              }}
+              style={{
+                position: 'absolute', bottom: 12, right: 12,
+                background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: 8, color: '#fff', padding: '6px 10px',
+                fontSize: 18, cursor: 'pointer', lineHeight: 1,
+              }}
+              title={eggMuted ? 'Включить звук' : 'Выключить звук'}
+            >
+              {eggMuted ? '🔇' : '🔊'}
+            </button>
+          </div>
           <div style={{
-            position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)',
-            color: 'rgba(255,255,255,0.5)', fontSize: 13,
+            position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+            color: 'rgba(255,255,255,0.4)', fontSize: 12, whiteSpace: 'nowrap',
           }}>
-            🦆 нажми куда угодно, чтобы закрыть
+            🦆 нажми за пределами видео, чтобы закрыть
           </div>
         </div>,
         document.body

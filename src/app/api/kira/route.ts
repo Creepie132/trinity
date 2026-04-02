@@ -11,6 +11,27 @@ export const maxDuration = 60
 
 const HISTORY_LIMIT = 20
 
+// ai@6 UIMessage: { role, parts:[{type:'text',text}], id }
+// DB / old format: { role, content: string }
+// Нормализуем любой входящий формат → { role, content: string }
+type RawMsg = {
+  role: 'user' | 'assistant'
+  content?: string
+  parts?: { type: string; text?: string }[]
+}
+
+function extractText(msg: RawMsg): string {
+  if (msg.content) return msg.content
+  if (msg.parts) {
+    return msg.parts
+      .filter(p => p.type === 'text' && p.text)
+      .map(p => p.text!)
+      .join('')
+  }
+  return ''
+}
+
+
 const SYSTEM_PROMPT = [
   'Тебя зовут Кира. Ты интеллектуальный ассистент CRM-системы Trinity от компании Amber Solutions.',
   'Ты помогаешь владельцу бизнеса управлять процессами: клиентами, визитами, финансами, командой.',
@@ -26,37 +47,41 @@ export async function POST(request: NextRequest) {
   if ('error' in auth) return auth.error
   const { orgId } = auth
 
-  let incomingMessages: { role: 'user' | 'assistant'; content: string }[]
+  let rawMessages: RawMsg[]
   let sessionId: string | null
   try {
     const body = await request.json()
-    incomingMessages = body.messages ?? []
+    rawMessages = body.messages ?? []
     sessionId = body.sessionId ?? null
-    if (!Array.isArray(incomingMessages) || incomingMessages.length === 0) {
+    if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
       return new Response(JSON.stringify({ error: 'No messages' }), { status: 400 })
     }
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid body' }), { status: 400 })
   }
 
-  // ── Диагностический лог — видно в Vercel Runtime Logs ───────────────────
-  console.log('[kira] session:', sessionId, '| incoming messages count:', incomingMessages.length)
-  console.log('[kira] INCOMING MESSAGES:', JSON.stringify(incomingMessages, null, 2))
+  // Нормализуем входящие UIMessages → { role, content }
+  const incomingNormalized = rawMessages
+    .filter(m => m.role === 'user' || m.role === 'assistant')
+    .map(m => ({ role: m.role as 'user' | 'assistant', content: extractText(m) }))
+    .filter(m => m.content.length > 0)
+
+  if (incomingNormalized.length === 0) {
+    return new Response(JSON.stringify({ error: 'No messages with content' }), { status: 400 })
+  }
+
+  console.log('[kira] session:', sessionId, '| msgs:', incomingNormalized.length)
 
   const supabase = createSupabaseServiceClient()
 
-
   // ── Контекст для AI ──────────────────────────────────────────────────────
-  // ai@6 + useChat передаёт ВЕСЬ массив сообщений из UI в body.messages.
-  // Поэтому мы доверяем клиенту полный контекст + при холодном старте
-  // (1 сообщение) добавляем историю из БД чтобы не терять память.
-  let messagesForAI = incomingMessages
+  // ai@6: useChat передаёт ВЕСЬ массив сообщений.
+  // При холодном старте (1 user-сообщение) подклеиваем историю из БД.
+  let messagesForAI: { role: 'user' | 'assistant'; content: string }[] = incomingNormalized
 
-  const isColdStart = incomingMessages.length === 1 && incomingMessages[0].role === 'user'
+  const isColdStart = incomingNormalized.length === 1 && incomingNormalized[0].role === 'user'
 
   if (isColdStart && sessionId) {
-    // Холодный старт: браузер только что открылся, setMessages ещё не сработал
-    // → достаём историю из БД и подклеиваем перед первым сообщением
     const { data: session } = await supabase
       .from('kira_sessions').select('id')
       .eq('id', sessionId).eq('org_id', orgId).single()
@@ -71,17 +96,14 @@ export async function POST(request: NextRequest) {
 
       const dbHistory = (rows ?? []).reverse() as { role: 'user' | 'assistant'; content: string }[]
       if (dbHistory.length > 0) {
-        messagesForAI = [...dbHistory, ...incomingMessages]
-        console.log('[kira] cold start — prepended', dbHistory.length, 'messages from DB')
+        messagesForAI = [...dbHistory, ...incomingNormalized]
+        console.log('[kira] cold start — prepended', dbHistory.length, 'msgs from DB')
       }
     }
   }
 
-  console.log('[kira] MESSAGES FOR AI count:', messagesForAI.length)
-
-  // Последнее user-сообщение — для сохранения в onFinish
-  const lastUserMsg = [...incomingMessages].reverse().find(m => m.role === 'user')
-
+  // Последнее user-сообщение для сохранения в onFinish
+  const lastUserText = [...incomingNormalized].reverse().find(m => m.role === 'user')?.content ?? null
 
   // ── Tools ────────────────────────────────────────────────────────────────
   const getClientSummary = {
@@ -116,7 +138,6 @@ export async function POST(request: NextRequest) {
       }
     },
   }
-
 
   const getRevenueStats = {
     description: 'Get revenue stats (total, count, avg check) for today / week / month.',
@@ -172,7 +193,6 @@ export async function POST(request: NextRequest) {
     },
   }
 
-
   // ── Stream ───────────────────────────────────────────────────────────────
   const result = streamText({
     model: openai('gpt-4o-mini'),
@@ -182,14 +202,13 @@ export async function POST(request: NextRequest) {
     stopWhen: stepCountIs(3),
     maxOutputTokens: 1024,
     onFinish: async ({ text }) => {
-      // Сохраняем только последний обмен — история уже есть в БД
-      if (!sessionId || !lastUserMsg || !text) return
+      if (!sessionId || !lastUserText || !text) return
       try {
         await supabase.from('kira_messages').insert([
-          { session_id: sessionId, org_id: orgId, role: 'user',      content: lastUserMsg.content },
+          { session_id: sessionId, org_id: orgId, role: 'user',      content: lastUserText },
           { session_id: sessionId, org_id: orgId, role: 'assistant', content: text },
         ])
-        console.log('[kira] saved to DB — user + assistant messages')
+        console.log('[kira] saved to DB — user + assistant')
       } catch (dbError) {
         console.error('[kira] DB SAVE ERROR:', dbError)
       }

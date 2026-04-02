@@ -157,6 +157,12 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Trinity" />
+        {/* Language flash prevention — runs before first paint */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var l=localStorage.getItem('trinity-language');if(l==='ru'){document.documentElement.setAttribute('lang','ru');document.documentElement.setAttribute('dir','ltr');document.documentElement.classList.remove('font-assistant');document.documentElement.classList.add('font-inter');}}catch(e){}})();`,
+          }}
+        />
         {/* JSON-LD Structured Data */}
         <script
           type="application/ld+json"

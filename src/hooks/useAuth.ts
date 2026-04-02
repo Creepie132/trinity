@@ -22,14 +22,26 @@ let cachedRole: string | null = null
 let cachedOrganizations: Array<{ org_id: string; org_name: string; role: string }> | null = null
 let cachedUserId: string | null = null
 
+// Восстанавливаем role из localStorage при инициализации модуля
+// Это устраняет flash кабинета/сайдбара при первой загрузке
+if (typeof window !== 'undefined') {
+  try {
+    const persistedRole = localStorage.getItem('trinity_user_role')
+    const persistedOrgId = localStorage.getItem('current_org_id')
+    if (persistedRole) cachedRole = persistedRole
+    if (persistedOrgId) cachedOrgId = persistedOrgId
+  } catch {}
+}
+
 export function useAuth(): UseAuthResult {
   const [user, setUser] = useState<any | null>(null)
   const [orgId, setOrgId] = useState<string | null>(cachedOrgId)
   const [organizations, setOrganizations] = useState<Array<{ org_id: string; org_name: string; role: string }> | null>(cachedOrganizations)
   const [isAdmin, setIsAdmin] = useState<boolean>(cachedIsAdmin ?? false)
   const [isSalesAgent, setIsSalesAgent] = useState<boolean>(cachedIsSalesAgent ?? false)
-  const [role, setRole] = useState<string | null>(cachedRole)
-  const [isLoading, setIsLoading] = useState(true)
+  const [role, setRole] = useState<string | null>(() => cachedRole)
+  // isLoading=false immediately when we have cached auth data (avoids sidebar flash)
+  const [isLoading, setIsLoading] = useState(() => cachedRole === null && cachedOrgId === null)
 
   useEffect(() => {
     let mounted = true
@@ -61,6 +73,10 @@ export function useAuth(): UseAuthResult {
         cachedIsSalesAgent = null
         cachedRole = null
         cachedOrganizations = null
+        try {
+          localStorage.removeItem('trinity_user_role')
+          localStorage.removeItem('current_org_id')
+        } catch {}
       }
       cachedUserId = user.id
 
@@ -114,6 +130,12 @@ export function useAuth(): UseAuthResult {
       const userRole = currentOrgData?.role || 'user'
       cachedRole = userRole
 
+      // Персистим role и orgId — устраняет flash кабинета при следующей загрузке
+      try {
+        localStorage.setItem('trinity_user_role', userRole)
+        if (selectedOrgId) localStorage.setItem('current_org_id', selectedOrgId)
+      } catch {}
+
       setIsAdmin(isAdminUser)
       setIsSalesAgent(isSalesAgentUser)
       setOrganizations(userOrganizations)
@@ -136,6 +158,7 @@ export function useAuth(): UseAuthResult {
     cachedOrganizations = null
     cachedUserId = null
     localStorage.removeItem('current_org_id')
+    localStorage.removeItem('trinity_user_role')
     await supabase.auth.signOut()
     window.location.href = '/login'
   }

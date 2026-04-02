@@ -6,6 +6,7 @@ import { enforceDemoLimit } from '@/lib/demo-limits'
 import { resend, getEmailHeaders, getEmailTags } from '@/lib/resend'
 import { bookingConfirmEmail, newBookingNotifyEmail } from '@/lib/email-templates'
 import { queuePushNotification } from '@/lib/push-notify'
+import { dispatchNotification } from '@/lib/dispatch-notification'
 import { scheduleMessage } from '@/lib/wa/scheduler'
 import { normalizePhone } from '@/lib/wa/phone'
 
@@ -222,8 +223,17 @@ export async function POST(request: NextRequest) {
     }
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Queue push notification
+    // Queue push + dispatch Telegram via Edge Function (non-critical, fire-and-forget)
     const visitTimeStr = new Date(scheduled_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+    void dispatchNotification({
+      event_type: 'new_visit',
+      org_id: org_id,
+      payload: {
+        title: '📅 ביקור נוצר',
+        body: `${visitTimeStr} — ${insertData.service_type || 'ביקור'}`,
+        url: '/diary',
+      },
+    })
     await queuePushNotification({
       org_id: org_id,
       user_id: user.id,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { validateBody, createPaymentSchema } from '@/lib/validations'
+import { dispatchNotification } from '@/lib/dispatch-notification'
 
 // GET /api/payments — список платежей для текущей организации
 // Query params: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), status, limit
@@ -238,6 +239,17 @@ export async function POST(request: NextRequest) {
           .eq('org_id', orgId)
       }
     }
+
+    // Dispatch Telegram notification (fire-and-forget)
+    void dispatchNotification({
+      event_type: 'new_payment',
+      org_id: orgId,
+      payload: {
+        title: '💳 תשלום חדש',
+        body: `₪${roundedAmount} — ${payment_method}`,
+        url: '/payments',
+      },
+    })
 
     return NextResponse.json({ payment }, { status: 201 })
   } catch (error) {

@@ -1,22 +1,26 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { Sparkles, Megaphone, Bell, ExternalLink } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Megaphone, Bell, ExternalLink } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { useKiraRealtime } from '@/hooks/useKiraRealtime'
 import { useLanguage } from '@/contexts/LanguageContext'
-import type { KiraWaveState } from '@/components/kira/KiraWave'
-const KiraWave = dynamic(() => import('@/components/kira/KiraWave').then(m => ({ default: m.KiraWave })), { ssr: false })
+import { useBranch } from '@/contexts/BranchContext'
+
+const KiraChatPanel = dynamic(
+  () => import('@/components/kira/KiraChatPanel').then(m => ({ default: m.KiraChatPanel })),
+  { ssr: false }
+)
 
 // ─── Типы ────────────────────────────────────────────────────────────────────
 interface Announcement { id: string; text: string; type: 'info' | 'success' | 'warning' }
 
-// ─── Объявления (статичные пока нет API) ─────────────────────────────────────
+// ─── Объявления ───────────────────────────────────────────────────────────────
 const ANNOUNCEMENTS: Announcement[] = [
   { id: '1', text: '🚀 Новая функция: WhatsApp уведомления скоро!', type: 'info' },
-  { id: '2', text: '✨ Кира AI — ваш личный ассистент в разработке', type: 'success' },
+  { id: '2', text: '✨ Кира AI — ваш личный ассистент теперь активен', type: 'success' },
   { id: '3', text: '📱 Установите приложение на телефон!', type: 'info' },
 ]
+
 
 // ─── Бегущая строка ───────────────────────────────────────────────────────────
 function Ticker({ items }: { items: Announcement[] }) {
@@ -37,7 +41,11 @@ function Ticker({ items }: { items: Announcement[] }) {
 
   if (!items.length) return null
   const item = items[idx]
-  const colors = { info: 'bg-blue-50 border-blue-200 text-blue-700', success: 'bg-emerald-50 border-emerald-200 text-emerald-700', warning: 'bg-amber-50 border-amber-200 text-amber-700' }
+  const colors = {
+    info: 'bg-blue-50 border-blue-200 text-blue-700',
+    success: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+    warning: 'bg-amber-50 border-amber-200 text-amber-700',
+  }
 
   return (
     <div className={`rounded-xl border px-3 py-2.5 transition-all duration-400 ${colors[item.type]} ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1'}`}>
@@ -45,7 +53,6 @@ function Ticker({ items }: { items: Announcement[] }) {
         <Bell className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
         <p className="text-xs leading-relaxed">{item.text}</p>
       </div>
-      {/* Dot progress */}
       {items.length > 1 && (
         <div className="flex gap-1 mt-2 justify-center">
           {items.map((_, i) => (
@@ -56,6 +63,7 @@ function Ticker({ items }: { items: Announcement[] }) {
     </div>
   )
 }
+
 
 // ─── Рекламный баннер ─────────────────────────────────────────────────────────
 interface AdCampaign {
@@ -76,7 +84,6 @@ function AdBlock() {
       .then(r => r.json())
       .then(d => {
         if (d.campaigns?.length) {
-          // Pick random campaign if multiple
           const idx = Math.floor(Math.random() * d.campaigns.length)
           setAd(d.campaigns[idx])
         }
@@ -85,7 +92,6 @@ function AdBlock() {
       .finally(() => setLoaded(true))
   }, [])
 
-  // Placeholder while loading
   if (!loaded) return (
     <div className="rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden animate-pulse">
       <div className="w-full h-28 bg-gray-100 dark:bg-slate-700" />
@@ -95,7 +101,6 @@ function AdBlock() {
     </div>
   )
 
-  // No campaigns — show promo slot
   if (!ad) return (
     <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-4 text-center">
       <Megaphone className="w-6 h-6 text-gray-300 mx-auto mb-2" />
@@ -103,6 +108,7 @@ function AdBlock() {
       <p className="text-xs text-gray-300 mt-1">Ваш баннер здесь</p>
     </div>
   )
+
 
   const handleClick = () => {
     if (!ad.link_url) return
@@ -144,72 +150,13 @@ function AdBlock() {
   )
 }
 
-// ─── Слот Киры — звуковая волна + Realtime ───────────────────────────────────
-function KiraBlock() {
-  const [state, setState] = useState<KiraWaveState>('idle')
-
-  // Supabase Realtime — реагируем на реальные события
-  const handleStateChange = useCallback((s: KiraWaveState) => setState(s), [])
-  useKiraRealtime({ onStateChange: handleStateChange })
-
-  const stateLabel: Record<KiraWaveState, string> = {
-    idle:     'Слушаю...',
-    sale:     '🎉 Продажа!',
-    client:   '👤 Новый клиент!',
-    thinking: 'Думает...',
-    payment:  '💳 Платёж!',
-    visit:    '📅 Визит',
-    cancel:   '❌ Отмена',
-  }
-
-  return (
-    <div className="rounded-2xl overflow-hidden shadow-md" style={{ background: '#2a2d35' }}>
-      {/* Волна */}
-      <div className="relative flex items-center justify-center px-2 pt-5 pb-3"
-        style={{ background: '#2a2d35' }}>
-        <div className="absolute inset-0 opacity-20" style={{
-          background: 'radial-gradient(circle at 50% 80%, rgba(40,80,255,0.3) 0%, transparent 70%)'
-        }} />
-        <KiraWave state={state} width={224} height={72} />
-        <div className="absolute bottom-3 right-4 flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
-            state === 'idle' ? 'bg-blue-400' :
-            state === 'payment' ? 'bg-purple-400' :
-            state === 'client' ? 'bg-amber-400' :
-            state === 'visit' ? 'bg-cyan-400' :
-            state === 'cancel' ? 'bg-gray-400' :
-            'bg-green-400'
-          }`} />
-          <span className="text-xs transition-all duration-300" style={{ color: 'rgba(100,150,255,0.6)' }}>
-            {stateLabel[state]}
-          </span>
-        </div>
-      </div>
-      {/* Подпись */}
-      <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-3.5 h-3.5" style={{ color: 'rgba(100,160,255,0.7)' }} />
-          <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'rgba(140,180,255,0.6)' }}>
-            AI Ассистент Кира
-          </span>
-        </div>
-        <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.25)' }}>
-          Личный ИИ-помощник для вашего бизнеса
-        </p>
-      </div>
-    </div>
-  )
-}
-
 
 // ─── Главная правая/левая панель ──────────────────────────────────────────────
 export function RightPanel() {
   const { language } = useLanguage()
+  const { activeOrgId } = useBranch()
   const isRTL = language === 'he'
 
-  // В иврите (RTL) панель — слева (flex dir=rtl ставит её первой из конца)
-  // В русском (LTR) — справа (обычный flex порядок)
-  // border меняется в зависимости от стороны
   const borderClass = isRTL
     ? 'border-r border-gray-100 dark:border-slate-800'
     : 'border-l border-gray-100 dark:border-slate-800'
@@ -228,16 +175,16 @@ export function RightPanel() {
           </h2>
         </div>
 
-        {/* Бегущая строка объявлений */}
+        {/* Бегущая строка */}
         <Ticker items={ANNOUNCEMENTS} />
 
-        {/* Слот Киры */}
-        <KiraBlock />
+        {/* Кира AI — чат */}
+        {activeOrgId && <KiraChatPanel orgId={activeOrgId} />}
 
         {/* Рекламный баннер */}
         <AdBlock />
 
-        {/* Прижимаем подпись к низу */}
+        {/* Подпись */}
         <div className="mt-auto pt-3 border-t border-gray-100 dark:border-slate-700">
           <p className="text-xs text-gray-300 dark:text-gray-600 text-center">
             Trinity CRM by Amber Solutions

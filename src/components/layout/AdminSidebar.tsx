@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Megaphone, Settings, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, FlaskConical, UserCheck, Mail, Monitor, BookOpen } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, FlaskConical, UserCheck, Mail, Monitor, BookOpen, LineChart } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
@@ -33,6 +33,7 @@ export function AdminSidebar() {
     { name: language === 'he' ? 'הזמנות' : 'Приглашения', href: '/admin/invitations', icon: Mail },
     { name: language === 'he' ? 'מצגות' : 'Презентации', href: '/admin/presentations', icon: Monitor },
     { name: language === 'he' ? 'בלוג Beautymania' : 'Блог Beautymania', href: '/admin/blog', icon: BookOpen },
+    { name: language === 'he' ? 'סטטיסטיקת תנועה' : 'Трафик лендинга', href: '/admin/stats', icon: LineChart },
   ]
 
   return (

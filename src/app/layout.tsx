@@ -16,14 +16,130 @@ const assistant = Assistant({
   variable: '--font-assistant',
 });
 
+const BASE_URL = 'https://ambersol.co.il'
+
 export const metadata: Metadata = {
-  title: "Trinity | Amber Solutions Systems",
-  description: "מערכת ניהול לקוחות, תשלומים והודעות SMS",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: 'Trinity CRM | מערכת ניהול לקוחות לעסקים קטנים בישראל',
+    template: '%s | Trinity CRM',
+  },
+  description: 'Trinity CRM — מערכת ניהול לקוחות, תורים, תשלומים והודעות WhatsApp לעסקים קטנים בישראל. סלוני יופי, קליניקות, מוסכים ועוד. הפעלה תוך יום אחד.',
+  keywords: [
+    'CRM ישראל', 'מערכת ניהול לקוחות', 'ניהול תורים', 'WhatsApp עסקי',
+    'סלון יופי תוכנה', 'Trinity CRM', 'Amber Solutions', 'crm לעסקים קטנים',
+    'CRM салон красоты', 'CRM Израиль', 'система записи клиентов',
+  ],
+  authors: [{ name: 'Amber Solutions', url: BASE_URL }],
+  creator: 'Amber Solutions',
+  publisher: 'Amber Solutions',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'he_IL',
+    alternateLocale: ['ru_RU', 'en_US'],
+    url: BASE_URL,
+    siteName: 'Trinity CRM',
+    title: 'Trinity CRM | מערכת ניהול לקוחות לעסקים קטנים',
+    description: 'ניהול לקוחות, תורים ו-WhatsApp בפלטפורמה אחת. הפעלה תוך יום אחד.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Trinity CRM — מערכת ניהול לקוחות',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Trinity CRM | מערכת ניהול לקוחות',
+    description: 'ניהול לקוחות, תורים ו-WhatsApp בפלטפורמה אחת.',
+    images: ['/og-image.png'],
+  },
+  alternates: {
+    canonical: BASE_URL,
+    languages: {
+      'he-IL': `${BASE_URL}/`,
+      'ru-RU': `${BASE_URL}/`,
+    },
+  },
   icons: {
     icon: '/logo.png',
     apple: '/icons/icon-192.png',
+    shortcut: '/logo.png',
+  },
+  verification: {
+    // google: 'YOUR_GOOGLE_SITE_VERIFICATION_CODE', // Добавить после верификации в GSC
   },
 };
+
+// JSON-LD Schema for SoftwareApplication
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Trinity CRM',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web, iOS, Android',
+  url: BASE_URL,
+  description: 'מערכת ניהול לקוחות, תורים, תשלומים והודעות WhatsApp לעסקים קטנים בישראל.',
+  screenshot: `${BASE_URL}/og-image.png`,
+  offers: [
+    {
+      '@type': 'Offer',
+      price: '199',
+      priceCurrency: 'ILS',
+      name: 'Trinity CRM Base',
+      description: 'ניהול לקוחות, תורים ומלאי',
+    },
+    {
+      '@type': 'Offer',
+      price: '249',
+      priceCurrency: 'ILS',
+      name: 'Trinity CRM Pro',
+      description: 'כולל WhatsApp, סטטיסטיקות ואנליטיקה',
+    },
+  ],
+  author: {
+    '@type': 'Organization',
+    name: 'Amber Solutions',
+    url: BASE_URL,
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'sales',
+      availableLanguage: ['Hebrew', 'Russian'],
+    },
+  },
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '5',
+    ratingCount: '2',
+    bestRating: '5',
+    worstRating: '1',
+  },
+  featureList: [
+    'ניהול לקוחות',
+    'יומן תורים',
+    'WhatsApp תזכורות',
+    'ניהול מלאי',
+    'מעקב תשלומים',
+    'אנליטיקה ודוחות',
+  ],
+  inLanguage: ['he', 'ru', 'en'],
+  isAccessibleForFree: false,
+  softwareVersion: '2.0',
+  applicationSubCategory: 'CRM',
+}
 
 export default function RootLayout({
   children,
@@ -31,7 +147,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // suppressHydrationWarning — LanguageContext меняет lang/dir на клиенте при старте
     <html lang="he" dir="rtl" className="light" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
@@ -42,6 +157,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Trinity" />
+        {/* JSON-LD Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
       <body className={`${inter.variable} ${assistant.variable} font-sans`} suppressHydrationWarning>
         <QueryProvider>

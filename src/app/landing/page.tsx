@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { usePricingPlans } from '@/hooks/usePricingPlans'
+import { useTrafficTracker } from '@/hooks/useTrafficTracker'
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────
 type LDir = 'ltr' | 'rtl'
@@ -352,6 +353,8 @@ export default function LandingPage() {
   const t = LANG_MAP[lang]
   // Динамические планы из БД (fallback на хардкод если API недоступен)
   const { plans: dbPlans } = usePricingPlans()
+  // Fire-and-forget трекинг просмотра лендинга (не блокирует рендер)
+  const track = useTrafficTracker()
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20)
@@ -761,7 +764,7 @@ export default function LandingPage() {
           <h1>{t.h1a}<br /><em>{t.h1b}</em></h1>
           <p className="hero-sub">{t.heroSub}</p>
           <div className="hero-cta">
-            <a href="/demo/try" className="btn-primary">{t.ctaPrimary}</a>
+            <a href="/demo/try" className="btn-primary" onClick={() => track('demo_click')}>{t.ctaPrimary}</a>
             <a href="#features" className="btn-secondary">{t.ctaSecondary}</a>
           </div>
           <div className="hero-stats">
@@ -916,6 +919,7 @@ export default function LandingPage() {
                     href="/demo/try"
                     className={`btn-plan ${isPopular ? 'btn-plan-fill' : 'btn-plan-outline'}`}
                     style={{display:'block',textAlign:'center'}}
+                    onClick={() => track('pricing_click')}
                   >
                     {cta || t.choosePlan}
                   </a>
@@ -957,7 +961,7 @@ export default function LandingPage() {
         <h2>{t.ctaH2a}<br />{t.ctaH2b}</h2>
         <p>{t.ctaSub}</p>
         <div className="hero-cta">
-          <a href="https://wa.me/972544858586" className="btn-white">{t.ctaWA}</a>
+          <a href="https://wa.me/972544858586" className="btn-white" onClick={() => track('wa_click')}>{t.ctaWA}</a>
           <a href="#pricing" className="btn-secondary" style={{color:'rgba(255,255,255,0.6)',borderColor:'rgba(255,255,255,0.15)'}}>{t.ctaPrice}</a>
         </div>
       </section>

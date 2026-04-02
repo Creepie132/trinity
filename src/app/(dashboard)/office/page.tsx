@@ -466,6 +466,11 @@ export default function OwnerOfficePage() {
             <span>📊</span>
             <span className="hidden md:inline">{isRTL ? 'SEO אנליטיקה' : 'SEO-аналитика'}</span>
           </Link>
+          <Link href="/office/website/settings"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-all shadow-sm">
+            <span>🌐</span>
+            <span className="hidden md:inline">{isRTL ? 'אתר' : 'Сайт'}</span>
+          </Link>
         </div>
       </div>
 

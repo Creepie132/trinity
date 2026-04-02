@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import Modal from '@/components/ui/Modal'
+import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
@@ -110,16 +111,17 @@ function PostEditor({ open, post, onClose, s }: { open:boolean; post:BlogPost|nu
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string|null>(null)
 
-  const handleOpenChange = useCallback((isOpen: boolean) => {
-    if (isOpen) {
+  // Инициализация формы при открытии
+  useEffect(() => {
+    if (open) {
       setError(null)
       if (post) {
         setForm({ title:post.title, slug:post.slug, cover_image:post.cover_image??'',
           excerpt:post.excerpt??'', content_html:post.content_html, published:post.published })
         setSlugTouched(true)
       } else { setForm(EMPTY_FORM); setSlugTouched(false) }
-    } else { onClose() }
-  }, [post, onClose])
+    }
+  }, [open, post?.id])
 
   const editor = useEditor({
     extensions: [
@@ -162,18 +164,31 @@ function PostEditor({ open, post, onClose, s }: { open:boolean; post:BlogPost|nu
     finally { setSaving(false) }
   }
 
+  const footerContent = (
+    <div className="flex items-center justify-between w-full">
+      <Button variant="ghost" onClick={onClose} className="text-gray-600">{s.cancel}</Button>
+      <Button onClick={handleSave} disabled={!form.title.trim()||!form.slug.trim()||saving}
+        className="bg-indigo-600 hover:bg-indigo-700 min-w-[130px] gap-2">
+        {saving
+          ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{s.saving}</>
+          : <><CheckCircle2 className="w-4 h-4" />{s.save}</>}
+      </Button>
+    </div>
+  )
+
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl p-0 gap-0 max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex-shrink-0">
-          <DialogHeader>
-            <DialogTitle className="text-white text-xl flex items-center gap-2">
-              <BookOpen className="w-5 h-5 opacity-80" />
-              {post ? s.editPost : s.newPost}
-            </DialogTitle>
-          </DialogHeader>
-        </div>
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+    <Modal open={open} onClose={onClose} darkHeader showCloseButton={false} width="620px">
+      <TrinityModalShell
+        open={open}
+        onClose={onClose}
+        icon={<BookOpen />}
+        title={post ? s.editPost : s.newPost}
+        subtitle={s.pageSub}
+        accentColor="#4f46e5"
+        footerContent={footerContent}
+        dir="ltr"
+      >
+        <div className="space-y-5 p-5">
           {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
           <div className="space-y-1.5">
             <Label className="text-sm font-semibold">{s.titleLabel} *</Label>
@@ -189,7 +204,7 @@ function PostEditor({ open, post, onClose, s }: { open:boolean; post:BlogPost|nu
           <div className="space-y-1.5">
             <Label className="text-sm font-semibold flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5 text-indigo-500" />{s.coverLabel}</Label>
             <Input value={form.cover_image} onChange={e=>up('cover_image',e.target.value)} placeholder={s.coverPlaceholder} dir="ltr" className="h-10" />
-            {form.cover_image && <img src={form.cover_image} alt="preview" className="mt-2 h-28 w-full object-cover rounded-lg border border-gray-200" />}
+            {form.cover_image && <img src={form.cover_image} alt="preview" className="mt-2 h-24 w-full object-cover rounded-lg border border-gray-200" />}
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm font-semibold">{s.excerptLabel}</Label>
@@ -198,13 +213,13 @@ function PostEditor({ open, post, onClose, s }: { open:boolean; post:BlogPost|nu
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm font-semibold">{s.contentLabel}</Label>
-            <div className="border border-gray-200 rounded-lg overflow-hidden min-h-[240px]">
+            <div className="border border-gray-200 rounded-lg overflow-hidden min-h-[200px]">
               <EditorToolbar editor={editor} />
               <EditorContent editor={editor}
-                className="prose prose-sm max-w-none p-4 min-h-[200px] focus-within:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[180px] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-gray-400 [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none" />
+                className="prose prose-sm max-w-none p-4 min-h-[160px] focus-within:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[140px] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-gray-400 [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none" />
             </div>
           </div>
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200">
             <div>
               <p className="text-sm font-semibold text-gray-800">{s.publishLabel}</p>
               <p className="text-xs text-gray-400 mt-0.5">{form.published ? s.published : s.draft}</p>
@@ -212,17 +227,8 @@ function PostEditor({ open, post, onClose, s }: { open:boolean; post:BlogPost|nu
             <Switch checked={form.published} onCheckedChange={v=>up('published',v)} />
           </div>
         </div>
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex-shrink-0">
-          <Button variant="ghost" onClick={onClose} className="text-gray-600">{s.cancel}</Button>
-          <Button onClick={handleSave} disabled={!form.title.trim()||!form.slug.trim()||saving}
-            className="bg-indigo-600 hover:bg-indigo-700 min-w-[130px] gap-2">
-            {saving
-              ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{s.saving}</>
-              : <><CheckCircle2 className="w-4 h-4" />{s.save}</>}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </TrinityModalShell>
+    </Modal>
   )
 }
 
@@ -271,19 +277,19 @@ export default function WebsiteBlogPage() {
   const publishedCount = posts.filter(p => p.published).length
 
   return (
-    <div className="space-y-6" dir={language==='he' ? 'rtl' : 'ltr'}>
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6" dir={language==='he' ? 'rtl' : 'ltr'}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Globe className="w-7 h-7 text-indigo-500" />{s.pageTitle}
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <Globe className="w-6 h-6 md:w-7 md:h-7 text-indigo-500" />{s.pageTitle}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">{s.pageSub}</p>
+          <p className="text-gray-500 text-xs md:text-sm mt-1">{s.pageSub}</p>
         </div>
-        <Button onClick={openNew} className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200">
+        <Button onClick={openNew} size="sm" className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 shrink-0">
           <Plus className="w-4 h-4" />{s.newPost}
         </Button>
       </div>
-      <div className="grid grid-cols-2 gap-4 max-w-xs">
+      <div className="grid grid-cols-2 gap-3 max-w-xs">
         <Card><CardContent className="p-4"><p className="text-xs text-gray-500">{s.totalPosts}</p><p className="text-2xl font-bold text-gray-800 mt-0.5">{posts.length}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-gray-500">{s.publishedCount}</p><p className="text-2xl font-bold text-emerald-600 mt-0.5">{publishedCount}</p></CardContent></Card>
       </div>

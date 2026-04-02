@@ -44,7 +44,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const { data: isAdmin } = useIsAdmin()
   const features = useFeatures()
   const { data: lowStockProducts } = useLowStockProducts()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const meetingMode = useMeetingMode()
   const { isDemo } = useDemoMode()
   const { data: hasWorkers } = useHasWorkers()
@@ -165,6 +165,28 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                   </div>
                   <span className="flex-1 text-purple-700 dark:text-purple-300 font-semibold">{t('nav.admin')}</span>
                   <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                </NavLink>
+              </>
+            )}
+            {hasStorefront && (
+              <>
+                <Separator className="my-2 bg-gray-200 dark:bg-slate-700" />
+                <NavLink href="/website/blog" onClick={onClose}
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200 group',
+                    pathname.startsWith('/website')
+                      ? 'bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-lg shadow-teal-500/30 scale-[1.02]'
+                      : 'text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:shadow-md active:scale-[0.98] border border-teal-100 dark:border-teal-800/40'
+                  )}>
+                  <div className={cn('p-1.5 rounded-lg transition-colors',
+                    pathname.startsWith('/website') ? 'bg-white/20' : 'bg-teal-100 dark:bg-teal-900/30')}>
+                    <Globe className={cn('w-5 h-5 flex-shrink-0',
+                      pathname.startsWith('/website') ? 'text-white' : 'text-teal-600 dark:text-teal-400')} />
+                  </div>
+                  <span className="flex-1 font-semibold">
+                    {language === 'he' ? '🌐 אתר' : '🌐 Сайт'}
+                  </span>
+                  {pathname.startsWith('/website') && <div className="w-2 h-2 rounded-full bg-white/80 animate-pulse" />}
                 </NavLink>
               </>
             )}

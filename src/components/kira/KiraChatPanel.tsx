@@ -19,23 +19,47 @@ const supabaseRealtime = createClient(
 
 export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [text, setText]               = useState('')
-  const [sessionId, setSessionId]     = useState<string | null>(null)
-  const [sessionReady, setReady]      = useState(false)
-  const [initMsgs, setInitMsgs]       = useState<HistoryMessage[]>([])
-  const [proactiveBadge, setBadge]    = useState(false)
-  const [proactiveMsg, setProactive]  = useState<string | null>(null)
+  const [text, setText]              = useState('')
+  const [sessionId, setSessionId]    = useState<string | null>(null)
+  const [sessionReady, setReady]     = useState(false)
+  const [proactiveBadge, setBadge]   = useState(false)
+  const [proactiveMsg, setProactive] = useState<string | null>(null)
 
+
+  // useChat — инициализируем без initialMessages, вольём историю через setMessages
+  const { messages, sendMessage, setMessages, status, error } = useChat({
+    transport: new DefaultChatTransport({ api: '/api/kira', body: { sessionId, orgId } }),
+  })
+
+  // ── Инициализация сессии + гидратация истории ─────────────────────────
   useEffect(() => {
     fetch('/api/kira/session', { method: 'POST' })
       .then(r => r.json())
       .then(d => {
-        if (d.sessionId) { setSessionId(d.sessionId); setInitMsgs(d.messages ?? []) }
-      })
-      .catch(() => {})
-      .finally(() => setReady(true))
-  }, [orgId])
+        if (d.sessionId) {
+          setSessionId(d.sessionId)
 
+          // setMessages — правильный способ влить историю в ai@6
+          // Строго соответствует интерфейсу UIMessage
+          const historyMsgs = (d.messages as HistoryMessage[] ?? []).map((m, i) => ({
+            id:      `hist-${i}`,
+            role:    m.role as 'user' | 'assistant',
+            content: m.content,
+            parts:   [{ type: 'text' as const, text: m.content }],
+          }))
+
+          if (historyMsgs.length > 0) {
+            setMessages(historyMsgs)
+            console.log('[kira] hydrated', historyMsgs.length, 'messages from DB')
+          }
+        }
+      })
+      .catch(e => console.error('[kira] session init error:', e))
+      .finally(() => setReady(true))
+  }, [orgId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+
+  // ── Realtime — проактивные сообщения от cron ──────────────────────────
   useEffect(() => {
     if (!sessionId) return
     const channel = supabaseRealtime
@@ -56,14 +80,6 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
 
   const dismissProactive = useCallback(() => { setBadge(false); setProactive(null) }, [])
 
-  const { messages, sendMessage, status, error } = useChat({
-    transport: new DefaultChatTransport({ api: '/api/kira', body: { sessionId, orgId } }),
-    messages: initMsgs.map((m, i) => ({
-      id: `hist-${i}`, role: m.role as 'user' | 'assistant',
-      content: m.content, parts: [{ type: 'text' as const, text: m.content }],
-    })),
-  })
-
   const isLoading = status === 'streaming' || status === 'submitted'
   const waveState: KiraWaveState = isLoading ? 'thinking' : 'idle'
 
@@ -75,10 +91,9 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
     const trimmed = text.trim()
     if (!trimmed || isLoading) return
     dismissProactive()
-    sendMessage({ role: 'user', content: trimmed, parts: [{ type: 'text', text: trimmed }] })
+    sendMessage({ role: 'user', text: trimmed })
     setText('')
   }
-
 
   if (!sessionReady) {
     return (
@@ -87,6 +102,7 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
       </div>
     )
   }
+
 
   return (
     <div className="rounded-2xl overflow-hidden flex flex-col" style={{ background: '#1e2027', minHeight: 0 }}>
@@ -118,7 +134,6 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
         </div>
       )}
 
-
       {/* Сообщения */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2"
         style={{ maxHeight: 260, minHeight: 80, scrollbarWidth: 'thin', scrollbarColor: 'rgba(99,102,241,0.2) transparent' }}>
@@ -129,10 +144,10 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
           </p>
         )}
 
+
         {messages.map((msg) => (
           <div key={msg.id} className={`flex flex-col gap-1.5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-            {(msg.parts ?? [{ type: 'text', text: msg.content }]).map((part: any, i: number) => {
-              // Текст
+            {(msg.parts ?? []).map((part: any, i: number) => {
               if (part.type === 'text' && part.text) {
                 return (
                   <div key={i} className="max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed"
@@ -144,11 +159,9 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
                   </div>
                 )
               }
-              // Generative UI: getDebts — результат готов
               if (part.type === 'tool-getDebts' && part.state === 'output-available') {
                 return <div key={i} className="w-full"><DebtWidget result={part.output} /></div>
               }
-              // Любой tool — загружается
               if (part.type?.startsWith('tool-') && (part.state === 'input-available' || part.state === 'input-streaming')) {
                 return (
                   <div key={i} className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-lg"
@@ -162,7 +175,6 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
             })}
           </div>
         ))}
-
 
         {isLoading && (
           <div className="flex justify-start">
@@ -205,3 +217,5 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
     </div>
   )
 }
+
+

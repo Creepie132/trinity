@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   let sessionId: string | null
   try {
     const body = await request.json()
-    incomingMessages = body.messages
+    incomingMessages = body.messages ?? []
     sessionId = body.sessionId ?? null
     if (!Array.isArray(incomingMessages) || incomingMessages.length === 0) {
       return new Response(JSON.stringify({ error: 'No messages' }), { status: 400 })
@@ -39,26 +39,51 @@ export async function POST(request: NextRequest) {
     return new Response(JSON.stringify({ error: 'Invalid body' }), { status: 400 })
   }
 
+  // ── Диагностический лог — видно в Vercel Runtime Logs ───────────────────
+  console.log('[kira] session:', sessionId, '| incoming messages count:', incomingMessages.length)
+  console.log('[kira] INCOMING MESSAGES:', JSON.stringify(incomingMessages, null, 2))
+
   const supabase = createSupabaseServiceClient()
 
-  let historyMessages: { role: 'user' | 'assistant'; content: string }[] = []
-  if (sessionId) {
+
+  // ── Контекст для AI ──────────────────────────────────────────────────────
+  // ai@6 + useChat передаёт ВЕСЬ массив сообщений из UI в body.messages.
+  // Поэтому мы доверяем клиенту полный контекст + при холодном старте
+  // (1 сообщение) добавляем историю из БД чтобы не терять память.
+  let messagesForAI = incomingMessages
+
+  const isColdStart = incomingMessages.length === 1 && incomingMessages[0].role === 'user'
+
+  if (isColdStart && sessionId) {
+    // Холодный старт: браузер только что открылся, setMessages ещё не сработал
+    // → достаём историю из БД и подклеиваем перед первым сообщением
     const { data: session } = await supabase
       .from('kira_sessions').select('id')
       .eq('id', sessionId).eq('org_id', orgId).single()
+
     if (session) {
       const { data: rows } = await supabase
         .from('kira_messages').select('role, content')
         .eq('session_id', sessionId)
-        .order('created_at', { ascending: false }).limit(HISTORY_LIMIT)
-      historyMessages = ((rows ?? []).reverse()) as typeof historyMessages
+        .not('is_proactive', 'eq', true)
+        .order('created_at', { ascending: false })
+        .limit(HISTORY_LIMIT)
+
+      const dbHistory = (rows ?? []).reverse() as { role: 'user' | 'assistant'; content: string }[]
+      if (dbHistory.length > 0) {
+        messagesForAI = [...dbHistory, ...incomingMessages]
+        console.log('[kira] cold start — prepended', dbHistory.length, 'messages from DB')
+      }
     }
   }
 
-  const lastUserMsg = [...incomingMessages].reverse().find(m => m.role === 'user')
-  const messagesForAI = lastUserMsg ? [...historyMessages, lastUserMsg] : historyMessages
+  console.log('[kira] MESSAGES FOR AI count:', messagesForAI.length)
 
-  // ── Tool: getClientSummary ───────────────────────────────────────────────
+  // Последнее user-сообщение — для сохранения в onFinish
+  const lastUserMsg = [...incomingMessages].reverse().find(m => m.role === 'user')
+
+
+  // ── Tools ────────────────────────────────────────────────────────────────
   const getClientSummary = {
     description: 'Find client by name or phone. Returns contacts and lifetime value (LTV).',
     inputSchema: zodSchema(z.object({
@@ -93,12 +118,9 @@ export async function POST(request: NextRequest) {
   }
 
 
-  // ── Tool: getRevenueStats ────────────────────────────────────────────────
   const getRevenueStats = {
     description: 'Get revenue stats (total, count, avg check) for today / week / month.',
-    inputSchema: zodSchema(z.object({
-      period: z.enum(['today', 'week', 'month']),
-    })),
+    inputSchema: zodSchema(z.object({ period: z.enum(['today', 'week', 'month']) })),
     execute: async ({ period }: { period: 'today' | 'week' | 'month' }) => {
       const now = new Date()
       let from: Date
@@ -127,10 +149,8 @@ export async function POST(request: NextRequest) {
     },
   }
 
-
-  // ── Tool: getDebts (Generative UI) ───────────────────────────────────────
   const getDebts = {
-    description: 'Get list of clients with outstanding debts (unpaid/partial sales). Used to render DebtWidget in UI.',
+    description: 'Get clients with outstanding debts. Renders DebtWidget in UI.',
     inputSchema: zodSchema(z.object({
       limit: z.number().optional().describe('Max records, default 10'),
     })),
@@ -138,26 +158,20 @@ export async function POST(request: NextRequest) {
       const { data, error } = await supabase
         .from('sales')
         .select('id, total_amount, paid_amount, clients(id, first_name, last_name, phone)')
-        .eq('org_id', orgId)
-        .in('status', ['unpaid', 'partial'])
-        .order('total_amount', { ascending: false })
-        .limit(limit)
+        .eq('org_id', orgId).in('status', ['unpaid', 'partial'])
+        .order('total_amount', { ascending: false }).limit(limit)
       if (error || !data?.length) return { found: false, debts: [] }
       return {
         found: true,
         debts: (data as any[]).map(s => {
-          const client = s.clients
+          const c = s.clients
           const debt = Math.round((Number(s.total_amount) - Number(s.paid_amount ?? 0)) * 100) / 100
-          return {
-            id:     s.id,
-            name:   `${client?.first_name ?? ''} ${client?.last_name ?? ''}`.trim() || 'Unknown',
-            phone:  client?.phone ?? '',
-            amount: debt,
-          }
+          return { id: s.id, name: `${c?.first_name ?? ''} ${c?.last_name ?? ''}`.trim() || 'Unknown', phone: c?.phone ?? '', amount: debt }
         }),
       }
     },
   }
+
 
   // ── Stream ───────────────────────────────────────────────────────────────
   const result = streamText({
@@ -168,11 +182,17 @@ export async function POST(request: NextRequest) {
     stopWhen: stepCountIs(3),
     maxOutputTokens: 1024,
     onFinish: async ({ text }) => {
+      // Сохраняем только последний обмен — история уже есть в БД
       if (!sessionId || !lastUserMsg || !text) return
-      await supabase.from('kira_messages').insert([
-        { session_id: sessionId, org_id: orgId, role: 'user',      content: lastUserMsg.content },
-        { session_id: sessionId, org_id: orgId, role: 'assistant', content: text },
-      ])
+      try {
+        await supabase.from('kira_messages').insert([
+          { session_id: sessionId, org_id: orgId, role: 'user',      content: lastUserMsg.content },
+          { session_id: sessionId, org_id: orgId, role: 'assistant', content: text },
+        ])
+        console.log('[kira] saved to DB — user + assistant messages')
+      } catch (dbError) {
+        console.error('[kira] DB SAVE ERROR:', dbError)
+      }
     },
   })
 

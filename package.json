@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.49",
+    "@ai-sdk/react": "^3.0.145",
     "@anthropic-ai/sdk": "^0.79.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
@@ -20,6 +22,7 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.2",
     "@zxing/library": "^0.21.3",
+    "ai": "^6.0.143",
     "browser-image-compression": "^2.0.2",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
@@ -48,11 +51,11 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@tiptap/extension-link": "^3.22.0",
-    "@tiptap/extension-placeholder": "^3.22.0",
-    "@tiptap/pm": "^3.22.0",
-    "@tiptap/react": "^3.22.0",
-    "@tiptap/starter-kit": "^3.22.0",
+    "@tiptap/extension-link": "^3.22.1",
+    "@tiptap/extension-placeholder": "^3.22.1",
+    "@tiptap/pm": "^3.22.1",
+    "@tiptap/react": "^3.22.1",
+    "@tiptap/starter-kit": "^3.22.1",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",

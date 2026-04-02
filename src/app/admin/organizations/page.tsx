@@ -304,6 +304,17 @@ function OrgCard({
               {org.tranzila_card_last4 ? `*${org.tranzila_card_last4}` : l ? 'טוקן' : 'Токен'}
             </span>
           )}
+          {/* Billing status badge */}
+          {!hasToken && org.billing_status === 'pending' && (
+            <span className="ml-auto flex items-center gap-1 text-xs text-yellow-700 bg-yellow-50 px-1.5 py-0.5 rounded-md border border-yellow-200">
+              <Clock className="w-3 h-3" />{l ? 'ממתין' : 'Ожидает'}
+            </span>
+          )}
+          {!hasToken && org.billing_status === 'failed' && (
+            <span className="ml-auto flex items-center gap-1 text-xs text-red-600 bg-red-50 px-1.5 py-0.5 rounded-md border border-red-200">
+              <AlertTriangle className="w-3 h-3" />{l ? 'כשל' : 'Ошибка'}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -1037,8 +1048,35 @@ export default function AdminOrganizationsPage() {
           <div className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 dark:border-gray-800">
             <span className="text-gray-500">{l ? 'חיוב הבא' : 'Следующее списание'}</span>
             <span className="font-medium text-gray-900 dark:text-gray-100">
-              {org.subscription_expires_at ? new Date(org.subscription_expires_at).toLocaleDateString(l ? 'he-IL' : 'ru-RU') : '—'}
+              {org.billing_due_date
+                ? new Date(org.billing_due_date).toLocaleDateString(l ? 'he-IL' : 'ru-RU')
+                : org.subscription_expires_at
+                  ? new Date(org.subscription_expires_at).toLocaleDateString(l ? 'he-IL' : 'ru-RU')
+                  : '—'}
             </span>
+          </div>
+          {/* Статус оплаты */}
+          <div className="flex items-center justify-between text-sm py-1.5 border-b border-gray-50 dark:border-gray-800">
+            <span className="text-gray-500">{l ? 'סטטוס תשלום' : 'Статус оплаты'}</span>
+            {(() => {
+              const s = org.billing_status
+              if (s === 'paid') return (
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  <CheckCircle className="w-3 h-3" />{l ? 'שולם' : 'Оплачено'}
+                </span>
+              )
+              if (s === 'pending') return (
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700 border border-yellow-200">
+                  <Clock className="w-3 h-3" />{l ? 'ממתין לתשלום' : 'Ожидает оплаты'}
+                </span>
+              )
+              if (s === 'failed') return (
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-600 border border-red-200">
+                  <AlertTriangle className="w-3 h-3" />{l ? 'נכשל' : 'Ошибка оплаты'}
+                </span>
+              )
+              return <span className="text-xs text-gray-400">{l ? 'לא הוגדר' : 'Не задан'}</span>
+            })()}
           </div>
           {/* Тарифная ставка — inline редактор */}
           <BillingAmountRow

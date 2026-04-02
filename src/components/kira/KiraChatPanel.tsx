@@ -31,7 +31,7 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
   // body — ФУНКЦИЯ, читает актуальный sessionIdRef при каждом запросе
   // Это решает проблему stale closure: транспорт создаётся один раз,
   // но body вычисляется свежим при каждой отправке
-  const { messages, sendMessage, setMessages, status, error } = useChat({
+  const { messages, sendMessage, setMessages, status, error, clearError } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/kira',
       body: () => ({ sessionId: sessionIdRef.current, orgId }),
@@ -98,7 +98,8 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
     const trimmed = text.trim()
     if (!trimmed || isLoading) return
     dismissProactive()
-    sendMessage({ role: 'user', text: trimmed })
+    if (error) clearError()
+    sendMessage({ text: trimmed })
     setText('')
   }
 

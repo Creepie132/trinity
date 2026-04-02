@@ -1,7 +1,7 @@
 import {
   Globe, Palette, Bell, Package, Building2, Users,
   Calendar, CreditCard, MessageSquare, FileText,
-  ShieldAlert,
+  ShieldAlert, MessageCircle,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -153,6 +153,17 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
         title_he: 'תבניות WhatsApp',
         desc_ru: 'Шаблоны по умолчанию для SMS и WhatsApp',
         desc_he: 'הגדר הודעות ברירת מחדל ל-SMS ו-WhatsApp',
+      },
+      {
+        id: 'whatsapp',
+        href: '/settings/whatsapp',
+        icon: MessageCircle,
+        colorTint: 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+        title_ru: 'Персональный WhatsApp',
+        title_he: 'WhatsApp מותאם אישית',
+        desc_ru: 'Подключите свой номер Whapi — избегайте блокировок',
+        desc_he: 'חבר מספר Whapi עצמאי — הימנע מחסימות',
+        featureFlag: 'hasWhatsapp',
       },
     ],
   },

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { sendWhatsAppMessage } from '@/lib/wa/send'
 
 // POST /api/wa-inbox/send — отправить ответ клиенту из Trinity
+// Использует Fallback-паттерн: custom org → org-level → global ENV
 export async function POST(req: NextRequest) {
   const auth = await getAuthContext(req)
   if ('error' in auth) return auth.error
@@ -31,51 +33,34 @@ export async function POST(req: NextRequest) {
 
   if (!conv) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // Читаем API ключ через SECURITY DEFINER функцию
-  const { data: apiKey, error: keyError } = await supabase
-    .rpc('get_wa_api_key', { p_org_id: orgId })
-
-  if (keyError || !apiKey) {
-    console.error('[send] API key error:', keyError)
-    return NextResponse.json({ error: 'WhatsApp not configured' }, { status: 400 })
-  }
-
-  // Конвертируем телефон в международный формат для Whapi
-  // 0524024447 → 972524024447
-  let phone = conv.phone.replace(/\D/g, '')
-  if (phone.startsWith('0')) phone = '972' + phone.slice(1)
-  if (!phone.startsWith('972')) phone = '972' + phone
-
-  // Отправляем через Whapi
-  const whapiRes = await fetch('https://gate.whapi.cloud/messages/text', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ to: phone + '@s.whatsapp.net', body: message }),
+  // ── Отправляем через центральную утилиту (Fallback: custom → org → env) ──
+  const sendResult = await sendWhatsAppMessage({
+    orgId,
+    to:      conv.phone,
+    message,
+    softFail: true,
   })
 
-  if (!whapiRes.ok) {
-    const err = await whapiRes.text()
-    console.error('[send] Whapi error:', err)
-    return NextResponse.json({ error: `Whapi error: ${err}` }, { status: 500 })
+  if (!sendResult.ok) {
+    console.error('[wa-inbox/send] send failed:', sendResult.error, 'provider:', sendResult.provider)
+    return NextResponse.json(
+      { error: sendResult.error ?? 'WhatsApp not configured' },
+      { status: sendResult.provider === 'none' ? 400 : 500 }
+    )
   }
 
-  const whapiData = await whapiRes.json()
-
-  // Сохраняем исходящее сообщение и возвращаем реальный id
+  // Сохраняем исходящее сообщение
   const { data: savedMsg } = await supabase
     .from('wa_messages')
     .insert({
       conversation_id,
-      org_id: orgId,
-      whapi_message_id: whapiData.message?.id ?? null,
-      direction: 'outbound',
-      message_type: 'text',
-      body: message,
-      status: 'sent',
-      sent_by_user_id: user.id,
+      org_id:           orgId,
+      whapi_message_id: sendResult.messageId ?? null,
+      direction:        'outbound',
+      message_type:     'text',
+      body:             message,
+      status:           'sent',
+      sent_by_user_id:  user.id,
     })
     .select('id, status, created_at, direction, message_type, body')
     .single()
@@ -84,11 +69,10 @@ export async function POST(req: NextRequest) {
   await supabase
     .from('wa_conversations')
     .update({
-      last_message_at: new Date().toISOString(),
+      last_message_at:   new Date().toISOString(),
       last_message_text: message.slice(0, 200),
     })
     .eq('id', conversation_id)
 
-  // Возвращаем реальный id — фронт заменит им temp сообщение
-  return NextResponse.json({ ok: true, message: savedMsg ?? null })
+  return NextResponse.json({ ok: true, message: savedMsg ?? null, provider: sendResult.provider })
 }

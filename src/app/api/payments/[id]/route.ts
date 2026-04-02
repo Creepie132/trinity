@@ -19,7 +19,7 @@ export async function GET(
       .select(`
         *,
         clients(id, first_name, last_name, phone, email),
-        sales:sale_id(
+        sale:sale_id(
           id, total_amount, paid_amount, status, sale_date,
           payment_method, receipt_sent, notes,
           sale_items(

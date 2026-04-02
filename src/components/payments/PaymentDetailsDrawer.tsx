@@ -133,9 +133,9 @@ export function PaymentDetailsDrawer({
   const statusLabel: Record<string, string> = { completed: l.paid, paid: l.paid, pending: l.pending, failed: l.failed, refunded: l.refunded, cancelled: l.cancelled }
   const tranzilaId  = payment.transaction_id || payment.metadata?.tranzila_transaction_id || payment.metadata?.transaction_id || null
   const typeLabel   = payment.subscription_period_start ? l.subscription : payment.type === 'product' ? l.product : l.service
-  const saleItems: any[] = payment.sales?.sale_items ?? []
-  const saleId    = payment.sales?.id ?? null
-  const saleNotes = payment.sales?.notes ?? payment.description ?? null
+  const saleItems: any[] = payment.sale?.sale_items ?? []
+  const saleId    = payment.sale?.id ?? null
+  const saleNotes = payment.sale?.notes ?? payment.description ?? null
   const initials  = getInitials(clientName)
 
   const handleWhatsApp = async () => {

@@ -25,9 +25,6 @@ export async function GET(request: NextRequest) {
         *,
         clients (
           id, first_name, last_name, phone, email, org_id
-        ),
-        sales:sale_id (
-          id, total_amount, status, sale_date
         )
       `)
       .eq('org_id', orgId)

@@ -836,3 +836,82 @@ chore: конфиг, зависимости
 **Оставшиеся warnings (не требуют действий):**
 - `pg_net`, `pg_trgm` в public schema — системные расширения Supabase, нельзя перенести
 - `auth_leaked_password_protection` — включить в Supabase Dashboard → Auth → Password Protection
+
+
+---
+
+## Notification System 2.0 — Апрель 2026
+
+### Архитектура
+
+```
+Событие (visit/payment/client/order)
+  └─► dispatchNotification() [fire-and-forget, src/lib/dispatch-notification.ts]
+        └─► Edge Function: send-notification [supabase/functions/send-notification/]
+              ├─► notification_preferences → кто и в какой канал
+              ├─► Telegram Bot API (если канал включён)
+              └─► Web Push / VAPID (если канал включён)
+
+Настройки пользователя: /settings/notifications
+  └─► API: GET/PUT /api/notifications/preferences
+        └─► Таблица: notification_preferences (org_id, user_id, preferences JSONB)
+```
+
+### Новые таблицы БД
+
+| Таблица | Назначение | RLS |
+|---|---|---|
+| `notification_preferences` | Настройки каналов per user per org. JSONB: `{event_key: {push, telegram, email}}` | ✅ `auth.uid() = user_id` |
+| `user_devices` | Push-токены устройств (Web Push endpoint / FCM) | ✅ `auth.uid() = user_id` |
+
+### Файлы
+
+| Файл | Описание |
+|---|---|
+| `src/lib/dispatch-notification.ts` | Server helper: POST к Edge Function, fire-and-forget |
+| `src/hooks/useNotificationPreferences.ts` | React hook: load + optimistic toggle per channel |
+| `src/app/api/notifications/preferences/route.ts` | GET + PUT, sanitized eventKey regex, atomic upsert |
+| `src/app/(dashboard)/settings/notifications/page.tsx` | UI: 4 группы событий × 2 канала (Push+TG), фикс Rules of Hooks crash |
+| `supabase/functions/send-notification/index.ts` | Edge Function: Telegram + Web Push VAPID (без npm deps) |
+
+### Точки отправки (event triggers)
+
+| Event | Файл | Payload |
+|---|---|---|
+| `new_visit` | `api/visits/route.ts` | 📅 Визит создан |
+| `new_payment` | `api/payments/route.ts` | 💳 Новый платёж |
+| `new_client` | `api/clients/route.ts` | 👤 Новый клиент |
+| `new_order` | `api/beautymania/order/route.ts` | 🛒 Заказ с сайта Beautymania |
+
+### Edge Function деплой (один раз вручную)
+
+```bash
+npx supabase functions deploy send-notification --project-ref tjryzcqvsavtllahjyrj
+```
+
+Secrets в Supabase Dashboard → Edge Functions → send-notification:
+- `TELEGRAM_BOT_TOKEN`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_EMAIL` = `mailto:admin@ambersol.co.il`
+
+### UI — группы событий
+
+| Группа | События |
+|---|---|
+| Визиты | new_visit, visit_reminder, birthday, new_client |
+| Продажи и склад | new_payment, stock_alerts, new_order |
+| WhatsApp / AI | ai_fallback, task_mentions |
+| Безопасность | security_login |
+
+### Фикс критического бага
+
+`useDemoMode()` вызывался после условного `return loading` → нарушение Rules of Hooks → crash страницы.
+Исправлено: все хуки подняты в верх компонента до любых условных return.
+
+### Коммиты
+
+| SHA | Описание |
+|---|---|
+| `15f9f19` | feat: notification system 2.0 — preferences table, UI, edge function, dispatch helper |
+| `8686d63` | feat: wire dispatchNotification into visits+payments routes |
+| `d31a49d` | feat: dispatch notifications on new_client and new_order events |

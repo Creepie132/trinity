@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
-import { supabase } from '@/lib/supabase'
+import { updateUserPreferences } from '@/actions/user-preferences'
 
 export type ThemeId = 'midnight' | 'forest' | 'plum' | 'amber'
 
@@ -120,23 +120,15 @@ export function ThemeProvider({ children, initialTheme }: { children: ReactNode;
   }, [theme])
 
   const setTheme = useCallback(async (id: ThemeId) => {
+    // Optimistic: немедленно применяем в UI
     setThemeId(id)
     localStorage.setItem(LS_KEY, id)
     setIsSaving(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: orgUser } = await supabase
-        .from('org_users').select('org_id').eq('user_id', user.id).single()
-      if (!orgUser) return
-      const { data: org } = await supabase
-        .from('organizations').select('metadata').eq('id', orgUser.org_id).single()
-      await supabase
-        .from('organizations')
-        .update({ metadata: { ...(org?.metadata ?? {}), ui_theme: id } })
-        .eq('id', orgUser.org_id)
+      // Синхронизация с БД через Server Action
+      await updateUserPreferences({ theme: id })
     } catch {
-      // silent — theme applied locally
+      // silent — тема уже применена локально
     } finally {
       setIsSaving(false)
     }

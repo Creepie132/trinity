@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { updateUserPreferences } from '@/actions/user-preferences'
 
 export type Language = 'he' | 'ru'
 
@@ -1854,8 +1855,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
-    localStorage.setItem('trinity-language', lang)
+    try { localStorage.setItem('trinity-language', lang) } catch {}
     applyLanguage(lang)
+    // Синхронизируем с БД в фоне (optimistic — UI уже обновлён)
+    updateUserPreferences({ preferred_language: lang }).catch(() => {})
   }
 
   const applyLanguage = (lang: Language) => {

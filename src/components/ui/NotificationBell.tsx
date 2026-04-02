@@ -40,12 +40,10 @@ interface Notification {
   priority?: 'normal' | 'high' | 'urgent'
   created_at: string
   metadata?: NotificationMetadata
-  // mention fields
   mention_status?: 'pending' | 'accepted' | 'rejected' | null
   mention_rejection_reason?: string | null
   sender_id?: string | null
   sender_name?: string | null
-  // task accept fields
   task_accept_status?: 'pending' | 'accepted' | 'rejected' | null
   task_rejection_reason?: string | null
   reference_id?: string | null
@@ -56,84 +54,52 @@ interface NotificationBellProps {
 }
 
 const translations = {
-  he: {
-    title: 'התראות',
-    empty: 'אין התראות',
-    markRead: 'סמן הכל כנקרא',
-  },
-  ru: {
-    title: 'Уведомления',
-    empty: 'Нет уведомлений',
-    markRead: 'Отметить все прочитанными',
-  },
+  he: { title: 'התראות', empty: 'אין התראות', markRead: 'סמן הכל כנקרא' },
+  ru: { title: 'Уведомления', empty: 'Нет уведомлений', markRead: 'Отметить все прочитанными' },
 }
 
-// AudioContext singleton
-let _audioCtx: AudioContext | null = null
-let _audioBuffer: AudioBuffer | null = null
+// ── AudioContext unlock (kept for bell open gesture unlock only) ──────────────
 let _audioUnlocked = false
-
 function unlockAudio() {
   if (_audioUnlocked) return
   _audioUnlocked = true
-  try {
-    _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    fetch('/sounds/Notification.mp3')
-      .then(r => r.arrayBuffer())
-      .then(buf => _audioCtx!.decodeAudioData(buf))
-      .then(decoded => { _audioBuffer = decoded })
-      .catch(() => {})
-  } catch {}
 }
-
 if (typeof window !== 'undefined') {
   window.addEventListener('click', unlockAudio, { once: true })
   window.addEventListener('touchstart', unlockAudio, { once: true })
   window.addEventListener('keydown', unlockAudio, { once: true })
 }
 
-function playNotificationSound() {
-  if (_audioCtx && _audioBuffer) {
-    try {
-      if (_audioCtx.state === 'suspended') _audioCtx.resume()
-      const source = _audioCtx.createBufferSource()
-      source.buffer = _audioBuffer
-      const gainNode = _audioCtx.createGain()
-      gainNode.gain.value = 0.6
-      source.connect(gainNode)
-      gainNode.connect(_audioCtx.destination)
-      source.start(0)
-      return
-    } catch {}
-  }
-  try {
-    const audio = new Audio('/sounds/Notification.mp3')
-    audio.volume = 0.6
-    const p = audio.play()
-    if (p) p.catch(() => {})
-  } catch {}
-}
-
-// ── Swipeable notification item ──────────────────────────────────────────────
+// ── SwipeableNotificationItem ─────────────────────────────────────────────────
+// Mobile: swipe-left to reveal delete button
+// Desktop: always shows a subtle × button on the right
 interface SwipeableItemProps {
   onDelete: () => void
   children: React.ReactNode
   isRead: boolean
+  isMobile: boolean
 }
 
-function SwipeableNotificationItem({ onDelete, children, isRead }: SwipeableItemProps) {
+function SwipeableNotificationItem({ onDelete, children, isRead, isMobile }: SwipeableItemProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const startXRef = useRef(0)
   const currentXRef = useRef(0)
   const isDraggingRef = useRef(false)
   const [translateX, setTranslateX] = useState(0)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [hovered, setHovered] = useState(false)
 
   const REVEAL_THRESHOLD = 72
   const DELETE_THRESHOLD = 140
 
-  function onTouchStart(e: React.TouchEvent) { startXRef.current = e.touches[0].clientX; currentXRef.current = 0; isDraggingRef.current = true }
-  function onTouchMove(e: React.TouchEvent) { if (!isDraggingRef.current) return; const dx = e.touches[0].clientX - startXRef.current; const clamped = Math.min(0, dx); currentXRef.current = clamped; setTranslateX(clamped) }
+  function onTouchStart(e: React.TouchEvent) {
+    startXRef.current = e.touches[0].clientX; currentXRef.current = 0; isDraggingRef.current = true
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    if (!isDraggingRef.current) return
+    const dx = e.touches[0].clientX - startXRef.current
+    const clamped = Math.min(0, dx); currentXRef.current = clamped; setTranslateX(clamped)
+  }
   function onTouchEnd() {
     if (!isDraggingRef.current) return; isDraggingRef.current = false
     const dx = currentXRef.current
@@ -152,28 +118,61 @@ function SwipeableNotificationItem({ onDelete, children, isRead }: SwipeableItem
   const revealRatio = Math.min(1, Math.abs(translateX) / REVEAL_THRESHOLD)
   const bgOpacity = Math.round(revealRatio * 255).toString(16).padStart(2, '0')
 
+  // ── Desktop: simple card with hover-reveal delete button ─────────────────
+  if (!isMobile) {
+    return (
+      <div
+        ref={containerRef}
+        className="relative rounded-xl group"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {children}
+        {/* Delete button — visible on hover */}
+        <button
+          onClick={(e) => { e.stopPropagation(); dismiss() }}
+          className={`
+            absolute top-2 right-2 z-10
+            w-6 h-6 rounded-full flex items-center justify-center
+            bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500
+            transition-all duration-150
+            ${hovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}
+          `}
+          aria-label="Удалить уведомление"
+          title="Удалить"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      </div>
+    )
+  }
+
+  // ── Mobile: swipe to reveal ───────────────────────────────────────────────
   return (
-    <div ref={containerRef} className="relative overflow-hidden rounded-xl" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-      <div className="absolute inset-0 flex items-center justify-end pr-4 rounded-xl" style={{ backgroundColor: `#ef4444${bgOpacity}` }}>
-        <button onPointerDown={(e) => { e.stopPropagation(); dismiss() }} className="flex items-center justify-center w-10 h-10 rounded-full bg-red-600 text-white shadow-md active:scale-90 transition-transform">
+    <div ref={containerRef} className="relative overflow-hidden rounded-xl"
+      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      <div className="absolute inset-0 flex items-center justify-end pr-4 rounded-xl"
+        style={{ backgroundColor: `#ef4444${bgOpacity}` }}>
+        <button
+          onPointerDown={(e) => { e.stopPropagation(); dismiss() }}
+          className="flex items-center justify-center w-10 h-10 rounded-full bg-red-600 text-white shadow-md active:scale-90 transition-transform"
+        >
           <Trash2 className="w-5 h-5" />
         </button>
       </div>
-      <div className={`relative transition-transform ${!isRead ? 'bg-indigo-50/60 dark:bg-indigo-900/10' : 'bg-white dark:bg-gray-900'}`}
-        style={{ transform: `translateX(${translateX}px)`, transition: isDraggingRef.current ? 'none' : 'transform 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
+      <div
+        className={`relative transition-transform ${!isRead ? 'bg-indigo-50/60 dark:bg-indigo-900/10' : 'bg-white dark:bg-gray-900'}`}
+        style={{ transform: `translateX(${translateX}px)`, transition: isDraggingRef.current ? 'none' : 'transform 0.3s cubic-bezier(0.32,0.72,0,1)' }}
+      >
         {children}
       </div>
     </div>
   )
 }
 
-// ── MentionActions — inline Accept/Reject UI ─────────────────────────────────
-function MentionActions({
-  notif, locale,
-  onRespond
-}: {
-  notif: Notification
-  locale: 'he' | 'ru'
+// ── MentionActions ────────────────────────────────────────────────────────────
+function MentionActions({ notif, locale, onRespond }: {
+  notif: Notification; locale: 'he' | 'ru'
   onRespond: (id: string, action: 'accepted' | 'rejected', reason?: string) => void
 }) {
   const [mode, setMode] = useState<'buttons' | 'rejecting'>('buttons')
@@ -181,89 +180,56 @@ function MentionActions({
   const [loading, setLoading] = useState(false)
   const isHe = locale === 'he'
 
-  if (notif.mention_status === 'accepted') {
-    return (
-      <div className="mt-2 ms-5 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
-        <Check className="w-3.5 h-3.5" />
-        {isHe ? 'קיבלת' : 'Вы приняли'}
-      </div>
-    )
-  }
-  if (notif.mention_status === 'rejected') {
-    return (
-      <div className="mt-2 ms-5 text-xs text-red-500 font-semibold flex items-center gap-1.5">
-        <X className="w-3.5 h-3.5" />
-        {isHe ? 'דחית' : 'Вы отклонили'}
-        {notif.mention_rejection_reason && (
-          <span className="text-gray-400 font-normal">— {notif.mention_rejection_reason}</span>
-        )}
-      </div>
-    )
-  }
+  if (notif.mention_status === 'accepted') return (
+    <div className="mt-2 ms-5 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
+      <Check className="w-3.5 h-3.5" />{isHe ? 'קיבלת' : 'Вы приняли'}
+    </div>
+  )
+  if (notif.mention_status === 'rejected') return (
+    <div className="mt-2 ms-5 text-xs text-red-500 font-semibold flex items-center gap-1.5">
+      <X className="w-3.5 h-3.5" />{isHe ? 'דחית' : 'Вы отклонили'}
+      {notif.mention_rejection_reason && <span className="text-gray-400 font-normal">— {notif.mention_rejection_reason}</span>}
+    </div>
+  )
 
-  const handleAccept = async () => {
-    setLoading(true)
-    onRespond(notif.id, 'accepted')
-  }
-
-  const handleReject = async () => {
-    if (!reason.trim()) return
-    setLoading(true)
-    onRespond(notif.id, 'rejected', reason.trim())
-  }
-
-  if (mode === 'rejecting') {
-    return (
-      <div className="mt-2 ms-5 space-y-2">
-        <textarea
-          autoFocus
-          value={reason}
-          onChange={e => setReason(e.target.value)}
-          rows={2}
-          placeholder={isHe ? 'כתוב סיבת דחייה...' : 'Напиши причину отклонения...'}
-          className="w-full text-xs border border-red-200 focus:border-red-400 rounded-xl px-3 py-2 outline-none resize-none bg-red-50 placeholder:text-red-300"
-          dir={isHe ? 'rtl' : 'ltr'}
-        />
-        <div className="flex gap-2">
-          <button onClick={handleReject} disabled={!reason.trim() || loading}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 disabled:opacity-40 transition-all">
-            {loading
-              ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              : <X className="w-3 h-3" />}
-            {isHe ? 'שלח דחייה' : 'Отклонить'}
-          </button>
-          <button onClick={() => { setMode('buttons'); setReason('') }}
-            className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-all">
-            {isHe ? 'ביטול' : 'Отмена'}
-          </button>
-        </div>
+  if (mode === 'rejecting') return (
+    <div className="mt-2 ms-5 space-y-2">
+      <textarea autoFocus value={reason} onChange={e => setReason(e.target.value)} rows={2}
+        placeholder={isHe ? 'כתוב סיבת דחייה...' : 'Напиши причину отклонения...'}
+        className="w-full text-xs border border-red-200 focus:border-red-400 rounded-xl px-3 py-2 outline-none resize-none bg-red-50 placeholder:text-red-300"
+        dir={isHe ? 'rtl' : 'ltr'} />
+      <div className="flex gap-2">
+        <button onClick={() => { if (!reason.trim()) return; setLoading(true); onRespond(notif.id, 'rejected', reason.trim()) }}
+          disabled={!reason.trim() || loading}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 disabled:opacity-40 transition-all">
+          {loading ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <X className="w-3 h-3" />}
+          {isHe ? 'שלח דחייה' : 'Отклонить'}
+        </button>
+        <button onClick={() => { setMode('buttons'); setReason('') }}
+          className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-all">
+          {isHe ? 'ביטול' : 'Отмена'}
+        </button>
       </div>
-    )
-  }
+    </div>
+  )
 
   return (
     <div className="mt-2 ms-5 flex gap-2">
-      <button onClick={handleAccept} disabled={loading}
+      <button onClick={() => { setLoading(true); onRespond(notif.id, 'accepted') }} disabled={loading}
         className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-all disabled:opacity-40">
-        <Check className="w-3.5 h-3.5" />
-        {isHe ? '✅ קבל' : '✅ Принять'}
+        <Check className="w-3.5 h-3.5" />{isHe ? '✅ קבל' : '✅ Принять'}
       </button>
       <button onClick={() => setMode('rejecting')}
         className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-bold hover:bg-red-100 transition-all">
-        <X className="w-3.5 h-3.5" />
-        {isHe ? '❌ דחה' : '❌ Отклонить'}
+        <X className="w-3.5 h-3.5" />{isHe ? '❌ דחה' : '❌ Отклонить'}
       </button>
     </div>
   )
 }
 
-// ── TaskAcceptActions — Принять / Отклонить задачу ───────────────────────────
-function TaskAcceptActions({
-  notif, locale,
-  onRespond,
-}: {
-  notif: Notification
-  locale: 'he' | 'ru'
+// ── TaskAcceptActions ─────────────────────────────────────────────────────────
+function TaskAcceptActions({ notif, locale, onRespond }: {
+  notif: Notification; locale: 'he' | 'ru'
   onRespond: (notifId: string, taskId: string, action: 'accepted' | 'rejected', reason?: string) => void
 }) {
   const [mode, setMode] = useState<'buttons' | 'rejecting'>('buttons')
@@ -271,90 +237,51 @@ function TaskAcceptActions({
   const [loading, setLoading] = useState(false)
   const isHe = locale === 'he'
 
-  if (notif.task_accept_status === 'accepted') {
-    return (
-      <div className="mt-2 ms-5 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
-        <Check className="w-3.5 h-3.5" />
-        {isHe ? 'קיבלת' : 'Вы приняли задачу'}
-      </div>
-    )
-  }
-  if (notif.task_accept_status === 'rejected') {
-    return (
-      <div className="mt-2 ms-5 text-xs text-red-500 font-semibold flex items-center gap-1.5">
-        <X className="w-3.5 h-3.5" />
-        {isHe ? 'דחית' : 'Вы отклонили'}
-        {notif.task_rejection_reason && (
-          <span className="text-gray-400 font-normal">— {notif.task_rejection_reason}</span>
-        )}
-      </div>
-    )
-  }
+  if (notif.task_accept_status === 'accepted') return (
+    <div className="mt-2 ms-5 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
+      <Check className="w-3.5 h-3.5" />{isHe ? 'קיבלת' : 'Вы приняли задачу'}
+    </div>
+  )
+  if (notif.task_accept_status === 'rejected') return (
+    <div className="mt-2 ms-5 text-xs text-red-500 font-semibold flex items-center gap-1.5">
+      <X className="w-3.5 h-3.5" />{isHe ? 'דחית' : 'Вы отклонили'}
+      {notif.task_rejection_reason && <span className="text-gray-400 font-normal">— {notif.task_rejection_reason}</span>}
+    </div>
+  )
 
   const taskId = notif.reference_id
   if (!taskId) return null
 
-  const handleAccept = () => {
-    setLoading(true)
-    onRespond(notif.id, taskId, 'accepted')
-  }
-
-  const handleReject = () => {
-    if (!reason.trim()) return
-    setLoading(true)
-    onRespond(notif.id, taskId, 'rejected', reason.trim())
-  }
-
-  if (mode === 'rejecting') {
-    return (
-      <div className="mt-2 ms-5 space-y-2">
-        <textarea
-          autoFocus
-          value={reason}
-          onChange={e => setReason(e.target.value)}
-          rows={2}
-          placeholder={isHe ? 'כתוב סיבת דחייה...' : 'Напиши причину отклонения...'}
-          className="w-full text-xs border border-red-200 focus:border-red-400 rounded-xl px-3 py-2 outline-none resize-none bg-red-50 placeholder:text-red-300"
-          dir={isHe ? 'rtl' : 'ltr'}
-        />
-        <div className="flex gap-2">
-          <button
-            onClick={handleReject}
-            disabled={!reason.trim() || loading}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 disabled:opacity-40 transition-all"
-          >
-            {loading
-              ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              : <X className="w-3 h-3" />}
-            {isHe ? 'שלח דחייה' : 'Отклонить'}
-          </button>
-          <button
-            onClick={() => { setMode('buttons'); setReason('') }}
-            className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-all"
-          >
-            {isHe ? 'ביטול' : 'Отмена'}
-          </button>
-        </div>
+  if (mode === 'rejecting') return (
+    <div className="mt-2 ms-5 space-y-2">
+      <textarea autoFocus value={reason} onChange={e => setReason(e.target.value)} rows={2}
+        placeholder={isHe ? 'כתוב סיבת דחייה...' : 'Напиши причину отклонения...'}
+        className="w-full text-xs border border-red-200 focus:border-red-400 rounded-xl px-3 py-2 outline-none resize-none bg-red-50 placeholder:text-red-300"
+        dir={isHe ? 'rtl' : 'ltr'} />
+      <div className="flex gap-2">
+        <button onClick={() => { if (!reason.trim()) return; setLoading(true); onRespond(notif.id, taskId, 'rejected', reason.trim()) }}
+          disabled={!reason.trim() || loading}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 text-white text-xs font-bold hover:bg-red-600 disabled:opacity-40 transition-all">
+          {loading ? <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : <X className="w-3 h-3" />}
+          {isHe ? 'שלח דחייה' : 'Отклонить'}
+        </button>
+        <button onClick={() => { setMode('buttons'); setReason('') }}
+          className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-all">
+          {isHe ? 'ביטול' : 'Отмена'}
+        </button>
       </div>
-    )
-  }
+    </div>
+  )
 
   return (
     <div className="mt-2 ms-5 flex gap-2">
-      <button
-        onClick={handleAccept}
-        disabled={loading}
-        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-all disabled:opacity-40"
-      >
-        <Check className="w-3.5 h-3.5" />
-        {isHe ? '✅ קבל' : '✅ Принять'}
+      <button onClick={() => { setLoading(true); onRespond(notif.id, taskId, 'accepted') }} disabled={loading}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-all disabled:opacity-40">
+        <Check className="w-3.5 h-3.5" />{isHe ? '✅ קבל' : '✅ Принять'}
       </button>
-      <button
-        onClick={() => setMode('rejecting')}
-        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-bold hover:bg-red-100 transition-all"
-      >
-        <X className="w-3.5 h-3.5" />
-        {isHe ? '❌ דחה' : '❌ Отклонить'}
+      <button onClick={() => setMode('rejecting')}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-bold hover:bg-red-100 transition-all">
+        <X className="w-3.5 h-3.5" />{isHe ? '❌ דחה' : '❌ Отклонить'}
       </button>
     </div>
   )
@@ -413,44 +340,29 @@ export function NotificationBell({ locale }: NotificationBellProps) {
     try { await fetch(`/api/notifications?id=${id}`, { method: 'DELETE' }) } catch (e) { console.error(e) }
   }
 
-  // ── Mention respond ─────────────────────────────────────────────────────────
   async function handleMentionRespond(notifId: string, action: 'accepted' | 'rejected', reason?: string) {
     try {
       const res = await fetch('/api/worker/mention-respond', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notification_id: notifId, action, rejection_reason: reason }),
       })
       if (!res.ok) { console.error(await res.json()); return }
-      // Update local state
       setNotifications(prev => prev.map(n =>
-        n.id === notifId
-          ? { ...n, mention_status: action, mention_rejection_reason: reason ?? null, is_read: true }
-          : n
+        n.id === notifId ? { ...n, mention_status: action, mention_rejection_reason: reason ?? null, is_read: true } : n
       ))
       setUnreadCount(prev => Math.max(0, prev - 1))
     } catch (e) { console.error(e) }
   }
 
-  // ── Task accept respond ──────────────────────────────────────────────────────
-  async function handleTaskRespond(
-    notifId: string,
-    taskId: string,
-    action: 'accepted' | 'rejected',
-    reason?: string
-  ) {
+  async function handleTaskRespond(notifId: string, taskId: string, action: 'accepted' | 'rejected', reason?: string) {
     try {
       const res = await fetch(`/api/tasks/${taskId}/respond`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, rejection_reason: reason }),
       })
       if (!res.ok) { console.error(await res.json()); return }
-      // Обновляем локальный стейт уведомления
       setNotifications(prev => prev.map(n =>
-        n.id === notifId
-          ? { ...n, task_accept_status: action, task_rejection_reason: reason ?? null, is_read: true }
-          : n
+        n.id === notifId ? { ...n, task_accept_status: action, task_rejection_reason: reason ?? null, is_read: true } : n
       ))
       setUnreadCount(prev => Math.max(0, prev - 1))
     } catch (e) { console.error(e) }
@@ -462,10 +374,8 @@ export function NotificationBell({ locale }: NotificationBellProps) {
     return () => clearInterval(interval)
   }, [fetchNotifications])
 
-  // Realtime — централизованная подписка находится в GlobalRealtimeSync (ClientProviders).
-  // NotificationBell просто слушает CustomEvent 'trinity:new-notification',
-  // который диспатчится оттуда при INSERT. Это предотвращает дублирование
-  // канала когда NotificationBell рендерится одновременно в Sidebar + MobileHeader.
+  // Слушаем trinity:new-notification — только обновляем список и счётчик.
+  // Звук и toast теперь идут из ClientProviders.GlobalRealtimeSync.
   useEffect(() => {
     const handler = (e: Event) => {
       const notif = (e as CustomEvent).detail as Notification | undefined
@@ -473,10 +383,8 @@ export function NotificationBell({ locale }: NotificationBellProps) {
         setNotifications(prev => [notif, ...prev])
         setUnreadCount(prev => prev + 1)
       } else {
-        // fallback — просто рефетчим
         fetchNotifications()
       }
-      playNotificationSound()
     }
     window.addEventListener('trinity:new-notification', handler)
     return () => window.removeEventListener('trinity:new-notification', handler)
@@ -538,6 +446,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
       transfer_result: '✅', payment: '💳', visit: '📅', task: '✅', system: 'ℹ️',
       client_registered: '🆕', demo_order_submitted: '🛒', demo_abandoned: '⚠️',
       mention: '📣', mention_accepted: '✅', mention_rejected: '❌',
+      new_order: '🛍️', subscription_payment: '💳',
     }
     const icon = typeIcon[n.type] || '🔔'
     const isUrgent = n.priority === 'urgent'
@@ -545,7 +454,7 @@ export function NotificationBell({ locale }: NotificationBellProps) {
 
     return (
       <div className={`rounded-xl border p-3 transition-all ${
-        isUrgent ? 'bg-red-50 border-red-300 animate-pulse'
+        isUrgent ? 'bg-red-50 border-red-300'
         : isHigh  ? 'bg-orange-50 border-orange-200'
         : !n.is_read ? 'bg-indigo-50/60 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-800/30'
         : 'border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'
@@ -557,97 +466,69 @@ export function NotificationBell({ locale }: NotificationBellProps) {
             }`}>{icon}</div>
             <div className="flex-1 min-w-0">
               <p className={`text-sm leading-snug ${
-                isUrgent ? 'font-bold text-red-700'
-                : isHigh  ? 'font-semibold text-orange-700'
-                : !n.is_read ? 'font-semibold text-gray-900 dark:text-gray-100'
-                : 'text-gray-700 dark:text-gray-300'
+                isUrgent ? 'font-bold text-red-700' : isHigh ? 'font-semibold text-orange-700'
+                : !n.is_read ? 'font-semibold text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'
               }`}>{n.title}</p>
               {n.body && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 whitespace-pre-line line-clamp-3">{n.body}</p>}
               <p className="text-xs text-gray-400 mt-1">
                 {new Date(n.created_at).toLocaleString(locale === 'he' ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
-            {!n.is_read && <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${isUrgent ? 'bg-red-500 animate-ping' : isHigh ? 'bg-orange-500' : 'bg-indigo-500'}`} />}
+            {!n.is_read && <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${isUrgent ? 'bg-red-500' : isHigh ? 'bg-orange-500' : 'bg-indigo-500'}`} />}
           </div>
         </a>
-
-        {/* ── Mention — Accept / Reject ────────────────────────────────── */}
-        {n.type === 'mention' && (
-          <MentionActions notif={n} locale={locale} onRespond={handleMentionRespond} />
-        )}
-
-        {/* ── Task assigned — Accept / Reject ─────────────────────────── */}
-        {n.type === 'task_assigned' && (
-          <TaskAcceptActions notif={n} locale={locale} onRespond={handleTaskRespond} />
-        )}
-
-        {/* ── Other action types ───────────────────────────────────────── */}
+        {n.type === 'mention' && <MentionActions notif={n} locale={locale} onRespond={handleMentionRespond} />}
+        {n.type === 'task_assigned' && <TaskAcceptActions notif={n} locale={locale} onRespond={handleTaskRespond} />}
         {n.type === 'transfer_request' && n.metadata?.transfer_request_id && (
           <div className="mt-2 ms-5 flex flex-wrap gap-1.5">
-            <button onClick={() => handleTransferAction(n.id, n.metadata!.transfer_request_id!, 'approved')} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-100 transition-colors"><Check className="w-3 h-3" />{locale === 'he' ? 'אשר' : 'Одобрить'}</button>
-            <button onClick={() => handleTransferAction(n.id, n.metadata!.transfer_request_id!, 'rejected')} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 transition-colors"><X className="w-3 h-3" />{locale === 'he' ? 'דחה' : 'Отклонить'}</button>
+            <button onClick={() => handleTransferAction(n.id, n.metadata!.transfer_request_id!, 'approved')} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-xs font-medium hover:bg-emerald-100 transition-colors"><Check className="w-3 h-3" />{locale === 'he' ? 'אשר' : 'Одобрить'}</button>
+            <button onClick={() => handleTransferAction(n.id, n.metadata!.transfer_request_id!, 'rejected')} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-medium hover:bg-red-100 transition-colors"><X className="w-3 h-3" />{locale === 'he' ? 'דחה' : 'Отклонить'}</button>
           </div>
         )}
-
         {n.type === 'access_request' && n.metadata && (
           <div className="mt-2 ms-5 flex flex-wrap gap-1.5">
             {n.metadata.staff_phone && (<>
-              <a href={`tel:${n.metadata.staff_phone}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 transition-colors"><Phone className="w-3 h-3" />{locale === 'he' ? '📞 התקשר' : '📞 Позвонить'}</a>
-              <a href={`https://wa.me/${n.metadata.staff_phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-medium hover:bg-green-100 transition-colors"><MessageCircle className="w-3 h-3" />💬 WhatsApp</a>
+              <a href={`tel:${n.metadata.staff_phone}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100 transition-colors"><Phone className="w-3 h-3" />{locale === 'he' ? '📞 התקשר' : '📞 Позвонить'}</a>
+              <a href={`https://wa.me/${n.metadata.staff_phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-50 text-green-600 text-xs font-medium hover:bg-green-100 transition-colors"><MessageCircle className="w-3 h-3" />💬 WhatsApp</a>
             </>)}
-            <button onClick={() => approveAccessRequest(n.id)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-100 transition-colors"><Check className="w-3 h-3" />{locale === 'he' ? '✅ אשר' : '✅ Одобрить'}</button>
+            <button onClick={() => approveAccessRequest(n.id)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-xs font-medium hover:bg-emerald-100 transition-colors"><Check className="w-3 h-3" />{locale === 'he' ? '✅ אשר' : '✅ Одобрить'}</button>
             {n.metadata.staff_email && n.metadata.org_id && (
-              <button onClick={() => rejectAccessRequest(n.id, n.metadata!.staff_email!, n.metadata!.org_id!)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 transition-colors"><X className="w-3 h-3" />{locale === 'he' ? '❌ דחה' : '❌ Отклонить'}</button>
+              <button onClick={() => rejectAccessRequest(n.id, n.metadata!.staff_email!, n.metadata!.org_id!)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-medium hover:bg-red-100 transition-colors"><X className="w-3 h-3" />{locale === 'he' ? '❌ דחה' : '❌ Отклонить'}</button>
             )}
           </div>
         )}
-
         {n.type === 'access_invitation' && n.metadata && (
           <div className="mt-2 ms-5 flex flex-wrap gap-1.5">
             {n.metadata.invited_by_phone && (<>
-              <a href={`tel:${n.metadata.invited_by_phone}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-medium hover:bg-blue-100 transition-colors"><Phone className="w-3 h-3" />{locale === 'he' ? 'התקשר' : 'Позвонить'}</a>
-              <a href={`https://wa.me/${n.metadata.invited_by_phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs font-medium hover:bg-green-100 transition-colors"><MessageCircle className="w-3 h-3" />WhatsApp</a>
+              <a href={`tel:${n.metadata.invited_by_phone}`} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100 transition-colors"><Phone className="w-3 h-3" />{locale === 'he' ? 'התקשר' : 'Позвонить'}</a>
+              <a href={`https://wa.me/${n.metadata.invited_by_phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-50 text-green-600 text-xs font-medium hover:bg-green-100 transition-colors"><MessageCircle className="w-3 h-3" />WhatsApp</a>
             </>)}
-            <button onClick={() => approveInvitation(n.id)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium hover:bg-emerald-100 transition-colors"><Check className="w-3 h-3" />{locale === 'he' ? 'אשר' : 'Одобрить'}</button>
+            <button onClick={() => approveInvitation(n.id)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-xs font-medium hover:bg-emerald-100 transition-colors"><Check className="w-3 h-3" />{locale === 'he' ? 'אשר' : 'Одобрить'}</button>
             {n.metadata.invited_user_email && n.metadata.org_id && (
-              <button onClick={() => rejectInvitation(n.id, n.metadata!.invited_user_email!, n.metadata!.org_id!)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-100 transition-colors"><X className="w-3 h-3" />{locale === 'he' ? 'דחה' : 'Отклонить'}</button>
+              <button onClick={() => rejectInvitation(n.id, n.metadata!.invited_user_email!, n.metadata!.org_id!)} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 text-xs font-medium hover:bg-red-100 transition-colors"><X className="w-3 h-3" />{locale === 'he' ? 'דחה' : 'Отклонить'}</button>
             )}
           </div>
         )}
-
         {n.type === 'client_registered' && n.reference_id && (
           <div className="mt-2 ms-5">
-            <button
-              onClick={async () => {
-                try {
-                  const res = await fetch(`/api/clients/${n.reference_id}`)
-                  if (!res.ok) return
-                  const client = await res.json()
-                  setIsOpen(false)
-                  if (window.innerWidth < 768) {
-                    setMobileClient(client)
-                  } else {
-                    openModal('client-details', { client, locale })
-                  }
-                } catch { /* ignore */ }
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors border border-amber-200 dark:border-amber-800/40"
-            >
+            <button onClick={async () => {
+              try {
+                const res = await fetch(`/api/clients/${n.reference_id}`)
+                if (!res.ok) return
+                const client = await res.json()
+                setIsOpen(false)
+                if (window.innerWidth < 768) setMobileClient(client)
+                else openModal('client-details', { client, locale })
+              } catch { }
+            }} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-xs font-semibold hover:bg-amber-100 transition-colors border border-amber-200">
               <span>👤</span>{locale === 'he' ? 'פתח כרטיס לקוח' : 'Открыть карточку'}
             </button>
           </div>
         )}
-
-        {/* ── new_order — открыть детали заказа ───────────────────────── */}
         {n.type === 'new_order' && n.reference_id && (
           <div className="mt-2 ms-5">
-            <button
-              onClick={() => {
-                setIsOpen(false)
-                setOrderModalId(n.reference_id!)
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 text-xs font-semibold hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors border border-violet-200 dark:border-violet-800/40"
-            >
+            <button onClick={() => { setIsOpen(false); setOrderModalId(n.reference_id!) }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 text-xs font-semibold hover:bg-violet-100 transition-colors border border-violet-200">
               <span>🛍️</span>{locale === 'he' ? 'פתח הזמנה' : 'Открыть заказ'}
             </button>
           </div>
@@ -668,7 +549,12 @@ export function NotificationBell({ locale }: NotificationBellProps) {
       ) : (
         <div className="space-y-1.5 p-1">
           {notifications.map((n) => (
-            <SwipeableNotificationItem key={n.id} isRead={n.is_read} onDelete={() => deleteNotification(n.id)}>
+            <SwipeableNotificationItem
+              key={n.id}
+              isRead={n.is_read}
+              isMobile={isMobile}
+              onDelete={() => deleteNotification(n.id)}
+            >
               {renderNotifContent(n)}
             </SwipeableNotificationItem>
           ))}
@@ -727,21 +613,11 @@ export function NotificationBell({ locale }: NotificationBellProps) {
           document.body
         )}
       </div>
-      {/* Мобильная карточка клиента из уведомления */}
+
       {mobileClient && (
-        <ClientBottomSheet
-          client={mobileClient}
-          isOpen={!!mobileClient}
-          onClose={() => setMobileClient(null)}
-          locale={locale as 'he' | 'ru'}
-        />
+        <ClientBottomSheet client={mobileClient} isOpen={!!mobileClient} onClose={() => setMobileClient(null)} locale={locale as 'he' | 'ru'} />
       )}
-      {/* Детали заказа с сайта из уведомления */}
-      <OrderDetailModal
-        orderId={orderModalId}
-        open={!!orderModalId}
-        onClose={() => setOrderModalId(null)}
-      />
+      <OrderDetailModal orderId={orderModalId} open={!!orderModalId} onClose={() => setOrderModalId(null)} />
     </>
   )
 }

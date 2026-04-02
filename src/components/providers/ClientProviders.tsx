@@ -22,6 +22,9 @@ import { useRealtimeSync, RealtimePayload } from '@/hooks/useRealtimeSync'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
 import { ToastStack } from '@/components/notifications/ToastStack'
+import { useNotificationStore } from '@/components/notifications/NotificationStore'
+import { playNotificationSound } from '@/components/notifications/SoundManager'
+import type { ToastVariant, ToastPriority } from '@/components/notifications/types'
 
 const ConditionalChatWidget = dynamic(
   () => import('@/components/ConditionalChatWidget'),
@@ -53,6 +56,36 @@ const UpdateBanner = dynamic(
   { ssr: false }
 )
 
+// ── Maps DB notification type → toast variant ─────────────────────────────────
+function notifTypeToVariant(type: string, priority?: string): ToastVariant {
+  if (priority === 'urgent') return 'critical'
+  const map: Record<string, ToastVariant> = {
+    payment:            'payment',
+    subscription_payment: 'payment',
+    client_registered:  'client',
+    visit:              'visit',
+    task:               'task',
+    task_assigned:      'task',
+    mention:            'info',
+    access_invitation:  'info',
+    access_request:     'info',
+    transfer_request:   'info',
+    transfer_result:    'success',
+    new_order:          'payment',
+    demo_order_submitted: 'payment',
+    system:             'system',
+    error:              'error',
+  }
+  return map[type] ?? 'info'
+}
+
+function notifTypeToPriority(type: string, dbPriority?: string): ToastPriority {
+  if (dbPriority === 'urgent') return 'urgent'
+  if (dbPriority === 'high')   return 'high'
+  const highTypes = ['payment', 'subscription_payment', 'new_order', 'access_request', 'transfer_request']
+  return highTypes.includes(type) ? 'high' : 'normal'
+}
+
 // ── Single RT subscriptions for ALL tables ───────────────────────────────────
 function GlobalRealtimeSync() {
   const { orgId, user } = useAuth()
@@ -66,6 +99,23 @@ function GlobalRealtimeSync() {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(event, detail ? { detail } : undefined))
     }
+  }
+
+  // ── Show toast for incoming DB notification ───────────────────────────────
+  function showNotifToast(notif: any) {
+    const variant  = notifTypeToVariant(notif.type, notif.priority)
+    const priority = notifTypeToPriority(notif.type, notif.priority)
+    const duration = priority === 'urgent' ? 0 : priority === 'high' ? 8000 : 5000
+
+    useNotificationStore.getState().show({
+      title:       notif.title ?? '—',
+      description: notif.body  ?? undefined,
+      variant,
+      priority,
+      duration,
+      sound: false, // sound fired separately below
+    })
+    playNotificationSound(variant, priority)
   }
 
   useRealtimeSync({ table: 'products',  orgId: activeOrgId, queryKey: ['products'] })
@@ -111,10 +161,17 @@ function GlobalRealtimeSync() {
     },
   })
 
+  // ── notifications — central handler: toast + bell event ──────────────────
   useRealtimeSync({
     table: 'notifications', orgId: userId,
     queryKey: ['notifications'], events: ['INSERT'], filterColumn: 'user_id',
-    onEvent: (payload: RealtimePayload) => dispatch('trinity:new-notification', payload.new),
+    onEvent: (payload: RealtimePayload) => {
+      const notif = payload.new as any
+      // 1. Dispatch to NotificationBell (history list + its own sound)
+      dispatch('trinity:new-notification', notif)
+      // 2. Show premium toast — sound handled inside showNotifToast
+      showNotifToast(notif)
+    },
   })
 
   return null

@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { Send, Loader2, Sparkles, Bell } from 'lucide-react'
+import { Send, Loader2, Sparkles, Bell, RotateCcw } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { KiraWave } from '@/components/kira/KiraWave'
 import type { KiraWaveState } from '@/components/kira/KiraWave'
@@ -19,6 +19,7 @@ const supabaseRealtime = createClient(
 
 export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
   const scrollRef      = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   // Ref для sessionId — читается при каждом запросе, не при монтировании
   const sessionIdRef   = useRef<string | null>(null)
   const [text, setText]              = useState('')
@@ -87,18 +88,42 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
 
   const dismissProactive = useCallback(() => { setBadge(false); setProactive(null) }, [])
 
+  // ── Новая сессия (сброс контекста) ────────────────────────────────────
+  const handleNewSession = useCallback(() => {
+    setMessages([])
+    sessionIdRef.current = null
+    setSessionId(null)
+    // Следующее сообщение автоматически создаст новую сессию через /api/kira/session
+  }, [setMessages])
+
   const isLoading = status === 'streaming' || status === 'submitted'
   const waveState: KiraWaveState = isLoading ? 'thinking' : 'idle'
 
+  // ── Автоскролл вниз при новых сообщениях ─────────────────────────────
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const trimmed = text.trim()
     if (!trimmed || isLoading) return
     dismissProactive()
     if (error) clearError()
+
+    // Если сессия была сброшена — создаём новую перед отправкой
+    if (!sessionIdRef.current) {
+      try {
+        const r = await fetch('/api/kira/session', { method: 'POST' })
+        const d = await r.json()
+        if (d.sessionId) {
+          sessionIdRef.current = d.sessionId
+          setSessionId(d.sessionId)
+        }
+      } catch (e) {
+        console.error('[kira] new session error:', e)
+      }
+    }
+
     sendMessage({ text: trimmed })
     setText('')
   }
@@ -128,6 +153,16 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
           <span className="w-1.5 h-1.5 rounded-full animate-pulse"
             style={{ background: isLoading ? '#a78bfa' : '#34d399' }} />
           {proactiveBadge && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+          {/* Кнопка новой сессии */}
+          <button
+            onClick={handleNewSession}
+            disabled={isLoading}
+            title="Новая сессия"
+            className="ms-1 w-5 h-5 rounded-full flex items-center justify-center opacity-40 hover:opacity-80 transition-opacity disabled:opacity-20"
+            style={{ background: 'rgba(255,255,255,0.08)' }}
+          >
+            <RotateCcw className="w-2.5 h-2.5" style={{ color: 'rgba(130,170,255,0.9)' }} />
+          </button>
         </div>
       </div>
 
@@ -201,6 +236,9 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
             Ошибка соединения. Попробуй ещё раз.
           </p>
         )}
+
+        {/* Якорь для автоскролла */}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Инпут */}

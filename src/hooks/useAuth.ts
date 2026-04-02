@@ -47,6 +47,25 @@ export function useAuth(): UseAuthResult {
     let mounted = true
 
     const loadAuth = async () => {
+      // ── Быстрый путь: кэш уже заполнен для этого пользователя ───────────
+      // Предотвращает N параллельных запросов к admin_users когда
+      // useAuth() вызывается из множества компонентов одновременно.
+      if (
+        cachedUserId &&
+        cachedOrgId !== null &&
+        cachedRole !== null &&
+        cachedIsAdmin !== null
+      ) {
+        setUser({ id: cachedUserId })
+        setOrgId(cachedOrgId)
+        setRole(cachedRole)
+        setIsAdmin(cachedIsAdmin)
+        setIsSalesAgent(cachedIsSalesAgent ?? false)
+        setOrganizations(cachedOrganizations)
+        setIsLoading(false)
+        return
+      }
+
       setIsLoading(true)
 
       const {

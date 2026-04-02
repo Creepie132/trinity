@@ -127,7 +127,8 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD
 
 // Платежи — создание (POST /api/payments)
 export const createPaymentSchema = z.object({
-  client_id:       z.string().uuid('Invalid client_id'),
+  // client_id опционален — платёж может создаваться без клиента (напр. автоплатёж из сделки)
+  client_id:       z.string().uuid('Invalid client_id').optional().nullable(),
   amount:          z.coerce.number()
                      .min(0.01, 'Amount must be > 0')
                      .max(1_000_000, 'Amount too large'),

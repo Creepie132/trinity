@@ -915,3 +915,86 @@ Secrets в Supabase Dashboard → Edge Functions → send-notification:
 | `15f9f19` | feat: notification system 2.0 — preferences table, UI, edge function, dispatch helper |
 | `8686d63` | feat: wire dispatchNotification into visits+payments routes |
 | `d31a49d` | feat: dispatch notifications on new_client and new_order events |
+
+
+---
+
+## Kira AI Agent
+
+### Уровень 1 — Базовый стриминговый чат
+
+**Дата:** 02.04.2026
+
+#### Зависимости
+| Пакет | Версия | Назначение |
+|---|---|---|
+| `ai` | ^6.x | Vercel AI SDK (streamText, useChat) |
+| `@ai-sdk/openai` | ^3.x | Провайдер OpenAI |
+| `@ai-sdk/react` | latest | Клиентский хук useChat |
+
+`OPENAI_API_KEY` — добавлен в `.env.local`.
+
+#### Файлы
+
+| Файл | Описание |
+|---|---|
+| `src/app/api/kira/route.ts` | Потоковый POST-роут. Auth → streamText → toTextStreamResponse |
+| `src/components/kira/KiraChatPanel.tsx` | Чат-компонент. Волна KiraWave + история + инпут |
+| `src/components/layout/RightPanel.tsx` | KiraBlock удалён → KiraChatPanel через dynamic() ssr:false |
+
+#### API роут (`/api/kira`)
+- `getAuthContext()` первым — `org_id` только из DB
+- Модель: `gpt-4o-mini`
+- Системный промпт: Кира, женский род, без markdown-заголовков
+- `tools: {}` — зарезервировано для Supabase-инструментов (Level 3)
+
+#### Особенности `ai@6` (breaking changes vs v3)
+| Старый API | Новый API (`ai@6`) |
+|---|---|
+| `useChat({ api, body })` | `useChat({ transport: new DefaultChatTransport({ api, body }) })` |
+| `initialMessages` | `messages` |
+| `handleSubmit` / `input` | `sendMessage()` + собственный `useState` |
+| `isLoading` | `status === 'streaming' \| 'submitted'` |
+| `maxTokens` | `maxOutputTokens` |
+| `toDataStreamResponse()` | `toTextStreamResponse()` |
+| `sendMessage({ role, content })` | `sendMessage({ role, content, parts: [{ type:'text', text }] })` |
+
+---
+
+### Уровень 2 — Долговременная память (Гиппокамп)
+
+**Дата:** 02.04.2026
+
+#### Схема БД
+```sql
+kira_sessions  (id uuid PK, org_id uuid FK, created_at)
+kira_messages  (id uuid PK, session_id uuid FK, org_id uuid, role varchar, content text, created_at)
+```
+`org_id` денормализован в `kira_messages` для RLS без JOIN.
+Миграция: `supabase/migrations/20260402_kira_memory.sql`
+
+#### RLS
+Оба стола: пользователь читает/пишет только записи своего `org_id` через `org_users`.
+
+#### Файлы
+
+| Файл | Описание |
+|---|---|
+| `src/app/api/kira/session/route.ts` | POST: найти/создать сессию орга + вернуть последние 20 сообщений |
+| `src/app/api/kira/route.ts` | Обновлён: загрузка истории + onFinish → запись в kira_messages |
+| `src/components/kira/KiraChatPanel.tsx` | Обновлён: init сессии при mount, initialMessages из истории |
+
+#### Архитектурные решения
+- `org_id` никогда не берётся из `body` — только из `getAuthContext()` (Trinity security rule)
+- Одна активная сессия на `org_id` — сервер сам находит последнюю по `(org_id, created_at desc)`
+- `sessionId` верифицируется через `.eq('org_id', orgId)` — чужой sessionId не пройдёт
+- Лимит контекста: последние **20 сообщений** (не вся история)
+- `onFinish` — фоновая запись после завершения стрима, не блокирует отдачу клиенту
+- Скелетон-лоадер в UI пока сессия инициализируется
+
+#### Коммиты
+
+| SHA | Описание |
+|---|---|
+| `b05aab4` | feat: Kira Level 1 + Level 2 — стриминг + долговременная память |
+| `1bf4c3e` | docs: Kira AI Level 1 + Level 2 — журнал работ |

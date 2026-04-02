@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Megaphone, Settings, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, FlaskConical, UserCheck, Mail, Monitor, BookOpen, LineChart } from 'lucide-react'
+import { LayoutDashboard, Megaphone, Settings, Home, LogOut, Building2, CreditCard, BarChart3, HeadphonesIcon, Monitor, LineChart } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Separator } from '@/components/ui/separator'
@@ -28,11 +28,7 @@ export function AdminSidebar() {
     { name: language === 'he' ? 'תמיכה' : 'Поддержка', href: '/admin/support', icon: HeadphonesIcon },
     { name: t('admin.ads'), href: '/admin/ads', icon: Megaphone },
     { name: t('admin.settings'), href: '/admin/settings', icon: Settings },
-    { name: language === 'he' ? 'דמו' : 'Демо', href: '/admin/demo', icon: FlaskConical },
-    { name: language === 'he' ? 'סוכני מכירות' : 'Продажники', href: '/admin/sales-agents', icon: UserCheck },
-    { name: language === 'he' ? 'הזמנות' : 'Приглашения', href: '/admin/invitations', icon: Mail },
     { name: language === 'he' ? 'מצגות' : 'Презентации', href: '/admin/presentations', icon: Monitor },
-    { name: language === 'he' ? 'בלוג Beautymania' : 'Блог Beautymania', href: '/admin/blog', icon: BookOpen },
     { name: language === 'he' ? 'סטטיסטיקת תנועה' : 'Трафик лендинга', href: '/admin/stats', icon: LineChart },
   ]
 

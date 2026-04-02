@@ -29,15 +29,10 @@ const PARENT_ROUTES: Record<string, string> = {
   '/admin/plans-editor':            '/admin',
   '/admin/modules':                 '/admin',
   '/admin/module-pricing':          '/admin',
-  '/admin/invitations':             '/admin',
   '/admin/support':                 '/admin',
   '/admin/ads':                     '/admin',
   '/admin/whatsapp':                '/admin',
-  '/admin/demo':                    '/admin',
   // Admin sub-pages → /admin/settings
-  '/admin/settings/landing-media':  '/admin/settings',
-  '/admin/settings/pricing':        '/admin/settings',
-  '/admin/landing-media':           '/admin/settings',
   // Dashboard settings sub-pages → /settings
   '/settings/birthday-templates':   '/settings',
   '/settings/booking':              '/settings',

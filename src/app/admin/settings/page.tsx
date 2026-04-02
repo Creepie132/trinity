@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Settings, Package, Image as ImageIcon, Sliders, MessageCircle, ArrowLeft } from 'lucide-react'
+import { Settings, Package, MessageCircle, ArrowLeft } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function AdminSettingsPage() {
@@ -16,22 +16,6 @@ export default function AdminSettingsPage() {
       iconColor: 'text-purple-600',
       title: l ? 'עורך כרטיסי תוכניות' : 'Редактор карточек планов',
       desc: l ? 'ניהול כרטיסי תמחור בלנדינג' : 'Управление тарифными карточками',
-    },
-    {
-      href: '/admin/landing-media',
-      icon: ImageIcon,
-      iconBg: 'bg-blue-100 group-hover:bg-blue-200',
-      iconColor: 'text-blue-600',
-      title: l ? 'מדיה לנדינג' : 'Медиа лендинга',
-      desc: l ? 'עדכון צילומי מסך בגלריה' : 'Замена скриншотов в галерее',
-    },
-    {
-      href: '/admin/settings/pricing',
-      icon: Sliders,
-      iconBg: 'bg-amber-100 group-hover:bg-amber-200',
-      iconColor: 'text-amber-600',
-      title: l ? 'פרמטרי תמחור דמו' : 'Параметры ценообразования',
-      desc: l ? 'מחירי מודולים והנחות' : 'Цены модулей и скидки',
     },
     {
       href: '/admin/whatsapp',

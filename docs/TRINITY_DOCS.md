@@ -998,3 +998,43 @@ kira_messages  (id uuid PK, session_id uuid FK, org_id uuid, role varchar, conte
 |---|---|
 | `b05aab4` | feat: Kira Level 1 + Level 2 — стриминг + долговременная память |
 | `1bf4c3e` | docs: Kira AI Level 1 + Level 2 — журнал работ |
+
+### Уровень 3 — Function Calling (Инструменты)
+
+**Дата:** 02.04.2026  
+**Коммит:** `188a419`
+
+#### Суть
+Кира теперь сама ходит в Supabase за данными перед ответом. `stopWhen: stepCountIs(3)` позволяет цикл: вызов tool → получение данных → финальный текстовый ответ — всё в одном стриме.
+
+#### `ai@6` breaking changes для tools
+| Старый API | Новый API (`ai@6`) |
+|---|---|
+| `tool({ parameters: zodSchema(...) })` | объект напрямую с `inputSchema: zodSchema(...)` |
+| `maxSteps: 3` | `stopWhen: stepCountIs(3)` + импорт `stepCountIs` из `'ai'` |
+| `tool()` хелпер с `execute` | plain object `{ description, inputSchema, execute }` |
+
+#### Инструменты (`src/app/api/kira/route.ts`)
+
+**`getClientSummary`**
+- Поиск по `first_name`, `last_name`, `phone` через `ilike` с экранированием
+- Фильтр: `eq('org_id', orgId)` — чужие клиенты недоступны
+- LTV считается отдельным запросом: сумма `completed`-платежей по найденным `client_id`
+- Возвращает: name, phone, email, loyalty_points, ltv_ils, notes
+
+**`getRevenueStats`**
+- Период: `today` / `week` / `month`
+- `week` считает от понедельника (с учётом воскресенья как дня 0)
+- Фильтр: `status = 'completed'`, `paid_at` в диапазоне
+- Возвращает: revenue_ils, payments_count, average_check_ils
+
+#### Системный промпт (дополнение)
+Добавлена инструкция: «Если пользователь спрашивает о конкретном клиенте или выручке — обязательно используй инструменты. Никогда не выдумывай цифры.»
+
+#### Пример диалога
+```
+Влад: Сколько мы заработали сегодня?
+Кира: [вызывает getRevenueStats(today)] → Сегодня пришло ₪4,230 — 12 платежей, средний чек ₪352.
+Влад: Найди клиента Анну Петрову
+Кира: [вызывает getClientSummary("Анна Петрова")] → Анна Петрова, +972-50-..., LTV ₪8,450, 120 бонусных баллов.
+```

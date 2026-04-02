@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MessageCircle, CheckCircle2, AlertCircle } from 'lucide-react'
+import { MessageCircle, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Debt {
@@ -16,7 +16,8 @@ interface DebtWidgetProps {
 }
 
 export function DebtWidget({ result }: DebtWidgetProps) {
-  const [sent, setSent] = useState<Record<string, boolean>>({})
+  const [sent, setSent]       = useState<Record<string, boolean>>({})
+  const [loading, setLoading] = useState<Record<string, boolean>>({})
 
   if (!result?.found || !result.debts.length) {
     return (
@@ -28,15 +29,38 @@ export function DebtWidget({ result }: DebtWidgetProps) {
     )
   }
 
-  const handleRemind = (debt: Debt) => {
-    // Заглушка — позже подключить реальный Whapi эндпоинт
-    // POST /api/sms/send или /api/wa-inbox/send с телефоном клиента
-    setSent(prev => ({ ...prev, [debt.id]: true }))
-    toast.success(`Напоминание отправлено: ${debt.name}`)
+  const handleRemind = async (debt: Debt) => {
+    if (sent[debt.id] || loading[debt.id] || !debt.phone) return
+    setLoading(prev => ({ ...prev, [debt.id]: true }))
+    try {
+      const res = await fetch('/api/kira/remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          saleId:     debt.id,
+          phone:      debt.phone,
+          clientName: debt.name,
+          amount:     debt.amount,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSent(prev => ({ ...prev, [debt.id]: true }))
+        toast.success(`WA отправлен: ${debt.name}`)
+      } else {
+        const msg = data.error === 'WhatsApp not configured'
+          ? 'WhatsApp не настроен в организации'
+          : data.error ?? 'Ошибка отправки'
+        toast.error(msg)
+      }
+    } catch {
+      toast.error('Ошибка соединения')
+    } finally {
+      setLoading(prev => ({ ...prev, [debt.id]: false }))
+    }
   }
 
   const totalDebt = result.debts.reduce((s, d) => s + d.amount, 0)
-
 
   return (
     <div className="rounded-xl overflow-hidden text-xs"
@@ -57,18 +81,17 @@ export function DebtWidget({ result }: DebtWidgetProps) {
       </div>
 
       {/* Список */}
-      <div className="flex flex-col divide-y">
+      <div className="flex flex-col divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
         {result.debts.map((debt) => (
           <div key={debt.id} className="flex items-center justify-between px-3 py-2 gap-2">
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 {debt.name}
               </p>
-              {debt.phone && (
-                <p className="text-[10px] truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                  {debt.phone}
-                </p>
-              )}
+              {debt.phone
+                ? <p className="text-[10px] truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>{debt.phone}</p>
+                : <p className="text-[10px]" style={{ color: 'rgba(248,113,113,0.4)' }}>нет телефона</p>
+              }
             </div>
 
             <span className="flex-shrink-0 font-bold" style={{ color: 'rgba(248,113,113,0.85)' }}>
@@ -77,20 +100,23 @@ export function DebtWidget({ result }: DebtWidgetProps) {
 
             <button
               onClick={() => handleRemind(debt)}
-              disabled={sent[debt.id]}
-              title="Напомнить в WhatsApp"
+              disabled={sent[debt.id] || loading[debt.id] || !debt.phone}
+              title={debt.phone ? 'Напомнить в WhatsApp' : 'Нет телефона'}
               className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg transition-all duration-200 disabled:opacity-40"
               style={{
                 background: sent[debt.id] ? 'rgba(52,211,153,0.15)' : 'rgba(37,211,102,0.15)',
                 border: `1px solid ${sent[debt.id] ? 'rgba(52,211,153,0.3)' : 'rgba(37,211,102,0.25)'}`,
               }}
             >
-              {sent[debt.id]
-                ? <CheckCircle2 className="w-3 h-3" style={{ color: '#34d399' }} />
-                : <MessageCircle className="w-3 h-3" style={{ color: 'rgba(37,211,102,0.8)' }} />
+              {loading[debt.id]
+                ? <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'rgba(37,211,102,0.8)' }} />
+                : sent[debt.id]
+                  ? <CheckCircle2 className="w-3 h-3" style={{ color: '#34d399' }} />
+                  : <MessageCircle className="w-3 h-3" style={{ color: 'rgba(37,211,102,0.8)' }} />
               }
-              <span className="text-[10px] font-medium" style={{ color: sent[debt.id] ? '#34d399' : 'rgba(37,211,102,0.85)' }}>
-                {sent[debt.id] ? 'Отправлено' : 'Напомнить'}
+              <span className="text-[10px] font-medium"
+                style={{ color: sent[debt.id] ? '#34d399' : 'rgba(37,211,102,0.85)' }}>
+                {loading[debt.id] ? '...' : sent[debt.id] ? 'Отправлено' : 'Напомнить'}
               </span>
             </button>
           </div>
@@ -99,4 +125,3 @@ export function DebtWidget({ result }: DebtWidgetProps) {
     </div>
   )
 }
-

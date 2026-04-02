@@ -26,6 +26,7 @@ import { TranzilaSettingsModal } from '@/components/modals/integrations/Tranzila
 import { ReceiptSettingsModal } from '@/components/modals/integrations/ReceiptSettingsModal'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useRouter } from 'next/navigation'
+import { startImpersonation } from '@/actions/impersonation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -740,51 +741,37 @@ export default function AdminOrganizationsPage() {
 
 
   const handleImpersonate = async (org: Organization, e: React.MouseEvent) => {
-    e.stopPropagation(); setImpersonating(org.id)
+    e.stopPropagation()
+    setImpersonating(org.id)
     try {
-      const sessionRes = await fetch('/api/admin/check')
-      const { isAdmin, adminEmail } = await sessionRes.json()
-      if (!isAdmin) { toast.error('Нет доступа'); return }
-
-      // Получаем токен — он обязателен для /api/admin/set-active-org
+      // Получаем access_token для верификации суперадмина в Server Action
       const { createSupabaseBrowserClient } = await import('@/lib/supabase-browser')
-      const supabaseBrowser = createSupabaseBrowserClient()
-      const { data: { session } } = await supabaseBrowser.auth.getSession()
-      let accessToken = session?.access_token
-      if (!accessToken) {
-        const { data: refreshData } = await supabaseBrowser.auth.refreshSession()
-        accessToken = refreshData.session?.access_token
+      const sb = createSupabaseBrowserClient()
+      let { data: { session } } = await sb.auth.getSession()
+      if (!session) {
+        const { data: refreshData } = await sb.auth.refreshSession()
+        session = refreshData.session
       }
-      if (!accessToken) { toast.error(l ? '\u05d0\u05d9\u05df \u05e1\u05e9\u05df \u05e4\u05e2\u05d9\u05dc, \u05d4\u05ea\u05d7\u05d1\u05e8 \u05de\u05d7\u05d3\u05e9' : '\u041d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439 \u0441\u0435\u0441\u0441\u0438\u0438 \u2014 \u043f\u0435\u0440\u0435\u0437\u0430\u0439\u0434\u0438\u0442\u0435'); return }
-
-      // Сохраняем текущий org до переключения (для корректного выхода)
-      const currentActiveOrg = localStorage.getItem('trinity_active_branch')
-
-      const res = await fetch('/api/admin/set-active-org', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ orgId: org.id }),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'Ошибка переключения org')
+      if (!session?.access_token) {
+        toast.error(l ? 'אין סשן פעיל — התחבר מחדש' : 'Нет активной сессии — войдите снова')
+        return
       }
 
-      localStorage.setItem('trinity_active_branch', org.id)
-      // admin_org_id = откуда пришли (для кнопки "В Админку")
-      localStorage.setItem('admin_org_id', currentActiveOrg || org.id)
-      localStorage.setItem('impersonation_session', JSON.stringify({
-        orgId: org.id, orgName: org.display_name || org.name,
-        adminEmail, startedAt: new Date().toISOString()
-      }))
-      toast.success(l ? `נכנס בתור: ${org.name}` : `Вход от имени: ${org.name}`)
-      router.push('/dashboard'); router.refresh()
+      // Safe Impersonation: ставим HttpOnly куки, сессия Supabase НЕ меняется
+      const result = await startImpersonation(org.id, session.access_token)
+      if (result?.error) {
+        toast.error(result.error)
+        return
+      }
+
+      toast.success(l ? `נכנס בתור: ${org.display_name || org.name}` : `Режим просмотра: ${org.display_name || org.name}`)
+      router.push('/dashboard')
+      router.refresh()
     } catch (err: any) {
       toast.error(err.message || (l ? 'שגיאה' : 'Ошибка входа'))
-    } finally { setImpersonating(null) }
+    } finally {
+      setImpersonating(null)
+    }
   }
 
   const getStatusBadge = (status: string) => {

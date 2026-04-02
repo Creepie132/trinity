@@ -197,6 +197,7 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         <DashboardPrefetcher />
         {showLangPicker && <DemoLanguagePicker onSelect={handleLangSelect}/>}
         <div className="min-h-[100dvh] bg-[#f8fafc] dark:bg-gray-950 flex flex-col">
+          <ImpersonationBanner />
           <DemoBannerGlobal/>
           <MobileHeader onSearchOpen={() => setSearchOpen(true)} />
           <div className="flex-1 lg:flex lg:h-screen lg:overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -212,7 +213,6 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-        <ImpersonationBanner />
         <PinnedModalsTray />
         <ClientProviders />
       </DemoLimitGuardProvider>

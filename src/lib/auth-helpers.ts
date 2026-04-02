@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { createSupabaseBrowserClient } from './supabase-browser'
 import { createSupabaseServiceClient } from './supabase-service'
 import { NextRequest, NextResponse } from 'next/server'
+import { COOKIE_ORG_ID } from './impersonation-cookies'
 
 type Role = "owner" | "moderator" | "user"
 
@@ -105,6 +106,24 @@ export async function getAuthContext(request?: NextRequest): Promise<AuthContext
   // Сервер не доверяет заголовкам или localStorage от клиента
   const mainOrgId = orgId
   const activeOrgId = await getActiveOrgId(user.id, orgId)
+
+  // ── Safe Impersonation ────────────────────────────────────────────────────
+  // Если суперадмин вошёл «как пользователь» — кука impersonate_org_id
+  // подменяет orgId БЕЗ изменения сессии Supabase и без записи в БД.
+  // Кука HttpOnly — клиент не может её подделать.
+  if (isAdmin) {
+    const impersonateOrgId = cookieStore.get(COOKIE_ORG_ID)?.value
+    if (impersonateOrgId) {
+      return {
+        user,
+        orgId: impersonateOrgId,   // подменённый org
+        mainOrgId,                 // реальный org суперадмина
+        orgRole,
+        isAdmin,
+        supabase: supabase as unknown as SupabaseClient,
+      }
+    }
+  }
 
   // orgId = activeOrgId чтобы все существующие роуты работали без изменений
   return { user, orgId: activeOrgId, mainOrgId, orgRole, isAdmin, supabase: supabase as unknown as SupabaseClient }

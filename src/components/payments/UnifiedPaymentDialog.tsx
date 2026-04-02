@@ -214,7 +214,7 @@ export function UnifiedPaymentDialog({
   const [bankDetails, setBankDetails] = useState<BankTransferDetails | null>(null)
   const [bankValid, setBankValid] = useState(false)
   const [cashData, setCashData] = useState<CashFormData | null>(null)
-  const [cashValid, setCashValid] = useState(false)
+  const [cashValid, setCashValid] = useState(true) // поле сдачи необязательно
 
   // ── UI state ────────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(false)
@@ -239,7 +239,7 @@ export function UnifiedPaymentDialog({
     setDescription('')
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
-    setCashData(null); setCashValid(false)
+    setCashData(null); setCashValid(true) // поле сдачи необязательно
     setAmount(sd.prefillAmount != null ? String(sd.prefillAmount) : '')
     if (sd.clientId && sd.clientName) {
       const parts = sd.clientName.trim().split(' ')
@@ -282,7 +282,7 @@ export function UnifiedPaymentDialog({
     setPaymentLink(null); setLinkCopied(false)
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
-    setCashData(null); setCashValid(false)
+    setCashData(null); setCashValid(true) // поле сдачи необязательно
     setStep('method-select')
     onOpenChange(false)
   }, [onOpenChange])
@@ -303,7 +303,7 @@ export function UnifiedPaymentDialog({
     setErrorMsg(null)
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
-    setCashData(null); setCashValid(false)
+    setCashData(null); setCashValid(true) // поле сдачи необязательно
     setStep('method-select')
   }, [])
 

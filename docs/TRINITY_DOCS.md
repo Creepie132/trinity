@@ -1038,3 +1038,57 @@ kira_messages  (id uuid PK, session_id uuid FK, org_id uuid, role varchar, conte
 Влад: Найди клиента Анну Петрову
 Кира: [вызывает getClientSummary("Анна Петрова")] → Анна Петрова, +972-50-..., LTV ₪8,450, 120 бонусных баллов.
 ```
+
+### Уровень 4 — Автономные триггеры (Morning Brief)
+
+**Дата:** 02.04.2026  
+**Коммит:** `b5078c8`
+
+#### Архитектура
+
+```
+Vercel Cron 06:30 UTC (08:30 IL)
+  → GET /api/kira/cron
+    → for...of по активным оргам (is_active=true, не demo)
+      → collectOrgData(orgId)        — визиты, выручка, долги, ДР
+      → generateBrief(orgName, data) — generateText gpt-4o-mini
+      → deliverBrief(orgId, text)    — INSERT kira_messages (is_proactive=true)
+        → Supabase Realtime          — автоматически рассылает INSERT-событие
+          → KiraChatPanel            — слушает через postgres_changes
+            → красный бейдж + баннер с текстом
+```
+
+#### Файлы
+
+| Файл | Описание |
+|---|---|
+| `src/app/api/kira/cron/route.ts` | GET-роут (Vercel Cron). Обходит все орги, генерирует бриф, пишет в БД |
+| `src/components/kira/KiraChatPanel.tsx` | Добавлена Realtime-подписка + UI баннера + красный бейдж |
+| `vercel.json` | Добавлен cron `/api/kira/cron` schedule `30 6 * * *` (UTC) + maxDuration 300 |
+
+#### Безопасность
+
+- Защита: `Authorization: Bearer CRON_SECRET` — только Vercel или ручной вызов
+- Строгий `for...of` — данные каждого орга изолированы, никогда не смешиваются в одном промпте
+- Ошибка одного орга не ломает весь цикл (try/catch на каждую итерацию)
+- Фильтр: `is_active=true` + не `subscription_status='demo'`
+
+#### Realtime доставка
+
+- `ALTER PUBLICATION supabase_realtime ADD TABLE public.kira_messages` — применена миграция
+- Клиент подписывается на `INSERT` в `kira_messages` с фильтром `session_id=eq.{sessionId}`
+- При получении события с `is_proactive=true`: показывается баннер + красный бейдж в заголовке
+- Баннер закрывается крестиком или автоматически при отправке следующего сообщения
+
+#### generateText vs streamText
+
+Cron использует `generateText` (не `streamText`) — нам не нужен стрим, нужен финальный текст для записи в БД.
+
+#### Данные в брифе
+
+| Метрика | Источник | Период |
+|---|---|---|
+| Визиты сегодня | `visits.scheduled_at` | [00:00, 23:59] сегодня |
+| Выручка | `payments` (status=completed) | вчера |
+| Долги | `sales` (status unpaid/partial) | все активные |
+| Дни рождения | `clients.date_of_birth` LIKE `%-MM-DD` | сегодня |

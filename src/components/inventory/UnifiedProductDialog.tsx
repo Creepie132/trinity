@@ -203,7 +203,16 @@ export function UnifiedProductDialog({ open, onClose, mode, product }: UnifiedPr
     try {
       const fd = new FormData(); fd.append('file', file)
       const res = await fetch('/api/products/upload-image', { method: 'POST', body: fd })
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Upload failed') }
+      if (!res.ok) {
+        let errMsg = 'Upload failed'
+        try {
+          const err = await res.json()
+          errMsg = err.error || errMsg
+        } catch {
+          errMsg = res.status === 413 ? (isHe ? 'קובץ גדול מדי (מקסימום 5MB)' : 'Файл слишком большой (макс. 5MB)') : `Upload failed (${res.status})`
+        }
+        throw new Error(errMsg)
+      }
       const { url } = await res.json()
       set({ image_url: url })
       setImagePreview(URL.createObjectURL(file))

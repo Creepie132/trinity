@@ -1,7 +1,7 @@
 import {
   Globe, Palette, Bell, Package, Building2, Users,
   Calendar, CreditCard, MessageSquare, FileText,
-  ShieldAlert, MessageCircle,
+  ShieldAlert, MessageCircle, ShoppingBag,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -113,6 +113,16 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
         desc_ru: 'Шаблоны рекомендаций для клиентов',
         desc_he: 'תבניות המלצות ללקוחות',
         permissionFlag: 'canManageCareInstructions',
+      },
+      {
+        id: 'sales-settings',
+        href: '/settings/sales',
+        icon: ShoppingBag,
+        colorTint: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
+        title_ru: 'Настройки продаж',
+        title_he: 'הגדרות מכירות',
+        desc_ru: 'Автооплата, пересчёт сдачи и другие параметры',
+        desc_he: 'תשלום אוטומטי, עודף ופרמטרים נוספים',
       },
     ],
   },

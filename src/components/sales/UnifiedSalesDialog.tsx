@@ -39,6 +39,7 @@ import { useGeneratePDF } from '@/lib/pdf/use-generate-pdf'
 import type { ProposalData } from '@/lib/pdf/proposal-types'
 import { getClientName } from '@/lib/client-utils'
 import { useOrganization } from '@/hooks/useOrganization'
+import { useSalesSettings } from '@/hooks/useSalesSettings'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -268,6 +269,9 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
   const { activeOrgId } = useBranch()
   const queryClient = useQueryClient()
   const { data: org } = useOrganization()
+  const { data: salesSettings } = useSalesSettings()
+  // Если включён режим "всегда оплачено" — сделка создаётся с paid_amount = total
+  const alwaysPaid = salesSettings?.sale_always_paid ?? false
   const { download: downloadPDF, uploadAndGetLink, loading: pdfLoading } = useGeneratePDF()
 
   const isHe = language === 'he'
@@ -521,6 +525,20 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
         try { localStorage.removeItem(`draft_sale_${clientId}`) } catch {}
       }
 
+      // ── Авто-платёж если включён режим "всегда оплачено" ──────────────────
+      if (alwaysPaid && total > 0) {
+        await apiFetch('/api/payments', {
+          method: 'POST',
+          json: {
+            sale_id:        result.id,
+            client_id:      clientId || undefined,
+            amount:         total,
+            payment_method: 'cash',
+            status:         'completed',
+          },
+        }).catch(e => console.error('[UnifiedSalesDialog] auto-payment error:', e))
+      }
+
       queryClient.invalidateQueries({ queryKey: ['sales'] })
       queryClient.invalidateQueries({ queryKey: ['payments'] })
 
@@ -539,7 +557,7 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
     }
   }, [
     items, clientId, total, saleDate, saleNotes,
-    discount, safeData, isHe, queryClient,
+    discount, safeData, isHe, queryClient, alwaysPaid,
   ])
 
   // ── PDF / Proposal ────────────────────────────────────────────────────────────
@@ -620,10 +638,15 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
           )}
           <button onClick={step === 'cart' ? () => setStep('checkout') : handleSubmit}
             disabled={(step === 'cart' && items.length === 0) || (step === 'checkout' && isLoading)}
-            style={{ padding:'11px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', marginBottom:6, background: items.length > 0 && !isLoading ? 'linear-gradient(135deg,#4a6fa5,#3b5998)' : 'rgba(255,255,255,0.08)', color: items.length > 0 ? '#fff' : 'rgba(255,255,255,0.25)', fontSize:13, fontWeight:700, transition:'all 0.2s' }}>
+            style={{ padding:'11px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', marginBottom:6,
+              background: items.length > 0 && !isLoading ? 'linear-gradient(135deg,#4a6fa5,#3b5998)' : 'rgba(255,255,255,0.08)',
+              color: items.length > 0 ? '#fff' : 'rgba(255,255,255,0.25)', fontSize:13, fontWeight:700, transition:'all 0.2s',
+              // Скрываем "Без оплаты" если alwaysPaid включён
+              display: step === 'checkout' && alwaysPaid ? 'none' : undefined,
+            }}>
             {isLoading ? (isHe?'שומר...':'Сохраняем...')
               : step === 'cart' ? (isHe?'להמשיך לתשלום →':'К оплате →')
-              : (isHe?'שמור עסקה':'Сохранить сделку')}
+              : (isHe?'שמור ללא תשלום':'Сохранить без оплаты')}
           </button>
           <button onClick={handleClose} style={{ padding:'8px 14px', borderRadius:9, border:'0.5px solid rgba(255,255,255,0.12)', background:'transparent', color:'rgba(255,255,255,0.4)', fontSize:12, cursor:'pointer' }}>
             {isHe?'ביטול':'Отмена'}
@@ -659,10 +682,12 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
         style={{ flex:'0 0 auto', padding:'11px 14px', borderRadius:10, border:'1px solid rgba(0,0,0,0.1)', background:'transparent', color:'#64748b', fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', gap:5 }}>
         <ChevronLeft size={15}/>{isHe?'חזור':'Назад'}
       </button>
-      <button onClick={handleSubmit} disabled={isLoading}
-        style={{ flex:1, padding:'11px', borderRadius:10, border:'none', cursor: isLoading?'not-allowed':'pointer', background: isLoading?'#e2e8f0':'linear-gradient(135deg,#4a6fa5,#3b5998)', color: isLoading?'#94a3b8':'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
-        {isLoading ? (isHe?'שומר...':'Сохраняем...') : (isHe?'שמור':'Сохранить')}
-      </button>
+      {!alwaysPaid && (
+        <button onClick={handleSubmit} disabled={isLoading}
+          style={{ flex:1, padding:'11px', borderRadius:10, border:'none', cursor: isLoading?'not-allowed':'pointer', background: isLoading?'#e2e8f0':'linear-gradient(135deg,#4a6fa5,#3b5998)', color: isLoading?'#94a3b8':'#fff', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
+          {isLoading ? (isHe?'שומר...':'Сохраняем...') : (isHe?'ללא תשלום':'Без оплаты')}
+        </button>
+      )}
       <button onClick={handlePayAndCheckout} disabled={isLoading}
         style={{ flex:1, padding:'11px', borderRadius:10, border:'none', cursor: isLoading?'not-allowed':'pointer', background: isLoading?'#e2e8f0':'linear-gradient(135deg,#22c55e,#16a34a)', color: isLoading?'#94a3b8':'#fff', fontSize:13, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
         <Wallet size={14}/>{isHe?'שלם':'Оплатить'}{total>0&&!isLoading?` ₪${total.toLocaleString()}`:''}

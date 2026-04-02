@@ -1,7 +1,9 @@
 'use client'
 // ─── NotificationItem ────────────────────────────────────────────────────────
+// Карточка НЕ управляет своей позицией — это делает ToastStack (CollapsedStack / ExpandedStack).
+// Карточка только рисует контент + progress bar.
 
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useRef, useState, useCallback, useEffect } from 'react'
 import {
   CheckCircle2, XCircle, AlertTriangle, Info,
   CreditCard, User, Calendar, CheckSquare,
@@ -23,17 +25,17 @@ const VARIANT_CONFIG = {
   critical: { icon: Zap,           color: '#dc2626', bg: '#fef2f2', border: '#fca5a5', text: '#7f1d1d' },
 } as const
 
-const PRIORITY_RING: Record<string, string> = {
+const PRIORITY_SHADOW: Record<string, string> = {
   normal: '',
-  high:   '0 0 0 1px rgba(251,191,36,0.5)',
-  urgent: '0 0 0 2px rgba(239,68,68,0.6)',
+  high:   '0 0 0 1.5px rgba(251,191,36,0.55)',
+  urgent: '0 0 0 2px rgba(239,68,68,0.65)',
 }
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
 function ProgressBar({ duration, isPaused, color, onExpire }: {
   duration: number; isPaused: boolean; color: string; onExpire: () => void
 }) {
-  const [progress, setProgress] = useState(100)
+  const [pct, setPct] = useState(100)
   const startRef   = useRef(Date.now())
   const elapsedRef = useRef(0)
   const rafRef     = useRef(0)
@@ -41,7 +43,7 @@ function ProgressBar({ duration, isPaused, color, onExpire }: {
   const tick = useCallback(() => {
     const elapsed   = elapsedRef.current + (Date.now() - startRef.current)
     const remaining = Math.max(0, 100 - (elapsed / duration) * 100)
-    setProgress(remaining)
+    setPct(remaining)
     if (remaining <= 0) { onExpire(); return }
     rafRef.current = requestAnimationFrame(tick)
   }, [duration, onExpire])
@@ -59,8 +61,8 @@ function ProgressBar({ duration, isPaused, color, onExpire }: {
 
   if (duration === 0) return null
   return (
-    <div className="absolute bottom-0 left-0 right-0 h-[2.5px] overflow-hidden rounded-b-2xl bg-black/5">
-      <div style={{ width: `${progress}%`, backgroundColor: color, height: '100%', opacity: 0.55 }} />
+    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2.5, background: 'rgba(0,0,0,0.07)', borderRadius: '0 0 14px 14px' }}>
+      <div style={{ width: `${pct}%`, height: '100%', backgroundColor: color, opacity: 0.6 }} />
     </div>
   )
 }
@@ -73,32 +75,26 @@ interface NotificationItemProps {
   isExpanded: boolean
 }
 
-export function NotificationItem({ toast, index, total, isExpanded }: NotificationItemProps) {
+export function NotificationItem({ toast, isExpanded }: NotificationItemProps) {
   const { _startExit, pauseToast, resumeToast } = useNotificationStore()
   const cfg     = VARIANT_CONFIG[toast.variant]
   const IconCmp = cfg.icon
 
-  const stackY       = isExpanded ? 0 : index * 7
-  const stackScale   = isExpanded ? 1 : 1 - index * 0.04
-  const stackOpacity = isExpanded ? 1 : index === 0 ? 1 : index === 1 ? 0.82 : index === 2 ? 0.6 : 0.35
+  const shadowParts = [
+    '0 4px 20px rgba(0,0,0,0.10)',
+    '0 1px 4px rgba(0,0,0,0.06)',
+    PRIORITY_SHADOW[toast.priority],
+  ].filter(Boolean)
 
   const cardStyle: React.CSSProperties = {
-    transform: toast.isExiting
-      ? 'translateX(calc(100% + 28px))'
-      : `translateY(${stackY}px) scale(${stackScale})`,
-    opacity: toast.isExiting ? 0 : stackOpacity,
-    zIndex:  total - index,
-    transition: toast.isExiting
-      ? 'transform 0.32s cubic-bezier(0.4,0,1,1), opacity 0.25s ease'
-      : 'transform 0.42s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease',
-    pointerEvents:   (index === 0 || isExpanded) ? 'auto' : 'none',
+    position:        'relative',        // ← НЕ absolute. Позиция управляется родителем.
+    width:           '100%',
+    borderRadius:    16,
+    border:          `1px solid ${cfg.border}`,
     backgroundColor: cfg.bg,
-    borderColor:     cfg.border,
-    boxShadow: [
-      '0 4px 20px rgba(0,0,0,0.10)',
-      '0 1px 4px rgba(0,0,0,0.06)',
-      PRIORITY_RING[toast.priority],
-    ].filter(Boolean).join(', '),
+    boxShadow:       shadowParts.join(', '),
+    overflow:        'hidden',
+    userSelect:      'none',
   }
 
   return (
@@ -108,61 +104,66 @@ export function NotificationItem({ toast, index, total, isExpanded }: Notificati
       style={cardStyle}
       onMouseEnter={() => pauseToast(toast.id)}
       onMouseLeave={() => resumeToast(toast.id)}
-      className="absolute bottom-0 left-0 right-0 rounded-2xl border flex flex-col overflow-hidden select-none"
     >
-      {/* ── Body ─────────────────────────────────────────────────── */}
-      <div className="flex items-start gap-3 px-4 pt-4 pb-3">
-
+      {/* ── Body ─────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px 12px', paddingRight: 44 }}>
         {/* Icon */}
-        <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center mt-0.5"
-          style={{ backgroundColor: cfg.color + '1a' }}>
+        <div style={{
+          flexShrink: 0, width: 36, height: 36, borderRadius: 10,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          backgroundColor: cfg.color + '1a', marginTop: 1,
+        }}>
           {toast.icon
-            ? <span className="text-lg leading-none">{toast.icon}</span>
-            : <IconCmp size={17} style={{ color: cfg.color }} strokeWidth={2.2} />
+            ? <span style={{ fontSize: 16 }}>{toast.icon}</span>
+            : <IconCmp size={17} color={cfg.color} strokeWidth={2.2} />
           }
         </div>
 
-        {/* Text — right-pad so close button doesn't overlap */}
-        <div className="flex-1 min-w-0 pt-0.5 pr-8">
-          <p className="text-[13px] font-semibold leading-snug" style={{ color: cfg.text }}>
+        {/* Text */}
+        <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, lineHeight: 1.35, color: cfg.text }}>
             {toast.title}
           </p>
           {toast.description && (
-            <p className="text-[12px] mt-0.5 leading-relaxed line-clamp-2"
-               style={{ color: cfg.text, opacity: 0.68 }}>
+            <p style={{ margin: '3px 0 0', fontSize: 12, lineHeight: 1.45, color: cfg.text, opacity: 0.68,
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
               {toast.description}
             </p>
           )}
         </div>
       </div>
 
-      {/* ── Close button — top-right, large hit target ────────────── */}
+      {/* ── Close button — крупная, всегда видима ── */}
       <button
         onClick={() => _startExit(toast.id)}
         aria-label="Закрыть"
-        title="Закрыть"
-        style={{ color: cfg.text }}
-        className="
-          absolute top-3 right-3
-          w-7 h-7 rounded-lg
-          flex items-center justify-center
-          bg-black/5 hover:bg-black/12
-          opacity-60 hover:opacity-100
-          transition-all duration-150
-          active:scale-90
-        "
+        style={{
+          position: 'absolute', top: 10, right: 10,
+          width: 28, height: 28, borderRadius: 8, border: 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.07)', cursor: 'pointer',
+          color: cfg.text, opacity: 0.65,
+          transition: 'opacity 0.15s, background 0.15s, transform 0.1s',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.13)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.65'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,0,0,0.07)' }}
+        onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.90)' }}
+        onMouseUp={e   => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
       >
         <X size={14} strokeWidth={2.5} />
       </button>
 
-      {/* ── Actions ──────────────────────────────────────────────── */}
+      {/* ── Actions ──────────────────────────────── */}
       {(toast.action || toast.secondaryAction) && (
-        <div className="flex items-center gap-2 px-4 pb-4 -mt-0.5">
+        <div style={{ display: 'flex', gap: 8, padding: '0 16px 14px', marginTop: -2 }}>
           {toast.action && (
             <button
               onClick={() => { toast.action!.onClick(); _startExit(toast.id) }}
-              className="text-[12px] font-semibold px-3 py-1.5 rounded-xl transition-all active:scale-95 text-white"
-              style={{ backgroundColor: cfg.color }}
+              style={{ fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 10,
+                border: 'none', cursor: 'pointer', color: '#fff', background: cfg.color,
+                transition: 'opacity 0.15s' }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
             >
               {toast.action.label}
             </button>
@@ -170,8 +171,8 @@ export function NotificationItem({ toast, index, total, isExpanded }: Notificati
           {toast.secondaryAction && (
             <button
               onClick={() => { toast.secondaryAction!.onClick(); _startExit(toast.id) }}
-              className="text-[12px] font-medium px-3 py-1.5 rounded-xl transition-all active:scale-95"
-              style={{ color: cfg.text, opacity: 0.65 }}
+              style={{ fontSize: 12, fontWeight: 500, padding: '6px 12px', borderRadius: 10,
+                border: 'none', cursor: 'pointer', background: 'transparent', color: cfg.text, opacity: 0.6 }}
             >
               {toast.secondaryAction.label}
             </button>
@@ -179,7 +180,7 @@ export function NotificationItem({ toast, index, total, isExpanded }: Notificati
         </div>
       )}
 
-      {/* ── Progress bar ─────────────────────────────────────────── */}
+      {/* ── Progress bar ─────────────────────────── */}
       <ProgressBar
         duration={toast.duration}
         isPaused={toast.isPaused}

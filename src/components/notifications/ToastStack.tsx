@@ -1,42 +1,160 @@
 'use client'
-// ─── ToastStack — Premium stacked toast container ────────────────────────────
-// Desktop: bottom-right, 380px wide
-// Mobile:  top-center, full-width minus padding
-// Hover: stack expands to show all toasts
-// Keyboard: Escape dismisses topmost
+// ─── ToastStack ───────────────────────────────────────────────────────────────
+// Desktop: bottom-right, 380px. Hover → expand колонку.
+// Mobile:  top-center, full-width. Flat список.
+//
+// FIX: убран хардкод collapsedHeight (120px). Теперь используем
+// ResizeObserver на топовой карточке — стек знает реальную высоту.
+// Второй и третий тост рендерятся как peek через translateY + scale,
+// не через absolute позицию с фиксированным offset.
 
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNotificationStore } from './NotificationStore'
 import { NotificationItem } from './NotificationItem'
 
-// Entry animation — slide in from right (desktop) or top (mobile)
-const ENTRY_KEYFRAMES = `
-@keyframes trinity-toast-in-desktop {
+const ENTRY_CSS = `
+@keyframes t-in-r {
   from { transform: translateX(calc(100% + 24px)); opacity: 0; }
-  to   { transform: translateX(0);                opacity: 1; }
+  to   { transform: translateX(0); opacity: 1; }
 }
-@keyframes trinity-toast-in-mobile {
-  from { transform: translateY(-100%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+@keyframes t-in-t {
+  from { transform: translateY(-110%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
 }
 `
 
 function injectStyles() {
   if (typeof document === 'undefined') return
-  if (document.getElementById('trinity-toast-styles')) return
-  const el = document.createElement('style')
-  el.id = 'trinity-toast-styles'
-  el.textContent = ENTRY_KEYFRAMES
-  document.head.appendChild(el)
+  if (document.getElementById('trinity-toast-css')) return
+  const s = document.createElement('style')
+  s.id = 'trinity-toast-css'
+  s.textContent = ENTRY_CSS
+  document.head.appendChild(s)
 }
 
+// ── Collapsed desktop stack: renders N cards with peek ────────────────────────
+// Top card (index=0) is full visible. Cards 1,2,3 peek behind as scaled ghosts.
+// Heights are measured via ResizeObserver so no hardcoding needed.
+function CollapsedStack({ toasts, onExpand }: {
+  toasts: ReturnType<typeof useNotificationStore.getState>['toasts']
+  onExpand: () => void
+}) {
+  const topRef    = useRef<HTMLDivElement>(null)
+  const [topH, setTopH] = useState(0)
+
+  useEffect(() => {
+    const el = topRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setTopH(e.contentRect.height))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [toasts[0]?.id]) // re-observe when top card changes
+
+  // Peek offset per card behind top
+  const PEEK = 8   // px per level
+  const SCALE_STEP = 0.04
+
+  // Total container height = top card + peek of cards behind
+  const peekCount = Math.min(toasts.length - 1, 3)
+  const containerH = topH > 0 ? topH + peekCount * PEEK : 'auto'
+
+  return (
+    <div
+      style={{ position: 'relative', height: containerH, cursor: 'pointer' }}
+      onClick={toasts.length > 1 ? onExpand : undefined}
+    >
+      {/* Render cards bottom→top so top card is on top visually */}
+      {[...toasts].slice(0, 4).reverse().map((toast, revIdx) => {
+        // revIdx=0 is the oldest (bottom of stack), revIdx=last is newest (top)
+        const idx = toasts.slice(0, 4).length - 1 - revIdx // 0=newest
+        const isTop = idx === 0
+        const peekY = -idx * PEEK
+        const scale = 1 - idx * SCALE_STEP
+        const opacity = idx === 0 ? 1 : idx === 1 ? 0.80 : idx === 2 ? 0.55 : 0.35
+
+        return (
+          <div
+            key={toast.id}
+            ref={isTop ? topRef : undefined}
+            style={{
+              position:   'absolute',
+              bottom:     0,
+              left:       0,
+              right:      0,
+              zIndex:     toasts.length - idx,
+              transform:  toast.isExiting
+                ? 'translateX(calc(100% + 28px))'
+                : `translateY(${peekY}px) scale(${scale})`,
+              opacity:    toast.isExiting ? 0 : opacity,
+              transformOrigin: 'bottom center',
+              transition: toast.isExiting
+                ? 'transform 0.30s cubic-bezier(0.4,0,1,1), opacity 0.24s ease'
+                : 'transform 0.40s cubic-bezier(0.22,1,0.36,1), opacity 0.28s ease',
+              pointerEvents: isTop ? 'auto' : 'none',
+              // Entry animation only for newest card
+              animation: isTop && !toast.isExiting
+                ? `t-in-r 0.42s cubic-bezier(0.22,1,0.36,1) both`
+                : undefined,
+            }}
+          >
+            <NotificationItem toast={toast} index={idx} total={toasts.length} isExpanded={false} />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── ExpandedStack: full column, newest on top ─────────────────────────────────
+function ExpandedStack({ toasts, onDismissAll }: {
+  toasts: ReturnType<typeof useNotificationStore.getState>['toasts']
+  onDismissAll: () => void
+}) {
+  return (
+    <div style={{ position: 'relative' }}>
+      {toasts.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+          <button
+            onClick={onDismissAll}
+            style={{
+              fontSize: 11, color: '#9ca3af', background: 'none', border: 'none',
+              cursor: 'pointer', padding: '2px 8px', borderRadius: 6,
+            }}
+          >
+            Закрыть все
+          </button>
+        </div>
+      )}
+      {/* Column: newest on top, each card in normal flow */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {toasts.map((toast, idx) => (
+          <div
+            key={toast.id}
+            style={{
+              opacity:    toast.isExiting ? 0 : 1,
+              transform:  toast.isExiting ? 'translateX(calc(100% + 28px))' : 'none',
+              transition: 'transform 0.30s cubic-bezier(0.4,0,1,1), opacity 0.24s ease',
+              // Entry only for truly new card (idx=0)
+              animation: idx === 0 && !toast.isExiting
+                ? `t-in-r 0.42s cubic-bezier(0.22,1,0.36,1) both`
+                : undefined,
+            }}
+          >
+            <NotificationItem toast={toast} index={idx} total={toasts.length} isExpanded={true} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Main ToastStack ───────────────────────────────────────────────────────────
 export function ToastStack() {
   const { toasts, dismissAll } = useNotificationStore()
   const [isExpanded, setIsExpanded] = useState(false)
-  const [isMobile, setIsMobile]     = useState(false)
-  const [mounted, setMounted]       = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [isMobile,   setIsMobile]   = useState(false)
+  const [mounted,    setMounted]    = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -47,14 +165,14 @@ export function ToastStack() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Collapse stack when last toast dismissed
+  // Auto-collapse when only 1 toast remains
   useEffect(() => {
-    if (toasts.length === 0) setIsExpanded(false)
+    if (toasts.length <= 1) setIsExpanded(false)
   }, [toasts.length])
 
-  // Escape key dismisses topmost
+  // Escape — dismiss topmost
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && toasts.length > 0) {
         useNotificationStore.getState().dismiss(toasts[0].id)
       }
@@ -65,124 +183,42 @@ export function ToastStack() {
 
   if (!mounted || toasts.length === 0) return null
 
-  // Collapsed stack height: top card + subtle peek of cards behind
-  const collapsedHeight = toasts.length > 1
-    ? 120 + (Math.min(toasts.length, 3) - 1) * 6
-    : 'auto'
-
-  // Expanded: each card full height + gap
-  const expandedGap = 10
-
-  const containerStyle: React.CSSProperties = isMobile
-    ? {
-        position: 'fixed',
-        top: '16px',
-        left: '12px',
-        right: '12px',
-        zIndex: 99999,
-      }
-    : {
-        position: 'fixed',
-        bottom: '24px',
-        right: '24px',
-        width: '380px',
-        zIndex: 99999,
-      }
+  const wrapStyle: React.CSSProperties = isMobile
+    ? { position: 'fixed', top: 12, left: 10, right: 10, zIndex: 99999 }
+    : { position: 'fixed', bottom: 24, right: 24, width: 380, zIndex: 99999 }
 
   return createPortal(
     <div
-      ref={containerRef}
-      style={containerStyle}
-      onMouseEnter={() => !isMobile && setIsExpanded(true)}
-      onMouseLeave={() => !isMobile && setIsExpanded(false)}
+      style={wrapStyle}
+      onMouseEnter={() => { if (!isMobile && toasts.length > 1) setIsExpanded(true) }}
+      onMouseLeave={() => { if (!isMobile) setIsExpanded(false) }}
     >
-      {/* ── Mobile: flat list, newest on top ── */}
-      {isMobile ? (
-        <div className="flex flex-col gap-2">
-          {toasts.map((toast, index) => (
+      {/* ── Mobile: flat newest-on-top list ── */}
+      {isMobile && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {toasts.map((toast, idx) => (
             <div
               key={toast.id}
               style={{
-                animation: `trinity-toast-in-mobile 0.38s cubic-bezier(0.22,1,0.36,1) both`,
+                opacity:   toast.isExiting ? 0 : 1,
+                transform: toast.isExiting ? 'translateY(-110%)' : 'none',
+                transition: 'transform 0.28s ease, opacity 0.22s ease',
+                animation: idx === 0 && !toast.isExiting
+                  ? `t-in-t 0.38s cubic-bezier(0.22,1,0.36,1) both`
+                  : undefined,
               }}
             >
-              <NotificationItem
-                toast={toast}
-                index={index}
-                total={toasts.length}
-                isExpanded={true}
-              />
+              <NotificationItem toast={toast} index={idx} total={toasts.length} isExpanded={true} />
             </div>
           ))}
         </div>
-      ) : (
-        /* ── Desktop: stacked with hover-expand ── */
-        <div
-          className="relative transition-all duration-400 ease-out"
-          style={{
-            height: isExpanded
-              ? 'auto'
-              : collapsedHeight,
-          }}
-        >
-          {/* Dismiss-all button — visible when expanded and multiple toasts */}
-          {isExpanded && toasts.length > 1 && (
-            <div className="absolute -top-8 right-0">
-              <button
-                onClick={dismissAll}
-                className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 py-1 rounded-lg hover:bg-gray-100/80"
-              >
-                Закрыть все
-              </button>
-            </div>
-          )}
+      )}
 
-          {/* Expanded: column layout */}
-          {isExpanded ? (
-            <div className="flex flex-col-reverse gap-[10px]">
-              {toasts.map((toast, index) => (
-                <div
-                  key={toast.id}
-                  className="relative"
-                  style={{ minHeight: 72 }}
-                >
-                  <NotificationItem
-                    toast={toast}
-                    index={index}
-                    total={toasts.length}
-                    isExpanded={true}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            /* Collapsed: absolute stack */
-            <div className="relative" style={{ height: collapsedHeight }}>
-              {[...toasts].reverse().map((toast, revIdx) => {
-                const index = toasts.length - 1 - revIdx
-                return (
-                  <div
-                    key={toast.id}
-                    className="absolute left-0 right-0"
-                    style={{
-                      bottom:    0,
-                      animation: index === 0
-                        ? `trinity-toast-in-desktop 0.42s cubic-bezier(0.22,1,0.36,1) both`
-                        : undefined,
-                    }}
-                  >
-                    <NotificationItem
-                      toast={toast}
-                      index={index}
-                      total={toasts.length}
-                      isExpanded={false}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+      {/* ── Desktop: collapsed stack or expanded column ── */}
+      {!isMobile && (
+        isExpanded
+          ? <ExpandedStack toasts={toasts} onDismissAll={dismissAll} />
+          : <CollapsedStack toasts={toasts} onExpand={() => setIsExpanded(true)} />
       )}
     </div>,
     document.body

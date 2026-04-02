@@ -1129,3 +1129,20 @@ Cron использует `generateText` (не `streamText`) — нам не н�
 
 #### Следующий шаг (заглушка → реальный WA)
 `DebtWidget` → кнопка "Напомнить" → `POST /api/sms/send` или `POST /api/wa-inbox/send` с `phone` клиента.
+
+#### Кнопка "Напомнить" — реальный WhatsApp (не заглушка)
+
+**Коммит:** `9cb2998`
+
+**Новый роут:** `src/app/api/kira/remind/route.ts` (POST)
+- Auth + проверка роли (`owner` / `moderator`)
+- Верификация: `sale.org_id === orgId` — чужие продажи недоступны
+- Вызывает `sendWhatsAppMessage({ orgId, to: phone, message })` — тот же Fallback-паттерн что и в wa-inbox
+- Сообщение на иврите: `שלום {clientName}! נשמח אם תסדיר את יתרת החוב בסך ₪{amount}. תודה!`
+- При `provider === 'none'` → 400 с понятным сообщением "WhatsApp не настроен"
+
+**`DebtWidget.tsx`** — обновлён:
+- `loading` state на каждую кнопку отдельно (spinner во время запроса)
+- `disabled` если нет телефона (подпись "нет телефона")
+- После успеха: кнопка переключается в "Отправлено" (зелёный, `disabled`)
+- `toast.error` с читаемым сообщением при ошибке

@@ -41,6 +41,16 @@ export interface AuthError {
  * ```
  */
 export async function getAuthContext(request?: NextRequest): Promise<AuthContext | AuthError> {
+  // ── Mobile Bearer-token support ───────────────────────────────────────────
+  // Если запрос приходит с заголовком Authorization: Bearer <jwt>
+  // (FlutterFlow, мобильное приложение) — используем отдельный путь аутентификации.
+  // Веб-версия (cookies) не затрагивается.
+  const authHeader = request?.headers.get('Authorization') ?? ''
+  if (authHeader.startsWith('Bearer ')) {
+    const jwt = authHeader.slice(7)
+    return getAuthContextFromBearer(jwt)
+  }
+
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -365,6 +375,61 @@ export async function getWorkerAuthContext(): Promise<WorkerAuthContext | AuthEr
   }
 
   return { error: NextResponse.json({ error: 'Sales agent access required' }, { status: 403 }) }
+}
+
+// ============================================
+// Bearer Token Auth — для мобильных клиентов (FlutterFlow)
+// Используется когда Authorization: Bearer <jwt> присутствует в запросе
+// ============================================
+
+async function getAuthContextFromBearer(jwt: string): Promise<AuthContext | AuthError> {
+  const service = createSupabaseServiceClient()
+
+  // Верификация JWT через Supabase — getUser безопаснее чем decodeJWT
+  const { data, error } = await service.auth.getUser(jwt)
+  if (error || !data.user) {
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  }
+  const user = data.user
+
+  // Читаем org_id из JWT claims (fast path)
+  let orgId = user.app_metadata?.org_id as string | undefined
+  const orgRole = user.app_metadata?.org_role as string | null ?? null
+  const isAdmin = user.app_metadata?.is_admin === true
+
+  // Fallback: org_users таблица (первый логин до refresh токена)
+  if (!orgId) {
+    const { data: orgUser } = await service
+      .from('org_users')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!orgUser?.org_id) {
+      return { error: NextResponse.json({ error: 'No organization' }, { status: 403 }) }
+    }
+    orgId = orgUser.org_id
+  }
+
+  const mainOrgId = orgId
+  // Читаем activeOrgId из БД — та же логика что и для веб-версии
+  const activeOrgId = await getActiveOrgId(user.id, orgId)
+
+  // Создаём Supabase client с токеном пользователя (для RLS-совместимости)
+  const supabaseWithToken = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: `Bearer ${jwt}` } } }
+  )
+
+  return {
+    user,
+    orgId: activeOrgId,
+    mainOrgId,
+    orgRole,
+    isAdmin,
+    supabase: supabaseWithToken as unknown as SupabaseClient,
+  }
 }
 
 // Хелпер для обработки ошибок в API

@@ -1180,3 +1180,16 @@ CREATE INDEX idx_kira_sessions_org_status ON kira_sessions(org_id, status);
 - Автоскролл: заменён `messagesEndRef.current?.scrollIntoView()` на `scrollRef.current.scrollTop = scrollRef.current.scrollHeight` внутри `setTimeout(100)` — правильный способ скролла внутри `div` с `overflow-y-auto`
 
 **Коммит:** `70f233a`
+
+
+---
+
+### [03.04.2026] Fix: Устранение FOULC (Flash of Unlocalized Content)
+**Задача:** При загрузке мерцал иврит перед переключением на русский.
+**Решение:** SSR читает `trinity_locale` cookie → отдаёт HTML с правильными `lang`/`dir` с первого байта.
+**Файлы:**
+- `src/app/layout.tsx` — `RootLayout` async, читает cookie, устанавливает `lang`+`dir` на сервере
+- `src/contexts/LanguageContext.tsx` — принимает `initialLocale` prop, исключает SSR/CSR mismatch
+- `src/actions/user-preferences.ts` — `setLocaleCookie()` server action (1 год, sameSite=lax)
+
+**Коммит:** `79afb09`

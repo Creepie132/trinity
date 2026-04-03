@@ -109,6 +109,8 @@ function buildSystemPrompt(ctx: {
     '',
     '1. НИКОГДА не сообщай что действие выполнено, пока инструмент не вернул success:true.',
     '   Если инструмент вернул ошибку — скажи об этом честно. НЕЛЬЗЯ врать про успех.',
+    '   НЕЛЬЗЯ вызывать один и тот же инструмент дважды для одного запроса.',
+    '   Если инструмент вернул success:true или duplicate_prevented:true — это финал, больше не вызывай.',
     '',
     '2. Типы событий:',
     '   "встреча" / "встречу" / "meeting" → event_type="meeting", service="Встреча"',
@@ -326,6 +328,33 @@ export async function POST(request: NextRequest) {
       }
       const client = clients[0]
       const scheduled_at = new Date(`${date}T${time}:00+03:00`).toISOString()
+
+      // Идемпотентность: проверяем нет ли уже такого визита (защита от двойного вызова GPT)
+      const windowStart = new Date(new Date(scheduled_at).getTime() - 60_000).toISOString() // -1 мин
+      const windowEnd   = new Date(new Date(scheduled_at).getTime() + 60_000).toISOString() // +1 мин
+      const { data: existing } = await supabase
+        .from('visits')
+        .select('id, scheduled_at, service_type, status')
+        .eq('org_id', orgId)
+        .eq('client_id', client.id)
+        .in('status', ['scheduled', 'confirmed'])
+        .gte('scheduled_at', windowStart)
+        .lte('scheduled_at', windowEnd)
+        .limit(1)
+        .maybeSingle()
+
+      if (existing) {
+        return {
+          success: true,
+          visit_id: existing.id,
+          client_name: `${client.first_name} ${client.last_name ?? ''}`.trim(),
+          scheduled_at: existing.scheduled_at,
+          service: existing.service_type,
+          status: existing.status,
+          duplicate_prevented: true,
+        }
+      }
+
       const { data: visit, error } = await supabase
         .from('visits')
         .insert({

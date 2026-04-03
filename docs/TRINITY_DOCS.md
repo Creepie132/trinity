@@ -1146,3 +1146,37 @@ Cron использует `generateText` (не `streamText`) — нам не н�
 - `disabled` если нет телефона (подпись "нет телефона")
 - После успеха: кнопка переключается в "Отправлено" (зелёный, `disabled`)
 - `toast.error` с читаемым сообщением при ошибке
+
+
+---
+
+## [03.04.2025] Kira — фикс жизненного цикла сессий + автоскролл
+
+**Задача:** При нажатии кнопки очистки чата и последующем F5 — история восстанавливалась из БД. Автоскролл не работал (race condition).
+
+**Результат:** Архитектурный фикс — бэкенд закрывает сессию, фронтенд ждёт DOM.
+
+**Файлы:**
+- `src/app/api/kira/session/route.ts`
+- `src/components/kira/KiraChatPanel.tsx`
+- Supabase migration: `add_status_to_kira_sessions`
+
+### Детали
+
+**Supabase — новая колонка:**
+```sql
+ALTER TABLE kira_sessions
+  ADD COLUMN status TEXT NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active', 'closed'));
+CREATE INDEX idx_kira_sessions_org_status ON kira_sessions(org_id, status);
+```
+
+**`session/route.ts`:**
+- `POST` теперь фильтрует `.eq('status', 'active')` — закрытые сессии игнорируются
+- Добавлен `DELETE`-хэндлер: принимает `?sessionId=`, проверяет `org_id` из `getAuthContext()`, делает `UPDATE status = 'closed'`
+
+**`KiraChatPanel.tsx`:**
+- `handleNewSession` стал `async`: сначала `DELETE /api/kira/session?sessionId=...`, потом `setMessages([]) + setSessionId(null)`
+- Автоскролл: заменён `messagesEndRef.current?.scrollIntoView()` на `scrollRef.current.scrollTop = scrollRef.current.scrollHeight` внутри `setTimeout(100)` — правильный способ скролла внутри `div` с `overflow-y-auto`
+
+**Коммит:** `70f233a`

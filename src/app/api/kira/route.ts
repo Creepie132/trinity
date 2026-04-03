@@ -110,14 +110,16 @@ function buildSystemPrompt(ctx: {
     '1. НИКОГДА не сообщай что действие выполнено, пока инструмент не вернул success:true.',
     '   Если инструмент вернул ошибку — скажи об этом честно. НЕЛЬЗЯ врать про успех.',
     '',
-    '2. "Встреча", "визит", "запись", "тур", "приём" — всё это одно и то же.',
-    '   Для создания ВСЕГДА используй createVisitByName. Услуга по умолчанию = "Встреча".',
-    '   НЕ СПРАШИВАЙ про услугу если пользователь уже сказал "мне нужна встреча".',
+    '2. Типы событий:',
+    '   "встреча" / "встречу" / "meeting" → event_type="meeting", service="Встреча"',
+    '   "визит" / "запись" / "приём" / "тур" → event_type="visit", service="Визит"',
+    '   Для создания ВСЕГДА используй createVisitByName с правильным event_type.',
+    '   НЕ СПРАШИВАЙ про услугу и цену если не просят — дефолты достаточны.',
     '',
-    '3. Порядок для создания записи:',
+    '3. Порядок для создания записи/встречи:',
     '   а) Получил имя клиента и дату/время? → сразу вызывай createVisitByName.',
     '   б) Не знаешь дату/время? → спроси ТОЛЬКО это, одним вопросом.',
-    '   в) НЕ спрашивай про услугу и цену если не просят — дефолты достаточны.',
+    '   в) НЕ спрашивай про услугу и цену — дефолты достаточны.',
     '',
     '4. После успешного выполнения действия — пиши коротко: что сделано, для кого, когда.',
     '   Например: "Готово! Запись для Анеты на сегодня в 12:00 ✅"',
@@ -287,21 +289,24 @@ export async function POST(request: NextRequest) {
       'Create a visit/appointment by CLIENT NAME (not UUID).',
       'Use this for ALL booking requests: "запись", "встреча", "визит", "приём".',
       'Automatically finds the client, then creates the visit.',
-      'service defaults to "Встреча" if not specified. price defaults to 0.',
+      'event_type: use "meeting" when user says "встреча"/"встречу"/"meeting", otherwise "visit".',
+      'service defaults to "Встреча" for meetings or "Визит" for visits if not specified. price defaults to 0.',
     ].join(' '),
     inputSchema: zodSchema(z.object({
       client_name: z.string().describe('Client first name or full name'),
       date: z.string().describe('Date YYYY-MM-DD'),
       time: z.string().describe('Time HH:MM (24h)'),
-      service: z.string().optional().describe('Service name, defaults to "Встреча"'),
+      event_type: z.enum(['visit', 'meeting']).optional().describe('"meeting" if user said встреча/meeting, "visit" otherwise. Default: visit'),
+      service: z.string().optional().describe('Service name, defaults to "Встреча" for meetings, "Визит" for visits'),
       duration_minutes: z.number().optional().describe('Duration minutes, default 60'),
       price: z.number().optional().describe('Price ILS, default 0'),
       notes: z.string().optional(),
     })),
-    execute: async ({ client_name, date, time, service = 'Встреча', duration_minutes = 60, price = 0, notes }: {
-      client_name: string; date: string; time: string; service?: string
+    execute: async ({ client_name, date, time, event_type = 'visit', service, duration_minutes = 60, price = 0, notes }: {
+      client_name: string; date: string; time: string; event_type?: 'visit' | 'meeting'; service?: string
       duration_minutes?: number; price?: number; notes?: string
     }) => {
+      const resolvedService = service ?? (event_type === 'meeting' ? 'Встреча' : 'Визит')
       const term = `%${client_name.replace(/[%_\\]/g, '\\$&')}%`
       const { data: clients } = await supabase
         .from('clients')
@@ -327,7 +332,7 @@ export async function POST(request: NextRequest) {
           client_id: client.id, org_id: orgId, scheduled_at,
           duration_minutes, price, quantity: 1, notes: notes ?? null,
           status: 'scheduled', staff_user_id: user.id,
-          event_type: 'visit', service_type: service, service_id: null,
+          event_type, service_type: resolvedService, service_id: null,
         })
         .select('id, scheduled_at, service_type, status')
         .single()

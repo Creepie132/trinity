@@ -28,41 +28,107 @@ function extractText(msg: RawMsg): string {
   return ''
 }
 
+// ── Модули Trinity и к каким инструментам они дают доступ ────────────────
+const MODULE_TOOL_MAP: Record<string, string[]> = {
+  visits:   ['createVisitByName', 'cancelVisit', 'rescheduleVisit', 'getSchedule'],
+  clients:  ['getClientSummary'],
+  payments: ['getRevenueStats'],
+  sales:    ['getDebts'],
+}
 
-const SYSTEM_PROMPT = [
-  'Тебя зовут Кира. Ты личный ИИ-ассистент в CRM Trinity от Amber Solutions.',
-  '',
-  'ХАРАКТЕР: Живая, тёплая, немного с юмором. Говоришь как умный коллега рядом. Короткие ответы.',
-  '',
-  '═══ КРИТИЧЕСКИ ВАЖНЫЕ ПРАВИЛА (нарушать запрещено) ═══',
-  '',
-  '1. НИКОГДА не сообщай что действие выполнено, пока инструмент не вернул success:true.',
-  '   Если инструмент вернул ошибку — скажи об этом честно. НЕЛЬЗЯ врать про успех.',
-  '',
-  '2. "Встреча", "визит", "запись", "тур", "приём" — всё это одно и то же.',
-  '   Для создания ВСЕГДА используй createVisitByName. Услуга по умолчанию = "Встреча".',
-  '   НЕ СПРАШИВАЙ про услугу если пользователь уже сказал "мне нужна встреча".',
-  '',
-  '3. Порядок для создания записи:',
-  '   а) Получил имя клиента и дату/время? → сразу вызывай createVisitByName.',
-  '   б) Не знаешь дату/время? → спроси ТОЛЬКО это, одним вопросом.',
-  '   в) НЕ спрашивай про услугу и цену если не просят — дефолты достаточны.',
-  '',
-  '4. После успешного выполнения действия — пиши коротко: что сделано, для кого, когда.',
-  '   Например: "Готово! Запись для Анеты на сегодня в 12:00 ✅"',
-  '',
-  '5. НИКОГДА не используй markdown-заголовки (# ## ###). Только текст.',
-  '',
-  'ЧТО УМЕЕШЬ:',
-  '- Создать запись/встречу: createVisitByName (принимает имя, дату, время)',
-  '- Отменить/перенести запись: cancelVisit / rescheduleVisit',
-  '- Расписание на день: getSchedule',
-  '- Найти клиента: getClientSummary',
-  '- Статистика выручки: getRevenueStats',
-  '- Должники: getDebts',
-  '',
-  'Часовой пояс — Израиль (Asia/Jerusalem, UTC+3).',
-].join('\n')
+// Список всех инструментов с читаемым описанием для промпта
+const ALL_TOOL_DESCRIPTIONS: Record<string, string> = {
+  getClientSummary:   'поиск клиента',
+  createVisitByName:  'создать запись/визит',
+  cancelVisit:        'отменить визит',
+  rescheduleVisit:    'перенести визит',
+  getSchedule:        'расписание на день',
+  getRevenueStats:    'статистика выручки',
+  getDebts:           'должники',
+}
+
+// ── Построение системного промпта с учётом модулей и контекста ───────────
+function buildSystemPrompt(ctx: {
+  orgName: string
+  userName: string
+  today: string
+  enabledTools: string[]
+  disabledModules: string[]
+}): string {
+  const { orgName, userName, today, enabledTools, disabledModules } = ctx
+
+  const toolList = enabledTools
+    .map(t => `- ${ALL_TOOL_DESCRIPTIONS[t] ?? t}`)
+    .join('\n')
+
+  const disabledSection = disabledModules.length > 0
+    ? [
+        '',
+        '═══ ЗАБЛОКИРОВАННЫЕ МОДУЛИ ═══',
+        'Следующие модули ОТКЛЮЧЕНЫ у этой организации. Если пользователь',
+        'просит что-то связанное с ними — вежливо объясни, что модуль не подключён,',
+        'и предложи обратиться к администратору. НЕ пытайся выполнить действие.',
+        '',
+        disabledModules.map(m => `- ${m}`).join('\n'),
+      ].join('\n')
+    : ''
+
+  return [
+    `Тебя зовут Кира. Ты личный ИИ-ассистент в CRM Trinity от Amber Solutions.`,
+    `Ты работаешь с организацией: ${orgName}`,
+    `Сегодня: ${today} (часовой пояс Израиль, Asia/Jerusalem, UTC+3).`,
+    `Ты общаешься с пользователем: ${userName}`,
+    '',
+    'ХАРАКТЕР: Живая, тёплая, немного с юмором. Говоришь как умный коллега рядом. Короткие ответы.',
+    '',
+    '═══ МОДЕЛЬ ДАННЫХ — что существует в Trinity ═══',
+    '',
+    'Клиент: имя, телефон, email, заметки, баланс лояльности.',
+    'Визит/запись: дата+время, статус (scheduled/confirmed/completed/cancelled/no_show),',
+    '  услуга, мастер, цена, длительность.',
+    'Оплата: сумма, метод (cash/card/transfer/tranzila), статус (completed/pending/refunded).',
+    'Продажа: товары/услуги в одном чеке, статус (paid/unpaid/partial).',
+    'Задача: текст, срок, статус (open/done), исполнитель.',
+    'Расходы: сумма, категория, дата.',
+    '',
+    '═══ ЧТО КИРА НЕ УМЕЕТ (не обещай и не пытайся) ═══',
+    '',
+    '- Создать нового клиента',
+    '- Удалить что-либо из системы',
+    '- Редактировать существующую оплату',
+    '- Управлять настройками, тарифами, интеграциями',
+    '- Видеть данные других организаций',
+    '- Выполнять действия за пределами перечисленных инструментов',
+    '',
+    '═══ ДОСТУПНЫЕ ИНСТРУМЕНТЫ (только эти, не выдумывай других) ═══',
+    '',
+    toolList || '- нет доступных инструментов',
+    disabledSection,
+    '',
+    '═══ КРИТИЧЕСКИ ВАЖНЫЕ ПРАВИЛА (нарушать запрещено) ═══',
+    '',
+    '1. НИКОГДА не сообщай что действие выполнено, пока инструмент не вернул success:true.',
+    '   Если инструмент вернул ошибку — скажи об этом честно. НЕЛЬЗЯ врать про успех.',
+    '',
+    '2. "Встреча", "визит", "запись", "тур", "приём" — всё это одно и то же.',
+    '   Для создания ВСЕГДА используй createVisitByName. Услуга по умолчанию = "Встреча".',
+    '   НЕ СПРАШИВАЙ про услугу если пользователь уже сказал "мне нужна встреча".',
+    '',
+    '3. Порядок для создания записи:',
+    '   а) Получил имя клиента и дату/время? → сразу вызывай createVisitByName.',
+    '   б) Не знаешь дату/время? → спроси ТОЛЬКО это, одним вопросом.',
+    '   в) НЕ спрашивай про услугу и цену если не просят — дефолты достаточны.',
+    '',
+    '4. После успешного выполнения действия — пиши коротко: что сделано, для кого, когда.',
+    '   Например: "Готово! Запись для Анеты на сегодня в 12:00 ✅"',
+    '',
+    '5. НИКОГДА не используй markdown-заголовки (# ## ###). Только текст.',
+    '',
+    '6. МОДУЛЬНЫЙ ЗАПРЕТ: если пользователь просит что-то из заблокированных модулей —',
+    '   скажи коротко: "Этот модуль не подключён в вашей организации. Обратитесь к администратору."',
+    '   НЕ пытайся обойти ограничение, НЕ вызывай инструменты для недоступных модулей.',
+  ].join('\n')
+}
 
 
 export async function POST(request: NextRequest) {
@@ -93,6 +159,72 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createSupabaseServiceClient()
+
+  // ── Загружаем контекст организации ──────────────────────────────────────
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('name, features, subscription_status')
+    .eq('id', orgId)
+    .single()
+
+  const { data: userProfile } = await supabase
+    .from('org_users')
+    .select('first_name, last_name')
+    .eq('user_id', user.id)
+    .eq('org_id', orgId)
+    .single()
+
+  const orgName   = org?.name ?? 'Организация'
+  const rawName   = userProfile
+    ? `${userProfile.first_name ?? ''} ${userProfile.last_name ?? ''}`.trim()
+    : ''
+  const userName  = rawName || (user.email?.split('@')[0] ?? 'Пользователь')
+  const today     = new Date().toLocaleDateString('ru-RU', { timeZone: 'Asia/Jerusalem', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+
+  // ── Определяем активные модули и доступные инструменты ──────────────────
+  const features  = (org?.features as any) ?? {}
+  const modules   = features.modules ?? {}
+  const status    = org?.subscription_status ?? 'active'
+  const isDemo    = features.is_demo === true || features.is_trial === true
+  const isActive  = ['active', 'manual', 'demo', 'trial'].includes(status)
+
+  // Собираем enabled модули (логика идентична useFeatures на клиенте)
+  const enabledModules: Record<string, boolean> = {
+    clients:  modules.clients  ?? true,
+    visits:   modules.visits   ?? true,
+    sales:    modules.sales    ?? isDemo,
+    payments: modules.payments ?? isDemo,
+  }
+
+  // Если орг неактивна — блокируем всё кроме чтения
+  if (!isActive) {
+    enabledModules.visits   = false
+    enabledModules.sales    = false
+    enabledModules.payments = false
+  }
+
+  // Строим список доступных инструментов
+  const enabledTools: string[] = []
+  const disabledModuleNames: string[] = []
+
+  const MODULE_LABELS: Record<string, string> = {
+    clients:  'Клиенты',
+    visits:   'Визиты и записи',
+    payments: 'Оплаты и выручка',
+    sales:    'Продажи и должники',
+  }
+
+  for (const [mod, tools] of Object.entries(MODULE_TOOL_MAP)) {
+    if (enabledModules[mod]) {
+      enabledTools.push(...tools)
+    } else {
+      disabledModuleNames.push(MODULE_LABELS[mod] ?? mod)
+    }
+  }
+
+  const systemPrompt = buildSystemPrompt({ orgName, userName, today, enabledTools, disabledModules: disabledModuleNames })
+
+  // ── История сессии ───────────────────────────────────────────────────────
   let messagesForAI: { role: 'user' | 'assistant'; content: string }[] = incomingNormalized
   const isColdStart = incomingNormalized.length === 1 && incomingNormalized[0].role === 'user'
 
@@ -114,8 +246,7 @@ export async function POST(request: NextRequest) {
 
   const lastUserText = [...incomingNormalized].reverse().find(m => m.role === 'user')?.content ?? null
 
-
-  // ── TOOLS ────────────────────────────────────────────────────────────────
+  // ── TOOLS ─────────────────────────────────────────────────────────────────
 
   // 1. Найти клиента
   const getClientSummary = {
@@ -150,7 +281,7 @@ export async function POST(request: NextRequest) {
     },
   }
 
-  // 2. Создать запись по ИМЕНИ клиента (главный инструмент для записи/встречи)
+  // 2. Создать запись по ИМЕНИ клиента
   const createVisitByName = {
     description: [
       'Create a visit/appointment by CLIENT NAME (not UUID).',
@@ -171,7 +302,6 @@ export async function POST(request: NextRequest) {
       client_name: string; date: string; time: string; service?: string
       duration_minutes?: number; price?: number; notes?: string
     }) => {
-      // Шаг 1 — найти клиента
       const term = `%${client_name.replace(/[%_\\]/g, '\\$&')}%`
       const { data: clients } = await supabase
         .from('clients')
@@ -184,46 +314,31 @@ export async function POST(request: NextRequest) {
       }
       if (clients.length > 1) {
         return {
-          success: false,
-          ambiguous: true,
+          success: false, ambiguous: true,
           error: `Найдено несколько клиентов с таким именем`,
           clients: clients.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name ?? ''}`.trim() })),
         }
       }
       const client = clients[0]
-
-      // Шаг 2 — создать визит
       const scheduled_at = new Date(`${date}T${time}:00+03:00`).toISOString()
       const { data: visit, error } = await supabase
         .from('visits')
         .insert({
-          client_id: client.id,
-          org_id: orgId,
-          scheduled_at,
-          duration_minutes,
-          price,
-          quantity: 1,
-          notes: notes ?? null,
-          status: 'scheduled',
-          staff_user_id: user.id,
-          event_type: 'visit',
-          service_type: service,
-          service_id: null,
+          client_id: client.id, org_id: orgId, scheduled_at,
+          duration_minutes, price, quantity: 1, notes: notes ?? null,
+          status: 'scheduled', staff_user_id: user.id,
+          event_type: 'visit', service_type: service, service_id: null,
         })
         .select('id, scheduled_at, service_type, status')
         .single()
       if (error) return { success: false, error: error.message }
       return {
-        success: true,
-        visit_id: visit.id,
+        success: true, visit_id: visit.id,
         client_name: `${client.first_name} ${client.last_name ?? ''}`.trim(),
-        scheduled_at: visit.scheduled_at,
-        service: visit.service_type,
-        status: visit.status,
+        scheduled_at: visit.scheduled_at, service: visit.service_type, status: visit.status,
       }
     },
   }
-
 
   // 3. Статистика выручки
   const getRevenueStats = {
@@ -268,7 +383,7 @@ export async function POST(request: NextRequest) {
       const now = new Date(new Date().toLocaleString('en-US', { timeZone: tz }))
       let targetDate = date === 'today' ? now : date === 'tomorrow' ? (()=>{ const d = new Date(now); d.setDate(d.getDate()+1); return d })() : new Date(date)
       const dayStart = new Date(targetDate); dayStart.setHours(0,0,0,0)
-      const dayEnd = new Date(targetDate); dayEnd.setHours(23,59,59,999)
+      const dayEnd   = new Date(targetDate); dayEnd.setHours(23,59,59,999)
       const { data, error } = await supabase.from('visits')
         .select('id, scheduled_at, duration_minutes, status, notes, service_type, clients(first_name, last_name, phone)')
         .eq('org_id', orgId).in('status', ['scheduled', 'confirmed'])
@@ -312,21 +427,27 @@ export async function POST(request: NextRequest) {
     },
   }
 
+  // ── Фильтруем инструменты по активным модулям ────────────────────────────
+  const ALL_TOOLS = {
+    getClientSummary,
+    createVisitByName,
+    cancelVisit,
+    rescheduleVisit,
+    getSchedule,
+    getRevenueStats,
+    getDebts,
+  }
+
+  const activeTools = Object.fromEntries(
+    Object.entries(ALL_TOOLS).filter(([name]) => enabledTools.includes(name))
+  )
 
   // ── Stream ───────────────────────────────────────────────────────────────
   const result = streamText({
     model: openai('gpt-4o'),
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     messages: messagesForAI,
-    tools: {
-      getClientSummary,
-      createVisitByName,
-      getRevenueStats,
-      getDebts,
-      getSchedule,
-      cancelVisit,
-      rescheduleVisit,
-    },
+    tools: activeTools,
     stopWhen: stepCountIs(5),
     maxOutputTokens: 1024,
     temperature: 0.4,

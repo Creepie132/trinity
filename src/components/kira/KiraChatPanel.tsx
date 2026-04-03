@@ -89,7 +89,16 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
   const dismissProactive = useCallback(() => { setBadge(false); setProactive(null) }, [])
 
   // ── Новая сессия (сброс контекста) ────────────────────────────────────
-  const handleNewSession = useCallback(() => {
+  const handleNewSession = useCallback(async () => {
+    // 1. Закрываем сессию в БД — чтобы при F5 она не восстановилась
+    if (sessionIdRef.current) {
+      try {
+        await fetch(`/api/kira/session?sessionId=${sessionIdRef.current}`, { method: 'DELETE' })
+      } catch (e) {
+        console.error('[kira] failed to close session:', e)
+      }
+    }
+    // 2. Чистим локальный стейт
     setMessages([])
     sessionIdRef.current = null
     setSessionId(null)
@@ -101,7 +110,15 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
 
   // ── Автоскролл вниз при новых сообщениях ─────────────────────────────
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // setTimeout даёт DOM время физически отрисовать новые блоки.
+    // scrollTop на контейнере — единственный надёжный способ скролла
+    // внутри div с overflow-y-auto (scrollIntoView работает от window).
+    const timer = setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      }
+    }, 100)
+    return () => clearTimeout(timer)
   }, [messages, isLoading])
 
   const handleSend = async () => {

@@ -11,11 +11,12 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseServiceClient()
 
-  // Ищем последнюю сессию этого орга
+  // Ищем последнюю АКТИВНУЮ сессию этого орга
   const { data: existingSession } = await supabase
     .from('kira_sessions')
     .select('id')
     .eq('org_id', orgId)
+    .eq('status', 'active')
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
@@ -25,10 +26,10 @@ export async function POST(request: NextRequest) {
   if (existingSession) {
     sessionId = existingSession.id
   } else {
-    // Создаём новую сессию
+    // Создаём новую сессию со статусом active
     const { data: newSession, error } = await supabase
       .from('kira_sessions')
-      .insert({ org_id: orgId })
+      .insert({ org_id: orgId, status: 'active' })
       .select('id')
       .single()
 
@@ -50,4 +51,32 @@ export async function POST(request: NextRequest) {
   const history = (messages ?? []).reverse()
 
   return NextResponse.json({ sessionId, messages: history })
+}
+
+export async function DELETE(request: NextRequest) {
+  const auth = await getAuthContext(request)
+  if ('error' in auth) return auth.error
+  const { orgId } = auth
+
+  const { searchParams } = new URL(request.url)
+  const sessionId = searchParams.get('sessionId')
+
+  if (!sessionId) {
+    return NextResponse.json({ error: 'sessionId is required' }, { status: 400 })
+  }
+
+  const supabase = createSupabaseServiceClient()
+
+  // Закрываем сессию — только если она принадлежит этому орг (защита от чужих данных)
+  const { error } = await supabase
+    .from('kira_sessions')
+    .update({ status: 'closed' })
+    .eq('id', sessionId)
+    .eq('org_id', orgId)
+
+  if (error) {
+    return NextResponse.json({ error: 'Failed to close session' }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
 }

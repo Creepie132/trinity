@@ -30,7 +30,7 @@ function extractText(msg: RawMsg): string {
 
 // ── Модули Trinity и к каким инструментам они дают доступ ────────────────
 const MODULE_TOOL_MAP: Record<string, string[]> = {
-  visits:   ['createVisitByName', 'cancelVisit', 'rescheduleVisit', 'getSchedule'],
+  visits:   ['createVisitByName', 'cancelVisit', 'rescheduleVisit', 'updateVisitType', 'getSchedule'],
   clients:  ['getClientSummary'],
   payments: ['getRevenueStats'],
   sales:    ['getDebts'],
@@ -42,6 +42,7 @@ const ALL_TOOL_DESCRIPTIONS: Record<string, string> = {
   createVisitByName:  'создать запись/визит',
   cancelVisit:        'отменить визит',
   rescheduleVisit:    'перенести визит',
+  updateVisitType:    'изменить тип записи (встреча ↔ визит)',
   getSchedule:        'расписание на день',
   getRevenueStats:    'статистика выручки',
   getDebts:           'должники',
@@ -116,6 +117,7 @@ function buildSystemPrompt(ctx: {
     '   "встреча" / "встречу" / "meeting" → event_type="meeting", service="Встреча"',
     '   "визит" / "запись" / "приём" / "тур" → event_type="visit", service="Визит"',
     '   Для создания ВСЕГДА используй createVisitByName с правильным event_type.',
+    '   Если пользователь говорит "ой ошибся", "измени на встречу/визит" → используй updateVisitType.',
     '   НЕ СПРАШИВАЙ про услугу и цену если не просят — дефолты достаточны.',
     '',
     '3. Порядок для создания записи/встречи:',
@@ -461,12 +463,63 @@ export async function POST(request: NextRequest) {
     },
   }
 
+  // 8. Изменить тип записи (встреча ↔ визит) по имени клиента
+  const updateVisitType = {
+    description: [
+      'Change event_type of the most recent scheduled visit for a client.',
+      'Use when user says "измени на встречу", "измени на визит", "ой ошибся" etc.',
+      'Finds the latest scheduled/confirmed visit for the client by name and updates its event_type and service_type.',
+    ].join(' '),
+    inputSchema: zodSchema(z.object({
+      client_name: z.string().describe('Client first name or full name'),
+      event_type: z.enum(['visit', 'meeting']).describe('"meeting" for встреча, "visit" for визит'),
+      visit_id: z.string().optional().describe('Specific visit UUID if known, otherwise finds latest'),
+    })),
+    execute: async ({ client_name, event_type, visit_id }: { client_name: string; event_type: 'visit' | 'meeting'; visit_id?: string }) => {
+      let targetVisitId = visit_id
+
+      if (!targetVisitId) {
+        // Находим клиента
+        const term = `%${client_name.replace(/[%_\\]/g, '\\$&')}%`
+        const { data: clients } = await supabase
+          .from('clients').select('id, first_name, last_name')
+          .eq('org_id', orgId)
+          .or(`first_name.ilike.${term},last_name.ilike.${term}`)
+          .limit(3)
+        if (!clients?.length) return { success: false, error: `Клиент "${client_name}" не найден` }
+        if (clients.length > 1) return {
+          success: false, ambiguous: true,
+          clients: clients.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name ?? ''}`.trim() })),
+        }
+
+        // Берём последний запланированный визит
+        const { data: visits } = await supabase
+          .from('visits').select('id, scheduled_at, event_type, service_type')
+          .eq('org_id', orgId).eq('client_id', clients[0].id)
+          .in('status', ['scheduled', 'confirmed'])
+          .order('scheduled_at', { ascending: false })
+          .limit(1)
+        if (!visits?.length) return { success: false, error: `Нет активных записей для клиента "${client_name}"` }
+        targetVisitId = visits[0].id
+      }
+
+      const newService = event_type === 'meeting' ? 'Встреча' : 'Визит'
+      const { error } = await supabase.from('visits')
+        .update({ event_type, service_type: newService, updated_at: new Date().toISOString() })
+        .eq('id', targetVisitId).eq('org_id', orgId)
+
+      if (error) return { success: false, error: error.message }
+      return { success: true, visit_id: targetVisitId, event_type, service_type: newService }
+    },
+  }
+
   // ── Фильтруем инструменты по активным модулям ────────────────────────────
   const ALL_TOOLS = {
     getClientSummary,
     createVisitByName,
     cancelVisit,
     rescheduleVisit,
+    updateVisitType,
     getSchedule,
     getRevenueStats,
     getDebts,

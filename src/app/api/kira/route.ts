@@ -31,14 +31,15 @@ function extractText(msg: RawMsg): string {
 // ── Модули Trinity и к каким инструментам они дают доступ ────────────────
 const MODULE_TOOL_MAP: Record<string, string[]> = {
   visits:   ['createVisitByName', 'cancelVisit', 'rescheduleVisit', 'updateVisitType', 'getSchedule'],
-  clients:  ['getClientSummary'],
+  clients:  ['getClientSummary', 'getTopClients'],
   payments: ['getRevenueStats'],
   sales:    ['getDebts'],
 }
 
 // Список всех инструментов с читаемым описанием для промпта
 const ALL_TOOL_DESCRIPTIONS: Record<string, string> = {
-  getClientSummary:   'поиск клиента',
+  getClientSummary:   'поиск клиента по имени/телефону',
+  getTopClients:      'топ клиентов по выручке (LTV)',
   createVisitByName:  'создать запись/визит',
   cancelVisit:        'отменить визит',
   rescheduleVisit:    'перенести визит',
@@ -125,7 +126,10 @@ function buildSystemPrompt(ctx: {
     '   "встреча" / "встречу" / "meeting" → event_type="meeting", service="Встреча"',
     '   "визит" / "запись" / "приём" / "тур" → event_type="visit", service="Визит"',
     '   Для создания ВСЕГДА используй createVisitByName с правильным event_type.',
-    '   Если пользователь говорит "ой ошибся", "измени на встречу/визит" → используй updateVisitType.',
+    '   Если пользователь говорит "ой ошибся", "измени на встречу/визит" →',
+    '   используй updateVisitType. ВАЖНО: если в предыдущем ответе был создан визит',
+    '   и известен visit_id — передай его явно в visit_id. Если имя клиента известно',
+    '   из контекста — передай в client_name. Никогда не вызывай без хотя бы одного из них.',
     '   НЕ СПРАШИВАЙ про услугу и цену если не просят — дефолты достаточны.',
     '',
     '3. Порядок для создания записи/встречи:',
@@ -478,39 +482,51 @@ export async function POST(request: NextRequest) {
     description: [
       'Change event_type of the most recent scheduled visit for a client.',
       'Use when user says "измени на встречу", "измени на визит", "ой ошибся" etc.',
-      'Finds the latest scheduled/confirmed visit for the client by name and updates its event_type and service_type.',
+      'PRIORITY: if visit_id is known from previous assistant response — pass it directly.',
+      'Otherwise finds the latest scheduled/confirmed visit for the client by name.',
     ].join(' '),
     inputSchema: zodSchema(z.object({
-      client_name: z.string().describe('Client first name or full name'),
+      client_name: z.string().optional().describe('Client first name or full name — use if visit_id unknown'),
       event_type: z.enum(['visit', 'meeting']).describe('"meeting" for встреча, "visit" for визит'),
-      visit_id: z.string().optional().describe('Specific visit UUID if known, otherwise finds latest'),
+      visit_id: z.string().optional().describe('Specific visit UUID if known from previous step — preferred over client_name'),
     })),
-    execute: async ({ client_name, event_type, visit_id }: { client_name: string; event_type: 'visit' | 'meeting'; visit_id?: string }) => {
+    execute: async ({ client_name, event_type, visit_id }: { client_name?: string; event_type: 'visit' | 'meeting'; visit_id?: string }) => {
       let targetVisitId = visit_id
 
       if (!targetVisitId) {
-        // Находим клиента
-        const term = `%${client_name.replace(/[%_\\]/g, '\\$&')}%`
-        const { data: clients } = await supabase
-          .from('clients').select('id, first_name, last_name')
-          .eq('org_id', orgId)
-          .or(`first_name.ilike.${term},last_name.ilike.${term}`)
-          .limit(3)
-        if (!clients?.length) return { success: false, error: `Клиент "${client_name}" не найден` }
-        if (clients.length > 1) return {
-          success: false, ambiguous: true,
-          clients: clients.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name ?? ''}`.trim() })),
+        if (!client_name) {
+          // Последний созданный визит в этой орг за последние 10 минут
+          const since = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+          const { data: recent } = await supabase
+            .from('visits').select('id, scheduled_at, event_type, service_type')
+            .eq('org_id', orgId)
+            .in('status', ['scheduled', 'confirmed'])
+            .gte('created_at', since)
+            .order('created_at', { ascending: false })
+            .limit(1)
+          if (!recent?.length) return { success: false, error: 'Не удалось найти недавно созданную запись. Уточни имя клиента.' }
+          targetVisitId = recent[0].id
+        } else {
+          const term = `%${client_name.replace(/[%_\\]/g, '\\$&')}%`
+          const { data: clients } = await supabase
+            .from('clients').select('id, first_name, last_name')
+            .eq('org_id', orgId)
+            .or(`first_name.ilike.${term},last_name.ilike.${term}`)
+            .limit(3)
+          if (!clients?.length) return { success: false, error: `Клиент "${client_name}" не найден` }
+          if (clients.length > 1) return {
+            success: false, ambiguous: true,
+            clients: clients.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name ?? ''}`.trim() })),
+          }
+          const { data: visits } = await supabase
+            .from('visits').select('id, scheduled_at, event_type, service_type')
+            .eq('org_id', orgId).eq('client_id', clients[0].id)
+            .in('status', ['scheduled', 'confirmed'])
+            .order('scheduled_at', { ascending: false })
+            .limit(1)
+          if (!visits?.length) return { success: false, error: `Нет активных записей для клиента "${client_name}"` }
+          targetVisitId = visits[0].id
         }
-
-        // Берём последний запланированный визит
-        const { data: visits } = await supabase
-          .from('visits').select('id, scheduled_at, event_type, service_type')
-          .eq('org_id', orgId).eq('client_id', clients[0].id)
-          .in('status', ['scheduled', 'confirmed'])
-          .order('scheduled_at', { ascending: false })
-          .limit(1)
-        if (!visits?.length) return { success: false, error: `Нет активных записей для клиента "${client_name}"` }
-        targetVisitId = visits[0].id
       }
 
       const newService = event_type === 'meeting' ? 'Встреча' : 'Визит'
@@ -523,9 +539,67 @@ export async function POST(request: NextRequest) {
     },
   }
 
+  // 9. Топ клиентов по выручке (LTV)
+  const getTopClients = {
+    description: 'Get top clients by total revenue (LTV). Use for "кто принёс больше денег", "лучшие клиенты", "топ клиентов".',
+    inputSchema: zodSchema(z.object({
+      limit: z.number().optional().describe('How many top clients to return, default 5'),
+      period: z.enum(['all', 'month', 'year']).optional().describe('Time period: all (default), month, year'),
+    })),
+    execute: async ({ limit = 5, period = 'all' }: { limit?: number; period?: 'all' | 'month' | 'year' }) => {
+      const now = new Date()
+      let dateFilter: string | null = null
+      if (period === 'month') dateFilter = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+      if (period === 'year')  dateFilter = new Date(now.getFullYear(), 0, 1).toISOString()
+
+      let query = supabase
+        .from('payments')
+        .select('client_id, amount')
+        .eq('org_id', orgId)
+        .eq('status', 'completed')
+      if (dateFilter) query = query.gte('paid_at', dateFilter)
+
+      const { data: payments, error } = await query
+      if (error || !payments?.length) return { found: false, clients: [] }
+
+      // Агрегируем LTV по client_id
+      const ltv: Record<string, number> = {}
+      for (const p of payments) {
+        ltv[p.client_id] = (ltv[p.client_id] ?? 0) + Number(p.amount)
+      }
+      const topIds = Object.entries(ltv)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, limit)
+        .map(([id]) => id)
+
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, first_name, last_name, phone')
+        .eq('org_id', orgId)
+        .in('id', topIds)
+
+      if (!clients?.length) return { found: false, clients: [] }
+
+      const result = topIds
+        .map(id => {
+          const c = clients.find(cl => cl.id === id)
+          if (!c) return null
+          return {
+            name: `${c.first_name} ${c.last_name ?? ''}`.trim(),
+            phone: c.phone ?? '—',
+            ltv_ils: Math.round((ltv[id] ?? 0) * 100) / 100,
+          }
+        })
+        .filter(Boolean)
+
+      return { found: true, period, clients: result }
+    },
+  }
+
   // ── Фильтруем инструменты по активным модулям ────────────────────────────
   const ALL_TOOLS = {
     getClientSummary,
+    getTopClients,
     createVisitByName,
     cancelVisit,
     rescheduleVisit,

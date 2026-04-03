@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileHeader } from '@/components/layout/MobileHeader'
-import { GoldTabBar } from '@/components/layout/GoldTabBar'
 import { BranchProvider } from '@/contexts/BranchContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GlobalSearch } from '@/components/GlobalSearch'
@@ -215,7 +214,6 @@ function DashboardInner({ children }: { children: React.ReactNode }) {
         </div>
         <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
         <PinnedModalsTray />
-        <GoldTabBar />
         <ClientProviders />
       </DemoLimitGuardProvider>
     </WaNotificationProvider>

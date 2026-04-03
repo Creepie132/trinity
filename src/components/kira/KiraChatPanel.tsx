@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js'
 import { KiraWave } from '@/components/kira/KiraWave'
 import type { KiraWaveState } from '@/components/kira/KiraWave'
 import { DebtWidget } from '@/components/kira/ui/DebtWidget'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface KiraChatPanelProps { orgId: string }
 type HistoryMessage = { role: 'user' | 'assistant'; content: string }
@@ -18,6 +19,7 @@ const supabaseRealtime = createClient(
 )
 
 export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
+  const { language } = useLanguage()
   const scrollRef      = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   // Ref для sessionId — читается при каждом запросе, не при монтировании
@@ -35,7 +37,7 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
   const { messages, sendMessage, setMessages, status, error, clearError } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/kira',
-      body: () => ({ sessionId: sessionIdRef.current, orgId }),
+      body: () => ({ sessionId: sessionIdRef.current, orgId, language }),
     }),
   })
 

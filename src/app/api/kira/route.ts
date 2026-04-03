@@ -55,8 +55,13 @@ function buildSystemPrompt(ctx: {
   today: string
   enabledTools: string[]
   disabledModules: string[]
+  language: 'he' | 'ru'
 }): string {
-  const { orgName, userName, today, enabledTools, disabledModules } = ctx
+  const { orgName, userName, today, enabledTools, disabledModules, language } = ctx
+
+  const langInstruction = language === 'he'
+    ? 'שפת התקשורת: עברית. תמיד תענה בעברית בלבד, ללא יוצא מן הכלל. גם אם המשתמש כותב ברוסית — תענה בעברית.'
+    : 'Язык общения: русский. Всегда отвечай только на русском, без исключений. Даже если пользователь пишет на иврите — отвечай на русском.'
 
   const toolList = enabledTools
     .map(t => `- ${ALL_TOOL_DESCRIPTIONS[t] ?? t}`)
@@ -79,6 +84,9 @@ function buildSystemPrompt(ctx: {
     `Ты работаешь с организацией: ${orgName}`,
     `Сегодня: ${today} (часовой пояс Израиль, Asia/Jerusalem, UTC+3).`,
     `Ты общаешься с пользователем: ${userName}`,
+    '',
+    `═══ ЯЗЫК ОБЩЕНИЯ (АБСОЛЮТНЫЙ ПРИОРИТЕТ) ═══`,
+    langInstruction,
     '',
     'ХАРАКТЕР: Живая, тёплая, немного с юмором. Говоришь как умный коллега рядом. Короткие ответы.',
     '',
@@ -144,10 +152,12 @@ export async function POST(request: NextRequest) {
 
   let rawMessages: RawMsg[]
   let sessionId: string | null
+  let language: 'he' | 'ru'
   try {
     const body = await request.json()
     rawMessages = body.messages ?? []
     sessionId = body.sessionId ?? null
+    language = (body.language === 'he' || body.language === 'ru') ? body.language : 'ru'
     if (!Array.isArray(rawMessages) || rawMessages.length === 0) {
       return new Response(JSON.stringify({ error: 'No messages' }), { status: 400 })
     }
@@ -228,7 +238,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const systemPrompt = buildSystemPrompt({ orgName, userName, today, enabledTools, disabledModules: disabledModuleNames })
+  const systemPrompt = buildSystemPrompt({ orgName, userName, today, enabledTools, disabledModules: disabledModuleNames, language })
 
   // ── История сессии ───────────────────────────────────────────────────────
   let messagesForAI: { role: 'user' | 'assistant'; content: string }[] = incomingNormalized

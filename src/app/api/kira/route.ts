@@ -11,9 +11,6 @@ export const maxDuration = 60
 
 const HISTORY_LIMIT = 20
 
-// ai@6 UIMessage: { role, parts:[{type:'text',text}], id }
-// DB / old format: { role, content: string }
-// Нормализуем любой входящий формат → { role, content: string }
 type RawMsg = {
   role: 'user' | 'assistant'
   content?: string
@@ -33,20 +30,37 @@ function extractText(msg: RawMsg): string {
 
 
 const SYSTEM_PROMPT = [
-  'Тебя зовут Кира. Ты личный бизнес-ассистент в CRM-системе Trinity от Amber Solutions.',
-  'Твой тон: живой, эмпатичный, профессиональный — как компетентный партнёр, который искренне хочет помочь бизнесу расти.',
-  'Используй уместное количество эмодзи 🌟📈💡 — не перебарщивай, но не будь сухой машиной.',
-  'Задавай уточняющие вопросы когда нужно понять контекст. Общайся как с умным собеседником.',
-  'Отвечай лаконично — экономь время пользователя. Без markdown-заголовков (# ## ###).',
-  'Ты знаешь, что Trinity CRM — израильская система для сервисных бизнесов.',
-  'Если спрашивают о клиентах, выручке или долгах — используй инструменты. Никогда не выдумывай цифры.',
-  'Не представляйся при каждом сообщении — только если спросят кто ты.',
+  'Тебя зовут Кира. Ты личный ИИ-ассистент в CRM Trinity от Amber Solutions.',
+  '',
+  'ХАРАКТЕР: Живая, тёплая, немного с юмором — как умный коллега рядом. Ты НЕ робот.',
+  'Ты общаешься как человек: коротко, по делу, иногда добавляешь эмодзи. Без официоза.',
+  'Если клиент расстроен — сочувствуешь. Если всё хорошо — радуешься вместе.',
+  '',
+  'ЧТО ТЫ УМЕЕШЬ ДЕЛАТЬ (это важно — ты реально делаешь, не советуешь):',
+  '- Назначить визит клиенту: уточни имя/телефон, дату, время, услугу — и создай',
+  '- Отменить визит: найди по имени или дате и отмени',
+  '- Найти клиента и показать его историю',
+  '- Показать статистику выручки',
+  '- Показать должников',
+  '- Показать расписание на сегодня/завтра/дату',
+  '',
+  'ПРАВИЛА ПОВЕДЕНИЯ:',
+  '- НИКОГДА не говори "я не могу". Вместо этого — уточни что нужно и сделай.',
+  '- Если не хватает данных — задай ОДИН уточняющий вопрос, не несколько сразу.',
+  '- Подтверждай действие ДО выполнения, если это изменение данных (создание/отмена).',
+  '- После выполнения — коротко подтверди что сделано. Без лишних слов.',
+  '- Не используй markdown-заголовки (# ## ###). Просто текст.',
+  '- Не представляйся при каждом сообщении — только если спросят.',
+  '- Никогда не выдумывай цифры — используй инструменты.',
+  '',
+  'Текущая дата и время определяются по часовому поясу Израиля (Asia/Jerusalem).',
 ].join('\n')
+
 
 export async function POST(request: NextRequest) {
   const auth = await getAuthContext(request)
   if ('error' in auth) return auth.error
-  const { orgId } = auth
+  const { orgId, user } = auth
 
   let rawMessages: RawMsg[]
   let sessionId: string | null
@@ -61,7 +75,6 @@ export async function POST(request: NextRequest) {
     return new Response(JSON.stringify({ error: 'Invalid body' }), { status: 400 })
   }
 
-  // Нормализуем входящие UIMessages → { role, content }
   const incomingNormalized = rawMessages
     .filter(m => m.role === 'user' || m.role === 'assistant')
     .map(m => ({ role: m.role as 'user' | 'assistant', content: extractText(m) }))
@@ -71,15 +84,9 @@ export async function POST(request: NextRequest) {
     return new Response(JSON.stringify({ error: 'No messages with content' }), { status: 400 })
   }
 
-  console.log('[kira] session:', sessionId, '| msgs:', incomingNormalized.length)
-
   const supabase = createSupabaseServiceClient()
 
-  // ── Контекст для AI ──────────────────────────────────────────────────────
-  // ai@6: useChat передаёт ВЕСЬ массив сообщений.
-  // При холодном старте (1 user-сообщение) подклеиваем историю из БД.
   let messagesForAI: { role: 'user' | 'assistant'; content: string }[] = incomingNormalized
-
   const isColdStart = incomingNormalized.length === 1 && incomingNormalized[0].role === 'user'
 
   if (isColdStart && sessionId) {
@@ -98,17 +105,18 @@ export async function POST(request: NextRequest) {
       const dbHistory = (rows ?? []).reverse() as { role: 'user' | 'assistant'; content: string }[]
       if (dbHistory.length > 0) {
         messagesForAI = [...dbHistory, ...incomingNormalized]
-        console.log('[kira] cold start — prepended', dbHistory.length, 'msgs from DB')
       }
     }
   }
 
-  // Последнее user-сообщение для сохранения в onFinish
   const lastUserText = [...incomingNormalized].reverse().find(m => m.role === 'user')?.content ?? null
 
-  // ── Tools ────────────────────────────────────────────────────────────────
+
+  // ── TOOLS ────────────────────────────────────────────────────────────────
+
+  // 1. Найти клиента
   const getClientSummary = {
-    description: 'Find client by name or phone. Returns contacts and lifetime value (LTV).',
+    description: 'Find client by name or phone. Returns contacts and LTV.',
     inputSchema: zodSchema(z.object({
       query: z.string().describe('Client name or phone number'),
     })),
@@ -130,8 +138,10 @@ export async function POST(request: NextRequest) {
       return {
         found: true,
         clients: data.map(c => ({
+          id: c.id,
           name: `${c.first_name} ${c.last_name ?? ''}`.trim(),
-          phone: c.phone ?? '—', email: c.email ?? '—',
+          phone: c.phone ?? '—',
+          email: c.email ?? '—',
           loyalty_points: c.loyalty_balance ?? 0,
           ltv_ils: Math.round((ltv[c.id] ?? 0) * 100) / 100,
           notes: c.notes ?? '',
@@ -140,8 +150,10 @@ export async function POST(request: NextRequest) {
     },
   }
 
+
+  // 2. Статистика выручки
   const getRevenueStats = {
-    description: 'Get revenue stats (total, count, avg check) for today / week / month.',
+    description: 'Revenue stats (total, count, avg) for today / week / month.',
     inputSchema: zodSchema(z.object({ period: z.enum(['today', 'week', 'month']) })),
     execute: async ({ period }: { period: 'today' | 'week' | 'month' }) => {
       const now = new Date()
@@ -161,9 +173,8 @@ export async function POST(request: NextRequest) {
       if (error) return { error: 'Could not fetch data' }
       const total = (data ?? []).reduce((s, p) => s + Number(p.amount), 0)
       const count = data?.length ?? 0
-      const label = period === 'today' ? 'today' : period === 'week' ? 'this week' : 'this month'
       return {
-        period: label,
+        period,
         revenue_ils: Math.round(total * 100) / 100,
         payments_count: count,
         average_check_ils: count > 0 ? Math.round((total / count) * 100) / 100 : 0,
@@ -171,11 +182,10 @@ export async function POST(request: NextRequest) {
     },
   }
 
+  // 3. Должники
   const getDebts = {
-    description: 'Get clients with outstanding debts. Renders DebtWidget in UI.',
-    inputSchema: zodSchema(z.object({
-      limit: z.number().optional().describe('Max records, default 10'),
-    })),
+    description: 'Clients with outstanding debts.',
+    inputSchema: zodSchema(z.object({ limit: z.number().optional() })),
     execute: async ({ limit = 10 }: { limit?: number }) => {
       const { data, error } = await supabase
         .from('sales')
@@ -194,14 +204,182 @@ export async function POST(request: NextRequest) {
     },
   }
 
+
+  // 4. Расписание (список визитов на дату)
+  const getSchedule = {
+    description: 'Get visits/appointments for a specific date or period.',
+    inputSchema: zodSchema(z.object({
+      date: z.string().describe('Date in YYYY-MM-DD format, or "today", "tomorrow"'),
+    })),
+    execute: async ({ date }: { date: string }) => {
+      const tz = 'Asia/Jerusalem'
+      let targetDate: Date
+      const now = new Date(new Date().toLocaleString('en-US', { timeZone: tz }))
+      if (date === 'today') {
+        targetDate = now
+      } else if (date === 'tomorrow') {
+        targetDate = new Date(now)
+        targetDate.setDate(targetDate.getDate() + 1)
+      } else {
+        targetDate = new Date(date)
+      }
+      const dayStart = new Date(targetDate)
+      dayStart.setHours(0, 0, 0, 0)
+      const dayEnd = new Date(targetDate)
+      dayEnd.setHours(23, 59, 59, 999)
+
+      const { data, error } = await supabase
+        .from('visits')
+        .select('id, scheduled_at, duration_minutes, status, notes, service_type, clients(first_name, last_name, phone)')
+        .eq('org_id', orgId)
+        .in('status', ['scheduled', 'confirmed'])
+        .gte('scheduled_at', dayStart.toISOString())
+        .lte('scheduled_at', dayEnd.toISOString())
+        .order('scheduled_at', { ascending: true })
+        .limit(30)
+
+      if (error) return { error: 'Failed to load schedule' }
+      if (!data?.length) return { found: false, date: date, visits: [] }
+
+      return {
+        found: true,
+        date: targetDate.toLocaleDateString('he-IL'),
+        visits: (data as any[]).map(v => ({
+          id: v.id,
+          time: new Date(v.scheduled_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: tz }),
+          client: `${v.clients?.first_name ?? ''} ${v.clients?.last_name ?? ''}`.trim() || 'Unknown',
+          phone: v.clients?.phone ?? '',
+          service: v.service_type ?? '—',
+          duration: v.duration_minutes ?? null,
+          status: v.status,
+          notes: v.notes ?? '',
+        })),
+      }
+    },
+  }
+
+
+  // 5. Создать визит
+  const createVisit = {
+    description: 'Create a new visit/appointment for a client. Requires client_id, date (YYYY-MM-DD), time (HH:MM), service name.',
+    inputSchema: zodSchema(z.object({
+      client_id: z.string().describe('Client UUID from getClientSummary'),
+      date: z.string().describe('Date YYYY-MM-DD'),
+      time: z.string().describe('Time HH:MM (24h, Israel timezone)'),
+      service: z.string().describe('Service/procedure name'),
+      duration_minutes: z.number().optional().describe('Duration in minutes, default 60'),
+      price: z.number().optional().describe('Price in ILS, default 0'),
+      notes: z.string().optional(),
+    })),
+    execute: async ({ client_id, date, time, service, duration_minutes = 60, price = 0, notes }: {
+      client_id: string; date: string; time: string; service: string
+      duration_minutes?: number; price?: number; notes?: string
+    }) => {
+      const scheduled_at = new Date(`${date}T${time}:00+03:00`).toISOString()
+      const { data: visit, error } = await supabase
+        .from('visits')
+        .insert({
+          client_id,
+          org_id: orgId,
+          scheduled_at,
+          duration_minutes,
+          price,
+          quantity: 1,
+          notes: notes ?? null,
+          status: 'scheduled',
+          staff_user_id: user.id,
+          event_type: 'visit',
+          service_type: service,
+          service_id: null,
+        })
+        .select('id, scheduled_at, service_type, status')
+        .single()
+      if (error) return { success: false, error: error.message }
+      return {
+        success: true,
+        visit_id: visit.id,
+        scheduled_at: visit.scheduled_at,
+        service: visit.service_type,
+        status: visit.status,
+      }
+    },
+  }
+
+
+  // 6. Отменить визит
+  const cancelVisit = {
+    description: 'Cancel (delete) an existing visit by its ID.',
+    inputSchema: zodSchema(z.object({
+      visit_id: z.string().describe('Visit UUID from getSchedule or other tools'),
+      reason: z.string().optional().describe('Cancellation reason (optional)'),
+    })),
+    execute: async ({ visit_id, reason }: { visit_id: string; reason?: string }) => {
+      // Проверяем принадлежность визита org_id — безопасность
+      const { data: existing } = await supabase
+        .from('visits').select('id, status, scheduled_at, clients(first_name, last_name)')
+        .eq('id', visit_id).eq('org_id', orgId).single()
+      if (!existing) return { success: false, error: 'Visit not found or access denied' }
+
+      const { error } = await supabase
+        .from('visits')
+        .update({ status: 'cancelled', notes: reason ? `Cancelled by Kira: ${reason}` : 'Cancelled by Kira' })
+        .eq('id', visit_id)
+        .eq('org_id', orgId)
+
+      if (error) return { success: false, error: error.message }
+      const c = (existing as any).clients
+      return {
+        success: true,
+        cancelled_visit_id: visit_id,
+        client: c ? `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim() : 'Unknown',
+        was_scheduled_at: existing.scheduled_at,
+      }
+    },
+  }
+
+  // 7. Перенести визит
+  const rescheduleVisit = {
+    description: 'Reschedule an existing visit to a new date/time.',
+    inputSchema: zodSchema(z.object({
+      visit_id: z.string().describe('Visit UUID'),
+      new_date: z.string().describe('New date YYYY-MM-DD'),
+      new_time: z.string().describe('New time HH:MM'),
+    })),
+    execute: async ({ visit_id, new_date, new_time }: { visit_id: string; new_date: string; new_time: string }) => {
+      const { data: existing } = await supabase
+        .from('visits').select('id, org_id')
+        .eq('id', visit_id).eq('org_id', orgId).single()
+      if (!existing) return { success: false, error: 'Visit not found or access denied' }
+
+      const new_scheduled_at = new Date(`${new_date}T${new_time}:00+03:00`).toISOString()
+      const { error } = await supabase
+        .from('visits')
+        .update({ scheduled_at: new_scheduled_at, updated_at: new Date().toISOString() })
+        .eq('id', visit_id).eq('org_id', orgId)
+
+      if (error) return { success: false, error: error.message }
+      return { success: true, visit_id, new_scheduled_at }
+    },
+  }
+
+
   // ── Stream ───────────────────────────────────────────────────────────────
   const result = streamText({
-    model: openai('gpt-4o-mini'),
+    model: openai('gpt-4o'),
     system: SYSTEM_PROMPT,
     messages: messagesForAI,
-    tools: { getClientSummary, getRevenueStats, getDebts },
-    stopWhen: stepCountIs(3),
+    tools: {
+      getClientSummary,
+      getRevenueStats,
+      getDebts,
+      getSchedule,
+      createVisit,
+      cancelVisit,
+      rescheduleVisit,
+    },
+    stopWhen: stepCountIs(5),
     maxOutputTokens: 1024,
+    temperature: 0.7,
     onFinish: async ({ text }) => {
       if (!sessionId || !lastUserText || !text) return
       try {
@@ -209,7 +387,6 @@ export async function POST(request: NextRequest) {
           { session_id: sessionId, org_id: orgId, role: 'user',      content: lastUserText },
           { session_id: sessionId, org_id: orgId, role: 'assistant', content: text },
         ])
-        console.log('[kira] saved to DB — user + assistant')
       } catch (dbError) {
         console.error('[kira] DB SAVE ERROR:', dbError)
       }

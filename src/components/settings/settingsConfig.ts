@@ -1,4 +1,4 @@
-import {
+﻿import {
   Globe, Palette, Bell, Package, Building2, Users,
   Calendar, CreditCard, MessageSquare, FileText,
   ShieldAlert, MessageCircle, ShoppingBag,
@@ -149,10 +149,10 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
         href: '/settings/payments',
         icon: CreditCard,
         colorTint: 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-        title_ru: 'Платежи Tranzila',
-        title_he: 'תשלומים Tranzila',
-        desc_ru: 'Подключите Tranzila — терминал и пароль',
-        desc_he: 'חבר את טרנזילה — שם טרמינל וסיסמה',
+        title_ru: 'Способы оплаты',
+        title_he: 'אמצעי תשלום',
+        desc_ru: 'Настройте доступные способы оплаты для клиентов',
+        desc_he: 'הגדר אילו אמצעי תשלום יהיו זמינים ללקוחות',
       },
       {
         id: 'message-templates',

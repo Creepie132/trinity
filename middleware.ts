@@ -50,6 +50,15 @@ export async function middleware(req: NextRequest) {
 
   if (isPublicPath(pathname)) return NextResponse.next()
 
+  // ── Bearer token bypass (mobile app) ─────────────────────────────────────
+  // Мобильное приложение отправляет JWT в заголовке Authorization: Bearer <token>
+  // Middleware не может верифицировать JWT напрямую — это делает route handler.
+  // Пропускаем такие запросы, route handler сам проверит токен через getAuthContext(req).
+  const authHeader = req.headers.get('Authorization') ?? ''
+  if (authHeader.startsWith('Bearer ') && pathname.startsWith('/api/')) {
+    return NextResponse.next()
+  }
+
   const isApiRoute = pathname.startsWith('/api/')
   let response = NextResponse.next()
 

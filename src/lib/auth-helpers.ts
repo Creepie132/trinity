@@ -383,14 +383,19 @@ export async function getWorkerAuthContext(): Promise<WorkerAuthContext | AuthEr
 // ============================================
 
 async function getAuthContextFromBearer(jwt: string): Promise<AuthContext | AuthError> {
-  const service = createSupabaseServiceClient()
-
-  // Верификация JWT через Supabase — getUser безопаснее чем decodeJWT
-  const { data, error } = await service.auth.getUser(jwt)
+  // ВАЖНО: getUser(jwt) работает только с anon клиентом — он проверяет токен через Supabase Auth API.
+  // Service role клиент НЕ умеет верифицировать пользовательские JWT через getUser(jwt).
+  const anonClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+  const { data, error } = await anonClient.auth.getUser(jwt)
   if (error || !data.user) {
+    console.error('[Bearer auth] getUser failed:', error?.message)
     return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   }
   const user = data.user
+  const service = createSupabaseServiceClient()
 
   // Читаем org_id из JWT claims (fast path)
   let orgId = user.app_metadata?.org_id as string | undefined

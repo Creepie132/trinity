@@ -21,6 +21,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/api/webhooks/',
   '/api/register/',
   '/api/beautymania/',
+  '/api/mobile/',
 ]
 
 function isPublicPath(pathname: string): boolean {

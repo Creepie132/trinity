@@ -30,7 +30,8 @@ function extractText(msg: RawMsg): string {
 
 // ── Модули Trinity и к каким инструментам они дают доступ ────────────────
 const MODULE_TOOL_MAP: Record<string, string[]> = {
-  visits:   ['createVisitByName', 'cancelVisit', 'rescheduleVisit', 'updateVisitType', 'getSchedule'],
+  visits:   ['createVisitByName', 'cancelVisit', 'rescheduleVisit', 'updateVisitType',
+             'getSchedule', 'startVisit', 'completeVisit', 'updateVisit', 'openVisitUI'],
   clients:  ['getClientSummary', 'getTopClients', 'createClient', 'updateClient', 'deleteClient', 'getClientHistory', 'openClientUI'],
   payments: ['getRevenueStats', 'getClientPayments'],
   sales:    ['getDebts'],
@@ -46,11 +47,15 @@ const ALL_TOOL_DESCRIPTIONS: Record<string, string> = {
   getClientHistory:   'история визитов клиента',
   getClientPayments:  'история платежей клиента',
   openClientUI:       'открыть карточку клиента, галерею, документы, WhatsApp, продажу, звонок, SMS, навигатор',
-  createVisitByName:  'создать запись/визит',
+  createVisitByName:  'создать запись/визит/встречу с уточняющими вопросами',
   cancelVisit:        'отменить визит',
-  rescheduleVisit:    'перенести визит',
+  rescheduleVisit:    'перенести визит на другое время',
   updateVisitType:    'изменить тип записи (встреча ↔ визит)',
+  updateVisit:        'редактировать поля визита (время, услуга, цена, заметки)',
   getSchedule:        'расписание на день',
+  startVisit:         'начать визит (перевести в in_progress)',
+  completeVisit:      'завершить визит (перевести в completed)',
+  openVisitUI:        'открыть WhatsApp/звонок/SMS для клиента из визита',
   getRevenueStats:    'статистика выручки',
   getDebts:           'должники',
 }
@@ -166,6 +171,25 @@ function buildSystemPrompt(ctx: {
     '   сначала найди клиента через getClientSummary (чтобы получить client_id),',
     '   затем вызови openClientUI с нужным action.',
     '   Для звонка и SMS — сначала сообщи номер и спроси подтверждение.',
+    '',
+    '10. ВИЗИТЫ и ВСТРЕЧИ — различай типы:',
+    '    "встреча" / "встречу" / "деловая встреча" → event_type="meeting"',
+    '    "визит" / "запись" / "приём" / "клиент придёт" → event_type="visit"',
+    '    При создании спрашивай по порядку: имя клиента → дата и время.',
+    '    Цену, услугу, заметки — только если пользователь сам упоминает.',
+    '',
+    '11. НАЧАТЬ/ЗАВЕРШИТЬ ВИЗИТ:',
+    '    Сначала найди визит через getSchedule или по контексту разговора.',
+    '    "начать визит" / "клиент пришёл" → startVisit(visit_id)',
+    '    "завершить визит" / "клиент ушёл" / "закрыть визит" → completeVisit(visit_id)',
+    '',
+    '12. РЕДАКТИРОВАТЬ ВИЗИТ: найди визит через getSchedule → спроси что менять →',
+    '    вызови updateVisit только с изменёнными полями.',
+    '',
+    '13. ОТМЕНА: cancelVisit требует только visit_id. Уточни клиента если неясно из контекста.',
+    '',
+    '14. ЗВОНОК/SMS/WhatsApp из визита → openVisitUI. Не нужно искать клиента отдельно,',
+    '    если visit_id и phone уже известны из getSchedule.',
   ].join('\n')
 }
 
@@ -737,6 +761,104 @@ export async function POST(request: NextRequest) {
     },
   }
 
+  // 16. Начать визит
+  const startVisit = {
+    description: 'Start a visit — set status to in_progress. Use when user says "начать визит", "клиент пришёл", "начинаем".',
+    inputSchema: zodSchema(z.object({
+      visit_id: z.string().describe('Visit UUID — get from getSchedule if not known'),
+      client_name: z.string().optional().describe('For confirmation message'),
+    })),
+    execute: async ({ visit_id, client_name }: { visit_id: string; client_name?: string }) => {
+      const { data: existing } = await supabase.from('visits')
+        .select('id, status, scheduled_at, service_type, event_type')
+        .eq('id', visit_id).eq('org_id', orgId).single()
+      if (!existing) return { success: false, error: 'Визит не найден' }
+      if (existing.status === 'in_progress') return { success: true, already: true, message: 'Визит уже начат' }
+      if (existing.status === 'completed') return { success: false, error: 'Визит уже завершён' }
+      const { error } = await supabase.from('visits')
+        .update({ status: 'in_progress', started_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', visit_id).eq('org_id', orgId)
+      if (error) return { success: false, error: error.message }
+      const label = existing.event_type === 'meeting' ? 'Встреча' : 'Визит'
+      return { success: true, visit_id, label, client_name: client_name ?? '—', status: 'in_progress' }
+    },
+  }
+
+  // 17. Завершить визит
+  const completeVisit = {
+    description: 'Complete a visit — set status to completed. Use when user says "завершить", "закрыть визит", "клиент ушёл".',
+    inputSchema: zodSchema(z.object({
+      visit_id: z.string(),
+      client_name: z.string().optional(),
+    })),
+    execute: async ({ visit_id, client_name }: { visit_id: string; client_name?: string }) => {
+      const { data: existing } = await supabase.from('visits')
+        .select('id, status, event_type').eq('id', visit_id).eq('org_id', orgId).single()
+      if (!existing) return { success: false, error: 'Визит не найден' }
+      if (existing.status === 'completed') return { success: true, already: true, message: 'Визит уже завершён' }
+      const { error } = await supabase.from('visits')
+        .update({ status: 'completed', updated_at: new Date().toISOString() })
+        .eq('id', visit_id).eq('org_id', orgId)
+      if (error) return { success: false, error: error.message }
+      const label = existing.event_type === 'meeting' ? 'Встреча' : 'Визит'
+      return { success: true, visit_id, label, client_name: client_name ?? '—', status: 'completed' }
+    },
+  }
+
+  // 18. Редактировать визит
+  const updateVisit = {
+    description: 'Edit visit fields. Use after getSchedule to get visit_id. Only pass fields that need to change.',
+    inputSchema: zodSchema(z.object({
+      visit_id: z.string(),
+      scheduled_at: z.string().optional().describe('ISO datetime with TZ, e.g. 2026-04-03T14:00:00+03:00'),
+      service_type: z.string().optional().describe('Service name / label'),
+      price: z.number().optional(),
+      duration_minutes: z.number().optional(),
+      notes: z.string().optional(),
+    })),
+    execute: async ({ visit_id, ...fields }: { visit_id: string; [k: string]: any }) => {
+      const { data: cur } = await supabase.from('visits')
+        .select('service_type, event_type').eq('id', visit_id).eq('org_id', orgId).single()
+      if (!cur) return { success: false, error: 'Визит не найден' }
+      const updates: Record<string, any> = { updated_at: new Date().toISOString() }
+      if (fields.scheduled_at    !== undefined) updates.scheduled_at    = fields.scheduled_at
+      if (fields.service_type    !== undefined) updates.service_type    = fields.service_type
+      if (fields.price           !== undefined) updates.price           = fields.price
+      if (fields.duration_minutes !== undefined) updates.duration_minutes = fields.duration_minutes
+      if (fields.notes           !== undefined) updates.notes           = fields.notes
+      // service_type NOT NULL guard
+      if (!updates.service_type) updates.service_type = cur.service_type ?? 'other'
+      const { error } = await supabase.from('visits').update(updates).eq('id', visit_id).eq('org_id', orgId)
+      if (error) return { success: false, error: error.message }
+      return { success: true, visit_id, updated_fields: Object.keys(updates).filter(k => k !== 'updated_at') }
+    },
+  }
+
+  // 19. UI-действия из визита: WhatsApp, звонок, SMS
+  const openVisitUI = {
+    description: 'Open WhatsApp, call, or SMS for client from a visit context. Use when user asks to contact a client during a visit.',
+    inputSchema: zodSchema(z.object({
+      client_id: z.string(),
+      client_name: z.string(),
+      action: z.enum(['open_whatsapp', 'call', 'sms']),
+      phone: z.string().optional(),
+      confirmed: z.boolean().optional().describe('true after user confirmed call/sms'),
+    })),
+    execute: async ({ client_id, client_name, action, phone, confirmed }: {
+      client_id: string; client_name: string; action: string; phone?: string; confirmed?: boolean;
+    }) => {
+      if ((action === 'call' || action === 'sms') && !confirmed) {
+        return {
+          ui_action: null, needs_confirmation: true, action, phone, client_name,
+          message: action === 'call'
+            ? `Позвонить ${client_name} на ${phone ?? 'номер не указан'}? Подтверди.`
+            : `Открыть SMS для ${client_name} (${phone ?? 'номер не указан'})? Подтверди.`,
+        }
+      }
+      return { ui_action: action, client_id, client_name, phone }
+    },
+  }
+
   // 15. UI-действия: открыть карточку, галерею, WA, продажу, звонок, SMS, навигатор
   const openClientUI = {
     description: [
@@ -784,6 +906,10 @@ export async function POST(request: NextRequest) {
     getClientPayments,
     openClientUI,
     createVisitByName,
+    startVisit,
+    completeVisit,
+    updateVisit,
+    openVisitUI,
     cancelVisit,
     rescheduleVisit,
     updateVisitType,

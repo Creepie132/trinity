@@ -246,7 +246,7 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
               if (part.type === 'tool-getDebts' && part.state === 'output-available') {
                 return <div key={i} className="w-full"><DebtWidget result={part.output} /></div>
               }
-              if (part.type === 'tool-openClientUI' && part.state === 'output-available') {
+              if ((part.type === 'tool-openClientUI' || part.type === 'tool-openVisitUI') && part.state === 'output-available') {
                 const r = part.output as any
                 if (r.ui_action) {
                   // Авто-выполняем навигацию

@@ -10,6 +10,7 @@
  *   - Double-submit: useRef-флаг isSubmittingRef (логический замок, не UI)
  *   - Сохранность данных при ошибке: форма НЕ сбрасывается при catch
  *   - Строгая типизация payload из ModalStore через validateModalData()
+ *   - Методы оплаты: SSoT из БД, нет fallback на все методы при загрузке
  *
  * Вызов из любой точки приложения:
  *   openModal('payment-unified', { defaultMethod: 'cash', clientId: '...', clientName: '...' })
@@ -28,11 +29,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   CreditCard, Banknote, Link, CheckCircle2,
-  Copy, Loader2, AlertCircle, X, ArrowLeft, MessageCircle, ExternalLink,
+  Loader2, AlertCircle, X, ArrowLeft, MessageCircle,
   FileCheck, Building2,
 } from 'lucide-react'
 import { PaymentSuccessView, PaymentSuccessSidebar } from '@/components/payments/PaymentSuccessView'
-import { TRINITY_PAYMENT_METHODS, type TrinityPaymentMethodId } from '@/lib/payment-methods'
 import { usePaymentMethodConfig } from '@/hooks/usePaymentMethodConfig'
 import {
   CheckForm, BankTransferForm, CashForm, IL_CASH_LIMIT,
@@ -44,19 +44,17 @@ import {
 export type PaymentMethod = 'cash' | 'link' | 'check' | 'bank_transfer'
 type Step = 'method-select' | 'cash-form' | 'link-form' | 'check-form' | 'bank-form' | 'success'
 
-/** Строгий тип для данных из ModalStore */
 export interface UnifiedPaymentModalData {
   clientId?: string
   clientName?: string
   clientPhone?: string
   visitId?: string
-  saleId?: string          // ID уже созданной продажи
-  prefillAmount?: number   // Предзаполненная сумма (из сделки)
+  saleId?: string
+  prefillAmount?: number
   defaultMethod?: PaymentMethod
   onSuccess?: () => void
 }
 
-// Совместимо с ClientSearch (phone обязателен в его внутреннем типе)
 interface Client {
   id: string
   first_name: string
@@ -68,7 +66,6 @@ interface Client {
 export interface UnifiedPaymentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Данные из ModalStore — строго типизированы */
   initialData?: UnifiedPaymentModalData
 }
 
@@ -120,6 +117,7 @@ const I18N = {
     errorGeneric: 'שגיאה, נסה שוב',
     toPayLabel: 'לתשלום', paidLabel: 'שולם ✓',
     errorTitle: 'שגיאה בביצוע פעולה',
+    loadingMethods: 'טוען שיטות תשלום...',
   },
   ru: {
     title: 'Новый платёж', selectMethod: 'Выберите способ оплаты',
@@ -147,6 +145,7 @@ const I18N = {
     errorGeneric: 'Ошибка, попробуйте ещё раз',
     toPayLabel: 'К оплате', paidLabel: 'Оплачено ✓',
     errorTitle: 'Ошибка при выполнении',
+    loadingMethods: 'Загрузка способов оплаты...',
   },
 } as const
 
@@ -180,11 +179,12 @@ export function UnifiedPaymentDialog({
   const isHe = language === 'he'
   const t = I18N[language as 'he' | 'ru'] ?? I18N.ru
 
-  // Загружаем конфиг включённых методов (реактивно из /api/payments/settings)
+  // Загружаем конфиг включённых методов. staleTime=0 → всегда актуально из БД.
+  // ВАЖНО: пока грузится — allowedMethodIds пустой. Нет fallback на все методы.
   const { enabledMethods: configMethods, isLoading: methodsLoading } = usePaymentMethodConfig()
   const allowedMethodIds = new Set(
-    methodsLoading || configMethods.length === 0
-      ? METHODS.map(m => m.id)
+    methodsLoading
+      ? [] as string[]
       : configMethods.map(m => m.key as string)
   )
   const visibleMethods = METHODS.filter(m => {
@@ -195,39 +195,32 @@ export function UnifiedPaymentDialog({
   const safeData = validateModalData(initialData)
   const queryClient = useQueryClient()
 
-  // ── State machine ────────────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>(() =>
     safeData.defaultMethod
       ? (`${safeData.defaultMethod}-form` as Step)
       : 'method-select'
   )
 
-  // ── Form state (НЕ сбрасывается при ошибке) ─────────────────────────────────
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [description, setDescription] = useState('')
 
-  // ── State для check/bank_transfer/cash форм ─────────────────────────────────
   const [checkDetails, setCheckDetails] = useState<CheckPaymentDetails | null>(null)
   const [checkValid, setCheckValid] = useState(false)
   const [bankDetails, setBankDetails] = useState<BankTransferDetails | null>(null)
   const [bankValid, setBankValid] = useState(false)
   const [cashData, setCashData] = useState<CashFormData | null>(null)
-  const [cashValid, setCashValid] = useState(true) // поле сдачи необязательно
+  const [cashValid, setCashValid] = useState(true)
 
-  // ── UI state ────────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [paymentLink, setPaymentLink] = useState<string | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
 
-  // ── Double-submit guard (useRef = логический замок, не UI) ──────────────────
   const isSubmittingRef = useRef(false)
-
   const createPaymentLinkMutation = useCreatePaymentLink()
 
-  // ── Reset on open ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return
     const sd = validateModalData(initialData)
@@ -239,7 +232,7 @@ export function UnifiedPaymentDialog({
     setDescription('')
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
-    setCashData(null); setCashValid(true) // поле сдачи необязательно
+    setCashData(null); setCashValid(true)
     setAmount(sd.prefillAmount != null ? String(sd.prefillAmount) : '')
     if (sd.clientId && sd.clientName) {
       const parts = sd.clientName.trim().split(' ')
@@ -252,7 +245,6 @@ export function UnifiedPaymentDialog({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // ── Derived ──────────────────────────────────────────────────────────────────
   const amountNum = parseFloat(amount)
   const isAmountValid = !isNaN(amountNum) && amountNum > 0
   const canSubmit = !!selectedClient && isAmountValid && (
@@ -273,8 +265,6 @@ export function UnifiedPaymentDialog({
 
   const methodCfg = METHODS.find(m => m.id === currentMethod) ?? null
 
-  // ── Handlers ─────────────────────────────────────────────────────────────────
-
   const handleClose = useCallback(() => {
     if (isSubmittingRef.current) return
     setAmount(''); setNotes(''); setDescription('')
@@ -282,7 +272,7 @@ export function UnifiedPaymentDialog({
     setPaymentLink(null); setLinkCopied(false)
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
-    setCashData(null); setCashValid(true) // поле сдачи необязательно
+    setCashData(null); setCashValid(true)
     setStep('method-select')
     onOpenChange(false)
   }, [onOpenChange])
@@ -303,46 +293,29 @@ export function UnifiedPaymentDialog({
     setErrorMsg(null)
     setCheckDetails(null); setCheckValid(false)
     setBankDetails(null); setBankValid(false)
-    setCashData(null); setCashValid(true) // поле сдачи необязательно
+    setCashData(null); setCashValid(true)
     setStep('method-select')
   }, [])
 
-  /** Единственная точка записи в БД — через защищённый API, не supabase-browser */
   const handleSubmit = useCallback(async () => {
     if (isSubmittingRef.current) return
     isSubmittingRef.current = true
 
-    if (!selectedClient) {
-      toast.error(t.fillRequired)
-      isSubmittingRef.current = false; return
-    }
-    if (!isAmountValid) {
-      toast.error(t.invalidAmount)
-      isSubmittingRef.current = false; return
-    }
+    if (!selectedClient) { toast.error(t.fillRequired); isSubmittingRef.current = false; return }
+    if (!isAmountValid)  { toast.error(t.invalidAmount); isSubmittingRef.current = false; return }
 
     setIsLoading(true)
     setErrorMsg(null)
 
     try {
-      // ── CASH ────────────────────────────────────────────────────────────────
       if (step === 'cash-form') {
-        if (amountNum > IL_CASH_LIMIT) {
-          toast.error(t.invalidAmount)
-          isSubmittingRef.current = false; return
-        }
+        if (amountNum > IL_CASH_LIMIT) { toast.error(t.invalidAmount); isSubmittingRef.current = false; return }
         const res = await fetch('/api/payments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            client_id:       selectedClient.id,
-            amount:          amountNum,
-            payment_method:  'cash',
-            status:          'completed',
-            visit_id:        safeData.visitId ?? null,
-            sale_id:         safeData.saleId ?? null,
-            description:     cashData?.notes?.trim() ||
-              `Наличные — ${selectedClient.first_name} ${selectedClient.last_name}`,
+            client_id: selectedClient.id, amount: amountNum, payment_method: 'cash',
+            status: 'completed', visit_id: safeData.visitId ?? null, sale_id: safeData.saleId ?? null,
+            description: cashData?.notes?.trim() || `Наличные — ${selectedClient.first_name} ${selectedClient.last_name}`,
             amount_received: cashData?.amount_received ?? null,
           }),
         })
@@ -350,26 +323,17 @@ export function UnifiedPaymentDialog({
         queryClient.invalidateQueries({ queryKey: ['payments'] })
         queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
         queryClient.invalidateQueries({ queryKey: ['sales'] })
-        toast.success(t.successCash)
-        safeData.onSuccess?.()
-        setStep('success')
-        return
+        toast.success(t.successCash); safeData.onSuccess?.(); setStep('success'); return
       }
 
-      // ── CHECK ────────────────────────────────────────────────────────────────
       if (step === 'check-form') {
         if (!checkValid || !checkDetails) { toast.error(t.checkSumMismatch); isSubmittingRef.current = false; return }
         const res = await fetch('/api/payments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            client_id:       selectedClient.id,
-            amount:          amountNum,
-            payment_method:  'check',
-            status:          'pending',
-            visit_id:        safeData.visitId ?? null,
-            sale_id:         safeData.saleId ?? null,
-            description:     `Чек — ${selectedClient.first_name} ${selectedClient.last_name}`,
+            client_id: selectedClient.id, amount: amountNum, payment_method: 'check',
+            status: 'pending', visit_id: safeData.visitId ?? null, sale_id: safeData.saleId ?? null,
+            description: `Чек — ${selectedClient.first_name} ${selectedClient.last_name}`,
             payment_details: checkDetails,
           }),
         })
@@ -377,56 +341,36 @@ export function UnifiedPaymentDialog({
         queryClient.invalidateQueries({ queryKey: ['payments'] })
         queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
         queryClient.invalidateQueries({ queryKey: ['sales'] })
-        toast.success(t.successCheck)
-        safeData.onSuccess?.()
-        setStep('success')
-        return
+        toast.success(t.successCheck); safeData.onSuccess?.(); setStep('success'); return
       }
 
-      // ── BANK TRANSFER ────────────────────────────────────────────────────────
       if (step === 'bank-form') {
         if (!bankValid || !bankDetails) { toast.error(t.bankRefRequired); isSubmittingRef.current = false; return }
         const res = await fetch('/api/payments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            client_id:       selectedClient.id,
-            amount:          amountNum,
-            payment_method:  'bank_transfer',
-            status:          'completed',
-            visit_id:        safeData.visitId ?? null,
-            sale_id:         safeData.saleId ?? null,
-            description:     `Перевод — ${bankDetails.reference}`,
-            payment_details: bankDetails,
+            client_id: selectedClient.id, amount: amountNum, payment_method: 'bank_transfer',
+            status: 'completed', visit_id: safeData.visitId ?? null, sale_id: safeData.saleId ?? null,
+            description: `Перевод — ${bankDetails.reference}`, payment_details: bankDetails,
           }),
         })
         if (!res.ok) { const err = await res.json(); throw new Error(err.error || t.errorGeneric) }
         queryClient.invalidateQueries({ queryKey: ['payments'] })
         queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
         queryClient.invalidateQueries({ queryKey: ['sales'] })
-        toast.success(t.successBank)
-        safeData.onSuccess?.()
-        setStep('success')
-        return
+        toast.success(t.successBank); safeData.onSuccess?.(); setStep('success'); return
       }
 
-      // ── PAYMENT LINK ──────────────────────────────────────────────────────
       if (step === 'link-form') {
         const result = await createPaymentLinkMutation.mutateAsync({
-          client_id:   selectedClient.id,
-          amount:      amountNum,
-          description: description.trim() ||
-            `Оплата — ${selectedClient.first_name} ${selectedClient.last_name}`,
-          visit_id: safeData.visitId,
-          sale_id:  safeData.saleId,
+          client_id: selectedClient.id, amount: amountNum,
+          description: description.trim() || `Оплата — ${selectedClient.first_name} ${selectedClient.last_name}`,
+          visit_id: safeData.visitId, sale_id: safeData.saleId,
         })
         if (!result?.payment_link) throw new Error('No payment link returned from API')
         setPaymentLink(result.payment_link)
         queryClient.invalidateQueries({ queryKey: ['sales'] })
-        toast.success(t.successLink)
-        safeData.onSuccess?.()
-        setStep('success')
-        return
+        toast.success(t.successLink); safeData.onSuccess?.(); setStep('success'); return
       }
 
     } catch (err: unknown) {
@@ -441,8 +385,7 @@ export function UnifiedPaymentDialog({
     step, selectedClient, isAmountValid, amountNum,
     notes, description, safeData, queryClient,
     createPaymentLinkMutation, t,
-    checkDetails, checkValid, bankDetails, bankValid,
-    cashData, cashValid,
+    checkDetails, checkValid, bankDetails, bankValid, cashData, cashValid,
   ])
 
   const handleCopyLink = useCallback(() => {
@@ -454,49 +397,31 @@ export function UnifiedPaymentDialog({
   }, [paymentLink, t.copied])
 
   const handleSendWhatsApp = useCallback(() => {
-    if (!paymentLink || !selectedClient?.phone) {
-      toast.error(t.noPhone); return
-    }
+    if (!paymentLink || !selectedClient?.phone) { toast.error(t.noPhone); return }
     let p = selectedClient.phone.replace(/\D/g, '')
     if (p.startsWith('0')) p = p.slice(1)
-    const msg = isHe
-      ? `קישור לתשלום: ${paymentLink}`
-      : `Ссылка для оплаты: ${paymentLink}`
+    const msg = isHe ? `קישור לתשלום: ${paymentLink}` : `Ссылка для оплаты: ${paymentLink}`
     window.open(`https://wa.me/972${p}?text=${encodeURIComponent(msg)}`, '_blank')
   }, [paymentLink, selectedClient, isHe, t.noPhone])
 
-  // ─── Sidebar (Desktop) ────────────────────────────────────────────────────────
+  // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
   const sidebar = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {/* Icon bubble */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
         <div style={{
           width: 54, height: 54, borderRadius: 16, color: '#fff',
           background: methodCfg?.gradient ?? 'linear-gradient(135deg,#334155,#1e293b)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: `0 6px 20px ${methodCfg?.glow ?? 'rgba(0,0,0,0.2)'}`,
-          transition: 'all 0.3s',
+          boxShadow: `0 6px 20px ${methodCfg?.glow ?? 'rgba(0,0,0,0.2)'}`, transition: 'all 0.3s',
         }}>
-          {step === 'success' ? <CheckCircle2 size={24} />
-            : currentMethod ? METHOD_ICONS[currentMethod]
-            : <CreditCard size={22} />}
+          {step === 'success' ? <CheckCircle2 size={24} /> : currentMethod ? METHOD_ICONS[currentMethod] : <CreditCard size={22} />}
         </div>
       </div>
-
-      {/* Amount preview */}
       {amount && isAmountValid ? (
-        <div style={{
-          background: methodCfg?.bg ?? 'rgba(255,255,255,0.06)',
-          border: `0.5px solid ${methodCfg?.border ?? 'rgba(255,255,255,0.1)'}`,
-          borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 10,
-        }}>
-          <div style={{ fontSize: 24, fontWeight: 900, color: methodCfg?.color ?? '#fff', letterSpacing: '-0.5px' }}>
-            ₪{amountNum.toLocaleString()}
-          </div>
-          <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 3, color: methodCfg?.color ?? '#94a3b8' }}>
-            {step === 'success' ? t.paidLabel : t.toPayLabel}
-          </div>
+        <div style={{ background: methodCfg?.bg ?? 'rgba(255,255,255,0.06)', border: `0.5px solid ${methodCfg?.border ?? 'rgba(255,255,255,0.1)'}`, borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 10 }}>
+          <div style={{ fontSize: 24, fontWeight: 900, color: methodCfg?.color ?? '#fff', letterSpacing: '-0.5px' }}>₪{amountNum.toLocaleString()}</div>
+          <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 3, color: methodCfg?.color ?? '#94a3b8' }}>{step === 'success' ? t.paidLabel : t.toPayLabel}</div>
         </div>
       ) : (
         <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '10px 8px', textAlign: 'center', marginBottom: 10 }}>
@@ -504,16 +429,9 @@ export function UnifiedPaymentDialog({
           <div style={{ fontSize: 9, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 3 }}>{t.toPayLabel}</div>
         </div>
       )}
-
-      {/* Client chip */}
       {selectedClient && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 10px', background: 'rgba(255,255,255,0.06)', borderRadius: 10, marginBottom: 10 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-            background: methodCfg?.gradient ?? 'linear-gradient(135deg,#334155,#1e293b)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontSize: 11, fontWeight: 700,
-          }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: methodCfg?.gradient ?? 'linear-gradient(135deg,#334155,#1e293b)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700 }}>
             {selectedClient.first_name?.[0]}{selectedClient.last_name?.[0]}
           </div>
           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -522,23 +440,11 @@ export function UnifiedPaymentDialog({
         </div>
       )}
       <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '0 0 10px' }} />
-
-      {/* Sidebar action buttons — form steps */}
       {step !== 'success' && step !== 'method-select' && (
         <>
           <button onClick={handleSubmit} disabled={!canSubmit || isLoading}
-            style={{
-              padding: '11px 14px', borderRadius: 10, border: 'none', width: '100%', marginBottom: 6,
-              cursor: canSubmit && !isLoading ? 'pointer' : 'not-allowed',
-              background: canSubmit && !isLoading
-                ? (methodCfg?.gradient ?? 'linear-gradient(135deg,#334155,#1e293b)')
-                : 'rgba(255,255,255,0.08)',
-              color: canSubmit ? '#fff' : 'rgba(255,255,255,0.2)',
-              fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.2s',
-            }}>
-            {isLoading
-              ? <><Loader2 size={14} className="animate-spin" />{step === 'link-form' ? t.creating : t.saving}</>
-              : <>{currentMethod ? METHOD_ICONS[currentMethod] : null}{step === 'link-form' ? t.createLink : t.save}</>}
+            style={{ padding: '11px 14px', borderRadius: 10, border: 'none', width: '100%', marginBottom: 6, cursor: canSubmit && !isLoading ? 'pointer' : 'not-allowed', background: canSubmit && !isLoading ? (methodCfg?.gradient ?? 'linear-gradient(135deg,#334155,#1e293b)') : 'rgba(255,255,255,0.08)', color: canSubmit ? '#fff' : 'rgba(255,255,255,0.2)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.2s' }}>
+            {isLoading ? <><Loader2 size={14} className="animate-spin" />{step === 'link-form' ? t.creating : t.saving}</> : <>{currentMethod ? METHOD_ICONS[currentMethod] : null}{step === 'link-form' ? t.createLink : t.save}</>}
           </button>
           <button onClick={handleBack} disabled={isLoading}
             style={{ padding: '8px 14px', borderRadius: 9, border: '0.5px solid rgba(255,255,255,0.12)', background: 'transparent', color: 'rgba(255,255,255,0.4)', fontSize: 12, cursor: 'pointer' }}>
@@ -546,58 +452,44 @@ export function UnifiedPaymentDialog({
           </button>
         </>
       )}
-
-      {/* Sidebar action buttons — success */}
       {step === 'success' && (
-        <PaymentSuccessSidebar
-          paymentLink={paymentLink}
-          clientPhone={selectedClient?.phone}
-          onClose={handleClose}
-          locale={isHe ? 'he' : 'ru'}
-        />
+        <PaymentSuccessSidebar paymentLink={paymentLink} clientPhone={selectedClient?.phone} onClose={handleClose} locale={isHe ? 'he' : 'ru'} />
       )}
     </div>
   )
 
-  // ─── Mobile footer ──────────────────────────────────────────────────────────
+  // ─── Mobile footer ────────────────────────────────────────────────────────────
 
   const mobileFooter =
     step === 'method-select' ? (
       <div style={{ display: 'flex', width: '100%' }}>
-        <button onClick={handleClose}
-          style={{ flex: 1, padding: '12px 18px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}>
+        <button onClick={handleClose} style={{ flex: 1, padding: '12px 18px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer' }}>
           {t.cancel}
         </button>
       </div>
     ) : step === 'success' ? (
       <div style={{ display: 'flex', gap: 10, width: '100%' }}>
         {paymentLink && selectedClient?.phone && (
-          <button onClick={handleSendWhatsApp}
-            style={{ flex: '0 0 auto', padding: '12px 16px', borderRadius: 10, border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#16a34a', fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={handleSendWhatsApp} style={{ flex: '0 0 auto', padding: '12px 16px', borderRadius: 10, border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#16a34a', fontSize: 14, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <MessageCircle size={15} />WA
           </button>
         )}
-        <button onClick={handleClose}
-          style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: methodCfg?.gradient ?? 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+        <button onClick={handleClose} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', background: methodCfg?.gradient ?? 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
           {t.close}
         </button>
       </div>
     ) : (
       <div style={{ display: 'flex', gap: 10, width: '100%' }}>
-        <button onClick={handleBack} disabled={isLoading}
-          style={{ flex: '0 0 auto', padding: '12px 18px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button onClick={handleBack} disabled={isLoading} style={{ flex: '0 0 auto', padding: '12px 18px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: '#64748b', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
           <ArrowLeft size={15} />{t.back}
         </button>
-        <button onClick={handleSubmit} disabled={!canSubmit || isLoading}
-          style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', cursor: canSubmit && !isLoading ? 'pointer' : 'not-allowed', background: canSubmit ? (methodCfg?.gradient ?? '#334155') : '#e2e8f0', color: canSubmit ? '#fff' : '#94a3b8', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          {isLoading
-            ? <><Loader2 size={15} className="animate-spin" />{t.saving}</>
-            : <>{currentMethod ? METHOD_ICONS[currentMethod] : null}{step === 'link-form' ? t.createLink : t.save}</>}
+        <button onClick={handleSubmit} disabled={!canSubmit || isLoading} style={{ flex: 1, padding: '12px', borderRadius: 10, border: 'none', cursor: canSubmit && !isLoading ? 'pointer' : 'not-allowed', background: canSubmit ? (methodCfg?.gradient ?? '#334155') : '#e2e8f0', color: canSubmit ? '#fff' : '#94a3b8', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          {isLoading ? <><Loader2 size={15} className="animate-spin" />{t.saving}</> : <>{currentMethod ? METHOD_ICONS[currentMethod] : null}{step === 'link-form' ? t.createLink : t.save}</>}
         </button>
       </div>
     )
 
-  // ─── Step content ───────────────────────────────────────────────────────────
+  // ─── Step content ─────────────────────────────────────────────────────────────
 
   const renderStep = () => {
     // ── Method select ──────────────────────────────────────────────────────
@@ -606,7 +498,13 @@ export function UnifiedPaymentDialog({
         <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
           {t.selectMethod}
         </p>
-        {visibleMethods.map((m) => {
+        {methodsLoading ? (
+          // SSoT: пока данные не пришли — спиннер, не список всех методов
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '28px 0' }}>
+            <Loader2 size={22} className="animate-spin" style={{ color: '#94a3b8' }} />
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>{t.loadingMethods}</span>
+          </div>
+        ) : visibleMethods.map((m) => {
           const label = t[m.id as keyof typeof t] as string
           const desc  = t[`${m.id}Desc` as keyof typeof t] as string
           return (
@@ -633,14 +531,10 @@ export function UnifiedPaymentDialog({
     // ── Success ────────────────────────────────────────────────────────────
     if (step === 'success') return (
       <PaymentSuccessView
-        paymentLink={paymentLink}
-        isCash={currentMethod === 'cash'}
-        amount={amountNum}
-        changeAmount={cashData?.change_amount}
-        clientPhone={selectedClient?.phone}
+        paymentLink={paymentLink} isCash={currentMethod === 'cash'} amount={amountNum}
+        changeAmount={cashData?.change_amount} clientPhone={selectedClient?.phone}
         clientName={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : undefined}
-        onClose={handleClose}
-        locale={isHe ? 'he' : 'ru'}
+        onClose={handleClose} locale={isHe ? 'he' : 'ru'}
       />
     )
 
@@ -670,12 +564,7 @@ export function UnifiedPaymentDialog({
           </div>
         </div>
         {isAmountValid && selectedClient && (
-          <CheckForm
-            totalAmount={amountNum}
-            disabled={isLoading}
-            locale={isHe ? 'he' : 'ru'}
-            onChange={(data, valid) => { setCheckDetails(data); setCheckValid(valid) }}
-          />
+          <CheckForm totalAmount={amountNum} disabled={isLoading} locale={isHe ? 'he' : 'ru'} onChange={(data, valid) => { setCheckDetails(data); setCheckValid(valid) }} />
         )}
       </div>
     )
@@ -705,15 +594,11 @@ export function UnifiedPaymentDialog({
               style={{ paddingInlineStart: 36, fontSize: 18, fontWeight: 700, height: 48, border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff' }} />
           </div>
         </div>
-        <BankTransferForm
-          disabled={isLoading}
-          locale={isHe ? 'he' : 'ru'}
-          onChange={(data, valid) => { setBankDetails(data); setBankValid(valid) }}
-        />
+        <BankTransferForm disabled={isLoading} locale={isHe ? 'he' : 'ru'} onChange={(data, valid) => { setBankDetails(data); setBankValid(valid) }} />
       </div>
     )
 
-    // ── Cash form ───────────────────────────────────────────────────────────────
+    // ── Cash form ────────────────────────────────────────────────────────────
     if (step === 'cash-form') return (
       <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
         {errorMsg && (
@@ -739,12 +624,7 @@ export function UnifiedPaymentDialog({
           </div>
         </div>
         {isAmountValid && selectedClient && (
-          <CashForm
-            totalAmount={amountNum}
-            disabled={isLoading}
-            locale={isHe ? 'he' : 'ru'}
-            onChange={(data, valid) => { setCashData(data); setCashValid(valid) }}
-          />
+          <CashForm totalAmount={amountNum} disabled={isLoading} locale={isHe ? 'he' : 'ru'} onChange={(data, valid) => { setCashData(data); setCashValid(valid) }} />
         )}
       </div>
     )
@@ -789,25 +669,10 @@ export function UnifiedPaymentDialog({
   const shellIcon = currentMethod ? METHOD_ICONS[currentMethod] : <CreditCard />
 
   return (
-    <Modal
-      open={open}
-      onClose={handleClose}
-      darkHeader
-      showCloseButton={false}
-      width="680px"
-      dir={isHe ? 'rtl' : 'ltr'}
-      contentClassName="!p-0"
-    >
+    <Modal open={open} onClose={handleClose} darkHeader showCloseButton={false} width="680px" dir={isHe ? 'rtl' : 'ltr'} contentClassName="!p-0">
       <TrinityModalShell
-        open={open}
-        onClose={handleClose}
-        icon={shellIcon}
-        title={t.title}
-        subtitle={
-          selectedClient
-            ? `${selectedClient.first_name} ${selectedClient.last_name}`
-            : isHe ? 'בחר לקוח' : 'Выберите клиента'
-        }
+        open={open} onClose={handleClose} icon={shellIcon} title={t.title}
+        subtitle={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : isHe ? 'בחר לקוח' : 'Выберите клиента'}
         dir={isHe ? 'rtl' : 'ltr'}
         sidebarExtra={step !== 'method-select' ? sidebar : undefined}
         footerContent={mobileFooter}

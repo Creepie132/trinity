@@ -52,7 +52,8 @@ export function usePaymentMethodConfig() {
       if (!res.ok) throw new Error('Failed to load payment settings')
       return res.json()
     },
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   })
 
   // terminal_connected приходит с сервера: !!(tranzila_terminal?.trim())

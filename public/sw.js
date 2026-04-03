@@ -1,7 +1,7 @@
 // Trinity CRM — Service Worker
 // Handles push notifications and offline caching
 
-const CACHE_NAME = 'trinity-v1'
+const CACHE_NAME = 'trinity-v2'
 
 // ─── Install ───────────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {

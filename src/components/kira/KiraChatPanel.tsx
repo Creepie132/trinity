@@ -3,8 +3,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { Send, Loader2, Sparkles, Bell, RotateCcw } from 'lucide-react'
+import { Send, Loader2, Sparkles, Bell, RotateCcw, Phone, MessageSquare, Map, ExternalLink } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
+import { useRouter } from 'next/navigation'
 import { KiraWave } from '@/components/kira/KiraWave'
 import type { KiraWaveState } from '@/components/kira/KiraWave'
 import { DebtWidget } from '@/components/kira/ui/DebtWidget'
@@ -19,6 +20,7 @@ const supabaseRealtime = createClient(
 )
 
 export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
+  const router = useRouter()
   const { language } = useLanguage()
   const scrollRef      = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -106,6 +108,26 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
     setSessionId(null)
     // Следующее сообщение автоматически создаст новую сессию через /api/kira/session
   }, [setMessages])
+
+  const handleUIAction = useCallback((result: any) => {
+    const { ui_action, client_id, phone, address } = result
+    switch (ui_action) {
+      case 'open_client':    router.push(`/clients?open=${client_id}`); break
+      case 'open_gallery':   router.push(`/clients?open=${client_id}&tab=gallery`); break
+      case 'open_documents': router.push(`/clients?open=${client_id}&tab=documents`); break
+      case 'open_whatsapp':  router.push(`/inbox?client=${client_id}`); break
+      case 'open_sale':      router.push(`/sales?newSale=1&client=${client_id}`); break
+      case 'open_maps':
+        if (address) window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank')
+        break
+      case 'call':
+        if (phone) window.location.href = `tel:${phone.replace(/\D/g,'')}`
+        break
+      case 'sms':
+        if (phone) window.location.href = `sms:${phone.replace(/\D/g,'')}`
+        break
+    }
+  }, [router])
 
   const isLoading = status === 'streaming' || status === 'submitted'
   const waveState: KiraWaveState = isLoading ? 'thinking' : 'idle'
@@ -223,6 +245,46 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
               }
               if (part.type === 'tool-getDebts' && part.state === 'output-available') {
                 return <div key={i} className="w-full"><DebtWidget result={part.output} /></div>
+              }
+              if (part.type === 'tool-openClientUI' && part.state === 'output-available') {
+                const r = part.output as any
+                if (r.ui_action) {
+                  // Авто-выполняем навигацию
+                  setTimeout(() => handleUIAction(r), 100)
+                  const labels: Record<string, string> = {
+                    open_client: '📋 Открываю карточку клиента...',
+                    open_gallery: '🖼️ Открываю галерею...',
+                    open_documents: '📁 Открываю документы...',
+                    open_whatsapp: '💬 Открываю переписку...',
+                    open_sale: '🛒 Открываю новую продажу...',
+                    open_maps: '🗺️ Открываю навигатор...',
+                    call: `📞 Звоню ${r.phone}...`,
+                    sms: `✉️ Открываю SMS для ${r.phone}...`,
+                  }
+                  return (
+                    <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl"
+                      style={{ background: 'rgba(52,211,153,0.12)', color: 'rgba(52,211,153,0.9)', border: '1px solid rgba(52,211,153,0.2)' }}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      {labels[r.ui_action] ?? 'Выполняю...'}
+                    </div>
+                  )
+                }
+                if (r.needs_confirmation) {
+                  return (
+                    <div key={i} className="flex flex-col gap-2 text-xs px-3 py-2 rounded-xl"
+                      style={{ background: 'rgba(99,102,241,0.12)', color: 'rgba(200,200,255,0.9)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                      <p>{r.message}</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleUIAction({ ...r, ui_action: r.action })}
+                          className="px-3 py-1 rounded-lg text-xs font-medium"
+                          style={{ background: 'rgba(52,211,153,0.2)', color: 'rgba(52,211,153,1)' }}>
+                          {r.action === 'call' ? <><Phone className="inline w-3 h-3 mr-1" />Позвонить</> : <><MessageSquare className="inline w-3 h-3 mr-1" />Написать</>}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                }
+                return null
               }
               if (part.type?.startsWith('tool-') && (part.state === 'input-available' || part.state === 'input-streaming')) {
                 return (

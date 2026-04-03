@@ -31,8 +31,8 @@ function extractText(msg: RawMsg): string {
 // ── Модули Trinity и к каким инструментам они дают доступ ────────────────
 const MODULE_TOOL_MAP: Record<string, string[]> = {
   visits:   ['createVisitByName', 'cancelVisit', 'rescheduleVisit', 'updateVisitType', 'getSchedule'],
-  clients:  ['getClientSummary', 'getTopClients'],
-  payments: ['getRevenueStats'],
+  clients:  ['getClientSummary', 'getTopClients', 'createClient', 'updateClient', 'deleteClient', 'getClientHistory', 'openClientUI'],
+  payments: ['getRevenueStats', 'getClientPayments'],
   sales:    ['getDebts'],
 }
 
@@ -40,6 +40,12 @@ const MODULE_TOOL_MAP: Record<string, string[]> = {
 const ALL_TOOL_DESCRIPTIONS: Record<string, string> = {
   getClientSummary:   'поиск клиента по имени/телефону',
   getTopClients:      'топ клиентов по выручке (LTV)',
+  createClient:       'создать нового клиента (задаёт уточняющие вопросы)',
+  updateClient:       'редактировать данные клиента',
+  deleteClient:       'удалить клиента (требует PIN-подтверждения)',
+  getClientHistory:   'история визитов клиента',
+  getClientPayments:  'история платежей клиента',
+  openClientUI:       'открыть карточку клиента, галерею, документы, WhatsApp, продажу, звонок, SMS, навигатор',
   createVisitByName:  'создать запись/визит',
   cancelVisit:        'отменить визит',
   rescheduleVisit:    'перенести визит',
@@ -103,9 +109,6 @@ function buildSystemPrompt(ctx: {
     '',
     '═══ ЧТО КИРА НЕ УМЕЕТ (не обещай и не пытайся) ═══',
     '',
-    '- Создать нового клиента',
-    '- Удалить что-либо из системы',
-    '- Редактировать существующую оплату',
     '- Управлять настройками, тарифами, интеграциями',
     '- Видеть данные других организаций',
     '- Выполнять действия за пределами перечисленных инструментов',
@@ -145,6 +148,24 @@ function buildSystemPrompt(ctx: {
     '6. МОДУЛЬНЫЙ ЗАПРЕТ: если пользователь просит что-то из заблокированных модулей —',
     '   скажи коротко: "Этот модуль не подключён в вашей организации. Обратитесь к администратору."',
     '   НЕ пытайся обойти ограничение, НЕ вызывай инструменты для недоступных модулей.',
+    '',
+    '7. СОЗДАНИЕ КЛИЕНТА: если пользователь хочет добавить клиента — спроси по порядку:',
+    '   а) Имя и фамилия (обязательно)',
+    '   б) Телефон (обязательно)',
+    '   в) Email, дата рождения, адрес, заметки — спроси "добавить дополнительную информацию?"',
+    '   Как только есть имя + телефон — вызывай createClient.',
+    '',
+    '8. УДАЛЕНИЕ КЛИЕНТА: ВСЕГДА требуй PIN перед удалением.',
+    '   Шаг 1: найди клиента через getClientSummary, подтверди имя.',
+    '   Шаг 2: скажи "Для удаления введи свой PIN-код".',
+    '   Шаг 3: вызови deleteClient с pin который ввёл пользователь.',
+    '   Никогда не удаляй без явного PIN от пользователя.',
+    '',
+    '9. UI-ДЕЙСТВИЯ через openClientUI: когда пользователь просит открыть карточку клиента,',
+    '   галерею, документы, WhatsApp, новую продажу, навигатор, позвонить или написать SMS —',
+    '   сначала найди клиента через getClientSummary (чтобы получить client_id),',
+    '   затем вызови openClientUI с нужным action.',
+    '   Для звонка и SMS — сначала сообщи номер и спроси подтверждение.',
   ].join('\n')
 }
 
@@ -596,10 +617,172 @@ export async function POST(request: NextRequest) {
     },
   }
 
+  // 10. Создать клиента
+  const createClient = {
+    description: 'Create a new client. first_name and phone are required. Ask for them if missing.',
+    inputSchema: zodSchema(z.object({
+      first_name: z.string().describe('First name (required)'),
+      last_name: z.string().optional(),
+      phone: z.string().describe('Phone number (required)'),
+      email: z.string().optional(),
+      date_of_birth: z.string().optional().describe('YYYY-MM-DD'),
+      address: z.string().optional(),
+      notes: z.string().optional(),
+    })),
+    execute: async (data: { first_name: string; last_name?: string; phone: string; email?: string; date_of_birth?: string; address?: string; notes?: string }) => {
+      const { data: client, error } = await supabase.from('clients').insert([{
+        org_id: orgId,
+        first_name: data.first_name,
+        last_name: data.last_name ?? null,
+        phone: data.phone,
+        email: data.email ?? null,
+        date_of_birth: data.date_of_birth ?? null,
+        address: data.address ?? null,
+        notes: data.notes ?? null,
+      }]).select('id, first_name, last_name, phone').single()
+      if (error) return { success: false, error: error.message }
+      return { success: true, client_id: client.id, name: `${client.first_name} ${client.last_name ?? ''}`.trim(), phone: client.phone }
+    },
+  }
+
+  // 11. Редактировать клиента
+  const updateClient = {
+    description: 'Update client fields. Find client first via getClientSummary to get client_id.',
+    inputSchema: zodSchema(z.object({
+      client_id: z.string().describe('Client UUID from getClientSummary'),
+      first_name: z.string().optional(),
+      last_name: z.string().optional(),
+      phone: z.string().optional(),
+      email: z.string().optional(),
+      date_of_birth: z.string().optional(),
+      address: z.string().optional(),
+      notes: z.string().optional(),
+    })),
+    execute: async ({ client_id, ...fields }: { client_id: string; [k: string]: any }) => {
+      const allowed = ['first_name','last_name','phone','email','date_of_birth','address','notes']
+      const updates: Record<string, any> = { updated_at: new Date().toISOString() }
+      for (const k of allowed) if (fields[k] !== undefined) updates[k] = fields[k] || null
+      const { data, error } = await supabase.from('clients').update(updates).eq('id', client_id).eq('org_id', orgId).select('id, first_name, last_name').single()
+      if (error) return { success: false, error: error.message }
+      return { success: true, name: `${data.first_name} ${data.last_name ?? ''}`.trim() }
+    },
+  }
+
+  // 12. Удалить клиента (с PIN)
+  const deleteClient = {
+    description: 'Delete a client. Requires PIN confirmation from the user. Ask for PIN before calling this tool.',
+    inputSchema: zodSchema(z.object({
+      client_id: z.string(),
+      client_name: z.string().describe('Client name for confirmation message'),
+      pin: z.string().describe('PIN entered by user'),
+    })),
+    execute: async ({ client_id, client_name, pin }: { client_id: string; client_name: string; pin: string }) => {
+      // Verify PIN via Supabase Auth signInWithPassword
+      const { data: { user: authUser }, error: authErr } = await supabase.auth.admin.getUserById(user.id)
+      if (authErr || !authUser?.email) return { success: false, error: 'Не удалось проверить пользователя' }
+
+      // Verify PIN by checking user metadata kira_pin
+      const meta = authUser.user_metadata as any
+      if (!meta?.kira_pin) return { success: false, error: 'PIN не установлен. Задай его в настройках профиля.' }
+      if (meta.kira_pin !== pin) return { success: false, error: 'Неверный PIN. Удаление отменено.' }
+
+      const { error } = await supabase.from('clients').delete().eq('id', client_id).eq('org_id', orgId)
+      if (error) return { success: false, error: error.message }
+      return { success: true, deleted_name: client_name }
+    },
+  }
+
+  // 13. История визитов клиента
+  const getClientHistory = {
+    description: 'Get visit history for a client. Find client_id first via getClientSummary.',
+    inputSchema: zodSchema(z.object({
+      client_id: z.string(),
+      limit: z.number().optional(),
+    })),
+    execute: async ({ client_id, limit = 10 }: { client_id: string; limit?: number }) => {
+      const { data, error } = await supabase.from('visits')
+        .select('id, scheduled_at, status, service_type, event_type, price, notes')
+        .eq('org_id', orgId).eq('client_id', client_id)
+        .order('scheduled_at', { ascending: false }).limit(limit)
+      if (error) return { found: false, visits: [] }
+      return { found: !!data?.length, visits: (data ?? []).map(v => ({
+        id: v.id,
+        date: new Date(v.scheduled_at).toLocaleDateString('ru-RU', { timeZone: 'Asia/Jerusalem' }),
+        time: new Date(v.scheduled_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' }),
+        status: v.status, service: v.service_type ?? '—', type: v.event_type,
+        price: v.price ? `₪${v.price}` : '—', notes: v.notes ?? '',
+      })) }
+    },
+  }
+
+  // 14. История платежей клиента
+  const getClientPayments = {
+    description: 'Get payment history for a client. Find client_id first via getClientSummary.',
+    inputSchema: zodSchema(z.object({
+      client_id: z.string(),
+      limit: z.number().optional(),
+    })),
+    execute: async ({ client_id, limit = 10 }: { client_id: string; limit?: number }) => {
+      const { data, error } = await supabase.from('payments')
+        .select('id, amount, status, method, paid_at, notes')
+        .eq('org_id', orgId).eq('client_id', client_id)
+        .order('paid_at', { ascending: false }).limit(limit)
+      if (error) return { found: false, payments: [] }
+      const total = (data ?? []).filter(p => p.status === 'completed').reduce((s, p) => s + Number(p.amount), 0)
+      return { found: !!data?.length, total_ils: Math.round(total * 100) / 100, payments: (data ?? []).map(p => ({
+        amount: `₪${p.amount}`, status: p.status, method: p.method ?? '—',
+        date: p.paid_at ? new Date(p.paid_at).toLocaleDateString('ru-RU', { timeZone: 'Asia/Jerusalem' }) : '—',
+        notes: p.notes ?? '',
+      })) }
+    },
+  }
+
+  // 15. UI-действия: открыть карточку, галерею, WA, продажу, звонок, SMS, навигатор
+  const openClientUI = {
+    description: [
+      'Trigger a UI action in the Trinity interface. Use for:',
+      '"открой карточку/профиль" → action=open_client',
+      '"галерея/фото" → action=open_gallery',
+      '"документы" → action=open_documents',
+      '"whatsapp/переписка" → action=open_whatsapp',
+      '"новая продажа" → action=open_sale',
+      '"навигатор/маршрут" → action=open_maps (requires address)',
+      '"позвони/звонок" → action=call (requires phone, confirmed=true)',
+      '"напиши SMS/сообщение" → action=sms (requires phone, confirmed=true)',
+    ].join(' '),
+    inputSchema: zodSchema(z.object({
+      client_id: z.string().describe('Client UUID'),
+      client_name: z.string().describe('Client name for display'),
+      action: z.enum(['open_client','open_gallery','open_documents','open_whatsapp','open_sale','open_maps','call','sms']),
+      phone: z.string().optional().describe('Required for call/sms'),
+      address: z.string().optional().describe('Required for open_maps'),
+      confirmed: z.boolean().optional().describe('true = user confirmed the action (for call/sms)'),
+    })),
+    execute: async ({ client_id, client_name, action, phone, address, confirmed }: {
+      client_id: string; client_name: string; action: string;
+      phone?: string; address?: string; confirmed?: boolean;
+    }) => {
+      // Защита: звонок и SMS только после явного подтверждения
+      if ((action === 'call' || action === 'sms') && !confirmed) {
+        return { ui_action: null, needs_confirmation: true, action, phone, client_name,
+          message: action === 'call'
+            ? `Позвонить ${client_name} на ${phone}? Подтверди.`
+            : `Открыть SMS для ${client_name} (${phone})? Подтверди.` }
+      }
+      return { ui_action: action, client_id, client_name, phone, address }
+    },
+  }
+
   // ── Фильтруем инструменты по активным модулям ────────────────────────────
   const ALL_TOOLS = {
     getClientSummary,
     getTopClients,
+    createClient,
+    updateClient,
+    deleteClient,
+    getClientHistory,
+    getClientPayments,
+    openClientUI,
     createVisitByName,
     cancelVisit,
     rescheduleVisit,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Assistant } from "next/font/google";
 import "./globals.css";
+import { cookies } from "next/headers";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster } from "@/components/ui/sonner";
@@ -141,13 +142,19 @@ const jsonLd = {
   applicationSubCategory: 'CRM',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Читаем locale из cookie — синхронный SSR, без DB запроса
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get('trinity_locale')?.value;
+  const locale = localeCookie === 'ru' ? 'ru' : 'he';
+  const dir = locale === 'he' ? 'rtl' : 'ltr';
+
   return (
-    <html lang="he" dir="rtl" className="light" suppressHydrationWarning>
+    <html lang={locale} dir={dir} className="light" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="preconnect" href="https://tjryzcqvsavtllahjyrj.supabase.co" />
@@ -171,7 +178,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${assistant.variable} font-sans`} suppressHydrationWarning>
         <QueryProvider>
-          <LanguageProvider>
+          <LanguageProvider initialLocale={locale}>
             {children}
             <Toaster 
               position="bottom-center" 

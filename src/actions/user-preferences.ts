@@ -54,6 +54,20 @@ export async function updateUserPreferences(prefs: UserPreferences): Promise<{ e
 }
 
 /**
+ * setLocaleCookie — записывает trinity_locale cookie (1 год).
+ * Вызывается при смене языка — даёт SSR читать язык без DB запроса.
+ */
+export async function setLocaleCookie(locale: string): Promise<void> {
+  const cookieStore = await cookies()
+  cookieStore.set('trinity_locale', locale, {
+    maxAge: 60 * 60 * 24 * 365, // 1 год
+    path: '/',
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  })
+}
+
+/**
  * getUserPreferences — читает предпочтения при старте сессии.
  * Используется в Server Components (layout.tsx).
  */

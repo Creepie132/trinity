@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { updateUserPreferences } from '@/actions/user-preferences'
+import { updateUserPreferences, setLocaleCookie } from '@/actions/user-preferences'
 
 export type Language = 'he' | 'ru'
 
@@ -1836,7 +1836,9 @@ const translations: Record<Language, Record<string, string>> = {
 }
 
 // Read language synchronously before first render to avoid hydration mismatch
-function getInitialLanguage(): Language {
+function getInitialLanguage(serverLocale?: Language): Language {
+  // Если SSR передал locale из cookie — используем его (без обращения к window)
+  if (serverLocale) return serverLocale
   if (typeof window === 'undefined') return 'he'
   try {
     const saved = localStorage.getItem('trinity-language') as Language
@@ -1845,8 +1847,8 @@ function getInitialLanguage(): Language {
   return 'he'
 }
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(getInitialLanguage)
+export function LanguageProvider({ children, initialLocale }: { children: ReactNode; initialLocale?: Language }) {
+  const [language, setLanguageState] = useState<Language>(() => getInitialLanguage(initialLocale))
 
   useEffect(() => {
     // Sync html attributes on mount (SSR renders with 'he' default)
@@ -1857,6 +1859,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLanguageState(lang)
     try { localStorage.setItem('trinity-language', lang) } catch {}
     applyLanguage(lang)
+    // Записываем cookie для SSR (не ждём результата — optimistic)
+    setLocaleCookie(lang).catch(() => {})
     // Синхронизируем с БД в фоне (optimistic — UI уже обновлён)
     updateUserPreferences({ preferred_language: lang }).catch(() => {})
   }

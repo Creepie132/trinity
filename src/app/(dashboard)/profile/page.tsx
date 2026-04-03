@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { User, Building2, Calendar, Globe, LogOut } from 'lucide-react'
 import { format } from 'date-fns'
+import { KiraPinCard } from '@/components/kira/KiraPinCard'
 
 export default function ProfilePage() {
   const { user, orgId, signOut, isLoading: authLoading } = useAuth()
@@ -170,6 +171,9 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Kira PIN */}
+      <KiraPinCard />
 
       {/* Logout */}
       <Card className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20">

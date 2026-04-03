@@ -1,5 +1,5 @@
 # Trinity CRM — Полная документация
-> Amber Solutions · ambersol.co.il · Последнее обновление: 01.04.2026
+> Amber Solutions · ambersol.co.il · Последнее обновление: 04.04.2026
 
 ---
 
@@ -489,6 +489,27 @@ Whapi.cloud → POST /api/webhooks/whapi
 ---
 
 ## 11. UI-компоненты
+
+### GoldTabBar — мобильная навигация
+`src/components/layout/GoldTabBar.tsx`
+
+Liquid gold bottom tab bar для мобильных устройств (<1024px). Рендерится через `DashboardShell` поверх всего контента.
+
+**Характеристики:**
+- Squircle-индикатор активного таба с золотой градиентной рамкой (9-стоп градиент, `#fffbe0` → `#3a1e00` → `#fffbe0`)
+- Внешнее свечение через `box-shadow` amber-glow
+- Shimmer-анимация внутри пилюли через `@keyframes goldShimmer`
+- Spring-физика переключения: JS RAF-анимация, lead/trail грани с разными `stiffness`/`damping`
+- Фильтрация табов по feature flags (`useFeatures`)
+- `safe-area-inset-bottom` для iPhone с notch
+- Spacer `h-[90px]` предотвращает перекрытие контента
+- Скрыт на `lg:` и выше (`lg:hidden`)
+
+**Табы:** Dashboard → Clients → Visits → Payments → Analytics
+
+**Интеграция:** Подключён в `DashboardShell.tsx` рядом с `PinnedModalsTray`.
+
+
 
 ### Modal.tsx — базовый движок
 `src/components/ui/Modal.tsx`

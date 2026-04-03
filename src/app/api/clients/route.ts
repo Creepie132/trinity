@@ -33,7 +33,7 @@ async function getRelatedOrgIds(orgId: string): Promise<string[]> {
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(req)
     if ('error' in auth) return auth.error
 
     const { orgId } = auth
@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(req)
     if ('error' in auth) return auth.error
     
     const { orgId } = auth

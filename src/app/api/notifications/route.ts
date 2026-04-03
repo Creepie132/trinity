@@ -1,23 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { getAuthContext } from '@/lib/auth-helpers'
 
 // GET /api/notifications - список уведомлений для текущего пользователя
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Bearer token support (mobile)
+  const authHeader = request.headers.get('Authorization') ?? ''
+  let userId: string
+
+  if (authHeader.startsWith('Bearer ')) {
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+    userId = auth.user.id
+  } else {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    userId = user.id
   }
 
   const { searchParams } = new URL(request.url)
   const unreadOnly = searchParams.get('unread_only') === 'true'
 
-  let query = supabase
+  const service = createSupabaseServiceClient()
+
+  let query = service
     .from('notifications')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     // Не показывать отложенные напоминания (scheduled_at ещё не наступил)
     .or('scheduled_at.is.null,scheduled_at.lte.' + new Date().toISOString())
     .order('created_at', { ascending: false })
@@ -69,28 +80,34 @@ export async function GET(request: NextRequest) {
 
 // PUT /api/notifications - пометить уведомления как прочитанные
 export async function PUT(request: NextRequest) {
-  const supabase = await createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authHeader = request.headers.get('Authorization') ?? ''
+  let userId: string
+  if (authHeader.startsWith('Bearer ')) {
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+    userId = auth.user.id
+  } else {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    userId = user.id
   }
 
+  const service = createSupabaseServiceClient()
   const body = await request.json()
   const { ids, all } = body
 
   if (all) {
-    const { error } = await supabase
+    const { error } = await service
       .from('notifications')
       .update({ is_read: true })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('is_read', false)
 
     if (error) {
       console.error('Mark all notifications read error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
     return NextResponse.json({ success: true })
   }
 
@@ -98,11 +115,11 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid ids array' }, { status: 400 })
   }
 
-  const { error } = await supabase
+  const { error } = await service
     .from('notifications')
     .update({ is_read: true })
     .in('id', ids)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
 
   if (error) {
     console.error('Mark notifications read error:', error)
@@ -114,26 +131,30 @@ export async function PUT(request: NextRequest) {
 
 // DELETE /api/notifications - удалить уведомление по id
 export async function DELETE(request: NextRequest) {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authHeader = request.headers.get('Authorization') ?? ''
+  let userId: string
+  if (authHeader.startsWith('Bearer ')) {
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+    userId = auth.user.id
+  } else {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    userId = user.id
   }
 
+  const service = createSupabaseServiceClient()
   const { searchParams } = new URL(request.url)
   const id = searchParams.get('id')
 
-  if (!id) {
-    return NextResponse.json({ error: 'Missing id' }, { status: 400 })
-  }
+  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
-  // user_id фильтр — никто не может удалить чужое уведомление
-  const { error } = await supabase
+  const { error } = await service
     .from('notifications')
     .delete()
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
 
   if (error) {
     console.error('Delete notification error:', error)

@@ -161,6 +161,9 @@ function buildSystemPrompt(ctx: {
     '   Email, дата рождения, адрес, заметки — необязательны. НЕ спрашивай про них.',
     '   Если пользователь сам говорит "не знаю" / "нет" / "пропусти" / "неважно" —',
     '   передавай null для этого поля и продолжай. Никогда не зависай на необязательных полях.',
+    '   ЗАПРЕЩЕНО: сообщать об ошибках с необязательными полями (дата рождения, email и т.д.).',
+    '   Если поле не заполнено — просто передай null и создай клиента молча.',
+    '   НИКОГДА не предлагай "попробовать ещё раз" из-за необязательного поля.',
     '',
     '8. УДАЛЕНИЕ КЛИЕНТА: ВСЕГДА требуй PIN перед удалением.',
     '   Шаг 1: найди клиента через getClientSummary, подтверди имя.',
@@ -656,13 +659,19 @@ export async function POST(request: NextRequest) {
       notes: z.string().optional(),
     })),
     execute: async (data: { first_name: string; last_name?: string; phone: string; email?: string; date_of_birth?: string; address?: string; notes?: string }) => {
+      // Защита: если дата не в формате YYYY-MM-DD — молча сбрасываем в null
+      let dob: string | null = null
+      if (data.date_of_birth) {
+        const parsed = new Date(data.date_of_birth)
+        dob = isNaN(parsed.getTime()) ? null : data.date_of_birth
+      }
       const { data: client, error } = await supabase.from('clients').insert([{
         org_id: orgId,
         first_name: data.first_name,
         last_name: data.last_name ?? null,
         phone: data.phone,
         email: data.email ?? null,
-        date_of_birth: data.date_of_birth ?? null,
+        date_of_birth: dob,
         address: data.address ?? null,
         notes: data.notes ?? null,
       }]).select('id, first_name, last_name, phone').single()

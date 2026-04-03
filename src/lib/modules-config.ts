@@ -85,4 +85,11 @@ export const MODULES: Module[] = [
     desc_he: 'ניהול שיחות WhatsApp עם לקוחות',
     desc_ru: 'Входящие сообщения и чаты WhatsApp',
   },
+  {
+    key: 'kira',
+    name_he: '✨ Kira AI — עוזרת אישית',
+    name_ru: '✨ Kira AI — ИИ-ассистент',
+    desc_he: 'סייענת חכמה לניהול עסק בשפה טבעית',
+    desc_ru: 'Умный ИИ-ассистент для управления бизнесом',
+  },
 ]

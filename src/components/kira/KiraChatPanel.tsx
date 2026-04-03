@@ -11,7 +11,7 @@ import type { KiraWaveState } from '@/components/kira/KiraWave'
 import { DebtWidget } from '@/components/kira/ui/DebtWidget'
 import { useLanguage } from '@/contexts/LanguageContext'
 
-interface KiraChatPanelProps { orgId: string }
+interface KiraChatPanelProps { orgId: string; kiraEnabled?: boolean }
 type HistoryMessage = { role: 'user' | 'assistant'; content: string }
 
 const supabaseRealtime = createClient(
@@ -19,7 +19,7 @@ const supabaseRealtime = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
+export function KiraChatPanel({ orgId, kiraEnabled = true }: KiraChatPanelProps) {
   const router = useRouter()
   const { language } = useLanguage()
   const scrollRef      = useRef<HTMLDivElement>(null)
@@ -167,6 +167,21 @@ export function KiraChatPanel({ orgId }: KiraChatPanelProps) {
 
     sendMessage({ text: trimmed })
     setText('')
+  }
+
+  if (!kiraEnabled) {
+    return (
+      <div className="rounded-2xl flex flex-col items-center justify-center gap-2 py-6 px-4 text-center"
+        style={{ background: '#1e2027', border: '1px solid rgba(255,255,255,0.06)', minHeight: 120 }}>
+        <Sparkles className="w-5 h-5 opacity-20" style={{ color: 'rgba(130,170,255,0.6)' }} />
+        <p className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          {language === 'he' ? 'Kira AI לא מופעל בחשבון זה' : 'Kira AI не подключена для этого аккаунта'}
+        </p>
+        <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.12)' }}>
+          {language === 'he' ? 'פנה למנהל המערכת' : 'Обратитесь к администратору'}
+        </p>
+      </div>
+    )
   }
 
   if (!sessionReady) {

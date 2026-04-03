@@ -5,6 +5,7 @@ import { Megaphone, Bell, ExternalLink } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useBranch } from '@/contexts/BranchContext'
+import { useOrganization } from '@/hooks/useOrganization'
 
 const KiraChatPanel = dynamic(
   () => import('@/components/kira/KiraChatPanel').then(m => ({ default: m.KiraChatPanel })),
@@ -155,7 +156,11 @@ function AdBlock() {
 export function RightPanel() {
   const { language } = useLanguage()
   const { activeOrgId } = useBranch()
+  const { data: org } = useOrganization()
   const isRTL = language === 'he'
+
+  // kira module flag — если явно false, блокируем. По умолчанию включено
+  const kiraEnabled = org?.features?.modules?.kira !== false
 
   const borderClass = isRTL
     ? 'border-r border-gray-100 dark:border-slate-800'
@@ -179,7 +184,7 @@ export function RightPanel() {
         <Ticker items={ANNOUNCEMENTS} />
 
         {/* Кира AI — чат */}
-        {activeOrgId && <KiraChatPanel orgId={activeOrgId} />}
+        {activeOrgId && <KiraChatPanel orgId={activeOrgId} kiraEnabled={kiraEnabled} />}
 
         {/* Рекламный баннер */}
         <AdBlock />

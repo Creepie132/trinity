@@ -258,6 +258,11 @@ export async function POST(request: NextRequest) {
   const isDemo    = features.is_demo === true || features.is_trial === true
   const isActive  = ['active', 'manual', 'demo', 'trial'].includes(status)
 
+  // Kira module gate — если явно отключён, блокируем весь доступ
+  if (modules.kira === false) {
+    return new Response(JSON.stringify({ error: 'Kira AI не подключена для этой организации' }), { status: 403 })
+  }
+
   // Собираем enabled модули (логика идентична useFeatures на клиенте)
   const enabledModules: Record<string, boolean> = {
     clients:  modules.clients  ?? true,

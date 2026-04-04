@@ -6,7 +6,7 @@ import { enforceDemoLimit } from '@/lib/demo-limits'
 // GET /api/tasks - список задач с фильтрами
 export async function GET(request: NextRequest) {
   try {
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(request)
     if ('error' in auth) return auth.error
 
     const { user, orgId, orgRole, supabase } = auth
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
 // POST /api/tasks - создать новую задачу
 export async function POST(request: NextRequest) {
-  const auth = await getAuthContext()
+  const auth = await getAuthContext(request)
   if ('error' in auth) return auth.error
 
   const { user, orgId, supabase } = auth

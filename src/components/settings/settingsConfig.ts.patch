@@ -1,0 +1,10 @@
+      {
+        id: 'payments',
+        href: '/settings/payments',
+        icon: CreditCard,
+        colorTint: 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+        title_ru: 'Способы оплаты',
+        title_he: 'אמצעי תשלום',
+        desc_ru: 'Настройте доступные способы оплаты для клиентов',
+        desc_he: 'הגדר אילו אמצעי תשלום יהיו זמינים ללקוחות',
+      },

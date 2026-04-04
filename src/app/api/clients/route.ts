@@ -43,10 +43,10 @@ export async function GET(req: NextRequest) {
     // Resolve all org IDs in the branch family for shared client access
     const relatedOrgIds = await getRelatedOrgIds(orgId)
 
-    // Build query
+    // Build query — visits/sales count для индикатора активности в мобиле
     let query = supabaseAdmin
       .from('clients')
-      .select('*')
+      .select('*, visits(count), sales(count)')
       .in('org_id', relatedOrgIds)
       .order('created_at', { ascending: false })
 
@@ -83,7 +83,18 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    return NextResponse.json(clients, { status: 200 })
+    // Добавляем has_activity — есть хоть один визит или продажа
+    const enriched = (clients ?? []).map((c: any) => {
+      const visitsCount  = (c.visits  as any[])?.[0]?.count ?? 0
+      const salesCount   = (c.sales   as any[])?.[0]?.count ?? 0
+      const { visits, sales, ...rest } = c
+      return {
+        ...rest,
+        has_activity: visitsCount > 0 || salesCount > 0,
+      }
+    })
+
+    return NextResponse.json(enriched, { status: 200 })
   } catch (error: any) {
     console.error('API error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })

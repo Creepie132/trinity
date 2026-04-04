@@ -11,7 +11,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await getAuthContext()
+  const auth = await getAuthContext(_request)
   if ('error' in auth) return auth.error
 
   const { orgId } = auth
@@ -41,7 +41,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await getAuthContext()
+  const auth = await getAuthContext(request)
   if ('error' in auth) return auth.error
 
   const { orgId } = auth
@@ -97,7 +97,7 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await getAuthContext()
+  const auth = await getAuthContext(_request)
   if ('error' in auth) return auth.error
 
   const { orgId } = auth

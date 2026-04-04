@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const auth = await getAuthContext()
+    const auth = await getAuthContext(request)
     if ('error' in auth) return NextResponse.json([], { status: 401 })
 
     const { orgId, supabase } = auth

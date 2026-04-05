@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     if (limitActive) return limitActive
     // ─────────────────────────────────────────────────────────────────────────
 
-    const { clientId, service, serviceId, date, time, duration, price, quantity, notes, event_type, meeting_link } = data
+    const { clientId, service, serviceId, date, time, scheduledAt: clientScheduledAt, duration, price, quantity, notes, event_type, meeting_link } = data
 
     if (!clientId) {
       return NextResponse.json({ error: 'חסר מזהה לקוח' }, { status: 400 })
@@ -86,15 +86,16 @@ export async function POST(request: NextRequest) {
     if (!service && !serviceId) {
       return NextResponse.json({ error: 'חסר סוג שירות' }, { status: 400 })
     }
-    if (!date || !time) {
+    if (!clientScheduledAt && (!date || !time)) {
       return NextResponse.json({ error: 'חסר תאריך או שעה' }, { status: 400 })
     }
     if (!isMeetingMode && (price === null || price === undefined || price === '')) {
       return NextResponse.json({ error: 'חסר מחיר' }, { status: 400 })
     }
 
-    // DST-aware: converts Israel local time (Asia/Jerusalem) to UTC
-    const scheduled_at = israelLocalToUTC(date, time)
+    // Prefer client-provided ISO timestamp (browser local TZ).
+    // Fallback: DST-aware conversion via israelLocalToUTC (Asia/Jerusalem).
+    const scheduled_at = clientScheduledAt ?? israelLocalToUTC(date!, time!)
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 

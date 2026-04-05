@@ -431,6 +431,7 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
             clientId:   form.clientId,
             serviceId:  isAppt ? null : form.serviceId,
             service:    isAppt ? (form.meetingPurpose || (isHe ? 'פגישה' : 'Встреча')) : form.service,
+            scheduledAt: new Date(`${form.date}T${form.time}`).toISOString(),
             date: form.date, time: form.time,
             duration:   isAppt ? null : form.duration,
             price:      isAppt ? '0' : form.price,

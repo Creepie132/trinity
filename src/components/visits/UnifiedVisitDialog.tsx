@@ -386,7 +386,13 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
     try {
       if (isEditMode && safeData.visit) {
         // ── EDIT: PUT /api/visits/:id ──────────────────────────────────────────
-        const scheduled_at = new Date(`${form.date}T${form.time}`).toISOString()
+        // Build ISO with explicit Israel offset to avoid browser-timezone ambiguity
+        const _noonUTC = new Date(`${form.date}T12:00:00.000Z`)
+        const _tzParts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', timeZoneName: 'shortOffset' }).formatToParts(_noonUTC)
+        const _tzName = _tzParts.find(p => p.type === 'timeZoneName')?.value ?? 'GMT+2'
+        const _tzMatch = _tzName.match(/GMT([+-])(\d+)(?::(\d+))?/)
+        const _offset = _tzMatch ? `${_tzMatch[1]}${_tzMatch[2].padStart(2,'0')}:${(_tzMatch[3]??'00').padStart(2,'0')}` : '+02:00'
+        const scheduled_at = new Date(`${form.date}T${form.time}:00${_offset}`).toISOString()
 
         // Validate not in past
         if (new Date(scheduled_at) < new Date()) {

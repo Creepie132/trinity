@@ -1214,3 +1214,25 @@ CREATE INDEX idx_kira_sessions_org_status ON kira_sessions(org_id, status);
 - `src/actions/user-preferences.ts` — `setLocaleCookie()` server action (1 год, sameSite=lax)
 
 **Коммит:** `79afb09`
+
+---
+
+## 05.04.2026 — Mobile Download Page & Landing Updates
+
+### Страница /mobile (скачивание APK)
+- Создан файл: `src/app/mobile/page.tsx`
+- Маршрут публичный — добавлен в `PUBLIC_PATH_SET` в `middleware.ts`
+- APK раздаётся через Vercel Blob: `https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v1.0.apk`
+- Страница содержит: версию (v1.0.0), размер (53.7 MB), кнопку скачивания, инструкцию по установке, changelog
+- APK не хранится в git — `public/releases/` добавлен в `.gitignore`
+- Пакет `@vercel/blob` добавлен в зависимости
+- Создан API route: `src/app/api/upload-apk/route.ts` (PUT — для загрузки будущих версий APK)
+
+### Лендинг (/landing)
+- Добавлен пункт меню «Скачать» / «הורדות» / «Download» → `/mobile` (в десктопном и мобильном nav)
+- Добавлено поле `navDownload: string` в тип `LangData`
+- Кнопка «Войти» в хедере: `padding 7px 14px`, `border-radius 8px`, `font-size 13px`, фон `#1a237e`, hover `#283593`, через `Link href="/login"`
+- Кнопка «Войти» в мобильном сайдбаре: `w-full rounded-lg py-3 font-bold text-white`, тот же фон, через `Link href="/login"`
+- Убраны `animate-pulse`, `shadow`, свечения — стиль чистый и строгий
+- Стили заданы через inline `style={}` из-за ограничения Turbopack с arbitrary Tailwind классами
+

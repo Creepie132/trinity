@@ -58,12 +58,17 @@ export async function POST(request: NextRequest) {
 
     const activeOrgId = await getActiveOrgId(user.id, orgId)
     const orgRole = user.app_metadata?.org_role ?? null
+    const isAdmin = user.app_metadata?.is_admin === true
 
     const { data: orgData } = await service
       .from('organizations')
       .select('name')
       .eq('id', activeOrgId)
       .single()
+
+    // Если пользователь — системный администратор (is_admin), возвращаем role='super_admin'.
+    // Это позволяет мобильному приложению показывать Admin Dashboard без дополнительных проверок.
+    const mobileRole = isAdmin ? 'super_admin' : (orgRole ?? 'owner')
 
     return NextResponse.json({
       access_token: session.access_token,
@@ -73,8 +78,8 @@ export async function POST(request: NextRequest) {
       email: user.email,
       org_id: activeOrgId,
       main_org_id: orgId,
-      role: orgRole,
-      is_admin: user.app_metadata?.is_admin === true,
+      role: mobileRole,
+      is_admin: isAdmin,
       org_name: orgData?.name ?? null,
     })
   } catch (err) {
@@ -127,11 +132,19 @@ export async function PUT(request: NextRequest) {
       // org_name is non-critical — don't fail the refresh
     }
 
+    // Возвращаем role чтобы Flutter мог обновить роль после refresh.
+    // Если is_admin — role='super_admin', иначе берём org_role из JWT или null (Flutter сохранит старую).
+    const refreshedIsAdmin = data.user.app_metadata?.is_admin === true
+    const refreshedOrgRole = data.user.app_metadata?.org_role as string | null ?? null
+    const refreshedRole = refreshedIsAdmin ? 'super_admin' : (refreshedOrgRole ?? null)
+
     return NextResponse.json({
       access_token: data.session.access_token,
       refresh_token: data.session.refresh_token,
       expires_at: data.session.expires_at,
       org_name: orgName,
+      role: refreshedRole,
+      is_admin: refreshedIsAdmin,
     })
   } catch (err) {
     console.error('[mobile/auth/refresh] Error:', err)

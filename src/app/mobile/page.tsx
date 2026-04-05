@@ -6,12 +6,16 @@ export const metadata: Metadata = {
   description: 'Мобильное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '1.0.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v1.0.apk'
+const CURRENT_VERSION = '1.1.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v1.1-EB5QkCjexamlhKH231SWgsxbznG9Yq.apk'
 const APK_SIZE = '53.7 MB'
 const RELEASE_DATE = '05.04.2026'
 
 const CHANGELOG = [
+  'Адаптивный интерфейс для планшетов (breakpoint 600px)',
+  'Дашборд: 4 карточки в строку на tablet, 2x2 на mobile',
+  'Клиенты и визиты: 2-колоночная сетка на tablet',
+  'Масштабируемые шрифты и отступы (scaledFont / scaledPadding)',
   'Авторизация через Google',
   'Дашборд: визиты сегодня, выручка, новые клиенты',
   'Список клиентов с поиском',

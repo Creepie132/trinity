@@ -6,21 +6,32 @@ export const metadata: Metadata = {
   description: 'Мобильное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '1.1.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v1.1-8APuPDJwzoTLiKiokn4ObwPVTWXhDD.apk'
-const APK_SIZE = '56.3 MB'
+const CURRENT_VERSION = '1.2.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v1.2-l5inYlXYm32gedGI8rPx2FfjYczCLF.apk'
+const APK_SIZE = '53.7 MB'
 const RELEASE_DATE = '05.04.2026'
 
 const CHANGELOG = [
-  'Адаптивный интерфейс для планшетов (breakpoint 600px)',
-  'Дашборд: 4 карточки в строку на tablet, 2x2 на mobile',
-  'Клиенты и визиты: 2-колоночная сетка на tablet',
-  'Масштабируемые шрифты и отступы (scaledFont / scaledPadding)',
-  'Авторизация через Google',
-  'Дашборд: визиты сегодня, выручка, новые клиенты',
-  'Список клиентов с поиском',
-  'Список визитов',
-  'Push-уведомления',
+  {
+    version: '1.2.0',
+    date: '05.04.2026',
+    changes: ['Исправлено отображение названия организации в боковом меню'],
+  },
+  {
+    version: '1.1.0',
+    date: '05.04.2026',
+    changes: [
+      'Адаптивный интерфейс для планшетов (breakpoint 600px)',
+      'Дашборд: 4 карточки в строку на tablet, 2x2 на mobile',
+      'Клиенты и визиты: 2-колоночная сетка на tablet',
+      'Масштабируемые шрифты и отступы (scaledFont / scaledPadding)',
+      'Авторизация через Google',
+      'Дашборд: визиты сегодня, выручка, новые клиенты',
+      'Список клиентов с поиском',
+      'Список визитов',
+      'Push-уведомления',
+    ],
+  },
 ]
 
 export default function MobilePage() {
@@ -94,15 +105,25 @@ export default function MobilePage() {
 
       {/* Changelog */}
       <div className="w-full max-w-sm bg-white/5 border border-white/10 rounded-2xl p-6 mb-10 backdrop-blur">
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">Что в этой версии</h2>
-        <ul className="space-y-2 text-sm text-gray-300">
-          {CHANGELOG.map((item, i) => (
-            <li key={i} className="flex items-start gap-2">
-              <span className="text-amber-400 mt-0.5">✓</span>
-              <span>{item}</span>
-            </li>
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4">Что нового</h2>
+        <div className="space-y-5">
+          {CHANGELOG.map((entry) => (
+            <div key={entry.version}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-amber-400 font-semibold text-sm">v{entry.version}</span>
+                <span className="text-xs text-gray-500">{entry.date}</span>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-300">
+                {entry.changes.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-amber-400 mt-0.5">✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
 
       {/* Footer */}

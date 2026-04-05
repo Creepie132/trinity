@@ -7,6 +7,7 @@ const PUBLIC_PATH_SET = new Set([
   '/terms', '/policy', '/pricing', '/access-pending',
   '/subscription-expired', '/onboarding', '/callback',
   '/payment-success', '/payment-failed', '/payment/success', '/payment/fail',
+  '/mobile',
 ])
 
 const PUBLIC_PATH_PREFIXES = [

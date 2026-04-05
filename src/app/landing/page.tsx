@@ -12,6 +12,7 @@ type LangData = {
   navFeatures: string
   navPricing: string
   navHow: string
+  navDownload: string
   navCta: string
   badge: string
   h1a: string
@@ -73,6 +74,7 @@ const RU: LangData = {
   navFeatures: 'Возможности',
   navPricing: 'Тарифы',
   navHow: 'Как это работает',
+  navDownload: 'Скачать',
   navCta: 'Войти →',
   badge: 'Система управления бизнесом · Израиль',
   h1a: 'Клиенты не пропадают. Запись не теряется.',
@@ -163,6 +165,7 @@ const HE: LangData = {
   navFeatures: 'יכולות',
   navPricing: 'תמחור',
   navHow: 'איך זה עובד',
+  navDownload: 'הורדות',
   navCta: 'כניסה →',
   badge: 'מערכת ניהול עסקים · ישראל',
   h1a: 'לקוחות לא נעלמים. תורים לא אובדים.',
@@ -253,6 +256,7 @@ const EN: LangData = {
   navFeatures: 'Features',
   navPricing: 'Pricing',
   navHow: 'How it works',
+  navDownload: 'Download',
   navCta: 'Login →',
   badge: 'Business Management · Israel',
   h1a: 'Clients never disappear. Bookings never get lost.',
@@ -726,10 +730,11 @@ export default function LandingPage() {
           <a href="#features">{t.navFeatures}</a>
           <a href="#pricing">{t.navPricing}</a>
           <a href="#how">{t.navHow}</a>
+          <a href="/mobile">{t.navDownload}</a>
         </div>
         <div className="nav-right">
           <button className="btn-lang" onClick={() => setLang(LANG_CYCLE[lang].next)}>{LANG_CYCLE[lang].label}</button>
-          <a href="/login" className="btn-nav desktop-only">{t.navCta}</a>
+          <a href="/login" className="desktop-only bg-gradient-to-r from-amber-400 to-amber-500 text-white px-5 py-2 rounded-full shadow-lg shadow-amber-400/40 animate-pulse hover:from-amber-300 hover:to-amber-400 transition-all">{t.navCta}</a>
           <button className="burger" onClick={() => setMobileOpen(o => !o)} aria-label="Menu">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               {mobileOpen
@@ -746,7 +751,8 @@ export default function LandingPage() {
         <a href="#features" onClick={() => setMobileOpen(false)}>{t.navFeatures}</a>
         <a href="#pricing"  onClick={() => setMobileOpen(false)}>{t.navPricing}</a>
         <a href="#how"      onClick={() => setMobileOpen(false)}>{t.navHow}</a>
-        <a href="/login"  onClick={() => setMobileOpen(false)} className="btn-nav">{t.navCta}</a>
+        <a href="/mobile"   onClick={() => setMobileOpen(false)}>{t.navDownload}</a>
+        <a href="/login"    onClick={() => setMobileOpen(false)} className="bg-gradient-to-r from-amber-400 to-amber-500 text-white px-5 py-2 rounded-full shadow-lg shadow-amber-400/40 animate-pulse hover:from-amber-300 hover:to-amber-400 transition-all">{t.navCta}</a>
         <button className="btn-lang" onClick={() => { setLang(LANG_CYCLE[lang].next); setMobileOpen(false) }}>{LANG_CYCLE[lang].label}</button>
       </div>
 

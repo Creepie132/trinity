@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { usePricingPlans } from '@/hooks/usePricingPlans'
 import { useTrafficTracker } from '@/hooks/useTrafficTracker'
 
@@ -734,7 +735,7 @@ export default function LandingPage() {
         </div>
         <div className="nav-right">
           <button className="btn-lang" onClick={() => setLang(LANG_CYCLE[lang].next)}>{LANG_CYCLE[lang].label}</button>
-          <a href="/login" className="desktop-only text-white px-5 py-2 rounded-full transition-colors duration-200" style={{backgroundColor:'#1a237e'}} onMouseEnter={e=>(e.currentTarget.style.backgroundColor='#283593')} onMouseLeave={e=>(e.currentTarget.style.backgroundColor='#1a237e')}>{t.navCta}</a>
+          <Link href="/login" className="desktop-only text-white px-4 py-2 rounded-lg transition-colors duration-200" style={{backgroundColor:'#1a237e'}} onMouseEnter={e=>(e.currentTarget.style.backgroundColor='#283593')} onMouseLeave={e=>(e.currentTarget.style.backgroundColor='#1a237e')}>{t.navCta}</Link>
           <button className="burger" onClick={() => setMobileOpen(o => !o)} aria-label="Menu">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               {mobileOpen
@@ -752,7 +753,7 @@ export default function LandingPage() {
         <a href="#pricing"  onClick={() => setMobileOpen(false)}>{t.navPricing}</a>
         <a href="#how"      onClick={() => setMobileOpen(false)}>{t.navHow}</a>
         <a href="/mobile"   onClick={() => setMobileOpen(false)}>{t.navDownload}</a>
-        <a href="/login"    onClick={() => setMobileOpen(false)} className="text-white px-5 py-2 rounded-full transition-colors duration-200" style={{backgroundColor:'#1a237e'}} onMouseEnter={e=>(e.currentTarget.style.backgroundColor='#283593')} onMouseLeave={e=>(e.currentTarget.style.backgroundColor='#1a237e')}>{t.navCta}</a>
+        <Link href="/login" onClick={() => setMobileOpen(false)} className="w-full rounded-lg py-3 font-bold text-white text-center transition-colors duration-200" style={{backgroundColor:'#1a237e'}} onMouseEnter={e=>(e.currentTarget.style.backgroundColor='#283593')} onMouseLeave={e=>(e.currentTarget.style.backgroundColor='#1a237e')}>{t.navCta}</Link>
         <button className="btn-lang" onClick={() => { setLang(LANG_CYCLE[lang].next); setMobileOpen(false) }}>{LANG_CYCLE[lang].label}</button>
       </div>
 

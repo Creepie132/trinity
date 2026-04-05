@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { zodSchema } from 'ai'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { israelLocalToUTC } from '@/lib/tz'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -373,7 +374,7 @@ export async function POST(request: NextRequest) {
         }
       }
       const client = clients[0]
-      const scheduled_at = new Date(`${date}T${time}:00+03:00`).toISOString()
+      const scheduled_at = israelLocalToUTC(date, time)
 
       // Идемпотентность: проверяем нет ли уже такого визита (защита от двойного вызова GPT)
       const windowStart = new Date(new Date(scheduled_at).getTime() - 60_000).toISOString() // -1 мин
@@ -500,7 +501,7 @@ export async function POST(request: NextRequest) {
     execute: async ({ visit_id, new_date, new_time }: { visit_id: string; new_date: string; new_time: string }) => {
       const { data: existing } = await supabase.from('visits').select('id').eq('id', visit_id).eq('org_id', orgId).single()
       if (!existing) return { success: false, error: 'Visit not found or access denied' }
-      const new_scheduled_at = new Date(`${new_date}T${new_time}:00+03:00`).toISOString()
+      const new_scheduled_at = israelLocalToUTC(new_date, new_time)
       const { error } = await supabase.from('visits').update({ scheduled_at: new_scheduled_at, updated_at: new Date().toISOString() }).eq('id', visit_id).eq('org_id', orgId)
       if (error) return { success: false, error: error.message }
       return { success: true, visit_id, new_scheduled_at }

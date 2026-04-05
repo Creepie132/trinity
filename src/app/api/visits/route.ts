@@ -9,28 +9,7 @@ import { queuePushNotification } from '@/lib/push-notify'
 import { dispatchNotification } from '@/lib/dispatch-notification'
 import { scheduleMessage } from '@/lib/wa/scheduler'
 import { normalizePhone } from '@/lib/wa/phone'
-
-/**
- * Convert Israel local date+time to UTC ISO string.
- * Uses Intl to correctly handle DST (+02:00 winter / +03:00 summer).
- */
-function israelLocalToUTC(dateStr: string, timeStr: string): string {
-  const [y, mo, d] = dateStr.split('-').map(Number)
-  const [h, mi] = timeStr.split(':').map(Number)
-  // Start with UTC+2 as estimate
-  const estimate = new Date(Date.UTC(y, mo - 1, d, h - 2, mi))
-  // Ask Intl what hour Israel sees for this UTC moment
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Jerusalem',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(estimate)
-  const israelHour = parseInt(parts.find(p => p.type === 'hour')!.value) % 24
-  // Adjust by the difference (handles DST automatically)
-  const delta = h - israelHour
-  return new Date(estimate.getTime() + delta * 3_600_000).toISOString()
-}
+import { israelLocalToUTC } from '@/lib/tz'
 
 // GET /api/visits - список визитов для текущей организации
 export async function GET(request: NextRequest) {
@@ -114,22 +93,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'חסר מחיר' }, { status: 400 })
     }
 
-    // Dynamic Israel offset — handles both standard time (UTC+2) and DST (UTC+3)
-    const israelOffset = (() => {
-      const noonUTC = new Date(`${date}T12:00:00.000Z`)
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Jerusalem',
-        timeZoneName: 'shortOffset',
-      }).formatToParts(noonUTC)
-      const tzName = parts.find(p => p.type === 'timeZoneName')?.value ?? 'GMT+2'
-      const match = tzName.match(/GMT([+-])(\d+)(?::(\d+))?/)
-      if (!match) return '+02:00'
-      const sign = match[1]
-      const h = match[2].padStart(2, '0')
-      const m = (match[3] ?? '00').padStart(2, '0')
-      return `${sign}${h}:${m}`
-    })()
-    const scheduled_at = new Date(`${date}T${time}:00${israelOffset}`).toISOString()
+    // DST-aware: converts Israel local time (Asia/Jerusalem) to UTC
+    const scheduled_at = israelLocalToUTC(date, time)
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 

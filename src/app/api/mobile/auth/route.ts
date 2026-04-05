@@ -59,6 +59,12 @@ export async function POST(request: NextRequest) {
     const activeOrgId = await getActiveOrgId(user.id, orgId)
     const orgRole = user.app_metadata?.org_role ?? null
 
+    const { data: orgData } = await service
+      .from('organizations')
+      .select('name')
+      .eq('id', activeOrgId)
+      .single()
+
     return NextResponse.json({
       access_token: session.access_token,
       refresh_token: session.refresh_token,
@@ -69,6 +75,7 @@ export async function POST(request: NextRequest) {
       main_org_id: orgId,
       role: orgRole,
       is_admin: user.app_metadata?.is_admin === true,
+      org_name: orgData?.name ?? null,
     })
   } catch (err) {
     console.error('[mobile/auth] Error:', err)
@@ -90,14 +97,41 @@ export async function PUT(request: NextRequest) {
     }
 
     const { data, error } = await supabaseAnon.auth.refreshSession({ refresh_token })
-    if (error || !data.session) {
+    if (error || !data.session || !data.user) {
       return NextResponse.json({ error: 'Invalid or expired refresh token' }, { status: 401 })
+    }
+
+    const service = createSupabaseServiceClient()
+    let orgName: string | null = null
+    try {
+      const userId = data.user.id
+      let orgId = data.user.app_metadata?.org_id as string | undefined
+      if (!orgId) {
+        const { data: orgUser } = await service
+          .from('org_users')
+          .select('org_id')
+          .eq('user_id', userId)
+          .single()
+        orgId = orgUser?.org_id
+      }
+      if (orgId) {
+        const activeOrgId = await getActiveOrgId(userId, orgId)
+        const { data: orgData } = await service
+          .from('organizations')
+          .select('name')
+          .eq('id', activeOrgId)
+          .single()
+        orgName = orgData?.name ?? null
+      }
+    } catch (_) {
+      // org_name is non-critical — don't fail the refresh
     }
 
     return NextResponse.json({
       access_token: data.session.access_token,
       refresh_token: data.session.refresh_token,
       expires_at: data.session.expires_at,
+      org_name: orgName,
     })
   } catch (err) {
     console.error('[mobile/auth/refresh] Error:', err)

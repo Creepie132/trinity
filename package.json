@@ -26,6 +26,7 @@
     "@tiptap/starter-kit": "^3.22.1",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.2",
+    "@vercel/blob": "^2.3.3",
     "@zxing/library": "^0.21.3",
     "ai": "^6.0.143",
     "autoprefixer": "^10.4.27",

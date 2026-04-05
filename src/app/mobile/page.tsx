@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 }
 
 const CURRENT_VERSION = '1.0.0'
-const APK_PATH = '/releases/trinity-mobile-v1.0.apk'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v1.0.apk'
 const APK_SIZE = '53.7 MB'
 const RELEASE_DATE = '05.04.2026'
 

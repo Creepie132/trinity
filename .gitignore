@@ -57,4 +57,7 @@ __commit_out.txt
 __grep_out.txt
 deploy.bat
 queryClient.invalidateQueries*
-build_out.txt  
+build_out.txt
+
+# APK releases — stored in Vercel Blob, not in git
+public/releases/

@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useProducts } from '@/hooks/useProducts'
@@ -25,13 +24,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Check, Plus, Trash2, Camera, Package, ChevronDown, ArrowRight, ArrowLeft } from 'lucide-react'
-import { Banknote, Smartphone, CreditCard, Building2, Phone, Zap } from 'lucide-react'
+import { Check, Plus, Trash2, Camera, Package, ArrowRight, ArrowLeft } from 'lucide-react'
 import { Visit } from '@/types/visits'
 import { Product } from '@/types/inventory'
 import { BarcodeScanner } from '@/components/inventory/BarcodeScannerLazy'
 import { CareInstructionsButtons } from '@/components/care-instructions/CareInstructionsButtons'
 import { useVisitServices } from '@/hooks/useVisitServices'
+import { usePaymentMethodConfig } from '@/hooks/usePaymentMethodConfig'
+import type { CanonicalPaymentMethod } from '@/lib/payment-method-normalizer'
 
 interface CompleteVisitPaymentDialogProps {
   visit: Visit | null
@@ -45,27 +45,31 @@ interface SelectedProduct {
   price: number
 }
 
-const paymentMethods = [
-  { value: 'cash', icon: Banknote, labelKey: 'visits.paymentMethod.cash', emoji: '💵' },
-  { value: 'bit', icon: Smartphone, labelKey: 'visits.paymentMethod.bit', emoji: '📱' },
-  { value: 'credit', icon: CreditCard, labelKey: 'visits.paymentMethod.credit', emoji: '💳' },
-  { value: 'bankTransfer', icon: Building2, labelKey: 'visits.paymentMethod.bankTransfer', emoji: '🏦' },
-  { value: 'phoneCredit', icon: Phone, labelKey: 'visits.paymentMethod.phoneCredit', emoji: '📞' },
-]
-
 export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: CompleteVisitPaymentDialogProps) {
   const { t, language } = useLanguage()
   const { orgId } = useAuth()
-  const router = useRouter()
   const supabase = createSupabaseBrowserClient()
   const queryClient = useQueryClient()
   const { data: products } = useProducts()
   const { data: visitServicesFromHook } = useVisitServices(visit?.id || '')
+  const { enabledMethods, isLoading: paymentSettingsLoading } = usePaymentMethodConfig()
+
   // Use hook data when available, fall back to visit.visit_services (already fetched with the visit)
   // This prevents empty cart on first open (race condition before hook fetch completes)
   const visitServices = visitServicesFromHook ?? visit?.visit_services ?? []
 
-  const [paymentMethod, setPaymentMethod] = useState<string>('cash')
+  // Дефолтный метод — первый из разрешённых для орга (cash как fallback)
+  const [paymentMethod, setPaymentMethod] = useState<CanonicalPaymentMethod>('cash')
+
+  // После загрузки настроек — обновляем дефолт если текущий метод не разрешён
+  useEffect(() => {
+    if (!paymentSettingsLoading && enabledMethods.length > 0) {
+      const isCurrentAllowed = enabledMethods.some(m => m.key === paymentMethod)
+      if (!isCurrentAllowed) {
+        setPaymentMethod(enabledMethods[0].key)
+      }
+    }
+  }, [paymentSettingsLoading, enabledMethods])
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([])
   const [selectedProductId, setSelectedProductId] = useState<string>('')
@@ -190,7 +194,7 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
     setIsProcessing(true)
     try {
       // For credit card (Tranzila) - create payment link
-      if (paymentMethod === 'credit') {
+      if (paymentMethod === 'card') {
         // Create Tranzilla payment link
         const response = await fetch('/api/payments/create-link', {
           method: 'POST',
@@ -243,12 +247,13 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
         return
       }
 
-      // For other methods (cash, bit, bank transfer, phone credit) - create payment record directly
+      // For other methods — canonical keys match DB values directly
+      // cash → 'cash', bit → 'bit', bank_transfer → 'bank_transfer', check → 'check'
       const paymentMethodMap: Record<string, string> = {
         cash: 'cash',
         bit: 'bit',
-        bankTransfer: 'bank_transfer',
-        phoneCredit: 'phone_credit',
+        bank_transfer: 'bank_transfer',
+        check: 'check',
       }
 
       const { error: paymentError } = await supabase
@@ -500,34 +505,40 @@ export function CompleteVisitPaymentDialog({ visit, open, onOpenChange }: Comple
             <div className="space-y-3">
               <Label className="text-gray-900 dark:text-gray-100">{t('visits.selectPaymentMethod')}</Label>
               
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger className="w-full h-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                  <SelectValue>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">
-                        {paymentMethods.find(m => m.value === paymentMethod)?.emoji}
-                      </span>
-                      <span>
-                        {t(paymentMethods.find(m => m.value === paymentMethod)?.labelKey || 'visits.selectPaymentMethod')}
-                      </span>
-                    </div>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentMethods.map((method) => (
-                    <SelectItem key={method.value} value={method.value}>
+              {paymentSettingsLoading ? (
+                <div className="h-12 rounded-md bg-gray-100 dark:bg-gray-700 animate-pulse" />
+              ) : (
+                <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as CanonicalPaymentMethod)}>
+                  <SelectTrigger className="w-full h-12 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    <SelectValue>
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">{method.emoji}</span>
-                        <span>{t(method.labelKey)}</span>
+                        <span className="text-xl">
+                          {enabledMethods.find(m => m.key === paymentMethod)?.icon ?? '💰'}
+                        </span>
+                        <span>
+                          {language === 'he'
+                            ? (enabledMethods.find(m => m.key === paymentMethod)?.label.he ?? paymentMethod)
+                            : (enabledMethods.find(m => m.key === paymentMethod)?.label.ru ?? paymentMethod)}
+                        </span>
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {enabledMethods.map((method) => (
+                      <SelectItem key={method.key} value={method.key}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{method.icon}</span>
+                          <span>{language === 'he' ? method.label.he : method.label.ru}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
-            {/* Note for credit */}
-            {paymentMethod === 'credit' && (
+            {/* Note for card (Tranzila) */}
+            {paymentMethod === 'card' && (
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <p className="text-sm text-blue-800 dark:text-blue-300">
                   💡 {t('payments.sendLinkToClient')}

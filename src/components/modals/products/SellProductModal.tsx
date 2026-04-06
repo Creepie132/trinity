@@ -20,13 +20,16 @@ import { useClients } from '@/hooks/useClients'
 import { TrinityMobileSearch } from '@/components/ui/TrinitySearch'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
+import { usePaymentMethodConfig } from '@/hooks/usePaymentMethodConfig'
 import type { ClientSummary } from '@/types/database'
 
-const PAYMENT_METHODS = [
+// Полный визуальный конфиг всех методов — фильтруется динамически
+const ALL_PAYMENT_METHODS = [
   { value: 'cash',          emoji: '💵', labelHe: 'מזומן',  labelRu: 'Наличные', color: '#22c55e', bg: 'rgba(34,197,94,0.1)',  border: 'rgba(34,197,94,0.3)'  },
   { value: 'bit',           emoji: '📱', labelHe: 'ביט',    labelRu: 'Bit',      color: '#f97316', bg: 'rgba(249,115,22,0.1)', border: 'rgba(249,115,22,0.3)' },
-  { value: 'credit',        emoji: '💳', labelHe: 'אשראי',  labelRu: 'Карта',    color: '#6366f1', bg: 'rgba(99,102,241,0.1)', border: 'rgba(99,102,241,0.3)' },
+  { value: 'card',          emoji: '💳', labelHe: 'אשראי',  labelRu: 'Карта',    color: '#6366f1', bg: 'rgba(99,102,241,0.1)', border: 'rgba(99,102,241,0.3)' },
   { value: 'bank_transfer', emoji: '🏦', labelHe: 'העברה',  labelRu: 'Перевод',  color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)', border: 'rgba(14,165,233,0.3)' },
+  { value: 'check',         emoji: '📄', labelHe: "צ'ק",    labelRu: 'Чек',      color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', border: 'rgba(139,92,246,0.3)' },
 ]
 
 export function SellProductModal() {
@@ -41,6 +44,12 @@ export function SellProductModal() {
 
   const isHe = language === 'he'
   const dir   = isHe ? 'rtl' : 'ltr'
+
+  // Фильтруем методы по настройкам орга
+  const { enabledMethods } = usePaymentMethodConfig()
+  const PAYMENT_METHODS = ALL_PAYMENT_METHODS.filter(m =>
+    enabledMethods.some(e => e.key === m.value)
+  )
 
   const [quantity,       setQuantity]       = useState(1)
   const [price,          setPrice]          = useState(0)

@@ -146,11 +146,11 @@ export async function POST(request: NextRequest) {
       insertData.service_type = 'other'
     }
 
-    // Insert visit
+    // Insert visit — select with clients join so CalendarView gets clientName immediately
     const { data: visit, error: insertError } = await supabase
       .from('visits')
       .insert(insertData)
-      .select()
+      .select(`*, clients(first_name, last_name, phone, email), services(id, name, name_ru, duration_minutes, price)`)
       .single()
 
     if (insertError) {

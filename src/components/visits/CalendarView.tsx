@@ -66,11 +66,10 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
     setSelectedDay(now)
   }, [])
 
-  // Scroll week/day view to current time on mount
+  // Scroll week/day view to 08:00 on mount (not current time)
   useEffect(() => {
     if ((viewMode === 'week' || viewMode === 'day') && weekScrollRef.current && currentDate) {
-      const hour = new Date().getHours()
-      const scrollTo = Math.max(0, hour * HOUR_HEIGHT - 80)
+      const scrollTo = 8 * HOUR_HEIGHT - 16 // 08:00 с небольшим отступом
       weekScrollRef.current.scrollTop = scrollTo
     }
   }, [viewMode, currentDate])

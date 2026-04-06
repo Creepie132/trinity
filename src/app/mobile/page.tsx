@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   description: 'Скачайте приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.2.1'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.2.1-f3J4cVy3Nj73seUAwctn0kTzVZRLo4.apk'
+const CURRENT_VERSION = '2.2.2'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.2.2-bwQKrFS4pBixScW3kbzAf52MFeZAPH.apk'
 const APK_SIZE = '55.7 MB'
 const RELEASE_DATE = '06.04.2026'
 
@@ -40,6 +40,16 @@ const BackButton = () => (
 
 
 const CHANGELOG = [
+  {
+    version: '2.2.2',
+    date: '06.04.2026',
+    changes: [
+      'Каталог услуг открывается в отдельном окне со списком и поиском',
+      'Кнопка + в заголовке "Услуги" появляется только после добавления первой услуги',
+      'Исправлено создание услуги: кнопка реагирует, loading-индикатор работает',
+      'Empty state в каталоге с кнопкой создания первой услуги',
+    ],
+  },
   {
     version: '2.2.1',
     date: '06.04.2026',

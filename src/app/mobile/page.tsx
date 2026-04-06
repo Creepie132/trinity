@@ -6,12 +6,17 @@ export const metadata: Metadata = {
   description: 'Мобильное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '1.9.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v1.9-Xw7dT01azE6SjDg96ukQ5xn9KfwxRZ.apk'
+const CURRENT_VERSION = '2.0.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.0-kV5IaWHLsonqFvllj1GGzCMp7AK2K6.apk'
 const APK_SIZE = '54.9 MB'
 const RELEASE_DATE = '06.04.2026'
 
 const CHANGELOG = [
+  {
+    version: '2.0.0',
+    date: '06.04.2026',
+    changes: ['Theme System: 4 темы с синхронизацией через Supabase'],
+  },
   {
     version: '1.9.0',
     date: '06.04.2026',

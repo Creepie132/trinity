@@ -1289,6 +1289,29 @@ CHECK (theme IN ('command_center','editorial_luxury','neon_industrial','warm_org
 
 ---
 
+## 07.04.2026 — Fix: Диалог оплаты визита теперь уважает настройки enabled_payment_methods
+
+**Файл:** `src/components/visits/CompleteVisitPaymentDialog.tsx`
+**Коммит:** `3e214cd`
+
+### Проблема:
+Список способов оплаты в диалоге завершения визита (`CompleteVisitPaymentDialog`) был захардкожен статически — Bit, Наличные, Карта и т.д. отображались всегда, независимо от настроек организации. Включение/отключение методов в `/settings/payments` не влияло на диалог.
+
+### Исправление:
+- Убран статический массив `paymentMethods`
+- Подключён хук `usePaymentMethodConfig()` — возвращает `enabledMethods` (отфильтрованные по настройкам орга + бизнес-логике терминала)
+- Select в диалоге рендерит только разрешённые методы из `enabledMethods`
+- Добавлен `useEffect`: если текущий выбранный метод после загрузки настроек оказывается недоступен — автоматически переключается на первый доступный
+- Skeleton-заглушка на время загрузки настроек (`paymentSettingsLoading`)
+- `paymentMethodMap` обновлён на canonical-ключи (`bank_transfer`, `bit`, `check`) — совпадают с DB напрямую
+- Проверка `paymentMethod === 'credit'` исправлена на `=== 'card'` (canonical)
+- Убраны неиспользуемые импорты: `useRouter`, иконки lucide (`Banknote`, `Smartphone`, `CreditCard`, `Building2`, `Phone`, `Zap`, `ChevronDown`)
+
+### Затронутые файлы:
+- `src/components/visits/CompleteVisitPaymentDialog.tsx`
+
+---
+
 ## 06.04.2026 — Mobile Landing: Desktop Layout + Back Button + v2.2.0 Changelog
 
 **Файл:** `src/app/mobile/page.tsx`

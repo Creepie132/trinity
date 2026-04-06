@@ -1285,3 +1285,22 @@ CHECK (theme IN ('command_center','editorial_luxury','neon_industrial','warm_org
 
 **ВАЖНО:** Выполнить вручную в Supabase SQL Editor или через `supabase db push`.
 
+
+
+---
+
+## 06.04.2026 — Mobile Landing: Desktop Layout + Back Button + v2.2.0 Changelog
+
+**Файл:** `src/app/mobile/page.tsx`
+**Коммит:** `675a4a2`
+
+### Что изменено:
+- **Версия обновлена:** `2.1.0` → `2.2.0`
+- **Desktop layout:** `max-w-6xl` → `max-w-7xl` + `lg:px-12`; колонки hero/download переключаются на `lg:flex-row` (1024px+), было `md:`
+- **Кнопка "На главную"** добавлена в трёх местах:
+  1. Sticky nav (BackButton, виден всегда)
+  2. Hero-блок, под описанием (только `lg:`, styled с border)
+  3. Footer (styled кнопка с border, для мобайл и десктоп)
+- **Changelog:** добавлена запись v2.2.0 (Create Visit Sheet с выбором типа), карточки получили `hover:border-amber-400/20`
+- **Build:** чистый, 0 ошибок, `/mobile` в роутах присутствует
+

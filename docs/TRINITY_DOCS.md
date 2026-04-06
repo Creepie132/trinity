@@ -1382,3 +1382,30 @@ CHECK (theme IN ('command_center','editorial_luxury','neon_industrial','warm_org
 - Охватывает: инициализацию, Google Auth, GoldTabBar, тёмную тему, все модули (финансы/склад/продажи/задачи/аналитика/клиенты/визиты), сайдбар, аппаратную кнопку назад, edge-to-edge, систему тем
 - Файл: `src/app/mobile/page.tsx`
 - Коммит: `19c256c`
+
+
+---
+
+## 07.04.2026 — Четыре UI-фикса по задаче клиента
+
+**Коммит:** `9488b90`
+
+### 1. Бургер и стрелка "назад" поменяны местами — все мобильные хедеры
+- `MobileHeader.tsx`: бургер (☰) перемещён **влево**, стрелка (←) перемещена **вправо**
+- `MobileAdminHeader.tsx`: аналогично
+- Иконка: `ArrowRight` → `ArrowLeft` (стрелка смотрит влево = назад)
+- Работает во всех языках (ru / he)
+
+### 2. Календарь визитов — скролл к 08:00 при открытии
+- `src/components/visits/CalendarView.tsx`
+- Было: открывалось на текущем часе. Стало: всегда 08:00
+
+### 3. POST /api/visits теперь возвращает clients join
+- `src/app/api/visits/route.ts`
+- `.select()` → `.select(\`*, clients(first_name,last_name,phone,email), services(...)\`)`
+- Устраняет пустое имя клиента в блоке календаря сразу после создания визита
+
+### 4. ServicePicker — поиск + пагинация услуг (7/стр) при создании визита
+- `src/components/visits/UnifiedVisitDialog.tsx`
+- Новый компонент `ServicePicker` вместо `<Select>` для поля "Услуга"
+- Поиск по символам, пагинация ‹/›, цена и длительность в строке, z-index 9999

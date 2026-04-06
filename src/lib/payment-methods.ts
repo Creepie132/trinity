@@ -11,13 +11,14 @@
  */
 
 import React from 'react'
-import { CreditCard, Banknote, Building2, FileCheck, Link } from 'lucide-react'
+import { CreditCard, Banknote, Building2, FileCheck, Link, Smartphone } from 'lucide-react'
 
 // ─── Типы ──────────────────────────────────────────────────────────────────────
 
 export type TrinityPaymentMethodId =
   | 'card'          // Кредитная карта → Tranzila ссылка
   | 'cash'          // Наличные → прямая запись
+  | 'bit'           // Bit → прямая запись
   | 'check'         // Чек → прямая запись
   | 'bank_transfer' // Банковский перевод → прямая запись
   | 'link'          // Ссылка на оплату (только для UnifiedPaymentDialog)
@@ -26,6 +27,7 @@ export type TrinityPaymentMethodId =
 export const PAYMENT_METHOD_API_MAP: Record<TrinityPaymentMethodId, string> = {
   card:          'credit',
   cash:          'cash',
+  bit:           'bit',
   check:         'check',
   bank_transfer: 'bank_transfer',
   link:          'link',
@@ -69,6 +71,16 @@ export const TRINITY_PAYMENT_METHODS: PaymentMethodConfig[] = [
     glow: 'rgba(34,197,94,0.3)',
     bg: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
     border: '#bbf7d0', color: '#15803d',
+  },
+  {
+    id: 'bit',
+    labelHe: 'ביט', labelRu: 'Bit',
+    descHe: 'תשלום דרך אפליקציית ביט', descRu: 'Оплата через приложение Bit',
+    icon: React.createElement(Smartphone, { size: 22 }),
+    gradient: 'linear-gradient(135deg, #f97316, #ea580c)',
+    glow: 'rgba(249,115,22,0.3)',
+    bg: 'linear-gradient(135deg, #fff7ed, #ffedd5)',
+    border: '#fed7aa', color: '#c2410c',
   },
   {
     id: 'check',

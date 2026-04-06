@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { X } from 'lucide-react'
 import {
-  PAYMENT_METHODS_FOR_MODAL,
+  TRINITY_PAYMENT_METHODS,
   type TrinityPaymentMethodId,
 } from '@/lib/payment-methods'
+import { usePaymentMethodConfig } from '@/hooks/usePaymentMethodConfig'
 
 interface PaymentMethodModalProps {
   open: boolean
@@ -19,6 +20,17 @@ export function PaymentMethodModal({ open, onOpenChange, onSelectMethod }: Payme
   const { language } = useLanguage()
   const [mounted, setMounted] = useState(false)
   const isHe = language === 'he'
+
+  // Загружаем разрешённые методы для этого орга
+  const { enabledMethods, isLoading: paymentSettingsLoading } = usePaymentMethodConfig()
+
+  // Фильтруем визуальный конфиг по enabledMethods (canonical keys совпадают с TrinityPaymentMethodId)
+  // 'link' всегда исключаем — он в отдельном флоу
+  // 'card' (Tranzila) тоже исключаем из этого модала — он идёт через UnifiedPaymentDialog
+  const visibleMethods = TRINITY_PAYMENT_METHODS.filter(m => {
+    if (m.id === 'link' || m.id === 'card') return false
+    return enabledMethods.some(e => e.key === m.id)
+  })
 
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
@@ -68,45 +80,52 @@ export function PaymentMethodModal({ open, onOpenChange, onSelectMethod }: Payme
 
         {/* Methods */}
         <div style={{ padding: '16px 16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {PAYMENT_METHODS_FOR_MODAL.map((m, i) => (
-            <button
-              key={m.id}
-              onClick={() => { onSelectMethod(m.id); onOpenChange(false) }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
-                background: m.bg, border: `1.5px solid ${m.border}`,
-                borderRadius: 14, cursor: 'pointer', textAlign: isHe ? 'right' : 'left',
-                transition: 'transform 0.15s, box-shadow 0.15s',
-                animation: `pmSlideIn 0.25s ${i * 0.06}s ease both`,
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'
-                ;(e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 24px ${m.glow}`
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.transform = ''
-                ;(e.currentTarget as HTMLButtonElement).style.boxShadow = ''
-              }}
-            >
-              {/* Icon bubble */}
-              <div style={{ width: 46, height: 46, borderRadius: 13, background: m.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: `0 4px 14px ${m.glow}`, flexShrink: 0 }}>
-                {m.icon}
-              </div>
-              {/* Text */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 15, fontWeight: 700, color: m.color, margin: '0 0 2px' }}>
-                  {isHe ? m.labelHe : m.labelRu}
-                </p>
-                <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>
-                  {isHe ? m.descHe : m.descRu}
-                </p>
-              </div>
-              {/* Arrow */}
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: m.color, opacity: 0.5, flexShrink: 0, transform: isHe ? 'rotate(180deg)' : 'none' }}>
-                <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          ))}
+          {paymentSettingsLoading ? (
+            // Skeleton пока грузятся настройки
+            [1, 2, 3].map(i => (
+              <div key={i} style={{ height: 74, borderRadius: 14, background: '#f1f5f9', animation: 'pmSlideIn 0.3s ease both' }} />
+            ))
+          ) : (
+            visibleMethods.map((m, i) => (
+              <button
+                key={m.id}
+                onClick={() => { onSelectMethod(m.id); onOpenChange(false) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
+                  background: m.bg, border: `1.5px solid ${m.border}`,
+                  borderRadius: 14, cursor: 'pointer', textAlign: isHe ? 'right' : 'left',
+                  transition: 'transform 0.15s, box-shadow 0.15s',
+                  animation: `pmSlideIn 0.25s ${i * 0.06}s ease both`,
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'
+                  ;(e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 24px ${m.glow}`
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.transform = ''
+                  ;(e.currentTarget as HTMLButtonElement).style.boxShadow = ''
+                }}
+              >
+                {/* Icon bubble */}
+                <div style={{ width: 46, height: 46, borderRadius: 13, background: m.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: `0 4px 14px ${m.glow}`, flexShrink: 0 }}>
+                  {m.icon}
+                </div>
+                {/* Text */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: m.color, margin: '0 0 2px' }}>
+                    {isHe ? m.labelHe : m.labelRu}
+                  </p>
+                  <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>
+                    {isHe ? m.descHe : m.descRu}
+                  </p>
+                </div>
+                {/* Arrow */}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: m.color, opacity: 0.5, flexShrink: 0, transform: isHe ? 'rotate(180deg)' : 'none' }}>
+                  <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            ))
+          )}
         </div>
       </div>
 

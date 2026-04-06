@@ -30,7 +30,7 @@ import { toast } from 'sonner'
 import {
   CreditCard, Banknote, Link, CheckCircle2,
   Loader2, AlertCircle, X, ArrowLeft, MessageCircle,
-  FileCheck, Building2,
+  FileCheck, Building2, Smartphone,
 } from 'lucide-react'
 import { PaymentSuccessView, PaymentSuccessSidebar } from '@/components/payments/PaymentSuccessView'
 import { usePaymentMethodConfig } from '@/hooks/usePaymentMethodConfig'
@@ -41,8 +41,8 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type PaymentMethod = 'cash' | 'link' | 'check' | 'bank_transfer'
-type Step = 'method-select' | 'cash-form' | 'link-form' | 'check-form' | 'bank-form' | 'success'
+export type PaymentMethod = 'cash' | 'bit' | 'link' | 'check' | 'bank_transfer'
+type Step = 'method-select' | 'cash-form' | 'bit-form' | 'link-form' | 'check-form' | 'bank-form' | 'success'
 
 export interface UnifiedPaymentModalData {
   clientId?: string
@@ -81,7 +81,7 @@ function validateModalData(raw: unknown): UnifiedPaymentModalData {
     visitId:       typeof d.visitId === 'string' ? d.visitId : undefined,
     saleId:        typeof d.saleId === 'string' ? d.saleId : undefined,
     prefillAmount: typeof d.prefillAmount === 'number' ? d.prefillAmount : undefined,
-    defaultMethod: ['cash', 'link'].includes(d.defaultMethod as string)
+    defaultMethod: ['cash', 'bit', 'link'].includes(d.defaultMethod as string)
       ? (d.defaultMethod as PaymentMethod) : undefined,
     onSuccess:     typeof d.onSuccess === 'function'
       ? (d.onSuccess as () => void) : undefined,
@@ -94,6 +94,7 @@ const I18N = {
   he: {
     title: 'תשלום חדש', selectMethod: 'בחר אמצעי תשלום',
     cash: 'מזומן', cashDesc: 'תשלום במזומן ישירות',
+    bit: 'ביט', bitDesc: 'תשלום דרך אפליקציית ביט',
     check: "צ'ק", checkDesc: "תשלום בצ'ק עם פרטים",
     bank_transfer: 'העברה בנקאית', bank_transferDesc: 'העברה ישירה עם אסמכתא',
     link: 'קישור תשלום', linkDesc: 'קישור מאובטח ללקוח',
@@ -104,6 +105,7 @@ const I18N = {
     creating: 'יוצר...', saving: 'שומר...',
     createLink: 'צור קישור',
     successCash: '✓ התשלום נרשם בהצלחה',
+    successBit: '✓ תשלום ביט נרשם בהצלחה',
     successLink: '✓ הקישור נוצר בהצלחה',
     successCheck: "✓ הצ'קים נרשמו בהצלחה",
     successBank: '✓ ההעברה נרשמה בהצלחה',
@@ -122,6 +124,7 @@ const I18N = {
   ru: {
     title: 'Новый платёж', selectMethod: 'Выберите способ оплаты',
     cash: 'Наличные', cashDesc: 'Оплата наличными напрямую',
+    bit: 'Bit', bitDesc: 'Оплата через приложение Bit',
     check: 'Чек', checkDesc: 'Оплата чеком с деталями',
     bank_transfer: 'Банковский перевод', bank_transferDesc: 'Прямой перевод с квитанцией',
     link: 'Ссылка на оплату', linkDesc: 'Безопасная ссылка клиенту',
@@ -132,6 +135,7 @@ const I18N = {
     creating: 'Создаём...', saving: 'Сохраняем...',
     createLink: 'Создать ссылку',
     successCash: '✓ Платёж успешно записан',
+    successBit: '✓ Платёж Bit успешно записан',
     successLink: '✓ Ссылка успешно создана',
     successCheck: '✓ Чеки успешно записаны',
     successBank: '✓ Перевод успешно записан',
@@ -156,6 +160,7 @@ const METHODS: {
   gradient: string; glow: string; bg: string; border: string; color: string
 }[] = [
   { id: 'cash',          gradient: 'linear-gradient(135deg,#22c55e,#16a34a)', glow: 'rgba(34,197,94,0.3)',   bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '#bbf7d0', color: '#15803d' },
+  { id: 'bit',           gradient: 'linear-gradient(135deg,#f97316,#ea580c)', glow: 'rgba(249,115,22,0.3)', bg: 'linear-gradient(135deg,#fff7ed,#ffedd5)', border: '#fed7aa', color: '#c2410c' },
   { id: 'check',         gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', glow: 'rgba(245,158,11,0.3)', bg: 'linear-gradient(135deg,#fffbeb,#fef3c7)', border: '#fde68a', color: '#b45309' },
   { id: 'bank_transfer', gradient: 'linear-gradient(135deg,#0ea5e9,#0284c7)', glow: 'rgba(14,165,233,0.3)', bg: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)', border: '#bae6fd', color: '#0369a1' },
   { id: 'link',          gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', glow: 'rgba(139,92,246,0.3)', bg: 'linear-gradient(135deg,#faf5ff,#ede9fe)', border: '#ddd6fe', color: '#6d28d9' },
@@ -163,6 +168,7 @@ const METHODS: {
 
 const METHOD_ICONS: Record<PaymentMethod, React.ReactNode> = {
   cash:          <Banknote size={22} />,
+  bit:           <Smartphone size={22} />,
   check:         <FileCheck size={22} />,
   bank_transfer: <Building2 size={22} />,
   link:          <Link size={22} />,
@@ -256,6 +262,7 @@ export function UnifiedPaymentDialog({
 
   const currentMethod: PaymentMethod | null =
     step === 'cash-form' ? 'cash'
+    : step === 'bit-form' ? 'bit'
     : step === 'check-form' ? 'check'
     : step === 'bank-form' ? 'bank_transfer'
     : step === 'link-form' ? 'link'
@@ -281,6 +288,7 @@ export function UnifiedPaymentDialog({
     setErrorMsg(null)
     const stepMap: Record<PaymentMethod, Step> = {
       cash:          'cash-form',
+      bit:           'bit-form',
       link:          'link-form',
       check:         'check-form',
       bank_transfer: 'bank-form',
@@ -324,6 +332,22 @@ export function UnifiedPaymentDialog({
         queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
         queryClient.invalidateQueries({ queryKey: ['sales'] })
         toast.success(t.successCash); safeData.onSuccess?.(); setStep('success'); return
+      }
+
+      if (step === 'bit-form') {
+        const res = await fetch('/api/payments', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id: selectedClient.id, amount: amountNum, payment_method: 'bit',
+            status: 'completed', visit_id: safeData.visitId ?? null, sale_id: safeData.saleId ?? null,
+            description: `Bit — ${selectedClient.first_name} ${selectedClient.last_name}`,
+          }),
+        })
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error || t.errorGeneric) }
+        queryClient.invalidateQueries({ queryKey: ['payments'] })
+        queryClient.invalidateQueries({ queryKey: ['payments-stats'] })
+        queryClient.invalidateQueries({ queryKey: ['sales'] })
+        toast.success(t.successBit); safeData.onSuccess?.(); setStep('success'); return
       }
 
       if (step === 'check-form') {
@@ -536,6 +560,40 @@ export function UnifiedPaymentDialog({
         clientName={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : undefined}
         onClose={handleClose} locale={isHe ? 'he' : 'ru'}
       />
+    )
+
+    // ── Bit form ─────────────────────────────────────────────────────────────
+    if (step === 'bit-form') return (
+      <div style={{ padding: '20px 18px 24px' }} className="space-y-5">
+        {errorMsg && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12 }}>
+            <AlertCircle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: 1 }} />
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#dc2626', margin: '0 0 2px' }}>{t.errorTitle}</p>
+              <p style={{ fontSize: 11, color: '#ef4444', margin: 0 }}>{errorMsg}</p>
+            </div>
+            <button onClick={() => setErrorMsg(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 0 }}><X size={14} /></button>
+          </div>
+        )}
+        <div style={{ background: methodCfg?.bg ?? 'linear-gradient(135deg,#fff7ed,#ffedd5)', border: `1px solid ${methodCfg?.border ?? '#fed7aa'}`, borderRadius: 14, padding: '14px 16px' }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: methodCfg?.color ?? '#c2410c', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.client} *</label>
+          <ClientSearch orgId={searchOrgId} onSelect={c => setSelectedClient(c)} placeholder={t.selectClient} locale={language as 'he' | 'ru' | 'en'} value={selectedClient} />
+        </div>
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '14px 16px' }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.amount} *</label>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', insetInlineStart: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 18, fontWeight: 700, color: methodCfg?.color ?? '#64748b', pointerEvents: 'none' }}>₪</span>
+            <Input type="number" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" disabled={isLoading}
+              style={{ paddingInlineStart: 36, fontSize: 18, fontWeight: 700, height: 48, border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff' }} />
+          </div>
+        </div>
+        <div style={{ padding: '12px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Smartphone size={18} style={{ color: '#c2410c', flexShrink: 0 }} />
+          <p style={{ fontSize: 12, color: '#92400e', margin: 0 }}>
+            {isHe ? 'יש לאשר קבלת תשלום ביט לפני שמירה' : 'Убедитесь в получении Bit-платежа перед сохранением'}
+          </p>
+        </div>
+      </div>
     )
 
     // ── Check form ──────────────────────────────────────────────────────────

@@ -1289,6 +1289,21 @@ CHECK (theme IN ('command_center','editorial_luxury','neon_industrial','warm_org
 
 ---
 
+## 07.04.2026 — Fix: SellProductModal фильтрует методы по настройкам орга
+
+**Файл:** `src/components/modals/products/SellProductModal.tsx`
+**Коммит:** `9ee1d98`
+
+### Проблема:
+`SellProductModal` имел захардкоженный статический массив `PAYMENT_METHODS` без фильтрации по `enabled_payment_methods` орга. `'credit'` заменён на `'card'` (canonical), добавлен `'check'`.
+
+### Исправление:
+- Массив переименован в `ALL_PAYMENT_METHODS`, расширен (`card`, `check`)
+- Подключён `usePaymentMethodConfig()` — `PAYMENT_METHODS` вычисляется динамически через `.filter(m => enabledMethods.some(e => e.key === m.value))`
+- `'credit'` исправлен на `'card'` для совпадения с canonical DB-ключом
+
+---
+
 ## 07.04.2026 — Fix: Bit добавлен в PaymentMethodModal и UnifiedPaymentDialog
 
 **Файлы:** `src/components/payments/PaymentMethodModal.tsx`, `src/components/payments/UnifiedPaymentDialog.tsx`, `src/lib/payment-methods.ts`

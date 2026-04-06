@@ -1236,3 +1236,52 @@ CREATE INDEX idx_kira_sessions_org_status ON kira_sessions(org_id, status);
 - Убраны `animate-pulse`, `shadow`, свечения — стиль чистый и строгий
 - Стили заданы через inline `style={}` из-за ограничения Turbopack с arbitrary Tailwind классами
 
+---
+
+## 06.04.2026 — Mobile Profile API & Theme System
+
+### /api/mobile/profile
+
+Новый endpoint для синхронизации темы оформления между устройствами.
+
+**Файл:** `src/app/api/mobile/profile/route.ts`
+
+| Метод  | Описание                              |
+|--------|---------------------------------------|
+| `GET`  | Получить текущую тему пользователя    |
+| `PATCH`| Обновить тему пользователя            |
+
+**Auth:** Bearer токен (mobile) или cookie (web). Использует `getAuthContext(req)`.
+
+**GET response:**
+```json
+{ "theme": "command_center" }
+```
+
+**PATCH body / response:**
+```json
+// body:
+{ "theme": "warm_organic" }
+// response:
+{ "ok": true }
+```
+
+**Допустимые значения theme:** `command_center`, `editorial_luxury`, `neon_industrial`, `warm_organic`
+
+**Ошибки:**
+- `400 Invalid theme value` — неизвестное значение темы
+- `500 DB error` — ошибка Supabase
+
+### Supabase: migration
+
+Добавить колонку `theme` в таблицу `profiles`:
+```sql
+ALTER TABLE profiles
+ADD COLUMN IF NOT EXISTS theme TEXT
+DEFAULT 'command_center'
+CHECK (theme IN ('command_center','editorial_luxury','neon_industrial','warm_organic'));
+```
+Файл миграции: `supabase/migrations/20260406_add_theme_to_profiles.sql`
+
+**ВАЖНО:** Выполнить вручную в Supabase SQL Editor или через `supabase db push`.
+

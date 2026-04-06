@@ -1289,6 +1289,36 @@ CHECK (theme IN ('command_center','editorial_luxury','neon_industrial','warm_org
 
 ---
 
+## 07.04.2026 — Fix: Bit добавлен в PaymentMethodModal и UnifiedPaymentDialog
+
+**Файлы:** `src/components/payments/PaymentMethodModal.tsx`, `src/components/payments/UnifiedPaymentDialog.tsx`, `src/lib/payment-methods.ts`
+**Коммит:** `855746f`
+
+### Проблема:
+`PaymentMethodModal` (диалог "Новый платёж" из карточки клиента) и `UnifiedPaymentDialog` — оба имели захардкоженные статические списки методов без `bit`. `PaymentMethodModal` использовал `PAYMENT_METHODS_FOR_MODAL` без фильтрации по настройкам орга. `UnifiedPaymentDialog` имел `PaymentMethod` тип без `bit`.
+
+### Исправление `payment-methods.ts`:
+- Добавлен `'bit'` в `TrinityPaymentMethodId`
+- Добавлен `'bit'` в `PAYMENT_METHOD_API_MAP` → `'bit'`
+- Добавлена запись `bit` в `TRINITY_PAYMENT_METHODS` (оранжевый, иконка Smartphone)
+
+### Исправление `PaymentMethodModal.tsx`:
+- Подключён `usePaymentMethodConfig()` — динамическая фильтрация по `enabledMethods` орга
+- Заменён статический `PAYMENT_METHODS_FOR_MODAL` на `visibleMethods` (фильтр: `card` и `link` исключены, остальные — по настройкам)
+- Skeleton loading пока грузятся настройки
+
+### Исправление `UnifiedPaymentDialog.tsx`:
+- `PaymentMethod` тип расширен: добавлен `'bit'`
+- `Step` расширен: добавлен `'bit-form'`
+- `METHODS` + `METHOD_ICONS` — добавлен `bit` (оранжевый, Smartphone)
+- `handleSelectMethod` — `stepMap` дополнен `bit → 'bit-form'`
+- `currentMethod` — определение `bit-form → 'bit'`
+- `handleSubmit` — блок `bit-form`: POST `/api/payments` с `payment_method: 'bit'`
+- `renderStep` — добавлен `bit-form` (форма клиент + сумма + подсказка подтвердить Bit)
+- i18n (`he` и `ru`) — добавлены `bit`, `bitDesc`, `successBit`
+
+---
+
 ## 07.04.2026 — Fix: Диалог оплаты визита теперь уважает настройки enabled_payment_methods
 
 **Файл:** `src/components/visits/CompleteVisitPaymentDialog.tsx`

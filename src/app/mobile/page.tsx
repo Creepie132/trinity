@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   description: 'Скачайте приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.2.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.2.0-iAq2BFgRTSYl4reccnLy9VilXroEZ5.apk'
+const CURRENT_VERSION = '2.2.1'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.2.1-f3J4cVy3Nj73seUAwctn0kTzVZRLo4.apk'
 const APK_SIZE = '55.7 MB'
 const RELEASE_DATE = '06.04.2026'
 
@@ -40,6 +40,15 @@ const BackButton = () => (
 
 
 const CHANGELOG = [
+  {
+    version: '2.2.1',
+    date: '06.04.2026',
+    changes: [
+      'Исправлено создание визита: Bearer-авторизация через мобильный endpoint',
+      'Исправлена загрузка услуг из каталога организации',
+      'Меню добавления услуги: из каталога / создать новую / одноразовая',
+    ],
+  },
   {
     version: '2.2.0',
     date: '06.04.2026',

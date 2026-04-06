@@ -1372,3 +1372,13 @@ CHECK (theme IN ('command_center','editorial_luxury','neon_industrial','warm_org
 - **Changelog:** добавлена запись v2.2.0 (Create Visit Sheet с выбором типа), карточки получили `hover:border-amber-400/20`
 - **Build:** чистый, 0 ошибок, `/mobile` в роутах присутствует
 
+
+
+---
+
+## 07.04.2026 — Лендинг /mobile: полный changelog (v0.1.0–v1.0.0)
+
+- Добавлены все недостающие версии: v0.1.0 → v1.0.0 (14 записей)
+- Охватывает: инициализацию, Google Auth, GoldTabBar, тёмную тему, все модули (финансы/склад/продажи/задачи/аналитика/клиенты/визиты), сайдбар, аппаратную кнопку назад, edge-to-edge, систему тем
+- Файл: `src/app/mobile/page.tsx`
+- Коммит: `19c256c`

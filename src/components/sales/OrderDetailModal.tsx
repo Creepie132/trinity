@@ -439,7 +439,7 @@ export function OrderDetailModal({ orderId, open, onClose }: OrderDetailModalPro
               transition={{ duration: .2 }} onClick={onClose} />
             <motion.div key="order-drawer"
               className="fixed bottom-0 left-0 right-0 flex flex-col"
-              style={{ zIndex: 9999, height: 'calc(100dvh - 3rem)', background: '#1a2333', borderRadius: '20px 20px 0 0', border: '1px solid rgba(255,255,255,0.07)', borderBottom: 'none', overflow: 'hidden' }}
+              style={{ zIndex: 9999, height: 'calc(100vh - 3rem)', maxHeight: 'calc(100dvh - 3rem)', background: '#1a2333', borderRadius: '20px 20px 0 0', border: '1px solid rgba(255,255,255,0.07)', borderBottom: 'none', overflow: 'hidden' }}
               dir={dir}
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 400, damping: 40 }}>

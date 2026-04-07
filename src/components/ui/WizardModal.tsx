@@ -216,7 +216,8 @@ function WizardBottomSheet({
         dir={dir}
         style={{
           position: 'fixed', bottom: 0, left: 0, right: 0,
-          height: '92dvh',
+          height: '92vh',
+          maxHeight: 'calc(100dvh - env(safe-area-inset-bottom, 0px))',
           zIndex: 9999,
           transform: `translateY(${translateY})`,
           transition,

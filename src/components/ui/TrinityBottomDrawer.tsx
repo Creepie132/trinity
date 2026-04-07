@@ -118,7 +118,7 @@ export function TrinityBottomDrawer({
             key="drawer"
             ref={contentRef}
             className="fixed bottom-0 left-0 right-0 bg-background rounded-t-2xl flex flex-col outline-none"
-            style={{ y, maxHeight: 'calc(100dvh - 2rem)', touchAction: 'none', zIndex: 9999 }}
+            style={{ y, maxHeight: 'calc(100vh - 2rem)', touchAction: 'none', zIndex: 9999 }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}

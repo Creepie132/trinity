@@ -322,7 +322,7 @@ export function TaskMob({ mode, task, isOpen, onClose, locale, onSuccess, onEdit
           {/* Bottom drawer */}
           <motion.div key="taskmob-dr" ref={contentRef}
             className="fixed bottom-0 left-0 right-0 flex flex-col"
-            style={{ y, zIndex: 9999, height: 'calc(100dvh - 3rem)', background: sidebarBg,
+            style={{ y, zIndex: 9999, height: 'calc(100vh - 3rem)', maxHeight: 'calc(100dvh - 3rem)', background: sidebarBg,
               borderRadius: '20px 20px 0 0', border: '1px solid rgba(255,255,255,0.07)',
               borderBottom: 'none', touchAction: 'none', overflow: 'hidden' }}
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}

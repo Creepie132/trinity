@@ -162,7 +162,9 @@ export function ModalBottomSheet({
           bottom:        0,
           left:          0,
           right:         0,
-          height:        '92dvh',
+          /* dvh fallback для старых Android Chrome (< 108) */
+          height:        '92vh',
+          maxHeight:     'calc(100dvh - env(safe-area-inset-bottom, 0px))',
           zIndex:        9999,
           transform:     `translateY(${translateY})`,
           transition,
@@ -240,8 +242,7 @@ export function ModalBottomSheet({
             overscrollBehavior: 'contain',
             touchAction:        'pan-y',   // скролл контента всегда работает
             padding:            '20px 16px',
-            // Extra bottom padding so sticky footer never overlaps last content item
-            paddingBottom:      footerContent ? '80px' : '20px',
+            paddingBottom:      '24px',
             WebkitOverflowScrolling: 'touch',
           }}
         >
@@ -254,12 +255,14 @@ export function ModalBottomSheet({
             style={{
               flexShrink:    0,
               padding:       '12px 16px',
-              paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+              paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
               borderTop:     '1px solid rgba(0,0,0,0.08)',
               background:    'var(--trinity-content-bg, #f8f9fc)',
               display:       'flex',
               gap:           10,
               width:         '100%',
+              position:      'sticky',
+              bottom:        0,
             }}
           >
             <div style={{ width: '100%' }}>{footerContent}</div>

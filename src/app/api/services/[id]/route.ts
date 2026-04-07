@@ -65,20 +65,18 @@ export async function DELETE(
       return authErrorResponse(e)
     }
 
-    const { data: service, error } = await supabase
+    const { error } = await supabase
       .from('services')
-      .update({ is_active: false })
+      .delete()
       .eq('id', serviceId)
       .eq('org_id', orgId)
-      .select()
-      .single()
 
     if (error) {
       console.error('[API] DELETE /api/services/[id] error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ service })
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error('[API] DELETE /api/services/[id] exception:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

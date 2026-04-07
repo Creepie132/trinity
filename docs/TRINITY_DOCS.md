@@ -1443,3 +1443,18 @@ Footer во всех листах теперь `position: sticky; bottom: 0`, ч
 ### Не затронуто
 - Десктопные Split Layout страницы (payments, sales, diary) — там `dvh` используется для layout, не для bottom sheet, footer-обрезки нет
 - Лендинг (landing/page.tsx, landing/layout.tsx) — не затронут, там `dvh` в CSS строках без inline style
+
+---
+
+## 07.04.2026 — fix: Реальное удаление услуг
+
+**Коммит:** 8729c7f
+
+**Проблема:** `DELETE /api/services/[id]` делал `is_active=false` вместо реального удаления. Услуги "удалённые" на вебе оставались в базе и появлялись в мобильном приложении.
+
+**Решение:**
+1. Миграция БД: `visits.service_id` и `bookings.service_id` FK изменены с `NO ACTION` на `ON DELETE SET NULL`
+2. Endpoint теперь делает реальный `DELETE` из таблицы
+3. Почищены тестовые данные в org Amber Solutions
+
+**Затронутые файлы:** `src/app/api/services/[id]/route.ts`, migration `fix_service_delete_fk_set_null`

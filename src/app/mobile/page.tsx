@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   description: 'Скачайте приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.2.2'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.2.2-bwQKrFS4pBixScW3kbzAf52MFeZAPH.apk'
-const APK_SIZE = '55.7 MB'
-const RELEASE_DATE = '06.04.2026'
+const CURRENT_VERSION = '2.2.3'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.2.3-yMZ7k1kryC6wjZnRvWTR9mqZsMubuU.apk'
+const APK_SIZE = '55.8 MB'
+const RELEASE_DATE = '07.04.2026'
 
 const HexLogo = () => (
   <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30 flex-shrink-0">
@@ -40,6 +40,16 @@ const BackButton = () => (
 
 
 const CHANGELOG = [
+  {
+    version: '2.2.3',
+    date: '07.04.2026',
+    changes: [
+      'Единый стиль уведомлений TSnackBar — контрастный текст, цветные иконки',
+      'Исправлено создание услуги из окна визита — ошибка теперь видна',
+      'Успешное создание услуги показывает зелёный тост',
+      'Все 26 уведомлений в приложении приведены к единому стандарту',
+    ],
+  },
   {
     version: '2.2.2',
     date: '06.04.2026',

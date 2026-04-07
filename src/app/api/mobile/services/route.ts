@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const { orgId } = auth
 
     const body = await req.json()
-    const { name, price, duration, description } = body
+    const { name, price, duration } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'name обязателен' }, { status: 400 })
@@ -76,7 +76,6 @@ export async function POST(req: NextRequest) {
         name_ru: name.trim(),
         price: parseFloat(price ?? 0),
         duration_minutes: parseInt(duration ?? 0),
-        description: description?.trim() || null,
         is_active: true,
       })
       .select()

@@ -8,7 +8,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await getAuthContext()
+  const auth = await getAuthContext(request)
   if ('error' in auth) return auth.error
   const { orgId } = auth
   const { id } = await params
@@ -37,7 +37,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await getAuthContext()
+  const auth = await getAuthContext(request)
   if ('error' in auth) return auth.error
 
   const { orgId, supabase } = auth

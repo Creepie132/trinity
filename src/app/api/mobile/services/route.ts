@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const supabase = createSupabaseServiceClient()
     let query = supabase
       .from('services')
-      .select('id, name, name_ru, price, duration_minutes, description, is_active')
+      .select('id, name, name_ru, price, duration_minutes, is_active')
       .eq('org_id', orgId)
       .eq('is_active', true)
       .order('name', { ascending: true })
@@ -45,7 +45,6 @@ export async function GET(req: NextRequest) {
       name_ru: s.name_ru,
       price: s.price ?? 0,
       duration: s.duration_minutes ?? 0,
-      description: s.description,
     }))
 
     return NextResponse.json(services)

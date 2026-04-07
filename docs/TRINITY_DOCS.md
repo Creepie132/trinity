@@ -1409,3 +1409,37 @@ CHECK (theme IN ('command_center','editorial_luxury','neon_industrial','warm_org
 - `src/components/visits/UnifiedVisitDialog.tsx`
 - Новый компонент `ServicePicker` вместо `<Select>` для поля "Услуга"
 - Поиск по символам, пагинация ‹/›, цена и длительность в строке, z-index 9999
+
+
+---
+
+## 07.04.2026 — Фикс обрезки bottom sheet в PWA/мобильном браузере
+
+**Коммит:** `e2e602a`
+
+### Проблема
+На Android (Samsung, Chrome < 108) и в PWA нижняя часть модального окна обрезалась — кнопки "Сохранить" / "Отмена" уходили за границу экрана. Корневая причина: `height: 'Xdvh'` без fallback — единица `dvh` не поддерживается в Chrome < 108 и некоторых WebView.
+
+### Исправление
+Добавлен CSS-fallback во всех мобильных bottom-sheet компонентах:
+- `height: '92vh'` — fallback для старых браузеров
+- `maxHeight: 'calc(100dvh - env(safe-area-inset-bottom, 0px))'` — правильное ограничение для новых
+
+Footer во всех листах теперь `position: sticky; bottom: 0`, что гарантирует видимость кнопок при любом поведении viewport.
+
+### Затронутые файлы (9 компонентов)
+| Файл | Изменение |
+|---|---|
+| `src/components/ui/ModalBottomSheet.tsx` | vh fallback + sticky footer + убран `paddingBottom: 80px` |
+| `src/components/ui/WizardModal.tsx` | vh fallback |
+| `src/components/ui/TrinityMob.tsx` | vh fallback |
+| `src/components/ui/TrinityMobDetailShell.tsx` | vh fallback |
+| `src/components/ui/TrinityBottomDrawer.tsx` | vh fallback |
+| `src/components/diary/TaskMob.tsx` | vh fallback |
+| `src/components/sales/OrderDetailModal.tsx` | vh fallback |
+| `src/components/sales/UnifiedSalesDialog.tsx` | vh fallback |
+| `src/components/visits/VisitDetailMob.tsx` | vh fallback (2 места: основная шторка + sub-drawer добавления услуг) |
+
+### Не затронуто
+- Десктопные Split Layout страницы (payments, sales, diary) — там `dvh` используется для layout, не для bottom sheet, footer-обрезки нет
+- Лендинг (landing/page.tsx, landing/layout.tsx) — не затронут, там `dvh` в CSS строках без inline style

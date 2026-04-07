@@ -1,38 +1,21 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthContext } from '@/lib/auth-helpers'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
 /**
  * PATCH /api/visits/[id]/status
- * Update visit status (start, cancel)
+ * Update visit status. Supports both cookie auth (web) and Bearer token (mobile).
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+
+    const { orgId } = auth
     const { id } = await params
-
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const body = await request.json()
     const { status } = body
@@ -41,17 +24,17 @@ export async function PATCH(
       return NextResponse.json({ error: 'Missing status field' }, { status: 400 })
     }
 
-    const updateData: any = { status }
-
-    // If starting visit, record started_at timestamp
+    const updateData: Record<string, unknown> = { status }
     if (status === 'in_progress') {
       updateData.started_at = new Date().toISOString()
     }
 
+    const supabase = createSupabaseServiceClient()
     const { data: visit, error } = await supabase
       .from('visits')
       .update(updateData)
       .eq('id', id)
+      .eq('org_id', orgId)
       .select()
       .single()
 

@@ -24,6 +24,7 @@ import { useVisits } from '@/hooks/useVisits'
 import { useModalStore } from '@/store/useModalStore'
 import { CalendarView } from '@/components/visits/CalendarView'
 import { VisitCard } from '@/components/visits/VisitCard'
+import { VisitActionButtons } from '@/components/visits/VisitActionButtons'
 import { TrinityBottomDrawer } from '@/components/ui/TrinityBottomDrawerLazy'
 import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
 import {
@@ -803,7 +804,7 @@ export default function VisitsPage() {
                         <tr
                           key={visit.id}
                           onClick={() => setSelectedVisit(visit)}
-                          className="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer transition group"
+                          className="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer transition"
                         >
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
@@ -856,49 +857,19 @@ export default function VisitsPage() {
                             {getVisitTotal(visit) > 0 ? `₪${getVisitTotal(visit).toLocaleString()}` : '—'}
                           </td>
                           <td className="py-3 px-4">
-                            <div className="flex gap-1.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                              {/* WhatsApp reminder button — always shown for active visits */}
-                              {(() => {
-                                const phone = getClientPhone(visit)
-                                const name = getClientName(visit)
-                                const svc = getServiceName(visit)
-                                const time = new Date(visit.scheduled_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })
-                                const date = new Date(visit.scheduled_at).toLocaleDateString(loc)
-                                const msg = isHe
-                                  ? `שלום ${name}! רצינו להזכיר לך על התור שלך ל${svc ? svc : 'שירות'} ב-${date} בשעה ${time}. מחכים לך!`
-                                  : `Здравствуйте, ${name}! Напоминаем о вашем визите${svc ? ` (${svc})` : ''} ${date} в ${time}. Ждём вас!`
-                                return phone ? (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank') }}
-                                    className="p-1.5 rounded-md bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100 transition"
-                                    title={isHe ? 'שלח תזכורת בוואצאפ' : 'Напомнить в WhatsApp'}
-                                  >
-                                    <MessageCircle className="w-3.5 h-3.5" />
-                                  </button>
-                                ) : null
-                              })()}
-                              {visit.status === 'scheduled' && (
-                                <button
-                                  onClick={() => handleStartVisit(visit.id)}
-                                  className="px-2.5 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 hover:bg-amber-200 transition"
-                                >
-                                  {isHe ? 'התחל' : 'Начать'}
-                                </button>
-                              )}
-                              {visit.status === 'in_progress' && (
-                                <button
-                                  onClick={() => handleCompleteVisit(visit)}
-                                  className="px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 hover:bg-emerald-200 transition"
-                                >
-                                  {isHe ? 'סיים' : 'Завершить'}
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleCancelVisit(visit.id)}
-                                className="px-2.5 py-1 rounded-md text-xs font-medium bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 transition"
-                              >
-                                {isHe ? 'בטל' : 'Отменить'}
-                              </button>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <VisitActionButtons
+                                visit={visit}
+                                clientPhone={getClientPhone(visit)}
+                                clientName={getClientName(visit)}
+                                serviceName={getServiceName(visit)}
+                                locale={isHe ? 'he' : 'ru'}
+                                onStart={() => handleStartVisit(visit.id)}
+                                onComplete={() => handleCompleteVisit(visit)}
+                                onCancel={() => handleCancelVisit(visit.id)}
+                                onEdit={() => { openModal('visit-unified', { mode: 'edit', visit }); setSelectedVisit(null) }}
+                                stopPropagation={false}
+                              />
                             </div>
                           </td>
                         </tr>

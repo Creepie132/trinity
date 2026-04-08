@@ -1,10 +1,11 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { ChevronRight, MapPin, Video, Navigation, ExternalLink, Play, CheckCircle, X } from 'lucide-react'
+import { ChevronRight, MapPin, Video, Play, CheckCircle, X } from 'lucide-react'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useVisitServices } from '@/hooks/useVisitServices'
 import { useModalStore } from '@/store/useModalStore'
+import { VisitActionButtons } from './VisitActionButtons'
 
 interface VisitCardProps {
   visit: {
@@ -156,15 +157,6 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
   const statusLabel = STATUS_LABELS[visit.status]?.[locale] || visit.status
   const isCancelled = visit.status === 'cancelled'
 
-  const locationFromNotes = (() => {
-    if (!visit.notes) return null
-    const lines = visit.notes.split('\n')
-    const addr = lines.find(l => l.startsWith('Адрес:') || l.startsWith('כתובת:'))
-    const city = lines.find(l => l.startsWith('Город:') || l.startsWith('עיר:'))
-    if (!addr && !city) return null
-    return [city?.split(': ')[1], addr?.split(': ')[1]].filter(Boolean).join(', ')
-  })()
-
   const progressColor = 'rgba(52,211,153,0.22)'
   const cancelColor   = 'rgba(239,68,68,0.22)'
 
@@ -273,24 +265,18 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
                     <ChevronRight size={14} className="text-muted-foreground" />
                   </div>
                 </div>
-                {visit.status !== 'cancelled' && visit.status !== 'completed' && (
-                  <div className="flex items-center gap-2 mt-2">
-                    {isMeeting && visit.meeting_link && (
-                      <button onClick={e => { e.stopPropagation(); window.open(visit.meeting_link!, '_blank') }}
-                        className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg"
-                        style={{ backgroundColor: accentColor + '18', color: accentColor, border: `1px solid ${accentColor}40` }}>
-                        <ExternalLink size={10} />{locale === 'he' ? 'הצטרף' : 'Присоединиться'}
-                      </button>
-                    )}
-                    {locationFromNotes && (
-                      <button onClick={e => { e.stopPropagation(); window.open(`https://maps.google.com/?q=${encodeURIComponent(locationFromNotes)}`, '_blank') }}
-                        className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg"
-                        style={{ backgroundColor: '#3b82f618', color: '#3b82f6', border: '1px solid #3b82f640' }}>
-                        <Navigation size={10} />{locale === 'he' ? 'נווט' : 'Навигация'}
-                      </button>
-                    )}
-                  </div>
-                )}
+                <VisitActionButtons
+                  visit={visit}
+                  clientPhone={visit.clients?.phone || visit.client_phone}
+                  clientName={clientName}
+                  serviceName={serviceName}
+                  locale={locale}
+                  onStart={onStart ? () => onStart(visit.id) : undefined}
+                  onComplete={onComplete ? () => onComplete(visit.id) : undefined}
+                  onCancel={onCancel ? () => onCancel(visit.id) : undefined}
+                  onEdit={onEdit ? () => onEdit(visit) : undefined}
+                  stopPropagation
+                />
               </div>
             </div>
           </div>

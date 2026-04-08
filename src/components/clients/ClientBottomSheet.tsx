@@ -15,6 +15,8 @@ import { useOrgTemplates } from '@/hooks/useOrgTemplates'
 import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-utils'
 import { getClientName } from '@/lib/client-utils'
 import { useModalStore } from '@/store/useModalStore'
+import { useQuickMode } from '@/hooks/useQuickMode'
+import { QuickVisitModal } from '@/components/modals/visits/QuickVisitModal'
 
 interface ClientBottomSheetProps {
   client: {
@@ -53,6 +55,8 @@ export function ClientBottomSheet({
 }: ClientBottomSheetProps) {
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [quickVisitOpen, setQuickVisitOpen] = useState(false)
+  const isQuickMode = useQuickMode()
   const { openModal } = useModalStore()
   const [showPicker, setShowPicker] = useState(false)
   const [pickerType, setPickerType] = useState<'visit' | 'product' | null>(null)
@@ -141,6 +145,7 @@ export function ClientBottomSheet({
         onDocuments={() => { onClose(); openModal('client-documents', { client, locale }) }}
         onVisitsHistory={() => { onClose(); openModal('client-history', { client, locale, tab: 'visits' }) }}
         onPaymentsHistory={() => { onClose(); openModal('client-history', { client, locale, tab: 'payments' }) }}
+        onQuickVisit={isQuickMode ? () => setQuickVisitOpen(true) : undefined}
       />
 
       {/* ── Редактирование клиента ── */}
@@ -161,6 +166,16 @@ export function ClientBottomSheet({
         locale={locale}
         zIndex={10000}
       />
+
+      {/* ── QuickVisitModal — быстрый постфактум-визит ── */}
+      {isQuickMode && (
+        <QuickVisitModal
+          open={quickVisitOpen}
+          onClose={() => setQuickVisitOpen(false)}
+          clientId={client.id}
+          clientName={clientName}
+        />
+      )}
 
       {/* ── WhatsApp picker (портал) ── */}
       {showPicker && typeof document !== 'undefined' && createPortal(

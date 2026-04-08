@@ -25,7 +25,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion'
 import {
   ArrowLeft, ArrowRight, Phone, MessageCircle, MessageSquare,
-  ShoppingCart, CalendarPlus, Pencil, Trash2, Images, FileText, Settings2, Navigation,
+  ShoppingCart, CalendarPlus, Pencil, Trash2, Images, FileText, Settings2, Navigation, Zap,
 } from 'lucide-react'
 import { useClientCardSettings } from '@/components/clients/ClientCardSettingsModal'
 import { getClientName, getClientInitials } from '@/lib/client-utils'
@@ -77,6 +77,8 @@ export interface TrinityMobProps {
   onVisitsHistory?: (client: TrinityMobClient) => void
   /** История платежей */
   onPaymentsHistory?: (client: TrinityMobClient) => void
+  /** Быстрый постфактум-визит (Quick Mode) */
+  onQuickVisit?: (client: TrinityMobClient) => void
 }
 
 // ─── i18n ─────────────────────────────────────────────────────────────────────
@@ -218,7 +220,7 @@ export function TrinityMob({
   client, isOpen, onClose, locale,
   isDemo, enabledModules,
   onSale, onVisit, onWhatsApp, onEdit, onDelete, onGallery, onDocuments,
-  onVisitsHistory, onPaymentsHistory,
+  onVisitsHistory, onPaymentsHistory, onQuickVisit,
 }: TrinityMobProps) {
   const t = T[locale] ?? T.ru
   const isRtl = locale === 'he'
@@ -555,6 +557,11 @@ export function TrinityMob({
 
                     {/* Визит */}
                     <ActionRow icon={<CalendarPlus size={13} />} label={t.newVisit} onClick={() => onVisit?.(client)} accentBg={accentBg} accentText={accentText} />
+
+                    {/* Быстрый визит (Quick Mode) */}
+                    {onQuickVisit && (
+                      <ActionRow icon={<Zap size={13} />} label={locale === 'he' ? 'ביקור מהיר' : 'Быстрый визит'} onClick={() => onQuickVisit(client)} accentBg="rgba(139,92,246,0.2)" accentText="#a78bfa" />
+                    )}
 
                     {/* WhatsApp */}
                     {client.phone && (

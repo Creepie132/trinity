@@ -1548,3 +1548,21 @@ Footer во всех листах теперь `position: sticky; bottom: 0`, ч
 3. Почищены тестовые данные в org Amber Solutions
 
 **Затронутые файлы:** `src/app/api/services/[id]/route.ts`, migration `fix_service_delete_fk_set_null`
+
+
+### Апрель 2026 — Расширение /api/mobile/dashboard (коммит 8f96c3f)
+
+**Файл:** src/app/api/mobile/dashboard/route.ts
+
+**Добавлено:** 5 новых блоков данных для мобильного дашборда.
+12 параллельных запросов вместо 7 (Promise.all).
+
+Новые поля ответа:
+- 	op_services — топ-3 услуги за текущий месяц (name, revenue, count, bar_pct)
+- 
+ew_clients — последние 5 клиентов (id, name, phone, source, created_at)
+- debtors — клиенты с незакрытыми долгами, сгруппированные по client_id (max 5)
+- irthdays — клиенты с ДР на этой неделе (days_left, birthday)
+- whatsapp — { total_unread, conversations[] } из wa_conversations
+
+Все запросы фильтрованы по org_id. Bearer auth сохранён.

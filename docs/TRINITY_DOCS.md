@@ -1506,7 +1506,9 @@ Footer во всех листах теперь `position: sticky; bottom: 0`, ч
 | `src/components/modals/visits/QuickVisitModal.tsx` | WizardModal, 2 шага: выбор позиций + итог/действия |
 | `src/app/api/visits/quick/route.ts` | `POST /api/visits/quick` — создаёт постфактум-визит |
 | `src/app/admin/organizations/page.tsx` | + `QuickModeToggle` компонент + тумблер в `renderOrgDetail` |
-| `src/components/modals/ClientDetailsModal.tsx` | + кнопка "Быстрый визит" (только если `isQuickMode`) |
+| `src/components/modals/ClientDetailsModal.tsx` | + кнопка "Быстрый визит" (только если `isQuickMode`, десктоп) |
+| `src/components/clients/ClientBottomSheet.tsx` | + `useQuickMode` + `QuickVisitModal` + `onQuickVisit` → TrinityMob |
+| `src/components/ui/TrinityMob.tsx` | + пропс `onQuickVisit?` + кнопка "Быстрый визит" в action-шторке |
 | `src/app/(dashboard)/visits/page.tsx` | + статус `open` в `statusBadge`, `avatarColor`, `activeVisits` |
 
 ### Суть QuickVisitModal

@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   description: 'Скачайте приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.2.3'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.2.3-yMZ7k1kryC6wjZnRvWTR9mqZsMubuU.apk'
-const APK_SIZE = '55.8 MB'
-const RELEASE_DATE = '07.04.2026'
+const CURRENT_VERSION = '2.3.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.3.0.apk'
+const APK_SIZE = '56.1 MB'
+const RELEASE_DATE = '08.04.2026'
 
 const HexLogo = () => (
   <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30 flex-shrink-0">
@@ -40,6 +40,18 @@ const BackButton = () => (
 
 
 const CHANGELOG = [
+  {
+    version: '2.3.0',
+    date: '08.04.2026',
+    changes: [
+      'Мгновенное отображение изменений статуса визита (Начать / Завершить / Отменить)',
+      'Новый визит появляется в списке моментально без промаргивания',
+      'Кнопка WhatsApp в списке визитов — открывает переписку с клиентом',
+      'Детали визита закрываются автоматически после отмены',
+      'Детали визита не моргают при открытии (устранён race condition с сервером)',
+      'Исправлен краш при нажатии "Отменить" в списке визитов (GoRouter context)',
+    ],
+  },
   {
     version: '2.2.3',
     date: '07.04.2026',

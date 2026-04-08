@@ -1,38 +1,35 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthContext } from '@/lib/auth-helpers'
+import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import type { CreateVisitServiceDTO } from '@/types/visits'
 
 /**
  * GET /api/visits/[id]/services
  * Get all services for a visit
+ * Supports Bearer token (mobile) + cookie auth (web)
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+    const { orgId } = auth
     const { id } = await params
 
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
+    const supabase = createSupabaseServiceClient()
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Verify visit belongs to org
+    const { data: visit } = await supabase
+      .from('visits')
+      .select('id')
+      .eq('id', id)
+      .eq('org_id', orgId)
+      .single()
+
+    if (!visit) {
+      return NextResponse.json({ error: 'Visit not found' }, { status: 404 })
     }
 
     const { data: visitServices, error } = await supabase
@@ -56,33 +53,30 @@ export async function GET(
 /**
  * POST /api/visits/[id]/services
  * Add service to visit
+ * Supports Bearer token (mobile) + cookie auth (web)
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await getAuthContext(request)
+    if ('error' in auth) return auth.error
+    const { orgId } = auth
     const { id: visitId } = await params
 
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          },
-        },
-      }
-    )
+    const supabase = createSupabaseServiceClient()
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Verify visit belongs to org
+    const { data: visit } = await supabase
+      .from('visits')
+      .select('id, status')
+      .eq('id', visitId)
+      .eq('org_id', orgId)
+      .single()
+
+    if (!visit) {
+      return NextResponse.json({ error: 'Visit not found' }, { status: 404 })
     }
 
     const body: CreateVisitServiceDTO = await request.json()
@@ -91,7 +85,6 @@ export async function POST(
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Insert visit service
     const { data: visitService, error } = await supabase
       .from('visit_services')
       .insert({
@@ -109,15 +102,6 @@ export async function POST(
       console.error('[API] POST /api/visits/[id]/services error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
-    // NOTE: We do NOT touch visits.price or visits.duration_minutes here.
-    // visits.price = BASE service price (immutable, set at creation).
-    // visits.duration_minutes = BASE duration (immutable, set at creation).
-    // Full totals are computed dynamically in the UI:
-    //   total price    = visit.price + SUM(visit_services.price)
-    //   total duration = visit.duration_minutes + SUM(visit_services.duration_minutes)
-    // The DB trigger update_visit_totals has been dropped — it overwrote visits.price
-    // with only SUM(visit_services.price), destroying the base price.
 
     return NextResponse.json({ service: visitService }, { status: 201 })
   } catch (error) {

@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   description: 'Скачайте приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.4.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.4.0.apk'
-const APK_SIZE = '56.2 MB'
+const CURRENT_VERSION = '2.5.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.5.0.apk'
+const APK_SIZE = '56.3 MB'
 const RELEASE_DATE = '08.04.2026'
 
 const HexLogo = () => (
@@ -40,6 +40,16 @@ const BackButton = () => (
 
 
 const CHANGELOG = [
+  {
+    version: '2.5.0',
+    date: '08.04.2026',
+    changes: [
+      'Кнопки визита: иконки без текста (WA, маршрут, Meet) — не съезжают на узких экранах',
+      'Кнопка «Начать» / «Завершить» с фиксированной шириной (min 80px) — всегда видна',
+      'Меню ••• заменяет текстовую кнопку «Отменить» — BottomSheet с подтверждением',
+      'Стандарт адаптивных кнопок применён по всему списку визитов',
+    ],
+  },
   {
     version: '2.4.0',
     date: '08.04.2026',

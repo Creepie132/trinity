@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   description: 'Скачайте приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.3.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.3.0.apk'
-const APK_SIZE = '56.1 MB'
+const CURRENT_VERSION = '2.4.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.4.0.apk'
+const APK_SIZE = '56.2 MB'
 const RELEASE_DATE = '08.04.2026'
 
 const HexLogo = () => (
@@ -40,6 +40,17 @@ const BackButton = () => (
 
 
 const CHANGELOG = [
+  {
+    version: '2.4.0',
+    date: '08.04.2026',
+    changes: [
+      'Чип типа встречи в карточке списка: "Online · Zoom" (синий) или "Offline · адрес" (золотой)',
+      'Кнопка "Открыть [App]" в action row — запускает Zoom, Meet, Teams, Telegram и др.',
+      'В деталях встречи: бейдж типа в hero-карточке под именем клиента',
+      'Секция "Онлайн встреча" с кнопкой открытия приложения в деталях визита',
+      'Исправлен баг: создание оффлайн/онлайн встречи возвращало 500 (неверный ключ service_name)',
+    ],
+  },
   {
     version: '2.3.0',
     date: '08.04.2026',

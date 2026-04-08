@@ -14,7 +14,7 @@ import {
   Shield, Pencil, CreditCard, Eye, Package,
   Clock, TrendingUp, Users, Calendar, BarChart3,
   Wifi, WifiOff, AlertTriangle, Trash2, EyeOff, Edit3, Check, Leaf, Receipt,
-  ChevronDown, Globe,
+  ChevronDown, Globe, Play,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/switch'
@@ -601,6 +601,55 @@ function ActivateOrgButton({
   )
 }
 
+// ─── QuickModeToggle ─────────────────────────────────────────────────────────
+// Включает режим "быстрого мастера" — кнопка в карточке клиента для
+// постфактум-создания визитов без административной нагрузки.
+
+function QuickModeToggle({
+  org, lang, onToggled,
+}: {
+  org: Organization; lang: 'he' | 'ru'
+  onToggled: (val: boolean) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const current = org.features?.quick_mode === true
+
+  const handleToggle = async () => {
+    setLoading(true)
+    try {
+      const newFeatures = { ...(org.features || {}), quick_mode: !current }
+      const res = await fetch('/api/admin/organizations/features', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org_id: org.id, features: newFeatures }),
+      })
+      if (!res.ok) throw new Error()
+      onToggled(!current)
+      toast.success(!current
+        ? (lang === 'he' ? '✅ מצב מהיר הופעל' : '✅ Быстрый режим включён')
+        : (lang === 'he' ? 'מצב מהיר כובה' : 'Быстрый режим отключён')
+      )
+    } catch {
+      toast.error(lang === 'he' ? 'שגיאה' : 'Ошибка')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleToggle}
+      disabled={loading}
+      className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${current ? 'bg-violet-500' : 'bg-gray-300'} disabled:opacity-60`}
+    >
+      {loading
+        ? <Loader2 className="absolute inset-0 m-auto w-3.5 h-3.5 text-white animate-spin" />
+        : <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${current ? 'left-6' : 'left-1'}`} />
+      }
+    </button>
+  )
+}
+
 // ─── StorefrontToggle ─────────────────────────────────────────────────────────
 // Включает/выключает has_storefront для организации прямо из панели детали.
 // Вызывает /api/admin/organizations/features (PUT) — тот же эндпоинт что для модулей.
@@ -1179,6 +1228,21 @@ export default function AdminOrganizationsPage() {
             </div>
             <StorefrontToggle org={org} lang={language} onToggled={(val) => {
               const updated = { ...org, has_storefront: val }
+              setSelectedOrg(updated)
+              setOrgs(prev => prev.map(o => o.id === org.id ? updated : o))
+            }} />
+          </div>
+          {/* quick_mode toggle */}
+          <div className="col-span-2 flex items-center justify-between p-3 rounded-xl bg-violet-50 border border-violet-100">
+            <div className="flex items-center gap-2">
+              <Play className="w-4 h-4 text-violet-600" />
+              <div>
+                <p className="text-sm font-semibold text-violet-800">{l ? 'מצב מאסטר מהיר' : 'Быстрый режим мастера'}</p>
+                <p className="text-xs text-violet-500">{l ? 'יצירת ביקור מהיר מכרטיס לקוח' : 'Создание визита из карточки клиента'}</p>
+              </div>
+            </div>
+            <QuickModeToggle org={org} lang={language} onToggled={(val) => {
+              const updated = { ...org, features: { ...(org.features || {}), quick_mode: val } }
               setSelectedOrg(updated)
               setOrgs(prev => prev.map(o => o.id === org.id ? updated : o))
             }} />

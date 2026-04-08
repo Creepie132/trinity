@@ -47,6 +47,7 @@ function getInitials(name: string): string {
 
 function avatarColor(status: string): string {
   if (status === 'in_progress') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+  if (status === 'open') return 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
   if (status === 'completed') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
   if (status === 'cancelled' || status === 'no_show') return 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
   return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
@@ -54,11 +55,12 @@ function avatarColor(status: string): string {
 
 function statusBadge(status: string, lang: string) {
   const map: Record<string, { ru: string; he: string; cls: string }> = {
-    scheduled:   { ru: 'Запланирован', he: 'מתוכנן',  cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
-    in_progress: { ru: 'В процессе',   he: 'בתהליך',  cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-    completed:   { ru: 'Завершён',     he: 'הושלם',   cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
-    cancelled:   { ru: 'Отменён',      he: 'בוטל',    cls: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' },
-    no_show:     { ru: 'Не пришёл',    he: 'לא הגיע', cls: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' },
+    scheduled:   { ru: 'Запланирован', he: 'מתוכנן',      cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+    in_progress: { ru: 'В процессе',   he: 'בתהליך',      cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+    completed:   { ru: 'Завершён',     he: 'הושלם',       cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
+    cancelled:   { ru: 'Отменён',      he: 'בוטל',        cls: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' },
+    no_show:     { ru: 'Не пришёл',    he: 'לא הגיע',     cls: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' },
+    open:        { ru: 'Открыт',       he: 'פתוח',        cls: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' },
   }
   const s = map[status] ?? { ru: status, he: status, cls: 'bg-slate-100 text-slate-500' }
   return { label: lang === 'he' ? s.he : s.ru, cls: s.cls }
@@ -319,7 +321,7 @@ export default function VisitsPage() {
 
   // ── derived data ──────────────────────────────────────────────────────────
 
-  const statusOrder: Record<string, number> = { scheduled: 0, in_progress: 0, completed: 1, cancelled: 2, no_show: 2 }
+  const statusOrder: Record<string, number> = { scheduled: 0, in_progress: 0, open: 0, completed: 1, cancelled: 2, no_show: 2 }
   const sortedVisits = useMemo(() => [...visits].sort((a, b) => {
     const ga = statusOrder[a.status] ?? 1
     const gb = statusOrder[b.status] ?? 1
@@ -328,7 +330,7 @@ export default function VisitsPage() {
     return new Date(b.updated_at || b.scheduled_at).getTime() - new Date(a.updated_at || a.scheduled_at).getTime()
   }), [visits])
 
-  const activeVisits    = sortedVisits.filter(v => v.status === 'scheduled' || v.status === 'in_progress')
+  const activeVisits    = sortedVisits.filter(v => v.status === 'scheduled' || v.status === 'in_progress' || v.status === 'open')
   const completedVisits = sortedVisits.filter(v => v.status === 'completed')
   const cancelledVisits = sortedVisits.filter(v => v.status === 'cancelled' || v.status === 'no_show')
 

@@ -13,6 +13,9 @@ import { buildMessage, buildWhatsAppUrl, buildVisitRef } from '@/lib/message-uti
 import { ClientCardSettingsPanel, useClientCardSettings } from '@/components/clients/ClientCardSettingsModal'
 import { useQueryClient } from '@tanstack/react-query'
 import { AdminDeleteButton } from '@/components/admin/AdminDeleteButton'
+import { useQuickMode } from '@/hooks/useQuickMode'
+import { QuickVisitModal } from '@/components/modals/visits/QuickVisitModal'
+import { Zap } from 'lucide-react'
 
 const AVATAR_GRADIENTS: [string, string][] = [
   ['#818cf8', '#a78bfa'], ['#34d399', '#0d9488'], ['#fbbf24', '#f97316'],
@@ -27,6 +30,8 @@ export function ClientDetailsModal() {
   const queryClient = useQueryClient()
   const [showGdprDialog, setShowGdprDialog] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [quickVisitOpen, setQuickVisitOpen] = useState(false)
+  const isQuickMode = useQuickMode()
   const [cardSettings, saveCardSettings] = useClientCardSettings()
   const [photosCount, setPhotosCount] = useState<number | null>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -223,6 +228,14 @@ export function ClientDetailsModal() {
             <MessageCircle size={14} />WhatsApp
           </button>
         )}
+        {isQuickMode && (
+          <button
+            onClick={() => setQuickVisitOpen(true)}
+            style={{ display:'flex',alignItems:'center',gap:7,padding:'9px 10px',borderRadius:10,border:'none',cursor:'pointer',width:'100%',background:'rgba(139,92,246,0.2)',color:'#a78bfa',fontSize:12,fontWeight:600,marginBottom:4 }}
+          >
+            <Zap size={14} />{isHe ? 'ביקור מהיר' : 'Быстрый визит'}
+          </button>
+        )}
         <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '2px 0 6px' }} />
         {client.phone && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 4 }}>
@@ -394,6 +407,15 @@ export function ClientDetailsModal() {
           </div>
         </div>
       , document.body)}
+      {/* QuickVisitModal — быстрый постфактум-визит */}
+      {isQuickMode && (
+        <QuickVisitModal
+          open={quickVisitOpen}
+          onClose={() => setQuickVisitOpen(false)}
+          clientId={client.id}
+          clientName={clientName}
+        />
+      )}
     </>
   )
 }

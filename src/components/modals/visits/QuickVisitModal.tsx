@@ -199,6 +199,9 @@ export function QuickVisitModal({ open, onClose, clientId, clientName }: QuickVi
   const [loadingOptions, setLoadingOptions] = useState(false)
   const [pickerType, setPickerType] = useState<'service' | 'product' | null>(null)
   const [saving, setSaving] = useState(false)
+  const [customOpen, setCustomOpen] = useState(false)
+  const [customName, setCustomName] = useState('')
+  const [customPrice, setCustomPrice] = useState('')
 
   // Загружаем услуги и товары при открытии
   useEffect(() => {
@@ -206,13 +209,18 @@ export function QuickVisitModal({ open, onClose, clientId, clientName }: QuickVi
     setItems([])
     setStep(1)
     setPickerType(null)
+    setCustomOpen(false)
+    setCustomName('')
+    setCustomPrice('')
     setLoadingOptions(true)
     Promise.all([
-      fetch('/api/services').then(r => r.ok ? r.json() : []),
-      fetch('/api/products').then(r => r.ok ? r.json() : []),
+      fetch('/api/services').then(r => r.ok ? r.json() : {}) as Promise<any>,
+      fetch('/api/products').then(r => r.ok ? r.json() : {}) as Promise<any>,
     ]).then(([svcs, prods]) => {
-      setServices(Array.isArray(svcs) ? svcs : (svcs.data || []))
-      setProducts(Array.isArray(prods) ? prods : (prods.data || []))
+      const svcList: ServiceOption[] = svcs.services || svcs.data || (Array.isArray(svcs) ? svcs : [])
+      const prodList: ProductOption[] = prods.products || prods.data || (Array.isArray(prods) ? prods : [])
+      setServices(svcList)
+      setProducts(prodList)
     }).catch(() => {}).finally(() => setLoadingOptions(false))
   }, [open])
 
@@ -250,6 +258,17 @@ export function QuickVisitModal({ open, onClose, clientId, clientName }: QuickVi
 
   function removeItem(id: string, type: LineItem['type']) {
     setItems(prev => prev.filter(i => !(i.id === id && i.type === type)))
+  }
+
+  function addCustomItem() {
+    const name = customName.trim()
+    const price = parseFloat(customPrice)
+    if (!name || isNaN(price) || price < 0) return
+    const id = `custom_${Date.now()}`
+    setItems(prev => [...prev, { id, type: 'service', name, price, quantity: 1 }])
+    setCustomName('')
+    setCustomPrice('')
+    setCustomOpen(false)
   }
 
   // Создать визит со статусом 'open' (постфактум, не завершён)
@@ -342,7 +361,7 @@ export function QuickVisitModal({ open, onClose, clientId, clientName }: QuickVi
       {/* Кнопки добавления */}
       <div className="flex gap-2">
         <button
-          onClick={() => setPickerType(pickerType === 'service' ? null : 'service')}
+          onClick={() => { setPickerType(pickerType === 'service' ? null : 'service'); setCustomOpen(false) }}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
             pickerType === 'service'
               ? 'bg-violet-600 text-white border-violet-600'
@@ -353,7 +372,7 @@ export function QuickVisitModal({ open, onClose, clientId, clientName }: QuickVi
           {s.addService}
         </button>
         <button
-          onClick={() => setPickerType(pickerType === 'product' ? null : 'product')}
+          onClick={() => { setPickerType(pickerType === 'product' ? null : 'product'); setCustomOpen(false) }}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
             pickerType === 'product'
               ? 'bg-violet-600 text-white border-violet-600'
@@ -363,7 +382,56 @@ export function QuickVisitModal({ open, onClose, clientId, clientName }: QuickVi
           <Package className="w-4 h-4" />
           {s.addProduct}
         </button>
+        <button
+          onClick={() => { setCustomOpen(v => !v); setPickerType(null) }}
+          className={`flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+            customOpen
+              ? 'bg-amber-500 text-white border-amber-500'
+              : 'border-gray-200 text-gray-500 hover:bg-amber-50 hover:border-amber-300'
+          }`}
+          title={isHe ? 'פריט מותאם אישית' : 'Произвольно'}
+        >
+          <Plus className="w-4 h-4" />
+        </button>
       </div>
+
+      {/* Форма произвольной позиции */}
+      {customOpen && (
+        <div className="border border-amber-200 rounded-xl p-3 bg-amber-50/50 dark:bg-amber-900/10 space-y-2">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+            {isHe ? 'פריט מותאם אישית' : 'Произвольная позиция'}
+          </p>
+          <input
+            autoFocus
+            value={customName}
+            onChange={e => setCustomName(e.target.value)}
+            placeholder={isHe ? 'שם השירות / מוצר...' : 'Название услуги / товара...'}
+            className="w-full px-3 py-2 rounded-xl border border-amber-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white dark:bg-gray-800"
+          />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₪</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={customPrice}
+                onChange={e => setCustomPrice(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addCustomItem()}
+                placeholder="0"
+                className="w-full pl-7 pr-3 py-2 rounded-xl border border-amber-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white dark:bg-gray-800"
+              />
+            </div>
+            <button
+              onClick={addCustomItem}
+              disabled={!customName.trim() || customPrice === ''}
+              className="px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 disabled:opacity-40 transition-colors"
+            >
+              {isHe ? 'הוסף' : 'Добавить'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Picker dropdown */}
       {pickerType && !loadingOptions && (

@@ -1466,6 +1466,74 @@ Footer во всех листах теперь `position: sticky; bottom: 0`, ч
 
 ---
 
+## 08.04.2026 — feat: Quick Mode — Быстрый режим мастера
+
+**Коммит:** `260ff9d`
+
+### Концепция
+
+"Быстрый режим мастера" — альтернативный способ работы с визитами для мастеров-одиночек (типа Ксении), которым неудобна стандартная административная концепция визита. Вместо планирования и отметки прихода — постфактум-создание через карточку клиента.
+
+### Флаг включения
+
+`organizations.features.quick_mode: true` — включается из `/admin/organizations` тумблером "Быстрый режим мастера" (фиолетовый, иконка Play).
+
+### Статус `open`
+
+Новый статус для постфактум-визитов:
+
+| Статус | Лента визитов | Календарь |
+|---|---|---|
+| `open` (постфактум, не завершён) | ✅ | ❌ |
+| `scheduled` | ✅ | ✅ |
+| `in_progress` | ✅ | ✅ |
+| `completed` | ✅ | ✅ |
+
+Цвет в UI: фиолетовый (violet). Колонка `is_postfactum boolean` — помогает cron отличать постфактум от плановых.
+
+### pg_cron автостатусы (каждые 5 минут)
+
+- `visit_auto_in_progress` (jobid 8): `scheduled → in_progress` когда `scheduled_at <= now()` и `is_postfactum = false`
+- `visit_auto_completed` (jobid 9): `in_progress → completed` когда `scheduled_at + duration <= now()` и `is_postfactum = false`
+
+Постфактум-визиты (`is_postfactum = true`) cron **не трогает** — их статус управляется только вручную.
+
+### Файлы
+
+| Файл | Описание |
+|---|---|
+| `src/hooks/useQuickMode.ts` | Хук — возвращает `true` если `features.quick_mode === true` |
+| `src/components/modals/visits/QuickVisitModal.tsx` | WizardModal, 2 шага: выбор позиций + итог/действия |
+| `src/app/api/visits/quick/route.ts` | `POST /api/visits/quick` — создаёт постфактум-визит |
+| `src/app/admin/organizations/page.tsx` | + `QuickModeToggle` компонент + тумблер в `renderOrgDetail` |
+| `src/components/modals/ClientDetailsModal.tsx` | + кнопка "Быстрый визит" (только если `isQuickMode`) |
+| `src/app/(dashboard)/visits/page.tsx` | + статус `open` в `statusBadge`, `avatarColor`, `activeVisits` |
+
+### Суть QuickVisitModal
+
+**Шаг 1 — Позиции:** несколько услуг + несколько товаров, у каждой позиции `QuantityControl` (+/-). Picker с поиском открывается по кнопке.
+
+**Шаг 2 — Итог + действия:**
+- "Сохранить" → `status: 'open'`, `is_postfactum: true` (визит сохранён, не завершён)
+- "Завершить и оплатить" → `status: 'completed'` → открывает `sale-unified` диалог оплаты
+
+### API `/api/visits/quick`
+
+Поля body: `clientId`, `service`, `date`, `time`, `quick_items[]`, `status_override`.
+- Первая услуга из `quick_items` → основной `service_id` визита
+- Остальные услуги → `visit_services`
+- Товары → `sales` + `sale_items`
+
+### Миграция БД
+
+`quick_mode_visits_open_status`:
+- `visits.status` CHECK расширен: добавлен `'open'`
+- `visits.is_postfactum boolean NOT NULL DEFAULT false`
+- Индекс `idx_visits_cron_transition`
+- pg_cron jobs: `visit_auto_in_progress`, `visit_auto_completed`
+
+---
+
 ## 07.04.2026 — fix: Реальное удаление услуг
 
 **Коммит:** 8729c7f

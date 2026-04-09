@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
       staff_user_id: user.id,
       event_type: type === 'meeting' ? 'meeting' : 'visit',
       service_id: primaryServiceId,
-      service_type: primaryServiceName,
+      service_type: primaryServiceName ?? '',
     }
     if (client_id) insertData.client_id = client_id
 

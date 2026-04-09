@@ -535,8 +535,14 @@ tr:hover td{background:#f8f9fc}
     <div id="s-portal" class="screen">
       <div class="ph"><div><div class="ph-title">🌐 Клиентский портал</div><div class="ph-sub">Нажимайте на вкладки — это живое демо того, что видит ваш клиент</div></div><span class="pill pe" style="font-size:12px;padding:5px 12px">✓ Встроено в Trinity</span></div>
 
-      <!-- PORTAL DEMO WIDGET -->
-      <div style="background:#f5f6fa;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px">
+      <!-- PORTAL DEMO WIDGET — browser frame -->
+      <div style="background:#e2e8f0;border-radius:12px;padding:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);margin-bottom:18px">
+        <!-- Fake browser bar -->
+        <div style="background:#f8fafc;border-radius:8px 8px 0 0;padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #cbd5e1">
+          <div style="display:flex;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:#ff5f57"></div><div style="width:10px;height:10px;border-radius:50%;background:#febc2e"></div><div style="width:10px;height:10px;border-radius:50%;background:#28c840"></div></div>
+          <div style="flex:1;background:#fff;border:1px solid #cbd5e1;border-radius:5px;padding:3px 10px;font-size:11px;color:#64748b;font-family:monospace">portal.israstar.co.il · Личный кабинет</div>
+        </div>
+      <div style="background:#f5f6fa;border-radius:0 0 8px 8px;overflow:hidden">
         <!-- Portal header -->
         <div style="background:linear-gradient(90deg,#1a237e,#3949ab);padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
           <div style="display:flex;align-items:center;gap:10px">
@@ -560,6 +566,7 @@ tr:hover td{background:#f8f9fc}
 
         <!-- Tab: HOME -->
         <div id="pt-home" class="ptab-content" style="padding:16px;background:#fff">
+          <div style="font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:14px">Добрый день, Слава! 👋</div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
             <div style="background:#f5f6fa;border-radius:8px;padding:12px"><div style="font-size:11px;color:#9aa3b0;margin-bottom:4px" class="pt" data-key="stat_active">Активных заказов</div><div style="font-size:22px;font-weight:700;color:#1a1a2e">3</div><div style="font-size:11px;color:#27ae60" class="pt" data-key="stat_active_sub">сейчас в работе</div></div>
             <div style="background:#f5f6fa;border-radius:8px;padding:12px"><div style="font-size:11px;color:#9aa3b0;margin-bottom:4px" class="pt" data-key="stat_devices">Устройств у меня</div><div style="font-size:22px;font-weight:700;color:#1a1a2e">47</div><div style="font-size:11px;color:#27ae60" class="pt" data-key="stat_devices_sub">из последнего заказа</div></div>
@@ -612,17 +619,18 @@ tr:hover td{background:#f8f9fc}
           </div>
           <div id="pDocsList"></div>
         </div>
-      </div>
+      </div></div></div>
 
       <div class="note note-green">💡 <strong>Итог:</strong> клиент получает ссылку в WhatsApp, открывает портал и сам оформляет заказ — вы не тратите время на переписку.</div>
     </div>
 
 <style>
-.ptab{padding:9px 14px;font-size:12px;font-weight:500;border:none;background:transparent;color:#9aa3b0;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
-.ptab-active{color:#1a237e;border-bottom-color:#1a237e;background:#f8f9fc}
-.ptab:hover:not(.ptab-active){color:#4a5568;background:#f5f6fa}
-.pfilt{padding:5px 12px;font-size:12px;border:1px solid #e8ecf0;border-radius:20px;background:transparent;color:#9aa3b0;cursor:pointer}
-.pfilt-active{background:#e8f8f0;color:#27ae60;border-color:#27ae60}
+.ptab{padding:10px 16px;font-size:13px;font-weight:500;border:none;background:transparent;color:#9aa3b0;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap}
+.ptab-active{color:#1a237e;border-bottom-color:#1a237e;background:#fff}
+.ptab:hover:not(.ptab-active){color:#4a5568;background:rgba(0,0,0,.03)}
+.pfilt{padding:5px 13px;font-size:12px;border:1px solid #e8ecf0;border-radius:20px;background:transparent;color:#9aa3b0;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.pfilt-active{background:#e8f8f0;color:#1a7a4a;border-color:#a8e6c8;font-weight:600}
+.pfilt:hover:not(.pfilt-active){background:#f5f6fa;color:#4a5568}
 </style>
 
 <script>

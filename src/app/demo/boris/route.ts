@@ -599,38 +599,13 @@ tr:hover td{background:#f8f9fc}
     <!-- ═══ PRICING ═══ -->
     <div id="s-pricing" class="screen">
       <div class="ph"><div><div class="ph-title">Условия для Israstar</div><div class="ph-sub">Гибкий старт — платите когда бизнес работает</div></div></div>
-      <div class="pricing-grid">
-        <div class="pricing-card">
-          <div class="pr-plan">BASE</div>
-          <div class="pr-price">₪249 <span>/мес</span></div>
+      <div class="pricing-grid" style="grid-template-columns:1fr">
+        <div class="pricing-card rec" style="max-width:480px;margin:0 auto">
+          <div class="rec-badge">🎯 Ваш тариф</div>
+          <div class="pr-plan">PRO — всё включено</div>
+          <div class="pr-price">₪399 <span>/мес</span></div>
           <div class="tooltip-wrap">
-            <span class="pr-note">+ разовая настройка системы</span>
-            <div class="tooltip-box">
-              <strong>🔧 Что входит в разовую настройку</strong>
-              <ul>
-                <li>Перенос клиентской базы из Google Таблиц</li>
-                <li>Настройка тарифов для каждого клиента</li>
-                <li>Настройка складского учёта (90 устройств)</li>
-                <li>Интеграция с Google Календарём</li>
-                <li>Обучение работе с системой (1 сессия)</li>
-                <li>Настройка уведомлений и WhatsApp</li>
-              </ul>
-            </div>
-          </div>
-          <ul class="pr-feats">
-            <li><span class="ck">✓</span>Заказы и складской учёт</li>
-            <li><span class="ck">✓</span>Клиентская база с тарифами</li>
-            <li><span class="ck">✓</span>Календарь выдач / возвратов</li>
-            <li><span class="ck">✓</span>PDF-счета автоматически</li>
-            <li><span class="ck">✓</span>1 локация</li>
-          </ul>
-        </div>
-        <div class="pricing-card rec">
-          <div class="rec-badge">🎯 Рекомендуем для вас</div>
-          <div class="pr-plan">PRO</div>
-          <div class="pr-price">₪499 <span>/мес</span></div>
-          <div class="tooltip-wrap">
-            <span class="pr-note">+ разовая настройка системы</span>
+            <span class="pr-note">+ разовая настройка системы 1,500₪</span>
             <div class="tooltip-box">
               <strong>🔧 Что входит в разовую настройку</strong>
               <ul>
@@ -646,13 +621,17 @@ tr:hover td{background:#f8f9fc}
             </div>
           </div>
           <ul class="pr-feats">
-            <li><span class="ck">✓</span>Всё из BASE +</li>
-            <li><span class="ck">✓</span>WhatsApp ИИ-парсер (Kira AI)</li>
-            <li><span class="ck">✓</span>Клиентский портал</li>
-            <li><span class="ck">✓</span>Умные тарифы по клиентам</li>
+            <li><span class="ck">✓</span>Заказы и аренда оборудования</li>
+            <li><span class="ck">✓</span>Склад — статусы, резерв +2 автоматически</li>
+            <li><span class="ck">✓</span>Клиентская база с умными тарифами</li>
+            <li><span class="ck">✓</span>Календарь выдач и возвратов</li>
+            <li><span class="ck">✓</span>WhatsApp AI парсер — до 1,000 парсингов/мес включено</li>
+            <li><span class="ck">✓</span>Каждый дополнительный парсинг — +0.5₪</li>
+            <li><span class="ck">✓</span>Клиентский портал (иврит / русский / английский)</li>
+            <li><span class="ck">✓</span>Накладная + счёт на email автоматически</li>
             <li><span class="ck">✓</span>Мультифилиальность (Греция, Япония)</li>
-            <li><span class="ck">✓</span>Логика резервных устройств</li>
-            <li><span class="ck">✓</span>3 языка интерфейса</li>
+            <li><span class="ck">✓</span>Подключение WhatsApp номера включено</li>
+            <li><span class="ck">✓</span>Поддержка — живой человек, быстро</li>
           </ul>
         </div>
       </div>
@@ -734,8 +713,9 @@ tr:hover td{background:#f8f9fc}
             <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">Специальные условия для Бориса</div>
             <div style="font-size:14px;color:var(--text2);line-height:1.8">
               Мы понимаем, что туристический сектор пока стоит. Поэтому:<br>
-              <strong style="color:var(--emerald)">→ Символический старт: ₪149 первые 3 месяца</strong> — пока туризм не восстановится<br>
-              <strong style="color:var(--emerald)">→ Поддержка 24/7</strong> — личный контакт, ответ за 2 часа<br>
+              <strong style="color:var(--emerald)">→ Символический старт: ₪99/мес первые 2 месяца</strong> — попробуйте без риска<br>
+              <strong style="color:var(--emerald)">→ Далее: ₪399/мес</strong> — подписка + WhatsApp всё включено<br>
+              <strong style="color:var(--emerald)">→ Поддержка</strong> — живой человек, на русском, ответ быстро<br>
               <strong style="color:var(--emerald)">→ Бесплатный перенос</strong> всех данных из Google Таблиц в Trinity
             </div>
           </div>

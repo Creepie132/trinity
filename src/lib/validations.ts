@@ -232,7 +232,9 @@ export const createProductSchema = z.object({
 
 // Листинг визитов (GET /api/visits/list)
 export const listVisitsSchema = z.object({
-  dateFilter:      z.enum(['today', 'week', 'month', 'all']).default('week'),
+  dateFilter:      z.enum(['today', 'week', 'month', 'all', 'day']).default('week'),
+  // date: YYYY-MM-DD — используется только при dateFilter='day'
+  date:            z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   statusFilter:    z.enum(['all', 'scheduled', 'in_progress', 'completed', 'cancelled', 'no_show']).default('all'),
   eventTypeFilter: z.enum(['all', 'visit', 'meeting']).default('all'),
   search:          z.string().max(200).optional(),

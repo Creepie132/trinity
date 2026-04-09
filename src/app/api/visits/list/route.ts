@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const sp = request.nextUrl.searchParams
     const parsed = listVisitsSchema.safeParse({
       dateFilter:      sp.get('dateFilter')      ?? 'week',
+      date:            sp.get('date')            ?? undefined,
       statusFilter:    sp.get('statusFilter')     ?? 'all',
       eventTypeFilter: sp.get('eventTypeFilter')  ?? 'all',
       search:          sp.get('search')           ?? undefined,
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: errors }, { status: 400 })
     }
 
-    const { dateFilter, statusFilter, eventTypeFilter, search, page, pageSize } = parsed.data
+    const { dateFilter, date, statusFilter, eventTypeFilter, search, page, pageSize } = parsed.data
     const service = createSupabaseServiceClient()
 
     // 3. Базовый запрос
@@ -73,6 +74,23 @@ export async function GET(request: NextRequest) {
       } else if (dateFilter === 'month') {
         start.setDate(1)
         start.setHours(0, 0, 0, 0)
+      } else if (dateFilter === 'day' && date) {
+        // Точный фильтр по дню: date=YYYY-MM-DD
+        // Используем Israel timezone (UTC+3) — начало и конец дня
+        const [y, m, d] = date.split('-').map(Number)
+        const dayStart = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0))
+        dayStart.setTime(dayStart.getTime() - 3 * 60 * 60 * 1000) // 00:00 Israel = 21:00 UTC prev day
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000)
+        query = query
+          .gte('scheduled_at', dayStart.toISOString())
+          .lt('scheduled_at', dayEnd.toISOString())
+        // Ранний выход — не применяем .gte ниже
+        const { data, error, count } = await query.range((page - 1) * pageSize, (page - 1) * pageSize + pageSize - 1)
+        if (error) {
+          console.error('[API] GET /api/visits/list error:', error)
+          return NextResponse.json({ error: error.message }, { status: 500 })
+        }
+        return NextResponse.json({ data: data ?? [], count: count ?? 0, page, pageSize })
       }
       query = query.gte('scheduled_at', start.toISOString())
     }

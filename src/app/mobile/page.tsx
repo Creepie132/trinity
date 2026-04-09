@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   description: 'Скачайте приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.5.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.5.0.apk'
-const APK_SIZE = '56.3 MB'
-const RELEASE_DATE = '08.04.2026'
+const CURRENT_VERSION = '2.5.1'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.5.1-Xtobse4YPQH0tGUOrfmPROxULlWnOJ.apk'
+const APK_SIZE = '57.5 MB'
+const RELEASE_DATE = '09.04.2026'
 
 const HexLogo = () => (
   <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30 flex-shrink-0">
@@ -40,6 +40,19 @@ const BackButton = () => (
 
 
 const CHANGELOG = [
+  {
+    version: '2.5.1',
+    date: '09.04.2026',
+    changes: [
+      'Исправлено создание визитов (NOT NULL constraint)',
+      'Предупреждение о пересечении времени визитов',
+      'Детали платежа и привязанная сделка',
+      'Экран способов оплаты в настройках',
+      'Редизайн: Склад (сетка), Продажи (сводка), Клиенты (CRM Power)',
+      'Календарь визитов: Месяц / Неделя / День',
+      'Исправления графа платежей',
+    ],
+  },
   {
     version: '2.5.0',
     date: '08.04.2026',

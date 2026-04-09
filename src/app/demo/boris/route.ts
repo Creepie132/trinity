@@ -533,48 +533,256 @@ tr:hover td{background:#f8f9fc}
 
     <!-- ═══ PORTAL ═══ -->
     <div id="s-portal" class="screen">
-      <div class="ph"><div><div class="ph-title">🌐 Клиентский портал</div><div class="ph-sub">Что видит ваш клиент — на компьютере или телефоне</div></div><span class="pill pe" style="font-size:12px;padding:5px 12px">✓ Встроено в Trinity</span></div>
-      <div class="g2">
-        <div>
-          <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7">Клиент получает личную ссылку в WhatsApp. Никаких Google-форм — всё понятно с первого взгляда.</p>
-          <ul style="list-style:none;font-size:13px;color:var(--text2);margin-bottom:16px">
-            <li style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px"><span style="color:var(--emerald);font-weight:700">✓</span> Оформить новый заказ онлайн</li>
-            <li style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px"><span style="color:var(--emerald);font-weight:700">✓</span> Видеть все свои заказы и статусы</li>
-            <li style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px"><span style="color:var(--emerald);font-weight:700">✓</span> Скачать PDF-счёт одной кнопкой</li>
-            <li style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px"><span style="color:var(--emerald);font-weight:700">✓</span> Узнать точку выдачи и возврата</li>
-            <li style="padding:8px 0;display:flex;align-items:center;gap:8px"><span style="color:var(--emerald);font-weight:700">✓</span> Иврит / Русский / Английский</li>
-          </ul>
-          <div class="note note-green">💡 <strong>Итог для вас:</strong> клиент сам оформляет заказ, получает счёт, видит статус — вы не тратите время на WhatsApp-переписку.</div>
+      <div class="ph"><div><div class="ph-title">🌐 Клиентский портал</div><div class="ph-sub">Нажимайте на вкладки — это живое демо того, что видит ваш клиент</div></div><span class="pill pe" style="font-size:12px;padding:5px 12px">✓ Встроено в Trinity</span></div>
+
+      <!-- PORTAL DEMO WIDGET -->
+      <div style="background:#f5f6fa;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px">
+        <!-- Portal header -->
+        <div style="background:linear-gradient(90deg,#1a237e,#3949ab);padding:10px 16px;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:26px;height:26px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#f5a623">T</div>
+            <span style="font-size:13px;font-weight:600;color:#fff">Israstar · Личный кабинет</span>
+          </div>
+          <div style="display:flex;gap:4px" id="pLangBar">
+            <button onclick="pLang('ru')" style="padding:4px 9px;font-size:11px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.2);color:#fff;border-radius:5px;cursor:pointer;font-weight:600">RU</button>
+            <button onclick="pLang('en')" style="padding:4px 9px;font-size:11px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.7);border-radius:5px;cursor:pointer">EN</button>
+            <button onclick="pLang('he')" style="padding:4px 9px;font-size:11px;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.7);border-radius:5px;cursor:pointer">עב</button>
+          </div>
         </div>
-        <div class="portal-preview">
-          <div class="pp-hdr">
-            <div class="hdr-logo-box" style="width:26px;height:26px"><img id="ppLogo" src="" alt="T" style="width:18px;height:18px;object-fit:contain"></div>
-            <span class="ppt">Israstar · Личный кабинет</span>
+
+        <!-- Portal tabs -->
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--border);background:#fff" id="pTabBar">
+          <button onclick="pTab('home')" class="ptab ptab-active" data-tab="home">🏠 <span class="pt" data-key="nav_home">Главная</span></button>
+          <button onclick="pTab('new')"  class="ptab" data-tab="new">📋 <span class="pt" data-key="nav_new">Новый заказ</span></button>
+          <button onclick="pTab('orders')" class="ptab" data-tab="orders">📦 <span class="pt" data-key="nav_orders">Мои заказы</span></button>
+          <button onclick="pTab('docs')" class="ptab" data-tab="docs">📄 <span class="pt" data-key="nav_docs">Документы</span></button>
+        </div>
+
+        <!-- Tab: HOME -->
+        <div id="pt-home" class="ptab-content" style="padding:16px;background:#fff">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+            <div style="background:#f5f6fa;border-radius:8px;padding:12px"><div style="font-size:11px;color:#9aa3b0;margin-bottom:4px" class="pt" data-key="stat_active">Активных заказов</div><div style="font-size:22px;font-weight:700;color:#1a1a2e">3</div><div style="font-size:11px;color:#27ae60" class="pt" data-key="stat_active_sub">сейчас в работе</div></div>
+            <div style="background:#f5f6fa;border-radius:8px;padding:12px"><div style="font-size:11px;color:#9aa3b0;margin-bottom:4px" class="pt" data-key="stat_devices">Устройств у меня</div><div style="font-size:22px;font-weight:700;color:#1a1a2e">47</div><div style="font-size:11px;color:#27ae60" class="pt" data-key="stat_devices_sub">из последнего заказа</div></div>
+            <div style="background:#f5f6fa;border-radius:8px;padding:12px"><div style="font-size:11px;color:#9aa3b0;margin-bottom:4px" class="pt" data-key="stat_total">Заказов за год</div><div style="font-size:22px;font-weight:700;color:#1a1a2e">28</div><div style="font-size:11px;color:#27ae60" class="pt" data-key="stat_total_sub">с января 2024</div></div>
           </div>
-          <div class="pp-body">
-            <div style="font-size:13px;color:#374151;margin-bottom:12px;font-weight:500">Добрый день, Слава! 👋</div>
-            <div class="pp-card">
-              <div class="pp-card-title">Заказ #4001 · 25 устройств · 9 дней</div>
-              <div class="pp-card-meta">02–10 апреля 2026 · Иерусалим</div>
-              <div class="pp-row"><span>Статус:</span><strong style="color:#f5a623">● Активен — возврат 10 апр</strong></div>
-              <div class="pp-row"><span>Место выдачи:</span><strong>Точка Иерусалим</strong></div>
-              <div class="pp-row"><span>Тариф:</span><strong>₪6/устр./день</strong></div>
-              <div class="pp-row"><span>Сумма:</span><strong>₪1,380</strong></div>
-              <button class="pp-btn">📄 Скачать счёт PDF</button>
-            </div>
-            <div class="pp-card" style="background:#f0fdf5;border-color:rgba(39,174,96,.2)">
-              <div class="pp-card-title" style="color:#27ae60">Заказ #3891 · Март 2026 — завершён</div>
-              <div class="pp-card-meta">15–22 марта · 22 устройства</div>
-              <div class="pp-row"><span>Статус:</span><strong style="color:#27ae60">✅ Завершён и оплачен</strong></div>
-              <button class="pp-btn" style="background:#27ae60">📄 Квитанция</button>
-            </div>
-            <div style="background:#fff8e1;border:1px solid rgba(230,126,34,.25);border-radius:8px;padding:10px 14px;font-size:12px;color:#7d5a00;line-height:1.6;margin-top:4px">
-              ℹ️ <strong>Электронные квитанции</strong> формируются автоматически при подключении одного из провайдеров онлайн-квитанций (Green Invoice, iCount и др.). <span style="color:var(--indigo2);font-weight:500">Amber Solutions может подключить и настроить этот сервис для вас.</span>
-            </div>
+          <div style="font-size:12px;font-weight:600;color:#4a5568;margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em" class="pt" data-key="sec_upcoming">Ближайшие заказы</div>
+          <div style="background:#f8f9fc;border:1px solid #e8ecf0;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+            <div><div style="font-size:13px;font-weight:500;color:#1a1a2e">#2024-041</div><div style="font-size:12px;color:#9aa3b0" class="pt" data-key="order1_dates">12 мая → 19 мая · Аэропорт</div></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#9aa3b0">20 <span class="pt" data-key="dev_s">уст.</span></span><span style="background:#e8f8f0;color:#27ae60;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px" class="pt" data-key="status_active">В работе</span></div>
           </div>
+          <div style="background:#f8f9fc;border:1px solid #e8ecf0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+            <div><div style="font-size:13px;font-weight:500;color:#1a1a2e">#2024-042</div><div style="font-size:12px;color:#9aa3b0" class="pt" data-key="order2_dates">25 мая → 1 июня · Иерусалим</div></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#9aa3b0">35 <span class="pt" data-key="dev_s2">уст.</span></span><span style="background:#fef3e2;color:#c17d0a;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px" class="pt" data-key="status_pending">Ожидает подтв.</span></div>
+          </div>
+        </div>
+
+        <!-- Tab: NEW ORDER -->
+        <div id="pt-new" class="ptab-content" style="display:none;padding:16px;background:#fff">
+          <div style="background:#f8f9fc;border:1px solid #e8ecf0;border-radius:8px;padding:16px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div><label style="display:block;font-size:12px;color:#9aa3b0;margin-bottom:4px" class="pt" data-key="field_pickup">Дата выдачи</label><input type="date" value="2024-05-25" style="width:100%;font-size:13px;padding:7px 10px;border:1px solid #e8ecf0;border-radius:6px;background:#fff;color:#1a1a2e"></div>
+              <div><label style="display:block;font-size:12px;color:#9aa3b0;margin-bottom:4px" class="pt" data-key="field_return">Дата возврата</label><input type="date" value="2024-06-01" style="width:100%;font-size:13px;padding:7px 10px;border:1px solid #e8ecf0;border-radius:6px;background:#fff;color:#1a1a2e"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div><label style="display:block;font-size:12px;color:#9aa3b0;margin-bottom:4px" class="pt" data-key="field_qty">Количество устройств</label><input type="number" value="20" style="width:100%;font-size:13px;padding:7px 10px;border:1px solid #e8ecf0;border-radius:6px;background:#fff;color:#1a1a2e"></div>
+              <div><label style="display:block;font-size:12px;color:#9aa3b0;margin-bottom:4px" class="pt" data-key="field_loc">Место получения</label><select style="width:100%;font-size:13px;padding:7px 10px;border:1px solid #e8ecf0;border-radius:6px;background:#fff;color:#1a1a2e"><option class="pt" data-key="loc_airport">Аэропорт Бен-Гурион</option><option class="pt" data-key="loc_jerusalem">Иерусалим</option></select></div>
+            </div>
+            <div style="background:#e8f8f0;border-left:2px solid #27ae60;border-radius:6px;padding:10px 12px;font-size:12px;color:#4a5568;margin-bottom:14px"><span class="pt" data-key="note_reserve">+ 2 резервных устройства добавляются автоматически. В стоимость не включаются.</span></div>
+            <button style="background:linear-gradient(135deg,#f5a623,#e8960a);color:#0f1629;border:none;padding:9px 20px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer" class="pt" data-key="btn_submit">Отправить заказ</button>
+          </div>
+        </div>
+
+        <!-- Tab: MY ORDERS -->
+        <div id="pt-orders" class="ptab-content" style="display:none;padding:16px;background:#fff">
+          <div style="display:flex;gap:6px;margin-bottom:12px" id="pFilterBar">
+            <button onclick="pFilter('all')" class="pfilt pfilt-active" data-f="all"><span class="pt" data-key="f_all">Все</span></button>
+            <button onclick="pFilter('active')" class="pfilt" data-f="active"><span class="pt" data-key="f_active">В работе</span></button>
+            <button onclick="pFilter('pending')" class="pfilt" data-f="pending"><span class="pt" data-key="f_pending">Ожидает</span></button>
+            <button onclick="pFilter('done')" class="pfilt" data-f="done"><span class="pt" data-key="f_done">Завершены</span></button>
+          </div>
+          <div id="pOrdersList"></div>
+        </div>
+
+        <!-- Tab: DOCS -->
+        <div id="pt-docs" class="ptab-content" style="display:none;padding:16px;background:#fff">
+          <div style="display:flex;gap:6px;margin-bottom:12px">
+            <button onclick="pDocFilter('all')" class="pfilt pfilt-active" data-df="all"><span class="pt" data-key="df_all">Все</span></button>
+            <button onclick="pDocFilter('delivery')" class="pfilt" data-df="delivery"><span class="pt" data-key="df_delivery">Накладные</span></button>
+            <button onclick="pDocFilter('invoice')" class="pfilt" data-df="invoice"><span class="pt" data-key="df_invoice">Счета</span></button>
+          </div>
+          <div id="pDocsList"></div>
         </div>
       </div>
+
+      <div class="note note-green">💡 <strong>Итог:</strong> клиент получает ссылку в WhatsApp, открывает портал и сам оформляет заказ — вы не тратите время на переписку.</div>
     </div>
+
+<style>
+.ptab{padding:9px 14px;font-size:12px;font-weight:500;border:none;background:transparent;color:#9aa3b0;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.ptab-active{color:#1a237e;border-bottom-color:#1a237e;background:#f8f9fc}
+.ptab:hover:not(.ptab-active){color:#4a5568;background:#f5f6fa}
+.pfilt{padding:5px 12px;font-size:12px;border:1px solid #e8ecf0;border-radius:20px;background:transparent;color:#9aa3b0;cursor:pointer}
+.pfilt-active{background:#e8f8f0;color:#27ae60;border-color:#27ae60}
+</style>
+
+<script>
+const PT = {
+  ru:{nav_home:'Главная',nav_new:'Новый заказ',nav_orders:'Мои заказы',nav_docs:'Документы',
+      stat_active:'Активных заказов',stat_active_sub:'сейчас в работе',stat_devices:'Устройств у меня',stat_devices_sub:'из последнего заказа',stat_total:'Заказов за год',stat_total_sub:'с января 2024',
+      sec_upcoming:'Ближайшие заказы',order1_dates:'12 мая → 19 мая · Аэропорт',order2_dates:'25 мая → 1 июня · Иерусалим',dev_s:'уст.',dev_s2:'уст.',
+      status_active:'В работе',status_pending:'Ожидает подтв.',status_done:'Завершён',
+      field_pickup:'Дата выдачи',field_return:'Дата возврата',field_qty:'Количество устройств',field_loc:'Место получения',
+      loc_airport:'Аэропорт Бен-Гурион',loc_jerusalem:'Иерусалим',
+      note_reserve:'+ 2 резервных устройства добавляются автоматически. В стоимость не включаются.',
+      btn_submit:'Отправить заказ',
+      f_all:'Все',f_active:'В работе',f_pending:'Ожидает',f_done:'Завершены',
+      df_all:'Все',df_delivery:'Накладные',df_invoice:'Счета',
+      lbl_pickup:'Выдача',lbl_return:'Возврат',lbl_loc:'Место',lbl_qty:'Устройств',lbl_total:'Сумма:',
+      loc_a:'Аэропорт',loc_j:'Иерусалим',
+      doc_delivery:'Накладная',doc_invoice:'Счёт на оплату',doc_for:'Заказ',btn_dl:'Скачать',currency:'₪'},
+  en:{nav_home:'Home',nav_new:'New Order',nav_orders:'My Orders',nav_docs:'Documents',
+      stat_active:'Active orders',stat_active_sub:'running now',stat_devices:'My devices',stat_devices_sub:'from last order',stat_total:'Orders this year',stat_total_sub:'since Jan 2024',
+      sec_upcoming:'Upcoming orders',order1_dates:'May 12 → May 19 · Airport',order2_dates:'May 25 → Jun 1 · Jerusalem',dev_s:'dev.',dev_s2:'dev.',
+      status_active:'Active',status_pending:'Awaiting conf.',status_done:'Completed',
+      field_pickup:'Pickup date',field_return:'Return date',field_qty:'Number of devices',field_loc:'Pickup location',
+      loc_airport:'Ben Gurion Airport',loc_jerusalem:'Jerusalem',
+      note_reserve:'+ 2 spare devices added automatically at no charge.',
+      btn_submit:'Submit order',
+      f_all:'All',f_active:'Active',f_pending:'Pending',f_done:'Completed',
+      df_all:'All',df_delivery:'Delivery notes',df_invoice:'Invoices',
+      lbl_pickup:'Pickup',lbl_return:'Return',lbl_loc:'Location',lbl_qty:'Devices',lbl_total:'Total:',
+      loc_a:'Airport',loc_j:'Jerusalem',
+      doc_delivery:'Delivery note',doc_invoice:'Payment invoice',doc_for:'Order',btn_dl:'Download',currency:'₪'},
+  he:{nav_home:'ראשי',nav_new:'הזמנה חדשה',nav_orders:'ההזמנות שלי',nav_docs:'מסמכים',
+      stat_active:'הזמנות פעילות',stat_active_sub:'כעת בעבודה',stat_devices:'מכשירים שלי',stat_devices_sub:'מהזמנה אחרונה',stat_total:'הזמנות השנה',stat_total_sub:'מינואר 2024',
+      sec_upcoming:'הזמנות קרובות',order1_dates:'12 מאי → 19 מאי · שדה תעופה',order2_dates:'25 מאי → 1 יוני · ירושלים',dev_s:'מכש.',dev_s2:'מכש.',
+      status_active:'פעיל',status_pending:'ממתין לאישור',status_done:'הושלם',
+      field_pickup:'תאריך איסוף',field_return:'תאריך החזרה',field_qty:'מספר מכשירים',field_loc:'מיקום איסוף',
+      loc_airport:'נמל תעופה בן גוריון',loc_jerusalem:'ירושלים',
+      note_reserve:'+ 2 מכשירי גיבוי מתווספים אוטומטית ללא תשלום.',
+      btn_submit:'שלח הזמנה',
+      f_all:'הכל',f_active:'פעיל',f_pending:'ממתין',f_done:'הושלם',
+      df_all:'הכל',df_delivery:'תעודות משלוח',df_invoice:'חשבונות',
+      lbl_pickup:'איסוף',lbl_return:'החזרה',lbl_loc:'מיקום',lbl_qty:'מכשירים',lbl_total:'סכום:',
+      loc_a:'שדה תעופה',loc_j:'ירושלים',
+      doc_delivery:'תעודת משלוח',doc_invoice:'חשבון עסקה',doc_for:'הזמנה',btn_dl:'הורד',currency:'₪'}
+};
+
+const pOrders=[
+  {num:'#2024-041',status:'active',pickup:'12.05',ret:'19.05',loc:'a',qty:20,total:'1,840'},
+  {num:'#2024-042',status:'pending',pickup:'25.05',ret:'01.06',loc:'j',qty:35,total:'3,220'},
+  {num:'#2024-039',status:'done',pickup:'02.05',ret:'09.05',loc:'a',qty:15,total:'1,380'},
+  {num:'#2024-037',status:'done',pickup:'10.04',ret:'18.04',loc:'j',qty:25,total:'2,300'}
+];
+const pDocs=[
+  {type:'delivery',order:'#2024-041',date:'12.05.2024',size:'84 KB'},
+  {type:'invoice', order:'#2024-041',date:'12.05.2024',size:'76 KB'},
+  {type:'delivery',order:'#2024-039',date:'02.05.2024',size:'81 KB'},
+  {type:'invoice', order:'#2024-039',date:'02.05.2024',size:'74 KB'},
+];
+
+let pCurrentLang='ru', pCurrentFilter='all', pCurrentDocFilter='all';
+
+function pLang(l){
+  pCurrentLang=l;
+  const dir=l==='he'?'rtl':'ltr';
+  document.querySelectorAll('#s-portal .ptab-content').forEach(el=>el.style.direction=dir);
+  document.querySelectorAll('.pt[data-key]').forEach(el=>{
+    const k=el.getAttribute('data-key');
+    if(PT[l][k]!==undefined) el.textContent=PT[l][k];
+  });
+  document.querySelectorAll('#pLangBar button').forEach(btn=>{
+    const active=btn.textContent.trim().toLowerCase()===l||(l==='he'&&btn.textContent.trim()==='עב');
+    btn.style.background=active?'rgba(255,255,255,.2)':'transparent';
+    btn.style.borderColor=active?'rgba(255,255,255,.4)':'rgba(255,255,255,.25)';
+    btn.style.color=active?'#fff':'rgba(255,255,255,.7)';
+    btn.style.fontWeight=active?'600':'400';
+  });
+  renderPOrders();renderPDocs();
+}
+
+function pTab(name){
+  document.querySelectorAll('.ptab-content').forEach(el=>el.style.display='none');
+  document.getElementById('pt-'+name).style.display='block';
+  document.querySelectorAll('.ptab').forEach(btn=>{
+    btn.classList.toggle('ptab-active',btn.dataset.tab===name);
+  });
+}
+
+function pFilter(f){
+  pCurrentFilter=f;
+  document.querySelectorAll('#pFilterBar .pfilt').forEach(btn=>{
+    btn.classList.toggle('pfilt-active',btn.dataset.f===f);
+  });
+  renderPOrders();
+}
+
+function pDocFilter(f){
+  pCurrentDocFilter=f;
+  document.querySelectorAll('[data-df]').forEach(btn=>{
+    btn.classList.toggle('pfilt-active',btn.dataset.df===f);
+  });
+  renderPDocs();
+}
+
+function statusBadge(s,l){
+  const L=PT[l];
+  const styles={active:'background:#e8f8f0;color:#27ae60',pending:'background:#fef3e2;color:#c17d0a',done:'background:#f0f1f5;color:#4a5568'};
+  return '<span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;'+styles[s]+'">'+L['status_'+s]+'</span>';
+}
+
+function renderPOrders(){
+  const l=pCurrentLang, L=PT[l];
+  const list=document.getElementById('pOrdersList');
+  if(!list) return;
+  const filtered=pCurrentFilter==='all'?pOrders:pOrders.filter(o=>o.status===pCurrentFilter);
+  list.innerHTML=filtered.map(o=>\`
+    <div style="background:#f8f9fc;border:1px solid #e8ecf0;border-radius:8px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:600;color:#1a1a2e">\${o.num}</span>
+        \${statusBadge(o.status,l)}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">
+        <div><div style="font-size:10px;color:#9aa3b0">\${L.lbl_pickup}</div><div style="font-size:12px;font-weight:500;color:#1a1a2e">\${o.pickup}</div></div>
+        <div><div style="font-size:10px;color:#9aa3b0">\${L.lbl_return}</div><div style="font-size:12px;font-weight:500;color:#1a1a2e">\${o.ret}</div></div>
+        <div><div style="font-size:10px;color:#9aa3b0">\${L.lbl_loc}</div><div style="font-size:12px;font-weight:500;color:#1a1a2e">\${o.loc==='a'?L.loc_a:L.loc_j}</div></div>
+        <div><div style="font-size:10px;color:#9aa3b0">\${L.lbl_qty}</div><div style="font-size:12px;font-weight:500;color:#1a1a2e">\${o.qty}(+2)</div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e8ecf0;padding-top:8px">
+        <span style="font-size:12px;color:#9aa3b0">\${L.lbl_total} <strong style="color:#1a1a2e">\${o.total} \${L.currency}</strong></span>
+        <button style="font-size:11px;padding:4px 12px;border:1px solid #e8ecf0;border-radius:6px;background:#fff;color:#1a237e;cursor:pointer">📄 \${L.doc_delivery}</button>
+      </div>
+    </div>
+  \`).join('');
+}
+
+function renderPDocs(){
+  const l=pCurrentLang, L=PT[l];
+  const list=document.getElementById('pDocsList');
+  if(!list) return;
+  const filtered=pCurrentDocFilter==='all'?pDocs:pDocs.filter(d=>d.type===pCurrentDocFilter);
+  list.innerHTML=filtered.map(d=>\`
+    <div style="background:#f8f9fc;border:1px solid #e8ecf0;border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px">
+      <div style="width:34px;height:34px;border-radius:8px;background:\${d.type==='delivery'?'#e8f8f0':'#e8eeff'};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">\${d.type==='delivery'?'📦':'📃'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">\${L['doc_'+d.type]} \${d.order}.pdf</div>
+        <div style="font-size:11px;color:#9aa3b0">\${L.doc_for} \${d.order} · \${d.date}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-size:11px;color:#9aa3b0">\${d.size}</span>
+        <button style="font-size:12px;padding:5px 12px;border:1px solid #e8ecf0;border-radius:6px;background:#fff;color:#1a1a2e;cursor:pointer">\${L.btn_dl}</button>
+      </div>
+    </div>
+  \`).join('');
+}
+
+// Init portal on first render
+document.addEventListener('DOMContentLoaded', function(){
+  renderPOrders(); renderPDocs();
+});
+// Also init immediately in case DOM already loaded
+renderPOrders(); renderPDocs();
+</script>
 
     <!-- ═══ BRANCHES ═══ -->
     <div id="s-branches" class="screen">

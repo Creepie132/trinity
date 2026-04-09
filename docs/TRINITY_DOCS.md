@@ -1550,6 +1550,21 @@ Footer во всех листах теперь `position: sticky; bottom: 0`, ч
 **Затронутые файлы:** `src/app/api/services/[id]/route.ts`, migration `fix_service_delete_fk_set_null`
 
 
+### Апрель 2026 — fix: dateFilter=day для точной проверки пересечений визитов (коммит c4693f6)
+
+**Файлы:** `src/lib/validations.ts`, `src/app/api/visits/list/route.ts`
+
+**Проблема:** Flutter-приложение не могло точно загрузить визиты за конкретный день.
+При создании визита на дату в будущем использовался `dateFilter=month`, который ограничен
+текущим месяцем — даты следующего месяца возвращали 0 визитов, проверка пересечений молча не срабатывала.
+
+**Решение:**
+- `listVisitsSchema` — добавлен `'day'` в enum `dateFilter` + опциональный параметр `date: YYYY-MM-DD`
+- `GET /api/visits/list?dateFilter=day&date=YYYY-MM-DD` — возвращает строго визиты одного дня
+- Реализован с учётом Israel timezone (UTC+3): `00:00 IST = 21:00 UTC предыдущего дня`
+- Ранний return до общего блока пагинации — не ломает существующие `today/week/month/all`
+
+
 ### Апрель 2026 — Расширение /api/mobile/dashboard (коммит 8f96c3f)
 
 **Файл:** src/app/api/mobile/dashboard/route.ts

@@ -1583,6 +1583,30 @@ ew_clients — последние 5 клиентов (id, name, phone, source, c
 Все запросы фильтрованы по org_id. Bearer auth сохранён.
 
 
+### 10 апреля 2026 — feat: PaymentReportModal — методы из настроек платежей (коммит 0b31cb0)
+
+**Задача:** Список методов в "Сводке платежей" должен отражать только те методы, которые включены в `/settings/payments`, а не хардкоженный список из 5 кнопок.
+
+**Решение:**
+- Убраны хардкоженные `PAYMENT_METHODS` и `METHOD_LABEL_HE` из `PaymentReportModal.tsx`
+- Добавлен `usePaymentMethodConfig()` hook — уже кеширован React Query (`payment-settings`), лишних запросов нет
+- `enabledMethods` из хука — только методы с `enabled: true && !forcedOff`
+- `enabledKeys` (useMemo) → инициализация `selectedMethods` через useEffect при загрузке
+- При синхронизации: если метод отключили в настройках — он автоматически исчезает из выбора в Сводке
+- `methodLabelHe` (useMemo) — строится из `enabledMethods` для корректных лейблов в PDF
+- Показывается лоадер пока `methodsLoading`
+- Кнопка "Создать PDF" заблокирована пока методы грузятся или ни один не выбран
+
+**Поведение:**
+- Методы в Сводке ≡ методам в `/settings/payments`
+- `forcedOff` методы (Bit при наличии Tranzila терминала, Card без терминала) не показываются совсем
+- Никакого лишнего fetch — React Query кеш `payment-settings` уже есть на странице
+
+**Файл:** `src/components/payments/PaymentReportModal.tsx`
+**Регрессия:** нет
+
+---
+
 ### 10 апреля 2026 — fix: PaymentReportModal — добавлен Bit в фильтры Сводки (коммит 7df61af)
 
 **Проблема:** В модалке "Сводка платежей" (`PaymentReportModal`) метод оплаты **Bit** отсутствовал в списке методов — ни как кнопка выбора, ни в `selectedMethods` по умолчанию, ни в `METHOD_LABEL_HE`. Платежи через Bit вылетали из фильтрации при расчёте суммы и генерации PDF.

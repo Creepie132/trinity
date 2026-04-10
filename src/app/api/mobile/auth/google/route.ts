@@ -43,6 +43,12 @@ export async function POST(request: NextRequest) {
 
     const activeOrgId = await getActiveOrgId(user.id, orgId)
 
+    const googleMeta = user.user_metadata ?? {}
+    const googleUserName: string =
+      (googleMeta.full_name as string | undefined) ??
+      (googleMeta.name as string | undefined) ??
+      (user.email?.split('@')[0] ?? '')
+
     return NextResponse.json({
       access_token:  session.access_token,
       refresh_token: session.refresh_token,
@@ -53,6 +59,7 @@ export async function POST(request: NextRequest) {
       main_org_id:   orgId,
       role:          user.app_metadata?.org_role ?? null,
       is_admin:      user.app_metadata?.is_admin === true,
+      user_name:     googleUserName,
     })
   } catch (err) {
     console.error('[mobile/auth/google]', err)

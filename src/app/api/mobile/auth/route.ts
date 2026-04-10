@@ -70,6 +70,13 @@ export async function POST(request: NextRequest) {
     // Это позволяет мобильному приложению показывать Admin Dashboard без дополнительных проверок.
     const mobileRole = isAdmin ? 'super_admin' : (orgRole ?? 'owner')
 
+    // Имя пользователя: сначала Google full_name, потом display_name, потом часть email до @
+    const meta = user.user_metadata ?? {}
+    const userName: string =
+      (meta.full_name as string | undefined) ??
+      (meta.display_name as string | undefined) ??
+      (user.email?.split('@')[0] ?? '')
+
     return NextResponse.json({
       access_token: session.access_token,
       refresh_token: session.refresh_token,
@@ -81,6 +88,7 @@ export async function POST(request: NextRequest) {
       role: mobileRole,
       is_admin: isAdmin,
       org_name: orgData?.name ?? null,
+      user_name: userName,
     })
   } catch (err) {
     console.error('[mobile/auth] Error:', err)
@@ -138,6 +146,12 @@ export async function PUT(request: NextRequest) {
     const refreshedOrgRole = data.user.app_metadata?.org_role as string | null ?? null
     const refreshedRole = refreshedIsAdmin ? 'super_admin' : (refreshedOrgRole ?? null)
 
+    const refreshedMeta = data.user.user_metadata ?? {}
+    const refreshedUserName: string =
+      (refreshedMeta.full_name as string | undefined) ??
+      (refreshedMeta.display_name as string | undefined) ??
+      (data.user.email?.split('@')[0] ?? '')
+
     return NextResponse.json({
       access_token: data.session.access_token,
       refresh_token: data.session.refresh_token,
@@ -145,6 +159,7 @@ export async function PUT(request: NextRequest) {
       org_name: orgName,
       role: refreshedRole,
       is_admin: refreshedIsAdmin,
+      user_name: refreshedUserName,
     })
   } catch (err) {
     console.error('[mobile/auth/refresh] Error:', err)

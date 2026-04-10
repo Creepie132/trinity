@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.5.1'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.5.1-Xtobse4YPQH0tGUOrfmPROxULlWnOJ.apk'
-const APK_SIZE = '57.5 MB'
-const RELEASE_DATE = '09.04.2026'
+const CURRENT_VERSION = '2.5.2'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.5.2-bNhvsKkRSc5zIsxiK4P9p83Sfh7epX.apk'
+const APK_SIZE = '57.6 MB'
+const RELEASE_DATE = '10.04.2026'
 
 const HexLogo = () => (
   <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30 flex-shrink-0">

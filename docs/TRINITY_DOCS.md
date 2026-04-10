@@ -1581,3 +1581,37 @@ ew_clients — последние 5 клиентов (id, name, phone, source, c
 - whatsapp — { total_unread, conversations[] } из wa_conversations
 
 Все запросы фильтрованы по org_id. Bearer auth сохранён.
+
+
+### 10 апреля 2026 — fix: PaymentReportModal — добавлен Bit в фильтры Сводки (коммит 7df61af)
+
+**Проблема:** В модалке "Сводка платежей" (`PaymentReportModal`) метод оплаты **Bit** отсутствовал в списке методов — ни как кнопка выбора, ни в `selectedMethods` по умолчанию, ни в `METHOD_LABEL_HE`. Платежи через Bit вылетали из фильтрации при расчёте суммы и генерации PDF.
+
+**Второй баг:** Фильтрация шла через `p.payment_method` напрямую, без нормализатора — ключ `'credit_card'` из БД не совпадал с каноническим `'card'`, аналогично другие алиасы.
+
+**Решение:**
+- `PAYMENT_METHODS` — добавлен Bit (`value: 'bit'`), карта переименована в `'card'` (canonical key)
+- `METHOD_LABEL_HE` — добавлен `bit: 'ביט'`, карта `card: 'כרטיס'`
+- `selectedMethods` default — теперь включает все 5 методов включая `'bit'` и `'card'`
+- Импортирован `normalizePaymentMethod` из `@/lib/payment-method-normalizer`
+- Фильтрация в `useEffect` (расчёт суммы) и `handleGenerate` (генерация PDF) — переведена на `normalizePaymentMethod(p.payment_method)` вместо raw значения из БД
+- В `items.map` метка метода тоже берётся через normalizer: `METHOD_LABEL_HE[normalizePaymentMethod(...)]`
+
+**Файл:** `src/components/payments/PaymentReportModal.tsx`
+**Регрессия:** нет — только расширение, логика других методов не затронута
+
+---
+
+### 10 апреля 2026 — fix: demo/boris — устранение 404 (коммит dcfb47b)
+
+**Проблема:** Борис получал 404 при открытии `/demo/boris`. Причина — огромный HTML (>1000 строк) внутри serverless route.ts вызывал проблемы при cold start на Vercel Edge.
+
+**Решение:**
+- `public/demo-boris.html` — уже существовал, актуальный
+- `public/demo-boris-portal.html` — создан, HTML извлечён из portal/route.ts
+- `src/app/demo/boris/route.ts` → теперь делает 301 redirect на `/demo-boris.html` (статика CDN)
+- `src/app/demo/boris/portal/route.ts` → теперь делает 301 redirect на `/demo-boris-portal.html`
+
+**Результат:** Демо раздаётся Vercel CDN как статика — никаких serverless функций, никогда не падает.
+
+**Файлы:** public/demo-boris.html, public/demo-boris-portal.html, src/app/demo/boris/route.ts, src/app/demo/boris/portal/route.ts

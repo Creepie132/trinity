@@ -11,7 +11,7 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const VALID_METHODS = new Set(['cash', 'card', 'bit', 'bank_transfer', 'check', 'paybox', 'tranzila'])
+const VALID_METHODS = new Set(['cash', 'card', 'bit', 'bank_transfer', 'check', 'paybox'])
 const DEFAULT_METHODS = ['cash', 'card', 'bit', 'bank_transfer', 'check']
 
 // ─── GET ──────────────────────────────────────────────────────────────────────
@@ -34,7 +34,9 @@ export async function GET(request: NextRequest) {
     }
 
     const rawMethods: string[] = data?.enabled_payment_methods ?? DEFAULT_METHODS
-    const methods = rawMethods.map((m: string) => m === 'credit_card' ? 'card' : m)
+    const methods = rawMethods
+      .map((m: string) => m === 'credit_card' ? 'card' : m === 'tranzila' ? 'card' : m)
+      .filter((m, i, arr) => arr.indexOf(m) === i) // deduplicate
     const terminalConnected = !!(data?.tranzila_terminal?.trim())
 
     return NextResponse.json({
@@ -73,9 +75,9 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const normalized = (enabled_payment_methods as string[]).map((m: string) =>
-      m === 'credit_card' ? 'card' : m
-    )
+    const normalized = (enabled_payment_methods as string[])
+      .map((m: string) => m === 'credit_card' ? 'card' : m === 'tranzila' ? 'card' : m)
+      .filter((m, i, arr) => arr.indexOf(m) === i) // deduplicate
 
     const supabase = createSupabaseServiceClient()
     const { error } = await supabase

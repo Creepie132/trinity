@@ -23,9 +23,9 @@ export async function GET() {
 
     // Нормализуем: исторически дефолт мог содержать 'credit_card' — приводим к 'card'
     const rawMethods: string[] = data?.enabled_payment_methods ?? ['cash', 'card', 'bit', 'bank_transfer', 'check']
-    const normalizedMethods = rawMethods.map((m: string) =>
-      m === 'credit_card' ? 'card' : m
-    )
+    const normalizedMethods = rawMethods
+      .map((m: string) => m === 'credit_card' ? 'card' : m === 'tranzila' ? 'card' : m)
+      .filter((m: string, i: number, arr: string[]) => arr.indexOf(m) === i) // deduplicate
 
     return NextResponse.json({
       tranzila_terminal:           data?.tranzila_terminal || '',
@@ -70,9 +70,9 @@ export async function PUT(request: NextRequest) {
     }
     if (Array.isArray(enabled_payment_methods) && enabled_payment_methods.length > 0) {
       // Нормализуем перед записью — никогда не сохраняем 'credit_card', только 'card'
-      payload.enabled_payment_methods = enabled_payment_methods.map((m: string) =>
-        m === 'credit_card' ? 'card' : m
-      )
+      payload.enabled_payment_methods = enabled_payment_methods
+        .map((m: string) => m === 'credit_card' ? 'card' : m === 'tranzila' ? 'card' : m)
+        .filter((m: string, i: number, arr: string[]) => arr.indexOf(m) === i) // deduplicate
     }
 
     if (Object.keys(payload).length === 0) {

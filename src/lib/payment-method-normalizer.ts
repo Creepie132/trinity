@@ -29,7 +29,7 @@ export function normalizePaymentMethod(raw: string | null | undefined): Canonica
   const v = raw.toLowerCase().trim()
   if (v === 'cash' || v === 'מזומן') return 'cash'
   if (v === 'card' || v === 'credit' || v === 'credit_card' || v === 'creditcard'
-      || v === 'visa' || v === 'mastercard') return 'card'
+      || v === 'visa' || v === 'mastercard' || v === 'tranzila') return 'card'
   if (v === 'bit' || v === 'ביט') return 'bit'
   if (v === 'bank_transfer' || v === 'transfer' || v === 'banktransfer'
       || v === 'העברה' || v === 'העברה בנקאית') return 'bank_transfer'

@@ -1,0 +1,190 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Israstar Â· Ð›Ð¸Ñ‡Ð½Ñ‹Ð¹ ÐºÐ°Ð±Ð¸Ð½ÐµÑ‚</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --indigo:#1a237e;--indigo2:#283593;--indigo3:#3949ab;
+  --emerald:#27ae60;--emerald-bg:#e8f8f0;--emerald-bdr:#a8e6c8;
+  --amber:#f5a623;
+  --text:#1a1a2e;--text2:#4a5568;--muted:#9aa3b0;
+  --bg:#f5f6fa;--white:#fff;
+  --border:#e8ecf0;--border2:#d0d7de;
+  --radius:10px;--radius-sm:6px;
+  --shadow:0 1px 4px rgba(0,0,0,.08),0 2px 12px rgba(0,0,0,.04);
+  --sb-w:224px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.hdr{position:fixed;top:0;left:0;right:0;height:52px;background:linear-gradient(90deg,var(--indigo),var(--indigo2),var(--indigo3));display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.burger{display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:6px;border-radius:6px}
+.burger span{display:block;width:20px;height:2px;background:#fff;border-radius:2px;transition:all .28s}
+.burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.burger.open span:nth-child(2){opacity:0}
+.burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.hdr-logo{font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
+.hdr-icon{width:30px;height:30px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--amber)}
+.hdr-badge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.85);font-size:11px;padding:2px 9px;border-radius:5px}
+.hdr-right{display:flex;gap:4px}
+.lb{padding:4px 9px;font-size:11px;border-radius:5px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.lb.on{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;font-weight:600}
+.lb:not(.on){background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.6)}
+.overlay{position:fixed;inset:0;background:rgba(15,22,41,.45);z-index:149;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.vis{opacity:1;pointer-events:all}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sb-w);background:#fff;z-index:150;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:4px 0 24px rgba(0,0,0,.1);display:flex;flex-direction:column}
+.sidebar.open{transform:translateX(0)}
+.sb-hdr{background:linear-gradient(90deg,var(--indigo),var(--indigo3));padding:0 18px;height:52px;display:flex;align-items:center;gap:10px}
+.sb-icon{width:28px;height:28px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--amber)}
+.sb-brand{font-size:14px;font-weight:700;color:#fff}
+.sb-client{font-size:10px;color:rgba(255,255,255,.5);margin-top:1px}
+.sb-nav{flex:1;padding:8px 0;overflow-y:auto}
+.sb-sec{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;padding:12px 18px 5px}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 18px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;border-left:3px solid transparent;transition:all .15s;user-select:none}
+.ni:hover{color:var(--text);background:#f8f9fc}
+.ni.on{color:var(--indigo);background:#eef0fc;border-left-color:var(--indigo);font-weight:600}
+.ni .ico{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.sb-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sb-av{width:34px;height:34px;background:linear-gradient(135deg,#5b8def,var(--indigo3));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.sb-nm{font-size:13px;font-weight:600;color:var(--text)}
+.sb-rl{font-size:11px;color:var(--muted)}
+.main{padding-top:52px;min-height:100vh}
+.content{padding:22px 20px;max-width:860px;margin:0 auto}
+@media(min-width:768px){
+  .burger{display:none}
+  .overlay{display:none}
+  .sidebar{transform:translateX(0)!important;position:fixed}
+  .main{margin-left:var(--sb-w)}
+  .hdr{left:var(--sb-w)}
+}
+.screen{display:none}
+.screen.on{display:block;animation:fu .3s ease}
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+.ph h1{font-size:20px;font-weight:700;color:var(--text)}
+.ph p{font-size:12px;color:var(--muted);margin-top:3px}
+.btn-a{background:linear-gradient(135deg,var(--amber),#e8960a);color:#0f1629;padding:9px 18px;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .18s}
+.btn-a:hover{transform:translateY(-1px)}
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:560px){.kpi-grid{grid-template-columns:1fr 1fr}}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.kpi-lbl{font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.kpi-val{font-size:26px;font-weight:700;color:var(--text);line-height:1;margin-bottom:4px}
+.kpi-sub{font-size:11px;color:var(--emerald)}
+.sec-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.oc{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;box-shadow:var(--shadow)}
+.oc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.oc-num{font-size:13px;font-weight:600;color:var(--text)}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px}
+.b-a{background:var(--emerald-bg);color:var(--emerald)}
+.b-p{background:rgba(245,166,35,.12);color:#c17d0a}
+.b-d{background:#f0f1f5;color:var(--text2)}
+.og{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+@media(max-width:560px){.og{grid-template-columns:1fr 1fr}}
+.of label{display:block;font-size:10px;color:var(--muted);margin-bottom:2px}
+.of span{font-size:12px;font-weight:500;color:var(--text)}
+.ob{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px}
+.ot{font-size:12px;color:var(--muted)}
+.ot strong{color:var(--text)}
+.oa{display:flex;gap:6px}
+.bs{font-size:11px;padding:5px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:#fff;color:var(--text);cursor:pointer;font-family:'Inter',sans-serif}
+.bs.g{border-color:var(--emerald-bdr);color:var(--emerald)}
+.filters{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.fb{padding:5px 13px;font-size:12px;border:1px solid var(--border);border-radius:100px;background:transparent;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif}
+.fb.on{background:var(--emerald-bg);color:#1a7a4a;border-color:var(--emerald-bdr);font-weight:600}
+.fc{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:560px){.fr{grid-template-columns:1fr}}
+.fg label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.fg input,.fg select{width:100%;font-size:13px;padding:9px 11px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:#fff;color:var(--text);font-family:'Inter',sans-serif}
+.fn{background:var(--emerald-bg);border-left:3px solid var(--emerald);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:var(--text2);margin-bottom:16px}
+.fn strong{color:var(--emerald)}
+.dc{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)}
+.di{width:38px;height:38px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.di-d{background:var(--emerald-bg)}.di-i{background:#e8eeff}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="burger" id="burger" onclick="toggleSb()"><span></span><span></span><span></span></div>
+    <div class="hdr-logo"><div class="hdr-icon">T</div><span>Israstar</span></div>
+    <span class="hdr-badge t" data-k="badge">Ð›Ð¸Ñ‡Ð½Ñ‹Ð¹ ÐºÐ°Ð±Ð¸Ð½ÐµÑ‚</span>
+  </div>
+  <div class="hdr-right">
+    <button class="lb on" onclick="setLang('ru')">RU</button>
+    <button class="lb" onclick="setLang('en')">EN</button>
+    <button class="lb" onclick="setLang('he')">×¢×‘</button>
+  </div>
+</header>
+<div class="overlay" id="ov" onclick="closeSb()"></div>
+<div class="sidebar" id="sb">
+  <div class="sb-hdr"><div class="sb-icon">T</div><div><div class="sb-brand">Israstar</div><div class="sb-client t" data-k="badge">Ð›Ð¸Ñ‡Ð½Ñ‹Ð¹ ÐºÐ°Ð±Ð¸Ð½ÐµÑ‚</div></div></div>
+  <nav class="sb-nav">
+    <div class="sb-sec t" data-k="nav_sec">ÐÐ°Ð²Ð¸Ð³Ð°Ñ†Ð¸Ñ</div>
+    <div class="ni on" data-s="home" onclick="go('home')"><span class="ico">ðŸ </span><span class="t" data-k="nav_home">Ð“Ð»Ð°Ð²Ð½Ð°Ñ</span></div>
+    <div class="ni" data-s="new" onclick="go('new')"><span class="ico">ðŸ“‹</span><span class="t" data-k="nav_new">ÐÐ¾Ð²Ñ‹Ð¹ Ð·Ð°ÐºÐ°Ð·</span></div>
+    <div class="ni" data-s="orders" onclick="go('orders')"><span class="ico">ðŸ“¦</span><span class="t" data-k="nav_orders">ÐœÐ¾Ð¸ Ð·Ð°ÐºÐ°Ð·Ñ‹</span></div>
+    <div class="ni" data-s="docs" onclick="go('docs')"><span class="ico">ðŸ“„</span><span class="t" data-k="nav_docs">Ð”Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚Ñ‹</span></div>
+    <div class="ni" data-s="support" onclick="go('support')"><span class="ico">ðŸ’¬</span><span class="t" data-k="nav_support">ÐŸÐ¾Ð´Ð´ÐµÑ€Ð¶ÐºÐ°</span></div>
+  </nav>
+  <div class="sb-foot"><div class="sb-av">Ð¡</div><div><div class="sb-nm">Ð¡Ð»Ð°Ð²Ð° Ð¨Ð¸Ñ„Ñ€Ð¸Ð½</div><div class="sb-rl t" data-k="role">Ð“Ð¸Ð´ Â· ÑÑ‚Ð°Ð½Ð´Ð°Ñ€Ñ‚Ð½Ñ‹Ð¹ Ñ‚Ð°Ñ€Ð¸Ñ„</div></div></div>
+</div>
+<div class="main"><div class="content">
+  <div id="s-home" class="screen on">
+    <div class="ph"><div><h1 class="t" data-k="greet">Ð”Ð¾Ð±Ñ€Ñ‹Ð¹ Ð´ÐµÐ½ÑŒ, Ð¡Ð»Ð°Ð²Ð°! ðŸ‘‹</h1><p class="t" data-k="greet_sub">Israstar Â· ÐÐ¿Ñ€ÐµÐ»ÑŒ 2026</p></div><button class="btn-a t" data-k="btn_new" onclick="go('new')">+ ÐÐ¾Ð²Ñ‹Ð¹ Ð·Ð°ÐºÐ°Ð·</button></div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-lbl t" data-k="st1">ÐÐºÑ‚Ð¸Ð²Ð½Ñ‹Ñ… Ð·Ð°ÐºÐ°Ð·Ð¾Ð²</div><div class="kpi-val">3</div><div class="kpi-sub t" data-k="st1s">ÑÐµÐ¹Ñ‡Ð°Ñ Ð² Ñ€Ð°Ð±Ð¾Ñ‚Ðµ</div></div>
+      <div class="kpi"><div class="kpi-lbl t" data-k="st2">Ð£ÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð² Ñƒ Ð¼ÐµÐ½Ñ</div><div class="kpi-val">47</div><div class="kpi-sub t" data-k="st2s">Ð¸Ð· Ð¿Ð¾ÑÐ»ÐµÐ´Ð½ÐµÐ³Ð¾ Ð·Ð°ÐºÐ°Ð·Ð°</div></div>
+      <div class="kpi"><div class="kpi-lbl t" data-k="st3">Ð—Ð°ÐºÐ°Ð·Ð¾Ð² Ð·Ð° Ð³Ð¾Ð´</div><div class="kpi-val">28</div><div class="kpi-sub t" data-k="st3s">Ñ ÑÐ½Ð²Ð°Ñ€Ñ 2024</div></div>
+    </div>
+    <div class="sec-lbl t" data-k="upcoming">Ð‘Ð»Ð¸Ð¶Ð°Ð¹ÑˆÐ¸Ðµ Ð·Ð°ÐºÐ°Ð·Ñ‹</div>
+    <div class="oc"><div class="oc-top"><div class="oc-num">#2024-041</div><div class="badge b-a t" data-k="s_active">Ð’ Ñ€Ð°Ð±Ð¾Ñ‚Ðµ</div></div><div class="og"><div class="of"><label class="t" data-k="l_pick">Ð’Ñ‹Ð´Ð°Ñ‡Ð°</label><span>12.05.2024</span></div><div class="of"><label class="t" data-k="l_ret">Ð’Ð¾Ð·Ð²Ñ€Ð°Ñ‚</label><span>19.05.2024</span></div><div class="of"><label class="t" data-k="l_loc">ÐœÐµÑÑ‚Ð¾</label><span class="t" data-k="airport">ÐÑÑ€Ð¾Ð¿Ð¾Ñ€Ñ‚</span></div><div class="of"><label class="t" data-k="l_qty">Ð£ÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð²</label><span>25 (+2)</span></div></div></div>
+    <div class="oc"><div class="oc-top"><div class="oc-num">#2024-042</div><div class="badge b-p t" data-k="s_pend">ÐžÐ¶Ð¸Ð´Ð°ÐµÑ‚ Ð¿Ð¾Ð´Ñ‚Ð².</div></div><div class="og"><div class="of"><label class="t" data-k="l_pick">Ð’Ñ‹Ð´Ð°Ñ‡Ð°</label><span>25.05.2024</span></div><div class="of"><label class="t" data-k="l_ret">Ð’Ð¾Ð·Ð²Ñ€Ð°Ñ‚</label><span>01.06.2024</span></div><div class="of"><label class="t" data-k="l_loc">ÐœÐµÑÑ‚Ð¾</label><span class="t" data-k="jerusalem">Ð˜ÐµÑ€ÑƒÑÐ°Ð»Ð¸Ð¼</span></div><div class="of"><label class="t" data-k="l_qty">Ð£ÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð²</label><span>35 (+2)</span></div></div></div>
+  </div>
+  <div id="s-new" class="screen">
+    <div class="ph"><div><h1 class="t" data-k="nav_new">ÐÐ¾Ð²Ñ‹Ð¹ Ð·Ð°ÐºÐ°Ð·</h1><p class="t" data-k="new_sub">Ð—Ð°Ð¿Ð¾Ð»Ð½Ð¸Ñ‚Ðµ Ñ„Ð¾Ñ€Ð¼Ñƒ Ð¸ Ð¾Ñ‚Ð¿Ñ€Ð°Ð²ÑŒÑ‚Ðµ Ð·Ð°ÑÐ²ÐºÑƒ</p></div></div>
+    <div class="fc">
+      <div class="fr"><div class="fg"><label class="t" data-k="f_pick">Ð”Ð°Ñ‚Ð° Ð²Ñ‹Ð´Ð°Ñ‡Ð¸</label><input type="date" value="2024-05-25"></div><div class="fg"><label class="t" data-k="f_ret">Ð”Ð°Ñ‚Ð° Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‚Ð°</label><input type="date" value="2024-06-01"></div></div>
+      <div class="fr"><div class="fg"><label class="t" data-k="f_qty">ÐšÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ ÑƒÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð²</label><input type="number" value="20"></div><div class="fg"><label class="t" data-k="f_loc">ÐœÐµÑÑ‚Ð¾ Ð¿Ð¾Ð»ÑƒÑ‡ÐµÐ½Ð¸Ñ</label><select><option class="t" data-k="airport_f">ÐÑÑ€Ð¾Ð¿Ð¾Ñ€Ñ‚ Ð‘ÐµÐ½-Ð“ÑƒÑ€Ð¸Ð¾Ð½</option><option class="t" data-k="jerusalem_f">Ð˜ÐµÑ€ÑƒÑÐ°Ð»Ð¸Ð¼</option></select></div></div>
+      <div class="fr"><div class="fg"><label class="t" data-k="f_guide">Ð˜Ð¼Ñ Ð³Ð¸Ð´Ð°</label><input type="text" placeholder="Ð¡Ð»Ð°Ð²Ð° Ð¨Ð¸Ñ„Ñ€Ð¸Ð½"></div><div class="fg"><label class="t" data-k="f_flight">ÐÐ¾Ð¼ÐµÑ€ Ñ€ÐµÐ¹ÑÐ°</label><input type="text" placeholder="LY315"></div></div>
+      <div class="fn"><strong>+ 2</strong> <span class="t" data-k="note">Ñ€ÐµÐ·ÐµÑ€Ð²Ð½Ñ‹Ñ… ÑƒÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð²Ð° Ð´Ð¾Ð±Ð°Ð²Ð»ÑÑŽÑ‚ÑÑ Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¸. Ð’ ÑÑ‚Ð¾Ð¸Ð¼Ð¾ÑÑ‚ÑŒ Ð½Ðµ Ð²ÐºÐ»ÑŽÑ‡Ð°ÑŽÑ‚ÑÑ.</span></div>
+      <button class="btn-a t" data-k="btn_submit">ÐžÑ‚Ð¿Ñ€Ð°Ð²Ð¸Ñ‚ÑŒ Ð·Ð°ÐºÐ°Ð·</button>
+    </div>
+  </div>
+  <div id="s-orders" class="screen">
+    <div class="ph"><div><h1 class="t" data-k="nav_orders">ÐœÐ¾Ð¸ Ð·Ð°ÐºÐ°Ð·Ñ‹</h1><p class="t" data-k="orders_sub">ÐÐ¿Ñ€ÐµÐ»ÑŒ 2026 Â· 3 Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹Ñ…</p></div><button class="btn-a t" data-k="btn_new" onclick="go('new')">+ ÐÐ¾Ð²Ñ‹Ð¹ Ð·Ð°ÐºÐ°Ð·</button></div>
+    <div class="filters" id="fBar"><button class="fb on" data-f="all" onclick="fO('all')"><span class="t" data-k="f_all">Ð’ÑÐµ</span></button><button class="fb" data-f="active" onclick="fO('active')"><span class="t" data-k="f_act">Ð’ Ñ€Ð°Ð±Ð¾Ñ‚Ðµ</span></button><button class="fb" data-f="pending" onclick="fO('pending')"><span class="t" data-k="f_pend">ÐžÐ¶Ð¸Ð´Ð°ÐµÑ‚</span></button><button class="fb" data-f="done" onclick="fO('done')"><span class="t" data-k="f_done">Ð—Ð°Ð²ÐµÑ€ÑˆÐµÐ½Ñ‹</span></button></div>
+    <div id="oList"></div>
+  </div>
+  <div id="s-docs" class="screen">
+    <div class="ph"><div><h1 class="t" data-k="nav_docs">Ð”Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚Ñ‹</h1><p class="t" data-k="docs_sub">ÐÐ°ÐºÐ»Ð°Ð´Ð½Ñ‹Ðµ Ð¸ ÑÑ‡ÐµÑ‚Ð° Ð¿Ð¾ Ð·Ð°ÐºÐ°Ð·Ð°Ð¼</p></div></div>
+    <div class="filters" id="dfBar"><button class="fb on" data-df="all" onclick="fD('all')"><span class="t" data-k="df_all">Ð’ÑÐµ</span></button><button class="fb" data-df="delivery" onclick="fD('delivery')"><span class="t" data-k="df_del">ÐÐ°ÐºÐ»Ð°Ð´Ð½Ñ‹Ðµ</span></button><button class="fb" data-df="invoice" onclick="fD('invoice')"><span class="t" data-k="df_inv">Ð¡Ñ‡ÐµÑ‚Ð°</span></button></div>
+    <div id="dList"></div>
+  </div>
+  <div id="s-support" class="screen">
+    <div class="ph"><div><h1 class="t" data-k="nav_support">ÐŸÐ¾Ð´Ð´ÐµÑ€Ð¶ÐºÐ°</h1><p class="t" data-k="sup_sub">ÐœÑ‹ Ð²ÑÐµÐ³Ð´Ð° Ð½Ð° ÑÐ²ÑÐ·Ð¸</p></div></div>
+    <div class="fc" style="text-align:center;padding:40px 20px"><div style="font-size:44px;margin-bottom:16px">ðŸ’¬</div><div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px" class="t" data-k="sup_title">ÐÑƒÐ¶Ð½Ð° Ð¿Ð¾Ð¼Ð¾Ñ‰ÑŒ?</div><div style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.7;max-width:300px;margin-left:auto;margin-right:auto" class="t" data-k="sup_desc">ÐŸÐ¸ÑˆÐ¸Ñ‚Ðµ Ð½Ð°Ð¿Ñ€ÑÐ¼ÑƒÑŽ Ð² WhatsApp â€” Ð¾Ñ‚Ð²ÐµÑ‚Ð¸Ð¼ Ð±Ñ‹ÑÑ‚Ñ€Ð¾, Ð½Ð° Ñ€ÑƒÑÑÐºÐ¾Ð¼.</div><button class="btn-a">WhatsApp â†’</button></div>
+  </div>
+</div></div>
+<script>
+const L={ru:{badge:'Ð›Ð¸Ñ‡Ð½Ñ‹Ð¹ ÐºÐ°Ð±Ð¸Ð½ÐµÑ‚',nav_sec:'ÐÐ°Ð²Ð¸Ð³Ð°Ñ†Ð¸Ñ',nav_home:'Ð“Ð»Ð°Ð²Ð½Ð°Ñ',nav_new:'ÐÐ¾Ð²Ñ‹Ð¹ Ð·Ð°ÐºÐ°Ð·',nav_orders:'ÐœÐ¾Ð¸ Ð·Ð°ÐºÐ°Ð·Ñ‹',nav_docs:'Ð”Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚Ñ‹',nav_support:'ÐŸÐ¾Ð´Ð´ÐµÑ€Ð¶ÐºÐ°',role:'Ð“Ð¸Ð´ Â· ÑÑ‚Ð°Ð½Ð´Ð°Ñ€Ñ‚Ð½Ñ‹Ð¹ Ñ‚Ð°Ñ€Ð¸Ñ„',greet:'Ð”Ð¾Ð±Ñ€Ñ‹Ð¹ Ð´ÐµÐ½ÑŒ, Ð¡Ð»Ð°Ð²Ð°! ðŸ‘‹',greet_sub:'Israstar Â· ÐÐ¿Ñ€ÐµÐ»ÑŒ 2026',btn_new:'+ ÐÐ¾Ð²Ñ‹Ð¹ Ð·Ð°ÐºÐ°Ð·',st1:'ÐÐºÑ‚Ð¸Ð²Ð½Ñ‹Ñ… Ð·Ð°ÐºÐ°Ð·Ð¾Ð²',st1s:'ÑÐµÐ¹Ñ‡Ð°Ñ Ð² Ñ€Ð°Ð±Ð¾Ñ‚Ðµ',st2:'Ð£ÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð² Ñƒ Ð¼ÐµÐ½Ñ',st2s:'Ð¸Ð· Ð¿Ð¾ÑÐ»ÐµÐ´Ð½ÐµÐ³Ð¾ Ð·Ð°ÐºÐ°Ð·Ð°',st3:'Ð—Ð°ÐºÐ°Ð·Ð¾Ð² Ð·Ð° Ð³Ð¾Ð´',st3s:'Ñ ÑÐ½Ð²Ð°Ñ€Ñ 2024',upcoming:'Ð‘Ð»Ð¸Ð¶Ð°Ð¹ÑˆÐ¸Ðµ Ð·Ð°ÐºÐ°Ð·Ñ‹',s_active:'Ð’ Ñ€Ð°Ð±Ð¾Ñ‚Ðµ',s_pend:'ÐžÐ¶Ð¸Ð´Ð°ÐµÑ‚ Ð¿Ð¾Ð´Ñ‚Ð².',s_done:'Ð—Ð°Ð²ÐµÑ€ÑˆÑ‘Ð½',l_pick:'Ð’Ñ‹Ð´Ð°Ñ‡Ð°',l_ret:'Ð’Ð¾Ð·Ð²Ñ€Ð°Ñ‚',l_loc:'ÐœÐµÑÑ‚Ð¾',l_qty:'Ð£ÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð²',airport:'ÐÑÑ€Ð¾Ð¿Ð¾Ñ€Ñ‚',jerusalem:'Ð˜ÐµÑ€ÑƒÑÐ°Ð»Ð¸Ð¼',airport_f:'ÐÑÑ€Ð¾Ð¿Ð¾Ñ€Ñ‚ Ð‘ÐµÐ½-Ð“ÑƒÑ€Ð¸Ð¾Ð½',jerusalem_f:'Ð˜ÐµÑ€ÑƒÑÐ°Ð»Ð¸Ð¼',new_sub:'Ð—Ð°Ð¿Ð¾Ð»Ð½Ð¸Ñ‚Ðµ Ñ„Ð¾Ñ€Ð¼Ñƒ Ð¸ Ð¾Ñ‚Ð¿Ñ€Ð°Ð²ÑŒÑ‚Ðµ Ð·Ð°ÑÐ²ÐºÑƒ',f_pick:'Ð”Ð°Ñ‚Ð° Ð²Ñ‹Ð´Ð°Ñ‡Ð¸',f_ret:'Ð”Ð°Ñ‚Ð° Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‚Ð°',f_qty:'ÐšÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ ÑƒÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð²',f_loc:'ÐœÐµÑÑ‚Ð¾ Ð¿Ð¾Ð»ÑƒÑ‡ÐµÐ½Ð¸Ñ',f_guide:'Ð˜Ð¼Ñ Ð³Ð¸Ð´Ð°',f_flight:'ÐÐ¾Ð¼ÐµÑ€ Ñ€ÐµÐ¹ÑÐ°',note:'Ñ€ÐµÐ·ÐµÑ€Ð²Ð½Ñ‹Ñ… ÑƒÑÑ‚Ñ€Ð¾Ð¹ÑÑ‚Ð²Ð° Ð´Ð¾Ð±Ð°Ð²Ð»ÑÑŽÑ‚ÑÑ Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¸. Ð’ ÑÑ‚Ð¾Ð¸Ð¼Ð¾ÑÑ‚ÑŒ Ð½Ðµ Ð²ÐºÐ»ÑŽÑ‡Ð°ÑŽÑ‚ÑÑ.',btn_submit:'ÐžÑ‚Ð¿Ñ€Ð°Ð²Ð¸Ñ‚ÑŒ Ð·Ð°ÐºÐ°Ð·',orders_sub:'ÐÐ¿Ñ€ÐµÐ»ÑŒ 2026 Â· 3 Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹Ñ…',f_all:'Ð’ÑÐµ',f_act:'Ð’ Ñ€Ð°Ð±Ð¾Ñ‚Ðµ',f_pend:'ÐžÐ¶Ð¸Ð´Ð°ÐµÑ‚',f_done:'Ð—Ð°Ð²ÐµÑ€ÑˆÐµÐ½Ñ‹',lbl_tot:'Ð¡ÑƒÐ¼Ð¼Ð°:',doc_d:'ÐÐ°ÐºÐ»Ð°Ð´Ð½Ð°Ñ',doc_i:'Ð¡Ñ‡Ñ‘Ñ‚ Ð½Ð° Ð¾Ð¿Ð»Ð°Ñ‚Ñƒ',doc_for:'Ð—Ð°ÐºÐ°Ð·',btn_dl:'Ð¡ÐºÐ°Ñ‡Ð°Ñ‚ÑŒ',docs_sub:'ÐÐ°ÐºÐ»Ð°Ð´Ð½Ñ‹Ðµ Ð¸ ÑÑ‡ÐµÑ‚Ð° Ð¿Ð¾ Ð·Ð°ÐºÐ°Ð·Ð°Ð¼',df_all:'Ð’ÑÐµ',df_del:'ÐÐ°ÐºÐ»Ð°Ð´Ð½Ñ‹Ðµ',df_inv:'Ð¡Ñ‡ÐµÑ‚Ð°',sup_sub:'ÐœÑ‹ Ð²ÑÐµÐ³Ð´Ð° Ð½Ð° ÑÐ²ÑÐ·Ð¸',sup_title:'ÐÑƒÐ¶Ð½Ð° Ð¿Ð¾Ð¼Ð¾Ñ‰ÑŒ?',sup_desc:'ÐŸÐ¸ÑˆÐ¸Ñ‚Ðµ Ð½Ð°Ð¿Ñ€ÑÐ¼ÑƒÑŽ Ð² WhatsApp â€” Ð¾Ñ‚Ð²ÐµÑ‚Ð¸Ð¼ Ð±Ñ‹ÑÑ‚Ñ€Ð¾, Ð½Ð° Ñ€ÑƒÑÑÐºÐ¾Ð¼.',cur:'â‚ª'},en:{badge:'Client Portal',nav_sec:'Navigation',nav_home:'Home',nav_new:'New Order',nav_orders:'My Orders',nav_docs:'Documents',nav_support:'Support',role:'Guide Â· standard rate',greet:'Good day, Slava! ðŸ‘‹',greet_sub:'Israstar Â· April 2026',btn_new:'+ New Order',st1:'Active orders',st1s:'running now',st2:'My devices',st2s:'from last order',st3:'Orders this year',st3s:'since Jan 2024',upcoming:'Upcoming orders',s_active:'Active',s_pend:'Awaiting conf.',s_done:'Completed',l_pick:'Pickup',l_ret:'Return',l_loc:'Location',l_qty:'Devices',airport:'Airport',jerusalem:'Jerusalem',airport_f:'Ben Gurion Airport',jerusalem_f:'Jerusalem',new_sub:'Fill in the form and submit',f_pick:'Pickup date',f_ret:'Return date',f_qty:'Number of devices',f_loc:'Pickup location',f_guide:'Guide name',f_flight:'Flight number',note:'spare devices added automatically at no charge.',btn_submit:'Submit order',orders_sub:'April 2026 Â· 3 active',f_all:'All',f_act:'Active',f_pend:'Pending',f_done:'Completed',lbl_tot:'Total:',doc_d:'Delivery note',doc_i:'Invoice',doc_for:'Order',btn_dl:'Download',docs_sub:'Delivery notes and invoices',df_all:'All',df_del:'Delivery notes',df_inv:'Invoices',sup_sub:'We are always available',sup_title:'Need help?',sup_desc:'Write to us on WhatsApp â€” we reply quickly.',cur:'â‚ª'},he:{badge:'×¤×•×¨×˜×œ ×œ×§×•×—×•×ª',nav_sec:'× ×™×•×•×˜',nav_home:'×¨××©×™',nav_new:'×”×–×ž× ×” ×—×“×©×”',nav_orders:'×”×”×–×ž× ×•×ª ×©×œ×™',nav_docs:'×ž×¡×ž×›×™×',nav_support:'×ª×ž×™×›×”',role:'×ž×“×¨×™×š Â· ×ª×¢×¨×™×£ ×¨×’×™×œ',greet:'×©×œ×•×, ×¡×œ×‘×”! ðŸ‘‹',greet_sub:'Israstar Â· ××¤×¨×™×œ 2026',btn_new:'+ ×”×–×ž× ×” ×—×“×©×”',st1:'×”×–×ž× ×•×ª ×¤×¢×™×œ×•×ª',st1s:'×›×¢×ª ×‘×¢×‘×•×“×”',st2:'×ž×›×©×™×¨×™× ×©×œ×™',st2s:'×ž×”×–×ž× ×” ××—×¨×•× ×”',st3:'×”×–×ž× ×•×ª ×”×©× ×”',st3s:'×ž×™× ×•××¨ 2024',upcoming:'×”×–×ž× ×•×ª ×§×¨×•×‘×•×ª',s_active:'×¤×¢×™×œ',s_pend:'×ž×ž×ª×™×Ÿ ×œ××™×©×•×¨',s_done:'×”×•×©×œ×',l_pick:'××™×¡×•×£',l_ret:'×”×—×–×¨×”',l_loc:'×ž×™×§×•×',l_qty:'×ž×›×©×™×¨×™×',airport:'×©×“×” ×ª×¢×•×¤×”',jerusalem:'×™×¨×•×©×œ×™×',airport_f:'× ×ž×œ ×ª×¢×•×¤×” ×‘×Ÿ ×’×•×¨×™×•×Ÿ',jerusalem_f:'×™×¨×•×©×œ×™×',new_sub:'×ž×œ× ××ª ×”×˜×•×¤×¡ ×•×©×œ×— ×‘×§×©×”',f_pick:'×ª××¨×™×š ××™×¡×•×£',f_ret:'×ª××¨×™×š ×”×—×–×¨×”',f_qty:'×ž×¡×¤×¨ ×ž×›×©×™×¨×™×',f_loc:'×ž×™×§×•× ××™×¡×•×£',f_guide:'×©× ×”×ž×“×¨×™×š',f_flight:'×ž×¡×¤×¨ ×˜×™×¡×”',note:'×ž×›×©×™×¨×™ ×’×™×‘×•×™ ×ž×ª×•×•×¡×¤×™× ××•×˜×•×ž×˜×™×ª ×œ×œ× ×ª×©×œ×•×.',btn_submit:'×©×œ×— ×”×–×ž× ×”',orders_sub:'××¤×¨×™×œ 2026 Â· 3 ×¤×¢×™×œ×•×ª',f_all:'×”×›×œ',f_act:'×¤×¢×™×œ',f_pend:'×ž×ž×ª×™×Ÿ',f_done:'×”×•×©×œ×',lbl_tot:'×¡×›×•×:',doc_d:'×ª×¢×•×“×ª ×ž×©×œ×•×—',doc_i:'×—×©×‘×•×Ÿ ×¢×¡×§×”',doc_for:'×”×–×ž× ×”',btn_dl:'×”×•×¨×“',docs_sub:'×ª×¢×•×“×•×ª ×ž×©×œ×•×— ×•×—×©×‘×•× ×•×ª',df_all:'×”×›×œ',df_del:'×ª×¢×•×“×•×ª ×ž×©×œ×•×—',df_inv:'×—×©×‘×•× ×•×ª',sup_sub:'×× ×—× ×• ×ª×ž×™×“ ×–×ž×™× ×™×',sup_title:'×¦×¨×™×š ×¢×–×¨×”?',sup_desc:'×›×ª×•×‘ ××œ×™× ×• ×‘×•×•××˜×¡××¤ â€” × ×¢× ×” ×ž×”×¨.',cur:'â‚ª'}};
+const orders=[{n:'#2024-041',s:'active',p:'12.05',r:'19.05',l:'airport',q:25,t:'1,380'},{n:'#2024-042',s:'pending',p:'25.05',r:'01.06',l:'jerusalem',q:35,t:'3,220'},{n:'#2024-039',s:'done',p:'02.05',r:'09.05',l:'airport',q:22,t:'1,188'},{n:'#2024-037',s:'done',p:'10.04',r:'18.04',l:'jerusalem',q:20,t:'1,080'}];
+const docs=[{tp:'delivery',o:'#2024-041',d:'12.05.2024',sz:'84 KB'},{tp:'invoice',o:'#2024-041',d:'12.05.2024',sz:'76 KB'},{tp:'delivery',o:'#2024-039',d:'02.05.2024',sz:'81 KB'},{tp:'invoice',o:'#2024-039',d:'02.05.2024',sz:'74 KB'}];
+let lang='ru',cf='all',cdf='all';
+function setLang(l){lang=l;document.body.style.direction=l==='he'?'rtl':'ltr';document.querySelectorAll('.t[data-k]').forEach(el=>{const k=el.getAttribute('data-k');if(L[l][k]!==undefined)el.textContent=L[l][k];});document.querySelectorAll('.lb').forEach(b=>{const t=b.textContent.trim();b.classList.toggle('on',t===l||(l==='he'&&t==='×¢×‘'));});rO();rD();}
+function go(s){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('on'));document.getElementById('s-'+s).classList.add('on');document.querySelectorAll('.ni').forEach(x=>x.classList.remove('on'));document.querySelector('.ni[data-s="'+s+'"]').classList.add('on');closeSb();window.scrollTo(0,0);}
+function toggleSb(){const sb=document.getElementById('sb'),ov=document.getElementById('ov'),b=document.getElementById('burger');sb.classList.contains('open')?closeSb():(sb.classList.add('open'),ov.classList.add('vis'),b.classList.add('open'));}
+function closeSb(){document.getElementById('sb').classList.remove('open');document.getElementById('ov').classList.remove('vis');document.getElementById('burger').classList.remove('open');}
+function fO(f){cf=f;document.querySelectorAll('#fBar .fb').forEach(b=>b.classList.toggle('on',b.dataset.f===f));rO();}
+function fD(f){cdf=f;document.querySelectorAll('#dfBar .fb').forEach(b=>b.classList.toggle('on',b.dataset.df===f));rD();}
+function bc(s){return s==='active'?'b-a':s==='pending'?'b-p':'b-d';}
+function rO(){const l=L[lang],el=document.getElementById('oList');if(!el)return;const arr=cf==='all'?orders:orders.filter(o=>o.s===cf);el.innerHTML=arr.map(o=>'<div class="oc"><div class="oc-top"><div class="oc-num">'+o.n+'</div><div class="badge '+bc(o.s)+'">'+(l['s_'+o.s]||l.s_done)+'</div></div><div class="og"><div class="of"><label>'+l.l_pick+'</label><span>'+o.p+'</span></div><div class="of"><label>'+l.l_ret+'</label><span>'+o.r+'</span></div><div class="of"><label>'+l.l_loc+'</label><span>'+(o.l==='airport'?l.airport:l.jerusalem)+'</span></div><div class="of"><label>'+l.l_qty+'</label><span>'+o.q+' (+2)</span></div></div><div class="ob"><div class="ot">'+l.lbl_tot+' <strong>'+o.t+' '+l.cur+'</strong></div><div class="oa"><button class="bs g">ðŸ“„ '+l.doc_d+'</button>'+(o.s==='done'?'<button class="bs">ðŸ”„</button>':'')+'</div></div></div>').join('');}
+function rD(){const l=L[lang],el=document.getElementById('dList');if(!el)return;const arr=cdf==='all'?docs:docs.filter(d=>d.tp===cdf);el.innerHTML=arr.map(d=>'<div class="dc"><div class="di '+(d.tp==='delivery'?'di-d':'di-i')+'">'+(d.tp==='delivery'?'ðŸ“¦':'ðŸ“ƒ')+'</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(d.tp==='delivery'?l.doc_d:l.doc_i)+' '+d.o+'.pdf</div><div style="font-size:11px;color:var(--muted)">'+l.doc_for+' '+d.o+' Â· '+d.d+'</div></div><div style="display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:11px;color:var(--muted)">'+d.sz+'</span><button class="bs g">'+l.btn_dl+'</button></div></div>').join('');}
+rO();rD();
+<\/script>
+</body>
+</html>

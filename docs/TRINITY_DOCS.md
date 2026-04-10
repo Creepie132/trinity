@@ -1639,3 +1639,18 @@ ew_clients — последние 5 клиентов (id, name, phone, source, c
 **Результат:** Демо раздаётся Vercel CDN как статика — никаких serverless функций, никогда не падает.
 
 **Файлы:** public/demo-boris.html, public/demo-boris-portal.html, src/app/demo/boris/route.ts, src/app/demo/boris/portal/route.ts
+
+
+---
+
+### 10 апреля 2026 — fix: удаление дубля Tranzila из методов оплаты (коммит 3549f65)
+
+**Проблема:** В списке методов оплаты существовали два идентичных с пользовательской точки зрения метода: `card` ("Кредитная карта") и `tranzila` ("Tranzila"). Оба использовали Tranzila как шлюз. На экране настроек отображались оба — путаница.
+
+**Решение:**
+- `src/lib/payment-method-normalizer.ts` — добавлен маппинг `tranzila` → `card` в `normalizePaymentMethod()`
+- `src/app/api/mobile/payments/settings/route.ts` — убран `'tranzila'` из `VALID_METHODS`; в GET и PUT добавлена нормализация `tranzila → card` + дедупликация
+- `src/app/api/payments/settings/route.ts` — аналогично: нормализация + дедупликация в GET и PUT
+- Старые данные в БД (если там был `'tranzila'`) автоматически конвертируются в `'card'` при следующем чтении/сохранении
+
+**Правило:** `'card'` — единственный канонический ключ для кредитной карты через Tranzila.

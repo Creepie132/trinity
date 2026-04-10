@@ -1654,3 +1654,27 @@ ew_clients — последние 5 клиентов (id, name, phone, source, c
 - Старые данные в БД (если там был `'tranzila'`) автоматически конвертируются в `'card'` при следующем чтении/сохранении
 
 **Правило:** `'card'` — единственный канонический ключ для кредитной карты через Tranzila.
+
+
+---
+
+### 10 апреля 2026 — feat: mobile_sessions — детекция параллельных сессий (коммит f6a08df)
+
+**Задача:** При входе с нового устройства в уже залогиненный аккаунт — старое устройство должно получить сообщение и автоматически выйти.
+
+**Архитектура:**
+- Один `user_id` = одна запись в `mobile_sessions` (unique index)
+- При новом логине — upsert обновляет `token_hash`, Supabase Realtime шлёт UPDATE
+- Flutter подписывается на свою строку, сравнивает `token_hash` — если изменился, показывает диалог и делает logout
+- При refresh — тоже upsert, но Flutter распознаёт что это его собственный токен (hash совпадёт) и не выходит
+
+**Новые файлы:**
+- `sql/mobile-sessions.sql` — миграция: таблица, RLS, unique index, Realtime publication
+
+**Изменённые файлы:**
+- `src/app/api/mobile/auth/route.ts` — POST и PUT теперь вызывают `upsertMobileSession()`
+- `src/app/api/mobile/auth/google/route.ts` — POST вызывает `upsertMobileSession()`
+
+**Безопасность:** Токен не хранится — только SHA-256 хеш. RLS: пользователь видит только свою строку. Запись только через service role.
+
+**Следующий шаг:** Flutter часть — `SessionWatcherService` + диалог выброса (часть 2).

@@ -48,6 +48,13 @@ export async function PUT(
   if (body.contact_phone !== undefined) updateData.contact_phone = body.contact_phone
   if (body.contact_email !== undefined) updateData.contact_email = body.contact_email
   if (body.contact_address !== undefined) updateData.contact_address = body.contact_address
+  if (body.task_kind !== undefined) {
+    if (!['deadline', 'todo'].includes(body.task_kind)) {
+      return NextResponse.json({ error: 'Invalid task_kind' }, { status: 400 })
+    }
+    updateData.task_kind = body.task_kind
+  }
+  if (body.category_id !== undefined) updateData.category_id = body.category_id || null
 
   // Если статус меняется на 'completed', устанавливаем completed_at
   const isCompletingNow =
@@ -78,6 +85,7 @@ export async function PUT(
     .eq('org_id', orgId)
     .select(`
       *,
+      task_categories ( id, name, color ),
       client:clients(id, first_name, last_name, phone)
     `)
     .single()
@@ -85,6 +93,16 @@ export async function PUT(
   if (error) {
     console.error('Update task error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Flatten category
+  const taskAny = task as any
+  const cat = taskAny.task_categories
+  const { task_categories: _, ...taskRest } = taskAny
+  const result = {
+    ...taskRest,
+    category_name:  cat?.name  ?? null,
+    category_color: cat?.color ?? null,
   }
 
   const taskTitle = updateData.title || existingTask.title
@@ -154,7 +172,7 @@ export async function PUT(
     })
   }
 
-  return NextResponse.json(task)
+  return NextResponse.json(result)
 }
 
 // DELETE /api/tasks/[id] - удалить задачу

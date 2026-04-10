@@ -55,6 +55,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .sb-rl{font-size:11px;color:var(--muted)}
 .main{padding-top:52px;min-height:100vh}
 .content{padding:22px 20px;max-width:860px;margin:0 auto}
+@media(min-width:768px){
+  .burger{display:none}
+  .overlay{display:none}
+  .sidebar{transform:translateX(0)!important;position:fixed}
+  .main{margin-left:var(--sb-w)}
+  .hdr{left:var(--sb-w)}
+}
 .screen{display:none}
 .screen.on{display:block;animation:fu .3s ease}
 @keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}

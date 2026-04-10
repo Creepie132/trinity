@@ -1,15 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useGeneratePDF } from '@/lib/pdf/use-generate-pdf'
 import { buildPaymentReportHTML, type PaymentReportData } from '@/lib/pdf/payment-report-html'
 import { normalizePaymentMethod } from '@/lib/payment-method-normalizer'
+import { usePaymentMethodConfig } from '@/hooks/usePaymentMethodConfig'
 import { toast } from 'sonner'
 import { FileText, Loader2, Calendar, CheckCircle2, TrendingUp } from 'lucide-react'
-import { useEffect } from 'react'
 
 interface Props {
   open: boolean
@@ -19,21 +19,10 @@ interface Props {
   initialTo?: string
 }
 
-const PAYMENT_METHODS = [
-  { value: 'cash',          labelHe: 'מזומן',   labelRu: 'Наличные', icon: '💵', color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.3)'  },
-  { value: 'bit',           labelHe: 'ביט',     labelRu: 'Bit',      icon: '📲', color: '#f97316', bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.3)' },
-  { value: 'card',          labelHe: 'כרטיס',   labelRu: 'Карта',    icon: '💳', color: '#6366f1', bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)' },
-  { value: 'bank_transfer', labelHe: 'העברה',   labelRu: 'Перевод',  icon: '🏦', color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)', border: 'rgba(14,165,233,0.3)' },
-  { value: 'check',         labelHe: "צ'ק",     labelRu: 'Чек',      icon: '📝', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.3)' },
-]
-
-const METHOD_LABEL_HE: Record<string, string> = {
-  cash: 'מזומן', bit: 'ביט', card: 'כרטיס', bank_transfer: 'העברה', check: "צ'ק",
-}
-
 export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, initialTo }: Props) {
   const { data: org } = useOrganization()
   const { downloadRaw, loading: pdfLoading } = useGeneratePDF()
+  const { enabledMethods, isLoading: methodsLoading } = usePaymentMethodConfig()
   const isHe = locale === 'he'
 
   const today = new Date().toISOString().split('T')[0]
@@ -49,7 +38,30 @@ export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, 
     if (initialFrom !== undefined) setFromDate(initialFrom || firstOfMonth)
     if (initialTo   !== undefined) setToDate(initialTo   || today)
   }, [initialFrom, initialTo])
-  const [selectedMethods, setSelectedMethods] = useState<string[]>(['cash', 'bit', 'card', 'bank_transfer', 'check'])
+
+  // Ключи включённых методов из настроек
+  const enabledKeys = useMemo(() => enabledMethods.map(m => m.key), [enabledMethods])
+
+  // Лейбл для PDF — строим из enabledMethods
+  const methodLabelHe = useMemo(() => {
+    const map: Record<string, string> = {}
+    enabledMethods.forEach(m => { map[m.key] = m.label.he })
+    return map
+  }, [enabledMethods])
+
+  // selectedMethods — по умолчанию все включённые в настройках
+  const [selectedMethods, setSelectedMethods] = useState<string[]>([])
+  // При изменении enabledKeys (после загрузки) — синхронизируем выбор
+  useEffect(() => {
+    if (enabledKeys.length > 0) {
+      setSelectedMethods(prev => {
+        if (prev.length === 0) return enabledKeys
+        // Оставляем только те, что ещё включены в настройках
+        return prev.filter(k => enabledKeys.includes(k as any))
+      })
+    }
+  }, [enabledKeys.join(',')])
+
   const [loading, setLoading] = useState(false)
 
   // Считаем сумму при изменении дат или методов
@@ -93,7 +105,7 @@ export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, 
       const items = filtered.map(p => ({
         date: new Date(p.paid_at || p.created_at).toLocaleDateString('he-IL').replace(/\./g, '/'),
         clientName: p.clients ? `${p.clients.first_name || ''} ${p.clients.last_name || ''}`.trim() : (p.client_name || (isHe ? 'לא ידוע' : 'Неизвестно')),
-        method: METHOD_LABEL_HE[normalizePaymentMethod(p.payment_method)] || p.payment_method,
+        method: methodLabelHe[normalizePaymentMethod(p.payment_method)] || p.payment_method,
         amount: Number(p.amount),
         description: p.description || '',
       }))
@@ -106,7 +118,7 @@ export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, 
         orgName: org?.name || 'Trinity CRM', orgEmail: org?.email || '',
         orgPhone: org?.phone || '', orgAddress: (org as any)?.address || '',
         fromDate: fmtDate(fromDate), toDate: fmtDate(toDate),
-        methods: selectedMethods.map(m => METHOD_LABEL_HE[m] || m),
+        methods: selectedMethods.map(m => methodLabelHe[m] || m),
         payments: items, docNumber, issueDate,
       }
 
@@ -225,26 +237,33 @@ export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, 
             ))}
           </div>
 
-          {/* Payment methods */}
+          {/* Payment methods — только включённые в настройках */}
           <div>
             <p style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
               {isHe ? 'אמצעי תשלום' : 'Способы оплаты'}
             </p>
-            <div className="grid grid-cols-2 gap-2">
-              {PAYMENT_METHODS.map(m => {
-                const active = selectedMethods.includes(m.value)
-                return (
-                  <button key={m.value} onClick={() => toggleMethod(m.value)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, border: `1.5px solid ${active ? m.border : '#e8edf4'}`, background: active ? m.bg : '#f8fafc', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}>
-                    <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{m.icon}</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: active ? m.color : '#64748b', flex: 1 }}>
-                      {isHe ? m.labelHe : m.labelRu}
-                    </span>
-                    {active && <CheckCircle2 size={14} color={m.color} />}
-                  </button>
-                )
-              })}
-            </div>
+            {methodsLoading ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', color: '#94a3b8', fontSize: 13 }}>
+                <Loader2 size={16} style={{ animation: 'spin 1s linear infinite', marginInlineEnd: 8 }} />
+                {isHe ? 'טוען...' : 'Загрузка...'}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {enabledMethods.map(m => {
+                  const active = selectedMethods.includes(m.key)
+                  return (
+                    <button key={m.key} onClick={() => toggleMethod(m.key)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, border: `1.5px solid ${active ? m.border : '#e8edf4'}`, background: active ? m.bg : '#f8fafc', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'left' }}>
+                      <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{m.icon}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: active ? m.color : '#64748b', flex: 1 }}>
+                        {isHe ? m.label.he : m.label.ru}
+                      </span>
+                      {active && <CheckCircle2 size={14} color={m.color} />}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Info note */}

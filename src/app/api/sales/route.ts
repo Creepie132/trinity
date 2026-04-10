@@ -170,6 +170,21 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Возвращаем только id сделки — payment_id создаётся позже через POST /api/payments
-  return NextResponse.json({ id: sale.id }, { status: 201 })
+  // Возвращаем полный объект — нужен мобильному клиенту для обновления DataStore
+  const { data: fullSale, error: fetchErr } = await supabase
+    .from('sales')
+    .select(`
+      *,
+      clients(id, first_name, last_name, phone),
+      sale_items(id, product_id, product_name, quantity, unit_price, total_price)
+    `)
+    .eq('id', sale.id)
+    .single()
+
+  if (fetchErr || !fullSale) {
+    // Фоллбэк — минимальный объект чтобы клиент не сломался
+    return NextResponse.json({ id: sale.id, total_amount, paid_amount: 0, status: 'unpaid', sale_items: [] }, { status: 201 })
+  }
+
+  return NextResponse.json(fullSale, { status: 201 })
 }

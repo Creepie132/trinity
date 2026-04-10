@@ -27,12 +27,25 @@ export async function GET(request: NextRequest) {
     const { orgId } = auth
 
     const service = createSupabaseServiceClient()
-    const now = new Date()
 
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0)
-    const todayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const weekEnd    = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7)
+    // Israel Time (UTC+3) — сервер в UTC, поэтому все границы дат смещаем на +3ч
+    // Без этого "сегодня" на сервере = вчера до 03:00 Israel time
+    const TZ_OFFSET_MS = 3 * 60 * 60 * 1000
+    const nowUtc = new Date()
+    const nowIL  = new Date(nowUtc.getTime() + TZ_OFFSET_MS)
+
+    // Границы "сегодня" в Israel time, конвертированные обратно в UTC для запросов
+    const todayStart = new Date(
+      Date.UTC(nowIL.getUTCFullYear(), nowIL.getUTCMonth(), nowIL.getUTCDate(), 0, 0, 0) - TZ_OFFSET_MS
+    )
+    const todayEnd = new Date(
+      Date.UTC(nowIL.getUTCFullYear(), nowIL.getUTCMonth(), nowIL.getUTCDate(), 23, 59, 59) - TZ_OFFSET_MS
+    )
+    const monthStart = new Date(
+      Date.UTC(nowIL.getUTCFullYear(), nowIL.getUTCMonth(), 1, 0, 0, 0) - TZ_OFFSET_MS
+    )
+    const now    = nowUtc  // для ближайших визитов — "сейчас" всегда UTC
+    const weekEnd = new Date(nowUtc.getTime() + 7 * 24 * 60 * 60 * 1000)
 
     const [
       visitsToday,
@@ -40,11 +53,13 @@ export async function GET(request: NextRequest) {
       clientsTotal,
       visitsMonth,
       revenueMonth,
-      debts,
+      visitDebts,
+      salesDebts,
       upcomingVisits,
       topServicesRaw,
       newClientsRaw,
       debtorsRaw,
+      salesDebtorsRaw,
       allClientsWithBd,
       waConversations,
     ] = await Promise.all([
@@ -83,6 +98,12 @@ export async function GET(request: NextRequest) {
         .eq('status', 'completed')
         .eq('payment_status', 'unpaid'),
 
+      // долги из sales (unpaid + partial)
+      service.from('sales')
+        .select('total_amount, paid_amount')
+        .eq('org_id', orgId)
+        .in('status', ['unpaid', 'partial']),
+
       service.from('visits')
         .select(`
           id, scheduled_at, status, service_type, price,
@@ -120,6 +141,15 @@ export async function GET(request: NextRequest) {
         .order('scheduled_at', { ascending: false })
         .limit(30),
 
+      // должники из sales
+      service.from('sales')
+        .select('id, total_amount, paid_amount, sale_date, clients(id, first_name, last_name, phone)')
+        .eq('org_id', orgId)
+        .in('status', ['unpaid', 'partial'])
+        .not('client_id', 'is', null)
+        .order('sale_date', { ascending: false })
+        .limit(30),
+
       // клиенты с birthday
       service.from('clients')
         .select('id, first_name, last_name, birthday')
@@ -138,7 +168,14 @@ export async function GET(request: NextRequest) {
     // ── today ─────────────────────────────────────────────────────────────────
     const todayRevenue = (revenueToday.data ?? []).reduce((s: number, p: any) => s + (p.amount || 0), 0)
     const monthRevenue = (revenueMonth.data ?? []).reduce((s: number, p: any) => s + (p.amount || 0), 0)
-    const totalDebt    = (debts.data ?? []).reduce((s: number, p: any) => s + (p.price || 0), 0)
+
+    // Долги = неоплаченные визиты + остаток по неоплаченным/частично оплаченным сделкам
+    const visitDebtTotal = (visitDebts.data ?? []).reduce((s: number, p: any) => s + (p.price || 0), 0)
+    const salesDebtTotal = (salesDebts.data ?? []).reduce((s: number, p: any) => {
+      const remaining = Number(p.total_amount || 0) - Number(p.paid_amount || 0)
+      return s + Math.max(0, remaining)
+    }, 0)
+    const totalDebt = visitDebtTotal + salesDebtTotal
 
     const upcoming = (upcomingVisits.data ?? []).map((v: any) => {
       const client = v.clients
@@ -178,6 +215,8 @@ export async function GET(request: NextRequest) {
 
     // ── debtors ───────────────────────────────────────────────────────────────
     const debtorMap: Record<string, { id: string; name: string; phone: string | null; debt: number; last_visit: string }> = {}
+
+    // Из визитов
     for (const v of (debtorsRaw.data ?? [])) {
       const c = v.clients as any
       if (!c) continue
@@ -191,6 +230,23 @@ export async function GET(request: NextRequest) {
       }
       debtorMap[cid].debt += Number(v.price) || 0
     }
+
+    // Из сделок (unpaid / partial)
+    for (const s of (salesDebtorsRaw.data ?? [])) {
+      const c = s.clients as any
+      if (!c) continue
+      const cid = c.id as string
+      const remaining = Math.max(0, Number(s.total_amount || 0) - Number(s.paid_amount || 0))
+      if (!debtorMap[cid]) debtorMap[cid] = {
+        id:         cid,
+        name:       `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Клиент',
+        phone:      c.phone ?? null,
+        debt:       0,
+        last_visit: s.sale_date,
+      }
+      debtorMap[cid].debt += remaining
+    }
+
     const debtors = Object.values(debtorMap).sort((a, b) => b.debt - a.debt).slice(0, 5)
 
     // ── birthdays ─────────────────────────────────────────────────────────────

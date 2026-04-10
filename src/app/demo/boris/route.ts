@@ -621,7 +621,7 @@ tr:hover td{background:#f8f9fc}
         </div>
       </div></div></div>
 
-      <div class="note note-green">💡 <strong>Итог:</strong> клиент получает ссылку в WhatsApp, открывает портал и сам оформляет заказ — вы не тратите время на переписку.</div>
+      <div class="note note-green">💡 <strong>Итог:</strong> клиент получает ссылку в WhatsApp, открывает портал и сам оформляет заказ — вы не тратите время на переписку. <a href="/demo/boris/portal" target="_blank" style="color:var(--indigo2);font-weight:600;text-decoration:underline">Открыть демо портала →</a></div>
     </div>
 
 <style>

@@ -40,6 +40,16 @@ const BackButton = () => (
 
 const CHANGELOG = [
   {
+    version: '2.5.2',
+    date: '10.04.2026',
+    changes: [
+      'Sidebar: название фирмы пропадало после refresh токена — исправлено',
+      'Sidebar: пункт "Админка" восстановлён для роли owner',
+      'Sidebar header: сверху имя пользователя, снизу название организации',
+      'API auth (POST/PUT/Google): добавлено поле user_name из Supabase user_metadata',
+    ],
+  },
+  {
     version: '2.5.1',
     date: '09.04.2026',
     changes: [

@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.5.2'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.5.2-bNhvsKkRSc5zIsxiK4P9p83Sfh7epX.apk'
-const APK_SIZE = '57.6 MB'
+const CURRENT_VERSION = '2.5.3'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.5.3.apk'
+const APK_SIZE = '58.0 MB'
 const RELEASE_DATE = '10.04.2026'
 
 const HexLogo = () => (
@@ -39,6 +39,15 @@ const BackButton = () => (
 )
 
 const CHANGELOG = [
+  {
+    version: '2.5.3',
+    date: '10.04.2026',
+    changes: [
+      'Дашборд: исправлено отображение выручки сегодня (учёт временной зоны Израиля)',
+      'Дашборд: долги теперь включают неоплаченные сделки, а не только визиты',
+      'Дашборд: убраны приветствие, имя пользователя и аватар — интерфейс стал чище',
+    ],
+  },
   {
     version: '2.5.2',
     date: '10.04.2026',

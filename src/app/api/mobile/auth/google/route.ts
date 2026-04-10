@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createHash } from 'crypto'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { getActiveOrgId } from '@/lib/get-active-org'
 
@@ -11,9 +12,34 @@ const supabaseAnon = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+async function upsertMobileSession(
+  service: ReturnType<typeof createSupabaseServiceClient>,
+  userId: string,
+  orgId: string,
+  accessToken: string,
+  deviceName?: string | null
+) {
+  const tokenHash = createHash('sha256').update(accessToken).digest('hex')
+  const { error } = await service
+    .from('mobile_sessions')
+    .upsert(
+      {
+        user_id:      userId,
+        org_id:       orgId,
+        token_hash:   tokenHash,
+        device_name:  deviceName ?? null,
+        last_seen_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    )
+  if (error) {
+    console.error('[mobile/auth/google] upsertMobileSession error:', error.message)
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { id_token } = await request.json()
+    const { id_token, device_name } = await request.json()
     if (!id_token) {
       return NextResponse.json({ error: 'id_token is required' }, { status: 400 })
     }
@@ -48,6 +74,9 @@ export async function POST(request: NextRequest) {
       (googleMeta.full_name as string | undefined) ??
       (googleMeta.name as string | undefined) ??
       (user.email?.split('@')[0] ?? '')
+
+    // Записываем/обновляем сессию — триггер для старого устройства
+    await upsertMobileSession(service, user.id, activeOrgId, session.access_token, device_name)
 
     return NextResponse.json({
       access_token:  session.access_token,

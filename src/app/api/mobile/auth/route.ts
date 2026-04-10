@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createHash } from 'crypto'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { getActiveOrgId } from '@/lib/get-active-org'
 
@@ -12,22 +13,50 @@ const supabaseAnon = createClient(
 )
 
 /**
+ * Записывает/обновляет активную мобильную сессию в mobile_sessions.
+ * При upsert по user_id — Supabase Realtime шлёт UPDATE,
+ * который старое устройство ловит и делает logout.
+ */
+async function upsertMobileSession(
+  service: ReturnType<typeof createSupabaseServiceClient>,
+  userId: string,
+  orgId: string,
+  accessToken: string,
+  deviceName?: string | null
+) {
+  const tokenHash = createHash('sha256').update(accessToken).digest('hex')
+  const { error } = await service
+    .from('mobile_sessions')
+    .upsert(
+      {
+        user_id:      userId,
+        org_id:       orgId,
+        token_hash:   tokenHash,
+        device_name:  deviceName ?? null,
+        last_seen_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    )
+  if (error) {
+    console.error('[mobile/auth] upsertMobileSession error:', error.message)
+  }
+}
+
+
+/**
  * POST /api/mobile/auth
- * Аутентификация для мобильного приложения (FlutterFlow).
- * Принимает email+password, возвращает access_token + org_id + роль.
- *
- * Body: { email: string, password: string }
+ * Аутентификация для мобильного приложения.
+ * Body: { email: string, password: string, device_name?: string }
  * Response: { access_token, refresh_token, org_id, role, user_id, expires_at }
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { email, password, device_name } = await request.json()
 
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
     }
 
-    // Аутентификация через Supabase
     const { data: authData, error: authError } = await supabaseAnon.auth.signInWithPassword({
       email,
       password,
@@ -38,18 +67,15 @@ export async function POST(request: NextRequest) {
     }
 
     const { session, user } = authData
-
-    // Получаем org_id: сначала JWT claims, потом org_users
     const service = createSupabaseServiceClient()
-    let orgId = user.app_metadata?.org_id as string | undefined
 
+    let orgId = user.app_metadata?.org_id as string | undefined
     if (!orgId) {
       const { data: orgUser } = await service
         .from('org_users')
         .select('org_id, role')
         .eq('user_id', user.id)
         .single()
-
       if (!orgUser?.org_id) {
         return NextResponse.json({ error: 'No organization found' }, { status: 403 })
       }
@@ -57,8 +83,9 @@ export async function POST(request: NextRequest) {
     }
 
     const activeOrgId = await getActiveOrgId(user.id, orgId)
-    const orgRole = user.app_metadata?.org_role ?? null
-    const isAdmin = user.app_metadata?.is_admin === true
+    const orgRole  = user.app_metadata?.org_role ?? null
+    const isAdmin  = user.app_metadata?.is_admin === true
+    const mobileRole = isAdmin ? 'super_admin' : (orgRole ?? 'owner')
 
     const { data: orgData } = await service
       .from('organizations')
@@ -66,35 +93,34 @@ export async function POST(request: NextRequest) {
       .eq('id', activeOrgId)
       .single()
 
-    // Если пользователь — системный администратор (is_admin), возвращаем role='super_admin'.
-    // Это позволяет мобильному приложению показывать Admin Dashboard без дополнительных проверок.
-    const mobileRole = isAdmin ? 'super_admin' : (orgRole ?? 'owner')
-
-    // Имя пользователя: сначала Google full_name, потом display_name, потом часть email до @
     const meta = user.user_metadata ?? {}
     const userName: string =
       (meta.full_name as string | undefined) ??
       (meta.display_name as string | undefined) ??
       (user.email?.split('@')[0] ?? '')
 
+    // Записываем/обновляем сессию — триггер для старого устройства
+    await upsertMobileSession(service, user.id, activeOrgId, session.access_token, device_name)
+
     return NextResponse.json({
-      access_token: session.access_token,
+      access_token:  session.access_token,
       refresh_token: session.refresh_token,
-      expires_at: session.expires_at,
-      user_id: user.id,
-      email: user.email,
-      org_id: activeOrgId,
-      main_org_id: orgId,
-      role: mobileRole,
-      is_admin: isAdmin,
-      org_name: orgData?.name ?? null,
-      user_name: userName,
+      expires_at:    session.expires_at,
+      user_id:       user.id,
+      email:         user.email,
+      org_id:        activeOrgId,
+      main_org_id:   orgId,
+      role:          mobileRole,
+      is_admin:      isAdmin,
+      org_name:      orgData?.name ?? null,
+      user_name:     userName,
     })
   } catch (err) {
     console.error('[mobile/auth] Error:', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
+
 
 /**
  * PUT /api/mobile/auth
@@ -116,6 +142,8 @@ export async function PUT(request: NextRequest) {
 
     const service = createSupabaseServiceClient()
     let orgName: string | null = null
+    let activeOrgId: string | undefined
+
     try {
       const userId = data.user.id
       let orgId = data.user.app_metadata?.org_id as string | undefined
@@ -128,7 +156,7 @@ export async function PUT(request: NextRequest) {
         orgId = orgUser?.org_id
       }
       if (orgId) {
-        const activeOrgId = await getActiveOrgId(userId, orgId)
+        activeOrgId = await getActiveOrgId(userId, orgId)
         const { data: orgData } = await service
           .from('organizations')
           .select('name')
@@ -137,14 +165,25 @@ export async function PUT(request: NextRequest) {
         orgName = orgData?.name ?? null
       }
     } catch (_) {
-      // org_name is non-critical — don't fail the refresh
+      // org_name non-critical
     }
 
-    // Возвращаем role чтобы Flutter мог обновить роль после refresh.
-    // Если is_admin — role='super_admin', иначе берём org_role из JWT или null (Flutter сохранит старую).
-    const refreshedIsAdmin = data.user.app_metadata?.is_admin === true
-    const refreshedOrgRole = data.user.app_metadata?.org_role as string | null ?? null
-    const refreshedRole = refreshedIsAdmin ? 'super_admin' : (refreshedOrgRole ?? null)
+    // Обновляем token_hash в сессии (токен сменился после refresh)
+    // Это НЕ триггерит выброс — upsert по user_id с тем же user_id
+    // лишь обновляет запись. Realtime UPDATE придёт, но Flutter
+    // сравнит token_hash и поймёт что это его собственный токен.
+    if (activeOrgId) {
+      await upsertMobileSession(
+        service,
+        data.user.id,
+        activeOrgId,
+        data.session.access_token
+      )
+    }
+
+    const refreshedIsAdmin  = data.user.app_metadata?.is_admin === true
+    const refreshedOrgRole  = data.user.app_metadata?.org_role as string | null ?? null
+    const refreshedRole     = refreshedIsAdmin ? 'super_admin' : (refreshedOrgRole ?? null)
 
     const refreshedMeta = data.user.user_metadata ?? {}
     const refreshedUserName: string =
@@ -153,13 +192,13 @@ export async function PUT(request: NextRequest) {
       (data.user.email?.split('@')[0] ?? '')
 
     return NextResponse.json({
-      access_token: data.session.access_token,
+      access_token:  data.session.access_token,
       refresh_token: data.session.refresh_token,
-      expires_at: data.session.expires_at,
-      org_name: orgName,
-      role: refreshedRole,
-      is_admin: refreshedIsAdmin,
-      user_name: refreshedUserName,
+      expires_at:    data.session.expires_at,
+      org_name:      orgName,
+      role:          refreshedRole,
+      is_admin:      refreshedIsAdmin,
+      user_name:     refreshedUserName,
     })
   } catch (err) {
     console.error('[mobile/auth/refresh] Error:', err)

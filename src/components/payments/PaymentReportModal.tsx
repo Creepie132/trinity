@@ -6,6 +6,7 @@ import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useGeneratePDF } from '@/lib/pdf/use-generate-pdf'
 import { buildPaymentReportHTML, type PaymentReportData } from '@/lib/pdf/payment-report-html'
+import { normalizePaymentMethod } from '@/lib/payment-method-normalizer'
 import { toast } from 'sonner'
 import { FileText, Loader2, Calendar, CheckCircle2, TrendingUp } from 'lucide-react'
 import { useEffect } from 'react'
@@ -20,13 +21,14 @@ interface Props {
 
 const PAYMENT_METHODS = [
   { value: 'cash',          labelHe: 'מזומן',   labelRu: 'Наличные', icon: '💵', color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.3)'  },
-  { value: 'credit_card',   labelHe: 'כרטיס',   labelRu: 'Карта',    icon: '💳', color: '#6366f1', bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)' },
+  { value: 'bit',           labelHe: 'ביט',     labelRu: 'Bit',      icon: '📲', color: '#f97316', bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.3)' },
+  { value: 'card',          labelHe: 'כרטיס',   labelRu: 'Карта',    icon: '💳', color: '#6366f1', bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)' },
   { value: 'bank_transfer', labelHe: 'העברה',   labelRu: 'Перевод',  icon: '🏦', color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)', border: 'rgba(14,165,233,0.3)' },
-  { value: 'check',         labelHe: "צ'ק",     labelRu: 'Чек',      icon: '📝', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)' },
+  { value: 'check',         labelHe: "צ'ק",     labelRu: 'Чек',      icon: '📝', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.3)' },
 ]
 
 const METHOD_LABEL_HE: Record<string, string> = {
-  cash: 'מזומן', credit_card: 'כרטיס', bank_transfer: 'העברה', check: "צ'ק",
+  cash: 'מזומן', bit: 'ביט', card: 'כרטיס', bank_transfer: 'העברה', check: "צ'ק",
 }
 
 export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, initialTo }: Props) {
@@ -47,7 +49,7 @@ export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, 
     if (initialFrom !== undefined) setFromDate(initialFrom || firstOfMonth)
     if (initialTo   !== undefined) setToDate(initialTo   || today)
   }, [initialFrom, initialTo])
-  const [selectedMethods, setSelectedMethods] = useState<string[]>(['cash', 'credit_card', 'bank_transfer', 'check'])
+  const [selectedMethods, setSelectedMethods] = useState<string[]>(['cash', 'bit', 'card', 'bank_transfer', 'check'])
   const [loading, setLoading] = useState(false)
 
   // Считаем сумму при изменении дат или методов
@@ -63,7 +65,7 @@ export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, 
         if (!res.ok) return
         const raw = await res.json()
         const all: any[] = Array.isArray(raw) ? raw : (raw.payments || raw.data || [])
-        const filtered = all.filter(p => selectedMethods.includes(p.payment_method))
+        const filtered = all.filter(p => selectedMethods.includes(normalizePaymentMethod(p.payment_method)))
         setTotalSum(filtered.reduce((s: number, p: any) => s + Number(p.amount || 0), 0))
       } catch { setTotalSum(null) } finally { setSumLoading(false) }
     }
@@ -85,13 +87,13 @@ export function PaymentReportModal({ open, onClose, locale = 'he', initialFrom, 
       if (!res.ok) throw new Error('Failed to fetch payments')
       const raw = await res.json()
       const all: any[] = Array.isArray(raw) ? raw : (raw.payments || raw.data || [])
-      const filtered = all.filter(p => selectedMethods.includes(p.payment_method))
+      const filtered = all.filter(p => selectedMethods.includes(normalizePaymentMethod(p.payment_method)))
       if (filtered.length === 0) { toast.error(isHe ? 'לא נמצאו תשלומים' : 'Платежи не найдены'); setLoading(false); return }
 
       const items = filtered.map(p => ({
         date: new Date(p.paid_at || p.created_at).toLocaleDateString('he-IL').replace(/\./g, '/'),
         clientName: p.clients ? `${p.clients.first_name || ''} ${p.clients.last_name || ''}`.trim() : (p.client_name || (isHe ? 'לא ידוע' : 'Неизвестно')),
-        method: METHOD_LABEL_HE[p.payment_method] || p.payment_method,
+        method: METHOD_LABEL_HE[normalizePaymentMethod(p.payment_method)] || p.payment_method,
         amount: Number(p.amount),
         description: p.description || '',
       }))

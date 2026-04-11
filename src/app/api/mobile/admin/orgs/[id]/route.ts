@@ -51,6 +51,7 @@ export async function GET(
       paymentsResult,
       tranzilaResult,
       mobileTokenResult,
+      waIntegrationResult,
     ] = await Promise.all([
       service
         .from('organizations')
@@ -88,6 +89,11 @@ export async function GET(
         .from('mobile_sessions')
         .select('id', { count: 'exact', head: true })
         .eq('org_id', orgId),
+      service
+        .from('wa_integrations')
+        .select('is_active, instance_id')
+        .eq('org_id', orgId)
+        .maybeSingle(),
     ])
 
     if (orgResult.error || !orgResult.data) {
@@ -109,7 +115,7 @@ export async function GET(
       amount_this_month: tranzilaPayments.reduce((s: number, p: any) => s + Number(p.amount || 0), 0),
     } : null
 
-    const whapiConnected    = !!(features?.whapi?.token)
+    const whapiConnected    = waIntegrationResult.data?.is_active === true
     const receiptsConnected = features?.receipts?.enabled === true
     const paymentSystem: string = tranzilaEnabled ? 'tranzila'
       : (features?.morning?.enabled ? 'morning' : 'none')

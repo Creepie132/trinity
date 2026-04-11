@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const [orgRes, historyRes, plansRes] = await Promise.all([
       service
         .from('organizations')
-        .select('plan, billing_status, billing_due_date, billing_amount, billing_cycle, is_trial, trial_expires_at, features')
+        .select('plan, billing_status, billing_due_date, billing_amount, billing_cycle, is_trial, trial_expires_at, features, google_place_id, google_place_name, google_rating, google_reviews_count, google_rating_updated_at')
         .eq('id', orgId)
         .single(),
       service
@@ -77,6 +77,13 @@ export async function GET(req: NextRequest) {
       },
       modules:         enabledModules,
       payment_history: historyRes.data ?? [],
+      google_business: org.google_place_id ? {
+        place_id:      org.google_place_id,
+        name:          org.google_place_name,
+        rating:        org.google_rating,
+        reviews_count: org.google_reviews_count,
+        updated_at:    org.google_rating_updated_at,
+      } : null,
     })
   } catch (e) {
     console.error('[mobile/subscription GET] unexpected:', e)

@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.6.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.6.0-WEsfrYk1ub1dz3pcMcu0JlIzMhqtVt.apk'
-const APK_SIZE = '58.0 MB'
+const CURRENT_VERSION = '2.7.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.6.0-cdgXe5sWFtfgAtPvvWIo9NLBb2p1ra.apk'
+const APK_SIZE = '58.1 MB'
 const RELEASE_DATE = '11.04.2026'
 
 const HexLogo = () => (
@@ -39,6 +39,14 @@ const BackButton = () => (
 )
 
 const CHANGELOG = [
+  {
+    version: '2.7.0',
+    date: '11.04.2026',
+    changes: [
+      'Профиль: раздел "Безопасность" — список активных устройств, завершение других сессий',
+      'Профиль: раздел "Система" — текущий план, подключённые модули, история платежей',
+    ],
+  },
   {
     version: '2.6.0',
     date: '11.04.2026',

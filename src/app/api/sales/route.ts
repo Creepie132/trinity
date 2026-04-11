@@ -47,7 +47,8 @@ export async function GET(req: NextRequest) {
     .select(`
       *,
       clients(id, first_name, last_name, phone),
-      sale_items(id, product_id, product_name, quantity, unit_price, total_price)
+      sale_items(id, product_id, product_name, quantity, unit_price, total_price),
+      payments(payment_link)
     `)
     .eq('org_id', activeOrgId)
     .order('created_at', { ascending: false })
@@ -176,7 +177,8 @@ export async function POST(req: NextRequest) {
     .select(`
       *,
       clients(id, first_name, last_name, phone),
-      sale_items(id, product_id, product_name, quantity, unit_price, total_price)
+      sale_items(id, product_id, product_name, quantity, unit_price, total_price),
+      payments(payment_link)
     `)
     .eq('id', sale.id)
     .single()

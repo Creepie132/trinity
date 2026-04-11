@@ -1709,3 +1709,29 @@ clients, visits, booking, registration, whatsapp, branches, loyalty, analytics, 
 **БД:** module_pricing обновлена — добавлены 5 новых ключей, названия приведены к стандарту
 
 **Следующий шаг:** Flutter admin — тумблеры модулей в trinity-mobile AdminScreen
+
+
+---
+
+### Апрель 2026 — fix: tranzila-success webhook — верификация платежа перед обновлением статуса (commit 6f49a5b)
+
+**Дата:** 11.04.2026
+
+#### Что изменено
+
+**Файл:** `src/app/api/payments/tranzila-success/route.ts`
+
+**Проблема (аудит безопасности):**
+Webhook `/api/payments/tranzila-success` обновлял `payments.status = 'completed'` только по `paymentId` (`cField1` из query params Tranzila), без проверки существования записи и суммы. Теоретически — подделанный callback URL с чужим `payment_id` мог пометить платёж как оплаченный без реальной оплаты.
+
+**Исправлено (GET + POST):**
+1. **Проверка существования** — `SELECT id, amount, status FROM payments WHERE id = paymentId`. Если не найден → redirect на `/payment-failed`
+2. **Верификация суммы** — сумма из Tranzila callback (`sum` param) сравнивается с суммой из БД (допуск ±0.01). Расхождение → redirect на `/payment-failed` + лог ошибки
+3. **Идемпотентность** — если `status = 'completed'` уже → пропускаем без повторного обновления
+
+**Что изолировано правильно (подтверждено аудитом):**
+- Ссылки на оплату изолированы по организации — терминал Tranzila грузится из БД по `orgId` авторизованного пользователя
+- `POST /api/mobile/payments/create-link` проверяет клиента через `.eq('org_id', orgId)` → 403 при попытке использовать чужого клиента
+- Ксения (ks.hair.lab) использует только свой терминал, Amber Solutions — только свой
+
+**Коммит:** `6f49a5b`

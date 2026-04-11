@@ -19,7 +19,7 @@ import {
 import Modal from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/switch'
 import { getPlan, PLANS, type PlanKey } from '@/lib/subscription-plans'
-import { MODULES } from '@/lib/modules-config'
+import { MODULES, initModulesState, applyLinkedKeys } from '@/lib/modules-config'
 import { EditOrganizationModal } from '@/components/modals/other/EditOrganizationModal'
 import { MorningIntegrationModal } from '@/components/modals/integrations/MorningIntegrationModal'
 import { TranzilaSettingsModal } from '@/components/modals/integrations/TranzilaSettingsModal'
@@ -920,10 +920,7 @@ export default function AdminOrganizationsPage() {
 
   const openModules = (org: Organization) => {
     setModulesOrg(org)
-    const saved = org.features?.modules || {}
-    const full: Record<string, boolean> = {}
-    for (const m of MODULES) full[m.key] = saved[m.key] ?? false
-    setModulesState(full)
+    setModulesState(initModulesState(org.features?.modules || {}))
     setSelectedOrg(null)
     setModulesOpen(true)
   }
@@ -1371,12 +1368,16 @@ export default function AdminOrganizationsPage() {
             <div>
               <label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 block">{l ? 'מודולים' : 'Модули'}</label>
               <div className="space-y-2 max-h-48 overflow-y-auto border rounded-xl p-3">
-                {(modulePricing.length > 0 ? modulePricing : MODULES.map(m => ({ module_key: m.key, name_he: m.name_he, name_ru: m.name_ru, price_monthly: 0 }))).map(mod => {
+                {(modulePricing.length > 0 ? modulePricing : MODULES.filter(m => !m.hiddenInUI).map(m => ({ module_key: m.key, name_he: m.name_he, name_ru: m.name_ru, price_monthly: 0 }))).map(mod => {
                   const key = mod.module_key || (mod as any).key
+                  const linkedMod = MODULES.find(m => m.key === key)
                   return (
                     <div key={key} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Switch checked={extendModules[key] || false} onCheckedChange={v => setExtendModules(p => ({ ...p, [key]: v }))} />
+                        <Switch
+                          checked={extendModules[key] || false}
+                          onCheckedChange={v => setExtendModules(prev => applyLinkedKeys(prev, key, v))}
+                        />
                         <span className="text-sm">{l ? mod.name_he : mod.name_ru}</span>
                       </div>
                       <span className="text-xs text-gray-400">₪{extendModulePrices[key] ?? parseFloat(mod.price_monthly || 0)}</span>
@@ -1510,18 +1511,31 @@ export default function AdminOrganizationsPage() {
         footer={
           <div className="flex gap-3">
             <button onClick={() => setModulesOpen(false)} className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:bg-gray-50">{l ? 'ביטול' : 'Отмена'}</button>
-            <button onClick={handleSaveModules} disabled={modulesSaving} className="flex-1 py-3 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50">{modulesSaving ? '...' : (l ? 'שמור' : 'Сохранить')}</button>
+            <button onClick={handleSaveModules} disabled={modulesSaving} className="flex-1 py-3 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 flex items-center justify-center gap-2">
+              {modulesSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : (l ? 'שמור' : 'Сохранить')}
+            </button>
           </div>
         }
       >
         <div className="space-y-2">
-          {MODULES.map((mod) => {
+          {MODULES.filter(mod => !mod.hiddenInUI).map((mod) => {
             const isEnabled = modulesState[mod.key] ?? false
             return (
               <div key={mod.key} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
-                <span className={`text-sm font-medium ${isEnabled ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}`}>{l ? mod.name_he : mod.name_ru}</span>
-                <button onClick={() => setModulesState(prev => ({ ...prev, [mod.key]: !isEnabled }))}
-                  className={`relative w-10 h-6 rounded-full transition-colors ${isEnabled ? 'bg-violet-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                <div className="flex flex-col gap-0.5">
+                  <span className={`text-sm font-medium ${isEnabled ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                    {l ? mod.name_he : mod.name_ru}
+                  </span>
+                  {mod.linkedKeys && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      {l ? `כולל: ${mod.linkedKeys.join(', ')}` : `Включает: ${mod.linkedKeys.join(', ')}`}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setModulesState(prev => applyLinkedKeys(prev, mod.key, !isEnabled))}
+                  className={`relative w-10 h-6 rounded-full transition-colors flex-shrink-0 ${isEnabled ? 'bg-violet-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                >
                   <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${isEnabled ? 'left-5' : 'left-1'}`} />
                 </button>
               </div>

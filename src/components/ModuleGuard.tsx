@@ -16,8 +16,8 @@ export function ModuleGuard({ moduleKey, children }: ModuleGuardProps) {
 
   const module = MODULES.find(m => m.key === moduleKey)
   
-  // If module has alwaysVisible flag - always allow access (unless explicitly disabled)
-  if (module?.alwaysVisible) {
+  // If module has alwaysOn flag - always allow access (unless explicitly disabled)
+  if (module?.alwaysOn) {
     const enabledModules = organization?.features?.modules || {}
     if (enabledModules[moduleKey] === false) {
       // Module explicitly disabled

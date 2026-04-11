@@ -56,12 +56,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Client not found or access denied' }, { status: 403 })
     }
 
-    // Загружаем Tranzila-реквизиты орга
+    // Загружаем Tranzila-реквизиты орга + проверка модуля processing
     const { data: org } = await supabase
       .from('organizations')
-      .select('tranzila_terminal, tranzila_password')
+      .select('tranzila_terminal, tranzila_password, features')
       .eq('id', orgId)
       .single()
+
+    // МОДУЛЬ processing (Tranzila) — если выключен, ссылка недоступна
+    const processingEnabled = org?.features?.modules?.processing === true
+    if (!processingEnabled) {
+      return NextResponse.json(
+        { error: 'Модуль кредитных карт (Tranzila) не подключён для вашей организации.' },
+        { status: 403 }
+      )
+    }
 
     if (!org?.tranzila_terminal) {
       return NextResponse.json(

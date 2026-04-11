@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const supabase = createSupabaseServiceClient()
     const { data, error } = await supabase
       .from('organizations')
-      .select('tranzila_terminal, tranzila_password, enabled_payment_methods')
+      .select('tranzila_terminal, tranzila_password, enabled_payment_methods, features')
       .eq('id', orgId)
       .single()
 
@@ -33,17 +33,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'DB error' }, { status: 500 })
     }
 
+    // Если модуль processing выключен — card недоступна
+    const processingEnabled = data?.features?.modules?.processing === true
+
     const rawMethods: string[] = data?.enabled_payment_methods ?? DEFAULT_METHODS
-    const methods = rawMethods
+    let methods = rawMethods
       .map((m: string) => m === 'credit_card' ? 'card' : m === 'tranzila' ? 'card' : m)
       .filter((m, i, arr) => arr.indexOf(m) === i) // deduplicate
+
+    // Убираем card из списка если модуль processing выключен
+    if (!processingEnabled) {
+      methods = methods.filter((m: string) => m !== 'card')
+    }
+
     const terminalConnected = !!(data?.tranzila_terminal?.trim())
 
     return NextResponse.json({
       enabled_payment_methods: methods,
-      terminal_connected: terminalConnected,
-      tranzila_terminal: data?.tranzila_terminal || '',
-      tranzila_password_set: !!(data?.tranzila_password),
+      terminal_connected:      terminalConnected,
+      tranzila_terminal:       data?.tranzila_terminal || '',
+      tranzila_password_set:   !!(data?.tranzila_password),
+      processing_enabled:      processingEnabled,
     })
   } catch (e) {
     console.error('[mobile/payments/settings GET] unexpected:', e)
@@ -75,11 +85,26 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Проверяем модуль processing — запрещаем сохранить card если выключен
+    const supabase = createSupabaseServiceClient()
+    const { data: orgData } = await supabase
+      .from('organizations')
+      .select('features')
+      .eq('id', orgId)
+      .single()
+
+    const processingEnabled = orgData?.features?.modules?.processing === true
+    if (!processingEnabled && (enabled_payment_methods as string[]).includes('card')) {
+      return NextResponse.json(
+        { error: 'Модуль кредитных карт (Tranzila) не подключён. Включите модуль в настройках организации.' },
+        { status: 403 }
+      )
+    }
+
     const normalized = (enabled_payment_methods as string[])
       .map((m: string) => m === 'credit_card' ? 'card' : m === 'tranzila' ? 'card' : m)
       .filter((m, i, arr) => arr.indexOf(m) === i) // deduplicate
 
-    const supabase = createSupabaseServiceClient()
     const { error } = await supabase
       .from('organizations')
       .update({ enabled_payment_methods: normalized, updated_at: new Date().toISOString() })

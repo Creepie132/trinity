@@ -1678,3 +1678,34 @@ ew_clients — последние 5 клиентов (id, name, phone, source, c
 **Безопасность:** Токен не хранится — только SHA-256 хеш. RLS: пользователь видит только свою строку. Запись только через service role.
 
 **Следующий шаг:** Flutter часть — `SessionWatcherService` + диалог выброса (часть 2).
+
+
+---
+
+### 11 апреля 2026 — feat: канонический список модулей (коммит f1618fb)
+
+**Задача:** Привести все модули к единому стандарту — один источник истины, железная логика тумблеров в админке.
+
+**Канонические ключи (14 штук, хранятся в organizations.features.modules):**
+clients, visits, booking, registration, whatsapp, branches, loyalty, analytics, inventory, tasks, payments, sales, finances, processing, kira
+
+**Новые ключи (добавлены):** registration, loyalty, tasks, finances, processing
+**Переименованы в UI:** diary → tasks, analytics расширена, whatsapp уточнена
+**Устаревшие ключи** (diary, subscriptions, sms, statistics, reports, telegram, birthday) — сохранены в БД, не удалены, но не отображаются в UI
+
+**Логика clients+visits:** один тумблер в UI переключает оба ключа одновременно через `linkedKeys` и `applyLinkedKeys()`. `visits.hiddenInUI = true`.
+
+**Новые функции в modules-config.ts:**
+- `initModulesState(saved)` — инициализирует полный объект, новые ключи = false
+- `applyLinkedKeys(state, key, value)` — применяет linked-ключи при переключении
+- `ALL_MODULE_KEYS` — массив всех ключей для итерации
+
+**Изменённые файлы:**
+- `src/lib/modules-config.ts` — полная перезапись
+- `src/lib/subscription-plans.ts` — планы обновлены под новые ключи, цены: basic ₪199, pro ₪249, enterprise ₪499
+- `src/components/ModuleGuard.tsx` — `alwaysVisible` → `alwaysOn`
+- `src/app/admin/organizations/page.tsx` — openModules использует initModulesState, Modal использует applyLinkedKeys и hiddenInUI
+
+**БД:** module_pricing обновлена — добавлены 5 новых ключей, названия приведены к стандарту
+
+**Следующий шаг:** Flutter admin — тумблеры модулей в trinity-mobile AdminScreen

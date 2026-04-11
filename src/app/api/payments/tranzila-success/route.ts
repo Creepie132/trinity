@@ -151,6 +151,31 @@ export async function GET(request: NextRequest) {
   const paymentType = searchParams.get('cField2')
 
   if (responseCode === '000' && paymentId) {
+    // SECURITY: верифицируем запись в БД перед обновлением статуса
+    const tranzilaSum = sumParam ? parseFloat(sumParam) : null
+    const { data: dbPayment } = await supabase
+      .from('payments')
+      .select('id, amount, status')
+      .eq('id', paymentId)
+      .single()
+
+    if (!dbPayment) {
+      console.error('[tranzila-success] GET: Payment not found:', paymentId)
+      return NextResponse.redirect('https://www.ambersol.co.il/payment-failed', { status: 303 })
+    }
+
+    // Проверяем сумму — защита от подделки callback с чужим payment_id
+    if (tranzilaSum !== null && Math.abs(tranzilaSum - dbPayment.amount) > 0.01) {
+      console.error('[tranzila-success] GET: Amount mismatch! DB:', dbPayment.amount, 'Callback:', tranzilaSum, 'paymentId:', paymentId)
+      return NextResponse.redirect('https://www.ambersol.co.il/payment-failed', { status: 303 })
+    }
+
+    // Идемпотентность — не трогаем уже завершённые платежи
+    if (dbPayment.status === 'completed') {
+      console.log('[tranzila-success] GET: Already completed, skipping:', paymentId)
+      return NextResponse.redirect(PUBLIC_SUCCESS_URL, { status: 303 })
+    }
+
     await supabase
       .from('payments')
       .update({
@@ -272,6 +297,29 @@ export async function POST(request: NextRequest) {
 
   // ─── Обычный платёж ─────────────────────────────────────────────────────────
   if (responseCode === '000' && paymentId) {
+    // SECURITY: верифицируем запись в БД перед обновлением статуса
+    const tranzilaSum = sumParam ? parseFloat(sumParam) : null
+    const { data: dbPayment } = await supabase
+      .from('payments')
+      .select('id, amount, status')
+      .eq('id', paymentId)
+      .single()
+
+    if (!dbPayment) {
+      console.error('[tranzila-success] POST: Payment not found:', paymentId)
+      return NextResponse.redirect('https://www.ambersol.co.il/payment-failed', { status: 303 })
+    }
+
+    if (tranzilaSum !== null && Math.abs(tranzilaSum - dbPayment.amount) > 0.01) {
+      console.error('[tranzila-success] POST: Amount mismatch! DB:', dbPayment.amount, 'Callback:', tranzilaSum, 'paymentId:', paymentId)
+      return NextResponse.redirect('https://www.ambersol.co.il/payment-failed', { status: 303 })
+    }
+
+    if (dbPayment.status === 'completed') {
+      console.log('[tranzila-success] POST: Already completed, skipping:', paymentId)
+      return NextResponse.redirect(PUBLIC_SUCCESS_URL, { status: 303 })
+    }
+
     await supabase
       .from('payments')
       .update({

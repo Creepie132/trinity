@@ -48,7 +48,7 @@ export const createVisitSchema = z.object({
 })
 
 // ── Допустимые методы оплаты (единый источник истины) ─────────────────────────
-export const PAYMENT_METHOD_VALUES = ['cash', 'bit', 'credit', 'credit_card', 'bank', 'bank_transfer', 'check', 'paybox', 'tranzila'] as const
+export const PAYMENT_METHOD_VALUES = ['cash', 'bit', 'credit', 'card', 'credit_card', 'bank', 'bank_transfer', 'check', 'paybox', 'tranzila'] as const
 export type PaymentMethodValue = typeof PAYMENT_METHOD_VALUES[number]
 
 // Создание продажи (POST /api/sales)

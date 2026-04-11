@@ -47,6 +47,10 @@ export const createVisitSchema = z.object({
   meeting_link: z.string().url().optional().or(z.literal("")).nullable(),
 })
 
+// ── Допустимые методы оплаты (единый источник истины) ─────────────────────────
+export const PAYMENT_METHOD_VALUES = ['cash', 'bit', 'credit', 'credit_card', 'bank', 'bank_transfer', 'check', 'paybox', 'tranzila'] as const
+export type PaymentMethodValue = typeof PAYMENT_METHOD_VALUES[number]
+
 // Создание продажи (POST /api/sales)
 export const createSaleSchema = z.object({
   // Принимаем валидный UUID, null, undefined, или пустую строку (= нет клиента).
@@ -64,7 +68,7 @@ export const createSaleSchema = z.object({
     unit_price:   z.coerce.number().min(0).max(1_000_000),
   })).min(1, 'At least one item required'),
   paid_amount:    z.coerce.number().min(0).max(10_000_000).optional(),
-  payment_method: z.enum(['cash', 'bit', 'credit', 'credit_card', 'bank', 'bank_transfer', 'check']).optional(),
+  payment_method: z.enum(PAYMENT_METHOD_VALUES).optional(),
   sale_date:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   notes:          z.string().max(2000).optional().nullable(),
   discount_type:  z.enum(['percent', 'amount']).optional(),
@@ -91,10 +95,6 @@ export const updateVisitSchema = z.object({
   notes:            z.string().max(2000).optional().nullable(),
   price:            z.coerce.number().min(0).max(100000).optional().nullable(),
 })
-
-// ── Допустимые методы оплаты (единый источник истины) ─────────────────────────
-export const PAYMENT_METHOD_VALUES = ['cash', 'bit', 'credit', 'credit_card', 'bank', 'bank_transfer', 'check'] as const
-export type PaymentMethodValue = typeof PAYMENT_METHOD_VALUES[number]
 
 // ── Допустимые категории расходов (единый источник истины) ────────────────────
 export const EXPENSE_CATEGORY_VALUES = [

@@ -54,12 +54,12 @@ export async function GET(
     ] = await Promise.all([
       service
         .from('organizations')
-        .select('id, name, subscription_status, billing_amount, next_billing_date, owner_email, features')
+        .select('id, name, subscription_status, billing_amount, billing_due_date, owner_email, features')
         .eq('id', orgId)
         .single(),
       service
-        .from('profiles')
-        .select('full_name, phone, last_seen_at')
+        .from('org_users')
+        .select('first_name, last_name, phone, last_seen_at')
         .eq('org_id', orgId)
         .eq('role', 'owner')
         .maybeSingle(),
@@ -122,9 +122,9 @@ export async function GET(
         name:              features?.business_info?.display_name || org.name,
         status:            org.subscription_status,
         billing_amount:    org.billing_amount ?? null,
-        next_billing_date: org.next_billing_date ?? null,
+        next_billing_date: org.billing_due_date ?? null,
         owner_email:       org.owner_email,
-        owner_name:        owner?.full_name ?? null,
+        owner_name:        owner ? `${owner.first_name ?? ''} ${owner.last_name ?? ''}`.trim() || null : null,
         phone:             owner?.phone ?? null,
         address:           features?.business_info?.address ?? null,
       },

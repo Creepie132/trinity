@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 }
 
 const CURRENT_VERSION = '2.8.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.8.0-B0dYHWtB1TLzA53iywdq4FBdZBIzFa.apk'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.8.0-qrZM3imgp8rHJScdE5cukW1KVKKbb1.apk'
 const APK_SIZE = '59.8 MB'
 const RELEASE_DATE = '12.04.2026'
 
@@ -49,6 +49,7 @@ const CHANGELOG = [
       'Шаг 3 — начальный ассортимент товаров (если подключён склад)',
       'Шаг 4 — рабочее расписание с перерывами для каждого дня недели',
       'Полный список организаций в админке — больше не обрезается до 5',
+      'Удаление организации: подтверждение названием, очистка всех данных',
     ],
   },
   {

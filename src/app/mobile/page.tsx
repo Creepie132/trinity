@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.6.1'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.6.1.apk'
-const APK_SIZE = '55.0 MB'
+const CURRENT_VERSION = '2.7.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.7.0.apk'
+const APK_SIZE = '55.2 MB'
 const RELEASE_DATE = '12.04.2026'
 
 const HexLogo = () => (
@@ -39,6 +39,16 @@ const BackButton = () => (
 )
 
 const CHANGELOG = [
+  {
+    version: '2.7.0',
+    date: '12.04.2026',
+    changes: [
+      'WhatsApp рассылка — новый раздел в боковом меню вместо чата',
+      'Выбор клиентов вручную или всех сразу, фильтры по давности (30/60/90+ дней)',
+      'Лимит 30 сообщений в 24 часа с красивым индикатором и предупреждением',
+      'Дашборд: последние 5 сделок вместо WhatsApp-переписок',
+    ],
+  },
   {
     version: '2.6.1',
     date: '12.04.2026',

@@ -114,18 +114,22 @@ export async function POST(request: NextRequest) {
 
     // ── 6. Google OAuth invite ────────────────────────────────────────────────
     const adminClient = createAdminClient()
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.ambersol.co.il'
+    // ВАЖНО: redirectTo должен быть в списке разрешённых URL в Supabase Dashboard
+    // Authentication → URL Configuration → Redirect URLs
+    const redirectTo = 'https://www.ambersol.co.il/auth/callback'
     const { data: inviteData, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(normalEmail, {
-        redirectTo: `${siteUrl}/auth/callback`,
+        redirectTo,
         data: { org_id: org.id, org_role: 'owner' },
       })
 
     let inviteUserId: string | null = null
     let inviteSent = false
+    let inviteErrorMessage: string | null = null
 
     if (inviteError) {
       console.warn('[admin/orgs/create] invite warning:', inviteError.message)
+      inviteErrorMessage = inviteError.message
     } else {
       inviteUserId = inviteData.user?.id ?? null
       inviteSent   = true
@@ -143,12 +147,13 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      ok:           true,
-      org_id:       org.id,
-      org_name:     org.name,
-      org_status:   org.subscription_status,
-      invite_sent:  inviteSent,
-      invite_email: normalEmail,
+      ok:            true,
+      org_id:        org.id,
+      org_name:      org.name,
+      org_status:    org.subscription_status,
+      invite_sent:   inviteSent,
+      invite_email:  normalEmail,
+      invite_error:  inviteErrorMessage,
     })
   } catch (err: any) {
     console.error('[admin/orgs/create] error:', err)

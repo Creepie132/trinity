@@ -1,6 +1,6 @@
 /**
- * GET /api/mobile/admin/orgs/[id]
- * Детальная информация об организации для AdminPanel → OrgDetailSheet.
+ * GET  /api/mobile/admin/orgs/[id] — детали организации
+ * DELETE /api/mobile/admin/orgs/[id] — удалить организацию
  * Auth: Bearer токен. Только super_admin.
  */
 
@@ -11,6 +11,107 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+async function requireSuperAdmin(request: NextRequest) {
+  const authHeader = request.headers.get('Authorization') ?? ''
+  if (!authHeader.startsWith('Bearer ')) return null
+  const jwt = authHeader.slice(7)
+  const anonClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+  const { data, error } = await anonClient.auth.getUser(jwt)
+  if (error || !data.user) return null
+  const isAdmin = data.user.app_metadata?.is_admin === true
+  const orgRole = data.user.app_metadata?.org_role as string | null
+  if (!isAdmin && orgRole !== 'super_admin') return null
+  return data.user
+}
+
+// ─── DELETE /api/mobile/admin/orgs/[id] ──────────────────────────────────────
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const user = await requireSuperAdmin(request)
+    if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const { id: orgId } = await params
+    if (!orgId) return NextResponse.json({ error: 'org id обязателен' }, { status: 400 })
+
+    const service = createSupabaseServiceClient()
+
+    // Читаем орг чтобы убедиться что она существует
+    const { data: org, error: fetchErr } = await service
+      .from('organizations')
+      .select('id, name, owner_email')
+      .eq('id', orgId)
+      .single()
+
+    if (fetchErr || !org) {
+      return NextResponse.json({ error: 'Организация не найдена' }, { status: 404 })
+    }
+
+    // Удаляем данные орги последовательно (соблюдаем FK)
+    // Порядок важен: сначала дочерние таблицы, потом org
+    const tables = [
+      'visit_services',        // → visits
+      'inventory_transactions', // → products
+      'sale_items',            // → sales, products
+      'wa_messages',           // → wa_conversations
+      'wa_conversations',
+      'wa_send_log',
+      'wa_integrations',
+      'wa_trigger_settings',
+      'payments',
+      'sales',
+      'visits',
+      'expenses',
+      'products',
+      'services',
+      'clients',
+      'tasks',
+      'audit_log',
+      'mobile_sessions',
+      'notification_preferences',
+      'kira_messages',
+      'kira_sessions',
+      'org_receipt_settings',
+      'org_users',             // последним — чтобы не потерять ссылку на владельца
+    ]
+
+    for (const table of tables) {
+      const { error } = await service
+        .from(table as any)
+        .delete()
+        .eq('org_id', orgId)
+      // Ошибки типа "column org_id does not exist" игнорируем — таблица просто не имеет этого поля
+      if (error && !error.message.includes('org_id')) {
+        console.error(`[admin/orgs/delete] cleanup ${table}:`, error.message)
+      }
+    }
+
+    // Удаляем саму организацию
+    const { error: deleteErr } = await service
+      .from('organizations')
+      .delete()
+      .eq('id', orgId)
+
+    if (deleteErr) {
+      console.error('[admin/orgs/delete] delete org:', deleteErr)
+      return NextResponse.json({ error: deleteErr.message }, { status: 500 })
+    }
+
+    console.log(`[admin/orgs/delete] deleted org ${orgId} (${org.name}) by ${user.email}`)
+
+    return NextResponse.json({ ok: true, deleted_org: org.name })
+  } catch (err: any) {
+    console.error('[admin/orgs/delete] error:', err)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
+// ─── GET /api/mobile/admin/orgs/[id] ─────────────────────────────────────────
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },

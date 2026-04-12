@@ -27,10 +27,26 @@ const sendSMS = async (phone: string, message: string) => {
 }
 
 function applyTemplate(template: string, vars: Record<string, string>): string {
-  return Object.entries(vars).reduce(
-    (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
+  const hasHebrew = /[\u0590-\u05FF]/.test(template)
+
+  if (!hasHebrew) {
+    return Object.entries(vars).reduce(
+      (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
+      template
+    )
+  }
+
+  // RLM (\u200F) вокруг каждого подставляемого значения — единственный
+  // надёжный способ сохранить RTL в WhatsApp при смешанном тексте
+  const RLM = '\u200F'
+  const result = Object.entries(vars).reduce(
+    (msg, [key, val]) => msg.replace(
+      new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+      RLM + val + RLM
+    ),
     template
   )
+  return RLM + result
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────

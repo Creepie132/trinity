@@ -4,16 +4,29 @@ import { logAudit } from '@/lib/audit'
 import { sendWhatsAppMessage } from '@/lib/wa/send'
 
 /**
- * Применяет переменные к шаблону + BiDi для иврита.
- * Язык определяется по исходному шаблону до замены переменных.
+ * Применяет переменные к шаблону с корректной BiDi-обработкой для WhatsApp.
+ * RLM (\u200F) перед каждым значением — единственный надёжный способ
+ * зафиксировать RTL-направление в WhatsApp при смешанном тексте.
  */
 function applyTemplate(template: string, vars: Record<string, string>): string {
+  const hasHebrew = /[\u0590-\u05FF]/.test(template)
+
+  if (!hasHebrew) {
+    return Object.entries(vars).reduce(
+      (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
+      template
+    )
+  }
+
+  const RLM = '\u200F'
   const result = Object.entries(vars).reduce(
-    (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
+    (msg, [key, val]) => msg.replace(
+      new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+      RLM + val + RLM
+    ),
     template
   )
-  const hasHebrew = /[\u0590-\u05FF]/.test(template)
-  return hasHebrew ? '\u202B' + result + '\u202C' : result
+  return RLM + result
 }
 
 const sendSMS = async (phone: string, message: string) => {

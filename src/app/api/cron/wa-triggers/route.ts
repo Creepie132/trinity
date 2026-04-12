@@ -18,18 +18,40 @@ import { logAudit } from '@/lib/audit'
 export const dynamic = 'force-dynamic'
 
 /**
- * Применяет переменные к шаблону и добавляет BiDi-маркеры если текст на иврите.
- * Язык определяется по исходному шаблону — до замены переменных,
- * чтобы латиница/кириллица в значениях не влияла на направление.
+ * Применяет переменные к шаблону с корректной BiDi-обработкой для WhatsApp.
+ *
+ * Стратегия для ивритских шаблонов:
+ *   - \u200F (RLM) перед каждым подставляемым значением — сигнализирует
+ *     BiDi-алгоритму что следующий LTR-текст (латиница/кириллица) является
+ *     частью RTL-потока. WhatsApp корректно обрабатывает RLM в отличие от
+ *     \u202B/\u202C embedding-маркеров.
+ *   - \u200F в начале всего сообщения — устанавливает базовое направление RTL.
+ *
+ * Для не-ивритских шаблонов маркеры не добавляются.
  */
 function applyTemplate(template: string, vars: Record<string, string>): string {
+  const hasHebrew = /[\u0590-\u05FF]/.test(template)
+
+  if (!hasHebrew) {
+    // Обычная замена без маркеров
+    return Object.entries(vars).reduce(
+      (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
+      template
+    )
+  }
+
+  // Для иврита: оборачиваем каждое значение в RLM с обеих сторон
+  // \u200F = Right-to-Left Mark — невидимый маркер направления
+  const RLM = '\u200F'
   const result = Object.entries(vars).reduce(
-    (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
+    (msg, [key, val]) => msg.replace(
+      new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+      RLM + val + RLM
+    ),
     template
   )
-  const hasHebrew = /[\u0590-\u05FF]/.test(template)
-  // \u202B = RTL Embedding, \u202C = Pop Directional Formatting
-  return hasHebrew ? '\u202B' + result + '\u202C' : result
+  // RLM в начале — задаёт RTL как базовое направление параграфа
+  return RLM + result
 }
 
 export async function GET(request: NextRequest) {

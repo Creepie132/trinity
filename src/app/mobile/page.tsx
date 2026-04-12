@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.11.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.11.0-1XCoujMZ6IXehuErr6TPj5lrHIGjRr.apk'
+const CURRENT_VERSION = '2.12.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.12.0-wgfWvM0lw0V16inlY0H5tfOXwTQ6H3.apk'
 const APK_SIZE = '21.7 MB'
 const RELEASE_DATE = '12.04.2026'
 
@@ -39,6 +39,14 @@ const BackButton = () => (
 )
 
 const CHANGELOG = [
+  {
+    version: '2.12.0',
+    date: '12.04.2026',
+    changes: [
+      'Исправлено: WhatsApp теперь отправляет сообщение сразу при создании клиента и визита',
+      'Лог отправленных сообщений — кнопка в разделе "Автосообщения WhatsApp"',
+    ],
+  },
   {
     version: '2.11.0',
     date: '12.04.2026',

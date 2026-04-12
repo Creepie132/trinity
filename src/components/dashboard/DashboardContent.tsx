@@ -9,7 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { TodayVisitsWidget } from './TodayVisitsWidget'
 import { TodayTasksWidget } from './TodayTasksWidget'
 import { RevenueChartWidget } from './RevenueChartWidget'
-import { IncomeExpensesWidget } from './IncomeExpensesWidget'
+import { RecentDealsWidget } from './RecentDealsWidget'
 import FABMenu from './FABMenu'
 import { VisitDetailModal } from '@/components/visits/VisitDetailModal'
 import { useModalStore } from '@/store/useModalStore'
@@ -459,7 +459,7 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <RevenueChartWidget data={revenueData} locale={locale} />
-            <IncomeExpensesWidget locale={locale} />
+            <RecentDealsWidget locale={locale} />
           </div>
 
         </div>

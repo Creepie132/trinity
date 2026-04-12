@@ -31,7 +31,7 @@ const baseNavigation = [
   { name_he: 'כספים', name_ru: 'Финансы', href: '/finances', icon: PiggyBank, requireFeature: 'finances' },
   { name_he: 'מלאי', name_ru: 'Склад', href: '/inventory', icon: Package, requireFeature: 'inventory' },
   { name_he: 'משימות', name_ru: 'Дневник', href: '/diary', icon: BookOpen, requireFeature: 'diary' },
-  { name_he: 'וואטסאפ', name_ru: 'WhatsApp', href: '/inbox', icon: MessageCircle, requireFeature: 'whatsapp' },
+  { name_he: 'שליחה המונית', name_ru: 'Рассылка WA', href: '/broadcast', icon: MessageCircle, requireFeature: 'whatsapp' },
   { name_he: 'אנליטיקה', name_ru: 'Аналитика', href: '/analytics', icon: BarChart3, requireFeature: 'analytics' },
   { name_he: 'הגדרות', name_ru: 'Настройки', href: '/settings', icon: Settings, requireFeature: null },
 ]

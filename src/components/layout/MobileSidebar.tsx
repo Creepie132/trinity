@@ -63,7 +63,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
     { name: meetingMode.t.visits, href: '/visits', icon: Calendar, requireFeature: 'visits' },
     { name: t('nav.sales'), href: '/sales', icon: ShoppingBag, requireFeature: 'sales' },
     { name: t('nav.diary'), href: '/diary', icon: BookOpen, requireFeature: 'diary' },
-    { name: t('nav.whatsapp'), href: '/inbox', icon: MessageCircle, requireFeature: 'whatsapp' },
+    { name: t('nav.whatsapp'), href: '/broadcast', icon: MessageCircle, requireFeature: 'whatsapp' },
     { name: t('nav.inventory'), href: '/inventory', icon: Package, requireFeature: 'inventory' },
     { name: t('nav.payments'), href: '/payments', icon: CreditCard, requireFeature: 'payments' },
     { name: t('nav.finances'), href: '/finances', icon: PiggyBank, requireFeature: 'finances' },

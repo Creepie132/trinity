@@ -1816,3 +1816,38 @@ Webhook `/api/payments/tranzila-success` обновлял `payments.status = 'co
 - `src/app/api/cron/reminders/route.ts` — то же
 
 **Коммит:** `54246e2`
+
+---
+
+### Апрель 2026 — feat: WA рассылка, виджет сделок, sidebar (commit 5426ebb)
+
+**Дата:** 12.04.2026
+
+**Что сделано:**
+
+**БД:** таблица `wa_broadcast_log` — лог рассылок с RLS, индекс по org_id+sent_at
+
+**API `/api/wa/broadcast`:**
+- GET — статус лимита (used/remaining/limit=30 за 24ч)
+- POST — отправка рассылки с BiDi-фиксом, батч-логирование, лимит 30/24ч
+
+**UI `/broadcast`:** двухколоночный layout
+- Слева: список клиентов с поиском, фильтры по давности (30/60/90+ дней), чекбоксы, выбрать всех/очистить
+- Справа: textarea сообщения, кнопка отправки, результат
+- LimitBar: прогресс-бар лимита + красивое предупреждение при исчерпании
+
+**`RecentDealsWidget`:** виджет последних 5 сделок для дашборда (статус, сумма, дата)
+
+**`DashboardContent`:** заменён `IncomeExpensesWidget` → `RecentDealsWidget`
+
+**`Sidebar.tsx` + `MobileSidebar.tsx`:** `/inbox` → `/broadcast` (WhatsApp рассылка)
+
+**Затронутые файлы:**
+- `src/app/(dashboard)/broadcast/page.tsx` (новый)
+- `src/app/api/wa/broadcast/route.ts` (новый)
+- `src/components/dashboard/RecentDealsWidget.tsx` (новый)
+- `src/components/dashboard/DashboardContent.tsx`
+- `src/components/layout/Sidebar.tsx`
+- `src/components/layout/MobileSidebar.tsx`
+
+**Коммит:** `5426ebb`

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { fireWaTrigger } from '@/lib/wa/fire-trigger'
 
 /**
  * PATCH /api/visits/[id]/status
@@ -35,12 +36,32 @@ export async function PATCH(
       .update(updateData)
       .eq('id', id)
       .eq('org_id', orgId)
-      .select()
+      .select(`*, clients(first_name, phone), services(name, name_ru), organizations(name)`)
       .single()
 
     if (error) {
       console.error('[API] PATCH /api/visits/[id]/status error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // WA триггер visit_completed (fire-and-forget)
+    if (status === 'completed') {
+      const client = visit.clients as any
+      const svc    = visit.services as any
+      const org    = visit.organizations as any
+      if (client?.phone) {
+        void fireWaTrigger({
+          orgId,
+          triggerType: 'visit_completed',
+          clientPhone: client.phone,
+          vars: {
+            client_name: client.first_name ?? '',
+            org_name:    org?.name ?? '',
+            service:     svc?.name_ru ?? svc?.name ?? '',
+          },
+          entityId: id,
+        })
+      }
     }
 
     return NextResponse.json({ visit })

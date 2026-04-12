@@ -9,6 +9,7 @@ import { queuePushNotification } from '@/lib/push-notify'
 import { dispatchNotification } from '@/lib/dispatch-notification'
 import { scheduleMessage } from '@/lib/wa/scheduler'
 import { normalizePhone } from '@/lib/wa/phone'
+import { fireWaTrigger } from '@/lib/wa/fire-trigger'
 import { israelLocalToUTC } from '@/lib/tz'
 
 // GET /api/visits - список визитов для текущей организации
@@ -237,6 +238,29 @@ export async function POST(request: NextRequest) {
         url: '/diary',
       },
     })
+
+    // WA триггер visit_created (fire-and-forget)
+    {
+      const client = visit.clients as any
+      const svc    = visit.services as any
+      const dt     = new Date(scheduled_at)
+      if (client?.phone) {
+        const { data: org } = await supabase.from('organizations').select('name').eq('id', org_id).single()
+        void fireWaTrigger({
+          orgId: org_id,
+          triggerType: 'visit_created',
+          clientPhone: client.phone,
+          vars: {
+            client_name: client.first_name ?? '',
+            org_name:    org?.name ?? '',
+            date: dt.toLocaleDateString('he-IL', { timeZone: 'Asia/Jerusalem' }),
+            time: dt.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' }),
+            service: svc?.name_ru ?? svc?.name ?? insertData.service_type ?? '',
+          },
+          entityId: visit.id,
+        })
+      }
+    }
     await queuePushNotification({
       org_id: org_id,
       user_id: user.id,

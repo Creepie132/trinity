@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { enforceDemoLimit } from '@/lib/demo-limits'
 import { dispatchNotification } from '@/lib/dispatch-notification'
+import { fireWaTrigger } from '@/lib/wa/fire-trigger'
 
 const supabaseAdmin = createAdmin(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -146,6 +147,26 @@ export async function POST(req: NextRequest) {
         url: '/clients',
       },
     })
+
+    // WhatsApp триггер client_added (fire-and-forget)
+    if (client.phone) {
+      const { data: org } = await supabaseAdmin
+        .from('organizations')
+        .select('name')
+        .eq('id', orgId)
+        .single()
+
+      void fireWaTrigger({
+        orgId,
+        triggerType: 'client_added',
+        clientPhone: client.phone,
+        vars: {
+          client_name: client.first_name ?? '',
+          org_name:    org?.name ?? '',
+        },
+        entityId: client.id,
+      })
+    }
 
     return NextResponse.json(client, { status: 201 })
   } catch (error: any) {

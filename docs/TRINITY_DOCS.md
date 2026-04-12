@@ -1795,3 +1795,24 @@ Webhook `/api/payments/tranzila-success` обновлял `payments.status = 'co
 
 **Коммит:** `17c9e51`
 
+
+---
+
+### Апрель 2026 — fix: BiDi RTL для ивритских WhatsApp автосообщений (commit 54246e2)
+
+**Дата:** 12.04.2026
+
+**Проблема:** При отправке ивритских шаблонов с латинскими/кириллическими переменными
+({{client_name}}, {{org_name}}) WhatsApp ломал порядок слов в строке — BiDi-алгоритм
+переключал направление на LTR для каждого не-ивритского слова.
+
+**Решение:** RLM (Right-to-Left Mark, `\u200F`) вокруг каждого подставляемого значения
++ RLM в начале сообщения. Стратегия `\u202B/\u202C` (RTL Embedding) не работает в WhatsApp.
+Определение языка по исходному шаблону — до замены переменных.
+
+**Затронутые файлы:**
+- `src/app/api/cron/wa-triggers/route.ts` — `applyTemplate()` переписана
+- `src/app/api/cron/birthdays/route.ts` — то же
+- `src/app/api/cron/reminders/route.ts` — то же
+
+**Коммит:** `54246e2`

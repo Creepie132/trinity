@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.7.1'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.7.1.apk'
-const APK_SIZE = '21.8 MB'
+const CURRENT_VERSION = '2.8.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.8.0-B0dYHWtB1TLzA53iywdq4FBdZBIzFa.apk'
+const APK_SIZE = '59.8 MB'
 const RELEASE_DATE = '12.04.2026'
 
 const HexLogo = () => (
@@ -39,6 +39,18 @@ const BackButton = () => (
 )
 
 const CHANGELOG = [
+  {
+    version: '2.8.0',
+    date: '12.04.2026',
+    changes: [
+      'Онбординг новых клиентов: 4-шаговый мастер при первом входе',
+      'Шаг 1 — профиль компании, логотип, категория бизнеса, телефон и ИД',
+      'Шаг 2 — добавление базовых услуг прямо при регистрации',
+      'Шаг 3 — начальный ассортимент товаров (если подключён склад)',
+      'Шаг 4 — рабочее расписание с перерывами для каждого дня недели',
+      'Полный список организаций в админке — больше не обрезается до 5',
+    ],
+  },
   {
     version: '2.7.1',
     date: '12.04.2026',

@@ -58,13 +58,45 @@ export async function POST(request: NextRequest) {
     const service = createSupabaseServiceClient()
 
     let orgId = user.app_metadata?.org_id as string | undefined
+
     if (!orgId) {
+      // Попытка 1: ищем через org_users
       const { data: orgUser } = await service
         .from('org_users').select('org_id').eq('user_id', user.id).single()
-      if (!orgUser?.org_id) {
-        return NextResponse.json({ error: 'No organization found' }, { status: 403 })
+      if (orgUser?.org_id) {
+        orgId = orgUser.org_id
       }
-      orgId = orgUser.org_id
+    }
+
+    if (!orgId && user.email) {
+      // Попытка 2: ищем оргу по owner_email (случай когда invite упал и org_users не создался)
+      const { data: orgByEmail } = await service
+        .from('organizations')
+        .select('id')
+        .eq('owner_email', user.email.toLowerCase())
+        .maybeSingle()
+
+      if (orgByEmail?.id) {
+        orgId = orgByEmail.id
+        // Создаём org_users запись которой не было
+        await service.from('org_users').upsert(
+          { user_id: user.id, org_id: orgId, role: 'owner', email: user.email },
+          { onConflict: 'user_id,org_id' }
+        )
+        // Обновляем app_metadata
+        const adminClient = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          { auth: { autoRefreshToken: false, persistSession: false } }
+        )
+        await adminClient.auth.admin.updateUserById(user.id, {
+          app_metadata: { org_id: orgId, org_role: 'owner' },
+        })
+      }
+    }
+
+    if (!orgId) {
+      return NextResponse.json({ error: 'No organization found' }, { status: 403 })
     }
 
     const activeOrgId = await getActiveOrgId(user.id, orgId)

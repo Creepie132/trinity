@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.9.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.9.0-gJGIiB7GE87n7452B37ZvRA3U6923f.apk'
+const CURRENT_VERSION = '2.10.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.10.0-fZMIlfYjKS8TZEwdnM8mNAReP4rCiD.apk'
 const APK_SIZE = '21.6 MB'
 const RELEASE_DATE = '12.04.2026'
 
@@ -39,6 +39,14 @@ const BackButton = () => (
 )
 
 const CHANGELOG = [
+  {
+    version: '2.10.0',
+    date: '12.04.2026',
+    changes: [
+      'Настройки: новый раздел "Автосообщения WhatsApp" — включение, шаблоны и время для каждого триггера',
+      'WhatsApp: 8 типов автосообщений — до визита, после визита, день рождения, возврат клиента, долг и другие',
+    ],
+  },
   {
     version: '2.9.0',
     date: '12.04.2026',

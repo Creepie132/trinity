@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.8.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.8.0-5RnhEUUAUwYNfA3AdcUL2MuybKXhU6.apk'
+const CURRENT_VERSION = '2.9.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-mobile-v2.9.0-gJGIiB7GE87n7452B37ZvRA3U6923f.apk'
 const APK_SIZE = '21.6 MB'
 const RELEASE_DATE = '12.04.2026'
 
@@ -39,6 +39,15 @@ const BackButton = () => (
 )
 
 const CHANGELOG = [
+  {
+    version: '2.9.0',
+    date: '12.04.2026',
+    changes: [
+      'WhatsApp: автоматические сообщения — напоминания до визита, поздравления с днём рождения, сообщение после визита и покупки',
+      'WhatsApp: напоминание клиентам с долгом и клиентам которые давно не приходили',
+      'Настройки: новый раздел "Автоматические сообщения" с шаблонами и временными параметрами',
+    ],
+  },
   {
     version: '2.8.0',
     date: '12.04.2026',

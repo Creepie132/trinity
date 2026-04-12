@@ -41,10 +41,28 @@ const TEST_VARS: Record<string, string> = {
 
 function applyTemplate(template: string, orgName: string): string {
   const vars = { ...TEST_VARS, org_name: orgName }
-  return Object.entries(vars).reduce(
+
+  const result = Object.entries(vars).reduce(
     (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
     template
   )
+
+  // BiDi fix для WhatsApp: если шаблон на иврите — добавляем RLM
+  // в начало каждой строки которая начинается с не-ивритского символа
+  const hasHebrew = /[\u0590-\u05FF]/.test(template)
+  if (!hasHebrew) return result
+
+  const RLM = '\u200F'
+  return result
+    .split('\n')
+    .map(line => {
+      const firstStrong = line.match(/[A-Za-zА-Яа-яёЁ\u0590-\u05FF\u0600-\u06FF]/)
+      if (!firstStrong) return line
+      const code = firstStrong[0].codePointAt(0)!
+      const isRtlChar = code >= 0x0590 && code <= 0x06FF
+      return isRtlChar ? line : RLM + line
+    })
+    .join('\n')
 }
 
 export async function POST(

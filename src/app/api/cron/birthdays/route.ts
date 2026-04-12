@@ -5,28 +5,30 @@ import { sendWhatsAppMessage } from '@/lib/wa/send'
 
 /**
  * Применяет переменные к шаблону с корректной BiDi-обработкой для WhatsApp.
- * RLM (\u200F) перед каждым значением — единственный надёжный способ
- * зафиксировать RTL-направление в WhatsApp при смешанном тексте.
+ * RLM добавляется в начало каждой строки которая начинается с не-ивритского
+ * символа — это единственный надёжный способ зафиксировать RTL в WhatsApp.
  */
 function applyTemplate(template: string, vars: Record<string, string>): string {
   const hasHebrew = /[\u0590-\u05FF]/.test(template)
 
-  if (!hasHebrew) {
-    return Object.entries(vars).reduce(
-      (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
-      template
-    )
-  }
-
-  const RLM = '\u200F'
   const result = Object.entries(vars).reduce(
-    (msg, [key, val]) => msg.replace(
-      new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
-      RLM + val + RLM
-    ),
+    (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
     template
   )
-  return RLM + result
+
+  if (!hasHebrew) return result
+
+  const RLM = '\u200F'
+  return result
+    .split('\n')
+    .map(line => {
+      const firstStrong = line.match(/[A-Za-zА-Яа-яёЁ\u0590-\u05FF\u0600-\u06FF]/)
+      if (!firstStrong) return line
+      const code = firstStrong[0].codePointAt(0)!
+      const isRtlChar = code >= 0x0590 && code <= 0x06FF
+      return isRtlChar ? line : RLM + line
+    })
+    .join('\n')
 }
 
 const sendSMS = async (phone: string, message: string) => {

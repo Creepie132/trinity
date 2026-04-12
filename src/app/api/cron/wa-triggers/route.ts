@@ -20,38 +20,42 @@ export const dynamic = 'force-dynamic'
 /**
  * Применяет переменные к шаблону с корректной BiDi-обработкой для WhatsApp.
  *
- * Стратегия для ивритских шаблонов:
- *   - \u200F (RLM) перед каждым подставляемым значением — сигнализирует
- *     BiDi-алгоритму что следующий LTR-текст (латиница/кириллица) является
- *     частью RTL-потока. WhatsApp корректно обрабатывает RLM в отличие от
- *     \u202B/\u202C embedding-маркеров.
- *   - \u200F в начале всего сообщения — устанавливает базовое направление RTL.
+ * Проблема: WhatsApp определяет направление каждой строки по первому
+ * "сильному" символу. Если строка начинается с латиницы/кириллицы
+ * (подставленное значение) — вся строка идёт LTR и иврит ломается.
  *
- * Для не-ивритских шаблонов маркеры не добавляются.
+ * Решение: после замены переменных, каждую строку которая начинается
+ * с не-ивритского символа — предваряем RLM (\u200F).
+ * RLM сигнализирует WhatsApp: "базовое направление этой строки — RTL".
  */
 function applyTemplate(template: string, vars: Record<string, string>): string {
   const hasHebrew = /[\u0590-\u05FF]/.test(template)
 
-  if (!hasHebrew) {
-    // Обычная замена без маркеров
-    return Object.entries(vars).reduce(
-      (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
-      template
-    )
-  }
-
-  // Для иврита: оборачиваем каждое значение в RLM с обеих сторон
-  // \u200F = Right-to-Left Mark — невидимый маркер направления
-  const RLM = '\u200F'
+  // Сначала подставляем переменные
   const result = Object.entries(vars).reduce(
-    (msg, [key, val]) => msg.replace(
-      new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
-      RLM + val + RLM
-    ),
+    (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
     template
   )
-  // RLM в начале — задаёт RTL как базовое направление параграфа
-  return RLM + result
+
+  if (!hasHebrew) return result
+
+  // Для ивритских шаблонов: добавляем RLM в начало каждой строки
+  // которая не начинается с ивритского символа
+  const RLM = '\u200F'
+  const fixed = result
+    .split('\n')
+    .map(line => {
+      // Находим первый "сильный" символ в строке (пропускаем эмодзи и пробелы)
+      const firstStrong = line.match(/[A-Za-zА-Яа-яёЁ\u0590-\u05FF\u0600-\u06FF]/)
+      if (!firstStrong) return line // пустая строка или только эмодзи — не трогаем
+      const code = firstStrong[0].codePointAt(0)!
+      // Если первый сильный символ НЕ иврит/арабский — вставляем RLM
+      const isRtlChar = code >= 0x0590 && code <= 0x06FF
+      return isRtlChar ? line : RLM + line
+    })
+    .join('\n')
+
+  return fixed
 }
 
 export async function GET(request: NextRequest) {

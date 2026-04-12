@@ -1851,3 +1851,78 @@ Webhook `/api/payments/tranzila-success` обновлял `payments.status = 'co
 - `src/components/layout/MobileSidebar.tsx`
 
 **Коммит:** `5426ebb`
+
+---
+
+### Апрель 2026 — feat: Onboarding API — 7 endpoint'ов для мобильного онбординга (commit feddfc2)
+
+**Дата:** 12.04.2026
+
+#### Новые файлы
+
+**`src/app/api/mobile/onboarding/profile/route.ts`** — PATCH  
+Обновляет `organizations.name`, `organizations.phone`, расширяет `features.onboarding{}` JSONB (owner_first, owner_last, phone_fixed, company_id, logo_url, category_id). Валидация: израильский мобильный `^0(5[0-9])\d{7}$`, стационарный `^0[2-4679]\d{7}$`, ת.ז./ח.פ. `^\d{9}$`. Не требует ALTER TABLE.
+
+**`src/app/api/mobile/onboarding/logo/route.ts`** — POST multipart  
+Загружает логотип в Supabase Storage bucket `organization-logos` (upsert, путь `{orgId}/logo.{ext}`). Лимит 5MB, допустимые типы: JPEG/PNG/WebP/GIF. Сохраняет публичный URL в `organizations.logo_url`. Возвращает `{url}`.
+
+**`src/app/api/mobile/onboarding/categories/route.ts`** — GET + POST  
+GET: читает из `business_categories`, graceful fallback на хардкод (15 категорий) если таблицы ещё нет. POST: INSERT новой категории с `org_id` (кастомная). RLS: глобальные видны всем, кастомные — только своей орге.
+
+**`src/app/api/mobile/onboarding/services/route.ts`** — POST  
+Пакетный INSERT до 10 услуг в таблицу `services` (поля: `name`, `name_ru`, `price`, `duration_minutes`, `is_active=true`, `org_id`). Полная валидация каждой строки.
+
+**`src/app/api/mobile/onboarding/products/route.ts`** — POST  
+Пакетный INSERT до 10 товаров в `products` + `inventory_transactions(type='initial')` для начального остатка. Поля: `name`, `sell_price`, `quantity`, `stock_quantity`, `unit='יחידה'`, `is_active=true`.
+
+**`src/app/api/mobile/onboarding/hours/route.ts`** — POST  
+Сохраняет рабочее расписание в `features.working_hours` JSONB. Формат: `[{day_of_week:0-6, is_working, open_time:'HH:MM', close_time:'HH:MM', breaks:[{from,to}]}]`. Валидация формата времени regex `^\d{2}:\d{2}$`.
+
+**`src/app/api/mobile/onboarding/complete/route.ts`** — POST  
+Записывает `features.onboarding_completed_at = now()`. Финальная точка флоу.
+
+#### Миграция БД
+
+**`supabase/migrations/20260412_create_business_categories.sql`**  
+Таблица `business_categories`: `id uuid PK`, `name text`, `org_id uuid nullable` (NULL = глобальная, uuid = кастомная орга). Вычисляемое поле `is_global GENERATED ALWAYS AS (org_id IS NULL) STORED`. RLS: глобальные — read all; кастомные — INSERT только owner/admin своей орги. 15 дефолтных категорий (INSERT).
+
+**Запуск миграции:** Supabase Dashboard → SQL Editor → выполнить файл.  
+**Bucket:** Storage → New bucket → `organization-logos` → Public.
+
+#### Безопасность
+
+- Каждый endpoint: `getAuthContext(req)` первым, `orgId` только из БД
+- Service role используется только после проверки auth
+- Все операции scope по `org_id` — cross-org невозможен
+- Размер файла логотипа лимитирован (5MB), тип проверяется
+
+#### Схема хранения (без ALTER TABLE)
+
+```jsonc
+// organizations.features (JSONB)
+{
+  "onboarding": {
+    "owner_first":  "Ирина",
+    "owner_last":   "Коэн",
+    "phone_fixed":  "031234567",
+    "company_id":   "123456789",
+    "logo_url":     "https://...",
+    "category_id":  "uuid"
+  },
+  "working_hours": [
+    { "day_of_week": 0, "is_working": true, "open_time": "09:00", "close_time": "18:00", "breaks": [] },
+    { "day_of_week": 6, "is_working": false }
+  ],
+  "onboarding_completed_at": "2026-04-12T14:00:00.000Z"
+}
+```
+
+**Затронутые файлы:**
+- `src/app/api/mobile/onboarding/profile/route.ts` (новый)
+- `src/app/api/mobile/onboarding/logo/route.ts` (новый)
+- `src/app/api/mobile/onboarding/categories/route.ts` (новый)
+- `src/app/api/mobile/onboarding/services/route.ts` (новый)
+- `src/app/api/mobile/onboarding/products/route.ts` (новый)
+- `src/app/api/mobile/onboarding/hours/route.ts` (новый)
+- `src/app/api/mobile/onboarding/complete/route.ts` (новый)
+- `supabase/migrations/20260412_create_business_categories.sql` (новый)

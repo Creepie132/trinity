@@ -102,10 +102,10 @@ export async function POST(
   })
 
   if (!result.ok) {
-    return NextResponse.json(
-      { error: result.error ?? 'Ошибка отправки. Проверьте подключение WhatsApp.' },
-      { status: 500 }
-    )
+    const reason = result.provider === 'none'
+      ? 'WhatsApp не подключён для этой организации. Сначала подключите канал Whapi во вкладке "WhatsApp".'
+      : result.error ?? 'Ошибка отправки'
+    return NextResponse.json({ error: reason }, { status: 500 })
   }
 
   return NextResponse.json({

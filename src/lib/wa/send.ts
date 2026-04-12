@@ -80,7 +80,8 @@ export async function sendWhatsAppMessage(opts: SendWAOptions): Promise<SendWARe
       .rpc('get_wa_api_key', { p_org_id: orgId })
 
     if (apiKey) {
-      // Читаем instance_id для корректного base URL
+      // instance_id — это channel ID (например WONDRW-83GSD), а не хост
+      // Если по какой-то причине там записан хост — игнорируем его
       const { data: integration } = await supabase
         .from('wa_integrations')
         .select('instance_id')
@@ -88,8 +89,11 @@ export async function sendWhatsAppMessage(opts: SendWAOptions): Promise<SendWARe
         .eq('is_active', true)
         .maybeSingle()
 
-      const baseUrl = integration?.instance_id
-        ? `${DEFAULT_WHAPI_BASE}/${integration.instance_id}`
+      const channelId = integration?.instance_id
+      const isChannelId = channelId && !channelId.includes('.') && !channelId.startsWith('http')
+
+      const baseUrl = isChannelId
+        ? `${DEFAULT_WHAPI_BASE}/${channelId}`
         : DEFAULT_WHAPI_BASE
 
       const result = await _sendViaWhapi({ apiKey, baseUrl, phone, message })

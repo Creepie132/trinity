@@ -5,7 +5,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export type AuditAction = "create" | "update" | "delete" | "login" | "export" | "send_sms" | "import" | "cancel" | "send_reminder"
+export type AuditAction = "create" | "update" | "delete" | "login" | "export" | "send_sms" | "send_wa" | "import" | "cancel" | "send_reminder"
 
 interface AuditEntry {
   org_id: string

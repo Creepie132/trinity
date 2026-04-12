@@ -305,6 +305,27 @@ export default function WhatsAppSettingsPage() {
         </div>
       </div>
 
+      {/* Automation triggers link */}
+      <div
+        onClick={() => router.push('/settings/whatsapp/triggers')}
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 flex items-center gap-4 cursor-pointer hover:border-green-300 dark:hover:border-green-700 transition-colors group"
+      >
+        <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+          <MessageCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            {language === 'he' ? 'הודעות אוטומטיות' : 'Автоматические сообщения'}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {language === 'he'
+              ? 'תזכורות, ברכות יום הולדת, הודעות אחרי ביקור ועוד'
+              : 'Напоминания, дни рождения, сообщения после визита и другое'}
+          </p>
+        </div>
+        <ArrowRight size={16} className={`text-gray-400 group-hover:text-green-500 transition-colors ${dir === 'rtl' ? 'rotate-180' : ''}`} />
+      </div>
+
       {/* Test send — показываем только если custom активен и токен есть */}
       {useCustom && hasToken && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 space-y-3">

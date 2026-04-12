@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 
-const TRIGGER_TYPES = ['visit_created', 'visit_reminder', 'visit_completed', 'client_added', 'demo_expired'] as const
+const TRIGGER_TYPES = [
+  'visit_created', 'visit_reminder', 'visit_completed', 'client_added', 'demo_expired',
+  'after_visit', 'after_sale', 'birthday', 'win_back', 'debt_reminder',
+] as const
 
 export async function GET(req: NextRequest) {
   const auth = await getAuthContext(req)
@@ -41,7 +44,9 @@ export async function POST(req: NextRequest) {
       is_enabled:       Boolean(t.is_enabled),
       delay_min_sec:    Math.max(1, Math.min(600, parseInt(t.delay_min_sec) || 20)),
       delay_max_sec:    Math.max(1, Math.min(600, parseInt(t.delay_max_sec) || 60)),
-      hours_before:     t.hours_before ? parseInt(t.hours_before) : null,
+      hours_before:     t.hours_before != null ? parseInt(t.hours_before) : null,
+      delay_hours:      t.delay_hours  != null ? parseInt(t.delay_hours)  : null,
+      win_back_days:    t.win_back_days != null ? parseInt(t.win_back_days) : null,
       message_template: String(t.message_template || '').slice(0, 1000),
     }))
 

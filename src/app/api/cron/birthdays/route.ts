@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logAudit } from '@/lib/audit'
+import { sendWhatsAppMessage } from '@/lib/wa/send'
 
 const sendSMS = async (phone: string, message: string) => {
   const inforuUrl = 'https://api.inforu.co.il/SendMessageXml.ashx'
@@ -97,13 +98,49 @@ export async function GET(request: NextRequest) {
     for (const client of birthdayClients) {
       const org = client.organizations as any
 
-      // Проверить birthday_sms_enabled
-      if (org?.features?.birthday_sms_enabled !== true) {
-        stats.skipped++
+      // Проверить birthday_sms_enabled (старый флаг) или wa_trigger_settings.birthday
+      const smsFallback = org?.features?.birthday_sms_enabled === true
+      if (!smsFallback) {
+        // Проверяем wa_trigger_settings
+        const { data: triggerRow } = await supabase
+          .from('wa_trigger_settings')
+          .select('is_enabled, message_template')
+          .eq('org_id', client.org_id)
+          .eq('trigger_type', 'birthday')
+          .maybeSingle()
+
+        if (!triggerRow?.is_enabled) {
+          stats.skipped++
+          continue
+        }
+
+        // WhatsApp отправка
+        const template = triggerRow.message_template || ''
+        const message = template
+          .replace(/\{\{client_name\}\}/g, client.first_name)
+          .replace(/\{\{org_name\}\}/g, org.name)
+
+        const result = await sendWhatsAppMessage({
+          orgId: client.org_id,
+          to: client.phone,
+          message,
+          softFail: true,
+        })
+
+        if (result.ok) {
+          stats.sent++
+          await logAudit({
+            org_id: client.org_id, user_id: undefined, user_email: 'system',
+            action: 'send_wa', entity_type: 'birthday_greeting', entity_id: client.id,
+            new_data: { client_name: `${client.first_name} ${client.last_name}`, phone: client.phone, provider: result.provider },
+          })
+        } else {
+          stats.failed++
+        }
         continue
       }
 
-      // Получить кастомное сообщение или использовать дефолтное
+      // Старый путь — SMS
       const customMessage = org?.features?.birthday_message
       const defaultMessage = `🎂 ${org.name} מאחלת לך יום הולדת שמח, ${client.first_name}! נשמח לראות אותך!`
       const message = customMessage
@@ -114,20 +151,10 @@ export async function GET(request: NextRequest) {
 
       if (success) {
         stats.sent++
-
-        // Логировать
         await logAudit({
-          org_id: client.org_id,
-          user_id: undefined,
-          user_email: 'system',
-          action: 'send_sms',
-          entity_type: 'birthday_greeting',
-          entity_id: client.id,
-          new_data: {
-            client_name: `${client.first_name} ${client.last_name}`,
-            phone: client.phone,
-            date_of_birth: client.date_of_birth,
-          },
+          org_id: client.org_id, user_id: undefined, user_email: 'system',
+          action: 'send_sms', entity_type: 'birthday_greeting', entity_id: client.id,
+          new_data: { client_name: `${client.first_name} ${client.last_name}`, phone: client.phone, date_of_birth: client.date_of_birth },
         })
       } else {
         stats.failed++

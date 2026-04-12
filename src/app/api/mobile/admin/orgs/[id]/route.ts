@@ -27,6 +27,14 @@ async function requireSuperAdmin(request: NextRequest) {
   return data.user
 }
 
+function createAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  )
+}
+
 // ─── DELETE /api/mobile/admin/orgs/[id] ──────────────────────────────────────
 export async function DELETE(
   request: NextRequest,
@@ -55,10 +63,10 @@ export async function DELETE(
     // Удаляем данные орги последовательно (соблюдаем FK)
     // Порядок важен: сначала дочерние таблицы, потом org
     const tables = [
-      'visit_services',        // → visits
-      'inventory_transactions', // → products
-      'sale_items',            // → sales, products
-      'wa_messages',           // → wa_conversations
+      'visit_services',
+      'inventory_transactions',
+      'sale_items',
+      'wa_messages',
       'wa_conversations',
       'wa_send_log',
       'wa_integrations',
@@ -77,7 +85,7 @@ export async function DELETE(
       'kira_messages',
       'kira_sessions',
       'org_receipt_settings',
-      'org_users',             // последним — чтобы не потерять ссылку на владельца
+      'org_users',
     ]
 
     for (const table of tables) {
@@ -85,9 +93,28 @@ export async function DELETE(
         .from(table as any)
         .delete()
         .eq('org_id', orgId)
-      // Ошибки типа "column org_id does not exist" игнорируем — таблица просто не имеет этого поля
       if (error && !error.message.includes('org_id')) {
         console.error(`[admin/orgs/delete] cleanup ${table}:`, error.message)
+      }
+    }
+
+    // ── Удаляем пользователя из auth.users ───────────────────────────────────
+    // Находим user_id по owner_email орги
+    const adminClient = createAdminClient()
+    if (org.owner_email) {
+      const { data: listData } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+      const users = (listData?.users ?? []) as Array<{ id: string; email?: string }>
+      const authUser = users.find(
+        (u) => (u.email ?? '').toLowerCase() === org.owner_email.toLowerCase()
+      )
+      if (authUser) {
+        const { error: deleteAuthErr } = await adminClient.auth.admin.deleteUser(authUser.id)
+        if (deleteAuthErr) {
+          console.warn('[admin/orgs/delete] deleteUser warning:', deleteAuthErr.message)
+          // Не фатально — орга всё равно будет удалена
+        } else {
+          console.log(`[admin/orgs/delete] deleted auth user ${authUser.id} (${org.owner_email})`)
+        }
       }
     }
 

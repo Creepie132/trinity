@@ -114,9 +114,7 @@ export async function POST(request: NextRequest) {
 
     // ── 6. Google OAuth invite ────────────────────────────────────────────────
     const adminClient = createAdminClient()
-    // ВАЖНО: redirectTo должен быть в списке разрешённых URL в Supabase Dashboard
-    // Authentication → URL Configuration → Redirect URLs
-    const redirectTo = 'https://www.ambersol.co.il/auth/callback'
+    const redirectTo  = 'https://www.ambersol.co.il/auth/callback'
     const { data: inviteData, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(normalEmail, {
         redirectTo,

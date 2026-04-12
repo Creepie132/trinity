@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     // ── 6. Google OAuth invite ────────────────────────────────────────────────
     const adminClient = createAdminClient()
-    const redirectTo  = 'https://www.ambersol.co.il/auth/callback'
+    const redirectTo  = 'https://www.ambersol.co.il/mobile'
     const { data: inviteData, error: inviteError } =
       await adminClient.auth.admin.inviteUserByEmail(normalEmail, {
         redirectTo,

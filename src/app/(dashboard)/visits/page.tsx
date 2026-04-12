@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import {
   Plus, Search, Calendar, CalendarDays, List,
   ChevronDown, ChevronUp, Clock, TrendingUp,
-  Play, CheckCircle, X, Pencil, MapPin, Video
+  Play, CheckCircle, X, Pencil, MapPin, Video, CreditCard, Ban
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -221,6 +221,7 @@ export default function VisitsPage() {
   const [newVisitNotify, setNewVisitNotify] = useState<any>(null)
   const [receiptVisit, setReceiptVisit] = useState<any>(null)
   const [createVisitPrefill, setCreateVisitPrefill] = useState<any>(null)
+  const [completeMenuVisit, setCompleteMenuVisit] = useState<Visit | null>(null)
   const { isDemo } = useDemoMode()
   const [demoLimitOpen, setDemoLimitOpen] = useState(false)
 
@@ -385,40 +386,34 @@ export default function VisitsPage() {
 
   const handleCompleteVisit = async (visit: Visit) => {
     if (!features.paymentsEnabled) { updateVisitStatus(visit.id, 'completed'); return }
-    // Клиент уже в visit.clients (join в основном запросе)
-    const clientData = visit.clients
-      ? { id: visit.client_id, first_name: (visit.clients as any).first_name, last_name: (visit.clients as any).last_name, phone: (visit.clients as any).phone, email: (visit.clients as any).email }
-      : undefined
+    // Показываем меню: "Завершить с оплатой" / "Завершить без оплаты"
+    setCompleteMenuVisit(visit)
+  }
 
-    // Always fetch fresh visit_services to avoid empty cart on first open (race condition)
+  const handleCompleteWithPayment = async (visit: Visit) => {
+    setCompleteMenuVisit(null)
     const svcsRes = await fetch(`/api/visits/${visit.id}/services`)
     const freshServices = svcsRes.ok ? await svcsRes.json() : []
-
-    // Build main service item first — always included
     const mainServiceName = isHe
       ? (visit.services?.name || visit.service_type || '')
       : (visit.services?.name_ru || visit.services?.name || visit.service_type || '')
-    const mainItem = {
-      id: visit.id,
-      name: mainServiceName,
-      price: visit.price || 0,
-    }
-
-    // Additional services from visit_services
+    const mainItem = { id: visit.id, name: mainServiceName, price: visit.price || 0 }
     const additionalItems = (freshServices || (visit as any).visit_services || []).map((vs: any) => ({
       id: vs.id,
       name: isHe ? (vs.service_name || vs.service_name_ru) : (vs.service_name_ru || vs.service_name),
       price: vs.price || 0,
     }))
-
-    // Main service is always first → checkout step is always shown (never empty cart screen)
-    const preloadedItems = [mainItem, ...additionalItems]
     openModal('sale-unified', {
-      clientId:   (clientData || { id: visit.client_id }).id,
+      clientId:   visit.client_id,
       clientName: getClientName(visit),
       visitId:    visit.id,
-      preloadedItems,
+      preloadedItems: [mainItem, ...additionalItems],
     })
+  }
+
+  const handleCompleteWithoutPayment = async (visit: Visit) => {
+    setCompleteMenuVisit(null)
+    updateVisitStatus(visit.id, 'completed')
   }
 
   const handleCancelVisit = async (visitId: string) => {
@@ -1239,6 +1234,77 @@ export default function VisitsPage() {
             </button>
           </div>
         </TrinityBottomDrawer>
+      )}
+
+      {/* ── Complete visit menu ── */}
+      {completeMenuVisit && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={() => setCompleteMenuVisit(null)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative w-full md:w-[360px] bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-2xl p-5 pb-8 md:pb-5 z-10"
+            dir={isHe ? 'rtl' : 'ltr'}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle (mobile) */}
+            <div className="md:hidden flex justify-center mb-4">
+              <div className="w-10 h-1 rounded-full bg-gray-200 dark:bg-gray-700" />
+            </div>
+
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
+              {isHe ? 'סיום ביקור' : 'Завершение визита'}
+            </p>
+            <p className="text-xs text-gray-400 mb-4">
+              {getClientName(completeMenuVisit)}
+              {completeMenuVisit.price ? ` · ₪${completeMenuVisit.price}` : ''}
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+              {/* Завершить с оплатой */}
+              <button
+                onClick={() => handleCompleteWithPayment(completeMenuVisit)}
+                className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 transition-colors text-start"
+              >
+                <div className="w-9 h-9 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                  <CreditCard className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                    {isHe ? 'סיים עם תשלום' : 'Завершить с оплатой'}
+                  </p>
+                  <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-0.5">
+                    {isHe ? 'פתח חלון קופה' : 'Открыть кассу'}
+                  </p>
+                </div>
+              </button>
+
+              {/* Завершить без оплаты (в долг) */}
+              <button
+                onClick={() => handleCompleteWithoutPayment(completeMenuVisit)}
+                className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 border border-amber-200 dark:border-amber-800 transition-colors text-start"
+              >
+                <div className="w-9 h-9 rounded-lg bg-amber-400 flex items-center justify-center flex-shrink-0">
+                  <Ban className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                    {isHe ? 'סיים ללא תשלום (חוב)' : 'Завершить без оплаты (в долг)'}
+                  </p>
+                  <p className="text-xs text-amber-500 dark:text-amber-400 mt-0.5">
+                    {isHe ? 'הביקור יסומן כהושלם, התשלום יישאר פתוח' : 'Визит закрыт, оплата остаётся открытой'}
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            {/* Отмена */}
+            <button
+              onClick={() => setCompleteMenuVisit(null)}
+              className="mt-3 w-full py-2.5 rounded-xl text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              {isHe ? 'ביטול' : 'Отмена'}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── Visit detail modal ── */}

@@ -1926,3 +1926,30 @@ GET: читает из `business_categories`, graceful fallback на хардк�
 - `src/app/api/mobile/onboarding/hours/route.ts` (новый)
 - `src/app/api/mobile/onboarding/complete/route.ts` (новый)
 - `supabase/migrations/20260412_create_business_categories.sql` (новый)
+
+
+---
+
+## Стандарты UI — Шрифты
+
+### Hebrew Font Standard (12.04.2026)
+
+**Шрифт:** Rubik (Google Fonts)  
+**Веса:** 400 (Regular), 500 (Medium), 700 (Bold), 800 (ExtraBold)  
+**Применение:** все Hebrew-facing интерфейсы — email templates, мобильные экраны, любой контент на иврите  
+**Fallback:** `'Segoe UI', Arial, sans-serif`
+
+**Подключение в HTML/email:**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap" rel="stylesheet" />
+```
+
+**CSS:**
+```css
+font-family: 'Rubik', 'Segoe UI', Arial, sans-serif;
+```
+
+**Обоснование:** Rubik — геометрический sans-serif, поддерживает иврит, используется в Israeli tech продуктах (Monday.com, Wix, Fiverr). Технологичный характер, хорошо читается на тёмных фонах Trinity.
+
+**Затронутые файлы:**
+- `supabase_invite_email_template.html` — первый шаблон на Rubik

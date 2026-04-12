@@ -17,11 +17,19 @@ import { logAudit } from '@/lib/audit'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * Применяет переменные к шаблону и добавляет BiDi-маркеры если текст на иврите.
+ * Язык определяется по исходному шаблону — до замены переменных,
+ * чтобы латиница/кириллица в значениях не влияла на направление.
+ */
 function applyTemplate(template: string, vars: Record<string, string>): string {
-  return Object.entries(vars).reduce(
+  const result = Object.entries(vars).reduce(
     (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
     template
   )
+  const hasHebrew = /[\u0590-\u05FF]/.test(template)
+  // \u202B = RTL Embedding, \u202C = Pop Directional Formatting
+  return hasHebrew ? '\u202B' + result + '\u202C' : result
 }
 
 export async function GET(request: NextRequest) {

@@ -3,6 +3,19 @@ import { createClient } from '@supabase/supabase-js'
 import { logAudit } from '@/lib/audit'
 import { sendWhatsAppMessage } from '@/lib/wa/send'
 
+/**
+ * Применяет переменные к шаблону + BiDi для иврита.
+ * Язык определяется по исходному шаблону до замены переменных.
+ */
+function applyTemplate(template: string, vars: Record<string, string>): string {
+  const result = Object.entries(vars).reduce(
+    (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
+    template
+  )
+  const hasHebrew = /[\u0590-\u05FF]/.test(template)
+  return hasHebrew ? '\u202B' + result + '\u202C' : result
+}
+
 const sendSMS = async (phone: string, message: string) => {
   const inforuUrl = 'https://api.inforu.co.il/SendMessageXml.ashx'
   const username = process.env.INFORU_USERNAME
@@ -116,9 +129,10 @@ export async function GET(request: NextRequest) {
 
         // WhatsApp отправка
         const template = triggerRow.message_template || ''
-        const message = template
-          .replace(/\{\{client_name\}\}/g, client.first_name)
-          .replace(/\{\{org_name\}\}/g, org.name)
+        const message = applyTemplate(template, {
+          client_name: client.first_name,
+          org_name: org.name,
+        })
 
         const result = await sendWhatsAppMessage({
           orgId: client.org_id,

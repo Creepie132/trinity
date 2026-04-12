@@ -552,8 +552,9 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
         const _offset = _tzMatch ? `${_tzMatch[1]}${_tzMatch[2].padStart(2,'0')}:${(_tzMatch[3]??'00').padStart(2,'0')}` : '+02:00'
         const scheduled_at = new Date(`${form.date}T${form.time}:00${_offset}`).toISOString()
 
-        // Validate not in past
-        if (new Date(scheduled_at) < new Date()) {
+        // Validate not in past — only for non-completed visits
+        const isCompleted = safeData.visit?.status === 'completed'
+        if (!isCompleted && new Date(scheduled_at) < new Date()) {
           setErrorMsg(isHe ? 'לא ניתן לבחור תאריך שעבר' : 'Нельзя выбрать прошедшую дату')
           return
         }

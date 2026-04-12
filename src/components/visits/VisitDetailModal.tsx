@@ -286,18 +286,16 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
             </button>
           </div>
         )}
-        {visit.status === 'in_progress' && (
+        {(visit.status === 'in_progress' || visit.status === 'completed') && (
           <button onClick={() => { setViewMode('services'); if (servicesList.length === 0) fetchServices(); if (productsList.length === 0) fetchProducts() }}
             style={{ display:'flex',alignItems:'center',gap:7,padding:'8px 10px',borderRadius:9,border:'0.5px solid rgba(167,139,250,0.25)',background:'rgba(167,139,250,0.1)',cursor:'pointer',width:'100%',color:'#a78bfa',fontSize:11,fontWeight:600 }}>
             <Plus size={13} />{isHe ? 'הוסף שירות/מוצר' : 'Добавить'}
           </button>
         )}
         <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.08)', margin: '2px 0 4px' }} />
-        {visit.status !== 'completed' && (
-          <button onClick={onEdit} style={{ display:'flex',alignItems:'center',gap:7,padding:'7px 10px',borderRadius:8,border:'0.5px solid rgba(255,255,255,0.07)',background:'transparent',cursor:'pointer',width:'100%',color:'rgba(255,255,255,0.4)',fontSize:11,fontWeight:500 }}>
-            <Pencil size={12} />{isHe ? 'ערוך' : 'Редактировать'}
-          </button>
-        )}
+        <button onClick={onEdit} style={{ display:'flex',alignItems:'center',gap:7,padding:'7px 10px',borderRadius:8,border:'0.5px solid rgba(255,255,255,0.07)',background:'transparent',cursor:'pointer',width:'100%',color:'rgba(255,255,255,0.4)',fontSize:11,fontWeight:500 }}>
+          <Pencil size={12} />{isHe ? 'ערוך' : 'Редактировать'}
+        </button>
         {(visit.status === 'scheduled' || visit.status === 'in_progress') && (
           <button onClick={() => { onCancel(); onClose() }} style={{ display:'flex',alignItems:'center',gap:7,padding:'7px 10px',borderRadius:8,border:'0.5px solid rgba(248,113,113,0.2)',background:'transparent',cursor:'pointer',width:'100%',color:'rgba(248,113,113,0.5)',fontSize:11,fontWeight:500,marginTop:2 }}>
             <X size={12} />{isHe ? 'בטל ביקור' : 'Отменить визит'}

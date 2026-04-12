@@ -531,8 +531,8 @@ export function VisitDetailMob({
 
                   <div style={{ height: 1, background: 'rgba(255,255,255,0.07)' }} />
 
-                  {/* Добавить услугу / товар — только в процессе */}
-                  {visit.status === 'in_progress' && (
+                  {/* Добавить услугу / товар — в процессе и для завершённых без оплаты */}
+                  {(visit.status === 'in_progress' || visit.status === 'completed') && (
                     <ActionRow
                       icon={<Plus size={13} />}
                       label={isHe ? 'הוסף שירות / מוצר' : 'Добавить услугу / товар'}
@@ -550,9 +550,7 @@ export function VisitDetailMob({
                   )}
 
                   {/* Редактировать */}
-                  {visit.status !== 'completed' && (
-                    <ActionRow icon={<Pencil size={12} />} label={isHe ? 'ערוך ביקור' : 'Редактировать'} onClick={() => { setDrawerOpen(false); onEdit() }} />
-                  )}
+                  <ActionRow icon={<Pencil size={12} />} label={isHe ? 'ערוך ביקור' : 'Редактировать'} onClick={() => { setDrawerOpen(false); onEdit() }} />
 
                   {/* Закрыть */}
                   <ActionRow icon={<X size={12} />} label={isHe ? 'סגור' : 'Закрыть'} onClick={handleClose} />

@@ -1735,3 +1735,63 @@ Webhook `/api/payments/tranzila-success` обновлял `payments.status = 'co
 - Ксения (ks.hair.lab) использует только свой терминал, Amber Solutions — только свой
 
 **Коммит:** `6f49a5b`
+
+---
+
+### Апрель 2026 — feat: WhatsApp автоматические сообщения — триггеры, cron, UI (commit 17c9e51)
+
+**Дата:** 12.04.2026
+
+**Что сделано:**
+
+**БД — миграция `add_wa_trigger_types_v2`:**
+- Расширен check constraint `wa_trigger_settings_trigger_type_check` — добавлены 5 новых типов: `after_visit`, `after_sale`, `birthday`, `win_back`, `debt_reminder`
+- Добавлены поля: `delay_hours integer DEFAULT 1`, `win_back_days integer DEFAULT 60`
+- Вставлены дефолтные строки для всех существующих org по каждому новому типу
+
+**API `/api/wa-triggers` (GET/POST):**
+- Поддерживает все 10 типов триггеров
+- POST сохраняет `delay_hours`, `win_back_days` вместе с остальными полями
+
+**UI `/settings/whatsapp/triggers`:**
+- Новая страница: карточки для каждого триггера (9 штук)
+- Каждая карточка: иконка/цвет, название, описание, toggle вкл/выкл
+- При раскрытии карточки: поле времени (hours_before / delay_hours / win_back_days в зависимости от типа), textarea шаблона сообщения, кнопки-подсказки переменных (`{{client_name}}`, `{{date}}` и т.д.)
+- Кнопка "Сохранить" sticky внизу
+- Ссылка на страницу добавлена в `/settings/whatsapp`
+- Двуязычная (иврит / русский)
+
+**Cron `/api/cron/reminders` — переписан:**
+- Теперь бегает каждый час (`"0 * * * *"` в vercel.json)
+- Загружает активные триггеры `visit_reminder` из `wa_trigger_settings`
+- Для каждой org с активным триггером — ищет визиты в часовом окне `(now + hours_before ± 30мин)`
+- Отправляет через `sendWhatsAppMessage` с шаблоном из БД
+- Fallback: org без WA триггера — SMS + Email как раньше
+
+**Cron `/api/cron/birthdays` — обновлён:**
+- Проверяет триггер `birthday` в `wa_trigger_settings`
+- Если включён — отправляет через WhatsApp с шаблоном из БД
+- Fallback на SMS если триггер выключен но `birthday_sms_enabled` в features
+
+**Новый cron `/api/cron/wa-triggers` (каждый час):**
+- `after_visit` — через `delay_hours` после завершения визита (`status = completed`)
+- `after_sale` — через `delay_hours` после оплаты (`paid_at`)
+- `win_back` — клиентам без завершённых визитов за `win_back_days` дней и без будущих записей
+- `debt_reminder` — клиентам с платежами в статусе `partial` или `unpaid`, сумма долга агрегируется
+
+**`src/lib/audit.ts`:** добавлен тип `send_wa` в `AuditAction`
+
+**`vercel.json`:** добавлен `/api/cron/wa-triggers` (каждый час), `/api/cron/reminders` переведён на каждый час
+
+**Затронутые файлы:**
+- `src/app/(dashboard)/settings/whatsapp/page.tsx` — ссылка на триггеры
+- `src/app/(dashboard)/settings/whatsapp/triggers/page.tsx` (новый)
+- `src/app/api/wa-triggers/route.ts`
+- `src/app/api/cron/reminders/route.ts`
+- `src/app/api/cron/birthdays/route.ts`
+- `src/app/api/cron/wa-triggers/route.ts` (новый)
+- `src/lib/audit.ts`
+- `vercel.json`
+
+**Коммит:** `17c9e51`
+

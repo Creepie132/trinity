@@ -8,10 +8,11 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useModalStore } from '@/store/useModalStore'
 import {
   Search, AlertCircle, MessageCircle, CreditCard,
-  Pencil, ChevronRight, X, Phone, Calendar,
+  Pencil, ChevronRight, X, Phone, Calendar, Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
+import { SaleDetailModal } from '@/components/sales/SaleDetailModal'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,7 +97,7 @@ function DetailPanel({
   onClose: () => void
   onWhatsApp: (d: DebtEntry) => void
   onPaymentLink: (d: DebtEntry) => void
-  onEdit: (d: DebtEntry) => void
+  onEdit: (item: DebtItem) => void
 }) {
   const urg = urgencyColor(debt.days_ago)
 
@@ -166,15 +167,25 @@ function DetailPanel({
                 </span>
               </div>
             </div>
-            <div className="text-sm font-semibold flex-shrink-0" style={{ color: urg.text }}>
-              ₪{item.amount.toLocaleString()}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="text-sm font-semibold" style={{ color: urg.text }}>
+                ₪{item.amount.toLocaleString()}
+              </div>
+              <button
+                onClick={() => onEdit(item)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-all hover:opacity-80 active:scale-95"
+                style={{ background: '#f3f4f6', color: '#374151' }}
+              >
+                <Pencil size={11} />
+                {isHe ? 'ערוך' : 'Изменить'}
+              </button>
             </div>
           </div>
         ))}
       </div>
 
       {/* Action buttons */}
-      <div className="p-3 border-t border-gray-100 dark:border-gray-700 grid grid-cols-3 gap-2">
+      <div className="p-3 border-t border-gray-100 dark:border-gray-700 grid grid-cols-2 gap-2">
         <button
           onClick={() => onWhatsApp(debt)}
           className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-medium transition-all hover:opacity-80 active:scale-95"
@@ -190,14 +201,6 @@ function DetailPanel({
         >
           <CreditCard size={16} />
           {isHe ? 'קבל תשלום' : 'Принять оплату'}
-        </button>
-        <button
-          onClick={() => onEdit(debt)}
-          className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-medium transition-all hover:opacity-80 active:scale-95"
-          style={{ background: '#f9fafb', color: '#374151' }}
-        >
-          <Pencil size={16} />
-          {isHe ? 'ערוך' : 'Изменить'}
         </button>
       </div>
     </div>
@@ -219,6 +222,9 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
   const [daysFilter, setDaysFilter] = useState('all')
   const [minAmount, setMinAmount] = useState('')
   const [selected, setSelected] = useState<DebtEntry | null>(null)
+  // Для редактирования item
+  const [editLoading, setEditLoading] = useState(false)
+  const [editSale, setEditSale] = useState<any>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['debts', orgId, daysFilter, minAmount],
@@ -262,8 +268,25 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
     })
   }
 
-  const handleEdit = (debt: DebtEntry) => {
-    openModal('client-details', { id: debt.client_id })
+  const handleEdit = async (item: DebtItem) => {
+    setEditLoading(true)
+    try {
+      if (item.type === 'visit') {
+        const res = await fetch(`/api/visits/${item.id}`)
+        if (!res.ok) throw new Error()
+        const visit = await res.json()
+        openModal('visit-unified', { mode: 'edit', visit })
+      } else {
+        const res = await fetch(`/api/sales/${item.id}`)
+        if (!res.ok) throw new Error()
+        const sale = await res.json()
+        setEditSale(sale)
+      }
+    } catch {
+      toast.error(isHe ? 'שגיאה בטעינה' : 'Ошибка загрузки')
+    } finally {
+      setEditLoading(false)
+    }
   }
 
   const DATE_FILTERS = [
@@ -276,6 +299,7 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
+    <>
     <div className="space-y-4 pb-20" dir={isHe ? 'rtl' : 'ltr'}>
 
       {/* Header */}
@@ -517,31 +541,38 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
                 </div>
               </div>
 
-              {/* Debt items (always visible: first 2) */}
+              {/* Debt items */}
               {(debt.items ?? []).slice(0, isExpanded ? debt.items.length : 2).map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-gray-50 dark:border-gray-700/50 bg-gray-50/60 dark:bg-gray-700/20"
+                  className="flex items-center gap-2 px-4 py-2.5 border-t border-gray-50 dark:border-gray-700/50 bg-gray-50/60 dark:bg-gray-700/20"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold flex-shrink-0"
-                      style={{
-                        background: item.type === 'visit' ? '#eff6ff' : '#f0fdf4',
-                        color: item.type === 'visit' ? '#1d4ed8' : '#15803d',
-                      }}
-                    >
-                      {item.type === 'visit' ? (isHe ? 'ביקור' : 'визит') : (isHe ? 'מכירה' : 'продажа')}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.label}</span>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500 flex-shrink-0 flex items-center gap-1">
-                      <Calendar size={9} />
-                      {new Date(item.date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
-                    </span>
-                  </div>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold flex-shrink-0"
+                    style={{
+                      background: item.type === 'visit' ? '#eff6ff' : '#f0fdf4',
+                      color: item.type === 'visit' ? '#1d4ed8' : '#15803d',
+                    }}
+                  >
+                    {item.type === 'visit' ? (isHe ? 'ביקור' : 'визит') : (isHe ? 'מכירה' : 'продажа')}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{item.label}</span>
+                  <span className="text-[10px] text-gray-400 flex-shrink-0 flex items-center gap-1">
+                    <Calendar size={9} />
+                    {new Date(item.date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
+                  </span>
                   <span className="text-xs font-semibold flex-shrink-0" style={{ color: urg.text }}>
                     ₪{item.amount.toLocaleString()}
                   </span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleEdit(item) }}
+                    disabled={editLoading}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium flex-shrink-0 transition-all hover:opacity-80 active:scale-95 disabled:opacity-50"
+                    style={{ background: '#f3f4f6', color: '#374151' }}
+                  >
+                    {editLoading ? <Loader2 size={11} className="animate-spin" /> : <Pencil size={11} />}
+                    {isHe ? 'ערוך' : 'Изм.'}
+                  </button>
                 </div>
               ))}
 
@@ -555,8 +586,8 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
                 </div>
               )}
 
-              {/* Action buttons */}
-              <div className="grid grid-cols-3 gap-2 p-3 border-t border-gray-100 dark:border-gray-700">
+              {/* Action buttons — WA + оплата */}
+              <div className="grid grid-cols-2 gap-2 p-3 border-t border-gray-100 dark:border-gray-700">
                 <button
                   onClick={() => handleWhatsApp(debt)}
                   className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80 active:scale-95"
@@ -573,14 +604,6 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
                   <CreditCard size={14} />
                   {isHe ? 'תשלום' : 'Оплата'}
                 </button>
-                <button
-                  onClick={() => handleEdit(debt)}
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80 active:scale-95"
-                  style={{ background: '#f3f4f6', color: '#374151' }}
-                >
-                  <Pencil size={14} />
-                  {isHe ? 'ערוך' : 'Изменить'}
-                </button>
               </div>
             </div>
           )
@@ -588,6 +611,31 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
       </div>
 
     </div>
+
+    {/* SaleDetailModal для редактирования сделки */}
+    {editSale && (
+      <SaleDetailModal
+        sale={editSale}
+        locale={isHe ? 'he' : 'ru'}
+        onClose={() => {
+          setEditSale(null)
+          queryClient.invalidateQueries({ queryKey: ['debts'] })
+        }}
+      />
+    )}
+
+    {/* Оверлей загрузки */}
+    {editLoading && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl px-6 py-4 flex items-center gap-3 shadow-xl">
+          <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+            {isHe ? 'טוען...' : 'Загрузка...'}
+          </span>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 

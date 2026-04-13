@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -35,54 +35,61 @@ interface DebtEntry {
   items: DebtItem[]
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getInitials(first: string, last: string) {
   return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase()
 }
 
-function urgencyColor(days: number): { dot: string; text: string; bg: string; border: string } {
+function urgencyColor(days: number) {
   if (days > 30) return {
-    dot: '#E24B4A',
-    text: 'var(--color-text-danger, #b91c1c)',
-    bg: 'var(--color-background-danger, #fef2f2)',
-    border: 'var(--color-border-danger, #fca5a5)',
+    dot: '#ef4444',
+    text: '#b91c1c',
+    bg: '#fef2f2',
+    border: '#fca5a5',
+    darkBg: 'rgba(239,68,68,0.12)',
+    darkBorder: 'rgba(239,68,68,0.3)',
+    darkText: '#fca5a5',
   }
   if (days > 7) return {
-    dot: '#EF9F27',
-    text: 'var(--color-text-warning, #b45309)',
-    bg: 'var(--color-background-warning, #fffbeb)',
-    border: 'var(--color-border-warning, #fcd34d)',
+    dot: '#f59e0b',
+    text: '#b45309',
+    bg: '#fffbeb',
+    border: '#fcd34d',
+    darkBg: 'rgba(245,158,11,0.12)',
+    darkBorder: 'rgba(245,158,11,0.3)',
+    darkText: '#fcd34d',
   }
   return {
-    dot: '#888',
-    text: 'var(--color-text-secondary)',
-    bg: 'var(--color-background-secondary)',
-    border: 'var(--color-border-secondary)',
+    dot: '#6b7280',
+    text: '#374151',
+    bg: '#f9fafb',
+    border: '#e5e7eb',
+    darkBg: 'rgba(107,114,128,0.12)',
+    darkBorder: 'rgba(107,114,128,0.3)',
+    darkText: '#9ca3af',
   }
 }
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
-async function fetchDebts(orgId: string, search: string, daysFilter: string, minAmount: string): Promise<{ debts: DebtEntry[]; total: number }> {
+async function fetchDebts(
+  orgId: string,
+  daysFilter: string,
+  minAmount: string,
+): Promise<{ debts: DebtEntry[]; total: number }> {
   let url = `/api/dashboard/debts?org_id=${orgId}`
   if (daysFilter !== 'all') url += `&days_back=${daysFilter}`
   if (minAmount) url += `&min_amount=${minAmount}`
   const res = await fetch(url)
   if (!res.ok) throw new Error('Failed to load debts')
-  const data = await res.json()
-  return data
+  return res.json()
 }
 
 // ── Detail Panel ──────────────────────────────────────────────────────────────
 
 function DetailPanel({
-  debt,
-  isHe,
-  onClose,
-  onWhatsApp,
-  onPaymentLink,
-  onEdit,
+  debt, isHe, onClose, onWhatsApp, onPaymentLink, onEdit,
 }: {
   debt: DebtEntry
   isHe: boolean
@@ -92,149 +99,104 @@ function DetailPanel({
   onEdit: (d: DebtEntry) => void
 }) {
   const urg = urgencyColor(debt.days_ago)
-  const initials = getInitials(debt.first_name, debt.last_name)
 
   return (
-    <div style={{
-      background: 'var(--color-background-primary)',
-      border: '0.5px solid var(--color-border-tertiary)',
-      borderRadius: 'var(--border-radius-lg)',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-    }}>
+    <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col shadow-sm">
       {/* Header */}
-      <div style={{
-        padding: '14px 16px',
-        borderBottom: '0.5px solid var(--color-border-tertiary)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-      }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%',
-          background: urg.bg, border: `0.5px solid ${urg.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, fontWeight: 500, color: urg.text, flexShrink: 0,
-        }}>
-          {initials}
+      <div className="flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700">
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
+          style={{ background: urg.bg, color: urg.text, border: `1px solid ${urg.border}` }}
+        >
+          {getInitials(debt.first_name, debt.last_name)}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
             {debt.first_name} {debt.last_name}
           </div>
           {debt.phone && (
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
               <Phone size={10} />{debt.phone}
             </div>
           )}
         </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 500, color: urg.text }}>
+        <div className="text-right flex-shrink-0">
+          <div className="text-lg font-bold" style={{ color: urg.text }}>
             ₪{debt.total_debt.toLocaleString()}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)' }}>
+          <div className="text-[10px] text-gray-400 dark:text-gray-500">
             {isHe ? 'סה״כ חוב' : 'общий долг'}
           </div>
         </div>
         <button
           onClick={onClose}
-          style={{
-            width: 28, height: 28, borderRadius: '50%',
-            border: '0.5px solid var(--color-border-tertiary)',
-            background: 'transparent', cursor: 'pointer', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            color: 'var(--color-text-secondary)', flexShrink: 0,
-          }}
+          className="w-7 h-7 rounded-full border border-gray-200 dark:border-gray-600 flex items-center justify-center text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
         >
           <X size={13} />
         </button>
       </div>
 
-      {/* Items */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        <div style={{
-          padding: '8px 16px 4px',
-          fontSize: 10, fontWeight: 500,
-          color: 'var(--color-text-tertiary)',
-          textTransform: 'uppercase', letterSpacing: '0.07em',
-        }}>
+      {/* Items list */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 pt-3 pb-1.5 text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
           {isHe ? 'פירוט חובות' : 'Задолженности'}
         </div>
         {(debt.items ?? []).length === 0 ? (
-          <div style={{ padding: '12px 16px', fontSize: 12, color: 'var(--color-text-secondary)' }}>
-            {isHe ? 'אין פירוט' : 'Нет детализации'}
-          </div>
+          <div className="px-4 py-3 text-sm text-gray-400">{isHe ? 'אין פירוט' : 'Нет детализации'}</div>
         ) : (debt.items ?? []).map((item) => (
-          <div key={item.id} style={{
-            padding: '10px 16px',
-            borderTop: '0.5px solid var(--color-border-tertiary)',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8,
-          }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, color: 'var(--color-text-primary)', fontWeight: 500 }}>
-                {item.label}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                <span style={{
-                  fontSize: 10,
-                  background: item.type === 'visit' ? 'var(--color-background-info)' : 'var(--color-background-success)',
-                  color: item.type === 'visit' ? 'var(--color-text-info)' : 'var(--color-text-success)',
-                  padding: '1px 6px', borderRadius: 4,
-                }}>
+          <div
+            key={item.id}
+            className="flex items-start justify-between gap-3 px-4 py-3 border-t border-gray-50 dark:border-gray-700/60"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-gray-800 dark:text-gray-200 font-medium">{item.label}</div>
+              <div className="flex items-center gap-2 mt-1">
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-md font-medium"
+                  style={{
+                    background: item.type === 'visit' ? '#eff6ff' : '#f0fdf4',
+                    color: item.type === 'visit' ? '#1d4ed8' : '#15803d',
+                  }}
+                >
                   {item.type === 'visit' ? (isHe ? 'ביקור' : 'визит') : (isHe ? 'מכירה' : 'продажа')}
                 </span>
-                <Calendar size={10} />
-                {new Date(item.date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
+                <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                  <Calendar size={10} />
+                  {new Date(item.date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
+                </span>
               </div>
             </div>
-            <div style={{ fontSize: 14, fontWeight: 500, color: urg.text, flexShrink: 0 }}>
+            <div className="text-sm font-semibold flex-shrink-0" style={{ color: urg.text }}>
               ₪{item.amount.toLocaleString()}
             </div>
           </div>
         ))}
       </div>
 
-      {/* Actions */}
-      <div style={{
-        padding: '12px 16px',
-        borderTop: '0.5px solid var(--color-border-tertiary)',
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8,
-      }}>
+      {/* Action buttons */}
+      <div className="p-3 border-t border-gray-100 dark:border-gray-700 grid grid-cols-3 gap-2">
         <button
           onClick={() => onWhatsApp(debt)}
-          style={{
-            padding: '8px 4px', border: '0.5px solid var(--color-border-secondary)',
-            borderRadius: 'var(--border-radius-md)', background: 'transparent',
-            cursor: 'pointer', fontSize: 12, color: 'var(--color-text-secondary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          }}
+          className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-medium transition-all hover:opacity-80 active:scale-95"
+          style={{ background: '#dcfce7', color: '#15803d' }}
         >
-          <MessageCircle size={13} />
+          <MessageCircle size={16} />
           {isHe ? 'WA תזכורת' : 'WA-напоминание'}
         </button>
         <button
           onClick={() => onPaymentLink(debt)}
-          style={{
-            padding: '8px 4px', border: '0.5px solid var(--color-border-secondary)',
-            borderRadius: 'var(--border-radius-md)', background: 'transparent',
-            cursor: 'pointer', fontSize: 12, color: 'var(--color-text-secondary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          }}
+          className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-medium transition-all hover:opacity-80 active:scale-95"
+          style={{ background: '#eff6ff', color: '#1d4ed8' }}
         >
-          <CreditCard size={13} />
+          <CreditCard size={16} />
           {isHe ? 'קבל תשלום' : 'Принять оплату'}
         </button>
         <button
           onClick={() => onEdit(debt)}
-          style={{
-            padding: '8px 4px', border: '0.5px solid var(--color-border-secondary)',
-            borderRadius: 'var(--border-radius-md)', background: 'transparent',
-            cursor: 'pointer', fontSize: 12, color: 'var(--color-text-secondary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          }}
+          className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-medium transition-all hover:opacity-80 active:scale-95"
+          style={{ background: '#f9fafb', color: '#374151' }}
         >
-          <Pencil size={13} />
+          <Pencil size={16} />
           {isHe ? 'ערוך' : 'Изменить'}
         </button>
       </div>
@@ -242,7 +204,7 @@ function DetailPanel({
   )
 }
 
-// ── Debts Content (экспортируется для использования в /payments как вкладка) ──
+// ── DebtsContent ──────────────────────────────────────────────────────────────
 
 export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
   const { orgId: authOrgId } = useAuth()
@@ -251,7 +213,6 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
   const { language } = useLanguage()
   const isHe = language === 'he'
   const { openModal } = useModalStore()
-  const queryClient = useQueryClient()
 
   const [search, setSearch] = useState('')
   const [daysFilter, setDaysFilter] = useState('all')
@@ -260,7 +221,7 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
 
   const { data, isLoading } = useQuery({
     queryKey: ['debts', orgId, daysFilter, minAmount],
-    queryFn: () => fetchDebts(orgId, search, daysFilter, minAmount),
+    queryFn: () => fetchDebts(orgId, daysFilter, minAmount),
     enabled: !!orgId,
     staleTime: 30_000,
   })
@@ -277,7 +238,7 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
     )
   }, [debts, search])
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  // ── Actions ──────────────────────────────────────────────────────────────
 
   const handleWhatsApp = (debt: DebtEntry) => {
     if (!debt.phone) { toast.error(isHe ? 'אין מספר טלפון' : 'Нет телефона'); return }
@@ -318,40 +279,43 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
     openModal('client-details', { clientId: debt.client_id })
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-
   const DATE_FILTERS = [
-    { value: 'all', ru: 'Все', he: 'הכל' },
-    { value: '7',  ru: '7+ дней', he: '7+ ימים' },
-    { value: '30', ru: '30+ дней', he: '30+ ימים' },
-    { value: '90', ru: '90+ дней', he: '90+ ימים' },
+    { value: 'all', ru: 'Все',     he: 'הכל' },
+    { value: '7',   ru: '7+ дней', he: '7+ ימים' },
+    { value: '30',  ru: '30+ дней', he: '30+ ימים' },
+    { value: '90',  ru: '90+ дней', he: '90+ ימים' },
   ]
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
-    <div className="space-y-5 pb-20" dir={isHe ? 'rtl' : 'ltr'}>
+    <div className="space-y-4 pb-20" dir={isHe ? 'rtl' : 'ltr'}>
 
       {/* Header */}
       {!hideHeader && (
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
-          {isHe ? 'חובות' : 'Долги'}
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-          {filtered.length} {isHe ? 'לקוחות' : 'клиентов'} · ₪{total.toLocaleString()} {isHe ? 'סה״כ' : 'всего'}
-        </p>
-      </div>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
+            {isHe ? 'חובות' : 'Долги'}
+          </h1>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">
+            {filtered.length} {isHe ? 'לקוחות' : 'клиентов'} · ₪{total.toLocaleString()} {isHe ? 'סה״כ' : 'всего'}
+          </p>
+        </div>
       )}
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" style={{ [isHe ? 'right' : 'left']: 10, position: 'absolute', top: '50%', transform: 'translateY(-50%)' }} />
+          <Search
+            className="absolute top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none"
+            style={{ [isHe ? 'right' : 'left']: 12 }}
+          />
           <Input
             placeholder={isHe ? 'חיפוש לקוח...' : 'Поиск клиента...'}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ paddingRight: isHe ? 36 : 12, paddingLeft: isHe ? 12 : 36 }}
-            className="bg-white dark:bg-gray-800"
+            style={{ paddingRight: isHe ? 40 : 14, paddingLeft: isHe ? 14 : 40 }}
+            className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -359,9 +323,9 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
             <button
               key={f.value}
               onClick={() => setDaysFilter(f.value)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 daysFilter === f.value
-                  ? 'bg-theme-primary text-white'
+                  ? 'bg-theme-primary text-white shadow-sm'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
@@ -371,80 +335,60 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
         </div>
       </div>
 
-      {/* Main: table + detail panel */}
+      {/* ── DESKTOP: table + detail panel ── */}
       <div className="hidden md:flex gap-4 items-start">
 
         {/* Table */}
-        <div style={{
-          flex: selected ? '0 0 55%' : '1',
-          transition: 'flex 0.22s ease',
-          background: 'var(--color-background-primary)',
-          border: '0.5px solid var(--color-border-tertiary)',
-          borderRadius: 'var(--border-radius-lg)',
-        }}>
-          {/* Table header tabs */}
-          <div style={{
-            padding: '0 16px',
-            borderBottom: '0.5px solid var(--color-border-tertiary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}>
-            <div style={{ display: 'flex', gap: 0 }}>
+        <div
+          className="rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800"
+          style={{ flex: selected ? '0 0 55%' : '1', transition: 'flex 0.22s ease' }}
+        >
+          {/* Sub-tabs + counter */}
+          <div className="flex items-center justify-between px-4 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex gap-0">
               {(['all', 'visit', 'sale'] as const).map((tab) => {
                 const labels: Record<string, { ru: string; he: string }> = {
-                  all:  { ru: 'Все', he: 'הכל' },
-                  visit: { ru: 'Визиты', he: 'ביקורים' },
-                  sale:  { ru: 'Продажи', he: 'מכירות' },
+                  all:   { ru: 'Все',      he: 'הכל' },
+                  visit: { ru: 'Визиты',   he: 'ביקורים' },
+                  sale:  { ru: 'Продажи',  he: 'מכירות' },
                 }
                 return (
-                  <div key={tab} style={{
-                    fontSize: 12, padding: '10px 14px 9px',
-                    color: 'var(--color-text-secondary)',
-                    cursor: 'default',
-                  }}>
+                  <div key={tab} className="text-xs text-gray-400 dark:text-gray-500 py-2.5 px-3.5">
                     {isHe ? labels[tab].he : labels[tab].ru}
                   </div>
                 )
               })}
             </div>
-            <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>
+            <span className="text-xs text-gray-400 dark:text-gray-500">
               {filtered.length} {isHe ? 'תוצאות' : 'результатов'}
             </span>
           </div>
 
           {/* Table head */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: selected ? '1fr 80px 90px 90px' : '1fr 110px 100px 100px 90px',
-            padding: '7px 16px',
-            background: 'var(--color-background-secondary)',
-            borderBottom: '0.5px solid var(--color-border-tertiary)',
-            fontSize: 11, fontWeight: 500,
-            color: 'var(--color-text-tertiary)',
-            gap: 8,
-          }}>
+          <div
+            className="grid px-4 py-2 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700 text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider gap-2"
+            style={{ gridTemplateColumns: selected ? '1fr 80px 80px 80px' : '1fr 100px 110px 100px 80px' }}
+          >
             <span>{isHe ? 'לקוח' : 'Клиент'}</span>
-            {!selected && <span style={{ textAlign: 'center' }}>{isHe ? 'פריטים' : 'Позиций'}</span>}
+            {!selected && <span className="text-center">{isHe ? 'פריטים' : 'Позиций'}</span>}
             {!selected && <span>{isHe ? 'ותיקות' : 'Давность'}</span>}
-            <span style={{ textAlign: isHe ? 'left' : 'right' }}>{isHe ? 'סכום' : 'Сумма'}</span>
-            <span></span>
+            <span className={isHe ? '' : 'text-right'}>{isHe ? 'סכום' : 'Сумма'}</span>
+            <span />
           </div>
 
           {/* Rows */}
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} style={{
-                padding: '12px 16px', borderTop: '0.5px solid var(--color-border-tertiary)',
-                display: 'flex', gap: 10, alignItems: 'center',
-              }}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-background-secondary)' }} />
-                <div style={{ flex: 1, height: 12, borderRadius: 4, background: 'var(--color-background-secondary)' }} />
-                <div style={{ width: 60, height: 12, borderRadius: 4, background: 'var(--color-background-secondary)' }} />
+              <div key={i} className="flex items-center gap-3 px-4 py-3 border-t border-gray-50 dark:border-gray-700/40 animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0" />
+                <div className="flex-1 h-3 bg-gray-100 dark:bg-gray-700 rounded-full" />
+                <div className="w-16 h-3 bg-gray-100 dark:bg-gray-700 rounded-full" />
               </div>
             ))
           ) : filtered.length === 0 ? (
-            <div style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-              <AlertCircle size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
-              <p style={{ fontSize: 14 }}>{isHe ? 'אין חובות' : 'Нет долгов'}</p>
+            <div className="py-16 text-center">
+              <AlertCircle size={32} className="mx-auto mb-3 text-gray-200 dark:text-gray-700" />
+              <p className="text-sm text-gray-400 dark:text-gray-500">{isHe ? 'אין חובות' : 'Нет долгов'}</p>
             </div>
           ) : filtered.map((debt) => {
             const urg = urgencyColor(debt.days_ago)
@@ -453,75 +397,54 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
               <div
                 key={debt.client_id}
                 onClick={() => setSelected(isActive ? null : debt)}
+                className="grid items-center gap-2 px-4 cursor-pointer transition-colors border-t border-gray-50 dark:border-gray-700/40"
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: selected ? '1fr 80px 90px 90px' : '1fr 110px 100px 100px 90px',
-                  padding: '11px 16px',
-                  borderTop: '0.5px solid var(--color-border-tertiary)',
-                  cursor: 'pointer',
-                  gap: 8,
-                  alignItems: 'center',
-                  background: isActive ? 'var(--color-background-secondary)' : 'transparent',
-                  transition: 'background 0.15s',
+                  gridTemplateColumns: selected ? '1fr 80px 80px 80px' : '1fr 100px 110px 100px 80px',
+                  paddingTop: 11, paddingBottom: 11,
+                  background: isActive ? 'var(--color-background-secondary, #f9fafb)' : 'transparent',
                 }}
-                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'var(--color-background-secondary)' }}
+                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#f9fafb' }}
                 onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
               >
-                {/* Client */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                    background: urg.bg, border: `0.5px solid ${urg.border}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 500, color: urg.text,
-                  }}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0"
+                    style={{ background: urg.bg, color: urg.text, border: `1px solid ${urg.border}` }}
+                  >
                     {getInitials(debt.first_name, debt.last_name)}
                   </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-medium text-gray-800 dark:text-gray-200 truncate">
                       {debt.first_name} {debt.last_name}
                     </div>
                     {debt.phone && (
-                      <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{debt.phone}</div>
+                      <div className="text-[11px] text-gray-400 dark:text-gray-500">{debt.phone}</div>
                     )}
                   </div>
                 </div>
-
-                {/* Позиций */}
                 {!selected && (
-                  <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                  <div className="text-center text-xs text-gray-500 dark:text-gray-400">
                     {(debt.items ?? []).length}
                   </div>
                 )}
-
-                {/* Давность */}
                 {!selected && (
                   <div>
-                    <span style={{
-                      fontSize: 11, padding: '2px 7px', borderRadius: 4,
-                      background: urg.bg, color: urg.text, border: `0.5px solid ${urg.border}`,
-                    }}>
+                    <span
+                      className="text-[11px] px-2 py-0.5 rounded-md font-medium"
+                      style={{ background: urg.bg, color: urg.text, border: `1px solid ${urg.border}` }}
+                    >
                       {new Date(debt.oldest_debt_date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
                     </span>
                   </div>
                 )}
-
-                {/* Сумма */}
-                <div style={{
-                  textAlign: isHe ? 'left' : 'right',
-                  fontSize: 13, fontWeight: 500, color: urg.text,
-                }}>
+                <div className={`text-[13px] font-semibold ${isHe ? '' : 'text-right'}`} style={{ color: urg.text }}>
                   ₪{debt.total_debt.toLocaleString()}
                 </div>
-
-                {/* Arrow */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <ChevronRight size={14}
-                    style={{
-                      color: 'var(--color-text-tertiary)',
-                      transform: isActive ? 'rotate(90deg)' : 'none',
-                      transition: 'transform 0.2s',
-                    }}
+                <div className="flex justify-end">
+                  <ChevronRight
+                    size={14}
+                    className="text-gray-300 dark:text-gray-600 transition-transform"
+                    style={{ transform: isActive ? 'rotate(90deg)' : 'none' }}
                   />
                 </div>
               </div>
@@ -531,7 +454,7 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
 
         {/* Detail panel */}
         {selected && (
-          <div style={{ flex: '0 0 44%', minWidth: 0 }}>
+          <div className="flex-1 min-w-0">
             <DetailPanel
               debt={selected}
               isHe={isHe}
@@ -544,136 +467,131 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
         )}
       </div>
 
-      {/* ── Mobile layout ── */}
+      {/* ── MOBILE layout ── */}
       <div className="md:hidden space-y-3">
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} style={{
-              background: 'var(--color-background-primary)',
-              border: '0.5px solid var(--color-border-tertiary)',
-              borderRadius: 'var(--border-radius-lg)',
-              padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'center',
-            }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--color-background-secondary)', flexShrink: 0 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ height: 12, borderRadius: 4, background: 'var(--color-background-secondary)', marginBottom: 6, width: '60%' }} />
-                <div style={{ height: 10, borderRadius: 4, background: 'var(--color-background-secondary)', width: '40%' }} />
+            <div key={i} className="rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 flex gap-3 items-center animate-pulse">
+              <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full w-3/5" />
+                <div className="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full w-2/5" />
               </div>
+              <div className="w-14 h-4 bg-gray-100 dark:bg-gray-700 rounded-full" />
             </div>
           ))
         ) : filtered.length === 0 ? (
-          <div style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-            <AlertCircle size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
-            <p style={{ fontSize: 14 }}>{isHe ? 'אין חובות' : 'Нет долгов'}</p>
+          <div className="py-16 text-center">
+            <AlertCircle size={32} className="mx-auto mb-3 text-gray-200 dark:text-gray-700" />
+            <p className="text-sm text-gray-400 dark:text-gray-500">{isHe ? 'אין חובות' : 'Нет долгов'}</p>
           </div>
         ) : filtered.map((debt) => {
           const urg = urgencyColor(debt.days_ago)
           const initials = getInitials(debt.first_name, debt.last_name)
+          const isExpanded = selected?.client_id === debt.client_id
+
           return (
-            <div key={debt.client_id} style={{
-              background: 'var(--color-background-primary)',
-              border: '0.5px solid var(--color-border-tertiary)',
-              borderLeft: `3px solid ${urg.dot}`,
-              borderRadius: 'var(--border-radius-lg)',
-              overflow: 'hidden',
-            }}>
-              {/* Client row */}
-              <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                  background: urg.bg, border: `0.5px solid ${urg.border}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 12, fontWeight: 500, color: urg.text,
-                }}>
+            <div
+              key={debt.client_id}
+              className="rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-sm"
+              style={{ border: `1px solid ${urg.border}`, borderInlineStart: `3px solid ${urg.dot}` }}
+            >
+              {/* Client header row */}
+              <div
+                className="flex items-center gap-3 px-4 py-3.5 cursor-pointer"
+                onClick={() => setSelected(isExpanded ? null : debt)}
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                  style={{ background: urg.bg, color: urg.text, border: `1px solid ${urg.border}` }}
+                >
                   {initials}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                     {debt.first_name} {debt.last_name}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
-                    {(debt.items ?? []).length} {isHe ? 'פריטים' : 'позиций'} · {new Date(debt.oldest_debt_date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
+                  <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-2">
+                    {debt.phone && <span className="flex items-center gap-1"><Phone size={9} />{debt.phone}</span>}
+                    <span>{(debt.items ?? []).length} {isHe ? 'פריטים' : 'позиций'}</span>
+                    <span>·</span>
+                    <span>{new Date(debt.oldest_debt_date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}</span>
                   </div>
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 500, color: urg.text, flexShrink: 0 }}>
-                  ₪{debt.total_debt.toLocaleString()}
+                <div className="flex-shrink-0 text-right">
+                  <div className="text-base font-bold" style={{ color: urg.text }}>
+                    ₪{debt.total_debt.toLocaleString()}
+                  </div>
+                  <ChevronRight
+                    size={14}
+                    className="ms-auto mt-0.5 text-gray-300 dark:text-gray-600 transition-transform"
+                    style={{ transform: isExpanded ? 'rotate(90deg)' : 'none' }}
+                  />
                 </div>
               </div>
 
-              {/* Items (collapsed — show first 2) */}
-              {(debt.items ?? []).slice(0, 2).map((item) => (
-                <div key={item.id} style={{
-                  padding: '7px 14px',
-                  borderTop: '0.5px solid var(--color-border-tertiary)',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
-                  background: 'var(--color-background-secondary)',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                    <span style={{
-                      fontSize: 10, padding: '1px 5px', borderRadius: 4, flexShrink: 0,
-                      background: item.type === 'visit' ? 'var(--color-background-info)' : 'var(--color-background-success)',
-                      color: item.type === 'visit' ? 'var(--color-text-info)' : 'var(--color-text-success)',
-                    }}>
+              {/* Debt items (always visible: first 2) */}
+              {(debt.items ?? []).slice(0, isExpanded ? debt.items.length : 2).map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-gray-50 dark:border-gray-700/50 bg-gray-50/60 dark:bg-gray-700/20"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold flex-shrink-0"
+                      style={{
+                        background: item.type === 'visit' ? '#eff6ff' : '#f0fdf4',
+                        color: item.type === 'visit' ? '#1d4ed8' : '#15803d',
+                      }}
+                    >
                       {item.type === 'visit' ? (isHe ? 'ביקור' : 'визит') : (isHe ? 'מכירה' : 'продажа')}
                     </span>
-                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {item.label} · {new Date(item.date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
+                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.label}</span>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 flex-shrink-0 flex items-center gap-1">
+                      <Calendar size={9} />
+                      {new Date(item.date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
                     </span>
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 500, color: urg.text, flexShrink: 0 }}>₪{item.amount.toLocaleString()}</span>
+                  <span className="text-xs font-semibold flex-shrink-0" style={{ color: urg.text }}>
+                    ₪{item.amount.toLocaleString()}
+                  </span>
                 </div>
               ))}
-              {(debt.items ?? []).length > 2 && (
-                <div style={{
-                  padding: '5px 14px',
-                  borderTop: '0.5px solid var(--color-border-tertiary)',
-                  fontSize: 11, color: 'var(--color-text-tertiary)',
-                  background: 'var(--color-background-secondary)',
-                }}>
-                  + {debt.items.length - 2} {isHe ? 'עוד' : 'ещё'}
+
+              {/* "Show more" toggle when collapsed and items > 2 */}
+              {!isExpanded && (debt.items ?? []).length > 2 && (
+                <div
+                  className="px-4 py-2 border-t border-gray-50 dark:border-gray-700/50 bg-gray-50/60 dark:bg-gray-700/20 text-[11px] text-gray-400 dark:text-gray-500 cursor-pointer"
+                  onClick={() => setSelected(debt)}
+                >
+                  + {debt.items.length - 2} {isHe ? 'פריטים נוספים' : 'ещё позиций'}
                 </div>
               )}
 
               {/* Action buttons */}
-              <div style={{
-                padding: '10px 14px',
-                borderTop: '0.5px solid var(--color-border-tertiary)',
-                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7,
-              }}>
+              <div className="grid grid-cols-3 gap-2 p-3 border-t border-gray-100 dark:border-gray-700">
                 <button
                   onClick={() => handleWhatsApp(debt)}
-                  style={{
-                    padding: '8px 4px', border: '0.5px solid var(--color-border-secondary)',
-                    borderRadius: 'var(--border-radius-md)', background: 'transparent',
-                    cursor: 'pointer', fontSize: 12, color: 'var(--color-text-secondary)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                  }}
+                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80 active:scale-95"
+                  style={{ background: '#dcfce7', color: '#15803d' }}
                 >
-                  <MessageCircle size={13} />
+                  <MessageCircle size={14} />
                   WA
                 </button>
                 <button
                   onClick={() => handlePaymentLink(debt)}
-                  style={{
-                    padding: '8px 4px', border: '0.5px solid var(--color-border-secondary)',
-                    borderRadius: 'var(--border-radius-md)', background: 'transparent',
-                    cursor: 'pointer', fontSize: 12, color: 'var(--color-text-secondary)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                  }}
+                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80 active:scale-95"
+                  style={{ background: '#eff6ff', color: '#1d4ed8' }}
                 >
-                  <CreditCard size={13} />
+                  <CreditCard size={14} />
                   {isHe ? 'תשלום' : 'Оплата'}
                 </button>
                 <button
                   onClick={() => handleEdit(debt)}
-                  style={{
-                    padding: '8px 4px', border: '0.5px solid var(--color-border-secondary)',
-                    borderRadius: 'var(--border-radius-md)', background: 'transparent',
-                    cursor: 'pointer', fontSize: 12, color: 'var(--color-text-secondary)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                  }}
+                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80 active:scale-95"
+                  style={{ background: '#f3f4f6', color: '#374151' }}
                 >
-                  <Pencil size={13} />
+                  <Pencil size={14} />
                   {isHe ? 'ערוך' : 'Изменить'}
                 </button>
               </div>
@@ -685,6 +603,8 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
     </div>
   )
 }
+
+// ── Page export ───────────────────────────────────────────────────────────────
 
 export default function DebtsPage() {
   return <DebtsContent />

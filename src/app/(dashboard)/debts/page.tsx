@@ -102,7 +102,6 @@ function DetailPanel({
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      height: '100%',
     }}>
       {/* Header */}
       <div style={{
@@ -382,7 +381,6 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
           background: 'var(--color-background-primary)',
           border: '0.5px solid var(--color-border-tertiary)',
           borderRadius: 'var(--border-radius-lg)',
-          overflow: 'hidden',
         }}>
           {/* Table header tabs */}
           <div style={{
@@ -533,7 +531,7 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
 
         {/* Detail panel */}
         {selected && (
-          <div style={{ flex: '0 0 44%', minWidth: 0, position: 'sticky', top: 80 }}>
+          <div style={{ flex: '0 0 44%', minWidth: 0 }}>
             <DetailPanel
               debt={selected}
               isHe={isHe}

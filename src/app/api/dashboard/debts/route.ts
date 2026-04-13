@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     // ── Продажи со статусом unpaid / partial ────────────────────────────────
     let salesQuery = supabase
       .from('sales')
-      .select(`id, client_id, created_at, total_amount,
+      .select(`id, client_id, created_at, total_amount, description,
                clients(id, first_name, last_name, phone)`)
       .eq('org_id', orgId)
       .in('status', ['unpaid', 'partial'])
@@ -105,7 +105,8 @@ export async function GET(request: NextRequest) {
       if (!entry) continue
       const amount = parseFloat(String(s.total_amount)) || 0
       entry.total_debt += amount
-      entry.items.push({ id: s.id, type: 'sale', label: '—', date: s.created_at, amount, days_ago: daysAgo(s.created_at) })
+      const label = (s as any).description || 'Продажа'
+      entry.items.push({ id: s.id, type: 'sale', label, date: s.created_at, amount, days_ago: daysAgo(s.created_at) })
       if (!entry.oldest_debt_date || new Date(s.created_at) < new Date(entry.oldest_debt_date))
         entry.oldest_debt_date = s.created_at
     }

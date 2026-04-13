@@ -53,15 +53,13 @@ export async function GET(req: NextRequest) {
 
     // Фильтрация по поиску — ищем по имени, фамилии, телефону, email
     // Каждое слово ищется отдельно (чтобы "Влад Халфин" нашло Владислав Халфин)
+    // NOTE: внутри строкового .or() PostgREST использует * как wildcard, а не %.
+    // .ilike() с % работает только в методе-цепочке, не внутри строки .or().
     if (search) {
       const words = search.split(/\s+/).filter(Boolean)
       for (const word of words) {
-        const escaped = word.replace(/[%_\\]/g, '\\$&')
-        const term = `%${escaped}%`
-        // NOTE: PostgREST .or() парсит строку как "col.op.value" —
-        // % внутри value не экранируется, но ilike в Supabase JS SDK
-        // передаёт term как URL query param, поэтому % должен быть в самом term.
-        // Используем явный массив для читаемости:
+        const escaped = word.replace(/[*_%\\]/g, '\\$&')
+        const term = `*${escaped}*`
         query = (query as any).or(
           [
             `first_name.ilike.${term}`,

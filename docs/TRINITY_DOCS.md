@@ -2210,3 +2210,39 @@ PERSONAL_BOT_OWNER_PHONE=     # твой номер в формате 9725240244
 **Файл:** `src/app/api/webhooks/whapi/route.ts`
 
 **Коммит:** 0ebb4db
+
+---
+
+### 2026-04-13 — fix: имя клиента в Продажах + сумма сделки в Платежах
+
+**Баг 1 — "Клиент" вместо имени в Продажах**
+
+Подтверждено данными БД: 5 сделок из 24 за 7 дней создались с `client_id = NULL`.
+Причина: race condition в `useEffect` в `UnifiedSalesDialog.tsx`.
+При вызове `onClose() → openModal('sale-unified', { clientId, clientName })` из карточки клиента:
+`open` уже был `true` от предыдущего состояния → `useEffect([open])` не перезапускался →
+`clientId` читался из устаревшего `initialData` (undefined) → сделка создавалась без клиента.
+
+**Фикс:** добавлен `initialData` в зависимости `useEffect`:
+```ts
+}, [open, initialData])  // было: [open]
+```
+
+**Файл:** `src/components/sales/UnifiedSalesDialog.tsx`
+
+---
+
+**Баг 2 — суммы в Платежах не совпадают с Продажами**
+
+Не баг архитектуры — это два разных числа по задумке:
+- `sales.total_amount` — полная стоимость сделки
+- `payment.amount` — реально оплаченная сумма (может быть частичной)
+
+**Фикс UX:** бейдж "Сделка" в `PaymentCard` теперь показывает сумму сделки: "Сделка ₪500".
+API `/api/payments` теперь джойнит `sales (id, total_amount, status, sale_date)`.
+
+**Файлы:**
+- `src/components/payments/PaymentCard.tsx` — бейдж с суммой сделки
+- `src/app/api/payments/route.ts` — добавлен JOIN с sales
+
+**Коммит:** d32492f

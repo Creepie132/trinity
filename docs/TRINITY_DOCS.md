@@ -2097,3 +2097,63 @@ visits.payment_status TEXT NOT NULL DEFAULT 'paid'
 
 **Коммит:** ba09a39
 
+
+---
+
+### 2026-04-13 — feat: Personal WhatsApp Bot
+
+**Задача:** Автоответчик на личный номер WhatsApp с AI-классификацией, режимом тишины и командами управления.
+
+**Реализация:**
+
+**Новый endpoint:** `POST /api/personal-bot/webhook?secret=PERSONAL_BOT_WEBHOOK_SECRET`
+
+**Слои защиты:**
+- URL secret авторизация (`PERSONAL_BOT_WEBHOOK_SECRET`)
+- Loop prevention: `from_me === true` → не отвечаем, только обновляем тишину
+- Rate limiting: не более 5 ответов за 5 минут на один chat_id (через `personal_bot_logs`)
+- Глобальная пауза (`/pause`)
+- Тишина на конкретный чат (автоматически при ответе владельца)
+- Ночной режим: 23:00–08:00 Israel time (UTC+3)
+
+**AI-классификация (gpt-4o-mini через @ai-sdk/openai):**
+- Определяет язык: `ru | he | en`
+- Определяет intent: `business | personal`
+- Личные сообщения — игнорируются (не отвечаем)
+- Рабочие — генерируем ответ на языке отправителя
+
+**Эмуляция человека:**
+- Typing indicator через Whapi API
+- Задержка ответа: 4–15 секунд (рандом)
+
+**Команды владельца (пишешь в чат сам себе или в любой чат):**
+- `/pause [мин]` — глобальная пауза (с таймером или до /resume)
+- `/resume` — включить бота
+- `/status` — текущее состояние
+- `/silence [мин]` — тишина в конкретном чате
+- `/help` — список команд
+
+**Автоматическая тишина:**
+- Когда владелец сам отвечает в чат → бот молчит 30 минут (настраивается)
+- После истечения — бот снова активен
+
+**Новые таблицы Supabase:**
+- `personal_bot_sessions` — тишина по chat_id (`silent_until`, `last_owner_reply_at`)
+- `personal_bot_config` — singleton конфиг (`is_paused`, `paused_until`, `night_mode_start`, `night_mode_end`, `silence_after_owner_reply_minutes`)
+- `personal_bot_logs` — лог всех событий (direction, reason, language, intent, preview)
+
+**Новые env-переменные (добавить в Vercel):**
+```
+PERSONAL_BOT_WHAPI_TOKEN=     # токен отдельного Whapi-канала для личного номера
+PERSONAL_BOT_WEBHOOK_SECRET=  # секрет для авторизации вебхука
+PERSONAL_BOT_OWNER_PHONE=     # твой номер в формате 972524024447 (дефолт задан в коде)
+```
+
+**Настройка Whapi:**
+1. Создать канал для личного номера
+2. Webhook URL: `https://www.ambersol.co.il/api/personal-bot/webhook?secret=<SECRET>`
+3. Events: messages
+
+**Файл:** `src/app/api/personal-bot/webhook/route.ts`
+
+**Коммит:** 3385e03

@@ -2157,3 +2157,20 @@ PERSONAL_BOT_OWNER_PHONE=     # твой номер в формате 9725240244
 **Файл:** `src/app/api/personal-bot/webhook/route.ts`
 
 **Коммит:** 3385e03
+
+
+---
+
+### 2026-04-13 — refactor: личный бот смержен в /api/webhooks/whapi
+
+**Задача:** Убрать дублирование — личный бот и клиентский вебхук объединены в один файл.
+
+**Изменение:** `/api/personal-bot/webhook` удалён. Вся логика личного бота перенесена в `src/app/api/webhooks/whapi/route.ts`.
+
+**Роутинг внутри вебхука:**
+- `?org_id=...` → клиент Trinity (wa_conversations, wa_messages)
+- без `org_id` → личный номер Влада (AI-классификация, тишина, команды)
+
+**Удалён:** `src/app/api/personal-bot/webhook/route.ts`
+
+**Коммит:** fedc5e2

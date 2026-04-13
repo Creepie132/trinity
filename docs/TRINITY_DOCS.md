@@ -2246,3 +2246,53 @@ API `/api/payments` теперь джойнит `sales (id, total_amount, status
 - `src/app/api/payments/route.ts` — добавлен JOIN с sales
 
 **Коммит:** d32492f
+
+---
+
+## 2026-04-13 — Ядро глобальной реактивности (Optimistic UI + Supabase Realtime)
+
+### Новые файлы
+
+**`src/hooks/useOptimisticMutation.ts`**
+Универсальный дженерик-хук для всех мутаций Trinity (INSERT / UPDATE / DELETE).
+Реализует все 5 правил архитектуры реактивности:
+- Rule 1: нет Realtime-подписок — только хирургия кэша
+- Rule 2: `getQueriesData` → снэпшот всех matching ключей (все страницы, все фильтры) → `setQueriesData` откатывает при ошибке
+- Rule 3: `setTimeout(invalidateQueries, 2000)` — Realtime получает приоритет, full refetch только страховка
+- Rule 5: в `onSuccess` для INSERT — находит `optimistic-*` в кэше и заменяет реальным UUID сервера без мигания позиции
+
+API:
+```ts
+useOptimisticMutation<TData extends { id: string }, TInput>({
+  queryKey,       // TanStack Query key prefix
+  type,           // 'insert' | 'update' | 'delete'
+  mutationFn,     // (input: TInput) => Promise<TData>
+  toOptimistic?,  // (input) => Partial<TData> — для insert/update
+  messages?,      // { success?, error? }
+  invalidateDelayMs?, // default 2000
+  onSuccess?, onError?,
+})
+```
+
+**`src/components/providers/GlobalRealtimeProvider.tsx`**
+Единый Realtime-провайдер, монтируется один раз в `ClientProviders`.
+Заменил 10 вызовов `useRealtimeSync` (которые делали `invalidateQueries` = full refetch) на хирургические `setQueriesData`:
+- `INSERT` → prepend row, Rule 5: swap optimistic placeholder
+- `UPDATE` → patch row in-place
+- `DELETE` → remove row, decrement count
+- Поддерживает оба шейпа кэша Trinity: paged `{data, count}` и flat `[]`
+- `TABLE_CONFIGS` — одна строка чтобы добавить новую таблицу
+- Rule 4: `filter: org_id=eq.${orgId}` на каждом канале
+- Каналы дедуплицируются через `channelsRef` + `supabase.getChannels()`
+
+### Изменённые файлы
+- `src/components/providers/ClientProviders.tsx` — заменён `GlobalRealtimeSync` на `GlobalRealtimeSyncBridge` + `GlobalRealtimeProvider`; `notifications` (filterColumn=user_id) и `organizations` (router redirect) остались через `useRealtimeSync`
+- `src/hooks/useServices.ts` — мигрирован на новый API `useOptimisticMutation` (type/toOptimistic вместо applyOptimistic)
+- `src/components/services/ServiceDetailSheet.tsx` — вызовы `mutateAsync` обновлены под новый контракт
+
+### Что изменилось для пользователя
+До: любое действие (добавить клиента, изменить статус визита, удалить услугу) → `invalidateQueries` → full refetch → мигание списка ~200-400мс.
+После: мгновенное обновление UI, Realtime подтверждает через WebSocket ~50-200мс, rollback при ошибке незаметен.
+
+**Коммит:** e378bbb
+

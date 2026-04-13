@@ -244,9 +244,9 @@ function DetailPanel({
   )
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// ── Debts Content (экспортируется для использования в /payments как вкладка) ──
 
-export default function DebtsPage() {
+export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
   const { orgId: authOrgId } = useAuth()
   const { activeOrgId } = useBranch()
   const orgId = activeOrgId || authOrgId || ''
@@ -333,6 +333,7 @@ export default function DebtsPage() {
     <div className="space-y-5 pb-20" dir={isHe ? 'rtl' : 'ltr'}>
 
       {/* Header */}
+      {!hideHeader && (
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
           {isHe ? 'חובות' : 'Долги'}
@@ -341,6 +342,7 @@ export default function DebtsPage() {
           {filtered.length} {isHe ? 'לקוחות' : 'клиентов'} · ₪{total.toLocaleString()} {isHe ? 'סה״כ' : 'всего'}
         </p>
       </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -554,4 +556,8 @@ export default function DebtsPage() {
 
     </div>
   )
+}
+
+export default function DebtsPage() {
+  return <DebtsContent />
 }

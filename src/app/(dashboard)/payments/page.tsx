@@ -23,6 +23,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoStub, DemoStubConfig } from '@/components/demo/DemoStub'
 import { getCanonicalMethodCfg, normalizePaymentMethod } from '@/lib/payment-method-normalizer'
+import { DebtsContent } from '@/app/(dashboard)/debts/page'
 
 const PAGE_SIZE = 20
 
@@ -164,6 +165,7 @@ function PaymentsContent() {
   const [searchQuery, setSearchQuery]             = useState('')
   const [selectedPayment, setSelectedPayment]     = useState<any>(null)
   const [drawerOpen, setDrawerOpen]               = useState(false)
+  const [activeTab, setActiveTab]                 = useState<'payments' | 'debts'>('payments')
   // Мобильный свайп
   const swipeStartX = useRef(0)
   const [mobView, setMobView] = useState<'summary' | 'methods'>('summary')
@@ -286,16 +288,54 @@ function PaymentsContent() {
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">{filteredPayments.length} {t('payments.title')}</p>
           </div>
           <div className="flex gap-2 flex-wrap justify-end">
-            <button onClick={() => setReportModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 transition-colors">
-              <FileText className="w-4 h-4" />{locale === 'he' ? 'סיכום' : 'Сводка'}
-            </button>
-            <button onClick={() => openModal('payment-unified', { onSuccess: handlePaymentSuccess })}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-theme-primary text-white shadow-md hover:opacity-90 active:scale-95 transition-all">
-              <Plus className="w-4 h-4" />{locale === 'he' ? 'עסקה חדשה' : 'Новая сделка'}
-            </button>
+            {activeTab === 'payments' && <>
+              <button onClick={() => setReportModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 transition-colors">
+                <FileText className="w-4 h-4" />{locale === 'he' ? 'סיכום' : 'Сводка'}
+              </button>
+              <button onClick={() => openModal('payment-unified', { onSuccess: handlePaymentSuccess })}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-theme-primary text-white shadow-md hover:opacity-90 active:scale-95 transition-all">
+                <Plus className="w-4 h-4" />{locale === 'he' ? 'עסקה חדשה' : 'Новая сделка'}
+              </button>
+            </>}
           </div>
         </div>
+
+        {/* ── TABS ── */}
+        <div className="flex gap-0 border-b border-gray-200 dark:border-gray-700 -mb-1">
+          {([
+            { key: 'payments', ru: 'Платежи', he: 'תשלומים' },
+            { key: 'debts',    ru: 'Долги',   he: 'חובות' },
+          ] as const).map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className="relative px-5 py-2.5 text-sm font-medium transition-colors"
+              style={{
+                color: activeTab === tab.key
+                  ? 'var(--color-text-primary, #111)'
+                  : 'var(--color-text-secondary, #6b7280)',
+                paddingInline: 20,
+                paddingBlock: 10,
+                marginBottom: -1,
+                background: 'transparent',
+                border: 'none',
+                borderBottom: activeTab === tab.key ? '2px solid currentColor' : '2px solid transparent',
+                cursor: 'pointer',
+              }}
+            >
+              {locale === 'he' ? tab.he : tab.ru}
+            </button>
+          ))}
+        </div>
+
+        {/* ── TAB: ДОЛГИ ── */}
+        {activeTab === 'debts' && (
+          <DebtsContent hideHeader />
+        )}
+
+        {/* ── TAB: ПЛАТЕЖИ (всё что было ниже) ── */}
+        {activeTab === 'payments' && (<>
 
         {/* ══════════════ МОБИЛЬ: Bento + свайп ══════════════ */}
         <div className="md:hidden">
@@ -652,6 +692,7 @@ function PaymentsContent() {
           onRefunded={handlePaymentSuccess}
           onDeleted={() => { setDrawerOpen(false); setSelectedPayment(null); handlePaymentSuccess() }}
         />
+        </>)} {/* end activeTab === 'payments' */}
       </div>
     </>
   )

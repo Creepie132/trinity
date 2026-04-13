@@ -140,7 +140,7 @@ async function handlePersonalMessage(msg: any) {
     return
   }
 
-  const responseText = await generateBotResponse(body, classification, isNight)
+  const responseText = await generateBotResponse(body, classification, isNight, supabase)
 
   await setTyping(chatId)
   await sleep(4000 + Math.random() * 11000)
@@ -204,13 +204,51 @@ personal = семья, друзья, праздники, эмоции, small-tal
   }
 }
 
-async function generateBotResponse(body: string, cls: { language: string; intent: string }, isNight: boolean): Promise<string> {
+async function loadKnowledge(supabase: any): Promise<string> {
+  const { data } = await supabase
+    .from('personal_bot_knowledge')
+    .select('category, title, content')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+  if (!data || data.length === 0) return ''
+  return data.map((k: any) => `[${k.title}]\n${k.content}`).join('\n\n')
+}
+
+async function generateBotResponse(
+  body: string,
+  cls: { language: string; intent: string },
+  isNight: boolean,
+  supabase: any
+): Promise<string> {
   const lang = ({ ru: 'русском', he: 'иврите', en: 'английском' } as Record<string, string>)[cls.language] ?? 'русском'
-  const system = isNight
-    ? `Ты ИИ-ассистент Влада (CEO Amber Solutions). Сейчас ночь. Ответь на ${lang}: подтверди получение, скажи что Влад ответит утром. Максимум 2 предложения.`
-    : `Ты ИИ-ассистент Влада (CEO Amber Solutions, Израиль). Продукт: Trinity CRM для малого бизнеса. Отвечай на ${lang}. Кратко, профессионально. Если не знаешь точно — скажи что Влад уточнит лично. Не притворяйся человеком.`
+
+  if (isNight) {
+    try {
+      const { text } = await generateText({
+        model: openai('gpt-4o-mini'), temperature: 0.7, maxOutputTokens: 150,
+        system: `Ты ИИ-ассистент Влада (CEO Amber Solutions). Сейчас ночь. Ответь на ${lang}: подтверди получение, скажи что Влад ответит утром. Максимум 2 предложения.`,
+        prompt: body,
+      })
+      return text
+    } catch {
+      return 'Получил ваше сообщение, Влад ответит утром.'
+    }
+  }
+
+  const knowledge = await loadKnowledge(supabase)
+
+  const system = `Ты ИИ-ассистент Влада (CEO Amber Solutions, Израиль).
+Отвечай на ${lang}. Кратко и профессионально. Не притворяйся человеком.
+Если вопрос выходит за рамки базы знаний — скажи что Влад уточнит лично.
+
+БАЗА ЗНАНИЙ:
+${knowledge}`
+
   try {
-    const { text } = await generateText({ model: openai('gpt-4o-mini'), temperature: 0.7, maxOutputTokens: 300, system, prompt: body })
+    const { text } = await generateText({
+      model: openai('gpt-4o-mini'), temperature: 0.7, maxOutputTokens: 400,
+      system, prompt: body,
+    })
     return text
   } catch {
     return 'Получил ваше сообщение, Влад ответит в ближайшее время.'

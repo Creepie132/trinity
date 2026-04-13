@@ -59,7 +59,7 @@ export function ServiceDetailSheet({ service, open, onOpenChange }: ServiceDetai
     try {
       await updateService.mutateAsync({
         id: service.id,
-        updates: formData,
+        ...formData,
       });
 
       toast.success(t('services.updated'));
@@ -73,7 +73,7 @@ export function ServiceDetailSheet({ service, open, onOpenChange }: ServiceDetai
 
   const handleDelete = async () => {
     try {
-      await deleteService.mutateAsync(service.id);
+      await deleteService.mutateAsync({ id: service.id });
       toast.success(t('services.deleted'));
       setShowDeleteDialog(false);
       onOpenChange(false);

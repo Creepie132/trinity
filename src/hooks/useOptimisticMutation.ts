@@ -1,191 +1,225 @@
-/**
- * useOptimisticMutation — Trinity CRM Optimistic UI Standard
- *
- * Единая обёртка над useMutation из React Query.
- * Инкапсулирует весь boilerplate: snapshot → optimistic apply → rollback → invalidate → toast.
- *
- * Это ядро Optimistic UI системы Trinity. Все CRUD-мутации должны использовать его.
- *
- * @version 1.0.0
- * @see docs/OPTIMISTIC_UI.md
- *
- * Пример использования:
- *   const mutation = useOptimisticMutation({
- *     queryKey: ['services'],
- *     mutationFn: (data) => apiFetch('/api/services', { method: 'POST', json: data }),
- *     applyOptimistic: (old, vars) => [buildOptimistic(vars), ...(old ?? [])],
- *     messages: { success: 'Услуга создана', error: 'Ошибка создания' },
- *   })
- */
-
 'use client'
 
-import {
-  useMutation,
-  useQueryClient,
-  type QueryKey,
-  type UseMutationOptions,
-} from '@tanstack/react-query'
+/**
+ * useOptimisticMutation — Trinity CRM universal optimistic mutation hook.
+ *
+ * Implements all 5 Trinity reactivity rules:
+ *   Rule 1: No Realtime subscriptions here — only cache surgery.
+ *   Rule 2: Full snapshot via getQueriesData → rollback via setQueriesData.
+ *   Rule 3: Debounced invalidation 2s after success (Realtime gets priority).
+ *   Rule 4: org_id filter is enforced at subscription level (in GlobalRealtimeProvider).
+ *   Rule 5: On INSERT success — swap optimistic UUID for real server UUID in cache.
+ *
+ * Usage:
+ *   const add = useOptimisticMutation<ClientSummary, AddClientInput>({
+ *     queryKey: ['clients'],
+ *     type: 'insert',
+ *     mutationFn: (data) => apiFetch('/api/clients', { method: 'POST', json: data }),
+ *     toOptimistic: (input) => ({ ...input, total_visits: 0, total_paid: 0 }),
+ *     messages: { success: 'Клиент добавлен', error: 'Ошибка' },
+ *   })
+ *   add.mutate(formData)
+ */
+
+import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-/**
- * Стратегии применения optimistic update:
- *
- * 'setQueryData'     — один ключ, getQueryData → setQueryData
- * 'setQueriesData'   — все ключи по префиксу, getQueriesData → setQueriesData
- */
-export type OptimisticStrategy = 'setQueryData' | 'setQueriesData'
+export type MutationType = 'insert' | 'update' | 'delete'
 
-export interface OptimisticMessages {
-  /** Toast при успехе — если не задан, тост не показывается */
-  success?: string
-  /** Префикс Toast при ошибке. Итоговый текст: `${error} ${err.message}` */
-  error?: string
+/** Shape every cached list page must conform to for surgery to work. */
+export interface PagedCache<T> {
+  data: T[]
+  count: number
 }
 
-export interface UseOptimisticMutationOptions<
-  TData,
-  TError extends Error,
-  TVariables,
-  TCacheData = unknown,
+export interface OptimisticMutationOptions<
+  TData extends { id: string },
+  TInput,
 > {
   /**
-   * React Query ключ кэша, который нужно обновить оптимистично.
-   * При strategy='setQueryData'  — точный ключ.
-   * При strategy='setQueriesData' — ключ-префикс (все под-ключи).
+   * TanStack Query key prefix — used for both getQueriesData (snapshot)
+   * and setQueriesData (optimistic write + rollback).
+   * Must be the same prefix used in the corresponding useQuery().
+   * Example: ['clients'] — will match ['clients', orgId, search, page, ...]
    */
   queryKey: QueryKey
 
-  /** Основной запрос к серверу */
-  mutationFn: (variables: TVariables) => Promise<TData>
+  /** Operation type — determines the merge strategy applied to the cache. */
+  type: MutationType
 
   /**
-   * Функция применения optimistic update к текущему кэшу.
-   * Возвращает новый кэш.
+   * The actual API call. Must return the persisted server record (with real UUID).
+   * Called AFTER the optimistic cache update, in parallel with user seeing the result.
+   */
+  mutationFn: (input: TInput) => Promise<TData>
+
+  /**
+   * Converts mutation input → optimistic cache record (for insert/update).
+   * MUST be provided for insert/update. Not used for delete.
    *
-   * @param current — текущее значение кэша (может быть undefined при первой загрузке)
-   * @param variables — аргументы мутации
-   * @returns обновлённый кэш
+   * For insert: return a partial record — id will be overwritten with 'optimistic-<ts>'.
+   * For update: return only the fields being changed (merged over existing row).
    */
-  applyOptimistic: (current: TCacheData | undefined, variables: TVariables) => TCacheData
+  toOptimistic?: (input: TInput) => Partial<TData>
+
+  /** User-visible toast messages. */
+  messages?: {
+    success?: string
+    error?: string
+  }
 
   /**
-   * Стратегия обновления кэша.
-   * @default 'setQueriesData' — охватывает все варианты queryKey (с фильтрами, страницами и т.д.)
+   * Delay in ms before the fallback invalidateQueries fires.
+   * Default: 2000ms — gives Realtime 50-200ms to deliver the real row,
+   * then waits for any animation/transition before forcing a re-fetch.
+   *
+   * Set to 0 to invalidate immediately (disables Realtime-first behaviour).
    */
-  strategy?: OptimisticStrategy
+  invalidateDelayMs?: number
 
-  /**
-   * Дополнительные ключи для инвалидации в onSettled.
-   * queryKey инвалидируется всегда, это — дополнительные.
-   */
-  invalidateKeys?: QueryKey[]
-
-  /** Toast-сообщения */
-  messages?: OptimisticMessages
-
-  /**
-   * Дополнительные хуки жизненного цикла (опционально).
-   * НЕ перекрывают основную логику — выполняются ПОСЛЕ неё.
-   */
-  onSuccess?: (data: TData, variables: TVariables) => void
-  onError?: (error: TError, variables: TVariables) => void
-  onSettled?: () => void
+  /** Callbacks */
+  onSuccess?: (data: TData, input: TInput) => void
+  onError?: (error: Error, input: TInput) => void
 }
 
-// ─── Snapshot type — унифицирован для обоих стратегий ────────────────────────
+// ── Internal context passed through TanStack mutation lifecycle ───────────────
 
-type Snapshot<TCacheData> =
-  | { strategy: 'setQueryData'; data: TCacheData | undefined }
-  | { strategy: 'setQueriesData'; data: [QueryKey, TCacheData | undefined][] }
+interface MutationContext<TData extends { id: string }> {
+  /** Deep snapshot of every matching cache entry before mutation */
+  snapshot: [QueryKey, PagedCache<TData> | undefined][]
+  /** Temporary ID injected into the cache for insert operations */
+  optimisticId?: string
+}
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+// ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useOptimisticMutation<
-  TData,
-  TVariables,
-  TCacheData = unknown,
-  TError extends Error = Error,
->(options: UseOptimisticMutationOptions<TData, TError, TVariables, TCacheData>) {
+  TData extends { id: string },
+  TInput,
+>(options: OptimisticMutationOptions<TData, TInput>) {
   const {
     queryKey,
+    type,
     mutationFn,
-    applyOptimistic,
-    strategy = 'setQueriesData',
-    invalidateKeys = [],
+    toOptimistic,
     messages,
-    onSuccess: userOnSuccess,
-    onError: userOnError,
-    onSettled: userOnSettled,
+    invalidateDelayMs = 2000,
+    onSuccess,
+    onError,
   } = options
 
-  const qc = useQueryClient()
+  const queryClient = useQueryClient()
 
-  return useMutation<TData, TError, TVariables, { snapshot: Snapshot<TCacheData> }>({
+  return useMutation<TData, Error, TInput, MutationContext<TData>>({
     mutationFn,
 
-    // ── 1. onMutate: снимок + мгновенное применение ───────────────────────
-    onMutate: async (variables) => {
-      // Отменяем исходящие рефетчи — не перезаписать наш optimistic update
-      await qc.cancelQueries({ queryKey })
+    // ── RULE 2: Snapshot + Optimistic write ───────────────────────────────
+    onMutate: async (input): Promise<MutationContext<TData>> => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic state
+      await queryClient.cancelQueries({ queryKey })
 
-      let snapshot: Snapshot<TCacheData>
+      // Full snapshot of ALL matching cache entries (all pages, all filters)
+      const snapshot = queryClient.getQueriesData<PagedCache<TData>>({ queryKey })
 
-      if (strategy === 'setQueryData') {
-        const previous = qc.getQueryData<TCacheData>(queryKey)
-        snapshot = { strategy: 'setQueryData', data: previous }
+      let optimisticId: string | undefined
 
-        qc.setQueryData<TCacheData>(queryKey, (old) => applyOptimistic(old, variables))
-      } else {
-        // setQueriesData — охватывает все вариации ключа (с параметрами, страницами)
-        const entries = qc.getQueriesData<TCacheData>({ queryKey })
-        snapshot = { strategy: 'setQueriesData', data: entries }
+      // Apply the optimistic change based on mutation type
+      queryClient.setQueriesData<PagedCache<TData>>(
+        { queryKey },
+        (old) => {
+          if (!old) return old
 
-        qc.setQueriesData<TCacheData>(
+          // ── INSERT ─────────────────────────────────────────────────────
+          if (type === 'insert' && toOptimistic) {
+            optimisticId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+            const optimisticRecord = {
+              ...toOptimistic(input),
+              id: optimisticId,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            } as unknown as TData
+            return {
+              data: [optimisticRecord, ...old.data],
+              count: old.count + 1,
+            }
+          }
+
+          // ── UPDATE ─────────────────────────────────────────────────────
+          if (type === 'update' && toOptimistic) {
+            const patch = toOptimistic(input)
+            const targetId = (input as unknown as { id: string }).id
+            return {
+              data: old.data.map((item) =>
+                item.id === targetId
+                  ? { ...item, ...patch, updated_at: new Date().toISOString() }
+                  : item
+              ),
+              count: old.count,
+            }
+          }
+
+          // ── DELETE ─────────────────────────────────────────────────────
+          if (type === 'delete') {
+            const targetId = (input as unknown as { id: string }).id
+            return {
+              data: old.data.filter((item) => item.id !== targetId),
+              count: Math.max(0, old.count - 1),
+            }
+          }
+
+          return old
+        }
+      )
+
+      return { snapshot, optimisticId }
+    },
+
+    // ── RULE 5: Swap optimistic UUID with real server UUID ────────────────
+    onSuccess: (serverData, input, context) => {
+      if (type === 'insert' && context?.optimisticId) {
+        const tempId = context.optimisticId
+        queryClient.setQueriesData<PagedCache<TData>>(
           { queryKey },
-          (old) => applyOptimistic(old, variables)
+          (old) => {
+            if (!old) return old
+            return {
+              ...old,
+              data: old.data.map((item) =>
+                item.id === tempId ? { ...item, ...serverData } : item
+              ),
+            }
+          }
         )
       }
 
-      return { snapshot }
+      if (messages?.success) toast.success(messages.success)
+      onSuccess?.(serverData, input)
+
+      // ── RULE 3: Debounced fallback invalidation ───────────────────────
+      // Realtime WebSocket delivers the real row in 50-200ms.
+      // We wait invalidateDelayMs before forcing a full refetch as insurance.
+      if (invalidateDelayMs > 0) {
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey, exact: false })
+        }, invalidateDelayMs)
+      } else {
+        queryClient.invalidateQueries({ queryKey, exact: false })
+      }
     },
 
-    // ── 2. onError: жёсткий откат + toast ────────────────────────────────
-    onError: (error, variables, context) => {
+    // ── RULE 2: Rollback on error ─────────────────────────────────────────
+    onError: (error, input, context) => {
       if (context?.snapshot) {
-        const { snapshot } = context
-
-        if (snapshot.strategy === 'setQueryData') {
-          qc.setQueryData(queryKey, snapshot.data)
-        } else {
-          snapshot.data.forEach(([key, data]) => qc.setQueryData(key, data))
+        // Restore every cache entry from the snapshot taken before mutation
+        for (const [key, data] of context.snapshot) {
+          queryClient.setQueryData(key, data)
         }
       }
-
-      if (messages?.error) {
-        toast.error(`${messages.error}: ${error.message}`)
-      }
-
-      userOnError?.(error, variables)
-    },
-
-    // ── 3. onSettled: фоновая сверка с БД ────────────────────────────────
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey })
-      for (const key of invalidateKeys) {
-        qc.invalidateQueries({ queryKey: key })
-      }
-      userOnSettled?.()
-    },
-
-    // ── 4. onSuccess: toast успех + user hook ─────────────────────────────
-    onSuccess: (data, variables) => {
-      if (messages?.success) {
-        toast.success(messages.success)
-      }
-      userOnSuccess?.(data, variables)
+      const msg = messages?.error ?? `Ошибка: ${error.message}`
+      toast.error(msg)
+      onError?.(error, input)
     },
   })
 }

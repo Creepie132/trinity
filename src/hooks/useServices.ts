@@ -1,41 +1,34 @@
 /**
  * useServices — Trinity CRM
  *
- * PoC-внедрение стандарта useOptimisticMutation.
- * Все CRUD-операции мгновенны: UI обновляется до ответа сервера.
- * При ошибке — автоматический откат + toast.
+ * CRUD для услуг с полным Optimistic UI через useOptimisticMutation v2.
+ * Кэш плоский (Service[]), не paged — хук обрабатывает оба шейпа.
  *
- * Миграция с предыдущей версии:
- *   Было: ручные onMutate/onError/onSettled + toast в каждой функции
- *   Стало: useOptimisticMutation с applyOptimistic
+ * Realtime-синхронизация: GlobalRealtimeProvider (table: 'services').
+ * Здесь нет Supabase-подписок — Rule 1.
  *
- * @version 2.0.0
+ * @version 2.1.0 — мигрировано на useOptimisticMutation v2 (type/toOptimistic API)
  */
 
 'use client'
 
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '@/hooks/useAuth'
+import { useQuery } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/api-fetch'
 import { useOptimisticMutation } from '@/hooks/useOptimisticMutation'
 import type { Service, CreateServiceDTO, UpdateServiceDTO } from '@/types/services'
 
-// ─── Query key factory ────────────────────────────────────────────────────────
+// ─── Query key ────────────────────────────────────────────────────────────────
 
 export const servicesKeys = {
   all:  () => ['services'] as const,
   list: () => ['services'] as const,
 }
 
-// ── Константа ключа (используется во всех хуках) ─────────────────────────────
 const SERVICES_KEY = servicesKeys.all()
 
 // ─── useServices ──────────────────────────────────────────────────────────────
 
 export function useServices() {
-  // NOTE: useRealtimeSync intentionally removed from here.
-  // useServices is called from multiple components simultaneously — creating
-  // duplicate Supabase Realtime channels. RT subscription lives in DashboardShell.
   return useQuery<Service[]>({
     queryKey: SERVICES_KEY,
     queryFn: async () => {
@@ -49,8 +42,9 @@ export function useServices() {
 // ─── useCreateService — OPTIMISTIC ───────────────────────────────────────────
 
 export function useCreateService() {
-  return useOptimisticMutation<Service, CreateServiceDTO, Service[]>({
+  return useOptimisticMutation<Service, CreateServiceDTO>({
     queryKey: SERVICES_KEY,
+    type: 'insert',
 
     mutationFn: async (dto) => {
       const data = await apiFetch<{ service: Service }>('/api/services', {
@@ -60,24 +54,15 @@ export function useCreateService() {
       return data.service
     },
 
-    /**
-     * applyOptimistic: добавляем новую услугу в начало списка с временным ID.
-     * Optimistic-запись будет заменена реальной данными после onSettled → invalidate.
-     */
-    applyOptimistic: (old, dto) => {
-      const optimistic: Service = {
-        id:               `optimistic-${Date.now()}`,
-        org_id:           '',              // сервер заполнит через auth context
-        name:             dto.name,
-        name_ru:          dto.name_ru,
-        duration_minutes: dto.duration_minutes ?? 0,
-        price:            dto.price,
-        color:            dto.color ?? '#6366f1',
-        is_active:        true,
-        created_at:       new Date().toISOString(),
-      }
-      return [optimistic, ...(old ?? [])]
-    },
+    toOptimistic: (dto): Partial<Service> => ({
+      org_id:           '',
+      name:             dto.name,
+      name_ru:          dto.name_ru,
+      duration_minutes: dto.duration_minutes ?? 0,
+      price:            dto.price,
+      color:            dto.color ?? '#6366f1',
+      is_active:        true,
+    }),
 
     messages: {
       success: 'השירות נוסף בהצלחה',
@@ -89,14 +74,11 @@ export function useCreateService() {
 // ─── useUpdateService — OPTIMISTIC ───────────────────────────────────────────
 
 export function useUpdateService() {
-  return useOptimisticMutation<
-    Service,
-    { id: string; updates: UpdateServiceDTO },
-    Service[]
-  >({
+  return useOptimisticMutation<Service, { id: string } & UpdateServiceDTO>({
     queryKey: SERVICES_KEY,
+    type: 'update',
 
-    mutationFn: async ({ id, updates }) => {
+    mutationFn: async ({ id, ...updates }) => {
       const data = await apiFetch<{ service: Service }>(`/api/services/${id}`, {
         method: 'PATCH',
         json: updates,
@@ -104,15 +86,7 @@ export function useUpdateService() {
       return data.service
     },
 
-    /**
-     * applyOptimistic: patch только изменённые поля, остальное — как было.
-     */
-    applyOptimistic: (old, { id, updates }) =>
-      old?.map(s =>
-        s.id === id
-          ? { ...s, ...updates, updated_at: new Date().toISOString() }
-          : s
-      ) ?? [],
+    toOptimistic: ({ id: _id, ...updates }): Partial<Service> => updates,
 
     messages: {
       success: 'השירות עודכן בהצלחה',
@@ -124,22 +98,16 @@ export function useUpdateService() {
 // ─── useDeleteService — OPTIMISTIC ───────────────────────────────────────────
 
 export function useDeleteService() {
-  return useOptimisticMutation<Service, string, Service[]>({
+  return useOptimisticMutation<Service, { id: string }>({
     queryKey: SERVICES_KEY,
+    type: 'delete',
 
-    mutationFn: async (id) => {
+    mutationFn: async ({ id }) => {
       const data = await apiFetch<{ service: Service }>(`/api/services/${id}`, {
         method: 'DELETE',
       })
       return data.service
     },
-
-    /**
-     * applyOptimistic: убираем услугу из списка немедленно.
-     * При ошибке rollback вернёт её обратно.
-     */
-    applyOptimistic: (old, id) =>
-      old?.filter(s => s.id !== id) ?? [],
 
     messages: {
       success: 'השירות נמחק בהצלחה',

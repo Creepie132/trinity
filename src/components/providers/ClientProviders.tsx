@@ -21,6 +21,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRealtimeSync, RealtimePayload } from '@/hooks/useRealtimeSync'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
+import { GlobalRealtimeProvider } from '@/components/providers/GlobalRealtimeProvider'
 import { ToastStack } from '@/components/notifications/ToastStack'
 import { useNotificationStore } from '@/components/notifications/NotificationStore'
 import { playNotificationSound } from '@/components/notifications/SoundManager'
@@ -86,8 +87,12 @@ function notifTypeToPriority(type: string, dbPriority?: string): ToastPriority {
   return highTypes.includes(type) ? 'high' : 'normal'
 }
 
-// ── Single RT subscriptions for ALL tables ───────────────────────────────────
-function GlobalRealtimeSync() {
+// ── Realtime: surgical cache updates for all standard tables ─────────────────
+// GlobalRealtimeProvider replaces the old pattern of N useRealtimeSync() calls
+// (which each did invalidateQueries → full refetch).
+// It does setQueriesData surgery: INSERT/UPDATE/DELETE without a network hit.
+// Only notifications (filterColumn=user_id) remain as a separate useRealtimeSync.
+function GlobalRealtimeSyncBridge() {
   const { orgId, user } = useAuth()
   const { activeOrgId } = useBranch()
   const queryClient = useQueryClient()
@@ -95,55 +100,8 @@ function GlobalRealtimeSync() {
   const pathname = usePathname()
   const userId = user?.id ?? null
 
-  const dispatch = (event: string, detail?: unknown) => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent(event, detail ? { detail } : undefined))
-    }
-  }
-
-  // ── Show toast for incoming DB notification ───────────────────────────────
-  function showNotifToast(notif: any) {
-    const variant  = notifTypeToVariant(notif.type, notif.priority)
-    const priority = notifTypeToPriority(notif.type, notif.priority)
-    const duration = priority === 'urgent' ? 0 : priority === 'high' ? 8000 : 5000
-
-    useNotificationStore.getState().show({
-      title:       notif.title ?? '—',
-      description: notif.body  ?? undefined,
-      variant,
-      priority,
-      duration,
-      sound: false, // sound fired separately below
-    })
-    playNotificationSound(variant, priority)
-  }
-
-  useRealtimeSync({ table: 'products',  orgId: activeOrgId, queryKey: ['products'] })
-  useRealtimeSync({ table: 'services',  orgId: orgId,       queryKey: ['services'] })
-  useRealtimeSync({ table: 'sales',     orgId: activeOrgId, queryKey: ['sales'],
-    onEvent: () => queryClient.invalidateQueries({ queryKey: ['payments-stats'], exact: false }) })
-  useRealtimeSync({ table: 'payments',  orgId: activeOrgId, queryKey: ['payments'],
-    onEvent: ({ eventType, new: row }) => {
-      queryClient.invalidateQueries({ queryKey: ['payments-stats'], exact: false })
-      if (eventType === 'INSERT') {
-        const s = (row as any)?.status
-        if (s === 'completed' || s === 'success') dispatch('trinity:new-payment')
-      }
-    }})
-  useRealtimeSync({ table: 'expenses',  orgId: activeOrgId, queryKey: ['expenses'],
-    onEvent: () => queryClient.invalidateQueries({ queryKey: ['expenses-stats'] }) })
-  useRealtimeSync({ table: 'visits',    orgId: activeOrgId, queryKey: ['visits'],
-    onEvent: ({ eventType, new: row }) => {
-      if (eventType === 'INSERT') dispatch('trinity:new-visit')
-      if (eventType === 'UPDATE' && (row as any)?.status === 'cancelled') dispatch('trinity:cancel-visit')
-    }})
-  useRealtimeSync({ table: 'clients',   orgId: orgId,       queryKey: ['clients'],
-    onEvent: ({ eventType }) => {
-      if (eventType === 'INSERT') dispatch('trinity:new-client')
-    }})
-  useRealtimeSync({ table: 'visit_services',        orgId: activeOrgId, queryKey: ['visit-services'] })
-  useRealtimeSync({ table: 'inventory_transactions', orgId: activeOrgId, queryKey: ['inventory-transactions'] })
-
+  // ── organizations: module-flag redirect on UPDATE ─────────────────────────
+  // Not in GlobalRealtimeProvider because it needs router + pathname side-effects
   useRealtimeSync({
     table: 'organizations', orgId: activeOrgId,
     queryKey: ['organization'], events: ['UPDATE'], filterColumn: 'id',
@@ -161,20 +119,39 @@ function GlobalRealtimeSync() {
     },
   })
 
-  // ── notifications — central handler: toast + bell event ──────────────────
+  // ── notifications: user_id filter (non-standard, stays as useRealtimeSync) ─
+  function showNotifToast(notif: any) {
+    const variant  = notifTypeToVariant(notif.type, notif.priority)
+    const priority = notifTypeToPriority(notif.type, notif.priority)
+    const duration = priority === 'urgent' ? 0 : priority === 'high' ? 8000 : 5000
+    useNotificationStore.getState().show({
+      title:       notif.title ?? '—',
+      description: notif.body  ?? undefined,
+      variant, priority, duration,
+      sound: false,
+    })
+    playNotificationSound(variant, priority)
+  }
+
   useRealtimeSync({
     table: 'notifications', orgId: userId,
     queryKey: ['notifications'], events: ['INSERT'], filterColumn: 'user_id',
     onEvent: (payload: RealtimePayload) => {
       const notif = payload.new as any
-      // 1. Dispatch to NotificationBell (history list + its own sound)
-      dispatch('trinity:new-notification', notif)
-      // 2. Show premium toast — sound handled inside showNotifToast
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('trinity:new-notification', { detail: notif }))
+      }
       showNotifToast(notif)
     },
   })
 
-  return null
+  // ── All other tables: handled by GlobalRealtimeProvider (surgical updates) ─
+  return (
+    <GlobalRealtimeProvider
+      activeOrgId={activeOrgId}
+      mainOrgId={orgId}
+    />
+  )
 }
 
 export function ClientProviders() {
@@ -184,7 +161,7 @@ export function ClientProviders() {
 
   return (
     <>
-      <GlobalRealtimeSync />
+      <GlobalRealtimeSyncBridge />
       <UpdateBanner />
       <ForceLightMode />
       <ModalManager />

@@ -1956,7 +1956,32 @@ font-family: 'Rubik', 'Segoe UI', Arial, sans-serif;
   
 ---  
   
-### 13.04.2026 - ?????????? ?????? ??? ?????? (??????? A)  
+### 13.04.2026 — feat: payment_status на визитах (долг при завершении)
+
+**Задача:** При завершении визита "в долг" — отображать как завершённый но не оплаченный.
+
+**Архитектура:** новое поле `payment_status` на таблице `visits`, без дублирования данных из `payments`.
+
+**Миграция БД:** `20260413_add_payment_status_to_visits`
+```sql
+visits.payment_status TEXT NOT NULL DEFAULT 'paid'
+  CHECK (payment_status IN ('paid', 'unpaid', 'partial'))
+```
+Индекс: `idx_visits_payment_status ON visits(org_id, payment_status) WHERE status = 'completed'`
+
+**Изменённые файлы:**
+- `src/types/visits.ts` — добавлен `payment_status?: 'paid' | 'unpaid' | 'partial'`
+- `src/app/api/visits/[id]/status/route.ts` — принимает опциональный `payment_status`, валидирует и пишет в БД
+- `src/app/(dashboard)/visits/page.tsx` — `updateVisitStatus()` принимает `paymentStatus`; `handleCompleteWithoutPayment` передаёт `payment_status: 'unpaid'`; десктопная таблица завершённых визитов показывает amber бейдж "Не оплачен"
+- `src/components/visits/VisitCard.tsx` — мобильные карточки: бейдж рядом со StatusBadge
+- `src/components/visits/VisitDetailModal.tsx` — sidebar: бейдж amber/orange рядом со статусом
+
+**Поведение:**
+- Завершить с оплатой → `status: completed, payment_status: paid` (по умолчанию)
+- Завершить без оплаты (в долг) → `status: completed, payment_status: unpaid` → amber бейдж во всех UI
+- Существующие визиты не затронуты (DEFAULT 'paid')
+
+**Коммит:** `f6a15a6`  
   
 **??????:** ??? ??????? ????????? ?? ?????? ?????????? ?????: ? ??????? ??? ??? ?????? (? ????).  
   

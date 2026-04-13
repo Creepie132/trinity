@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.8.2'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.8.2-XO7smZIneqRPejJ1it2lFhpN0CZKg6.apk'
-const APK_SIZE = '60.0 MB'
+const CURRENT_VERSION = '2.9.0'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.9.0-kAWN1iUGOwZ8RcozN4PpblB7PJuqpn.apk'
+const APK_SIZE = '59.9 MB'
 const RELEASE_DATE = '14.04.2026'
 
 const HexLogo = () => (
@@ -39,6 +39,19 @@ const BackButton = () => (
 )
 
 const CHANGELOG = [
+  {
+    version: '2.9.0',
+    date: '14.04.2026',
+    changes: [
+      'Мгновенные обновления: все действия (создание, редактирование, удаление) отображаются моментально',
+      'Оптимистичные апдейты для клиентов, визитов, платежей, товаров и категорий задач',
+      'Удаление клиента — шит закрывается мгновенно, откат при ошибке API',
+      'Создание встречи — список обновляется без ожидания ответа сервера',
+      'Оплата визита — принимается мгновенно, API-запрос отправляется в фоне',
+      'Добавление товара на склад — появляется в списке сразу',
+      'Приёмка товара — количество обновляется мгновенно',
+    ],
+  },
   {
     version: '2.8.2',
     date: '14.04.2026',

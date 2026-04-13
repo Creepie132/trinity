@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.8.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.8.0-qrZM3imgp8rHJScdE5cukW1KVKKbb1.apk'
-const APK_SIZE = '59.8 MB'
-const RELEASE_DATE = '12.04.2026'
+const CURRENT_VERSION = '2.8.1'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.8.1.apk'
+const APK_SIZE = '60.0 MB'
+const RELEASE_DATE = '13.04.2026'
 
 const HexLogo = () => (
   <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30 flex-shrink-0">
@@ -39,6 +39,15 @@ const BackButton = () => (
 )
 
 const CHANGELOG = [
+  {
+    version: '2.8.1',
+    date: '13.04.2026',
+    changes: [
+      'Квитанция Tranzila: кнопка «Квитанция» в деталях платежа для completed-платежей',
+      'Открывает подписанный PDF-документ от Tranzila прямо в браузере',
+      'Первое открытие создаёт документ автоматически и сохраняет для повторных просмотров',
+    ],
+  },
   {
     version: '2.8.0',
     date: '12.04.2026',

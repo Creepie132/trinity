@@ -2174,3 +2174,19 @@ PERSONAL_BOT_OWNER_PHONE=     # твой номер в формате 9725240244
 **Удалён:** `src/app/api/personal-bot/webhook/route.ts`
 
 **Коммит:** fedc5e2
+
+---
+
+### 2026-04-13 — feat: база знаний личного бота
+
+**Новая таблица:** `personal_bot_knowledge`
+- Поля: `category` (pricing/product/faq/contacts/custom), `title`, `content`, `is_active`, `sort_order`
+- Начальные данные: Trinity CRM — описание, тарифы, возможности, контакты, FAQ (7 записей)
+
+**Изменение в вебхуке:** `generateBotResponse` теперь загружает активные записи из `personal_bot_knowledge` и вставляет их в системный промпт GPT. Бот отвечает на основе реальной базы знаний, а не галлюцинирует.
+
+**Как редактировать базу знаний:** напрямую в Supabase Dashboard → таблица `personal_bot_knowledge`. Панель управления в Trinity — следующий шаг.
+
+**Файл:** `src/app/api/webhooks/whapi/route.ts`
+
+**Коммит:** 0ebb4db

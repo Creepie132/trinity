@@ -2073,3 +2073,27 @@ visits.payment_status TEXT NOT NULL DEFAULT 'paid'
 
 **Коммит:** 05b5b45
 
+---
+
+### 2025-04-13 — feat(payments): квитанции Tranzila — GET /api/payments/[id]/receipt
+
+**Задача:** Ксения и клиенты должны видеть квитанции прямо из Trinity, без входа в My Tranzila.
+
+**Реализация:**
+- `GET /api/payments/[id]/receipt` переписан для работы с Tranzila Billing API
+- Логика: если `tranzila_document_id` уже есть в БД → редирект 302 на Tranzila PDF viewer (`billing5.tranzila.com/api/documents_db/display_document?key=...`)
+- Если нет → создаём квитанцию через `createReceipt()` из `lib/tranzila-invoices.ts`, сохраняем `retrieval_key` в `payments.tranzila_document_id`, редирект на PDF
+- Тип документа: IR (חשבונית מס קבלה) — утверждён налоговой
+- Email клиента передаётся в Tranzila → Tranzila автоматически шлёт подписанный PDF на email клиента
+- Auth: `getAuthContext(request)` обязателен; суперадмин видит любой платёж, обычный юзер — только своей org
+- Только `completed`-платежи; остальные возвращают 400
+
+**Существующая инфраструктура (не трогалась):**
+- `lib/tranzila-invoices.ts` — полная библиотека с HMAC-auth, уже была
+- `payments.tranzila_document_id` — колонка в БД, уже была
+- `/api/payments/[id]/tranzila-pdf` — качает PDF напрямую буфером, остался как есть
+
+**Файл:** `src/app/api/payments/[id]/receipt/route.ts`
+
+**Коммит:** ba09a39
+

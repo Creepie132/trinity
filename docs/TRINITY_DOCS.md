@@ -730,7 +730,27 @@ chore: конфиг, зависимости
 
 ---
 
-### 01.04.2026 — Оптимизация БД (RLS + индексы + политики)
+### 13.04.2026 — fix: WhatsApp visit_created из мобильного приложения (commit 7b0c1ec)
+
+**Проблема:** При создании визита через Trinity Mobile автоматическое WA-сообщение (`visit_created` триггер) не отправлялось. Создание визита через веб-версию работало корректно.
+
+**Причина:** Мобильный endpoint `POST /api/mobile/visits` не вызывал `fireWaTrigger()` — функция была добавлена только в веб-endpoint `POST /api/visits`, а мобильный endpoint забыли обновить.
+
+**Исправление:** `src/app/api/mobile/visits/route.ts`:
+- Добавлен импорт `fireWaTrigger` из `@/lib/wa/fire-trigger`
+- После успешной вставки визита добавлен fire-and-forget блок:
+  - Загружает телефон и имя клиента из БД
+  - Загружает название организации
+  - Вызывает `fireWaTrigger` с `triggerType: 'visit_created'` и переменными (client_name, org_name, date, time, service)
+- Для встреч без клиента (`client_id = null`) — блок пропускается
+- Ошибки WA не блокируют создание визита (всё в try/catch)
+
+**Затронутые файлы:**
+- `src/app/api/mobile/visits/route.ts` (+43 строки)
+
+---
+
+
 
 #### Задача 1: RLS initplan оптимизация
 **Миграция**: `rls_initplan_optimization`
@@ -814,7 +834,7 @@ chore: конфиг, зависимости
 
 ---
 
-*Документация обновлена: 01.04.2026*
+*Документация обновлена: 13.04.2026*
 *Версия Next.js: 16.1.6 (Turbopack)*
 *Supabase project: tjryzcqvsavtllahjyrj*
 

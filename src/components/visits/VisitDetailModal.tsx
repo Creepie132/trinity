@@ -240,10 +240,23 @@ export function VisitDetailModal(props: VisitDetailModalProps) {
           <Phone size={11} />{clientPhone}
         </a>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, marginBottom: 12, alignSelf: 'center', background: `${statusCfg.color}20`, border: `0.5px solid ${statusCfg.color}50` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, marginBottom: 6, alignSelf: 'center', background: `${statusCfg.color}20`, border: `0.5px solid ${statusCfg.color}50` }}>
         <div style={{ width: 6, height: 6, borderRadius: '50%', background: statusCfg.color }} />
         <span style={{ fontSize: 10, fontWeight: 600, color: statusCfg.color }}>{statusLabel}</span>
       </div>
+      {visit.status === 'completed' && visit.payment_status === 'unpaid' && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, marginBottom: 6, alignSelf: 'center', background: 'rgba(245,158,11,0.15)', border: '0.5px solid rgba(245,158,11,0.4)' }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b' }} />
+          <span style={{ fontSize: 10, fontWeight: 600, color: '#f59e0b' }}>{isHe ? 'לא שולם' : 'Не оплачен'}</span>
+        </div>
+      )}
+      {visit.status === 'completed' && visit.payment_status === 'partial' && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, marginBottom: 6, alignSelf: 'center', background: 'rgba(249,115,22,0.15)', border: '0.5px solid rgba(249,115,22,0.4)' }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f97316' }} />
+          <span style={{ fontSize: 10, fontWeight: 600, color: '#f97316' }}>{isHe ? 'שולם חלקית' : 'Частично оплачен'}</span>
+        </div>
+      )}
+      <div style={{ marginBottom: 6 }} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
         <div style={{ background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '8px 6px', textAlign: 'center' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0' }}>{timeStr}</div>

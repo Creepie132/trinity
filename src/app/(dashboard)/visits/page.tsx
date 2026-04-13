@@ -371,12 +371,12 @@ export default function VisitsPage() {
 
   // ── actions ────────────────────────────────────────────────────────────────
 
-  async function updateVisitStatus(visitId: string, newStatus: string) {
+  async function updateVisitStatus(visitId: string, newStatus: string, paymentStatus?: string) {
     try {
       const res = await fetch(`/api/visits/${visitId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, ...(paymentStatus ? { payment_status: paymentStatus } : {}) }),
       })
       if (!res.ok) { const e = await res.json(); throw new Error(e.error) }
       toast.success('✓')
@@ -413,7 +413,7 @@ export default function VisitsPage() {
 
   const handleCompleteWithoutPayment = async (visit: Visit) => {
     setCompleteMenuVisit(null)
-    updateVisitStatus(visit.id, 'completed')
+    updateVisitStatus(visit.id, 'completed', 'unpaid')
   }
 
   const handleCancelVisit = async (visitId: string) => {
@@ -931,9 +931,21 @@ export default function VisitsPage() {
                             )}
                           </td>
                           <td className="py-3 px-4">
-                            <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                              {isHe ? 'הושלם' : 'Завершён'}
-                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                {isHe ? 'הושלם' : 'Завершён'}
+                              </span>
+                              {(visit as any).payment_status === 'unpaid' && (
+                                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                  {isHe ? 'לא שולם' : 'Не оплачен'}
+                                </span>
+                              )}
+                              {(visit as any).payment_status === 'partial' && (
+                                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
+                                  {isHe ? 'שולם חלקית' : 'Частично'}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-end font-medium text-gray-900 dark:text-gray-100">
                             {getVisitTotal(visit) > 0 ? `₪${getVisitTotal(visit).toLocaleString()}` : '—'}

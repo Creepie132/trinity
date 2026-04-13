@@ -19,15 +19,23 @@ export async function PATCH(
     const { id } = await params
 
     const body = await request.json()
-    const { status } = body
+    const { status, payment_status } = body
 
     if (!status) {
       return NextResponse.json({ error: 'Missing status field' }, { status: 400 })
     }
 
+    const VALID_PAYMENT_STATUSES = ['paid', 'unpaid', 'partial']
+    if (payment_status && !VALID_PAYMENT_STATUSES.includes(payment_status)) {
+      return NextResponse.json({ error: 'Invalid payment_status' }, { status: 400 })
+    }
+
     const updateData: Record<string, unknown> = { status }
     if (status === 'in_progress') {
       updateData.started_at = new Date().toISOString()
+    }
+    if (payment_status) {
+      updateData.payment_status = payment_status
     }
 
     const supabase = createSupabaseServiceClient()

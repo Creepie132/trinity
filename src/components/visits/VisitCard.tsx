@@ -260,8 +260,18 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
                     {serviceName && <p className="text-xs text-muted-foreground truncate mt-0.5 text-start">{serviceName}</p>}
                     {visit.price != null && visit.price > 0 && <p className="text-xs font-medium text-primary mt-0.5 text-start">₪{visit.price}</p>}
                   </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
                     <StatusBadge status={visit.status} label={statusLabel} />
+                    {visit.status === 'completed' && (visit as any).payment_status === 'unpaid' && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                        {locale === 'he' ? 'לא שולם' : 'Не оплачен'}
+                      </span>
+                    )}
+                    {visit.status === 'completed' && (visit as any).payment_status === 'partial' && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+                        {locale === 'he' ? 'חלקי' : 'Частично'}
+                      </span>
+                    )}
                     <ChevronRight size={14} className="text-muted-foreground" />
                   </div>
                 </div>

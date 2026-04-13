@@ -38,6 +38,7 @@ export interface Visit {
   event_type?: 'visit' | 'meeting' // visit = офлайн, meeting = онлайн/видеозвонок
   meeting_link?: string | null     // Zoom/Google Meet URL
   staff_user_id?: string // Staff member who created the visit
+  payment_status?: 'paid' | 'unpaid' | 'partial' // Payment state for completed visits
   created_at?: string
   updated_at?: string
   clients?: {

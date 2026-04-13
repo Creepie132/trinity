@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.8.1'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.8.1.apk'
+const CURRENT_VERSION = '2.8.2'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.8.2-XO7smZIneqRPejJ1it2lFhpN0CZKg6.apk'
 const APK_SIZE = '60.0 MB'
-const RELEASE_DATE = '13.04.2026'
+const RELEASE_DATE = '14.04.2026'
 
 const HexLogo = () => (
   <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30 flex-shrink-0">
@@ -39,6 +39,20 @@ const BackButton = () => (
 )
 
 const CHANGELOG = [
+  {
+    version: '2.8.2',
+    date: '14.04.2026',
+    changes: [
+      'Безопасность: удалены захардкоженные ключи из исходного кода',
+      'Безопасность: добавлена кодировка всех параметров API-запросов (защита от инъекций)',
+      'Безопасность: убрано логирование тел ответов и токенов в продакшн-сборке',
+      'Исправлено: просроченный токен больше не используется как fallback — требуется повторный вход',
+      'Исправлено: крэш при пустом списке методов оплаты',
+      'Исправлено: ложные предупреждения о пересечении для визитов с нулевой длительностью',
+      'Исправлено: race condition при одновременной загрузке модулей',
+      'Добавлен лимит суммы платежа (₪100,000)',
+    ],
+  },
   {
     version: '2.8.1',
     date: '13.04.2026',

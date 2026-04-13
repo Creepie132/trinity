@@ -186,8 +186,7 @@ function DetailPanel({
                   {item.type === 'visit' ? (isHe ? 'ביקור' : 'визит') : (isHe ? 'מכירה' : 'продажа')}
                 </span>
                 <Calendar size={10} />
-                {new Date(item.date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU')}
-                · {item.days_ago} {isHe ? 'ימים' : 'дн.'}
+                {new Date(item.date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
               </div>
             </div>
             <div style={{ fontSize: 14, fontWeight: 500, color: urg.text, flexShrink: 0 }}>
@@ -504,7 +503,7 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
                       fontSize: 11, padding: '2px 7px', borderRadius: 4,
                       background: urg.bg, color: urg.text, border: `0.5px solid ${urg.border}`,
                     }}>
-                      {debt.days_ago} {isHe ? 'ימים' : 'дн.'}
+                      {new Date(debt.oldest_debt_date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
                     </span>
                   </div>
                 )}
@@ -547,11 +546,142 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
         )}
       </div>
 
-      {/* Mobile placeholder */}
-      <div className="md:hidden">
-        <p className="text-sm text-gray-400 text-center py-8">
-          {isHe ? 'גרסת מובייל בקרוב' : 'Мобильная версия — скоро'}
-        </p>
+      {/* ── Mobile layout ── */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} style={{
+              background: 'var(--color-background-primary)',
+              border: '0.5px solid var(--color-border-tertiary)',
+              borderRadius: 'var(--border-radius-lg)',
+              padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'center',
+            }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--color-background-secondary)', flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ height: 12, borderRadius: 4, background: 'var(--color-background-secondary)', marginBottom: 6, width: '60%' }} />
+                <div style={{ height: 10, borderRadius: 4, background: 'var(--color-background-secondary)', width: '40%' }} />
+              </div>
+            </div>
+          ))
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+            <AlertCircle size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
+            <p style={{ fontSize: 14 }}>{isHe ? 'אין חובות' : 'Нет долгов'}</p>
+          </div>
+        ) : filtered.map((debt) => {
+          const urg = urgencyColor(debt.days_ago)
+          const initials = getInitials(debt.first_name, debt.last_name)
+          return (
+            <div key={debt.client_id} style={{
+              background: 'var(--color-background-primary)',
+              border: '0.5px solid var(--color-border-tertiary)',
+              borderLeft: `3px solid ${urg.dot}`,
+              borderRadius: 'var(--border-radius-lg)',
+              overflow: 'hidden',
+            }}>
+              {/* Client row */}
+              <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                  background: urg.bg, border: `0.5px solid ${urg.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 500, color: urg.text,
+                }}>
+                  {initials}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {debt.first_name} {debt.last_name}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 1 }}>
+                    {(debt.items ?? []).length} {isHe ? 'פריטים' : 'позиций'} · {new Date(debt.oldest_debt_date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
+                  </div>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 500, color: urg.text, flexShrink: 0 }}>
+                  ₪{debt.total_debt.toLocaleString()}
+                </div>
+              </div>
+
+              {/* Items (collapsed — show first 2) */}
+              {(debt.items ?? []).slice(0, 2).map((item) => (
+                <div key={item.id} style={{
+                  padding: '7px 14px',
+                  borderTop: '0.5px solid var(--color-border-tertiary)',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+                  background: 'var(--color-background-secondary)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                    <span style={{
+                      fontSize: 10, padding: '1px 5px', borderRadius: 4, flexShrink: 0,
+                      background: item.type === 'visit' ? 'var(--color-background-info)' : 'var(--color-background-success)',
+                      color: item.type === 'visit' ? 'var(--color-text-info)' : 'var(--color-text-success)',
+                    }}>
+                      {item.type === 'visit' ? (isHe ? 'ביקור' : 'визит') : (isHe ? 'מכירה' : 'продажа')}
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.label} · {new Date(item.date).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: urg.text, flexShrink: 0 }}>₪{item.amount.toLocaleString()}</span>
+                </div>
+              ))}
+              {(debt.items ?? []).length > 2 && (
+                <div style={{
+                  padding: '5px 14px',
+                  borderTop: '0.5px solid var(--color-border-tertiary)',
+                  fontSize: 11, color: 'var(--color-text-tertiary)',
+                  background: 'var(--color-background-secondary)',
+                }}>
+                  + {debt.items.length - 2} {isHe ? 'עוד' : 'ещё'}
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div style={{
+                padding: '10px 14px',
+                borderTop: '0.5px solid var(--color-border-tertiary)',
+                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7,
+              }}>
+                <button
+                  onClick={() => handleWhatsApp(debt)}
+                  style={{
+                    padding: '8px 4px', border: '0.5px solid var(--color-border-secondary)',
+                    borderRadius: 'var(--border-radius-md)', background: 'transparent',
+                    cursor: 'pointer', fontSize: 12, color: 'var(--color-text-secondary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  }}
+                >
+                  <MessageCircle size={13} />
+                  WA
+                </button>
+                <button
+                  onClick={() => handlePaymentLink(debt)}
+                  style={{
+                    padding: '8px 4px', border: '0.5px solid var(--color-border-secondary)',
+                    borderRadius: 'var(--border-radius-md)', background: 'transparent',
+                    cursor: 'pointer', fontSize: 12, color: 'var(--color-text-secondary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  }}
+                >
+                  <CreditCard size={13} />
+                  {isHe ? 'תשלום' : 'Оплата'}
+                </button>
+                <button
+                  onClick={() => handleEdit(debt)}
+                  style={{
+                    padding: '8px 4px', border: '0.5px solid var(--color-border-secondary)',
+                    borderRadius: 'var(--border-radius-md)', background: 'transparent',
+                    cursor: 'pointer', fontSize: 12, color: 'var(--color-text-secondary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  }}
+                >
+                  <Pencil size={13} />
+                  {isHe ? 'ערוך' : 'Изменить'}
+                </button>
+              </div>
+            </div>
+          )
+        })}
       </div>
 
     </div>

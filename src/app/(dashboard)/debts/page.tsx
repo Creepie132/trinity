@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { useBranch } from '@/contexts/BranchContext'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -213,6 +213,7 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
   const { language } = useLanguage()
   const isHe = language === 'he'
   const { openModal } = useModalStore()
+  const queryClient = useQueryClient()
 
   const [search, setSearch] = useState('')
   const [daysFilter, setDaysFilter] = useState('all')
@@ -249,34 +250,20 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
-  const handlePaymentLink = async (debt: DebtEntry) => {
-    try {
-      const res = await fetch('/api/payments/create-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_id: debt.client_id,
-          amount: debt.total_debt,
-          description: isHe ? `סילוק חוב` : `Погашение долга`,
-        }),
-      })
-      if (!res.ok) throw new Error()
-      const { payment_url } = await res.json()
-      if (payment_url && debt.phone) {
-        const phone = debt.phone.replace(/[^0-9]/g, '')
-        const msg = isHe
-          ? `שלום ${debt.first_name}, לתשלום חוב ₪${debt.total_debt.toLocaleString()}: ${payment_url}`
-          : `Здравствуйте, ${debt.first_name}! Ссылка для оплаты ₪${debt.total_debt.toLocaleString()}: ${payment_url}`
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
-      }
-      toast.success(isHe ? 'נשלח' : 'Отправлено')
-    } catch {
-      toast.error(isHe ? 'שגיאה' : 'Ошибка')
-    }
+  const handlePaymentLink = (debt: DebtEntry) => {
+    openModal('payment-unified', {
+      clientId:     debt.client_id,
+      clientName:   `${debt.first_name} ${debt.last_name}`.trim(),
+      clientPhone:  debt.phone,
+      prefillAmount: debt.total_debt,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['debts'] })
+      },
+    })
   }
 
   const handleEdit = (debt: DebtEntry) => {
-    openModal('client-details', { clientId: debt.client_id })
+    openModal('client-details', { id: debt.client_id })
   }
 
   const DATE_FILTERS = [

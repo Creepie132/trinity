@@ -2075,6 +2075,26 @@ visits.payment_status TEXT NOT NULL DEFAULT 'paid'
 
 ---
 
+### 2025-04-13 — fix(debts): кнопка «Изменить» per-item, открывает визит или сделку
+
+**Проблема:** кнопка «Изменить» была одна на всю карточку клиента и открывала `client-details` — неверный UX.
+
+**Решение:**
+- Кнопка «Изм.» добавлена к каждой строке item (визит / продажа) — и на мобиле, и в `DetailPanel` (desktop)
+- `handleEdit(item: DebtItem)` — определяет тип:
+  - `type === 'visit'` → `GET /api/visits/:id` → `openModal('visit-unified', { mode: 'edit', visit })` — полная форма (услуги, товары, время, сумма)
+  - `type === 'sale'` → `GET /api/sales/:id` → `setEditSale(sale)` → `SaleDetailModal` рендерится локально
+- Спиннер-оверлей во время загрузки, кнопки `disabled`
+- После закрытия `SaleDetailModal` — `invalidateQueries(['debts'])` обновляет список
+- Общая кнопка «Изменить» с карточки клиента убрана, footer стал 2-колоночным (WA + Оплата)
+- Добавлен импорт `SaleDetailModal`, `Loader2`; `return` обёрнут в `<>` (Fragment)
+
+**Файл:** `src/app/(dashboard)/debts/page.tsx`
+
+**Коммит:** 0c438f9
+
+---
+
 ### 2025-04-13 — feat(payments): квитанции Tranzila — GET /api/payments/[id]/receipt
 
 **Задача:** Ксения и клиенты должны видеть квитанции прямо из Trinity, без входа в My Tranzila.

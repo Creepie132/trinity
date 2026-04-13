@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { israelLocalToUTC } from '@/lib/tz'
+import { fireWaTrigger } from '@/lib/wa/fire-trigger'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -163,6 +164,48 @@ export async function POST(req: NextRequest) {
         console.error('[/api/mobile/visits POST] visit_services error (non-critical):', vsError)
       }
     }
+
+    // ── WA триггер visit_created (fire-and-forget) ────────────────────────────
+    // Отправляем для визитов с клиентом. Для встреч без клиента — пропускаем.
+    if (client_id) {
+      void (async () => {
+        try {
+          const { data: clientRow } = await serviceSupabase
+            .from('clients')
+            .select('first_name, last_name, phone')
+            .eq('id', client_id)
+            .single()
+
+          if (clientRow?.phone) {
+            const { data: orgRow } = await serviceSupabase
+              .from('organizations')
+              .select('name')
+              .eq('id', orgId)
+              .single()
+
+            const dt = new Date(rawScheduledAt)
+            await fireWaTrigger({
+              orgId,
+              triggerType: 'visit_created',
+              clientPhone: clientRow.phone,
+              vars: {
+                client_name: clientRow.first_name ?? '',
+                org_name:    orgRow?.name ?? '',
+                date: dt.toLocaleDateString('he-IL', { timeZone: 'Asia/Jerusalem' }),
+                time: dt.toLocaleTimeString('he-IL', {
+                  hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem',
+                }),
+                service: primaryServiceName ?? '',
+              },
+              entityId: visit.id,
+            })
+          }
+        } catch (err) {
+          console.error('[/api/mobile/visits POST] fireWaTrigger error (non-critical):', err)
+        }
+      })()
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     return NextResponse.json({ visit }, { status: 201 })
   } catch (e: any) {

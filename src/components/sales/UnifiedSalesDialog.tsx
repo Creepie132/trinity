@@ -363,8 +363,10 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
       setClientLabel('')
       setClientObj(null)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  // initialData намеренно включён в зависимости — иначе race condition:
+  // openModal обновляет стор, но если open уже true — эффект не перезапускается
+  // и clientId приходит как undefined (сделка создаётся без клиента)
+  }, [open, initialData])
 
   // ── Client search ────────────────────────────────────────────────────────────
   useEffect(() => {

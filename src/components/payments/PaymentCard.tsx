@@ -149,10 +149,16 @@ export function PaymentCard({ payment, locale, onClick }: PaymentCardProps) {
             <button
               onClick={e => { e.stopPropagation(); router.push('/sales') }}
               className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 hover:bg-amber-100 transition-colors"
-              title={locale === 'he' ? 'עבור למכירות' : 'Перейти в Продажи'}
+              title={
+                payment.sales?.total_amount
+                  ? (locale === 'he' ? `עסקה על ₪${Number(payment.sales.total_amount).toLocaleString()}` : `Сделка на ₪${Number(payment.sales.total_amount).toLocaleString()}`)
+                  : (locale === 'he' ? 'עבור למכירות' : 'Перейти в Продажи')
+              }
             >
               <ShoppingBag size={9} />
-              {locale === 'he' ? 'עסקה' : 'Сделка'}
+              {payment.sales?.total_amount
+                ? `${locale === 'he' ? 'עסקה' : 'Сделка'} ₪${Number(payment.sales.total_amount).toLocaleString()}`
+                : (locale === 'he' ? 'עסקה' : 'Сделка')}
             </button>
           )}
         </div>

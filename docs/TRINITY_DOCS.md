@@ -2036,3 +2036,20 @@ visits.payment_status TEXT NOT NULL DEFAULT 'paid'
 
 **Коммит:** d219fa5
 
+---
+
+### 2025-04-13 — fix(debts): исправлены кнопки «Изменить» и «Принять оплату»
+
+**Проблемы:**
+- Кнопка «Изменить» не работала: `openModal('client-details', { clientId })` — неверный ключ
+- Кнопка «Принять оплату» делала API-запрос и открывала WhatsApp напрямую — неверный UX
+
+**Исправления:**
+- `handleEdit`: ключ исправлен на `{ id: debt.client_id }` — теперь открывает карточку клиента
+- `handlePaymentLink`: убран прямой API-запрос, теперь `openModal('payment-unified', { clientId, clientName, clientPhone, prefillAmount: debt.total_debt, onSuccess })` — открывает стандартный диалог выбора способа оплаты с предзаполненными данными клиента и суммой долга; после успеха инвалидирует `['debts']`
+- Добавлен `useQueryClient` в импорты
+
+**Файл:** `src/app/(dashboard)/debts/page.tsx`
+
+**Коммит:** 05b5b45
+

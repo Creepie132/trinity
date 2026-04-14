@@ -2426,3 +2426,43 @@ useOptimisticMutation<TData extends { id: string }, TInput>({
 - `src/hooks/usePushSettings.ts` — импорт из lib
 
 **Коммит:** 6ed1e2f
+
+---
+
+### 2025-04-14 — Рефакторинг мобильного хедера (PWA): Back ↔ Burger swap + RTL/LTR
+
+#### Задача
+Поменять местами кнопку «Назад» и кнопку гамбургер-меню во всех мобильных хедерах.
+Реализовать универсальную RTL/LTR совместимость через нативный Flexbox без хардкода направления.
+
+#### Архитектурное решение
+DOM-порядок: `[Back (Start)] [Logo (Center)] [Bell + Burger (End)]`
+
+- При **LTR** (русский): Back — физически слева, Burger — справа.
+- При **RTL** (иврит): Flexbox автоматически зеркалит: Back улетает вправо, Burger — влево.
+- Кнопка «Назад» рендерится **условно** — только если `canGoBack === true`.
+- При отсутствии кнопки «Назад» placeholder `<span class="w-10">` сохраняет симметрию `justify-between`.
+
+#### Изменения в `useBackNavigation.ts`
+- Добавлен `useMemo` импорт.
+- Добавлено вычисляемое свойство `canGoBack` (boolean):
+  - `true` если есть открытая модалка, или есть родительский маршрут в PARENT_ROUTES, или pathname не в ROOT_ROUTES, или есть история в sessionStorage.
+- Хук теперь возвращает `{ handleBack, canGoBack }`.
+
+#### Изменения в `MobileHeader.tsx`
+- Деструктурирован `canGoBack` из `useBackNavigation()`.
+- Структура flex-контейнера переработана: `[Back|Logo|Bell+Burger]`.
+- Кнопка «Назад» обёрнута в `div.w-10` с условным рендером по `canGoBack`.
+- Бургер перемещён в правый блок рядом с `NotificationBell`.
+- aria-label кнопок локализован через `language === 'he'`.
+
+#### Изменения в `MobileAdminHeader.tsx`
+- Та же структура: `[Back|Logo|Burger]`.
+- `canGoBack` из хука управляет видимостью Back-кнопки.
+
+#### Затронутые файлы
+- `src/hooks/useBackNavigation.ts`
+- `src/components/layout/MobileHeader.tsx`
+- `src/components/layout/MobileAdminHeader.tsx`
+
+**Коммит:** 0639cb1

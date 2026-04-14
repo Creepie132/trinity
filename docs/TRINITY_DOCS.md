@@ -2374,3 +2374,55 @@ useOptimisticMutation<TData extends { id: string }, TInput>({
 - Все будущие разработчики (и Claude) ограничены правилом: нет loading.tsx = нет merge
 
 **Коммит:** (следующий)
+
+---
+
+### 2026-04-14 — ⚡ next-pwa: полноценный Service Worker с precache-манифестом
+
+**Задача:** Внедрить `@ducanh2912/next-pwa` для генерации реального SW с precache-манифестом всех статических ассетов.
+
+#### Что сделано
+
+**Установка и конфигурация:**
+- `@ducanh2912/next-pwa@10.2.9` — единственный форк с поддержкой Next.js 16 + App Router
+- `next.config.js` обёрнут в `withPWA({ swSrc: 'src/sw.ts', dest: 'public', disable: dev, skipWaiting: true })`
+- `package.json`: `build: next build --webpack` (next-pwa использует webpack-плагин), `dev: next dev --turbopack`
+- Webpack alias `@/*` → `src/` добавлен явно для webpack-режима
+- `public/sw.js` и `public/workbox-*.js` добавлены в `.gitignore` (генерируются при build)
+
+**`src/sw.ts`** — кастомный SW-шаблон (`/// <reference lib="WebWorker" />`):
+- `precacheAndRoute(self.__WB_MANIFEST)` — next-pwa инжектирует реальный список ~300 файлов
+- `NetworkFirst` (3с таймаут) → HTML-навигация
+- `CacheFirst` → шрифты Google, изображения
+- `StaleWhileRevalidate` → GET `/api/*` (кроме `/api/auth`, `/api/mobile/auth`, `/api/webhooks`)
+- Push-события: `push` + `notificationclick` хэндлеры
+
+**Рефакторинг именованных экспортов из route/page файлов** (нарушали Next.js App Router rules, вскрылись при переходе на webpack):
+- `DebtsContent` вынесен из `debts/page.tsx` → `src/components/debts/DebtsContent.tsx`
+- `PushSettings`, `DEFAULT_PUSH_SETTINGS` → `src/lib/push-settings.ts`
+- `NotifChannels`, `NotificationPreferences` → `src/lib/notification-preferences.ts`
+- `usePushSettings.ts` обновлён для импорта из `lib/`
+- `payments/page.tsx` обновлён для импорта из `components/debts/`
+- `debts/page.tsx` — тонкий re-export `export { default } from '@/components/debts/DebtsContent'`
+
+**Результат:**
+- `public/sw.js` = 60KB, содержит precache с ~300 хешированными ассетами
+- При первом открытии PWA → SW кэширует весь статик
+- При повторном открытии → всё из кэша, страницы грузятся до сети
+- API-данные прошлой сессии видны мгновенно (StaleWhileRevalidate)
+
+#### Затронутые файлы
+- `next.config.js` — withPWA обёртка, webpack alias
+- `package.json` / `package-lock.json` — @ducanh2912/next-pwa, build/dev скрипты
+- `.gitignore` — generated SW files excluded
+- `src/sw.ts` — создан (кастомный SW с WebWorker reference)
+- `src/components/debts/DebtsContent.tsx` — создан (вынесен из page)
+- `src/lib/push-settings.ts` — создан
+- `src/lib/notification-preferences.ts` — создан
+- `src/app/(dashboard)/debts/page.tsx` — re-export thin wrapper
+- `src/app/(dashboard)/payments/page.tsx` — импорт из components/debts
+- `src/app/api/push/settings/route.ts` — импорт из lib
+- `src/app/api/notifications/preferences/route.ts` — импорт из lib
+- `src/hooks/usePushSettings.ts` — импорт из lib
+
+**Коммит:** 6ed1e2f

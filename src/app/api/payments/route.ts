@@ -38,12 +38,15 @@ export async function GET(request: NextRequest) {
     // Фильтр по статусу
     if (status) query = query.eq('status', status)
 
-    // Фильтр по датам — используем paid_at
+    // Фильтр по датам: включаем платежи где paid_at >= startDate
+    // ИЛИ paid_at IS NULL но created_at >= startDate (платежи без явной даты оплаты)
     if (startDate) {
-      query = query.gte('paid_at', `${startDate}T00:00:00.000Z`)
+      const from = `${startDate}T00:00:00.000Z`
+      query = query.or(`paid_at.gte.${from},and(paid_at.is.null,created_at.gte.${from})`)
     }
     if (endDate) {
-      query = query.lte('paid_at', `${endDate}T23:59:59.999Z`)
+      const to = `${endDate}T23:59:59.999Z`
+      query = query.or(`paid_at.lte.${to},and(paid_at.is.null,created_at.lte.${to})`)
     }
 
     const { data: payments, error } = await query

@@ -2486,3 +2486,36 @@ DOM-порядок: `[Back (Start)] [Logo (Center)] [Bell + Burger (End)]`
 - `src/app/api/payments/route.ts`
 
 **Коммит:** 276b1a4
+
+
+---
+
+## 2025-04-15 — /api/auth/register + Trinity Desktop валидация
+
+**Что сделано:**
+
+Создан endpoint `POST /api/auth/register` для регистрации новых пользователей через Trinity Desktop.
+
+**Логика endpoint'а:**
+- Rate limit: 5 запросов с одного IP за 10 минут
+- Валидация имени: 2–60 символов
+- Валидация email: строгий regex, только валидный формат
+- Валидация пароля: только латиница + цифры + спецсимволы (кириллица/иврит запрещены), 8–128 символов
+- Создаёт пользователя через `supabaseAnon.auth.signUp()`
+- Отправляет email верификации (redirectTo: `/auth/confirm`)
+- Создаёт организацию (`plan: 'trial'`) и привязывает пользователя как `owner`
+- Устанавливает `user_active_branch`
+
+**Фронт (trinity-desktop/login.html):**
+- Добавлена фронтовая валидация с теми же правилами (до отправки на сервер)
+- Новые строки ошибок на RU/EN/HE: `eNameShort`, `eEmail`, `ePassLatin`
+
+**Попутно:**
+- Фикс `src/app/landing/page.tsx` — был обрезан, не имел default export, блокировал билд
+
+**Затронутые файлы:**
+- `src/app/api/auth/register/route.ts` (новый)
+- `src/app/landing/page.tsx` (фикс)
+- `F:\Amber_solutions_Kira\trinity-desktop\src\login.html`
+
+**Коммит:** 91a4798

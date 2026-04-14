@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   description: 'Нативное приложение Trinity CRM для Android',
 }
 
-const CURRENT_VERSION = '2.9.0'
-const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.9.0-ruFMCsNd7uTnceSNjSuMMedX9zAOqt.apk'
+const CURRENT_VERSION = '2.9.1'
+const APK_PATH = 'https://xltydzjvervudvn6.public.blob.vercel-storage.com/trinity-v2.9.1-s6ZUCEZgqJw4fGU4MGPoi7PcCO3J5t.apk'
 const APK_SIZE = '59.9 MB'
 const RELEASE_DATE = '14.04.2026'
 
@@ -39,6 +39,15 @@ const BackButton = () => (
 )
 
 const CHANGELOG = [
+  {
+    version: '2.9.1',
+    date: '14.04.2026',
+    changes: [
+      'Исправлено: платежи не отображались при повторном входе в раздел',
+      'Раздел Платежи теперь всегда подгружает свежие данные при открытии',
+      'Тихое обновление в фоне — без мигающего спиннера если данные уже загружены',
+    ],
+  },
   {
     version: '2.9.0',
     date: '14.04.2026',

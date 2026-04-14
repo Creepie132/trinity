@@ -7,25 +7,30 @@ import { useBackNavigation } from '@/hooks/useBackNavigation'
 
 export function MobileAdminHeader() {
   const [isOpen, setIsOpen] = useState(false)
-  const { handleBack } = useBackNavigation()
+  const { handleBack, canGoBack } = useBackNavigation()
 
   return (
     <>
       {/* Мобильный admin header — только на <1024px */}
       <header className="lg:hidden sticky top-0 z-40 w-full bg-slate-800/95 backdrop-blur-lg border-b border-slate-700 shadow-lg">
-        <div className="flex items-center justify-between px-4 h-16">
-          {/* Левая сторона: бургер-кнопка */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setIsOpen(true)}
-              className="p-2.5 rounded-xl hover:bg-slate-700 active:bg-slate-600 transition-all duration-200 active:scale-95"
-              aria-label="פתח תפריט"
-            >
-              <Menu className="w-6 h-6 text-white" />
-            </button>
+        <div className="flex items-center justify-between w-full px-4 h-16">
+
+          {/* ── Start: кнопка «Назад» (условная) ── */}
+          <div className="w-10 flex items-center justify-start">
+            {canGoBack ? (
+              <button
+                onClick={handleBack}
+                className="p-2.5 rounded-xl hover:bg-slate-700 active:bg-slate-600 transition-all duration-200 active:scale-95 group"
+                aria-label="חזור"
+              >
+                <ArrowLeft className="w-5 h-5 text-slate-300 group-hover:text-white transition-colors" />
+              </button>
+            ) : (
+              <span className="w-10" aria-hidden="true" />
+            )}
           </div>
 
-          {/* Центр: Логотип */}
+          {/* ── Center: Логотип ── */}
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
               <img
@@ -39,16 +44,17 @@ export function MobileAdminHeader() {
             </h1>
           </div>
 
-          {/* Правая сторона: кнопка "назад" */}
-          <div className="flex items-center gap-1">
+          {/* ── End: Бургер ── */}
+          <div className="flex items-center">
             <button
-              onClick={handleBack}
-              className="p-2.5 rounded-xl hover:bg-slate-700 active:bg-slate-600 transition-all duration-200 active:scale-95 group"
-              aria-label="חזור"
+              onClick={() => setIsOpen(true)}
+              className="p-2.5 rounded-xl hover:bg-slate-700 active:bg-slate-600 transition-all duration-200 active:scale-95"
+              aria-label="פתח תפריט"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-300 group-hover:text-white transition-colors" />
+              <Menu className="w-6 h-6 text-white" />
             </button>
           </div>
+
         </div>
       </header>
 

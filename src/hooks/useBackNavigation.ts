@@ -13,7 +13,7 @@
  * Двойное нажатие за 2 сек закрывает PWA (window.close).
  */
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 import { useModalStore } from '@/store/useModalStore'
@@ -197,5 +197,19 @@ export function useBackNavigation() {
     }
   }, [handleBack])
 
-  return { handleBack }
+  // ─── canGoBack: есть ли открытые модалки, родитель или история ───────────
+  const canGoBack = useMemo(() => {
+    const hasOpenModal = Array.from(modals.entries()).some(([, s]) => s.isOpen)
+    if (hasOpenModal) return true
+    if (findParentRoute(pathname)) return true
+    if (!ROOT_ROUTES.has(pathname)) return true
+    try {
+      const history: string[] = JSON.parse(
+        sessionStorage.getItem(SECTION_HISTORY_KEY) || '[]'
+      )
+      return history.length > 0
+    } catch { return false }
+  }, [pathname, modals])
+
+  return { handleBack, canGoBack }
 }

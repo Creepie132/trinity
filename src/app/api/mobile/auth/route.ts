@@ -63,6 +63,9 @@ export async function POST(request: NextRequest) {
     })
 
     if (authError || !authData.session) {
+      if (authError?.message?.toLowerCase().includes('email not confirmed')) {
+        return NextResponse.json({ error: 'Email not confirmed' }, { status: 401 })
+      }
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 

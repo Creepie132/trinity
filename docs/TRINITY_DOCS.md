@@ -2519,3 +2519,35 @@ DOM-порядок: `[Back (Start)] [Logo (Center)] [Bell + Burger (End)]`
 - `F:\Amber_solutions_Kira\trinity-desktop\src\login.html`
 
 **Коммит:** 91a4798
+
+
+---
+
+## 2025-04-15 — Free план Trinity CRM
+
+**Что сделано:**
+
+### Новый файл: `src/lib/plan-limits.ts`
+Единый источник правды для ограничений по планам. Содержит:
+- `PLAN_MODULES` — какие модули доступны на каждом плане
+- `PLAN_LIMITS` — лимиты сущностей (clients: 100 для free)
+- `checkPlanLimit(orgId, entity)` — проверяет лимит
+- `enforcePlanLimit(orgId, entity)` — возвращает 403 если превышен
+- `enforceModuleAccess(orgId, moduleKey)` — возвращает 403 если модуль недоступен
+
+### Free план — что включено:
+- Модули: `clients`, `visits`, `tasks`, `analytics`
+- Лимит клиентов: **100**
+- Все остальные планы (trial, base, pro, enterprise) — без лимитов
+
+### Изменённые файлы:
+- `src/app/api/clients/route.ts` — добавлен `enforcePlanLimit` после demo limit
+- `src/app/api/auth/register/route.ts` — новые org получают `plan: 'free'` + включают только Free модули
+- `src/lib/trinityPlans.ts` — добавлен Free план в список (₪0/мес)
+
+### Формат 403 ответа при превышении лимита:
+```json
+{ "code": "PLAN_LIMIT_EXCEEDED", "entity": "clients", "current": 100, "limit": 100, "plan": "free" }
+```
+
+**Коммит:** 2f2b447

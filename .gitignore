@@ -61,3 +61,11 @@ build_out.txt
 
 # APK releases — stored in Vercel Blob, not in git
 public/releases/
+
+# next-pwa generated files — генерируются при каждом build, не коммитить
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+public/worker-*.js
+public/worker-*.js.map

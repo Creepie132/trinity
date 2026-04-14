@@ -1,20 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import type { PushSettings } from '@/app/api/push/settings/route'
+// Тип и константа вынесены в lib/push-settings.ts (route-файл не может экспортировать не-HTTP-хэндлеры)
+import { type PushSettings, DEFAULT_PUSH_SETTINGS } from '@/lib/push-settings'
 
 export type { PushSettings }
-
-export const DEFAULT_PUSH_SETTINGS: PushSettings = {
-  new_visit: true,
-  visit_reminder: true,
-  new_payment: true,
-  new_client: false,
-  birthday: false,
-  task_mentions: true,
-  stock_alerts: true,
-  admin_messages: true,
-}
+export { DEFAULT_PUSH_SETTINGS }
 
 export function usePushSettings() {
   const [settings, setSettings] = useState<PushSettings>(DEFAULT_PUSH_SETTINGS)
@@ -37,7 +28,6 @@ export function usePushSettings() {
   useEffect(() => { load() }, [load])
 
   const updateSetting = useCallback(async (key: keyof PushSettings, value: boolean) => {
-    // Optimistic update
     setSettings(prev => ({ ...prev, [key]: value }))
     setSaving(true)
     try {
@@ -47,7 +37,6 @@ export function usePushSettings() {
         body: JSON.stringify({ settings: { [key]: value } }),
       })
       if (!res.ok) {
-        // Revert on error
         setSettings(prev => ({ ...prev, [key]: !value }))
         throw new Error('Failed to save')
       }

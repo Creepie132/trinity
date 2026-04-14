@@ -23,7 +23,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useDemoMode } from '@/hooks/useDemoMode'
 import { DemoStub, DemoStubConfig } from '@/components/demo/DemoStub'
 import { getCanonicalMethodCfg, normalizePaymentMethod } from '@/lib/payment-method-normalizer'
-import { DebtsContent } from '@/app/(dashboard)/debts/page'
+import { DebtsContent } from '@/components/debts/DebtsContent'
 
 const PAGE_SIZE = 20
 

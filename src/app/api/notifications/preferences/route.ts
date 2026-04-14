@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface NotifChannels {
-  push: boolean
-  telegram: boolean
-  email: boolean
-}
-
-export interface NotificationPreferences {
-  [eventKey: string]: NotifChannels
-}
-
-const DEFAULT_CHANNELS: NotifChannels = { push: true, telegram: false, email: false }
+import {
+  type NotifChannels,
+  type NotificationPreferences,
+  DEFAULT_NOTIF_CHANNELS,
+} from '@/lib/notification-preferences'
 
 // ─── GET /api/notifications/preferences ──────────────────────────────────────
 // Returns the user's notification preferences for the active org
@@ -94,7 +85,7 @@ export async function PUT(request: NextRequest) {
     const updatedPrefs: NotificationPreferences = {
       ...currentPrefs,
       [eventKey]: {
-        ...(currentPrefs[eventKey] ?? DEFAULT_CHANNELS),
+        ...(currentPrefs[eventKey] ?? DEFAULT_NOTIF_CHANNELS),
         [channel]: value,
       },
     }

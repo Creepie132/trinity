@@ -2466,3 +2466,23 @@ DOM-порядок: `[Back (Start)] [Logo (Center)] [Bell + Burger (End)]`
 - `src/components/layout/MobileAdminHeader.tsx`
 
 **Коммит:** 0639cb1
+
+---
+
+### 14.04.2026 — fix: payments GET — фильтр по датам не работал для платежей без paid_at (коммит 276b1a4)
+
+**Проблема:**  
+Раздел "Платежи" в Trinity Mobile показывал 0 записей по всем периодам (кроме "Всё"). Платежи созданные без явной даты оплаты (`paid_at = NULL`) выпадали из выборки — PostgreSQL не включает NULL в условие `gte('paid_at', ...)`.
+
+**Причина:**  
+`GET /api/payments` фильтровал только по `paid_at >= startDate`. Записи где `paid_at IS NULL` (большинство платежей создаются без явной даты оплаты) игнорировались.
+
+**Исправление:**  
+`src/app/api/payments/route.ts` — заменён простой `gte` на `or()` условие:
+- `paid_at >= startDate` — платёж с явной датой оплаты
+- ИЛИ `paid_at IS NULL AND created_at >= startDate` — платёж без даты оплаты, fallback на дату создания
+
+**Затронутые файлы:**  
+- `src/app/api/payments/route.ts`
+
+**Коммит:** 276b1a4

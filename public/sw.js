@@ -1,88 +1,128 @@
-// Trinity CRM — Service Worker
-// Handles push notifications and offline caching
+// ============================================================
+// Trinity CRM — Service Worker (Workbox via workbox-window)
+// Стратегии:
+//   CacheFirst     — статика Next.js (_next/static), шрифты, иконки
+//   StaleWhileRevalidate — API GET-запросы (мгновенный ответ из кэша + фоновое обновление)
+//   NetworkFirst   — навигация (HTML-страницы) — всегда свежие, fallback на кэш
+// ============================================================
 
-const CACHE_NAME = 'trinity-v1'
+import { clientsClaim } from 'workbox-core'
+import { ExpirationPlugin } from 'workbox-expiration'
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching'
+import { registerRoute, NavigationRoute } from 'workbox-routing'
+import { CacheFirst, StaleWhileRevalidate, NetworkFirst } from 'workbox-strategies'
+import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
-// ─── Install ───────────────────────────────────────────────────────────────
-self.addEventListener('install', (event) => {
-  self.skipWaiting()
+declare const self: ServiceWorkerGlobalScope
+
+// Немедленно берём управление всеми вкладками без ожидания перезагрузки
+clientsClaim()
+
+// Precache — Next.js автоматически подставит список через next-pwa/инжект
+precacheAndRoute(self.__WB_MANIFEST)
+cleanupOutdatedCaches()
+
+// ── 1. Навигация (HTML-страницы) — NetworkFirst с fallback ────────────────
+// Берём свежую версию из сети, если сеть недоступна → кэш
+const navigationHandler = new NetworkFirst({
+  cacheName: 'trinity-pages',
+  networkTimeoutSeconds: 3,
+  plugins: [
+    new CacheableResponsePlugin({ statuses: [200] }),
+    new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 24 * 60 * 60 }),
+  ],
 })
+registerRoute(new NavigationRoute(navigationHandler, {
+  // НЕ кэшируем API-роуты как навигацию
+  denylist: [/^\/api\//],
+}))
 
-// ─── Activate ──────────────────────────────────────────────────────────────
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((key) => caches.delete(key)))
-    ).then(() => clients.claim())
-  )
-})
+// ── 2. Статика Next.js (_next/static) — CacheFirst, 1 год ────────────────
+// JS/CSS бандлы хешированы → иммутабельны → всегда из кэша
+registerRoute(
+  ({ url }) => url.pathname.startsWith('/_next/static/'),
+  new CacheFirst({
+    cacheName: 'trinity-static',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({ maxEntries: 128, maxAgeSeconds: 365 * 24 * 60 * 60 }),
+    ],
+  })
+)
 
-// ─── Message (SKIP_WAITING) ────────────────────────────────────────────────
-self.addEventListener('message', (event) => {
-  if (event.data?.type === 'SKIP_WAITING') {
-    self.skipWaiting()
-  }
-})
+// ── 3. Шрифты Google (если используются через CDN) — CacheFirst ───────────
+registerRoute(
+  ({ url }) =>
+    url.origin === 'https://fonts.gstatic.com' ||
+    url.origin === 'https://fonts.googleapis.com',
+  new CacheFirst({
+    cacheName: 'trinity-fonts',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 365 * 24 * 60 * 60 }),
+    ],
+  })
+)
 
-// ─── Push received ─────────────────────────────────────────────────────────
+// ── 4. Изображения из /public — CacheFirst, 30 дней ──────────────────────
+registerRoute(
+  ({ request }) => request.destination === 'image',
+  new CacheFirst({
+    cacheName: 'trinity-images',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({ maxEntries: 64, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+    ],
+  })
+)
+
+// ── 5. API GET — StaleWhileRevalidate ────────────────────────────────────
+// Мгновенный ответ из кэша прошлой сессии + тихое обновление в фоне.
+// Только безопасные GET: dashboard, clients, visits, payments, notifications.
+// POST/PATCH/DELETE — НЕ кэшируются (никогда).
+registerRoute(
+  ({ url, request }) =>
+    request.method === 'GET' &&
+    url.pathname.startsWith('/api/') &&
+    !url.pathname.startsWith('/api/auth') &&
+    !url.pathname.startsWith('/api/mobile/auth'),
+  new StaleWhileRevalidate({
+    cacheName: 'trinity-api',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({
+        maxEntries: 64,
+        // API-данные живут не более 5 минут — потом всё равно идём в сеть
+        maxAgeSeconds: 5 * 60,
+      }),
+    ],
+  })
+)
+
+// ── Push-уведомления ──────────────────────────────────────────────────────
 self.addEventListener('push', (event) => {
   if (!event.data) return
-
-  let data
-  try {
-    data = event.data.json()
-  } catch {
-    data = { title: 'Trinity CRM', body: event.data.text() }
-  }
-
-  const title = data.title || 'Trinity CRM'
-  const options = {
-    body: data.body || '',
-    icon: '/icons/icon-192.png',
-    badge: '/icons/badge-96.png',
-    tag: data.tag || 'trinity-notification',
-    data: {
-      url: data.url || '/dashboard',
-      ...data.data,
-    },
-    actions: data.actions || [],
-    requireInteraction: data.requireInteraction || false,
-    silent: data.silent || false,
-    vibrate: [200, 100, 200],
-    dir: 'rtl',
-    lang: 'he',
-  }
-
+  const data = event.data.json()
   event.waitUntil(
-    self.registration.showNotification(title, options)
-  )
-})
-
-// ─── Notification click ────────────────────────────────────────────────────
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close()
-
-  const targetUrl = event.notification.data?.url || '/dashboard'
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Если приложение уже открыто — фокусируемся
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.focus()
-          client.navigate(targetUrl)
-          return
-        }
-      }
-      // Иначе открываем новую вкладку
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl)
-      }
+    self.registration.showNotification(data.title || 'Trinity CRM', {
+      body: data.body || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: { url: data.url || '/dashboard' },
+      tag: 'trinity-notification',
+      renotify: true,
     })
   )
 })
 
-// ─── Notification close ────────────────────────────────────────────────────
-self.addEventListener('notificationclose', (event) => {
-  // Можно логировать dismissed-уведомления
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = event.notification.data?.url || '/dashboard'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clients) => {
+      const found = clients.find((c) => c.url.includes(url))
+      if (found) return found.focus()
+      return self.clients.openWindow(url)
+    })
+  )
 })

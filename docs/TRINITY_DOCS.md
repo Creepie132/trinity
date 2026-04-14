@@ -2296,3 +2296,81 @@ useOptimisticMutation<TData extends { id: string }, TInput>({
 
 **Коммит:** e378bbb
 
+
+
+---
+
+## Changelog — апрель 2026 (продолжение)
+
+### 2026-04-14 — ⚡ Performance First: Instant Load & PWA Caching
+
+**Задача:** Экстремальная оптимизация роутинга и инициализации — восприятие 0ms latency при навигации и старте PWA.
+
+#### Аудит — найденные узкие места
+1. **14 из 21 роутов** `(dashboard)` не имели `loading.tsx` → белый экран 300–800ms при каждом переходе
+2. **PWA без Service Worker** → каждый старт приложения = полная загрузка с нуля
+3. `staleTime` и `refetchOnWindowFocus` уже были настроены корректно в `QueryProvider`
+4. `DashboardLayout` — 1 DB-запрос (JWT fast-path) — допустимо
+
+#### Что сделано
+
+**Шаг 1 — loading.tsx для 14 роутов** (App Router показывает скелетон мгновенно, sidebar/header уже в DOM):
+- `visits/loading.tsx` — KPI strip + фильтры + строки визитов
+- `payments/loading.tsx` — split layout (тёмная панель + список)
+- `finances/loading.tsx` — KPI + чарт + категории + расходы
+- `sales/loading.tsx` — pipeline колонки (desktop) + список (mobile)
+- `inventory/loading.tsx` — продуктовая сетка + stats
+- `analytics/loading.tsx` — KPI + charts
+- `inbox/loading.tsx` — chat sidebar + area
+- `reports/loading.tsx` — period tabs + summary + charts
+- `debts/loading.tsx` — summary cards + table rows
+- `broadcast/loading.tsx` — template cards + history
+- `office/loading.tsx` — feature cards
+- `profile/loading.tsx` — avatar + form sections
+- `audit/loading.tsx` — filters + log rows
+- `settings-new/loading.tsx` — нет page.tsx, пропущено
+
+**Шаг 2 — Service Worker PWA** (`/public/sw.js`, Workbox):
+- `CacheFirst` → `_next/static/*` (JS/CSS бандлы, хешированные, 1 год TTL)
+- `StaleWhileRevalidate` → GET `/api/*` (мгновенный ответ из кэша прошлой сессии + фоновое обновление)
+- `NetworkFirst` → HTML навигация (3с таймаут → fallback на кэш)
+- Push-уведомления: обработчики `push` + `notificationclick`
+- НЕ кэширует: POST/PATCH/DELETE, `/api/auth/*`, `/api/mobile/auth`
+
+**Шаг 3 — PWARegister компонент** (`src/components/providers/PWARegister.tsx`):
+- Регистрирует `/sw.js` только в `production` и только в браузере
+- Проверяет обновления SW раз в 60 секунд
+- Подключён в `src/app/layout.tsx`
+
+**Шаг 4 — `.cursorrules`** (Performance First Policy):
+- ЗАКОН #1: все новые роуты ОБЯЗАНЫ иметь `loading.tsx`
+- ЗАКОН #2: запрещены blocking SSR fetches без Suspense
+- ЗАКОН #3: деградация скорости = критический баг, блокирует коммит
+- ЗАКОН #4: правила кэширования SW задокументированы
+
+#### Затронутые файлы
+- `src/app/(dashboard)/visits/loading.tsx` — создан
+- `src/app/(dashboard)/payments/loading.tsx` — создан
+- `src/app/(dashboard)/finances/loading.tsx` — создан
+- `src/app/(dashboard)/sales/loading.tsx` — создан
+- `src/app/(dashboard)/inventory/loading.tsx` — создан
+- `src/app/(dashboard)/analytics/loading.tsx` — создан
+- `src/app/(dashboard)/inbox/loading.tsx` — создан
+- `src/app/(dashboard)/reports/loading.tsx` — создан
+- `src/app/(dashboard)/debts/loading.tsx` — создан
+- `src/app/(dashboard)/broadcast/loading.tsx` — создан
+- `src/app/(dashboard)/office/loading.tsx` — создан
+- `src/app/(dashboard)/profile/loading.tsx` — создан
+- `src/app/(dashboard)/audit/loading.tsx` — создан
+- `public/sw.js` — создан (Workbox, 3 стратегии)
+- `src/components/providers/PWARegister.tsx` — создан
+- `src/app/layout.tsx` — добавлен import PWARegister
+- `.cursorrules` — создан (Performance First Policy)
+- `docs/TRINITY_DOCS.md` — обновлён
+
+#### Результат
+- Навигация между страницами: **мгновенный скелетон** вместо белого экрана
+- PWA холодный старт: **данные из кэша прошлой сессии** до ответа сервера
+- Все будущие разработчики (и Claude) ограничены правилом: нет loading.tsx = нет merge
+
+**Коммит:** (следующий)

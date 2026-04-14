@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster } from "@/components/ui/sonner";
+import { PWARegister } from "@/components/providers/PWARegister";
 
 const inter = Inter({ 
   subsets: ["latin", "cyrillic"], 

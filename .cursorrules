@@ -1,0 +1,164 @@
+# Trinity CRM — Developer Rules & Architecture
+# Amber Solutions · ambersol.co.il
+# Last updated: 2026-04-14
+
+# ══════════════════════════════════════════════════════════════════
+#  ⚡ PERFORMANCE FIRST POLICY (обязателен для каждого изменения)
+# ══════════════════════════════════════════════════════════════════
+
+## ЗАКОН #1 — Instant Navigation (абсолютный приоритет)
+Любые новые страницы и роуты ОБЯЗАНЫ иметь `loading.tsx` рядом с `page.tsx`.
+Без `loading.tsx` — роут не принимается в main.
+
+Шаблон минимального loading.tsx:
+```tsx
+export default function Loading() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded-lg w-48" />
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+      ))}
+    </div>
+  )
+}
+```
+
+## ЗАКОН #2 — No Blocking SSR Fetches
+Запрещены блокирующие серверные запросы (blocking SSR fetches) без Suspense-обёрток.
+Паттерн: данные → через React Query (useQuery) на клиенте, НЕ через await в Server Component верхнего уровня.
+
+Исключение (допустимо):
+- `(dashboard)/layout.tsx` — строго 1 DB-запрос (organizations), JWT fast-path
+- Server Actions с `<Suspense fallback={<Skeleton />}>`
+
+Запрещено:
+```tsx
+// ❌ НЕЛЬЗЯ — блокирует весь рендер страницы
+export default async function Page() {
+  const data = await fetch('/api/visits') // блокирует
+  return <Table data={data} />
+}
+
+// ✅ МОЖНО — данные грузятся клиентски, скелетон мгновенный
+export default function Page() {
+  return <VisitsClient /> // внутри useQuery
+}
+```
+
+## ЗАКОН #3 — Производительность = критический баг
+Изменение скорости загрузки в худшую сторону считается критическим багом
+и НЕ ДОПУСКАЕТСЯ к коммиту. Проверять до push:
+- `npm run build` — 0 ошибок
+- Нет новых блокирующих fetch на уровне layout/page Server Components
+- Все новые роуты имеют `loading.tsx`
+
+## ЗАКОН #4 — PWA Cache Rules
+Service Worker (`/public/sw.js`) кэширует по стратегиям:
+- `CacheFirst`          → `_next/static/*` (JS/CSS бандлы, 1 год)
+- `StaleWhileRevalidate` → GET `/api/*` (мгновенный кэш + фоновое обновление)
+- `NetworkFirst`        → HTML навигация (3с таймаут → fallback кэш)
+- НЕ кэшировать: POST/PATCH/DELETE, `/api/auth/*`
+
+# ══════════════════════════════════════════════════════════════════
+#  🔒 SECURITY RULES (Trinity SaaS — неотменяемо)
+# ══════════════════════════════════════════════════════════════════
+
+## Auth
+- `getAuthContext(request)` — первая строка каждого API route
+- `activeOrgId` ТОЛЬКО из БД (`user_active_branch`), никогда из headers/body/params
+- Все DB-запросы фильтровать по `org_id`
+- RLS включён на всех таблицах
+
+## Service Role
+- `createSupabaseServiceClient()` — только ПОСЛЕ проверки auth
+- Никогда не передавать service role token на клиент
+
+## Org Isolation
+- Данные одного клиента НИКОГДА не достигают другого
+- Ветки (branches): activeOrgId из `user_active_branch`, mainOrgId из `org_users`
+
+# ══════════════════════════════════════════════════════════════════
+#  🏗️ ARCHITECTURE PATTERNS
+# ══════════════════════════════════════════════════════════════════
+
+## Routing
+- `(dashboard)/` — все основные страницы CRM (sidebar + header через DashboardShell)
+- `(worker)/`    — изолированный layout для воркеров
+- `(marketing)/` — лендинг, публичные страницы
+- `api/`         — API routes (всегда getAuthContext первым)
+
+## Data Flow
+```
+Server (layout.tsx)
+  └─ 1 DB query → org data → HydrationBoundary → React Query cache seeded
+       └─ Client components → useQuery hooks → /api/* → Supabase (service role)
+```
+
+## Modals
+- Любая модалка → `TrinityModalShell`
+- Многошаговый wizard → `WizardModal`
+- НИКОГДА не строить кастомный modal с нуля
+
+## RTL/LTR
+- `useLanguage()` → `language` → `dir = language === 'he' ? 'rtl' : 'ltr'`
+- НИКОГДА не хардкодить `dir="rtl"` или `lang="he"`
+
+## Responsive (обязательно для всех страниц)
+- mobile  < 768px  → карточки, FAB, bottom sheet
+- tablet  768–1024px → адаптивная сетка
+- desktop > 1024px → split layout, таблицы
+
+# ══════════════════════════════════════════════════════════════════
+#  📦 REACT QUERY DEFAULTS (QueryProvider.tsx)
+# ══════════════════════════════════════════════════════════════════
+
+staleTime: 2 * 60 * 1000       # 2 минуты — стандарт
+gcTime: 10 * 60 * 1000         # 10 минут — GC
+refetchOnWindowFocus: false     # не дёргать при возврате на вкладку
+retry: false                    # ошибка = ошибка, не ретраить
+placeholderData: keepPreviousData  # нет белых экранов при обновлении
+
+# Переопределение для статичных справочников (services, workers):
+staleTime: 10 * 60 * 1000      # 10 минут
+gcTime: 30 * 60 * 1000         # 30 минут
+
+# ══════════════════════════════════════════════════════════════════
+#  🚀 DEPLOY PROTOCOL
+# ══════════════════════════════════════════════════════════════════
+
+1. npm run build → ОБЯЗАН быть чистым (0 errors, 0 type errors)
+2. Перечитать изменённые файлы — убедиться в корректности
+3. git add -A
+4. git commit -m "feat|fix|perf|refactor|chore: description"
+5. git push origin main → PRODUCTION (Vercel автодеплой)
+
+Влад НЕ деплоит сам — Claude делает до конца.
+НИКОГДА не деплоить вслепую без чистого билда.
+
+# ══════════════════════════════════════════════════════════════════
+#  📝 DOCS PROTOCOL
+# ══════════════════════════════════════════════════════════════════
+
+После каждого изменения обновить:
+- `docs/TRINITY_DOCS.md` → запись: дата / что / зачем / файлы / коммит
+- Коммитить документацию ВМЕСТЕ с кодом в одном коммите
+
+# ══════════════════════════════════════════════════════════════════
+#  🗂️ KEY FILES REFERENCE
+# ══════════════════════════════════════════════════════════════════
+
+src/lib/auth-helpers.ts          # getAuthContext() — канонический auth
+src/lib/supabase-service.ts      # service role client
+src/contexts/BranchContext.tsx   # activeOrgId, mainOrgId, switchBranch
+src/components/providers/
+  QueryProvider.tsx              # глобальный React Query + demo limit interceptor
+  PWARegister.tsx                # Service Worker registration (PWA)
+src/components/ui/
+  Modal.tsx                      # base draggable modal
+  WizardModal.tsx                # multi-step wizard shell
+src/store/useModalStore.ts       # глобальный modal bus
+public/sw.js                     # Service Worker (Workbox стратегии)
+public/manifest.json             # PWA manifest
+docs/TRINITY_DOCS.md             # главная документация
+.cursorrules                     # этот файл

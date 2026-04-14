@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { PLAN_MODULES } from '@/lib/plan-limits'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
       .from('organizations')
       .insert({
         name: `${name}'s Business`,
-        plan: 'trial',
+        plan: 'free',
         features: {},
         created_by: userId,
       })
@@ -112,6 +113,18 @@ export async function POST(req: NextRequest) {
     }
 
     if (org?.id) {
+      // Включаем только модули Free плана
+      const freeModules = PLAN_MODULES['free'] as string[]
+      const modulesObj = Object.fromEntries(
+        freeModules.map(k => [k, true])
+      )
+
+      // Обновляем features с модулями
+      await service
+        .from('organizations')
+        .update({ features: { modules: modulesObj } })
+        .eq('id', org.id)
+
       // Привязываем пользователя к организации как owner
       await service.from('org_users').insert({
         user_id: userId,

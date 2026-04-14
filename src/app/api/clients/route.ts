@@ -2,6 +2,7 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { enforceDemoLimit } from '@/lib/demo-limits'
+import { enforcePlanLimit } from '@/lib/plan-limits'
 import { dispatchNotification } from '@/lib/dispatch-notification'
 import { fireWaTrigger } from '@/lib/wa/fire-trigger'
 
@@ -110,6 +111,10 @@ export async function POST(req: NextRequest) {
     // ── Demo limit: max 10 clients ────────────────────────────────────────────
     const limitError = await enforceDemoLimit(orgId, 'clients')
     if (limitError) return limitError
+
+    // ── Plan limit: free = max 100 clients ───────────────────────────────────
+    const planLimitError = await enforcePlanLimit(orgId, 'clients')
+    if (planLimitError) return planLimitError
     // ─────────────────────────────────────────────────────────────────────────
 
     // Parse request body

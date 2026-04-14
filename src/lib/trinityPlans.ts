@@ -21,6 +21,19 @@ export interface TrinityPlan {
 
 export const TRINITY_PLANS: TrinityPlan[] = [
   {
+    nameRu: 'Free',
+    nameHe: 'Free',
+    price: '₪0',
+    priceHe: '₪0',
+    periodRu: '/мес',
+    periodHe: '/חודש',
+    badge: null,
+    badgeHe: null,
+    color: 'from-gray-500 to-gray-600',
+    featuresRu: ['До 100 клиентов', 'Визиты и записи', 'Задачи', 'Базовая аналитика'],
+    featuresHe: ['עד 100 לקוחות', 'ביקורים ותורים', 'משימות', 'אנליטיקה בסיסית'],
+  },
+  {
     nameRu: 'Base',
     nameHe: 'Base',
     price: '₪199',

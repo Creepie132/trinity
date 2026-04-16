@@ -2551,3 +2551,20 @@ DOM-порядок: `[Back (Start)] [Logo (Center)] [Bell + Burger (End)]`
 ```
 
 **Коммит:** 2f2b447
+
+
+---
+
+## 2026-04-16 — Hotfix: Next.js 16 cookies read-only crash
+
+**Проблема:** Пользователи не могли зайти в Trinity (веб и PWA) — экран ошибки «Что-то пошло не так». Runtime лог Vercel: `Error: Cookies can only be modified in a Server Action or Route Handler`.
+
+**Причина:** Next.js 16 сделал `cookies().set()` в Server Component контексте исключением (read-only). Supabase SSR при вызове `getUser()` пытается обновить сессионный cookie через `setAll` → исключение → 500 на `/dashboard`.
+
+**Фикс:** Обёрнуть `cookieStore.set()` в `try/catch` в обоих местах где создаётся Supabase клиент. Middleware продолжает писать cookies как обычно — сессия не теряется.
+
+**Изменённые файлы:**
+- `src/lib/supabase/server.ts` — `setAll` обёрнут в try/catch
+- `src/lib/api-auth.ts` — `setAll` в `getSupabaseServerClient` обёрнут в try/catch
+
+**Коммит:** b6ba4b6

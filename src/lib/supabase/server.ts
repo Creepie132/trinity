@@ -13,9 +13,15 @@ export async function createClient() {
           return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options)
-          })
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options)
+            })
+          } catch {
+            // Next.js 16: cookies().set() throws in Server Components (read-only context).
+            // Supabase SSR calls setAll to refresh the session — safe to ignore,
+            // middleware handles cookie writes on every request.
+          }
         },
       },
     }

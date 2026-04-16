@@ -28,9 +28,14 @@ export async function getSupabaseServerClient() {
           return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options)
-          })
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options)
+            })
+          } catch {
+            // Next.js 16: cookies().set() throws in Server Components (read-only context).
+            // Safe to ignore — middleware handles session cookie refresh.
+          }
         },
       },
     }

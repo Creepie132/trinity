@@ -154,6 +154,23 @@ export default async function RootLayout({
   const locale = localeCookie === 'ru' ? 'ru' : 'he';
   const dir = locale === 'he' ? 'rtl' : 'ltr';
 
+  // Лендинг — полная изоляция: ltr, inter, без Trinity-провайдеров
+  const isLanding = cookieStore.get('trinity_page')?.value === 'landing';
+  if (isLanding) {
+    return (
+      <html lang="ru" dir="ltr" suppressHydrationWarning>
+        <head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        </head>
+        <body style={{ margin: 0, padding: 0, background: '#080810', color: '#fff', fontFamily: "'Inter', sans-serif" }}>
+          {children}
+        </body>
+      </html>
+    );
+  }
+
   return (
     <html lang={locale} dir={dir} className="light" suppressHydrationWarning>
       <head>

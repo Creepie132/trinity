@@ -49,7 +49,15 @@ const CSRF_EXEMPT_PREFIXES = [
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  if (isPublicPath(pathname)) return NextResponse.next()
+  if (isPublicPath(pathname)) {
+    const res = NextResponse.next()
+    if (pathname === '/landing' || pathname.startsWith('/landing/')) {
+      res.cookies.set('trinity_page', 'landing', { path: '/', maxAge: 60, sameSite: 'lax' })
+    } else {
+      res.cookies.delete('trinity_page')
+    }
+    return res
+  }
 
   // ── Bearer token bypass (mobile app) ─────────────────────────────────────
   // Мобильное приложение отправляет JWT в заголовке Authorization: Bearer <token>

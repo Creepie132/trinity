@@ -301,12 +301,13 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
   const [showProposal, setShowProposal]   = useState(false)
 
   // ── UI state ─────────────────────────────────────────────────────────────────
-  const [isLoading, setIsLoading]   = useState(false)
-  const [errorMsg, setErrorMsg]     = useState<string | null>(null)
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [quickOpen, setQuickOpen]   = useState(false)
-  const [quickName, setQuickName]   = useState('')
-  const [quickPrice, setQuickPrice] = useState('')
+  const [isLoading, setIsLoading]         = useState(false)
+  const [errorMsg, setErrorMsg]           = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen]       = useState(false)
+  const [quickOpen, setQuickOpen]         = useState(false)
+  const [quickName, setQuickName]         = useState('')
+  const [quickPrice, setQuickPrice]       = useState('')
+  const [clientWarning, setClientWarning] = useState(false)
   // ── Mobile detection — синхронно при монтировании, без useEffect ─────────────
   // useState(false) + useEffect создаёт race condition на мобильном:
   // при первом рендере компонент думает что он десктоп → рендерит Modal вместо
@@ -333,6 +334,7 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
     if (!open) return
     const sd = validateSaleModalData(initialData)
     setErrorMsg(null)
+    setClientWarning(false)
     setStep('cart')
     setDiscount({ type: 'percent', value: 0 })
     setShowDiscount(false)
@@ -638,7 +640,10 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
               {total > 0 && !isLoading && ` · ₪${total.toLocaleString()}`}
             </button>
           )}
-          <button onClick={step === 'cart' ? () => setStep('checkout') : handleSubmit}
+          <button onClick={step === 'cart' ? () => {
+              if (!clientId) { setClientWarning(true); return }
+              setStep('checkout')
+            } : handleSubmit}
             disabled={(step === 'cart' && items.length === 0) || (step === 'checkout' && isLoading)}
             style={{ padding:'11px 14px', borderRadius:10, border:'none', cursor:'pointer', width:'100%', marginBottom:6,
               background: items.length > 0 && !isLoading ? 'linear-gradient(135deg,#4a6fa5,#3b5998)' : 'rgba(255,255,255,0.08)',
@@ -673,7 +678,10 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
       <button onClick={handleClose} style={{ flex:'0 0 auto', padding:'12px 18px', borderRadius:10, border:'1px solid rgba(0,0,0,0.1)', background:'transparent', color:'#64748b', fontSize:14, cursor:'pointer' }}>
         {isHe?'ביטול':'Отмена'}
       </button>
-      <button onClick={() => setStep('checkout')} disabled={items.length === 0}
+      <button onClick={() => {
+          if (!clientId) { setClientWarning(true); return }
+          setStep('checkout')
+        }} disabled={items.length === 0}
         style={{ flex:1, padding:'12px', borderRadius:10, border:'none', cursor: items.length>0?'pointer':'not-allowed', background: items.length>0?'linear-gradient(135deg,#f59e0b,#d97706)':'#e2e8f0', color: items.length>0?'#fff':'#94a3b8', fontSize:14, fontWeight:700 }}>
         {isHe?'לתשלום →':'К оплате →'}
       </button>
@@ -768,7 +776,11 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
                       {/* Шаг таб */}
                       <div style={{ display:'flex', gap:6, background:'#f1f5f9', borderRadius:10, padding:4 }}>
                         {(['cart','checkout'] as const).map(s => (
-                          <button key={s} onClick={() => { if (s === 'checkout' && !items.length) return; setStep(s) }}
+                          <button key={s} onClick={() => {
+                              if (s === 'checkout' && !items.length) return
+                              if (s === 'checkout' && !clientId) { setClientWarning(true); return }
+                              setStep(s)
+                            }}
                             style={{ flex:1, padding:'7px', borderRadius:7, border:'none', cursor:'pointer', fontSize:12, fontWeight:600, background: step === s ? '#fff' : 'transparent', color: step === s ? '#1e293b' : '#94a3b8', boxShadow: step === s ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', transition:'all .15s' }}>
                             {s === 'cart' ? (isHe?'🛒 סל':'🛒 Корзина') : (isHe?'💳 תשלום':'💳 Оплата')}
                           </button>
@@ -777,32 +789,42 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
                       {/* CART */}
                       {step === 'cart' && (<>
                         {!safeData.clientId && (
-                          <div className="relative">
-                            {clientLabel ? (
-                              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
-                                <span className="text-sm font-medium text-amber-800">{clientLabel}</span>
-                                <button onClick={() => { setClientLabel(''); setClientId(null); setClientObj(null) }}><X size={14} className="text-amber-400"/></button>
-                              </div>
-                            ) : (
-                              <div className="relative">
-                                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"/>
-                                <input value={clientSearch} onChange={e => setClientSearch(e.target.value)}
-                                  placeholder={isHe?'חיפוש לקוח...':'Поиск клиента...'}
-                                  className="w-full ps-9 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                                {clientResults.length > 0 && (
-                                  <div className="absolute top-full mt-1 w-full bg-white border border-gray-100 rounded-xl shadow-lg z-20 max-h-40 overflow-y-auto">
-                                    {clientResults.map((c: any) => (
-                                      <button key={c.id} onClick={() => { setClientId(c.id); setClientLabel(`${c.first_name} ${c.last_name}`.trim()); setClientObj(c); setClientSearch(''); setClientResults([]) }}
-                                        className="w-full text-start px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-0">
-                                        <span className="font-medium">{c.first_name} {c.last_name}</span>
-                                        {c.phone && <span className="ms-2 text-xs text-gray-400">{c.phone}</span>}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
+                          <>
+                            <div className="relative">
+                              {clientLabel ? (
+                                <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                                  <span className="text-sm font-medium text-amber-800">{clientLabel}</span>
+                                  <button onClick={() => { setClientLabel(''); setClientId(null); setClientObj(null) }}><X size={14} className="text-amber-400"/></button>
+                                </div>
+                              ) : (
+                                <div className="relative">
+                                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"/>
+                                  <input value={clientSearch} onChange={e => { setClientSearch(e.target.value); setClientWarning(false) }}
+                                    placeholder={isHe?'חיפוש לקוח...':'Поиск клиента...'}
+                                    className={`w-full ps-9 py-2.5 rounded-xl border text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300 ${clientWarning ? 'border-red-400 ring-2 ring-red-200' : 'border-gray-200'}`} />
+                                  {clientResults.length > 0 && (
+                                    <div className="absolute top-full mt-1 w-full bg-white border border-gray-100 rounded-xl shadow-lg z-20 max-h-40 overflow-y-auto">
+                                      {clientResults.map((c: any) => (
+                                        <button key={c.id} onClick={() => { setClientId(c.id); setClientLabel(`${c.first_name} ${c.last_name}`.trim()); setClientObj(c); setClientSearch(''); setClientResults([]); setClientWarning(false) }}
+                                          className="w-full text-start px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-0">
+                                          <span className="font-medium">{c.first_name} {c.last_name}</span>
+                                          {c.phone && <span className="ms-2 text-xs text-gray-400">{c.phone}</span>}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            {clientWarning && !clientLabel && (
+                              <div className="flex items-center gap-1.5 -mt-1 px-1">
+                                <AlertCircle size={12} className="text-red-500 flex-shrink-0"/>
+                                <span className="text-xs text-red-500 font-medium">
+                                  {isHe ? 'יש לבחור לקוח מהרשימה' : 'Выберите клиента из списка'}
+                                </span>
                               </div>
                             )}
-                          </div>
+                          </>
                         )}
                         {items.length > 0 && (
                           <div className="space-y-2">
@@ -916,13 +938,13 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
                   ) : (
                     <div className="relative">
                       <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"/>
-                      <input value={clientSearch} onChange={e => setClientSearch(e.target.value)}
+                      <input value={clientSearch} onChange={e => { setClientSearch(e.target.value); setClientWarning(false) }}
                         placeholder={isHe?'חיפוש לקוח...':'Поиск клиента...'}
-                        className="w-full ps-9 py-2.5 rounded-xl border border-gray-200 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                        className={`w-full ps-9 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-300 ${clientWarning ? 'border-red-400 ring-2 ring-red-200' : 'border-gray-200'}`} />
                       {clientResults.length > 0 && (
                         <div className="absolute top-full mt-1 w-full bg-white border border-gray-100 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
                           {clientResults.map((c: any) => (
-                            <button key={c.id} onClick={() => { setClientId(c.id); setClientLabel(`${c.first_name} ${c.last_name}`.trim()); setClientObj(c); setClientSearch(''); setClientResults([]) }}
+                            <button key={c.id} onClick={() => { setClientId(c.id); setClientLabel(`${c.first_name} ${c.last_name}`.trim()); setClientObj(c); setClientSearch(''); setClientResults([]); setClientWarning(false) }}
                               className="w-full text-start px-3 py-2.5 text-sm hover:bg-gray-50 border-b last:border-0">
                               <span className="font-medium">{c.first_name} {c.last_name}</span>
                               {c.phone && <span className="ms-2 text-xs text-gray-400">{c.phone}</span>}
@@ -932,6 +954,14 @@ export function UnifiedSalesDialog({ open, onOpenChange, initialData }: UnifiedS
                       )}
                     </div>
                   )}
+                </div>
+              )}
+              {clientWarning && !clientLabel && !safeData.clientId && (
+                <div className="flex items-center gap-1.5 -mt-3 px-1">
+                  <AlertCircle size={12} className="text-red-500 flex-shrink-0"/>
+                  <span className="text-xs text-red-500 font-medium">
+                    {isHe ? 'יש לבחור לקוח מהרשימה' : 'Выберите клиента из списка'}
+                  </span>
                 </div>
               )}
 

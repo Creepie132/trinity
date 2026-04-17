@@ -2607,3 +2607,18 @@ DOM-порядок: `[Back (Start)] [Logo (Center)] [Bell + Burger (End)]`
 - `src/app/landing/page.tsx`
 
 **Коммит:** 1c5e789
+
+---
+
+### 18.04.2026 — HOTFIX: /api/payments 500 у всех клиентов
+
+**Проблема:** GET /api/payments возвращал 500 Internal Server Error у всех клиентов. Страница "Платежи" показывала пустой список.
+
+**Причина:** JOIN с таблицей `sales` в SELECT-запросе — `sales(id, total_amount, status, sale_date)`. Колонка `sale_date` была переименована или удалена из таблицы `sales` в Supabase, из-за чего PostgREST возвращал ошибку "Could not find...".
+
+**Фикс:** Убран join с `sales` из GET `/api/payments`. Данные о сделке не нужны для отображения списка платежей — в `payment` уже есть `sale_id` для ссылки.
+
+**Затронутые файлы:**
+- `src/app/api/payments/route.ts`
+
+**Коммит:** 11ead4d

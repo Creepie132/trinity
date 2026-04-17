@@ -18,7 +18,10 @@ const T = {
   he: {
     title: 'פרטי עסקה', method: 'שיטת תשלום', items: 'פריטים',
     total: 'סה״כ', paid: 'שולם', balance: 'יתרה', receipt: 'חשבונית',
-    notes: 'הערות', close: 'סגור', unknown: 'לקוח לא ידוע',
+    notes: 'הערות', close: 'סגור',
+    unknown: 'לקוח ללא שם',
+    noClient: 'ללא לקוח',
+    clientDeleted: 'לקוח נמחק',
     cash: 'מזומן', card: 'כרטיס', bit: 'ביט', transfer: 'העברה',
     paid_status: 'שולם', partial_status: 'חלקי', new_status: 'חדש',
     unpaid_status: 'לא שולם',
@@ -30,7 +33,10 @@ const T = {
   ru: {
     title: 'Детали сделки', method: 'Оплата', items: 'Позиции',
     total: 'Итого', paid: 'Оплачено', balance: 'Остаток', receipt: 'Чек',
-    notes: 'Примечания', close: 'Закрыть', unknown: 'Клиент не найден',
+    notes: 'Примечания', close: 'Закрыть',
+    unknown: 'Клиент без имени',
+    noClient: 'Без клиента',
+    clientDeleted: 'Клиент удалён',
     cash: 'Наличные', card: 'Карта', bit: 'Bit', transfer: 'Перевод',
     paid_status: 'Оплачено', partial_status: 'Частично', new_status: 'Новая',
     unpaid_status: 'Не оплачено',
@@ -66,8 +72,13 @@ function getGradient(name: string) {
   return AVATAR_GRADIENTS[(name.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length]
 }
 function getClientName(sale: Sale, t: typeof T['ru']) {
-  if (sale.clients) return `${sale.clients.first_name || ''} ${sale.clients.last_name || ''}`.trim().trim()
-  return t.unknown
+  if (sale.clients) {
+    const name = `${sale.clients.first_name || ''} ${sale.clients.last_name || ''}`.trim()
+    if (name) return name
+    return t.unknown
+  }
+  if (sale.client_id) return t.clientDeleted
+  return t.noClient
 }
 
 interface Props { sale: Sale | null; locale: 'he' | 'ru'; onClose: () => void }

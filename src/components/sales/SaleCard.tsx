@@ -28,9 +28,12 @@ function clientInitials(sale: Sale) {
 
 function clientName(sale: Sale, locale: 'he' | 'ru') {
   if (sale.clients) {
-    return `${sale.clients.first_name || ''} ${sale.clients.last_name || ''}`.trim()
+    const name = `${sale.clients.first_name || ''} ${sale.clients.last_name || ''}`.trim()
+    if (name) return name
+    return locale === 'he' ? 'לקוח ללא שם' : 'Клиент без имени'
   }
-  return locale === 'he' ? 'לקוח לא ידוע' : 'Клиент не найден'
+  if (sale.client_id) return locale === 'he' ? 'לקוח נמחק' : 'Клиент удалён'
+  return locale === 'he' ? 'ללא לקוח' : 'Без клиента'
 }
 
 function avatarColor(sale: Sale) {

@@ -2586,3 +2586,24 @@ DOM-порядок: `[Back (Start)] [Logo (Center)] [Bell + Burger (End)]`
    - При открытии диалога `clientWarning` сбрасывается
 
 **Коммит:** 8a22579
+
+
+---
+
+### 18.04.2026 — Исправление бесконечного редиректа между / и /landing
+
+**Проблема:** Лендинг не открывался — браузер бесконечно прыгал между `https://www.ambersol.co.il/` и `https://www.ambersol.co.il/landing`.
+
+**Причина:** Redirect loop:
+- `src/app/page.tsx` — server-side `redirect('/landing')`
+- `src/app/landing/page.tsx` — client-side `router.replace('/')` в `useEffect`
+
+**Фикс:**
+- `src/app/page.tsx` — изменён редирект с `/landing` на `/login`
+- `src/app/landing/page.tsx` — заменён client-side компонент на server-side `redirect('/login')`
+
+**Изменённые файлы:**
+- `src/app/page.tsx`
+- `src/app/landing/page.tsx`
+
+**Коммит:** 1c5e789

@@ -2622,3 +2622,53 @@ DOM-порядок: `[Back (Start)] [Logo (Center)] [Bell + Burger (End)]`
 - `src/app/api/payments/route.ts`
 
 **Коммит:** 11ead4d
+
+---
+
+### 18.04.2026 — Сортировка клиентов
+
+**Функционал:** На странице `/clients` добавлена сортировка по 4 критериям.
+
+**UI:** Строка чипов под поиском — активный чип подсвечивается indigo. Работает на десктопе и мобиле.
+
+**Варианты сортировки:**
+- **По дате добавления** (`created_at DESC`) — дефолт, SQL `ORDER BY`
+- **По алфавиту** (`first_name ASC`) — SQL `ORDER BY`
+- **По последнему визиту** (`last_visit DESC`) — пост-сортировка после RPC-агрегата, null → в конец
+- **По сумме сделок** (`total_paid DESC`) — пост-сортировка после RPC-агрегата
+
+**Затронутые файлы:**
+- `src/app/(dashboard)/clients/page.tsx` — state `sortBy`, UI чипы, передача в хук
+- `src/hooks/useClients.ts` — параметр `sortBy` в queryKey и URLSearchParams
+- `src/app/api/clients/summary/route.ts` — `sortBy` из searchParams, SQL sort для alphabet/created_at, пост-сортировка для last_visit/last_sale
+
+**Коммит:** 8829823
+
+---
+
+### 18.04.2026 — Responsive layout: маленькие экраны (ноутбуки/планшеты)
+
+**Проблема:** На ноутбуках ~1366px одновременно показывались RightPanel (288px) + левая тёмная панель статистики (~250px) → для контента оставалось ~550px.
+
+**Что изменено:**
+
+**RightPanel** (`src/components/layout/RightPanel.tsx`):
+- `xl:flex` → `2xl:flex` — панель Киры/рекламы скрыта до 1536px
+
+**Sales** (`src/app/(dashboard)/sales/page.tsx`):
+- Левый split-layout: `hidden md:flex` → `hidden xl:flex`
+- KPI-карточки и chart: `md:hidden` → `xl:hidden` (видны на планшетах)
+- Добавлен `md:block xl:hidden` — полноширокая таблица без левой панели (поиск + табы + строки)
+
+**Payments** (`src/app/(dashboard)/payments/page.tsx`):
+- Левый split-layout: `hidden md:flex` → `hidden xl:flex`
+- Добавлен `md:block xl:hidden` — полноширокая таблица с поиском/шапкой/строками
+
+**Clients** (`src/app/(dashboard)/clients/page.tsx`):
+- Шапка/скелетон/строки: `grid-cols-[2fr_1fr_1fr_80px_100px_90px]` → адаптивный grid
+- `md`: имя + телефон + визиты (3 колонки)
+- `lg`: + последний визит + сумма (5 колонок)
+- `xl`: + действия (6 колонок)
+- Имя никогда не обрезается — первая колонка `2fr` на всех брейкпоинтах
+
+**Коммит:** 328da4b

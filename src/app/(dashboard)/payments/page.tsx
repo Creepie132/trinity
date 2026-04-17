@@ -445,8 +445,60 @@ function PaymentsContent() {
           </div>
         </div>
 
-        {/* ══════════════ ДЕСКТОП: Split Layout ══════════════ */}
-        <div className="hidden md:flex rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700"
+        {/* ══ ПЛАНШЕТ / МАЛЕНЬКИЙ НОУТБУК md..xl: полноширокая таблица без левой панели ══ */}
+        <div className="hidden md:block xl:hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden"
+          style={{ animation: 'fadeUp 0.42s 0.18s ease both' }}>
+          {/* Поиск + метод */}
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50 dark:border-gray-700/60">
+            <div className="relative flex-1">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                placeholder={locale === 'he' ? 'חיפוש לפי שם...' : 'Поиск по имени...'}
+                className="w-full ps-8 pe-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/25" />
+            </div>
+            <select value={methodFilter} onChange={e => setMethodFilter(e.target.value)}
+              className="text-xs border border-gray-100 dark:border-gray-600 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 focus:outline-none">
+              <option value="all">{locale === 'he' ? 'כל השיטות' : 'Все методы'}</option>
+              {(['cash','card','bit','bank_transfer','check'] as const).map(k => {
+                const cfg = getMethodCfg(k)
+                return <option key={k} value={k}>{cfg.label[locale as 'ru' | 'he']}</option>
+              })}
+            </select>
+          </div>
+          {/* Шапка */}
+          {!isLoading && filteredPayments.length > 0 && (
+            <div className="grid px-3 py-2 bg-gray-50/80 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700"
+              style={{ gridTemplateColumns: '1fr auto auto auto' }}>
+              {[locale === 'he' ? 'לקוח' : 'Клиент', locale === 'he' ? 'תאריך' : 'Дата', locale === 'he' ? 'סכום' : 'Сумма', locale === 'he' ? 'סטטוס' : 'Статус'].map((h, i) => (
+                <span key={i} className={`text-[10px] font-bold text-gray-400 uppercase tracking-widest ${i > 0 ? 'px-2' : ''} ${i === 2 ? 'text-right' : ''}`}>{h}</span>
+              ))}
+            </div>
+          )}
+          {/* Строки */}
+          <div className="divide-y divide-gray-50 dark:divide-gray-700/40 overflow-y-auto" style={{ maxHeight: 'calc(100dvh - 320px)' }}>
+            {isLoading ? [...Array(7)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+                <div className="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0" />
+                <div className="flex-1 space-y-2"><div className="h-3.5 bg-gray-100 dark:bg-gray-700 rounded-full w-36" /><div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full w-24" /></div>
+                <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full w-16" />
+              </div>
+            )) : filteredPayments.length === 0 ? (
+              <div className="py-16 text-center">
+                <Receipt className="w-10 h-10 text-gray-200 dark:text-gray-700 mx-auto mb-3" />
+                <p className="text-sm text-gray-400">{locale === 'he' ? 'אין תשלומים' : 'Платежей нет'}</p>
+                <button onClick={() => openModal('payment-unified', { onSuccess: handlePaymentSuccess })} className="mt-3 text-sm text-amber-500 hover:text-amber-600 hover:underline">
+                  {locale === 'he' ? 'הוסף תשלום' : 'Добавить платёж'}
+                </button>
+              </div>
+            ) : filteredPayments.map((p: any, i: number) => (
+              <PaymentRow key={p.id} payment={p} locale={locale} index={i}
+                onClick={() => { setSelectedPayment(p); setDrawerOpen(true) }} />
+            ))}
+          </div>
+        </div>
+
+        {/* ══ ШИРОКИЙ ДЕСКТОП xl+: Split Layout ══════════════ */}
+        <div className="hidden xl:flex rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700"
           style={{ height: 'calc(100dvh - 220px)', minHeight: 480, animation: 'fadeUp 0.42s 0.1s ease both' }}>
 
           {/* ══ ЛЕВАЯ ТЁМНАЯ ПАНЕЛЬ ══ */}

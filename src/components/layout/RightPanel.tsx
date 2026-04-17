@@ -169,7 +169,7 @@ export function RightPanel() {
   const titleLabel = isRTL ? 'עדכונים' : 'Обновления'
 
   return (
-    <aside className={`hidden xl:flex xl:flex-col xl:w-72 xl:flex-shrink-0 sticky top-0 h-screen overflow-y-auto ${borderClass} bg-white/80 dark:bg-slate-900/80 z-[0]`}>
+    <aside className={`hidden 2xl:flex 2xl:flex-col 2xl:w-72 2xl:flex-shrink-0 sticky top-0 h-screen overflow-y-auto ${borderClass} bg-white/80 dark:bg-slate-900/80 z-[0]`}>
       <div className="flex flex-col h-full p-4 gap-4">
 
         {/* Заголовок */}

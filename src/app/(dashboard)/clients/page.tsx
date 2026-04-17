@@ -311,30 +311,30 @@ export default function ClientsPage() {
 
       {/* Desktop — современный список */}
       <div className="hidden md:block">
-        {/* Заголовок колонок */}
-        <div className="grid grid-cols-[2fr_1fr_1fr_80px_100px_90px] gap-4 px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-800">
+        {/* Заголовок колонок — адаптивный: md=3кол, lg=5кол, xl=6кол */}
+        <div className="grid grid-cols-[2fr_1fr_80px] lg:grid-cols-[2fr_1fr_1fr_80px_100px] xl:grid-cols-[2fr_1fr_1fr_80px_100px_90px] gap-4 px-4 py-2 text-xs font-medium text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-800">
           <span>{t('clients.name')}</span>
           <span>{t('clients.phone')}</span>
-          <span>{t('clients.lastVisit')}</span>
+          <span className="hidden lg:block">{t('clients.lastVisit')}</span>
           <span>{t('clients.visits')}</span>
-          <span>{t('clients.totalSpent')}</span>
-          <span></span>
+          <span className="hidden lg:block">{t('clients.totalSpent')}</span>
+          <span className="hidden xl:block"></span>
         </div>
 
         {/* Скелетон */}
         {isFetching && clients.length === 0 ? (
           <div className="divide-y divide-gray-50 dark:divide-gray-800">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="grid grid-cols-[2fr_1fr_1fr_80px_100px_80px] gap-4 px-4 py-3 items-center">
+              <div key={i} className="grid grid-cols-[2fr_1fr_80px] lg:grid-cols-[2fr_1fr_1fr_80px_100px] xl:grid-cols-[2fr_1fr_1fr_80px_100px_80px] gap-4 px-4 py-3 items-center">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 animate-pulse" />
                   <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-28" />
                 </div>
                 <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-24" />
-                <div className="h-5 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-16" />
+                <div className="hidden lg:block h-5 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-16" />
                 <div className="h-5 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-8 mx-auto" />
-                <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-14" />
-                <div className="h-7 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="hidden lg:block h-4 bg-gray-100 dark:bg-gray-700 rounded-full animate-pulse w-14" />
+                <div className="hidden xl:block h-7 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
               </div>
             ))}
           </div>
@@ -347,7 +347,7 @@ export default function ClientsPage() {
                 <div
                   key={client.id}
                   onClick={() => handleClientClick(client)}
-                  className={`grid grid-cols-[2fr_1fr_1fr_80px_100px_90px] gap-4 px-4 py-2 items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group ${
+                  className={`grid grid-cols-[2fr_1fr_80px] lg:grid-cols-[2fr_1fr_1fr_80px_100px] xl:grid-cols-[2fr_1fr_1fr_80px_100px_90px] gap-4 px-4 py-2 items-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group ${
                     draftClients.has(client.id) ? 'draft-glow' : ''
                   }`}
                 >
@@ -363,12 +363,14 @@ export default function ClientsPage() {
                   </div>
 
                   {/* Телефон */}
-                  <span className="text-sm text-gray-600 dark:text-gray-300 tabular-nums">
+                  <span className="text-sm text-gray-600 dark:text-gray-300 tabular-nums truncate">
                     {client.phone || '—'}
                   </span>
 
-                  {/* Последний визит */}
-                  <ActivityBadge lastVisit={client.last_visit} locale={language === 'he' ? 'he' : 'ru'} />
+                  {/* Последний визит — скрыт до lg */}
+                  <div className="hidden lg:block">
+                    <ActivityBadge lastVisit={client.last_visit} locale={language === 'he' ? 'he' : 'ru'} />
+                  </div>
 
                   {/* Кол-во визитов */}
                   <div className="flex justify-center">
@@ -381,13 +383,13 @@ export default function ClientsPage() {
                     </span>
                   </div>
 
-                  {/* Сумма */}
-                  <span className={`text-sm font-semibold ${totalPaid > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-300'}`}>
+                  {/* Сумма — скрыта до lg */}
+                  <span className={`hidden lg:block text-sm font-semibold ${totalPaid > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-300'}`}>
                     {totalPaid > 0 ? `₪${totalPaid.toLocaleString()}` : '—'}
                   </span>
 
-                  {/* Действия */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                  {/* Действия — скрыты до xl */}
+                  <div className="hidden xl:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                     <DraftSaleIndicator clientId={client.id} client={client} locale={language === 'he' ? 'he' : 'ru'} />
                     {client.phone && (
                       <a

@@ -70,7 +70,17 @@ const AV_COLORS = [
   'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
 ]
 function saleName(s: Sale, l: string) {
-  return s.clients ? `${s.clients.first_name} ${s.clients.last_name}`.trim() : (l === 'he' ? 'לקוח לא ידוע' : 'Клиент')
+  // 1) Клиент привязан и JOIN вернул строку → реальное имя
+  if (s.clients) {
+    const name = `${s.clients.first_name || ''} ${s.clients.last_name || ''}`.trim()
+    if (name) return name
+    // Клиент есть, но first/last пустые — подстрахуемся
+    return l === 'he' ? 'לקוח ללא שם' : 'Клиент без имени'
+  }
+  // 2) client_id есть, но JOIN пустой → запись клиента удалена
+  if (s.client_id) return l === 'he' ? 'לקוח נמחק' : 'Клиент удалён'
+  // 3) client_id = null → быстрая продажа без клиента (walk-in)
+  return l === 'he' ? 'ללא לקוח' : 'Без клиента'
 }
 function saleIni(s: Sale) {
   return `${s.clients?.first_name?.[0] || ''}${s.clients?.last_name?.[0] || ''}`.toUpperCase() || '?'
@@ -376,8 +386,8 @@ function SalesContent() {
           </div>
         </div>
 
-        {/* ── KPI — только мобиль ── */}
-        <div className="grid grid-cols-3 gap-3 md:hidden">
+        {/* ── KPI — мобиль + планшет (до xl) ── */}
+        <div className="grid grid-cols-3 gap-3 xl:hidden">
           {kpiData.map((k, i) => (
             <div key={i} className="anim-popin bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 relative overflow-hidden"
               style={{ animationDelay: `${i * 0.08}s` }}>
@@ -389,29 +399,100 @@ function SalesContent() {
           ))}
         </div>
 
-        {/* ── MOBILE CHART ── */}
-        <div className="md:hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+        {/* ── CHART — мобиль + планшет (до xl) ── */}
+        <div className="xl:hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
           <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 block mb-3">{t.monthlyChart}</span>
           <BarChart chartPoints={chartPoints} locale={locale} />
         </div>
 
-        {/* ── MOBILE: панель заказов с сайта (если открыта) ── */}
+        {/* ── Orders panel — мобиль + планшет ── */}
         {showOrders && hasSiteIntegration && (
-          <div className="md:hidden bg-white dark:bg-gray-800 rounded-2xl border border-violet-200 dark:border-violet-800 overflow-hidden"
+          <div className="xl:hidden bg-white dark:bg-gray-800 rounded-2xl border border-violet-200 dark:border-violet-800 overflow-hidden"
             style={{ minHeight: 300 }}>
             <SiteOrdersPanel locale={locale} />
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════════
-            КОНЦЕПТ A — SPLIT LAYOUT (только десктоп)
-            height: фиксированная высота = весь экран минус header
-            Левая панель: overflow-y-auto (скроллится если контент длиннее)
-            Правая панель: flex-col overflow-hidden
-              ├── flex-shrink-0 : поиск + фильтры + табы + шапка (СТАТИЧНЫ)
-              └── flex-1 overflow-y-auto : строки (СКРОЛЛИРУЮТСЯ) + пагинация
-        ═══════════════════════════════════════════════════════════════════ */}
-        <div className="hidden md:flex rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700"
+        {/* ══ ПЛАНШЕТ / МАЛЕНЬКИЙ НОУТБУК md..xl: полноширокая таблица без левой панели ══ */}
+        <div className="hidden md:block xl:hidden rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800"
+          style={{ minHeight: 400 }}>
+          {/* Поиск + фильтры */}
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50 dark:border-gray-700/60">
+            <div className="relative flex-1">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t.search}
+                className="w-full ps-8 pe-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-xl text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/25" />
+            </div>
+            <button onClick={() => setShowFilters(v => !v)}
+              className={`relative flex items-center justify-center w-9 h-9 rounded-xl border transition-all ${showFilters || hasDateFilter ? 'bg-amber-50 border-amber-300 text-amber-600' : 'border-gray-100 text-gray-400'}`}>
+              <SlidersHorizontal size={15} />
+              {hasDateFilter && <span className="absolute -top-1 -end-1 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-white" />}
+            </button>
+            <select value={methodFilter} onChange={e => setMethodFilter(e.target.value)}
+              className="text-xs border border-gray-100 dark:border-gray-600 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 focus:outline-none">
+              <option value="all">{t.filterAll}</option>
+              <option value="cash">{t.cash}</option>
+              <option value="card">{t.card}</option>
+              <option value="bit">{t.bit}</option>
+            </select>
+          </div>
+          {/* Табы */}
+          <div className="flex bg-gray-50 dark:bg-gray-700/40 border-b border-gray-100 dark:border-gray-700 px-2 overflow-x-auto">
+            {(['all','paid','partial','unpaid','new','draft'] as const).map(s => (
+              <button key={s} onClick={() => setStatusFilter(s)}
+                className={`flex-shrink-0 flex items-center gap-1.5 text-[11px] font-semibold py-3 px-3 border-b-2 transition-all whitespace-nowrap ${statusFilter === s ? 'border-amber-500 text-gray-900 dark:text-gray-100' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+                {s === 'draft' && <BookmarkCheck size={11} />}
+                {s === 'all' ? t.all : s === 'paid' ? t.paid : s === 'partial' ? t.partial : s === 'unpaid' ? t.unpaid : s === 'new' ? t.newStatus : t.draft}
+                {s === 'draft' && drafts.length > 0 && <span className="bg-amber-500 text-white text-[8px] min-w-[14px] h-3.5 px-1 rounded-full flex items-center justify-center font-bold">{drafts.length}</span>}
+                {s === 'unpaid' && (() => { const cnt = sales.filter((x: Sale) => x.status === 'unpaid' || x.status === 'partial').length; return cnt > 0 ? <span className="bg-red-500 text-white text-[8px] min-w-[14px] h-3.5 px-1 rounded-full flex items-center justify-center font-bold">{cnt}</span> : null })()}
+              </button>
+            ))}
+          </div>
+          {/* Шапка */}
+          {!isLoading && filteredSales.length > 0 && (
+            <div className="grid px-3 py-2 bg-gray-50/80 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700"
+              style={{ gridTemplateColumns: '1fr auto auto auto' }}>
+              {[t.client, t.date, t.amount, t.status].map((h, i) => (
+                <span key={i} className={`text-[10px] font-bold text-gray-400 uppercase tracking-widest ${i > 0 ? 'px-2' : ''} ${i === 2 ? 'text-right' : ''}`}>{h}</span>
+              ))}
+            </div>
+          )}
+          {/* Строки */}
+          <div className="divide-y divide-gray-50 dark:divide-gray-700/40">
+            {isLoading ? [...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex-shrink-0" />
+                <div className="flex-1 space-y-2"><div className="h-3.5 bg-gray-100 dark:bg-gray-700 rounded-full w-32" /><div className="h-3 bg-gray-100 dark:bg-gray-700 rounded-full w-20" /></div>
+                <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full w-14" />
+              </div>
+            )) : filteredSales.length === 0 ? (
+              <EmptyState icon={<ShoppingBag size={26} />} title={t.noSales} description={t.noSalesDesc}
+                action={{ label: t.newSale, onClick: () => openModal('sale-unified', {}) }} />
+            ) : filteredSales.slice(0, 50).map((sale: Sale, i: number) => {
+              const cfg = STATUS_CFG[sale.status] || STATUS_CFG.new
+              const name = saleName(sale, locale)
+              const ini = name.split(' ').map((w: string) => w[0]?.toUpperCase() || '').join('').slice(0, 2) || '?'
+              const av = AV_COLORS[name.charCodeAt(0) % AV_COLORS.length]
+              const dateStr = sale.sale_date ? new Date(sale.sale_date).toLocaleDateString(locale === 'he' ? 'he-IL' : 'ru-RU', { day: 'numeric', month: 'short' }) : '—'
+              return (
+                <div key={sale.id} onClick={() => setSelectedSale(sale)}
+                  className="grid items-center px-3 py-2.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                  style={{ gridTemplateColumns: '1fr auto auto auto', borderInlineStart: `2.5px solid ${cfg.dot}` }}>
+                  <div className="flex items-center gap-2 min-w-0 pe-2">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${av}`}>{ini}</div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{name}</span>
+                  </div>
+                  <span className="text-xs text-gray-400 px-2 whitespace-nowrap tabular-nums">{dateStr}</span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100 px-2 tabular-nums whitespace-nowrap">₪{Number(sale.total_amount || 0).toLocaleString()}</span>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cfg.badge}`}>{cfg.label[locale as 'ru' | 'he']}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ══ ШИРОКИЙ ДЕСКТОП xl+: SPLIT LAYOUT (левая панель + таблица) ══ */}
+        <div className="hidden xl:flex rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700"
           style={{ height: 'calc(100dvh - 220px)', minHeight: 480, animation: 'fadeUp 0.42s 0.1s ease both' }}>
 
           {/* ══ ЛЕВАЯ ТЁМНАЯ ПАНЕЛЬ ══ */}

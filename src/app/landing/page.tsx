@@ -1,10 +1,5 @@
-'use client'
-
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { redirect } from 'next/navigation'
 
 export default function LandingPage() {
-  const router = useRouter()
-  useEffect(() => { router.replace('/') }, [])
-  return null
+  redirect('/login')
 }

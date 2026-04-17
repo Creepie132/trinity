@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Eye, Users, Phone, Calendar, TrendingUp, MessageCircle, Filter, Loader2, Download } from 'lucide-react'
+import { Plus, Search, Eye, Users, Phone, Calendar, TrendingUp, MessageCircle, Filter, Loader2, Download, ArrowUpDown } from 'lucide-react'
 import { useClients } from '@/hooks/useClients'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useQueryClient } from '@tanstack/react-query'
@@ -87,6 +87,7 @@ export default function ClientsPage() {
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [sortBy, setSortBy] = useState('created_at')
   const [draftClients, setDraftClients] = useState<Set<string>>(new Set())
   const [noVisitToday, setNoVisitToday] = useState(false)
   const { openModal } = useModalStore()
@@ -97,7 +98,7 @@ export default function ClientsPage() {
   // Пустая строка или < 2 символов → не гоним текстовый поиск к БД
   const activeSearch = debouncedSearch.length >= 2 ? debouncedSearch : ''
 
-  const { data: clientsData, isLoading, isFetching } = useClients(activeSearch, page, pageSize)
+  const { data: clientsData, isLoading, isFetching } = useClients(activeSearch, page, pageSize, undefined, sortBy)
   const clients = clientsData?.data || []
   const totalCount = clientsData?.count || 0
   const clientCount = totalCount
@@ -105,10 +106,10 @@ export default function ClientsPage() {
   const from = (page - 1) * pageSize + 1
   const to = Math.min(page * pageSize, totalCount)
 
-  // Reset to page 1 when search changes
+  // Reset to page 1 when search or sort changes
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch])
+  }, [debouncedSearch, sortBy])
 
   // Scan localStorage for draft sales and update on focus
   useEffect(() => {
@@ -279,6 +280,34 @@ export default function ClientsPage() {
           className="pr-10 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
         />
       </div>
+
+      {/* Sort controls */}
+      {(() => {
+        const sorts = [
+          { key: 'created_at', ru: 'По дате добавления', he: 'לפי תאריך הוספה' },
+          { key: 'alphabet',   ru: 'По алфавиту',        he: 'לפי א-ב' },
+          { key: 'last_visit', ru: 'По последнему визиту', he: 'לפי ביקור אחרון' },
+          { key: 'last_sale',  ru: 'По сумме сделок',    he: 'לפי סכום עסקאות' },
+        ]
+        return (
+          <div className="flex items-center gap-2 flex-wrap">
+            <ArrowUpDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            {sorts.map(s => (
+              <button
+                key={s.key}
+                onClick={() => setSortBy(s.key)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                  sortBy === s.key
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200/60'
+                    : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'
+                }`}
+              >
+                {language === 'he' ? s.he : s.ru}
+              </button>
+            ))}
+          </div>
+        )
+      })()}
 
       {/* Desktop — современный список */}
       <div className="hidden md:block">

@@ -18,6 +18,7 @@ export function useClients(
   page: number = 1,
   pageSize: number = 25,
   onClientInsert?: () => void,   // optional callback — kept for API compat (Kira)
+  sortBy: string = 'created_at',
 ) {
   const { orgId: authOrgId } = useAuth()
   const { activeOrgId, mainOrgId, isOrgResolved } = useBranch()
@@ -33,14 +34,15 @@ export function useClients(
   }, [onClientInsert])
 
   return useQuery({
-    queryKey: ['clients', orgId, searchQuery, page, pageSize],
+    queryKey: ['clients', orgId, searchQuery, page, pageSize, sortBy],
     enabled: !!orgId && isOrgResolved,
     placeholderData: keepPreviousData,
-    staleTime: 60_000, // 1 min — не рефетчим при каждом переходе
+    staleTime: 60_000,
     queryFn: async () => {
       const params = new URLSearchParams({
-        page:  String(page),
-        limit: String(pageSize),
+        page:   String(page),
+        limit:  String(pageSize),
+        sortBy,
       })
       if (searchQuery?.trim()) params.set('search', searchQuery.trim())
 

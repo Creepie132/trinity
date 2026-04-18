@@ -453,38 +453,86 @@ Whapi.cloud → POST /api/webhooks/whapi
 ## 10. Лендинг /landing
 
 ### Расположение
-`src/app/landing/page.tsx` — Next.js страница (статическая)
+- `src/app/landing/page.tsx` — единый client-component (`'use client'`), ~1700 строк
+- `src/app/landing/layout.tsx` — пустой pass-through (изоляция через root layout + cookie)
+- `src/app/landing/metadata.ts` — SEO metadata
+- `src/app/page.tsx` — `redirect('/landing')` (корень → лендинг)
 
-### Языки
-| Язык | Направление | Цикл переключения |
-|---|---|---|
-| RU (русский) | LTR | → HE |
-| HE (иврит) | RTL | → EN |
-| EN (английский) | LTR | → RU |
+### Изоляция от Trinity app
+Лендинг рендерится в ОТДЕЛЬНОМ `<html>/<body>` без Trinity-провайдеров.
 
-**Переключатель**: кнопка `btn-lang` в nav. Цикл: RU → HE → EN → RU.
+**Механизм:**
+1. `middleware.ts` на публичных путях выставляет cookie `trinity_page=landing` (maxAge 60s) только для `/landing*`, для остальных публичных путей — удаляет
+2. Root `src/app/layout.tsx` читает cookie в SSR — если `trinity_page === 'landing'`:
+   - `<html lang="ru" dir="ltr">` (всегда LTR, без Hebrew)
+   - `<head>` подключает только Inter (Google Fonts)
+   - `<body>` inline-style: `background: #080810`, `fontFamily: 'Inter'`
+   - Никаких `QueryProvider`, `LanguageProvider`, `Toaster`, PWA-манифеста
+3. Иначе (обычная Trinity-страница) — полный layout с Rubik/Assistant, провайдерами, JSON-LD
+
+**Зачем:** болванка требует `body { overflow: hidden }` + fixed sidebar + scroll-snap. Если бы лендинг рендерился под общим layout с Trinity-провайдерами и её `globals.css`, глобальные стили конфликтовали бы с лендингом (особенно Rubik vs Inter, RTL vs LTR, Tailwind reset vs собственный reset).
+
+### Архитектура страницы
+Единый client-компонент, все стили inline через `<style>{`...`}</style>` (template literal внутри JSX). Это позволяет держать весь лендинг в одном файле и избегать конфликтов с Trinity CSS.
+
+`useEffect` инициализирует 3 `IntersectionObserver`:
+- **Fade-up reveals** — `.reveal` получает `.visible` при появлении в viewport
+- **Active section** — синхронизирует `.active` класс sidebar/mobile-tabs со scroll-позицией
+- **Smooth scroll** — перехватывает клики по `a[href^="#"]`, делает `scrollIntoView({ behavior: 'smooth' })`
+
+Scroll-контейнер — `<main id="main-scroll">` с `scroll-snap-type: y mandatory`. Все `IntersectionObserver` используют этот элемент как `root`.
 
 ### Компоненты страницы
-1. **Nav** — логотип, ссылки, `btn-lang`, кнопка входа, бургер (мобильный)
-2. **Mobile menu** — открывается по бургеру, включает переключатель языка (добавлен 01.04.2026)
-3. **Hero** — заголовок, CTA, статистика (90% WhatsApp, 5 мин запуск, 0₪ комиссий)
-4. **Marquee** — бегущая строка с типами бизнесов
-5. **Problem** — три боли клиента
-6. **Features** — 6 ключевых возможностей
-7. **Trust** — безопасность (SSL, backup, соответствие закону)
-8. **How it works** — 4 шага запуска
-9. **Pricing** — 4 тарифных плана (из БД через `usePricingPlans`)
-10. **Testimonials** — отзывы Анеты и Ксении
-11. **CTA** — финальный призыв к действию
-12. **Footer**
+1. **Sidebar** (fixed, left, 80px → expands to 240px on hover) — логотип, 7 пунктов навигации, «Войти →», переключатель языка
+2. **Mobile bottom tabs** (fixed, bottom, только `<768px`) — 5 табов: Главная, Возможности, Тарифы, Отзывы, Контакты
+3. **Hero** — eyebrow, H1 с gradient-text, subtitle, 2 CTA-кнопки, 3 stats (90% WhatsApp / 5 мин / 0₪), particles + mesh-gradient bg, scroll-chevron
+4. **Industries strip** — marquee с 8 типами бизнеса (×2 для seamless loop)
+5. **Pain points** — 3 карточки с красной полосой слева (записи теряются / SMS не читают / непонятно что работает)
+6. **Bento features** — 6 карточек в grid-template-areas:
+   - WhatsApp (full row, с mini-chat mockup из 3 bubbles)
+   - Clients / Diary
+   - Analytics (full row, с mini-chart из 10 bars)
+   - Stock / Payments
+7. **How it works** — 4 шага с circular gradient-connector
+8. **Security** — 4 карточки 2×2 с зелёной полосой слева
+9. **Pricing** — 4 плана (Base ₪199 / Pro ₪249 featured / Enterprise ₪499 / Индивидуальная) в horizontal scroll-snap
+10. **Reviews** — 2 карточки: Анета (Beautymania), Ксения (Hair Rehab)
+11. **CTA + Contacts** — финальный призыв + форма (имя/email/тел/сообщение) + контакты (WhatsApp/Email/Израиль)
+12. **Footer** — copyright + ссылки
 
-### Планы из БД
-Цены берутся из Supabase через хук `usePricingPlans`. Fallback на хардкод если API недоступен.
+### Правила hover sidebar (важно!)
+Чтобы иконки НЕ смещались при expand sidebar:
+- `.sidebar-logo`, `.sidebar-nav a`, `.sidebar-bottom` имеют фиксированную `width: var(--sidebar-expanded)` (240px)
+- Ширина видимой части sidebar меняется через `width` на `.sidebar` (80 → 240px) + `overflow: hidden`
+- Layout внутренних элементов считается от 240px всегда → при expand ничего не пересчитывается, просто «открывается окно»
 
-### Мобильная адаптация
-- `@media (max-width: 900px)` — tablet: скрывается nav-links, показывается бургер
-- `@media (max-width: 480px)` — mobile: центрирование, вертикальные кнопки
-- `@media (max-height: 800px/650px)` — короткие экраны (ноутбуки)
+### Шрифты
+- **Единственный шрифт:** Inter (weights 300, 400, 500, 600, 700) с Google Fonts
+- Подключается в `src/app/layout.tsx` только при `trinity_page=landing`
+- `html`, `body`, `.sidebar` явно прописывают `font-family: 'Inter', sans-serif` чтобы не сработал fallback на Trinity-шрифты
+
+### Адаптивность
+- `>1024px` — sidebar 80px, expand до 240px при hover
+- `768–1024px` — sidebar 60px, без hover, текст скрыт через `display: none`, bento становится 2-column
+- `<768px` — sidebar скрыт, показывается mobile bottom tabs, scroll-snap отключён, все grid становятся 1-column, steps-container — вертикальный с линией слева
+
+### CSS-переменные
+```css
+--bg: #080810           /* тёмный фон */
+--surface: #111118      /* карточки */
+--white: #fff
+--muted: rgba(255,255,255,.4)
+--gold: #C8881A         /* акцент Amber */
+--gold-glow: rgba(200,136,26,.25)
+--sidebar-w: 80px
+--sidebar-expanded: 240px
+--red-accent: #e74c3c
+--green-accent: #2ecc71
+```
+
+### История изменений (18.04.2026)
+- **c632de0** — полная перезапись `page.tsx` с нуля 1-в-1 по эталонной HTML-болванке (`trinity-variant-a.html`, 1714 строк). Заменены все тексты, добавлены mini-chat/mini-chart mockups, форма контактов, fixed sidebar со scroll-snap секциями
+- **d9a9fe5** — фикс смещения иконок sidebar при hover: `.sidebar-logo`, `.sidebar-nav a`, `.sidebar-bottom` получили `width: var(--sidebar-expanded)`. Принудительный `font-family: 'Inter'` на `body` и `.sidebar`
 
 ---
 

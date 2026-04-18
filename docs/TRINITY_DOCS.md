@@ -533,6 +533,10 @@ Scroll-контейнер — `<main id="main-scroll">` с `scroll-snap-type: y 
 ### История изменений (18.04.2026)
 - **c632de0** — полная перезапись `page.tsx` с нуля 1-в-1 по эталонной HTML-болванке (`trinity-variant-a.html`, 1714 строк). Заменены все тексты, добавлены mini-chat/mini-chart mockups, форма контактов, fixed sidebar со scroll-snap секциями
 - **d9a9fe5** — фикс смещения иконок sidebar при hover: `.sidebar-logo`, `.sidebar-nav a`, `.sidebar-bottom` получили `width: var(--sidebar-expanded)`. Принудительный `font-family: 'Inter'` на `body` и `.sidebar`
+- **39d921e** — force-dynamic в `layout.tsx` для обхода edge-cache (prerender жил 15 дней игнорируя деплои)
+- **a7ea49f** — middleware пробрасывает pathname через request header `x-pathname` (попытка SSR-изоляции, не сработала: Next.js не читает эти headers в root layout)
+- **51d75d6** — **рабочая изоляция**: CSS-reset с `!important` (`html[dir="rtl"] { direction: ltr !important }`) + JS override в useEffect (удаление Trinity-классов `__variable_*`, `font-sans`, `light`). SSR всё равно отдаёт `<html dir="rtl" lang="he">`, но визуальный слой перезаписывается на клиенте. Производительность: FOUC не заметен за счёт `!important` в стилях
+- **46c1459** — фикс цвета заголовков (Trinity light-theme перебивала через inheritance) + pricing-бейджи теперь внутри карточек (не обрезаются scroll-контейнером)
 
 ---
 

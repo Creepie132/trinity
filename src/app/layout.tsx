@@ -155,14 +155,19 @@ export default async function RootLayout({
   const dir = locale === 'he' ? 'rtl' : 'ltr';
 
   // Лендинг — полная изоляция: ltr, inter, без Trinity-провайдеров.
-  // Определяем через request header из middleware (работает в том же запросе, в отличие от cookie)
-  // + cookie-fallback если middleware не сработал (client-side navigation)
+  // Проверяем ВСЕ возможные источники pathname в SSR:
   const hdrs = await headers();
-  const headerMark = hdrs.get('x-trinity-page') === 'landing';
-  const cookieMark = cookieStore.get('trinity_page')?.value === 'landing';
-  const pathFromHeader = hdrs.get('x-invoke-path') || hdrs.get('next-url') || '';
-  const pathMark = pathFromHeader.startsWith('/landing');
-  const isLanding = headerMark || cookieMark || pathMark;
+  const pathCandidates = [
+    hdrs.get('x-trinity-page') === 'landing' ? '/landing' : '',
+    hdrs.get('x-invoke-path') ?? '',
+    hdrs.get('next-url') ?? '',
+    hdrs.get('x-url') ?? '',
+    hdrs.get('x-pathname') ?? '',
+    hdrs.get('referer') ?? '',
+  ];
+  const isLandingByPath = pathCandidates.some(p => p.includes('/landing'));
+  const isLandingByCookie = cookieStore.get('trinity_page')?.value === 'landing';
+  const isLanding = isLandingByPath || isLandingByCookie;
   if (isLanding) {
     return (
       <html lang="ru" dir="ltr" suppressHydrationWarning>

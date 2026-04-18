@@ -49,15 +49,15 @@ const CSRF_EXEMPT_PREFIXES = [
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
+  // Всегда пробрасываем pathname в request header — нужно root layout для надёжной идентификации /landing
+  const baseHeaders = new Headers(req.headers)
+  baseHeaders.set('x-pathname', pathname)
+  baseHeaders.set('x-trinity-page', pathname.startsWith('/landing') ? 'landing' : 'app')
+
   if (isPublicPath(pathname)) {
     const isLanding = pathname === '/landing' || pathname.startsWith('/landing/')
 
-    // Ставим request header чтобы root layout мог проверить синхронно В ТОМ ЖЕ запросе
-    // (cookie через res.cookies.set видно только на СЛЕДУЮЩЕМ запросе — непригодно)
-    const reqHeaders = new Headers(req.headers)
-    if (isLanding) reqHeaders.set('x-trinity-page', 'landing')
-
-    const res = NextResponse.next({ request: { headers: reqHeaders } })
+    const res = NextResponse.next({ request: { headers: baseHeaders } })
     if (isLanding) {
       res.cookies.set('trinity_page', 'landing', { path: '/', maxAge: 60, sameSite: 'lax' })
     } else {
@@ -76,7 +76,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const isApiRoute = pathname.startsWith('/api/')
-  let response = NextResponse.next()
+  let response = NextResponse.next({ request: { headers: baseHeaders } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -96,14 +96,29 @@ export default function LandingPage() {
 html, html[dir="rtl"], html[lang="he"] {
   direction: ltr !important;
   font-family: 'Inter', sans-serif !important;
+  color: #fff !important;
 }
 body {
   direction: ltr !important;
   font-family: 'Inter', sans-serif !important;
   overflow: hidden !important;
   background: #080810 !important;
+  color: #fff !important;
   margin: 0 !important;
   padding: 0 !important;
+}
+/* Принудительно белый цвет всем заголовкам и текстовым элементам — защита от Trinity light-theme */
+main h1, main h2, main h3, main h4, main h5, main h6,
+main p, main div, main span, main li, main blockquote, main a {
+  color: inherit;
+}
+main h1, main h2, main h3, main h4 {
+  color: #fff !important;
+}
+/* Hero h1 имеет свой градиент — НЕ перезаписываем */
+.hero h1 {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
 }
 /* ======================================================================== */
 
@@ -885,35 +900,38 @@ body {
 }
 
 .pricing-badge {
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
+  display: inline-block;
+  align-self: flex-start;
   background: var(--gold);
   color: #000;
-  padding: 4px 16px;
+  padding: 4px 14px;
   border-radius: 100px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   white-space: nowrap;
+  margin-bottom: 12px;
 }
 
 .pricing-card h4 {
   font-size: 20px;
   font-weight: 600;
   margin-bottom: 8px;
+  color: #fff !important;
 }
 
 .pricing-price {
   font-size: 32px;
   font-weight: 700;
   margin-bottom: 4px;
+  color: #fff !important;
 }
 
 .pricing-price span {
   font-size: 14px;
   font-weight: 400;
-  color: var(--muted);
+  color: rgba(255,255,255,.4) !important;
 }
 
 .pricing-period {
@@ -1628,8 +1646,8 @@ body {
               <a href="#contacts" className="btn-gold">Выбрать</a>
             </div>
 
-            <div className="pricing-card" style={{ position: 'relative' }}>
-              <div className="pricing-badge" style={{ background: 'rgba(255,255,255,.1)', color: 'var(--white)' }}>Для бизнеса</div>
+            <div className="pricing-card">
+              <div className="pricing-badge" style={{ background: 'rgba(255,255,255,.1)', color: '#fff' }}>Для бизнеса</div>
               <h4>Enterprise</h4>
               <div className="pricing-price">₪499 <span>/ мес</span></div>
               <div className="pricing-period" />

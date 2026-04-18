@@ -4,6 +4,17 @@ import { useEffect } from 'react'
 
 export default function LandingPage() {
   useEffect(() => {
+    // Страховка: если root layout по какой-то причине отрисовал html с dir="rtl"
+    // или с Rubik-шрифтом (cookie не успел встать, client-side navigation и т.п.),
+    // принудительно выставляем LTR и Inter на <html>.
+    const html = document.documentElement
+    html.setAttribute('dir', 'ltr')
+    html.setAttribute('lang', 'ru')
+    html.style.fontFamily = "'Inter', sans-serif"
+    document.body.style.fontFamily = "'Inter', sans-serif"
+    document.body.style.overflow = 'hidden'
+    document.body.style.background = '#080810'
+
     const mainScroll = document.getElementById('main-scroll')
     if (!mainScroll) return
 

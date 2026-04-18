@@ -50,8 +50,15 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   if (isPublicPath(pathname)) {
-    const res = NextResponse.next()
-    if (pathname === '/landing' || pathname.startsWith('/landing/')) {
+    const isLanding = pathname === '/landing' || pathname.startsWith('/landing/')
+
+    // Ставим request header чтобы root layout мог проверить синхронно В ТОМ ЖЕ запросе
+    // (cookie через res.cookies.set видно только на СЛЕДУЮЩЕМ запросе — непригодно)
+    const reqHeaders = new Headers(req.headers)
+    if (isLanding) reqHeaders.set('x-trinity-page', 'landing')
+
+    const res = NextResponse.next({ request: { headers: reqHeaders } })
+    if (isLanding) {
       res.cookies.set('trinity_page', 'landing', { path: '/', maxAge: 60, sameSite: 'lax' })
     } else {
       res.cookies.delete('trinity_page')

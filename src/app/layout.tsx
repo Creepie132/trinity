@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Assistant } from "next/font/google";
 import "./globals.css";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster } from "@/components/ui/sonner";
@@ -154,8 +154,15 @@ export default async function RootLayout({
   const locale = localeCookie === 'ru' ? 'ru' : 'he';
   const dir = locale === 'he' ? 'rtl' : 'ltr';
 
-  // Лендинг — полная изоляция: ltr, inter, без Trinity-провайдеров
-  const isLanding = cookieStore.get('trinity_page')?.value === 'landing';
+  // Лендинг — полная изоляция: ltr, inter, без Trinity-провайдеров.
+  // Определяем через request header из middleware (работает в том же запросе, в отличие от cookie)
+  // + cookie-fallback если middleware не сработал (client-side navigation)
+  const hdrs = await headers();
+  const headerMark = hdrs.get('x-trinity-page') === 'landing';
+  const cookieMark = cookieStore.get('trinity_page')?.value === 'landing';
+  const pathFromHeader = hdrs.get('x-invoke-path') || hdrs.get('next-url') || '';
+  const pathMark = pathFromHeader.startsWith('/landing');
+  const isLanding = headerMark || cookieMark || pathMark;
   if (isLanding) {
     return (
       <html lang="ru" dir="ltr" suppressHydrationWarning>

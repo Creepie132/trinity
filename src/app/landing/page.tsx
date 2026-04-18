@@ -98,6 +98,7 @@ html {
 body {
   overflow: hidden;
   background: var(--bg);
+  font-family: 'Inter', sans-serif;
 }
 
 /* ===== SIDEBAR ===== */
@@ -114,6 +115,7 @@ body {
   z-index: 1000;
   transition: width .35s cubic-bezier(.4,0,.2,1);
   overflow: hidden;
+  font-family: 'Inter', sans-serif;
 }
 
 .sidebar:hover {
@@ -127,6 +129,7 @@ body {
   gap: 12px;
   min-height: 80px;
   flex-shrink: 0;
+  width: var(--sidebar-expanded);
 }
 
 .sidebar-logo img {
@@ -166,6 +169,7 @@ body {
   white-space: nowrap;
   position: relative;
   transition: color .2s, background .2s;
+  width: var(--sidebar-expanded);
 }
 
 .sidebar-nav a:hover {
@@ -211,6 +215,7 @@ body {
   flex-direction: column;
   gap: 12px;
   flex-shrink: 0;
+  width: var(--sidebar-expanded);
 }
 
 .sidebar-bottom a {

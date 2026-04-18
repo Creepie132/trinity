@@ -4,16 +4,25 @@ import { useEffect } from 'react'
 
 export default function LandingPage() {
   useEffect(() => {
-    // Страховка: если root layout по какой-то причине отрисовал html с dir="rtl"
-    // или с Rubik-шрифтом (cookie не успел встать, client-side navigation и т.п.),
-    // принудительно выставляем LTR и Inter на <html>.
+    // Страховка: root layout рендерит html с dir="rtl" и Rubik-шрифтом.
+    // Жёстко перезатираем на клиенте: удаляем все Trinity-классы, ставим LTR + Inter.
     const html = document.documentElement
     html.setAttribute('dir', 'ltr')
     html.setAttribute('lang', 'ru')
+    html.classList.remove('font-assistant', 'light', 'dark')
+    html.classList.add('font-inter')
     html.style.fontFamily = "'Inter', sans-serif"
+    html.style.direction = 'ltr'
+
     document.body.style.fontFamily = "'Inter', sans-serif"
     document.body.style.overflow = 'hidden'
     document.body.style.background = '#080810'
+    document.body.style.direction = 'ltr'
+    // Удаляем классы Trinity-шрифтов с body
+    document.body.className = document.body.className
+      .split(' ')
+      .filter(c => !c.startsWith('__variable_') && c !== 'font-sans')
+      .join(' ')
 
     const mainScroll = document.getElementById('main-scroll')
     if (!mainScroll) return
@@ -83,6 +92,21 @@ export default function LandingPage() {
   return (
     <>
       <style>{`
+/* ============ LANDING RESET — ПРИНУДИТЕЛЬНО ИЗОЛИРУЕТ ОТ TRINITY ============ */
+html, html[dir="rtl"], html[lang="he"] {
+  direction: ltr !important;
+  font-family: 'Inter', sans-serif !important;
+}
+body {
+  direction: ltr !important;
+  font-family: 'Inter', sans-serif !important;
+  overflow: hidden !important;
+  background: #080810 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+/* ======================================================================== */
+
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {

@@ -1,0 +1,22 @@
+fix(mobile-header): swap Back and Burger positions for correct RTL
+
+Problem: On Hebrew (RTL) the burger icon appeared on the left and the
+back arrow on the right — reversed from what's natural for an RTL reader.
+
+Root cause: DOM order was [Back | Logo | Burger]. Flexbox `justify-between`
+does mirror items in an RTL direction context, so in RTL this rendered as
+[Burger-left | Logo-center | Back-right]. That's the wrong placement for
+Hebrew: an RTL user expects the menu on the right (start of text flow)
+and the back arrow on the left (end of flow, pointing forward-in-text).
+
+Fix: swap the DOM order to [Burger | Logo | Back] in both mobile headers.
+Result:
+  - RTL (he): Burger right, Back left  (natural for Hebrew)
+  - LTR (ru): Burger left,  Back right (natural for Russian)
+
+All achieved through native flexbox mirroring + `dir` on <html>. No JS
+conditions, no hardcoded direction checks.
+
+Files:
+  src/components/layout/MobileHeader.tsx
+  src/components/layout/MobileAdminHeader.tsx

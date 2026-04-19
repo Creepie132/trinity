@@ -2841,7 +2841,27 @@ RLS уже настроен (`auth.uid() = user_id`), политика `user_nav
 
 **Миграция:** `add_default_landing_page_to_user_nav_preferences`
 
-**Коммит:** (следующий push)
+**Коммиты:**
+- `3288cde` — feature
+- `9d0e88d` — fix: суперадмин с своей org уважает preference в /callback
+- `2460a29` — fix: PWA entry /pwa-start (см. ниже)
+
+**PWA nuance — отдельный entry point `/pwa-start`:**
+
+PWA manifest не пропускает пользователя через `/callback` — при тапе на иконку приложение открывается сразу на `start_url` с уже валидной сессией. Захардкоженный `/dashboard` игнорировал preference.
+
+Решение: `start_url: "/pwa-start"` в `manifest.json` + серверный компонент `src/app/pwa-start/page.tsx`, который:
+- Проверяет auth через cookies (SSR supabase client)
+- Не залогинен → `/login`
+- Залогинен → читает `user_nav_preferences.default_landing_page` → редирект
+- Fallback `/dashboard` на любую ошибку
+
+Страница `force-dynamic` + `runtime: 'nodejs'` — никакого edge-кэша, каждый открытый PWA тап = свежий расчёт.
+
+**⚠️ Важно про обновление manifest в PWA:**
+Браузеры агрессивно кэшируют `manifest.json`. Установленная PWA может продолжать использовать старый `start_url: "/dashboard"` до полного цикла обновления Service Worker, который может занять несколько открытий приложения. Чтобы ускорить:
+- Android Chrome: удалить иконку с домашнего экрана → переустановить PWA
+- iOS Safari: удалить иконку → снова "Add to Home Screen"
 
 ---
 

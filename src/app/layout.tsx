@@ -6,6 +6,7 @@ import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster } from "@/components/ui/sonner";
 import { PWARegister } from "@/components/providers/PWARegister";
+import { getUserPreferences } from "@/actions/user-preferences";
 
 const inter = Inter({ 
   subsets: ["latin", "cyrillic"], 
@@ -148,10 +149,36 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Читаем locale из cookie — синхронный SSR, без DB запроса
+  // Приоритет источников языка (чтобы веб и PWA были синхронизированы через БД):
+  //   1. БД (org_users.preferred_language) — истина для залогиненного пользователя
+  //   2. cookie trinity_locale — fallback для гостей и для быстрого SSR без DB-запроса
+  //   3. 'he' — дефолт
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get('trinity_locale')?.value;
-  const locale = localeCookie === 'ru' ? 'ru' : 'he';
+
+  let locale: 'he' | 'ru' = localeCookie === 'ru' ? 'ru' : 'he';
+
+  // Читаем из БД только если юзер залогинен. getUserPreferences() вернёт {} если нет auth.
+  // Не падаем на любой ошибке — cookie-fallback выше уже применён.
+  try {
+    const prefs = await getUserPreferences();
+    if (prefs.preferred_language === 'ru' || prefs.preferred_language === 'he') {
+      locale = prefs.preferred_language;
+      // Если cookie отстаёт от БД (другое устройство / PWA) — обновляем, чтобы
+      // следующий SSR работал без DB-запроса. Тихо ошибку игнорируем.
+      if (localeCookie !== locale) {
+        try {
+          cookieStore.set('trinity_locale', locale, {
+            maxAge: 60 * 60 * 24 * 365,
+            path: '/',
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+          });
+        } catch { /* Server Component read-only cookie store в некоторых ветках Next 16 */ }
+      }
+    }
+  } catch { /* нет auth или DB недоступна — используем cookie */ }
+
   const dir = locale === 'he' ? 'rtl' : 'ltr';
 
   // Лендинг — полная изоляция: ltr, inter, без Trinity-провайдеров.
@@ -194,12 +221,14 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Trinity" />
-        {/* Language flash prevention — runs before first paint */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var l=localStorage.getItem('trinity-language');if(l==='ru'){document.documentElement.setAttribute('lang','ru');document.documentElement.setAttribute('dir','ltr');document.documentElement.classList.remove('font-assistant');document.documentElement.classList.add('font-inter');}}catch(e){}})();`,
-          }}
-        />
+        {/*
+          Flash-prevention script удалён намеренно.
+          Ранее он читал localStorage и принудительно переключал lang/dir на клиенте,
+          что ломало синхронизацию между веб и PWA (localStorage не делится между ними).
+          Теперь SSR читает язык из БД (org_users.preferred_language) и отдаёт
+          правильные lang/dir с первого байта — никакого flash'а нет.
+          LanguageProvider синкает localStorage с SSR-значением при mount.
+        */}
         {/* JSON-LD Structured Data */}
         <script
           type="application/ld+json"

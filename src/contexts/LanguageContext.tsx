@@ -1835,9 +1835,11 @@ const translations: Record<Language, Record<string, string>> = {
   },
 }
 
-// Read language synchronously before first render to avoid hydration mismatch
+// Read language synchronously before first render to avoid hydration mismatch.
+// IMPORTANT: когда есть serverLocale (из БД через SSR) — всегда используем его,
+// даже если в localStorage есть другое значение. БД = источник истины, localStorage
+// это просто кэш для оффлайна / старых сессий. Так синхронизируются веб и PWA.
 function getInitialLanguage(serverLocale?: Language): Language {
-  // Если SSR передал locale из cookie — используем его (без обращения к window)
   if (serverLocale) return serverLocale
   if (typeof window === 'undefined') return 'he'
   try {
@@ -1853,6 +1855,14 @@ export function LanguageProvider({ children, initialLocale }: { children: ReactN
   useEffect(() => {
     // Sync html attributes on mount (SSR renders with 'he' default)
     applyLanguage(language)
+    // Sync localStorage c текущим языком из SSR/БД — важно для PWA,
+    // где localStorage мог отстать от БД (пользователь сменил язык на другом устройстве).
+    try {
+      const saved = localStorage.getItem('trinity-language')
+      if (saved !== language) {
+        localStorage.setItem('trinity-language', language)
+      }
+    } catch {}
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setLanguage = (lang: Language) => {

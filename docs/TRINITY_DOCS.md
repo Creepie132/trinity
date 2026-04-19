@@ -1,5 +1,5 @@
 # Trinity CRM — Полная документация
-> Amber Solutions · ambersol.co.il · Последнее обновление: 04.04.2026
+> Amber Solutions · ambersol.co.il · Последнее обновление: 20.04.2026
 
 ---
 
@@ -779,6 +779,43 @@ chore: конфиг, зависимости
 ---
 
 ## 16. Changelog
+
+---
+
+### 20.04.2026 — refactor: переименование ביקורים → יומן/תורים в Hebrew UI (для Ксении)
+
+**Контекст:** Ксения (Hair Rehab) запросила замену терминологии: раздел/меню "ביקורים" → "יומן" (журнал), счётчики визитов → "תורים" (записи).
+
+**Логика разделения терминов:**
+- **יומן** — название раздела, пункт меню, заголовок страницы /visits, PWA shortcut, группы уведомлений, описания модулей в биллинге
+- **תורים** — все счётчики, empty states, метки виджетов, статистика, column labels
+- **ביקור / ביקורים** — функциональные фразы (`הוסף ביקור`, `ביקור אחרון`, `סיים ביקור`, `ממוצע לביקור`, tab filter visit/meeting) **оставлены без изменений**
+- **terms/page.tsx** — юридический документ, термин "ביקורים" не трогали
+
+**Затронутые файлы (33 файла, ~80 точечных замен):**
+- `src/contexts/LanguageContext.tsx` — visits.title, clients.history, visitsMonth, widgets.visits_month, stats.visitsByMonth и др.
+- `src/lib/landing-pages.ts` — sidebar menu label_he: `יומן`
+- `public/manifest.json` — PWA shortcut: `יומן`
+- `src/app/(dashboard)/settings/display/page.tsx`, `settings/notifications/page.tsx`, `analytics/page.tsx`
+- `src/lib/modules-config.ts`, `trinityPlans.ts`, `src/hooks/usePricingPlans.ts`, `useMeetingMode.ts`
+- `src/app/admin/modules/page.tsx`, `admin/organizations/page.tsx`
+- `src/components/admin/OrganizationStatsCard.tsx`
+- `src/components/clients/GdprDeleteDialog.tsx`, `ClientDesktopPanel.tsx`, `ClientBottomSheet.tsx`, `ClientCard.tsx`
+- `src/components/visits/CalendarView.tsx` (5 мест — счётчики дня, empty states)
+- `src/components/modals/clients/ClientHistoryModal.tsx`, `ClientDetailsModal.tsx`
+- `src/components/landing/DemoRegisterModal.tsx` → `יומן פגישות` (коллизия с `diary: יומן`)
+- `src/components/AiChatWidget.tsx` — модуль core + FAQ
+- `src/components/demo/DemoBannerGlobal.tsx`, `DemoSectionBanner.tsx`, `DemoLimitModal.tsx`, `DemoOrderModal.tsx`
+- `src/components/diary/CreateTaskSheet.tsx` — visit picker empty state
+- `src/components/dashboard/DashboardContent.tsx`, `StatsCardsClient.tsx`, `TodayVisitsWidget.tsx`
+- `src/components/ui/TrinityMob.tsx`, `src/components/debts/DebtsContent.tsx`
+- `src/app/demo/register/page.tsx` → `יומן פגישות` (коллизия с `diary: יומן`)
+- `src/app/demo/callback/google/page.tsx`, `src/app/onboarding/trial/page.tsx`
+- `src/app/api/mobile/preferences/route.ts` — mobile navbar label
+
+**Build:** `npm run build` чистый, 0 ошибок.
+
+**Регрессия:** нет — все функциональные фразы (кнопки действий, filter by event type) намеренно сохранены. Tab filter в `/visits` (`all/visit/meeting`) оставлен без изменений как категория события.
 
 ---
 

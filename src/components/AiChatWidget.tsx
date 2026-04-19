@@ -20,7 +20,7 @@ const MODULES: Module[] = [
   {
     id: 'core',
     name: {
-      he: 'ליבה בסיסית (בסיס לקוחות + ביקורים)',
+      he: 'ליבה בסיסית (בסיס לקוחות + יומן)',
       ru: 'Базовое ядро (Клиенты + Визиты)',
       en: 'Core (Clients + Visits)'
     },
@@ -269,7 +269,7 @@ const faqData: Record<string, { question: Record<Language, string>, answer: Reco
       en: 'What is a CRM system?'
     },
     answer: {
-      he: 'זה ה\'מוח הדיגיטלי\' של העסק שלך. במקום אחד נמצאים תורי לקוחות, היסטוריית ביקורים, תשלומים, מלאי ושליחת SMS אוטומטית. בלי עוד פנקסים וטבלאות אקסל.',
+      he: 'זה ה\'מוח הדיגיטלי\' של העסק שלך. במקום אחד נמצאים תורי לקוחות, היסטוריית תורים, תשלומים, מלאי ושליחת SMS אוטומטית. בלי עוד פנקסים וטבלאות אקסל.',
       ru: 'Это «цифровой мозг» твоего бизнеса. В одном месте собраны записи клиентов, история визитов, оплаты, остатки на складе и автоматическая отправка SMS. Больше никаких блокнотов и Excel-таблиц.',
       en: 'It\'s the \'digital brain\' of your business. Client records, visit history, payments, inventory, and automated SMS — all in one place. No more notebooks and spreadsheets.'
     }

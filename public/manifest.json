@@ -61,8 +61,8 @@
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "ביקורים",
-      "short_name": "ביקורים",
+      "name": "יומן",
+      "short_name": "יומן",
       "url": "/visits",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },

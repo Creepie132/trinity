@@ -52,7 +52,7 @@ export function TodayVisitsWidget({ visits, locale, onVisitClick }: TodayVisitsW
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              {l ? 'ביקורים היום' : 'Визиты сегодня'}
+              {l ? 'תורים היום' : 'Визиты сегодня'}
             </h3>
             {visits.length > 0 && (
               <p className="text-xs text-gray-400">
@@ -79,7 +79,7 @@ export function TodayVisitsWidget({ visits, locale, onVisitClick }: TodayVisitsW
           <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
             <Calendar className="w-5 h-5 text-blue-400" />
           </div>
-          <p className="text-sm text-gray-400">{l ? 'אין ביקורים היום' : 'Нет визитов сегодня'}</p>
+          <p className="text-sm text-gray-400">{l ? 'אין תורים היום' : 'Нет визитов сегодня'}</p>
           {nextVisit && (
             <div className="w-full mt-1 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
               <p className="text-xs text-gray-400 mb-1">{l ? 'הביקור הבא' : 'Следующий визит'}</p>
@@ -103,7 +103,7 @@ export function TodayVisitsWidget({ visits, locale, onVisitClick }: TodayVisitsW
             onClick={() => router.push('/visits')}
             className="mt-1 text-xs text-blue-500 hover:text-blue-600 font-medium flex items-center gap-1"
           >
-            {l ? 'לוח ביקורים' : 'Перейти к визитам'} <ArrowRight className="w-3 h-3" />
+            {l ? 'ליומן' : 'Перейти к визитам'} <ArrowRight className="w-3 h-3" />
           </button>
         </div>
       ) : (

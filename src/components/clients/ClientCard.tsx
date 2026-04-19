@@ -124,7 +124,7 @@ export function ClientCard({
   const isOptimistic  = client.id?.startsWith('optimistic-') ?? false
 
   const t = {
-    he: { visits: 'ביקורים', call: 'שיחה', visit: 'ביקור', sale: 'מכירה' },
+    he: { visits: 'תורים', call: 'שיחה', visit: 'ביקור', sale: 'מכירה' },
     ru: { visits: 'Визитов',  call: 'Звонок', visit: 'Визит', sale: 'Продажа' },
   }[locale]
 

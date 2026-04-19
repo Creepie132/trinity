@@ -27,17 +27,17 @@ export interface Module {
 export const MODULES: Module[] = [
   {
     key: 'clients',
-    name_he: 'לקוחות וביקורים',
+    name_he: 'לקוחות ויומן',
     name_ru: 'Клиенты и визиты',
-    desc_he: 'ניהול לקוחות, ביקורים ותורים',
+    desc_he: 'ניהול לקוחות ויומן תורים',
     desc_ru: 'Управление клиентами, визитами и записями',
     linkedKeys: ['visits'],
   },
   {
     key: 'visits',
-    name_he: 'ביקורים',
+    name_he: 'יומן',
     name_ru: 'Визиты',
-    desc_he: 'ניהול ביקורים ותורים',
+    desc_he: 'ניהול יומן ותורים',
     desc_ru: 'Управление визитами',
     hiddenInUI: true,
   },

@@ -111,7 +111,7 @@ export function OrganizationStatsCard({ orgId }: OrganizationStatsCardProps) {
                 <div className="p-2 bg-green-500 rounded-lg">
                   <Calendar className="w-4 h-4 text-white" />
                 </div>
-                {language === 'he' ? 'ביקורים' : 'Визиты'}
+                {language === 'he' ? 'תורים' : 'Визиты'}
               </CardTitle>
             </CardHeader>
             <CardContent>

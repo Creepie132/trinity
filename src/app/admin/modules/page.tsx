@@ -9,7 +9,7 @@ import { MODULES } from '@/lib/modules-config'
 // Маппинг модуля → иконка использования и метрика
 const MODULE_USAGE: Record<string, { icon: any; metricKey: string; labelRu: string; labelHe: string }> = {
   clients:       { icon: Users,     metricKey: 'clients',    labelRu: 'клиентов', labelHe: 'לקוחות' },
-  visits:        { icon: Calendar,  metricKey: 'visits30d',  labelRu: 'визитов/мес', labelHe: 'ביקורים' },
+  visits:        { icon: Calendar,  metricKey: 'visits30d',  labelRu: 'визитов/мес', labelHe: 'תורים' },
   payments:      { icon: CreditCard,metricKey: 'payments30d',labelRu: 'платежей/мес', labelHe: 'תשלומים' },
   inventory:     { icon: Package,   metricKey: 'products',   labelRu: 'товаров', labelHe: 'מוצרים' },
   diary:         { icon: Calendar,  metricKey: 'visits30d',  labelRu: 'записей/мес', labelHe: 'רשומות' },
@@ -279,7 +279,7 @@ export default function AdminModulesPage() {
               <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-slate-700">
                 {[
                   { label: l ? 'לקוחות' : 'Клиенты', val: org.usage.clients },
-                  { label: l ? 'ביקורים/חודש' : 'Визиты/мес', val: org.usage.visits30d },
+                  { label: l ? 'תורים/חודש' : 'Визиты/мес', val: org.usage.visits30d },
                   { label: l ? 'תשלומים/חודש' : 'Платежи/мес', val: org.usage.payments30d },
                 ].map(({ label, val }) => (
                   <div key={label} className="text-center">

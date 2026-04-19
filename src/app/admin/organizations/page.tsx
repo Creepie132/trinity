@@ -389,7 +389,7 @@ function DeleteOrgModal({
               </p>
               {[
                 l ? 'כל לקוחות הארגון' : 'Все клиенты',
-                l ? 'כל הביקורים' : 'Все визиты',
+                l ? 'כל התורים' : 'Все визиты',
                 l ? 'כל התשלומים' : 'Все платежи',
                 l ? 'כל המשימות' : 'Все задачи',
                 l ? 'כל המלאי (מוצרים)' : 'Весь склад (товары)',
@@ -548,7 +548,7 @@ function ActivateOrgButton({
                 <p className="font-semibold">{org.display_name || org.name}</p>
                 <p className="text-xs opacity-80">
                   {l
-                    ? 'נתוני הלקוחות, ביקורים ותשלומים ישמרו בשלמותם'
+                    ? 'נתוני הלקוחות, תורים ותשלומים ישמרו בשלמותם'
                     : 'Данные клиентов, визиты и платежи сохранятся полностью'
                   }
                 </p>
@@ -1067,7 +1067,7 @@ export default function AdminOrganizationsPage() {
             <div className="grid grid-cols-2 gap-2">
               {[
                 { icon: Users, label: l ? 'לקוחות' : 'Клиенты', value: orgStats.totalClients, cls: 'bg-blue-50 border-blue-100 text-blue-700' },
-                { icon: Calendar, label: l ? 'ביקורים' : 'Визиты', value: orgStats.visitsCount, cls: 'bg-purple-50 border-purple-100 text-purple-700' },
+                { icon: Calendar, label: l ? 'תורים' : 'Визиты', value: orgStats.visitsCount, cls: 'bg-purple-50 border-purple-100 text-purple-700' },
                 { icon: BarChart3, label: l ? 'תשלומים' : 'Платежи', value: orgStats.paymentsCount, cls: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
                 { icon: TrendingUp, label: l ? 'הכנסות' : 'Выручка', value: `₪${orgStats.totalRevenue.toFixed(0)}`, cls: 'bg-amber-50 border-amber-100 text-amber-700' },
               ].map(({ icon: Icon, label, value, cls }) => (

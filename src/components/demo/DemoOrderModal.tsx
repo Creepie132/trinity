@@ -19,7 +19,7 @@ export interface ModuleItem { id: string; labelHe: string; labelRu: string }
 
 export const MODULES: ModuleItem[] = [
   { id: 'clients',       labelHe: 'לקוחות',          labelRu: 'Клиенты' },
-  { id: 'visits',        labelHe: 'ביקורים / תורים', labelRu: 'Визиты / Записи' },
+  { id: 'visits',        labelHe: 'תורים',            labelRu: 'Визиты / Записи' },
   { id: 'diary',         labelHe: 'יומן',             labelRu: 'Дневник / Задачи' },
   { id: 'inventory',     labelHe: 'מלאי',             labelRu: 'Склад' },
   { id: 'booking',       labelHe: 'הזמנה אונליין',   labelRu: 'Онлайн-запись' },

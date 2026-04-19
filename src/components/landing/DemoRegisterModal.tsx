@@ -14,7 +14,7 @@ interface Module {
 
 const MODULES: Module[] = [
   { key: 'clients',       label_he: 'ניהול לקוחות',  label_ru: 'Клиенты',       desc_he: 'בסיס לקוחות, היסטוריה, תיוג',  desc_ru: 'База клиентов, история, теги',    icon: <Users size={18}/>,      popular: true },
-  { key: 'visits',        label_he: 'ביקורים',       label_ru: 'Визиты',         desc_he: 'לוח שנה ותורים',               desc_ru: 'Календарь записей',               icon: <Calendar size={18}/>,   popular: true },
+  { key: 'visits',        label_he: 'יומן פגישות',   label_ru: 'Визиты',         desc_he: 'לוח שנה ותורים',               desc_ru: 'Календарь записей',               icon: <Calendar size={18}/>,   popular: true },
   { key: 'payments',      label_he: 'תשלומים',       label_ru: 'Платежи',        desc_he: 'כרטיסי אשראי, הוראת קבע',     desc_ru: 'Кредитные карты, прямой дебет',  icon: <CreditCard size={18}/>, popular: true },
   { key: 'analytics',     label_he: 'אנליטיקה',      label_ru: 'Аналитика',      desc_he: 'גרפים וסטטיסטיקות',           desc_ru: 'Графики и статистика',            icon: <BarChart2 size={18}/> },
   { key: 'inventory',     label_he: 'מלאי',          label_ru: 'Склад',          desc_he: 'ניהול מוצרים ומלאי',          desc_ru: 'Управление товарами',             icon: <ShoppingBag size={18}/> },

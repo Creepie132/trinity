@@ -360,7 +360,7 @@ export function DebtsContent({ hideHeader = false }: { hideHeader?: boolean }) {
               {(['all', 'visit', 'sale'] as const).map((tab) => {
                 const labels: Record<string, { ru: string; he: string }> = {
                   all:   { ru: 'Все',      he: 'הכל' },
-                  visit: { ru: 'Визиты',   he: 'ביקורים' },
+                  visit: { ru: 'Визиты',   he: 'תורים' },
                   sale:  { ru: 'Продажи',  he: 'מכירות' },
                 }
                 return (

@@ -31,7 +31,7 @@ export const TRINITY_PLANS: TrinityPlan[] = [
     badgeHe: null,
     color: 'from-gray-500 to-gray-600',
     featuresRu: ['До 100 клиентов', 'Визиты и записи', 'Задачи', 'Базовая аналитика'],
-    featuresHe: ['עד 100 לקוחות', 'ביקורים ותורים', 'משימות', 'אנליטיקה בסיסית'],
+    featuresHe: ['עד 100 לקוחות', 'תורים', 'משימות', 'אנליטיקה בסיסית'],
   },
   {
     nameRu: 'Base',
@@ -44,7 +44,7 @@ export const TRINITY_PLANS: TrinityPlan[] = [
     badgeHe: null,
     color: 'from-blue-500 to-blue-700',
     featuresRu: ['Клиенты', 'Визиты / Записи', 'Дневник и задачи', 'Склад'],
-    featuresHe: ['לקוחות', 'ביקורים / תורים', 'יומן ומשימות', 'מלאי'],
+    featuresHe: ['לקוחות', 'תורים', 'יומן ומשימות', 'מלאי'],
   },
   {
     nameRu: 'Pro',

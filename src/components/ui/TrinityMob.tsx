@@ -85,7 +85,7 @@ export interface TrinityMobProps {
 
 const T = {
   he: {
-    sub: 'פרטי לקוח', paid: 'שולם', visits: 'ביקורים', info: 'מידע',
+    sub: 'פרטי לקוח', paid: 'שולם', visits: 'תורים', info: 'מידע',
     phone: 'טלפון', status: 'סטטוס', active: 'פעיל', created: 'נוצר',
     notes: 'הערות', back: 'חזרה', actions: 'פעולות', settings: 'הגדרות',
     sale: 'עסקה', newVisit: 'ביקור חדש', call: 'התקשר', edit: 'ערוך', del: 'מחק',

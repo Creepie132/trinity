@@ -143,7 +143,7 @@ const GROUPS = [
   {
     key: 'visits' as const,
     icon: Calendar,
-    labelHe: 'ביקורים',
+    labelHe: 'יומן',
     labelRu: 'Визиты',
     color: 'indigo',
   },

@@ -36,7 +36,7 @@ export function GdprDeleteDialog({
       title: 'מחיקה מלאה של לקוח (GDPR)',
       areYouSure: 'האם אתה בטוח? פעולה זו בלתי הפיכה!',
       willDelete: 'יימחקו כל הנתונים של הלקוח:',
-      allVisits: 'כל הביקורים והשירותים',
+      allVisits: 'כל התורים והשירותים',
       allPayments: 'כל התשלומים',
       smsHistory: 'היסטוריית הודעות SMS',
       personalInfo: 'מידע אישי של הלקוח',
@@ -48,7 +48,7 @@ export function GdprDeleteDialog({
       deleteForever: 'מחק לצמיתות',
       deleting: 'מוחק...',
       enterConfirm: 'הקלד "מחק" לאישור',
-      deleteSuccess: 'נמחקו: {visits} ביקורים, {payments} תשלומים, {sms} הודעות SMS',
+      deleteSuccess: 'נמחקו: {visits} תורים, {payments} תשלומים, {sms} הודעות SMS',
       deleteError: 'שגיאת מחיקה',
     },
     ru: {

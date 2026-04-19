@@ -250,13 +250,13 @@ export function ClientDesktopPanel({ client, isOpen, onClose, onEdit, onSaved, l
 
   const t = {
     he: {
-      visits: 'היסטוריית ביקורים',
+      visits: 'היסטוריית תורים',
       payments: 'פיננסים',
       messages: 'הודעות',
       notes: 'הערות',
       totalSpent: 'סה"כ הוצאות',
       edit: 'עריכה',
-      noVisits: 'אין ביקורים',
+      noVisits: 'אין תורים',
       noPayments: 'אין תשלומים',
       date: 'תאריך',
       status: 'סטטוס',

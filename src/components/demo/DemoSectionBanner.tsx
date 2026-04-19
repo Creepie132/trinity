@@ -34,8 +34,8 @@ const T = {
   },
   he: {
     clients:       (u: number, l: number) => `דמו: נוספו ${u} מתוך ${l} לקוחות`,
-    visits_active: (u: number, l: number) => `דמו: ביקורים פעילים ${u} מתוך ${l}`,
-    visits_total:  (u: number, l: number) => `דמו: סה"כ ביקורים ${u} מתוך ${l}`,
+    visits_active: (u: number, l: number) => `דמו: תורים פעילים ${u} מתוך ${l}`,
+    visits_total:  (u: number, l: number) => `דמו: סה"כ תורים ${u} מתוך ${l}`,
     inventory:     (u: number, l: number) => `דמו: נוספו ${u} מתוך ${l} מוצרים`,
     diary:         (u: number, l: number) => `דמו: רשומות ${u} מתוך ${l}`,
     hint: 'להסרת המגבלות — צרו קשר',

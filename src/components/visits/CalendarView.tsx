@@ -292,7 +292,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
                 {selectedDayVisits.length}{' '}
                 {isHe
-                  ? 'ביקורים'
+                  ? 'תורים'
                   : selectedDayVisits.length === 1 ? 'визит' : selectedDayVisits.length < 5 ? 'визита' : 'визитов'}
               </p>
             </div>
@@ -305,7 +305,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
             {selectedDayVisits.length === 0 ? (
               <div className="text-center py-8 text-gray-400 dark:text-gray-500">
                 <Clock size={24} className="mx-auto mb-2 opacity-30" />
-                <p className="text-xs">{isHe ? 'אין ביקורים' : 'Нет визитов'}</p>
+                <p className="text-xs">{isHe ? 'אין תורים' : 'Нет визитов'}</p>
               </div>
             ) : (
               selectedDayVisits.map((visit) => {
@@ -647,7 +647,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
               </div>
               <div className="flex items-center gap-2">
                 <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl px-3 py-1.5 text-center">
-                  <p className="text-xs text-blue-400 dark:text-blue-500">{isHe ? 'ביקורים' : 'Визитов'}</p>
+                  <p className="text-xs text-blue-400 dark:text-blue-500">{isHe ? 'תורים' : 'Визитов'}</p>
                   <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
                     {getVisitsForDay(currentDate).length}
                   </p>
@@ -800,7 +800,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                           <Clock size={32} className="text-gray-200 dark:text-gray-700 mb-2" />
                           <p className="text-sm text-gray-300 dark:text-gray-600 font-medium">
-                            {isHe ? 'אין ביקורים' : 'Нет визитов'}
+                            {isHe ? 'אין תורים' : 'Нет визитов'}
                           </p>
                         </div>
                       )}
@@ -902,7 +902,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
           <div className="lg:hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
               <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-100">
-                {format(selectedDay, 'd MMMM')} · {selectedDayVisits.length} {isHe ? 'ביקורים' : 'визитов'}
+                {format(selectedDay, 'd MMMM')} · {selectedDayVisits.length} {isHe ? 'תורים' : 'визитов'}
               </h3>
               <button onClick={() => setSelectedDay(null)} className="text-gray-400 hover:text-gray-600 transition">
                 <X size={16} />

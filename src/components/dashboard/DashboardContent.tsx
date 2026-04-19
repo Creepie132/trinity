@@ -147,7 +147,7 @@ function ActivityStrip({ visitsToday, visitsDone, tasksOpen, tasksUrgent, revenu
       value: visitsToday,
       // главная подпись — короткая, всегда читаема
       label: l ? 'визит...' : 'визит...',
-      labelFull: l ? 'ביקורים היום' : 'Визиты',
+      labelFull: l ? 'תורים היום' : 'Визиты',
       // sub — прогресс завершённых
       sub: `${visitsDone}/${visitsToday} ${l ? 'הושלמו' : 'завершено'}`,
       color: 'bg-blue-50 border-blue-100',
@@ -215,7 +215,7 @@ function GreetingHeader({ ownerName, todayVisitsCount, locale }: { ownerName: st
       {todayVisitsCount > 0 && (
         <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-xl border border-blue-100">
           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-          <span className="text-sm font-medium text-blue-700">{l ? `${todayVisitsCount} ביקורים היום` : `${todayVisitsCount} визитов сегодня`}</span>
+          <span className="text-sm font-medium text-blue-700">{l ? `${todayVisitsCount} תורים היום` : `${todayVisitsCount} визитов сегодня`}</span>
         </div>
       )}
     </div>
@@ -420,7 +420,7 @@ export function DashboardContent({ orgId: _orgIdProp }: DashboardContentProps) {
             onClick={() => router.push('/clients')}
           />
           <KpiCard
-            title={l ? 'ביקורים החודש' : 'Визиты за месяц'}
+            title={l ? 'תורים החודש' : 'Визиты за месяц'}
             value={s.visits.value}
             icon={<Calendar size={18} className="text-white" />}
             gradient="bg-gradient-to-br from-emerald-500 to-teal-600"

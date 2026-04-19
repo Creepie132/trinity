@@ -23,7 +23,7 @@ export const runtime = 'nodejs'
 const AVAILABLE_TABS = [
   { id: 'dashboard',     label_ru: 'Главная',       label_he: 'ראשי' },
   { id: 'clients',       label_ru: 'Клиенты',       label_he: 'לקוחות' },
-  { id: 'visits',        label_ru: 'Визиты',        label_he: 'ביקורים' },
+  { id: 'visits',        label_ru: 'Визиты',        label_he: 'יומן' },
   { id: 'notifications', label_ru: 'Уведомления',   label_he: 'התראות' },
   { id: 'kira',          label_ru: 'Чат с Кирой',   label_he: 'צ׳אט עם קירה' },
 ] as const

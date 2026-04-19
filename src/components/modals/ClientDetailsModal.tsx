@@ -103,7 +103,7 @@ export function ClientDetailsModal() {
   const totalPaid   = client.total_paid   || 0
 
   const T = {
-    he: { information:'מידע', visits:'ביקורים', totalPaid:'שולם', gallery:'גלריה', documents:'מסמכים', notes:'הערות', description:'תיאור', createdAt:'תאריך יצירה', edit:'ערוך', sale:'עסקה', newVisit:'ביקור חדש', delete:'מחק', active:'פעיל', call:'התקשר', address:'כתובת', birthday:'יום הולדת', paintCode:'מספר צבע', quickAccess:'גישה מהירה' },
+    he: { information:'מידע', visits:'תורים', totalPaid:'שולם', gallery:'גלריה', documents:'מסמכים', notes:'הערות', description:'תיאור', createdAt:'תאריך יצירה', edit:'ערוך', sale:'עסקה', newVisit:'ביקור חדש', delete:'מחק', active:'פעיל', call:'התקשר', address:'כתובת', birthday:'יום הולדת', paintCode:'מספר צבע', quickAccess:'גישה מהירה' },
     ru: { information:'Информация', visits:'Визитов', totalPaid:'Оплачено', gallery:'Галерея', documents:'Документы', notes:'Заметки', description:'Описание', createdAt:'Дата создания', edit:'Редактировать', sale:'Продажа', newVisit:'Новый визит', delete:'Удалить', active:'Активен', call:'Позвонить', address:'Адрес', birthday:'День рождения', paintCode:'Код краски', quickAccess:'Быстрый доступ' },
     en:  { information:'Information', visits:'Visits', totalPaid:'Paid', gallery:'Gallery', documents:'Documents', notes:'Notes', description:'Description', createdAt:'Created', edit:'Edit', sale:'Sale', newVisit:'New visit', delete:'Delete', active:'Active', call:'Call', address:'Address', birthday:'Birthday', paintCode:'Paint code', quickAccess:'Quick access' },
   }

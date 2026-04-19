@@ -219,7 +219,7 @@ export function ClientBottomSheet({
                 <div className="text-center py-8">
                   <p className="text-3xl mb-2">🗓️</p>
                   <p className="text-sm text-muted-foreground">
-                    {locale === 'he' ? 'אין ביקורים קרובים' : 'Нет предстоящих визитов'}
+                    {locale === 'he' ? 'אין תורים קרובים' : 'Нет предстоящих визитов'}
                   </p>
                 </div>
               ) : (

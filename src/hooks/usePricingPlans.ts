@@ -73,7 +73,7 @@ export const FALLBACK_PLANS: LandingPlan[] = [
     badge_ru: '', badge_he: '',
     color: 'blue', is_active: true, is_popular: false,
     features_ru: ['Клиенты', 'Визиты / Записи', 'Дневник и задачи', 'Склад'],
-    features_he: ['לקוחות', 'ביקורים / תורים', 'יומן ומשימות', 'מלאי'],
+    features_he: ['לקוחות', 'תורים', 'יומן ומשימות', 'מלאי'],
     cta_ru: 'Выбрать', cta_he: 'בחרו',
   },
   {

@@ -111,7 +111,7 @@ function DemoTopBanner({ locale }: { locale: string }) {
               DEMO
             </span>
             <span className="text-xs text-red-200 hidden md:inline whitespace-nowrap">
-              {l ? '10 לקוחות · 15 ביקורים · 5 מוצרים · 5 משימות' : '10 клиентов · 15 визитов · 5 товаров · 5 задач'}
+              {l ? '10 לקוחות · 15 תורים · 5 מוצרים · 5 משימות' : '10 клиентов · 15 визитов · 5 товаров · 5 задач'}
             </span>
           </div>
 

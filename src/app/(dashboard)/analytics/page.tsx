@@ -36,7 +36,7 @@ interface ReportsData {
 const ALL_WIDGETS = [
   { id: 'kpi',      labelHe: 'כרטיסי KPI',       labelRu: 'KPI карточки',          icon: Activity },
   { id: 'revenue',  labelHe: 'גרף הכנסות',        labelRu: 'График выручки',         icon: TrendingUp },
-  { id: 'visits',   labelHe: 'גרף ביקורים',       labelRu: 'График визитов',         icon: Calendar },
+  { id: 'visits',   labelHe: 'גרף תורים',         labelRu: 'График визитов',         icon: Calendar },
   { id: 'services', labelHe: 'שירותים מובילים',   labelRu: 'Топ услуги',             icon: PieIcon },
   { id: 'staff',    labelHe: 'ביצועי צוות',       labelRu: 'Сотрудники',             icon: Award },
   { id: 'clients',  labelHe: 'לקוחות חוזרים',    labelRu: 'Клиенты',               icon: Users },
@@ -162,18 +162,18 @@ export default function AnalyticsPage() {
     period90:   isHe ? '90 ימים' : '90 дней',
     refresh:    isHe ? 'רענן' : 'Обновить',
     kpiClients: isHe ? 'סה"כ לקוחות' : 'Всего клиентов',
-    kpiVisits:  isHe ? 'ביקורים החודש' : 'Визитов в месяце',
+    kpiVisits:  isHe ? 'תורים החודש' : 'Визитов в месяце',
     kpiRevenue: isHe ? 'הכנסות החודש' : 'Выручка в месяце',
     kpiAvg:     isHe ? 'ממוצע לביקור' : 'Средний чек',
     revenueTitle:  isHe ? 'הכנסות לפי יום' : 'Выручка по дням',
-    visitsTitle:   isHe ? 'ביקורים לפי יום' : 'Визиты по дням',
+    visitsTitle:   isHe ? 'תורים לפי יום' : 'Визиты по дням',
     servicesTitle: isHe ? 'שירותים מובילים' : 'Топ услуги',
     staffTitle:    isHe ? 'ביצועי צוות' : 'Сотрудники',
     clientsTitle:  isHe ? 'לקוחות' : 'Клиенты',
     newClients:    isHe ? 'חדשים' : 'Новые',
     returning:     isHe ? 'חוזרים' : 'Вернувшиеся',
     noData:        isHe ? 'אין נתונים' : 'Нет данных',
-    visitsCount:   isHe ? 'ביקורים' : 'Визиты',
+    visitsCount:   isHe ? 'תורים' : 'Визиты',
     revenue_lbl:   isHe ? 'הכנסות ₪' : 'Выручка ₪',
   }
 
@@ -184,7 +184,7 @@ export default function AnalyticsPage() {
   if (isDemo) {
     const demoKpi = [
       { icon: Users,     label: isHe ? 'סה"כ לקוחות' : 'Всего клиентов',   value: '47',      change: 12.5, color: 'bg-indigo-500' },
-      { icon: Calendar,  label: isHe ? 'ביקורים החודש' : 'Визитов в месяце', value: '124',    change: 8.3,  color: 'bg-violet-500' },
+      { icon: Calendar,  label: isHe ? 'תורים החודש' : 'Визитов в месяце', value: '124',    change: 8.3,  color: 'bg-violet-500' },
       { icon: DollarSign,label: isHe ? 'הכנסות החודש' : 'Выручка в месяце', value: '₪14,750', change: 6.1, color: 'bg-emerald-500' },
       { icon: Activity,  label: isHe ? 'ממוצע לביקור' : 'Средний чек',       value: '₪119',   change: -2.4, color: 'bg-amber-500' },
     ]
@@ -222,7 +222,7 @@ export default function AnalyticsPage() {
             <h2 className="font-bold text-gray-900 text-lg">{isHe ? 'אנליטיקה עסקית חכמה' : 'Умная бизнес-аналитика'}</h2>
             <p className="text-sm text-gray-600 mt-1 leading-relaxed">
               {isHe
-                ? 'מעקב אחר KPI בזמן אמת: לקוחות, הכנסות, ביקורים ושירותים מובילים. גרפים אינטראקטיביים, דוחות לפי תקופות וניתוח ביצועי צוות.'
+                ? 'מעקב אחר KPI בזמן אמת: לקוחות, הכנסות, תורים ושירותים מובילים. גרפים אינטראקטיביים, דוחות לפי תקופות וניתוח ביצועי צוות.'
                 : 'Отслеживайте KPI в реальном времени: клиентов, выручку, визиты и топ-услуги. Интерактивные графики, отчёты по периодам и анализ эффективности команды.'}
             </p>
           </div>
@@ -437,7 +437,7 @@ export default function AnalyticsPage() {
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: any) => [`${v} ${isHe ? 'ביקורים' : 'визитов'}`, '']} />
+                <Tooltip formatter={(v: any) => [`${v} ${isHe ? 'תורים' : 'визитов'}`, '']} />
                 <Legend iconType="circle" iconSize={8}
                   formatter={(v) => <span className="text-xs text-slate-600">{v}</span>} />
               </PieChart>
@@ -469,7 +469,7 @@ export default function AnalyticsPage() {
             {reports.clients.avg_interval_days > 0 && (
               <p className="text-center text-xs text-slate-400 mt-2">
                 {isHe
-                  ? `ממוצע ${reports.clients.avg_interval_days} ימים בין ביקורים`
+                  ? `ממוצע ${reports.clients.avg_interval_days} ימים בין תורים`
                   : `Средний интервал ${reports.clients.avg_interval_days} дн. между визитами`}
               </p>
             )}

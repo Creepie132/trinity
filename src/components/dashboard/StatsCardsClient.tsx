@@ -22,7 +22,7 @@ export default function StatsCardsClient({ clients, visits, revenue, avgCheck }:
   const translations = {
     he: {
       clients: 'לקוחות',
-      visits: 'ביקורים החודש',
+      visits: 'תורים החודש',
       revenue: 'הכנסות',
       avgCheck: 'צ\'ק ממוצע',
     },

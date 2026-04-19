@@ -563,7 +563,7 @@ export function CreateTaskSheet({ isOpen, onClose, onCreated, locale, prefill }:
                 <div className="absolute z-50 w-full bg-card border rounded-xl shadow-lg max-h-48 overflow-y-auto bottom-full mb-1 md:bottom-auto md:top-full md:mb-0 md:mt-1">
                   {filteredVisits.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      {currentLocale === 'he' ? 'אין ביקורים' : 'Нет визитов'}
+                      {currentLocale === 'he' ? 'אין תורים' : 'Нет визитов'}
                     </p>
                   ) : (
                     filteredVisits.map((visit: any) => (

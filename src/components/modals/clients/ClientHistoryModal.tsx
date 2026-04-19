@@ -46,8 +46,8 @@ interface PaymentItem {
 
 const T = {
   he: {
-    visits: 'ביקורים', payments: 'תשלומים', history: 'היסטוריה',
-    noVisits: 'אין ביקורים', noPayments: 'אין תשלומים',
+    visits: 'תורים', payments: 'תשלומים', history: 'היסטוריה',
+    noVisits: 'אין תורים', noPayments: 'אין תשלומים',
     completed: 'הושלם', inProgress: 'בתהליך', scheduled: 'מתוכנן',
     cancelled: 'בוטל', back: 'חזרה', page: 'עמוד',
   },

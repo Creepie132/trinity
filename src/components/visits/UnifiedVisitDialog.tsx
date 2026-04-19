@@ -38,7 +38,9 @@ import { visitsKeys } from '@/hooks/useVisits'
 import {
   Users, Calendar, FileText, CheckCircle2, Clock,
   Scissors, MapPin, Video, Loader2, AlertCircle, X, Save, Search, ChevronLeft, ChevronRight,
+  Plus, Wrench, Package,
 } from 'lucide-react'
+import { ItemPickerSheet, type PickedItem } from '@/components/shared/ItemPickerSheet'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -144,6 +146,22 @@ const emptyForm = () => ({
   duration: 60, price: '', quantity: '' as string | number, notes: '', city: '', address: '', meeting_link: '',
   meetingPurpose: '', isOnline: false, reminderHours: [] as number[],
 })
+
+// ─── Multi-item cart types (create-mode, visit only) ──────────────────────────
+// Одна позиция корзины визита. Первая позиция уходит в visits.service_id/price,
+// остальные — отдельными POST в /api/visits/[id]/services или /products.
+export interface VisitLineItem {
+  id: string              // local uid (для React key)
+  type: 'service' | 'product' | 'custom'
+  service_id?: string     // для service
+  product_id?: string     // для product
+  name: string            // отображаемое имя в текущем языке
+  quantity: number
+  unit_price: number
+  duration_minutes: number  // 0 для product/custom
+}
+
+function uid() { return Math.random().toString(36).slice(2, 10) }
 
 // ─── ServicePicker — searchable + paginated (7 per page) ────────────────────
 
@@ -418,6 +436,14 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
   const [selClient, setSelClient] = useState<Client | null>(null)
   const [form, setForm] = useState(emptyForm)
 
+  // ── Multi-item cart (только для create-mode визита, не встречи) ──────────────
+  // Если items.length > 0, то управление ценой/длительностью переходит к корзине,
+  // и поля form.serviceId/price/duration игнорируются при submit.
+  const [items, setItems] = useState<VisitLineItem[]>([])
+  // Ручной override общей суммы (скидка/наценка). null = считаем автоматически.
+  const [priceOverride, setPriceOverride] = useState<number | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+
   // ── UI state ─────────────────────────────────────────────────────────────────
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -435,6 +461,10 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
     if (!open) return
     const sd = validateVisitModalData(initialData)
     setErrorMsg(null)
+    // Сбрасываем корзину при каждом открытии — визит всегда начинается с чистого листа
+    setItems([])
+    setPriceOverride(null)
+    setPickerOpen(false)
 
     if (sd.mode === 'edit' && sd.visit) {
       // Populate form from existing visit
@@ -486,9 +516,19 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  // ── Multi-item cart mode flag ────────────────────────────────────────────────
+  // Мульти-корзина активна только при создании визита (не встречи, не редактирование).
+  // Объявлено до canSubmit / useEffect / handleSubmit — используется во всех трёх.
+  const hasMultiMode = !isEditMode && !isAppt
+
   // ── Derived ──────────────────────────────────────────────────────────────────
-  const canSubmit = !!form.clientId && !!form.date && !!form.time &&
-    (isAppt ? !!form.meetingPurpose : (!!form.serviceId && !!form.price))
+  // В мульти-режиме (create + visit) валидность = клиент + дата + время + непустая корзина.
+  // Иначе — как было: клиент + дата + время + (serviceId + price) или meetingPurpose.
+  const canSubmit =
+    !!form.clientId && !!form.date && !!form.time &&
+    (hasMultiMode
+      ? items.length > 0
+      : (isAppt ? !!form.meetingPurpose : (!!form.serviceId && !!form.price)))
 
   // ── Service change handler ────────────────────────────────────────────────────
   const onSvcChange = useCallback((id: string) => {
@@ -503,6 +543,56 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
       duration: svcDuration ?? p.duration,
     }))
   }, [customServices, services, isHe])
+
+  // ── Multi-item cart handlers (create-mode visit only) ────────────────────────
+  // hasMultiMode объявлен выше, до canSubmit.
+
+  const addItem = useCallback((picked: PickedItem) => {
+    setItems(prev => [...prev, {
+      id: uid(),
+      type: picked.type,
+      service_id: picked.service_id,
+      product_id: picked.product_id,
+      name: picked.product_name,
+      quantity: picked.quantity,
+      unit_price: picked.unit_price,
+      duration_minutes: picked.duration_minutes,
+    }])
+    // сбрасываем override когда добавляется позиция — чтобы пользователь увидел актуальную сумму
+    setPriceOverride(null)
+  }, [])
+
+  const removeItem = useCallback((id: string) => {
+    setItems(prev => prev.filter(i => i.id !== id))
+    setPriceOverride(null)
+  }, [])
+
+  const updateItemQty = useCallback((id: string, delta: number) => {
+    setItems(prev => prev.map(i =>
+      i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i
+    ))
+    setPriceOverride(null)
+  }, [])
+
+  const updateItemPrice = useCallback((id: string, price: number) => {
+    setItems(prev => prev.map(i =>
+      i.id === id ? { ...i, unit_price: Math.max(0, price) } : i
+    ))
+    setPriceOverride(null)
+  }, [])
+
+  // ── Авто-расчёт итогов корзины ───────────────────────────────────────────────
+  const cartSubtotal = useMemo(() =>
+    items.reduce((s, i) => s + i.quantity * i.unit_price, 0), [items])
+
+  // Длительность = сумма длительностей услуг × qty. Товары и custom не считаются.
+  const cartDuration = useMemo(() =>
+    items.reduce((s, i) =>
+      i.type === 'service' ? s + (i.duration_minutes * i.quantity) : s, 0
+    ), [items])
+
+  // Финальная сумма: override или subtotal
+  const cartTotal = priceOverride !== null ? priceOverride : cartSubtotal
 
   // ── Close ────────────────────────────────────────────────────────────────────
   const handleClose = useCallback(() => {
@@ -572,6 +662,10 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
         toast.success(isHe ? 'נשמר בהצלחה' : 'Сохранено')
       } else {
         // ── CREATE: POST /api/visits ───────────────────────────────────────────
+        // В мульти-режиме первая позиция уходит в visits.service_id/price/duration
+        // для обратной совместимости (мобилка, CalendarView, VisitFlowCard читают
+        // visit.services). Остальные позиции пишутся параллельными POST в
+        // /api/visits/[id]/services и /api/visits/[id]/products после создания.
         let notes = form.notes
         if (isAppt) {
           const parts: string[] = []
@@ -584,22 +678,86 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
           if (form.notes) parts.push(form.notes)
           notes = parts.join('\n')
         }
-        await apiFetch('/api/visits', {
+
+        // Выбираем payload: мульти-режим с корзиной ИЛИ legacy single-service
+        const useMultiCart = hasMultiMode && items.length > 0
+        const firstItem = useMultiCart ? items[0] : null
+        const restItems = useMultiCart ? items.slice(1) : []
+
+        const createPayload = useMultiCart
+          ? {
+              clientId:    form.clientId,
+              // service_id из первой позиции (если это services-тип, иначе null + service_type=имя)
+              serviceId:   firstItem!.type === 'service' ? firstItem!.service_id : null,
+              service:     firstItem!.name,
+              scheduledAt: new Date(`${form.date}T${form.time}`).toISOString(),
+              date: form.date, time: form.time,
+              // Длительность визита = сумма длительностей всех услуг. 60 минимум если одни товары.
+              duration:    cartDuration > 0 ? cartDuration : 60,
+              // Цена = override или subtotal, отдаётся как строка (API парсит parseFloat)
+              price:       String(cartTotal),
+              quantity:    firstItem!.quantity,
+              notes,
+              event_type:  'visit',
+              meeting_link: null,
+            }
+          : {
+              clientId:   form.clientId,
+              serviceId:  isAppt ? null : form.serviceId,
+              service:    isAppt ? (form.meetingPurpose || (isHe ? 'פגישה' : 'Встреча')) : form.service,
+              scheduledAt: new Date(`${form.date}T${form.time}`).toISOString(),
+              date: form.date, time: form.time,
+              duration:   isAppt ? null : form.duration,
+              price:      isAppt ? '0' : form.price,
+              quantity:   isAppt ? 1 : (parseInt(String(form.quantity)) || 1),
+              notes,
+              event_type: isAppt ? 'meeting' as const : 'visit' as const,
+              meeting_link: isAppt && form.isOnline ? (form.meeting_link || null) : null,
+            }
+
+        const createRes = await apiFetch<{ visit: { id: string } }>('/api/visits', {
           method: 'POST',
-          json: {
-            clientId:   form.clientId,
-            serviceId:  isAppt ? null : form.serviceId,
-            service:    isAppt ? (form.meetingPurpose || (isHe ? 'פגישה' : 'Встреча')) : form.service,
-            scheduledAt: new Date(`${form.date}T${form.time}`).toISOString(),
-            date: form.date, time: form.time,
-            duration:   isAppt ? null : form.duration,
-            price:      isAppt ? '0' : form.price,
-            quantity:   isAppt ? 1 : (parseInt(String(form.quantity)) || 1),
-            notes,
-            event_type: isAppt ? 'meeting' : 'visit',
-            meeting_link: isAppt && form.isOnline ? (form.meeting_link || null) : null,
-          },
+          json: createPayload,
         })
+
+        // Доп.позиции: параллельные POST-ы в /services и /products.
+        // Ошибки тут не ломают визит (он уже создан), только логируем + показываем toast.
+        if (useMultiCart && restItems.length > 0 && createRes?.visit?.id) {
+          const visitId = createRes.visit.id
+          const results = await Promise.allSettled(
+            restItems.map(item => {
+              if (item.type === 'product' && item.product_id) {
+                // Товар → visit_services с пометкой о продукте, без движения склада
+                return apiFetch(`/api/visits/${visitId}/products`, {
+                  method: 'POST',
+                  json: { product_id: item.product_id },
+                })
+              }
+              // service / custom → visit_services напрямую
+              return apiFetch(`/api/visits/${visitId}/services`, {
+                method: 'POST',
+                json: {
+                  visit_id:         visitId,
+                  service_id:       item.type === 'service' ? item.service_id : undefined,
+                  service_name:     item.name,
+                  service_name_ru:  item.name,
+                  price:            item.unit_price * item.quantity,
+                  duration_minutes: item.duration_minutes * item.quantity,
+                },
+              })
+            })
+          )
+          const failed = results.filter(r => r.status === 'rejected').length
+          if (failed > 0) {
+            console.error('[UnifiedVisitDialog] Some extra items failed:', results)
+            toast.warning(
+              isHe
+                ? `הביקור נוצר, אך ${failed} פריטים לא נוספו`
+                : `Визит создан, но ${failed} позиций не добавилось`
+            )
+          }
+        }
+
         toast.success(t('common.success'))
       }
 
@@ -628,6 +786,7 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
   }, [
     isEditMode, canSubmit, orgId, activeOrgId, form, isAppt, isHe, safeData,
     handleCloseAfterSuccess, queryClient, t,
+    hasMultiMode, items, cartTotal, cartDuration,
   ])
 
   // ─── Mobile footer ────────────────────────────────────────────────────────────
@@ -717,33 +876,127 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
 
           {/* Услуга / Цель встречи */}
           {!isAppt ? (
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                <Scissors size={11} />{t('visits.service')} *
-              </label>
-              <div className="flex gap-2">
-                <ServicePicker
-                  services={services}
-                  value={form.serviceId}
-                  onChange={onSvcChange}
-                  isHe={isHe}
-                  placeholder={t('visits.selectService')}
-                  disabled={isLoading}
-                />
-                {!isEditMode && (
-                  <input type="number" min={1} max={999}
-                    value={form.quantity === '' ? '' : form.quantity}
-                    placeholder="1"
-                    onChange={e => {
-                      const raw = e.target.value
-                      if (raw === '') { setForm(p => ({ ...p, quantity: '' })); return }
-                      const n = Math.max(1, Math.min(999, parseInt(raw) || 1))
-                      setForm(p => ({ ...p, quantity: n }))
-                    }}
-                    className="h-10 w-14 rounded-md border border-input bg-background px-2 text-sm text-center font-semibold" />
+            hasMultiMode ? (
+              /* ─── Multi-item cart (create + visit) ─────────────────────────── */
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Scissors size={11} />{isHe ? 'פריטים' : 'Позиции'} *
+                </label>
+
+                {/* Список позиций */}
+                {items.length > 0 && (
+                  <div className="space-y-2">
+                    {items.map(item => {
+                      const TYPE_BADGE: Record<string, string> = {
+                        service: 'bg-violet-100 text-violet-600',
+                        product: 'bg-emerald-100 text-emerald-600',
+                        custom:  'bg-amber-100 text-amber-600',
+                      }
+                      const TYPE_LABEL: Record<string, string> = {
+                        service: isHe ? 'שר' : 'У',
+                        product: isHe ? 'מו' : 'Т',
+                        custom:  isHe ? 'חו' : 'С',
+                      }
+                      const Icon = item.type === 'service' ? Wrench : item.type === 'product' ? Package : Plus
+                      return (
+                        <div key={item.id} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800/60 rounded-xl px-3 py-2.5">
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0 ${TYPE_BADGE[item.type]}`}>
+                            <Icon size={9} className="inline me-0.5 -mt-0.5" />{TYPE_LABEL[item.type]}
+                          </span>
+                          <span className="flex-1 text-sm font-medium truncate">{item.name}</span>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button type="button" onClick={() => updateItemQty(item.id, -1)}
+                              className="w-6 h-6 rounded-md bg-gray-200 text-gray-500 text-xs font-bold flex items-center justify-center hover:bg-gray-300">−</button>
+                            <span className="w-5 text-center text-xs font-medium">{item.quantity}</span>
+                            <button type="button" onClick={() => updateItemQty(item.id, +1)}
+                              className="w-6 h-6 rounded-md bg-gray-200 text-gray-500 text-xs font-bold flex items-center justify-center hover:bg-gray-300">+</button>
+                          </div>
+                          <div className="relative w-20 flex-shrink-0">
+                            <span className="absolute start-2 top-1/2 -translate-y-1/2 text-gray-400 text-[11px]">₪</span>
+                            <input type="number" min={0} value={item.unit_price || ''}
+                              onChange={e => updateItemPrice(item.id, Number(e.target.value))}
+                              className="w-full ps-5 py-1 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-400/40" />
+                          </div>
+                          <button type="button" onClick={() => removeItem(item.id)}
+                            className="text-gray-300 hover:text-red-400 flex-shrink-0"><X size={13}/></button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Кнопка добавить */}
+                <button type="button" onClick={() => setPickerOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-sm font-semibold hover:bg-amber-100 transition">
+                  <Plus size={15}/>{isHe ? '+ הוסף פריט' : '+ Добавить позицию'}
+                </button>
+
+                {/* Итого + override */}
+                {items.length > 0 && (
+                  <div className="flex items-center gap-3 mt-2 p-3 rounded-xl bg-green-50 border-2 border-green-200">
+                    <span className="text-sm font-bold text-green-700 flex-shrink-0">
+                      {isHe ? 'סה״כ' : 'Итого'}:
+                    </span>
+                    <div className="relative flex-1">
+                      <span className="absolute start-2.5 top-1/2 -translate-y-1/2 text-green-600 text-sm font-bold">₪</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={priceOverride !== null ? priceOverride : cartSubtotal.toFixed(2)}
+                        onChange={e => {
+                          const v = e.target.value
+                          if (v === '') { setPriceOverride(null); return }
+                          setPriceOverride(Math.max(0, Number(v)))
+                        }}
+                        className="w-full ps-6 py-1.5 text-base font-bold text-green-700 border border-green-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-green-400/40"
+                      />
+                    </div>
+                    {priceOverride !== null && priceOverride !== cartSubtotal && (
+                      <button type="button" onClick={() => setPriceOverride(null)}
+                        title={isHe ? 'אפס' : 'Сброс'}
+                        className="text-xs text-green-600 hover:text-green-800 underline flex-shrink-0">
+                        {isHe ? `₪${cartSubtotal.toFixed(0)}` : `↺ ₪${cartSubtotal.toFixed(0)}`}
+                      </button>
+                    )}
+                  </div>
+                )}
+                {items.length > 0 && cartDuration > 0 && (
+                  <p className="text-xs text-muted-foreground px-1">
+                    <Clock size={10} className="inline me-1 -mt-0.5" />
+                    {isHe ? 'משך' : 'Длительность'}: {cartDuration} {isHe ? "ד'" : 'мин'}
+                  </p>
                 )}
               </div>
-            </div>
+            ) : (
+              /* ─── Legacy single-service (edit-mode visit) ───────────────────── */
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Scissors size={11} />{t('visits.service')} *
+                </label>
+                <div className="flex gap-2">
+                  <ServicePicker
+                    services={services}
+                    value={form.serviceId}
+                    onChange={onSvcChange}
+                    isHe={isHe}
+                    placeholder={t('visits.selectService')}
+                    disabled={isLoading}
+                  />
+                  {!isEditMode && (
+                    <input type="number" min={1} max={999}
+                      value={form.quantity === '' ? '' : form.quantity}
+                      placeholder="1"
+                      onChange={e => {
+                        const raw = e.target.value
+                        if (raw === '') { setForm(p => ({ ...p, quantity: '' })); return }
+                        const n = Math.max(1, Math.min(999, parseInt(raw) || 1))
+                        setForm(p => ({ ...p, quantity: n }))
+                      }}
+                      className="h-10 w-14 rounded-md border border-input bg-background px-2 text-sm text-center font-semibold" />
+                  )}
+                </div>
+              </div>
+            )
           ) : (
             <div className="space-y-3">
               <div className="space-y-1.5">
@@ -803,8 +1056,8 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
             </div>
           </div>
 
-          {/* Длит + Цена (только для визита) */}
-          {!isAppt && (
+          {/* Длит + Цена (только для визита; в мульти-режиме — авто из корзины) */}
+          {!isAppt && !hasMultiMode && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('visits.duration')}</label>
@@ -847,13 +1100,33 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
               <div className="space-y-1 text-xs text-foreground">
                 {selClient && <div className="flex items-center gap-1.5"><Users size={10} className="text-muted-foreground shrink-0" /><span className="font-medium">{selClient.first_name} {selClient.last_name}</span></div>}
                 {isAppt && form.meetingPurpose && <div className="flex items-center gap-1.5"><FileText size={10} className="text-muted-foreground shrink-0" /><span>{form.meetingPurpose}</span></div>}
-                {!isAppt && svcName && <div className="flex items-center gap-1.5"><Scissors size={10} className="text-muted-foreground shrink-0" /><span>{svcName}{form.price ? ` — ₪${form.price}` : ''}</span></div>}
+                {hasMultiMode && items.length > 0 ? (
+                  <div className="flex items-start gap-1.5">
+                    <Scissors size={10} className="text-muted-foreground shrink-0 mt-0.5" />
+                    <span>
+                      {items.length} {isHe ? 'פריטים' : 'поз.'} — ₪{cartTotal.toFixed(2)}
+                      {cartDuration > 0 && ` · ${cartDuration} ${isHe ? "ד'" : 'мин'}`}
+                    </span>
+                  </div>
+                ) : (
+                  !isAppt && svcName && <div className="flex items-center gap-1.5"><Scissors size={10} className="text-muted-foreground shrink-0" /><span>{svcName}{form.price ? ` — ₪${form.price}` : ''}</span></div>
+                )}
                 <div className="flex items-center gap-1.5"><Calendar size={10} className="text-muted-foreground shrink-0" /><span>{form.date} {isHe ? 'ב' : 'в'} {form.time}</span></div>
               </div>
             </div>
           )}
 
         </div>
+
+        {/* ItemPickerSheet — портал поверх всего, рендерится только в мульти-режиме */}
+        {hasMultiMode && (
+          <ItemPickerSheet
+            isOpen={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            isHe={isHe}
+            onAdd={addItem}
+          />
+        )}
       </TrinityModalShell>
     </Modal>
   )

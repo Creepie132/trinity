@@ -17,8 +17,15 @@ import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 import { useModalStore } from '@/store/useModalStore'
+import { useLandingPage } from './useLandingPage'
+import { DEFAULT_LANDING_PATH } from '@/lib/landing-pages'
 
 // ─── Маппинг: дочерний путь → родительский путь ────────────────────────────
+// ВАЖНО: корневые секции (/clients, /payments, /visits, /sales, /inventory,
+// /diary, /broadcast, /analytics, /finances, /dashboard, /settings и т.д.)
+// сюда НЕ входят. Их родителем становится landingPath пользователя
+// (вычисляется в buildParentResolver ниже). Это даёт правильное поведение
+// кнопки «Назад» независимо от того, какую страницу юзер выбрал главной.
 const PARENT_ROUTES: Record<string, string> = {
   // Admin sections → /admin
   '/admin/settings':                '/admin',
@@ -32,7 +39,6 @@ const PARENT_ROUTES: Record<string, string> = {
   '/admin/support':                 '/admin',
   '/admin/ads':                     '/admin',
   '/admin/whatsapp':                '/admin',
-  // Admin sub-pages → /admin/settings
   // Dashboard settings sub-pages → /settings
   '/settings/birthday-templates':   '/settings',
   '/settings/booking':              '/settings',
@@ -41,6 +47,7 @@ const PARENT_ROUTES: Record<string, string> = {
   '/settings/customize':            '/settings',
   '/settings/dashboard':            '/settings',
   '/settings/display':              '/settings',
+  '/settings/home-page':            '/settings',
   '/settings/language':             '/settings',
   '/settings/loyalty':              '/settings',
   '/settings/message-templates':    '/settings',
@@ -51,47 +58,71 @@ const PARENT_ROUTES: Record<string, string> = {
   '/settings/services':             '/settings',
   '/settings/templates':            '/settings',
   '/settings/users':                '/settings',
-  // Dashboard sections → /dashboard
+  // Sub-pages внутри корневых секций
   '/clients/import':                '/clients',
-  '/clients':                       '/dashboard',
-  '/payments':                      '/dashboard',
-  '/visits':                        '/dashboard',
-  '/inventory':                     '/dashboard',
-  '/diary':                         '/dashboard',
-  '/sms':                           '/dashboard',
-  '/sales':                         '/dashboard',
-  '/reports':                       '/dashboard',
-  '/stats':                         '/dashboard',
-  '/analytics':                     '/dashboard',
-  '/debts':                         '/dashboard',
-  '/audit':                         '/dashboard',
-  '/profile':                       '/dashboard',
-  '/settings':                      '/dashboard',
-  '/partners':                      '/dashboard',
-  '/dashboard':                     '/',
 }
 
-// ─── Корневые маршруты — "некуда идти назад" ───────────────────────────────
-const ROOT_ROUTES = new Set(['/', '/dashboard', '/admin'])
+// ─── Набор «корневых секций дашборда» ──────────────────────────────────────
+// Их родитель = landingPath пользователя. Если одна из них И ЕСТЬ landingPath,
+// то она считается конечным корнем (см. isAtLanding ниже).
+const DASHBOARD_ROOT_SECTIONS: ReadonlySet<string> = new Set([
+  '/dashboard',
+  '/clients',
+  '/payments',
+  '/visits',
+  '/inventory',
+  '/diary',
+  '/sms',
+  '/sales',
+  '/reports',
+  '/stats',
+  '/analytics',
+  '/finances',
+  '/broadcast',
+  '/debts',
+  '/audit',
+  '/profile',
+  '/settings',
+  '/partners',
+])
+
+// ─── Статически-корневые маршруты (нет родителя независимо от landing) ────
+// /admin — корень админки, выбранная главная не влияет.
+// / — корневой редиректор.
+const STATIC_ROOT_ROUTES = new Set(['/', '/admin'])
 
 // ─── sessionStorage ключ для истории переходов ─────────────────────────────
 const SECTION_HISTORY_KEY = 'trinity_nav_history'
 const DOUBLE_BACK_MS = 2000
 
-// ─── Хелпер: найти родительский маршрут ────────────────────────────────────
-function findParentRoute(pathname: string): string | null {
-  // Точное совпадение в маппинге
-  if (PARENT_ROUTES[pathname]) return PARENT_ROUTES[pathname]
+// ─── Построитель резолвера с учётом landing пользователя ──────────────────
+function buildParentResolver(landingPath: string) {
+  return (pathname: string): string | null => {
+    // 1. Точное совпадение в статическом маппинге
+    if (PARENT_ROUTES[pathname]) return PARENT_ROUTES[pathname]
 
-  // Динамический сегмент: /admin/organizations/abc123 → /admin/organizations
-  const parts = pathname.split('/').filter(Boolean)
-  if (parts.length >= 3) {
-    const parent = '/' + parts.slice(0, -1).join('/')
-    if (PARENT_ROUTES[parent]) return PARENT_ROUTES[parent]
-    return parent
+    // 2. Корневая секция дашборда → landingPath (если не сама landing)
+    if (DASHBOARD_ROOT_SECTIONS.has(pathname)) {
+      if (pathname === landingPath) return null // уже на главной
+      return landingPath
+    }
+
+    // 3. Динамический сегмент: /admin/organizations/abc123 → /admin/organizations
+    const parts = pathname.split('/').filter(Boolean)
+    if (parts.length >= 3) {
+      const parent = '/' + parts.slice(0, -1).join('/')
+      if (PARENT_ROUTES[parent]) return PARENT_ROUTES[parent]
+      return parent
+    }
+
+    // 4. Двухсегментный путь внутри корневой секции: /clients/abc → /clients
+    if (parts.length === 2) {
+      const parent = '/' + parts[0]
+      if (DASHBOARD_ROOT_SECTIONS.has(parent)) return parent
+    }
+
+    return null
   }
-
-  return null
 }
 
 // ─── Основной хук ────────────────────────────────────────────────────────────
@@ -99,8 +130,22 @@ export function useBackNavigation() {
   const router = useRouter()
   const pathname = usePathname()
   const { modals, closeModal } = useModalStore()
+  const { landingPath: rawLandingPath } = useLandingPage()
   const lastBackRef = useRef<number>(0)
   const prevPathRef = useRef<string>('')
+
+  // Нормализуем landingPath: пока prefs грузятся — используем дефолт.
+  // Никогда не передаём пустую строку, чтобы резолвер не сломался.
+  const landingPath = rawLandingPath || DEFAULT_LANDING_PATH
+
+  // Резолвер пересоздаётся только при смене landingPath
+  const findParentRoute = useMemo(
+    () => buildParentResolver(landingPath),
+    [landingPath]
+  )
+
+  // Текущая страница — это landing пользователя? Корневая точка навигации.
+  const isAtLanding = pathname === landingPath
 
   // Пишем историю переходов в sessionStorage при каждом изменении pathname
   useEffect(() => {
@@ -135,10 +180,13 @@ export function useBackNavigation() {
     }
 
     // ── Приоритет 2: Родительский маршрут по маппингу ──────────────────────
-    const parentRoute = findParentRoute(pathname)
-    if (parentRoute) {
-      router.push(parentRoute)
-      return
+    // Если мы на выбранной главной — пропускаем и переходим к шагу "выход".
+    if (!isAtLanding) {
+      const parentRoute = findParentRoute(pathname)
+      if (parentRoute) {
+        router.push(parentRoute)
+        return
+      }
     }
 
     // ── Приоритет 3: Предыдущая секция из sessionStorage истории ───────────
@@ -172,7 +220,7 @@ export function useBackNavigation() {
       duration: DOUBLE_BACK_MS,
       id: 'back-exit-hint',
     })
-  }, [pathname, modals, closeModal, router])
+  }, [pathname, modals, closeModal, router, isAtLanding, findParentRoute])
 
   // ─── Перехват физической кнопки "Назад" на Android ───────────────────────
   // Логика: при монтировании добавляем фиктивную запись в browser history.
@@ -201,15 +249,17 @@ export function useBackNavigation() {
   const canGoBack = useMemo(() => {
     const hasOpenModal = Array.from(modals.entries()).some(([, s]) => s.isOpen)
     if (hasOpenModal) return true
+    // На выбранной главной или статическом корне — стрелку прячем
+    if (isAtLanding) return false
+    if (STATIC_ROOT_ROUTES.has(pathname)) return false
     if (findParentRoute(pathname)) return true
-    if (!ROOT_ROUTES.has(pathname)) return true
     try {
       const history: string[] = JSON.parse(
         sessionStorage.getItem(SECTION_HISTORY_KEY) || '[]'
       )
       return history.length > 0
     } catch { return false }
-  }, [pathname, modals])
+  }, [pathname, modals, isAtLanding, findParentRoute])
 
   return { handleBack, canGoBack }
 }

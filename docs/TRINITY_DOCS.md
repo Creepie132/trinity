@@ -3103,3 +3103,63 @@ PWA manifest не пропускает пользователя через `/cal
 **Регрессия:** нет. Обычный веб не затронут. Клик из меню в PWA не перехватывается.
 
 **Коммит:** `583c12b`
+
+
+---
+
+### 20.04.2026 — fix: кнопка «Назад» возвращала на /dashboard игнорируя выбранную главную
+
+**Проблема:**
+После настройки кастомной главной страницы (`user_nav_preferences.default_landing_page` — например `/clients` или `/diary`) кнопка «Назад» в PWA — и физическая Android-кнопка, и стрелка ← в `MobileHeader` — всё равно возвращала на `/dashboard`. Поведение одинаковое в RU и HE, на мобиле и десктопе, потому что все header'ы используют один и тот же хук `useBackNavigation`.
+
+**Причина:**
+В `src/hooks/useBackNavigation.ts` карта `PARENT_ROUTES` хардкодила `/dashboard` как родителя для всех корневых секций:
+```ts
+'/clients': '/dashboard',
+'/payments': '/dashboard',
+'/visits': '/dashboard',
+'/sales': '/dashboard',
+'/inventory': '/dashboard',
+'/diary': '/dashboard',
+// ... и т.д.
+'/dashboard': '/',
+```
+`ROOT_ROUTES = new Set(['/', '/dashboard', '/admin'])` — дашборд считался конечным корнем навигации независимо от выбора пользователя. `canGoBack` и `handleBack` ничего не знали про `landingPath`.
+
+**Решение — нативное, без костылей:**
+
+Файл `src/hooks/useBackNavigation.ts`:
+
+1. **Импорт** `useLandingPage` и `DEFAULT_LANDING_PATH`.
+2. **Убрана** карта «корневые секции → /dashboard». Оставлены только реальные sub-page → parent маппинги (`/admin/*` → `/admin`, `/settings/*` → `/settings`, `/clients/import` → `/clients`). Добавлен `/settings/home-page` → `/settings` (его не хватало).
+3. **Новая константа** `DASHBOARD_ROOT_SECTIONS` — Set всех корневых секций дашборда. Их родитель вычисляется динамически как `landingPath` пользователя.
+4. **Новая функция** `buildParentResolver(landingPath)` — возвращает резолвер, который для любой секции из `DASHBOARD_ROOT_SECTIONS` возвращает `landingPath` (или `null`, если текущая секция и есть landing). Статический маппинг имеет приоритет.
+5. **`STATIC_ROOT_ROUTES = new Set(['/', '/admin'])`** — только то, что всегда корень (выбор главной не влияет на админку и корневой редиректор).
+6. **В хуке**: `useLandingPage()` даёт `landingPath`, из него через `useMemo` собирается резолвер. Флаг `isAtLanding = pathname === landingPath` — единственный источник истины «мы на главной».
+7. **`handleBack`**: если `isAtLanding`, шаг "родитель" пропускается → сразу переходим к истории → к двойному нажатию для выхода.
+8. **`canGoBack`**: `false` если `isAtLanding` или `pathname ∈ STATIC_ROOT_ROUTES` → стрелка ← в `MobileHeader` автоматически скрывается на выбранной главной.
+
+**Что это даёт:**
+- Юзер выбрал `/clients` главной → на `/clients` стрелка скрыта, Android-back = двойное нажатие для выхода.
+- С `/clients/<id>` стрелка возвращает на `/clients` (было так же — работает).
+- С `/payments` стрелка возвращает на `/clients` (было на `/dashboard` — **фикс**).
+- Юзер ничего не выбирал → `landingPath = /dashboard` → всё работает как раньше.
+- RU и HE ведут себя одинаково (хук не зависит от языка).
+- Desktop (`Sidebar` использует `landingPath` для логотипа) и mobile (`MobileHeader` использует `useBackNavigation` для стрелки) — единая логика.
+- Админка (`/admin`) не затронута — `STATIC_ROOT_ROUTES` держит её как корень независимо от preference.
+
+**Затронутые файлы:**
+- `src/hooks/useBackNavigation.ts` — полная переработка резолвера родителей + canGoBack
+
+**Проверено:**
+- `src/app/page.tsx`, `src/app/pwa-start/page.tsx` — редиректы на landing не тронуты
+- `src/components/dashboard/PWAHomeGate.tsx` — логика блокировки дашборда не тронута
+- `src/components/layout/MobileHeader.tsx`, `src/components/layout/MobileAdminHeader.tsx`, `src/components/layout/Sidebar.tsx` — потребители хука, API хука не изменился (`{ handleBack, canGoBack }`)
+- `src/lib/landing-pages.ts` — SSOT опций главной страницы, не тронут
+- Билд `npm run build` — чистый, 237 страниц, 0 ошибок TypeScript
+
+**Регрессия:** нет. API хука не изменился. Все существующие маппинги `/admin/*`, `/settings/*`, `/clients/import` работают как раньше. Для юзеров без выбранной главной (`landingId === 'dashboard'`) поведение идентично прежнему. Админка и корневой `/` не затронуты.
+
+**Безопасность:** не затронута. Изменения только в клиентской навигации, никакого касания auth/RLS/org_id.
+
+**Коммит:** будет проставлен после push.

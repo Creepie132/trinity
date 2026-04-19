@@ -1,0 +1,34 @@
+fix(mobile-header): lock Back-left / Burger-right for both languages
+
+Global rule (RU and HE identical):
+  - Back arrow: ALWAYS left
+  - Burger:    ALWAYS right
+  - Logo/BranchSwitcher in center
+
+Mechanism: `dir="ltr"` on the header's flex container overrides the
+`dir="rtl"` from <html> on Hebrew. Flexbox no longer mirrors the
+children because local `dir` wins. Inner dropdowns (BranchSwitcher)
+get their own `dir` based on language so text still reads correctly.
+
+This replaces the 14.04 attempt that relied on Flexbox auto-mirroring
+for RTL — that approach produced inconsistent results where the icons
+would swap back on some loads.
+
+DOM order is now fixed:
+  <div dir="ltr">
+    <div>Back (left)</div>
+    <div>Logo/BranchSwitcher (center)</div>
+    <div>Bell + Burger (right)</div>
+  </div>
+
+No JS `if (language === 'he')` conditions for positioning.
+No reliance on Flexbox RTL auto-mirroring.
+
+Docs: TRINITY_DOCS.md — added "GLOBAL RULE: Mobile Header" section at
+the end with full explanation, list of forbidden changes, and guide
+for adding new elements without breaking the rule.
+
+Files:
+  src/components/layout/MobileHeader.tsx
+  src/components/layout/MobileAdminHeader.tsx
+  docs/TRINITY_DOCS.md

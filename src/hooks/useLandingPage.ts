@@ -9,7 +9,7 @@
  * значение после fetch.
  */
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useFeatures } from './useFeatures'
 import {
@@ -19,6 +19,24 @@ import {
   resolveLandingPath,
   type LandingPageOption,
 } from '@/lib/landing-pages'
+
+/**
+ * Ключ в localStorage для синхронного чтения preference при открытии PWA.
+ * Обновляется при каждом успешном fetch и при savePreferences (optimistic).
+ * Читается в PWAHomeGate ДО рендера DashboardContent — это устраняет
+ * 4-5 секундное мелькание дашборда перед редиректом.
+ */
+export const LANDING_LS_KEY = 'trinity_landing_v1'
+
+function writeLandingCache(landingId: string | null | undefined) {
+  if (typeof window === 'undefined') return
+  try {
+    if (!landingId) localStorage.removeItem(LANDING_LS_KEY)
+    else localStorage.setItem(LANDING_LS_KEY, landingId)
+  } catch {
+    /* Safari private mode / quota — молча игнорируем */
+  }
+}
 
 interface PreferencesPayload {
   nav_tabs: string[]
@@ -88,11 +106,16 @@ export function useLandingPage(): UseLandingPageResult {
           default_landing_page: newId,
         })
       }
+      // optimistic write в localStorage — следующее открытие PWA сразу возьмёт новое значение
+      writeLandingCache(newId)
       return { prev }
     },
     onError: (_err, _id, ctx) => {
-      // откат
-      if (ctx?.prev) qc.setQueryData(['user-preferences'], ctx.prev)
+      // откат и в React Query, и в localStorage
+      if (ctx?.prev) {
+        qc.setQueryData(['user-preferences'], ctx.prev)
+        writeLandingCache(ctx.prev.default_landing_page)
+      }
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['user-preferences'] })
@@ -100,6 +123,13 @@ export function useLandingPage(): UseLandingPageResult {
   })
 
   const landingId = data?.default_landing_page ?? DEFAULT_LANDING_ID
+
+  // Синхронизируем localStorage каждый раз когда серверная версия preference пришла.
+  // Это гарантирует что PWAHomeGate при следующем холодном старте возьмёт актуальное значение
+  // синхронно, без ожидания HTTP-запроса.
+  useEffect(() => {
+    if (data?.default_landing_page) writeLandingCache(data.default_landing_page)
+  }, [data?.default_landing_page])
 
   const landingPath = useMemo(
     () => resolveLandingPath(landingId, features),

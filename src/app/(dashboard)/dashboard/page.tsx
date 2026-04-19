@@ -1,18 +1,21 @@
 import { DashboardContent } from '@/components/dashboard/DashboardContent'
-import { PWAHomeRedirect } from '@/components/dashboard/PWAHomeRedirect'
+import { PWAHomeGate } from '@/components/dashboard/PWAHomeGate'
 
 // ─── DashboardPage ────────────────────────────────────────────────────────────
-// Server Component — просто рендерит DashboardContent.
-// Hydration mismatch (#418) подавляется через suppressHydrationWarning
-// на корневом div внутри DashboardContent.
+// Server Component — рендерит DashboardContent внутри PWAHomeGate.
 //
-// PWAHomeRedirect — клиентский guard: если PWA открыта из иконки и у юзера
-// выбрана другая landing page, редиректит на неё. На обычном вебе не работает.
+// PWAHomeGate решает синхронно (при первом рендере), нужно ли редиректить
+// пользователя на его выбранную landing page. Если да — дашборд НЕ монтируется
+// вообще (ни виджетов, ни fetch'ей), показывается пустой фон и сразу
+// триггерится router.replace. Это устраняет мелькание дашборда на 4-5 секунд
+// перед переходом на целевую страницу.
+//
+// На обычном вебе (не PWA standalone) гейт сразу рендерит детей — никаких
+// задержек и никакого влияния на обычных пользователей.
 export default function DashboardPage() {
   return (
-    <>
-      <PWAHomeRedirect />
+    <PWAHomeGate>
       <DashboardContent orgId="" />
-    </>
+    </PWAHomeGate>
   )
 }

@@ -3006,3 +3006,63 @@ PWA manifest не пропускает пользователя через `/cal
 - Прямые клики «Дашборд» в меню PWA не ломаются — они идут с реферером того же origin.
 
 **Коммит:** `fed6df9`
+
+---
+
+### 19.04.2026 — fix: PWA мелькание дашборда 4-5 сек перед редиректом на landing preference
+
+**Проблема:**
+После предыдущего фикса (`fed6df9`) при открытии PWA дашборд всё равно показывался 4-5 секунд **полностью загруженным** со всеми виджетами, и только потом происходил редирект на выбранную юзером landing page (например «Задачи»). Причина: `PWAHomeRedirect` был тонкий client-side guard, который **не блокировал** рендер `DashboardContent` — виджеты успевали и смонтироваться, и завершить свои fetch'и, пока guard ждал ответа от `/api/mobile/preferences`.
+
+**Решение — два изменения:**
+
+**1. Кэш landing в `localStorage`** (файл `src/hooks/useLandingPage.ts`)
+- Экспортируется константа `LANDING_LS_KEY = 'trinity_landing_v1'`
+- При каждом успешном fetch preferences значение `default_landing_page` пишется в `localStorage`
+- При сохранении нового выбора (optimistic update в `useMutation`) — тоже пишется сразу в `localStorage`
+- При откате ошибки — восстанавливается старое значение
+
+Это даёт **синхронное** чтение preference при следующем открытии PWA — без ожидания сети.
+
+**2. `PWAHomeGate` — блокирующая обёртка** (новый файл `src/components/dashboard/PWAHomeGate.tsx`, удалён старый `PWAHomeRedirect.tsx`)
+
+Компонент-обёртка вокруг `DashboardContent`. При первом рендере синхронно в `useState(() => ...)` принимает решение: `'show-dashboard'` / `'redirect'` / `'pending'`.
+
+Условия для синхронного `'redirect'`:
+- `display-mode: standalone` (PWA)
+- Реферер пуст или внешний (свежее открытие, не клик из меню)
+- Флаг `sessionStorage.trinity_pwa_home_redirected_v1` не выставлен
+- `localStorage[LANDING_LS_KEY]` содержит не-dashboard значение
+
+Если все выполнены — **`DashboardContent` НЕ монтируется**, показывается только нейтральный фон `bg-gray-50`, параллельно триггерится `router.replace(target)`. Виджеты не грузятся, сетевых запросов дашборда нет, мельтешения нет.
+
+Для кейса без кэша (первый запуск PWA после установки) — рендерится пустой фон и идёт fetch preferences; после ответа либо редирект, либо показ дашборда. Это ~200 мс пустого экрана вместо 4-5 секунд мельтешащего дашборда.
+
+Фоновый `refreshLandingCacheInBackground()` при синхронном редиректе — обновляет localStorage на случай если серверное значение изменилось.
+
+**Файл `src/app/(dashboard)/dashboard/page.tsx`:**
+```tsx
+<PWAHomeGate>
+  <DashboardContent orgId="" />
+</PWAHomeGate>
+```
+
+**Защита от регрессии для обычных пользователей:**
+- На веб-Chrome (не standalone) `syncDecision()` сразу возвращает `'show-dashboard'` → дашборд рендерится **без задержек и без изменений**
+- Клик «Дашборд» из меню PWA имеет реферер с того же origin → тоже `'show-dashboard'`
+- После первого редиректа в сессии — флаг sessionStorage блокирует повторную сработку (если юзер вручную пойдёт на /dashboard из меню)
+
+**Затронутые файлы:**
+- `src/hooks/useLandingPage.ts` — добавлен кэш в localStorage (expose `LANDING_LS_KEY`, write on fetch + mutate)
+- `src/components/dashboard/PWAHomeGate.tsx` — **новый**, блокирующая обёртка
+- `src/components/dashboard/PWAHomeRedirect.tsx` — **удалён**, заменён на PWAHomeGate
+- `src/app/(dashboard)/dashboard/page.tsx` — DashboardContent обёрнут в PWAHomeGate
+
+**Безопасность:**
+- `localStorage` хранит только id страницы (`'diary'`, `'visits'` и т.п.) — не секретные данные, не токены
+- API `/api/mobile/preferences` требует auth и возвращает только данные текущего юзера (RLS)
+- Все try/catch защищены от приватного режима/quota errors
+
+**Регрессия:** нет. Обычный веб не затронут. Клик из меню в PWA не перехватывается.
+
+**Коммит:** _(будет добавлен после push)_

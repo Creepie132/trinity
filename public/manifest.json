@@ -2,7 +2,7 @@
   "name": "Trinity CRM",
   "short_name": "Trinity",
   "description": "מערכת ניהול לעסקים",
-  "start_url": "/dashboard",
+  "start_url": "/pwa-start",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",

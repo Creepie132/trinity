@@ -1,1 +1,0 @@
-docs: document /pwa-start entry and PWA manifest caching gotcha

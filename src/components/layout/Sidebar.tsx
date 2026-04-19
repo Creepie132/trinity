@@ -21,6 +21,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { useBranch } from '@/contexts/BranchContext'
 import { useOrganization } from '@/hooks/useOrganization'
+import { useLandingPage } from '@/hooks/useLandingPage'
 
 const baseNavigation = [
   { name_he: 'דשבורד', name_ru: 'Дашборд', href: '/dashboard', icon: Home, requireFeature: null },
@@ -60,6 +61,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
   const [demoVisitOpen, setDemoVisitOpen] = useState(false)
   const { data: organization } = useOrganization()
   const hasStorefront = organization?.has_storefront === true
+  const { landingPath } = useLandingPage()
 
   // Count visits for demo limit check (total + active simultaneous)
   const { activeOrgId } = useBranch()
@@ -116,13 +118,18 @@ export function Sidebar({ onSearchOpen }: SidebarProps = {}) {
     <div className="w-64 h-full flex flex-col bg-gradient-to-b from-white to-gray-50 dark:from-slate-800 dark:to-slate-900 shadow-lg">
       <div className="p-6 pb-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+          <Link
+            href={landingPath}
+            prefetch={true}
+            className="flex items-center gap-3 group rounded-xl -mx-1 px-1 py-1 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+            aria-label={language === 'he' ? 'מעבר לדף הבית' : 'Перейти на главную'}
+          >
             <img src="/trinity-logo.png" alt="Trinity" className="w-12 h-12 object-contain rounded-xl" />
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Trinity</h1>
               <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Amber Solutions Systems</p>
             </div>
-          </div>
+          </Link>
           <NotificationBell locale={locale} />
         </div>
         {!features.isLoading && (

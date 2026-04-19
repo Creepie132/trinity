@@ -82,7 +82,22 @@ export default function LoginPage() {
       }
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      // Читаем предпочтительную главную страницу (fallback /dashboard)
+      let targetPath = '/dashboard'
+      try {
+        const res = await fetch('/api/mobile/preferences', {
+          credentials: 'include',
+          cache: 'no-store',
+        })
+        if (res.ok) {
+          const prefs = await res.json()
+          const { pathFromLandingId } = await import('@/lib/landing-pages')
+          targetPath = pathFromLandingId(prefs?.default_landing_page)
+        }
+      } catch {
+        // fallback уже выставлен
+      }
+      router.push(targetPath)
     }
   }
 

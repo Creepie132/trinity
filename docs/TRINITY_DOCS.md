@@ -2724,3 +2724,121 @@ DOM-порядок: `[Back (Start)] [Logo (Center)] [Bell + Burger (End)]`
 - Имя никогда не обрезается — первая колонка `2fr` на всех брейкпоинтах
 
 **Коммит:** 328da4b
+
+---
+
+### 19.04.2026 — feat: Главная страница — пользовательский выбор landing page (Web + PWA синк)
+
+**Задача:** Ксения попросила возможность выбрать какая страница открывается при входе (например Визиты вместо Дашборда). Выбор должен синхронизироваться между веб и PWA.
+
+#### Архитектурное решение
+
+Расширена существующая таблица `user_nav_preferences` (уже использовалась для мобильного навбара) — per-user хранилище с RLS `auth.uid() = user_id`. Существующий API `/api/mobile/preferences` уже работает и из веб (cookies), и из PWA (Bearer) — автоматическая синхронизация.
+
+**Почему расширили, а не создали новое:** экономия инфраструктуры. Одна таблица, один endpoint, одна React Query key — всё уже настроено.
+
+#### Миграция БД
+
+`add_default_landing_page_to_user_nav_preferences`:
+```sql
+ALTER TABLE public.user_nav_preferences
+  ADD COLUMN IF NOT EXISTS default_landing_page text NOT NULL DEFAULT 'dashboard';
+
+ALTER TABLE public.user_nav_preferences
+  ADD CONSTRAINT user_nav_preferences_default_landing_page_check
+  CHECK (default_landing_page IN (
+    'dashboard', 'visits', 'clients', 'sales', 'payments',
+    'finances', 'inventory', 'diary', 'broadcast', 'analytics'
+  ));
+```
+
+RLS уже настроен (`auth.uid() = user_id`), политика `user_nav_preferences_self` — юзер видит только свою строку.
+
+#### Новые файлы
+
+**`src/lib/landing-pages.ts`** — single source of truth
+- 10 опций: `dashboard`, `visits`, `clients`, `sales`, `payments`, `finances`, `inventory`, `diary`, `broadcast`, `analytics`
+- Каждая опция: `path`, `label_ru`, `label_he`, `desc_ru`, `desc_he`, `icon` (Lucide), `featureFlag`, `colorTint`
+- `pathFromLandingId(id)` — серверный резолв без проверки фич, fallback `/dashboard`
+- `resolveLandingPath(id, features)` — клиентский резолв с учётом отключённых модулей
+- `VALID_LANDING_IDS` — множество для API-валидации
+
+**`src/hooks/useLandingPage.ts`** — React Query хук
+- Query `['user-preferences']`, staleTime 60s, `refetchOnWindowFocus: false`
+- Мутация с optimistic update (Rule 5 реактивности Trinity)
+- `availableOptions` — фильтрация через `useFeatures()` (отключённые модули не показываются)
+- Возвращает: `landingId`, `landingPath`, `availableOptions`, `isLoading`, `isSaving`, `saveError`, `setLanding`
+
+**`src/app/(dashboard)/settings/home-page/page.tsx`** — UI выбора
+- Карточки с иконкой, лейблом, описанием (RU/HE)
+- Клик → optimistic save + toast об ошибке если упало
+- Skeleton-loading пока грузятся preferences
+- RTL-aware
+
+#### Изменённые файлы
+
+**`src/app/api/mobile/preferences/route.ts`**
+- GET возвращает `default_landing_page` (default `'dashboard'`)
+- PUT принимает частичный payload (`nav_tabs` и/или `default_landing_page` — одно или оба)
+- Валидация `default_landing_page` через `VALID_LANDING_IDS`
+- Возвращает актуальное состояние после upsert
+
+**`src/components/settings/settingsConfig.ts`**
+- Добавлен импорт `Home` из lucide-react
+- Новая карточка `home-page` в категорию `general`, после `language` (иконка Home, emerald colorTint, href `/settings/home-page`)
+
+**`src/app/callback/route.ts`** (Google OAuth коллбек)
+- Добавлен helper `getUserLandingPath(adminClient, userId)` — читает `user_nav_preferences.default_landing_page`, fallback `/dashboard` при любой ошибке
+- Редирект обычных owner/staff: `NextResponse.redirect(${origin}${landingPath})` вместо хардкода `/dashboard`
+- **Не затронуты** ветки admin/sales-agent/onboarding — у них своя логика редиректов
+
+**`src/app/login/page.tsx`** (email/password логин)
+- После успешного `signInWithPassword`: fetch `/api/mobile/preferences` → `pathFromLandingId` → `router.push(targetPath)`
+- Fallback `/dashboard` при любой ошибке fetch
+
+**`src/components/layout/Sidebar.tsx`** (десктопный логотип)
+- Добавлен импорт `useLandingPage`
+- Блок логотипа обёрнут в `<Link href={landingPath} prefetch>`: клик по "Trinity" ведёт на выбранную страницу
+- aria-label на RU/HE
+
+**`src/components/layout/MobileHeader.tsx`** (мобильный центральный логотип)
+- Добавлен импорт `Link` и `useLandingPage`
+- Центральный логотип (когда нет филиалов) обёрнут в `<Link href={landingPath}>` с active:scale-95
+- Когда есть филиалы — центр занят `BranchSwitcher`, логотипа нет (не трогаем)
+
+#### Поведение
+
+1. Юзер заходит в `/settings/home-page`, выбирает "Визиты"
+2. Optimistic update в кэше React Query, PUT на `/api/mobile/preferences`
+3. БД: `UPSERT user_nav_preferences SET default_landing_page = 'visits' WHERE user_id = auth.uid()`
+4. При следующем логине (OAuth через `/callback` или email через `/login`) — редирект на `/visits`
+5. Клик по логотипу в шапке → переход на `/visits`
+6. В PWA — то же самое, читает ту же БД-запись через Bearer auth
+7. Если админ отключит модуль `visits` для org — опция исчезнет из списка выбора, но в БД запись останется; `resolveLandingPath` вернёт fallback `/dashboard`
+
+#### Безопасность
+
+- RLS `auth.uid() = user_id` — per-user isolation
+- CHECK constraint в БД — невалидное значение отвергается на уровне PostgreSQL
+- API-валидация через `VALID_LANDING_IDS` — двойная защита
+- `getAuthContext(request)` — поддерживает и Bearer (mobile/PWA), и cookies (веб)
+- Fallback `/dashboard` везде при сбое — юзер не попадёт в 404
+
+#### Затронутые файлы
+
+**Созданы:**
+- `src/lib/landing-pages.ts`
+- `src/hooks/useLandingPage.ts`
+- `src/app/(dashboard)/settings/home-page/page.tsx`
+
+**Изменены:**
+- `src/app/api/mobile/preferences/route.ts`
+- `src/components/settings/settingsConfig.ts`
+- `src/app/callback/route.ts`
+- `src/app/login/page.tsx`
+- `src/components/layout/Sidebar.tsx`
+- `src/components/layout/MobileHeader.tsx`
+
+**Миграция:** `add_default_landing_page_to_user_nav_preferences`
+
+**Коммит:** (следующий push)

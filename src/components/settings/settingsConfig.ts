@@ -1,7 +1,7 @@
 ﻿import {
   Globe, Palette, Bell, Package, Building2, Users,
   Calendar, CreditCard, MessageSquare, FileText,
-  ShieldAlert, MessageCircle, ShoppingBag,
+  ShieldAlert, MessageCircle, ShoppingBag, Home,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -42,6 +42,16 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
         title_he: 'שפת ממשק',
         desc_ru: 'Переключите язык системы: русский, иврит',
         desc_he: 'החלף שפת מערכת: עברית, רוסית',
+      },
+      {
+        id: 'home-page',
+        href: '/settings/home-page',
+        icon: Home,
+        colorTint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
+        title_ru: 'Главная страница',
+        title_he: 'דף הבית',
+        desc_ru: 'Страница, открываемая при входе и по клику на логотип',
+        desc_he: 'הדף שיפתח בכניסה ובלחיצה על הלוגו',
       },
       {
         id: 'display',

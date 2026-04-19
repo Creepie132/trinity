@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
 import { Menu, ArrowLeft, Building2, ChevronDown, Check } from 'lucide-react'
 import { MobileSidebar } from './MobileSidebar'
 import { NotificationBell } from '@/components/ui/NotificationBell'
@@ -8,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useBranch } from '@/contexts/BranchContext'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useBackNavigation } from '@/hooks/useBackNavigation'
+import { useLandingPage } from '@/hooks/useLandingPage'
 import { cn } from '@/lib/utils'
 
 interface MobileHeaderProps {
@@ -22,6 +24,7 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
   const { activeOrgId, mainOrgId, branches, switchBranch, isMainOrg, currentBranchName } = useBranch()
   const { data: mainOrg } = useOrganization()
   const { handleBack, canGoBack } = useBackNavigation()
+  const { landingPath } = useLandingPage()
 
   const hasBranches = branches && branches.length > 0
 
@@ -142,12 +145,17 @@ export function MobileHeader({ onSearchOpen }: MobileHeaderProps) {
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2.5">
+            <Link
+              href={landingPath}
+              prefetch={true}
+              className="flex items-center gap-2.5 rounded-lg px-1 py-0.5 active:scale-95 transition-transform"
+              aria-label={language === 'he' ? 'מעבר לדף הבית' : 'Перейти на главную'}
+            >
               <img src="/logo.png" alt="Amber Solutions" className="w-9 h-9 object-contain rounded-lg" />
               <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-indigo-400">
                 Trinity
               </h1>
-            </div>
+            </Link>
           )}
 
           {/* ── End: Уведомления + Бургер ── */}

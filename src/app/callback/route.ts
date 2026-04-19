@@ -2,6 +2,28 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import { pathFromLandingId, DEFAULT_LANDING_PATH } from '@/lib/landing-pages'
+
+/**
+ * Читает предпочтительную главную страницу пользователя.
+ * Используется здесь только для "обычных" owner/staff, не для админов/sales-agent.
+ * При любой ошибке — безопасный fallback на /dashboard.
+ */
+async function getUserLandingPath(
+  adminClient: any,
+  userId: string
+): Promise<string> {
+  try {
+    const { data } = await adminClient
+      .from('user_nav_preferences')
+      .select('default_landing_page')
+      .eq('user_id', userId)
+      .maybeSingle()
+    return pathFromLandingId(data?.default_landing_page)
+  } catch {
+    return DEFAULT_LANDING_PATH
+  }
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
@@ -162,8 +184,10 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
 
   if (anyOrg || wasLinked) {
-    // User belongs to an org (owner, moderator, or invited staff) → go to dashboard
-    return NextResponse.redirect(`${origin}/dashboard`)
+    // User belongs to an org (owner, moderator, or invited staff)
+    // → redirect to their chosen landing page (fallback /dashboard)
+    const landingPath = await getUserLandingPath(supabaseAdmin, user.id)
+    return NextResponse.redirect(`${origin}${landingPath}`)
   }
 
   // 3) Truly new user — нет орга → Auth-First Trial onboarding

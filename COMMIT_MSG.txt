@@ -1,0 +1,18 @@
+fix(callback): superadmin with own org respects landing preference
+
+Problem: Superadmin users (admin_users) who also own an organization
+(org_users owner/staff role) were always redirected to /dashboard after
+Google OAuth login, ignoring their saved default_landing_page preference.
+
+Root cause: The callback logic treated ALL admin_users (except sales_agents)
+as pure system admins and hardcoded /dashboard. But most superadmins in
+Trinity are also business owners (e.g. Vlad = Amber Solutions superadmin
++ owner of Amber Solutions org) and should behave like regular users
+regarding the landing-page preference.
+
+Fix: If adminRecord is NOT a sales_agent AND user has a row in org_users,
+read default_landing_page from user_nav_preferences and redirect there.
+Pure admin accounts (no org membership) keep the /dashboard hardcode.
+
+Files:
+  src/app/callback/route.ts

@@ -138,6 +138,20 @@ export async function GET(request: NextRequest) {
       const onboardingDone = agentRow?.sales_onboarding_completed === true
       return NextResponse.redirect(`${origin}${onboardingDone ? '/worker' : '/worker/onboarding'}`)
     }
+    // Суперадмин-не-sales-agent: если у него есть своя org (owner/staff) —
+    // уважаем его выбранную "главную страницу". Это нормальный пользовательский
+    // сценарий (например, Vlad: суперадмин + owner Amber Solutions).
+    // Если orgs нет (чисто-админский аккаунт) — fallback на /dashboard.
+    const { data: adminOrg } = await supabaseAdmin
+      .from('org_users')
+      .select('org_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
+    if (adminOrg) {
+      const landingPath = await getUserLandingPath(supabaseAdmin, user.id)
+      return NextResponse.redirect(`${origin}${landingPath}`)
+    }
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 

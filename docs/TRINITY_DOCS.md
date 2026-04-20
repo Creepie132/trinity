@@ -3618,3 +3618,57 @@ CHECK (trigger_type = ANY (ARRAY[
 **Безопасность:** не затронута.
 
 **Коммит:** документация обновлена, миграция применена напрямую через Supabase MCP (никакого кода в репозитории не менялось).
+
+
+---
+
+### 20.04.2026 — fix(whatsapp): BiDi в fireWaTrigger + короткие ссылки через /pay/[id]
+
+**Контекст:**
+После первого теста `payment_link_created` Влад прислал скриншот реально пришедшего WhatsApp-сообщения. Две проблемы:
+
+1. **Длинная Tranzila-ссылка отображалась целиком как текст** — `https://directng.tranzila.com/ambersolt/iframenew.php?TranzilaPW=...&sum=...&currency=1&...` с URL-encoded параметрами. Клиент такое не откроет — выглядит как фишинг.
+
+2. **BiDi-проблема в ивритском тексте** — строки где иврит смешан с эмодзи или цифрами ломались: WhatsApp выстраивал всю строку как LTR потому что первый «сильный» символ был латиницей или кириллицей (после подстановки `{{client_name}}`).
+
+**Причина 1 — длинные ссылки:**
+`fireWaTrigger` для `payment_link_created` передавал в переменную `payment_link` прямой URL Tranzila из `tranzilaResult.url`. URL был 200+ символов с десятками encoded параметров.
+
+**Причина 2 — BiDi:**
+В `src/lib/wa/fire-trigger.ts` функция `applyTemplate` просто подставляла переменные без RLM-обработки. Та же проблема уже была решена в `src/app/api/cron/wa-triggers/route.ts` для delayed-триггеров (after_visit, after_sale, win_back, debt_reminder), но код не был выделен в общий хелпер и не применялся в `fireWaTrigger`.
+
+**Исправление 1 — короткие брендированные ссылки:**
+В Trinity уже есть публичная страница `src/app/pay/[id]/page.tsx`. Она:
+- Принимает UUID платежа из URL
+- Загружает payment из Supabase по RLS-permissive SELECT (публичный доступ, только `status`, `payment_link`, `amount`, `currency`)
+- При `status = 'pending'` и наличии `payment_link` — автоматически редиректит на Tranzila через 1 секунду
+- Обрабатывает `cancelled/completed/failed` с соответствующими экранами
+- Локализована HE+RU с тумблером переключения
+
+Изменение в двух endpoint-ах (`src/app/api/payments/create-link/route.ts` и `src/app/api/mobile/payments/create-link/route.ts`) — в `fireWaTrigger.vars.payment_link` теперь передаётся `${origin}/pay/${payment.id}` вместо `tranzilaResult.url`.
+
+Результат: клиент получает короткую ссылку типа `https://www.ambersol.co.il/pay/abc123-...` (~55 символов) вместо 250-символового URL. В WhatsApp такая ссылка автоматически становится кликабельным preview. Бренд — Amber Solutions, а не Tranzila → выше доверие.
+
+**Исправление 2 — BiDi через RLM:**
+Портирована логика из `applyTemplate` в `api/cron/wa-triggers/route.ts` в `src/lib/wa/fire-trigger.ts`. Проверка `hasHebrew` (есть ли иврит в шаблоне) + построчная вставка RLM (`\u200F`) перед строками, которые начинаются с не-ивритского символа. Теперь все 4 точки использования `fireWaTrigger` (`client_added`, `visit_created`, `visit_completed`, `payment_link_created`) автоматически получают корректный RTL-рендеринг.
+
+**Затронутые файлы:**
+- `src/lib/wa/fire-trigger.ts` — расширена `applyTemplate` с RLM-обработкой.
+- `src/app/api/payments/create-link/route.ts` — `payment_link` в vars теперь короткая ссылка.
+- `src/app/api/mobile/payments/create-link/route.ts` — то же для mobile.
+
+**Безопасность:**
+- `/pay/[id]` уже использует `.select('id, status, payment_link, amount, currency')` — минимум данных, никаких client_id/org_id не раскрываются.
+- UUID платежа непредсказуем (v4), brute-force неработоспособен.
+- RLS на `payments` разрешает публичный SELECT, но только этих полей (проверено существующей страницей, паттерн не меняется).
+
+**Регрессия:** нет.
+- `tranzilaResult.url` продолжает сохраняться в `payments.payment_link` (и передаётся в success_url/fail_url Tranzila как раньше) — поведение webhook не менялось.
+- BiDi-фикс срабатывает только если в шаблоне есть ивритские символы (`/[\u0590-\u05FF]/`) — для чисто русских или английских шаблонов поведение идентично старому.
+- Cron-триггеры используют свою `applyTemplate` в `api/cron/wa-triggers/route.ts` — не трогаем, работает.
+
+**Проверено:**
+- `npm run build` — чистый, exit 0.
+- Страница `/pay/[id]` уже в билде (видна в списке 237 страниц).
+
+**Коммит:** будет проставлен после push.

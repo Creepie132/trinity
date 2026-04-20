@@ -34,10 +34,31 @@ interface FireWaTriggerOpts {
 }
 
 function applyTemplate(template: string, vars: Record<string, string>): string {
-  return Object.entries(vars).reduce(
+  const hasHebrew = /[\u0590-\u05FF]/.test(template)
+
+  // Сначала подставляем переменные
+  const result = Object.entries(vars).reduce(
     (msg, [key, val]) => msg.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val),
     template
   )
+
+  if (!hasHebrew) return result
+
+  // BiDi-фикс для WhatsApp: для ивритских шаблонов добавляем RLM (\u200F)
+  // в начало каждой строки, которая начинается с не-ивритского символа.
+  // Без этого WhatsApp выстраивает строку как LTR, если она начинается с
+  // латиницы/кириллицы (например после подстановки {{client_name}}).
+  const RLM = '\u200F'
+  return result
+    .split('\n')
+    .map(line => {
+      const firstStrong = line.match(/[A-Za-zА-Яа-яёЁ\u0590-\u05FF\u0600-\u06FF]/)
+      if (!firstStrong) return line // пустая строка, только эмодзи/цифры — не трогаем
+      const code = firstStrong[0].codePointAt(0)!
+      const isRtlChar = code >= 0x0590 && code <= 0x06FF
+      return isRtlChar ? line : RLM + line
+    })
+    .join('\n')
 }
 
 export async function fireWaTrigger(opts: FireWaTriggerOpts): Promise<void> {

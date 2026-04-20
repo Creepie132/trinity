@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
             client_name:  clientRow.first_name ?? '',
             org_name:     orgRow?.name ?? '',
             amount:       amount.toFixed(2),
-            payment_link: tranzilaResult.url,
+            payment_link: `${request.nextUrl.origin}/pay/${payment.id}`,
           },
           entityId: payment.id,
         })

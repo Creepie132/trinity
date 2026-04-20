@@ -782,7 +782,32 @@ chore: конфиг, зависимости
 
 ---
 
-### 20.04.2026 — feat(visits): мульти-выбор услуг и товаров при создании визита
+### 20.04.2026 — fix(services): создание услуги в Настройки→Бизнес падало на `משהו השתבש`
+
+**Что:** Кнопка "Добавить услугу" (`Настройки → Бизнес → Услуги → הוסף שירות`) падала с toast-ом "משהו השתבש" ещё до отправки запроса. POST на `/api/services` вообще не уходил — в Vercel runtime logs за 2ч только GET-запросы, ни одного POST.
+
+**Корень проблемы:**
+- `useServices()` хранит кэш как плоский массив `Service[]`
+- `useCreateService/useUpdateService/useDeleteService` использовали общий `useOptimisticMutation`, который рассчитан **только** на `PagedCache<T> = { data: T[], count: number }`
+- В `onMutate` хук делал `[...old.data, optimisticRecord]` и `old.count + 1` над плоским массивом → `undefined.data` → crash → `onError` → toast "somethingWentWrong"
+- В jsdoc `useServices.ts` было написано "хук обрабатывает оба шейпа" — это было неверно, `useOptimisticMutation` обрабатывает только paged
+
+**Фикс:** `src/hooks/useServices.ts` переписан — три хука (`useCreateService/useUpdateService/useDeleteService`) теперь используют `useMutation` напрямую с локальной optimistic-логикой для плоского `Service[]`:
+- `onMutate`: snapshot через `getQueryData<Service[]>`, optimistic-insert/update/delete через `setQueryData`
+- `onSuccess` (insert): swap temp UUID → server UUID в кэше, debounced invalidate через 2 сек (Realtime-first как в базовом хуке)
+- `onError`: rollback из snapshot
+
+**Почему не правил базовый `useOptimisticMutation`:** его используют `clients / visits / payments / products / sales` — все с `PagedCache`. Расширение базового хука на оба шейпа потребовало бы регрессии 5 модулей. Локальный фикс в `useServices.ts` — нулевая регрессия, точечное решение ровно под плоский кэш.
+
+**Файлы:**
+- `src/hooks/useServices.ts` — полностью переписан (185 строк, 3 хука локально)
+
+**Build:** `npm run build` — `✓ Compiled successfully in 28.0s`, 237/237 страниц, 0 TS-ошибок.
+
+**Регрессия:** нет. `useOptimisticMutation.ts` не тронут, grep по всему `src/` подтвердил что только `useServices.ts` его импортировал.
+
+**Безопасность:** защищено — API `/api/services` POST не менялся, RLS `services_insert` с `get_user_org_ids()` не менялся.
+
 
 **Что:** При создании нового визита теперь можно добавить несколько позиций: услуги, товары и произвольные (custom) строки — по аналогии с модулем "Продажи". Edit-mode и meeting-mode (встречи) остались как были — одна услуга, без корзины.
 

@@ -3948,4 +3948,4 @@ TBD (будет подставлен после push)
 - Локальная проверка файла (107 717 chars): `HEB / RUS / ENG` найдено, `wa.me/972544858586` найдено, старого `<button>Начать работу</button>` нет.
 
 ### Commit
-TBD — обновится после `git push`
+`764ad90e8ba40b73c3b280979a26f9a3a2c76cc5` — deployment `dpl_5EriEVm1cujs6TNX7pN1qUEFku52`

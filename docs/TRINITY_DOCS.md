@@ -3931,3 +3931,21 @@ CHECK (trigger_type = ANY (ARRAY[
 
 ### Коммит
 TBD (будет подставлен после push)
+
+
+---
+
+## 🔧 2026-04-20 (part 2) — Demo Boris: language codes + WA CTA
+
+### Changes
+1. **Язык-фичу** в pricing-карточке `Старт с ИИ`: флаги `🇮🇱 / 🇷🇺 / 🇬🇧` заменены на текстовые коды `HEB / RUS / ENG` — Борис попросил, чтобы не было двусмысленности с флагами.
+2. **Кнопка "Начать работу"** в special-offer блоке внизу страницы «Условия» превращена из `<button>` в `<a href="https://wa.me/972544858586?text=...">`. Предзаполненный текст (URL-encoded): «Привет Влад, я посмотрел демо Trinity для Israstar — готов начать работу». `target="_blank" rel="noopener"` — безопасное открытие в новой вкладке.
+
+### Files
+- `public/demo-boris.html` — 2 правки через Desktop Commander `edit_block`
+
+### Verification
+- Локальная проверка файла (107 717 chars): `HEB / RUS / ENG` найдено, `wa.me/972544858586` найдено, старого `<button>Начать работу</button>` нет.
+
+### Commit
+TBD — обновится после `git push`

@@ -3513,3 +3513,64 @@ PWA manifest не пропускает пользователя через `/cal
 - Миграция применена в Supabase, колонка подтверждена через `information_schema`.
 
 **Коммит:** будет проставлен после push.
+
+
+---
+
+### 20.04.2026 — refactor(whatsapp): ссылка на оплату как отдельный триггер `payment_link_created`
+
+**Контекст:**
+Предыдущая реализация (коммит `111dab7`) добавляла опцию «прикрепить ссылку на оплату» внутрь триггера `visit_created`. Это была неверная архитектура: логически ссылка на оплату не связана с созданием визита — владелец создаёт её в любой момент (в drawer платежа, в drawer сделки, в `CompleteVisitPaymentDialog`, через API). Влад попросил сделать это отдельным триггером.
+
+**Что изменилось:**
+- **Новый триггер `payment_link_created`** — отдельный пункт в списке автоматических сообщений WhatsApp. Срабатывает после успешного выполнения `POST /api/payments/create-link` или `POST /api/mobile/payments/create-link` (т.е. когда владелец/сотрудник создаёт платёжную ссылку Tranzila для клиента).
+- **Переменные шаблона:** `{{client_name}}`, `{{amount}}`, `{{payment_link}}`, `{{org_name}}`. Когда триггер включён и у клиента есть телефон — автоматически отправляется WhatsApp с заполненным шаблоном.
+- Иконка: `CreditCard` (emerald-цвет). В списке стоит между `after_sale` и `birthday`.
+
+**Откат предыдущей реализации:**
+- Убран `showPaymentLinkToggle` и тумблер «Прикрепить ссылку на оплату» из карточки `visit_created`.
+- Убрана переменная `{{payment_link}}` из `visit_created.vars`.
+- Удалён файл `src/lib/wa/create-visit-payment-link.ts` — больше не нужен.
+- Удалены импорты и вызовы `createVisitPaymentLink` из `src/app/api/visits/route.ts` и `src/app/api/mobile/visits/route.ts` — оба файла возвращены к состоянию до коммита `111dab7` в части триггеров.
+- Колонка `wa_trigger_settings.attach_payment_link` (добавленная в миграции `wa_trigger_settings_add_attach_payment_link`) **оставлена в БД** — не удаляется, т.к. это дороже чем держать неиспользуемую boolean-колонку с `DEFAULT false`. API upsert её сохраняет, но нигде больше не читает.
+
+**Затронутые файлы:**
+- `src/lib/wa/fire-trigger.ts` — в `WaTriggerType` добавлен `'payment_link_created'`.
+- `src/app/api/wa-triggers/route.ts` — в `TRIGGER_TYPES` whitelist добавлен `'payment_link_created'`.
+- `src/app/(dashboard)/settings/whatsapp/triggers/page.tsx` — новая карточка `payment_link_created` с переменными, добавлена в `ORDER` между `after_sale` и `birthday`. Убран тумблер payment_link из `visit_created`. Добавлен `emerald` в `COLOR_BG`.
+- `src/app/api/payments/create-link/route.ts` — после сохранения ссылки в `payments` добавлен `void` fire-and-forget вызов `fireWaTrigger('payment_link_created', ...)`. Загружает `clients.first_name/phone` и `organizations.name` через тот же `createSupabaseServiceClient`.
+- `src/app/api/mobile/payments/create-link/route.ts` — то же самое для мобильного endpoint-а.
+- `src/app/api/visits/route.ts` — откат: убрана проверка `attach_payment_link`, генерация ссылки и поле `payment_link` в vars.
+- `src/app/api/mobile/visits/route.ts` — откат аналогично.
+- Удалён: `src/lib/wa/create-visit-payment-link.ts`
+
+**Точки срабатывания в UI (где вызывается `/api/payments/create-link` или мобильный аналог):**
+- `/payments` — кнопка «Создать ссылку» в списке платежей.
+- `PaymentDetailsDrawer` — действия в drawer платежа.
+- `SaleDetailModal` — кнопка генерации ссылки в drawer сделки.
+- `CompleteVisitPaymentDialog` — при выборе способа оплаты `card` (Tranzila).
+- `UnifiedPaymentDialog` — тот же способ оплаты.
+- Flutter mobile — все экраны создания платежа/сделки, использующие `create-link`.
+
+Во всех этих точках ничего менять не пришлось — логика внедрена в сам endpoint, а не в фронтенд-вызов.
+
+**Безопасность:**
+- Per-org `tranzila_terminal` уже валидируется внутри endpoint-ов. WhatsApp-триггер срабатывает только после успешного создания `payment` и получения `tranzilaResult.url`.
+- `fireWaTrigger` сам проверяет `is_enabled = true` и наличие непустого `message_template` перед отправкой. Если владелец не включил триггер — ничего не отправляется.
+- `void` / try-catch — любая ошибка триггера не блокирует возврат ссылки клиенту (endpoint возвращает `payment_link` как и раньше).
+- Нет изменений в проверках auth, RLS, модулей — `checkAuthAndFeature('payments')` + проверка `client.org_id` сохранены.
+
+**Регрессия:** нет.
+- Существующие триггеры работают как раньше.
+- `visit_created` вернулся ровно к состоянию до коммита `111dab7` (переменных снова 5, без `{{payment_link}}`).
+- Существующие строки в `wa_trigger_settings.attach_payment_link` не читаются — поле просто игнорируется.
+- Endpoint-ы `/api/payments/create-link` возвращают тот же JSON-контракт `{ success, payment_id, payment_link, amount, currency }` — фронтенд ничего не замечает.
+- Если у клиента нет телефона — триггер ранний `return`, ошибки нет.
+- Если WA-интеграция у org отключена — `sendWhatsAppMessage` мягко фейлится (softFail), endpoint всё равно возвращает ссылку успешно.
+
+**Проверено:**
+- `npm run build` — чистый, 28.7s, 237 страниц, 0 TypeScript-ошибок.
+- Поиск по коду: `createVisitPaymentLink` больше нигде не упоминается.
+- Поиск по коду: `attach_payment_link` остался только в API upsert (не читается при отправке).
+
+**Коммит:** будет проставлен после push.

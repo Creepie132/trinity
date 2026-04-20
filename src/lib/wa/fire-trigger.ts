@@ -15,6 +15,7 @@ export type WaTriggerType =
   | 'client_added'
   | 'visit_created'
   | 'visit_completed'
+  | 'payment_link_created'
 
 interface FireWaTriggerOpts {
   orgId:       string

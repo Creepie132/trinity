@@ -10,7 +10,6 @@ import { dispatchNotification } from '@/lib/dispatch-notification'
 import { scheduleMessage } from '@/lib/wa/scheduler'
 import { normalizePhone } from '@/lib/wa/phone'
 import { fireWaTrigger } from '@/lib/wa/fire-trigger'
-import { createVisitPaymentLink } from '@/lib/wa/create-visit-payment-link'
 import { israelLocalToUTC } from '@/lib/tz'
 
 // GET /api/visits - список визитов для текущей организации
@@ -240,36 +239,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // WA триггер visit_created (fire-and-forget, с опциональной ссылкой на оплату)
+    // WA триггер visit_created (fire-and-forget)
     {
       const client = visit.clients as any
       const svc    = visit.services as any
       const dt     = new Date(scheduled_at)
       if (client?.phone) {
         const { data: org } = await supabase.from('organizations').select('name').eq('id', org_id).single()
-
-        // Проверяем: включена ли у триггера visit_created опция прикрепить ссылку на оплату
-        const { data: triggerCfg } = await supabase
-          .from('wa_trigger_settings')
-          .select('is_enabled, attach_payment_link')
-          .eq('org_id', org_id)
-          .eq('trigger_type', 'visit_created')
-          .maybeSingle()
-
-        let paymentLink = ''
-        if (triggerCfg?.is_enabled && triggerCfg?.attach_payment_link && visitPrice > 0) {
-          const serviceName = svc?.name_ru ?? svc?.name ?? insertData.service_type ?? 'שירות'
-          const link = await createVisitPaymentLink({
-            orgId: org_id,
-            visitId: visit.id,
-            clientId: clientId,
-            amount: visitPrice,
-            description: `${serviceName} — ${client.first_name ?? ''}`.trim(),
-            origin: request.nextUrl.origin,
-          })
-          paymentLink = link ?? ''
-        }
-
         void fireWaTrigger({
           orgId: org_id,
           triggerType: 'visit_created',
@@ -280,7 +256,6 @@ export async function POST(request: NextRequest) {
             date: dt.toLocaleDateString('he-IL', { timeZone: 'Asia/Jerusalem' }),
             time: dt.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' }),
             service: svc?.name_ru ?? svc?.name ?? insertData.service_type ?? '',
-            payment_link: paymentLink,
           },
           entityId: visit.id,
         })

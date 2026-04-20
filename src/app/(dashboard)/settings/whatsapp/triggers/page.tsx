@@ -17,7 +17,6 @@ interface Trigger {
   hours_before?: number | null
   delay_hours?: number | null
   win_back_days?: number | null
-  attach_payment_link?: boolean
 }
 
 const TRIGGER_META: Record<string, {
@@ -25,7 +24,6 @@ const TRIGGER_META: Record<string, {
   label_he: string; label_ru: string
   desc_he: string; desc_ru: string
   showHoursBefore?: boolean; showDelayHours?: boolean; showWinBackDays?: boolean
-  showPaymentLinkToggle?: boolean
   vars: string[]
 }> = {
   visit_reminder:  { icon: Bell,          color: 'blue',
@@ -35,8 +33,7 @@ const TRIGGER_META: Record<string, {
   visit_created:   { icon: Bell,          color: 'indigo',
     label_he: 'אישור תור חדש',         label_ru: 'Подтверждение визита',
     desc_he:  'נשלח כשנוצר תור חדש',  desc_ru:  'Отправляется при создании визита',
-    showPaymentLinkToggle: true,
-    vars: ['{{client_name}}','{{date}}','{{time}}','{{service}}','{{org_name}}','{{payment_link}}'] },
+    vars: ['{{client_name}}','{{date}}','{{time}}','{{service}}','{{org_name}}'] },
   visit_completed: { icon: CheckCircle2, color: 'green',
     label_he: 'אחרי סיום תור',         label_ru: 'После завершения визита',
     desc_he:  'נשלח כשהתור הושלם',    desc_ru:  'Отправляется когда визит завершён',
@@ -65,18 +62,24 @@ const TRIGGER_META: Record<string, {
     label_he: 'ברוך הבא לקוח חדש',     label_ru: 'Приветствие нового клиента',
     desc_he:  'נשלח כשלקוח נוסף',     desc_ru:  'Отправляется при добавлении клиента',
     vars: ['{{client_name}}','{{org_name}}'] },
+  payment_link_created: { icon: CreditCard, color: 'emerald',
+    label_he: 'קישור לתשלום נוצר',     label_ru: 'Создана ссылка на оплату',
+    desc_he:  'נשלח ללקוח כשנוצר קישור תשלום',
+    desc_ru:  'Отправляется клиенту при создании ссылки на оплату',
+    vars: ['{{client_name}}','{{amount}}','{{payment_link}}','{{org_name}}'] },
 }
 
 const COLOR_BG: Record<string,string> = {
-  blue:   'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-  indigo: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
-  green:  'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-  teal:   'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
-  purple: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
-  pink:   'bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400',
-  orange: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
-  red:    'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-  cyan:   'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400',
+  blue:    'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+  indigo:  'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
+  green:   'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+  teal:    'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
+  purple:  'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
+  pink:    'bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400',
+  orange:  'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
+  red:     'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+  cyan:    'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400',
+  emerald: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
 }
 
 // ─── TriggerCard ──────────────────────────────────────────────────────────────
@@ -190,36 +193,6 @@ function TriggerCard({
             </div>
           )}
 
-          {/* attach_payment_link — только для visit_created */}
-          {meta.showPaymentLinkToggle && (
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800">
-              <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center flex-shrink-0">
-                <CreditCard size={14} className="text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {isHe ? 'צרף קישור לתשלום' : 'Прикрепить ссылку на оплату'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {isHe
-                    ? 'יצירת קישור Tranzila אוטומטי עבור הביקור. השתמש במשתנה {{payment_link}} בתבנית.'
-                    : 'Создаёт ссылку Tranzila для визита. Используйте переменную {{payment_link}} в шаблоне.'
-                  }
-                </p>
-              </div>
-              <button
-                onClick={() => onChange({ ...trigger, attach_payment_link: !trigger.attach_payment_link })}
-                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 mt-0.5 ${
-                  trigger.attach_payment_link ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-slate-600'
-                }`}
-              >
-                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${
-                  trigger.attach_payment_link ? 'left-6' : 'left-1'
-                }`} />
-              </button>
-            </div>
-          )}
-
           {/* Message template */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
@@ -262,7 +235,8 @@ export default function WATriggerSettingsPage() {
   // Ordered display list
   const ORDER = [
     'visit_reminder','visit_created','visit_completed',
-    'after_visit','after_sale','birthday','win_back','debt_reminder','client_added',
+    'after_visit','after_sale','payment_link_created',
+    'birthday','win_back','debt_reminder','client_added',
   ]
 
   useEffect(() => {
@@ -276,7 +250,6 @@ export default function WATriggerSettingsPage() {
             trigger_type: type, is_enabled: false,
             message_template: '', hours_before: null,
             delay_hours: 1, win_back_days: 60,
-            attach_payment_link: false,
           }
         })
         setTriggers(merged)

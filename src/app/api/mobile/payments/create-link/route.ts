@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { createTranzilaPaymentLink } from '@/lib/tranzila'
+import { fireWaTrigger } from '@/lib/wa/fire-trigger'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -119,6 +120,42 @@ export async function POST(request: NextRequest) {
       .update({ payment_link: tranzilaResult.url })
       .eq('id', payment.id)
       .eq('org_id', orgId)
+
+    // ── WA триггер payment_link_created (fire-and-forget) ────────────────────
+    void (async () => {
+      try {
+        const { data: clientRow } = await supabase
+          .from('clients')
+          .select('first_name, phone')
+          .eq('id', client_id)
+          .eq('org_id', orgId)
+          .single()
+
+        if (!clientRow?.phone) return
+
+        const { data: orgRow } = await supabase
+          .from('organizations')
+          .select('name')
+          .eq('id', orgId)
+          .single()
+
+        await fireWaTrigger({
+          orgId,
+          triggerType: 'payment_link_created',
+          clientPhone: clientRow.phone,
+          vars: {
+            client_name:  clientRow.first_name ?? '',
+            org_name:     orgRow?.name ?? '',
+            amount:       amount.toFixed(2),
+            payment_link: tranzilaResult.url,
+          },
+          entityId: payment.id,
+        })
+      } catch (err) {
+        console.error('[mobile/payments/create-link] fireWaTrigger error (non-critical):', err)
+      }
+    })()
+    // ─────────────────────────────────────────────────────────────────────────
 
     return NextResponse.json({
       success:      true,

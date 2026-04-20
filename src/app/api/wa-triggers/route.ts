@@ -5,6 +5,7 @@ import { createSupabaseServiceClient } from '@/lib/supabase-service'
 const TRIGGER_TYPES = [
   'visit_created', 'visit_reminder', 'visit_completed', 'client_added', 'demo_expired',
   'after_visit', 'after_sale', 'birthday', 'win_back', 'debt_reminder',
+  'payment_link_created',
 ] as const
 
 export async function GET(req: NextRequest) {

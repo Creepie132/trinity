@@ -11,7 +11,6 @@ import { getAuthContext } from '@/lib/auth-helpers'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
 import { israelLocalToUTC } from '@/lib/tz'
 import { fireWaTrigger } from '@/lib/wa/fire-trigger'
-import { createVisitPaymentLink } from '@/lib/wa/create-visit-payment-link'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -184,28 +183,6 @@ export async function POST(req: NextRequest) {
               .eq('id', orgId)
               .single()
 
-            // Проверяем настройку attach_payment_link для visit_created
-            const { data: triggerCfg } = await serviceSupabase
-              .from('wa_trigger_settings')
-              .select('is_enabled, attach_payment_link')
-              .eq('org_id', orgId)
-              .eq('trigger_type', 'visit_created')
-              .maybeSingle()
-
-            let paymentLink = ''
-            if (triggerCfg?.is_enabled && triggerCfg?.attach_payment_link && totalPrice > 0) {
-              const descName = primaryServiceName || 'שירות'
-              const link = await createVisitPaymentLink({
-                orgId,
-                visitId: visit.id,
-                clientId: client_id,
-                amount: totalPrice,
-                description: `${descName} — ${clientRow.first_name ?? ''}`.trim(),
-                origin: req.nextUrl.origin,
-              })
-              paymentLink = link ?? ''
-            }
-
             const dt = new Date(rawScheduledAt)
             await fireWaTrigger({
               orgId,
@@ -219,7 +196,6 @@ export async function POST(req: NextRequest) {
                   hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem',
                 }),
                 service: primaryServiceName ?? '',
-                payment_link: paymentLink,
               },
               entityId: visit.id,
             })

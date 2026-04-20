@@ -7,6 +7,7 @@ import { logAudit } from '@/lib/audit'
 import { queuePushNotification } from '@/lib/push-notify'
 import { getClientIp } from '@/lib/ratelimit'
 import { createSupabaseServiceClient } from '@/lib/supabase-service'
+import { fireWaTrigger } from '@/lib/wa/fire-trigger'
 
 export const dynamic = 'force-dynamic'
 
@@ -125,6 +126,43 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       console.error('Failed to update payment link:', updateError)
     }
+
+    // ── WA триггер payment_link_created (fire-and-forget) ────────────────────
+    // Отправляем клиенту WhatsApp с ссылкой на оплату, если триггер включён
+    void (async () => {
+      try {
+        const { data: clientRow } = await supabase
+          .from('clients')
+          .select('first_name, phone')
+          .eq('id', data.client_id)
+          .eq('org_id', org_id)
+          .single()
+
+        if (!clientRow?.phone) return
+
+        const { data: orgRow } = await supabase
+          .from('organizations')
+          .select('name')
+          .eq('id', org_id)
+          .single()
+
+        await fireWaTrigger({
+          orgId:       org_id,
+          triggerType: 'payment_link_created',
+          clientPhone: clientRow.phone,
+          vars: {
+            client_name:  clientRow.first_name ?? '',
+            org_name:     orgRow?.name ?? '',
+            amount:       amount.toFixed(2),
+            payment_link: paymentLink,
+          },
+          entityId: payment.id,
+        })
+      } catch (err) {
+        console.error('[/api/payments/create-link] fireWaTrigger error (non-critical):', err)
+      }
+    })()
+    // ─────────────────────────────────────────────────────────────────────────
 
     // ✅ Audit log
     await logAudit({

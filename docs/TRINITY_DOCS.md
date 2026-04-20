@@ -3574,3 +3574,47 @@ PWA manifest не пропускает пользователя через `/cal
 - Поиск по коду: `attach_payment_link` остался только в API upsert (не читается при отправке).
 
 **Коммит:** будет проставлен после push.
+
+
+---
+
+### 20.04.2026 — fix(whatsapp): CHECK constraint блокировал сохранение нового триггера `payment_link_created`
+
+**Контекст:**
+После деплоя `7a628be` включение нового триггера «Создана ссылка на оплату» и нажатие «Сохранить настройки» приводило к тосту «Ошибка сохранения». Ошибка появлялась только для этого триггера — остальные 9 сохранялись нормально.
+
+**Причина:**
+На таблице `public.wa_trigger_settings` был CHECK constraint `wa_trigger_settings_trigger_type_check`, который жёстко ограничивал `trigger_type` десятью значениями: `visit_created`, `visit_reminder`, `visit_completed`, `client_added`, `demo_expired`, `after_visit`, `after_sale`, `birthday`, `win_back`, `debt_reminder`.
+
+Код в `src/app/api/wa-triggers/route.ts` whitelist-ил новый тип на уровне приложения (`TRIGGER_TYPES.includes(t.trigger_type)`), но при upsert Postgres отбрасывал строку с constraint violation `23514`.
+
+**Исправление:**
+Миграция `wa_trigger_settings_add_payment_link_created_type` пересоздаёт CHECK constraint с расширенным списком, добавляя `'payment_link_created'`.
+
+```sql
+ALTER TABLE public.wa_trigger_settings
+DROP CONSTRAINT IF EXISTS wa_trigger_settings_trigger_type_check;
+
+ALTER TABLE public.wa_trigger_settings
+ADD CONSTRAINT wa_trigger_settings_trigger_type_check
+CHECK (trigger_type = ANY (ARRAY[
+  'visit_created'::text, 'visit_reminder'::text, 'visit_completed'::text,
+  'client_added'::text, 'demo_expired'::text, 'after_visit'::text,
+  'after_sale'::text, 'birthday'::text, 'win_back'::text,
+  'debt_reminder'::text, 'payment_link_created'::text
+]));
+```
+
+**Проверено:**
+- Constraint подтверждён через `pg_get_constraintdef` — новый тип в списке.
+- Существующие строки не затронуты (DROP + ADD с тем же именем, данные сохраняются).
+- Код приложения без изменений.
+
+**Урок на будущее:**
+При добавлении нового `trigger_type` нужно **одновременно** обновлять CHECK constraint — иначе application-level whitelist пропускает, а БД молча режет. Next time — гpеп по схеме перед коммитом: `SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'public.wa_trigger_settings'::regclass`.
+
+**Регрессия:** нет — CHECK только расширен, ничего не удалено из списка.
+
+**Безопасность:** не затронута.
+
+**Коммит:** документация обновлена, миграция применена напрямую через Supabase MCP (никакого кода в репозитории не менялось).

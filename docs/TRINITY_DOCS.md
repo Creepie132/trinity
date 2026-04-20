@@ -3358,3 +3358,78 @@ PWA manifest не пропускает пользователя через `/cal
 **Безопасность:** не затронута. Изменения только в клиентской навигации, никакого касания auth/RLS/org_id.
 
 **Коммит:** будет проставлен после push.
+
+
+---
+
+### 20.04.2026 — feat: мульти-корзина при редактировании визита (услуги + товары + произвольные)
+
+**Запрос:**
+При редактировании визита должна быть возможность добавлять и удалять услуги, товары или произвольные позиции — как при создании. До этого в edit-режиме был только один ServicePicker и одна цена.
+
+**Архитектурное решение — без новых API:**
+
+Существующие эндпоинты уже поддерживают инкрементное управление позициями визита:
+- `POST /api/visits/[id]/services` — добавить услугу/произвольную позицию в `visit_services`
+- `POST /api/visits/[id]/products` — добавить товар в `visit_services` (без движения склада до оплаты)
+- `DELETE /api/visits/[id]/services/[serviceId]` — удалить позицию
+- `PUT /api/visits/[id]` — обновить базовую услугу/цену/длительность/дату
+
+Фундаментальное правило (закреплено в эндпоинтах, не меняется): `visits.price` = базовая цена (первая позиция). `visit_services[]` хранит только ДОП. позиции. Итог в UI = `visits.price + sum(visit_services.price)`. `DELETE`/`POST` на `visit_services` **не трогают** `visits.price` — иначе был бы двойной счёт.
+
+**Реализация в `src/components/visits/UnifiedVisitDialog.tsx`:**
+
+1. **Тип `VisitLineItem` расширен** двумя полями:
+   - `dbId?: string` — id строки `visit_services` в БД (если уже сохранено)
+   - `isBase?: boolean` — маркер основной позиции визита (управляется через `PUT /api/visits/[id]`)
+
+2. **`hasMultiMode = !isAppt`** (было `!isEditMode && !isAppt`) — корзина теперь активна и для edit визита.
+
+3. **`initialItemsRef: useRef<VisitLineItem[]>([])`** — snapshot БД-позиций на момент открытия модалки (только `extras`, без `isBase`). Используется для diff'а при submit.
+
+4. **`useEffect` на `open` в edit-режиме** теперь:
+   - строит `baseItem` из `visit.services`/`visit.price`/`visit.duration_minutes` с `isBase: true`
+   - делает свежий `fetch('/api/visits/[id]/services')` — источник истины (а не кэшированный `visit_services` из props)
+   - маппит результат в `extras`, каждая позиция получает `dbId`
+   - `setItems([baseItem, ...extras])`, `initialItemsRef.current = extras`
+   - fallback на `[baseItem]` при ошибке fetch — хотя бы базовая позиция видна
+
+5. **`handleSubmit` для edit-режима — diff-синхронизация:**
+   - `PUT /api/visits/[id]` — из значений `baseItem` (если корзинный режим) или `form.*` (fallback для встреч)
+   - `DELETE` для позиций, которые были в `initialItemsRef` (с `dbId`), но исчезли из текущей корзины
+   - `POST` для новых позиций (без `dbId`) в `/services` или `/products` в зависимости от типа
+   - Все операции через `Promise.allSettled` — ошибки на отдельных позициях не ломают PUT, но показывают toast с числом неудач
+
+6. **UI мульти-корзины:**
+   - Базовая позиция (`isBase`) выделена indigo-подсветкой и бейджем «Основная услуга» / «שירות ראשי»
+   - Кнопка `×` для `isBase` скрыта (вместо неё пустой spacer той же ширины) — базовую позицию нельзя удалить, это сам визит
+   - `removeItem` дополнительно защищён: даже при программном вызове `i.isBase` фильтруется и не удаляется
+
+7. **Блок «Длительность + Цена»** (`!isAppt && !hasMultiMode`) теперь рендерится только для встреч — для визитов цена и длительность считаются из корзины автоматически.
+
+8. **Legacy-блок ServicePicker** остался в коде (ветка `hasMultiMode ? <корзина/> : <picker/>`) — формально недостижим для визита, но не удалён, т.к. используется как fallback для потенциального будущего отключения корзины через feature flag.
+
+**Затронутые файлы:**
+- `src/components/visits/UnifiedVisitDialog.tsx` — тип `VisitLineItem`, `useEffect` на open, `handleSubmit` edit-ветка, `removeItem`, UI корзины (бейдж + скрытие ×)
+
+**Проверено:**
+- `src/app/api/visits/[id]/route.ts` — PUT не трогает `visit_services`, safe
+- `src/app/api/visits/[id]/services/route.ts` — POST не трогает `visits.price`, safe
+- `src/app/api/visits/[id]/services/[serviceId]/route.ts` — DELETE пересчитывает `visits.duration_minutes`, но НЕ `visits.price`, safe
+- `src/app/api/visits/[id]/products/route.ts` — POST не списывает склад до оплаты (списание через `/api/sales` при завершении), safe
+- `src/app/(dashboard)/visits/page.tsx` — `getVisitTotal` считает `visit.price + sum(visit_services.price)`, ломает если удалить базу → именно поэтому `isBase` нельзя удалить из UI
+- `src/components/shared/ItemPickerSheet.tsx` — общий picker с корзиной UnifiedSalesDialog, не затронут
+- Билд `npm run build` — чистый, 237 страниц, 0 TypeScript-ошибок, 32s compile
+
+**Регрессия:** нет.
+- Create визита — логика `useMultiCart` та же (первая позиция → `visits.*`, остальные → `visit_services`)
+- Создание встречи — блок `!isAppt` не выполняется, корзина не инициализируется, всё как раньше
+- Редактирование встречи — `v.event_type === 'meeting'` пропускает блок загрузки корзины, рендерится старый UI (цель встречи + link)
+- Завершённые визиты — edit теперь показывает все их позиции в корзине и позволяет добавлять новые, но не удалять базу
+
+**Безопасность:**
+- Все операции через `apiFetch` идут в существующие эндпоинты, защищённые `getAuthContext` + фильтр по `org_id`
+- Никакого касания RLS, никаких новых таблиц, никаких миграций
+- `dbId` в клиентском состоянии — это uuid строки `visit_services`, которая уже принадлежит визиту; передача его в URL `DELETE /api/visits/[id]/services/[dbId]` проходит ту же auth-проверку
+
+**Коммит:** будет проставлен после push.

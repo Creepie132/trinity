@@ -147,9 +147,15 @@ const emptyForm = () => ({
   meetingPurpose: '', isOnline: false, reminderHours: [] as number[],
 })
 
-// ─── Multi-item cart types (create-mode, visit only) ──────────────────────────
-// Одна позиция корзины визита. Первая позиция уходит в visits.service_id/price,
-// остальные — отдельными POST в /api/visits/[id]/services или /products.
+// ─── Multi-item cart types (create + edit visits) ─────────────────────────────
+// Одна позиция корзины визита.
+// В create-режиме: первая позиция → visits.service_id/price, остальные → POST
+// /api/visits/[id]/services или /products после создания визита.
+// В edit-режиме: первая позиция (isBase=true) — основная услуга визита
+// (visits.service_id/price/duration), управляется через PUT /api/visits/[id].
+// Остальные позиции хранятся в таблице visit_services:
+//   - dbId присутствует → позиция уже в БД (при удалении → DELETE)
+//   - dbId отсутствует → свежедобавленная (при сохранении → POST)
 export interface VisitLineItem {
   id: string              // local uid (для React key)
   type: 'service' | 'product' | 'custom'
@@ -159,6 +165,8 @@ export interface VisitLineItem {
   quantity: number
   unit_price: number
   duration_minutes: number  // 0 для product/custom
+  dbId?: string           // id в visit_services (если уже сохранено в БД — edit-режим)
+  isBase?: boolean        // true для основной позиции визита (редактируется через PUT /api/visits/[id])
 }
 
 function uid() { return Math.random().toString(36).slice(2, 10) }
@@ -451,6 +459,12 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
   // ── Double-submit guard ──────────────────────────────────────────────────────
   const isSubmittingRef = useRef(false)
 
+  // ── Edit-mode snapshot: исходное состояние корзины на момент открытия ────────
+  // Нужен для diff-синхронизации при submit: сравниваем текущие items с ref и
+  // понимаем, что DELETE-нуть (было + dbId, стало отсутствует) и что POST-нуть
+  // (новые items без dbId). isBase позиция сюда НЕ попадает — она идёт через PUT.
+  const initialItemsRef = useRef<VisitLineItem[]>([])
+
   // ── Services list ────────────────────────────────────────────────────────────
   const services = (customServices && customServices.length > 0)
     ? customServices
@@ -461,8 +475,10 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
     if (!open) return
     const sd = validateVisitModalData(initialData)
     setErrorMsg(null)
-    // Сбрасываем корзину при каждом открытии — визит всегда начинается с чистого листа
+    // Корзина сбрасывается при каждом открытии; потом в edit-режиме она
+    // асинхронно заполняется из visit_services ниже.
     setItems([])
+    initialItemsRef.current = []
     setPriceOverride(null)
     setPickerOpen(false)
 
@@ -493,6 +509,60 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
           phone: v.clients.phone || '',
         })
       }
+
+      // Только для визитов (не встреч) подгружаем корзину позиций из БД.
+      // Базовая позиция (visits.service_*) кладётся первой с isBase=true —
+      // её нельзя удалить, но можно менять цену/qty/длительность;
+      // при submit это уйдёт в PUT /api/visits/[id].
+      if (v.event_type !== 'meeting') {
+        const baseName = (isHe ? v.services?.name : (v.services?.name_ru || v.services?.name))
+          || v.service_type
+          || v.service
+          || (isHe ? 'שירות' : 'Услуга')
+
+        const baseItem: VisitLineItem = {
+          id: uid(),
+          type: 'service',
+          service_id: v.service_id || undefined,
+          name: baseName,
+          quantity: v.quantity || 1,
+          unit_price: Number(v.price) || 0,
+          duration_minutes: Number(v.duration_minutes) || 0,
+          isBase: true,
+        }
+
+        // Свежий fetch visit_services — источник истины (на случай, если в prop
+        // пришла устаревшая версия из кэша visitsData).
+        fetch(`/api/visits/${v.id}/services`)
+          .then(r => r.ok ? r.json() : [])
+          .then((rows: any[]) => {
+            const extras: VisitLineItem[] = (rows || []).map((vs: any) => {
+              const isProduct = !vs.service_id && (vs.duration_minutes === 0 || vs.duration_minutes === null)
+              const nm = isHe
+                ? (vs.service_name || vs.service_name_ru || '')
+                : (vs.service_name_ru || vs.service_name || '')
+              return {
+                id: uid(),
+                type: isProduct ? 'product' : (vs.service_id ? 'service' : 'custom'),
+                service_id: vs.service_id || undefined,
+                name: nm,
+                quantity: 1,
+                unit_price: Number(vs.price) || 0,
+                duration_minutes: Number(vs.duration_minutes) || 0,
+                dbId: vs.id,
+              }
+            })
+            const next = [baseItem, ...extras]
+            setItems(next)
+            // Snapshot: только БД-позиции (с dbId) участвуют в diff'е.
+            initialItemsRef.current = extras
+          })
+          .catch(() => {
+            // Если fetch упал — хотя бы базовая позиция будет видна.
+            setItems([baseItem])
+            initialItemsRef.current = []
+          })
+      }
     } else {
       // Create mode — reset
       setIsAppt(sd.isMeetingMode ?? false)
@@ -517,9 +587,11 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
   }, [open])
 
   // ── Multi-item cart mode flag ────────────────────────────────────────────────
-  // Мульти-корзина активна только при создании визита (не встречи, не редактирование).
+  // Мульти-корзина активна для всех визитов (create + edit), НЕ для встреч.
+  // В edit-режиме первая позиция = основная услуга визита (visits.*),
+  // остальные = строки visit_services. Подробнее см. VisitLineItem.
   // Объявлено до canSubmit / useEffect / handleSubmit — используется во всех трёх.
-  const hasMultiMode = !isEditMode && !isAppt
+  const hasMultiMode = !isAppt
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   // В мульти-режиме (create + visit) валидность = клиент + дата + время + непустая корзина.
@@ -563,7 +635,9 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
   }, [])
 
   const removeItem = useCallback((id: string) => {
-    setItems(prev => prev.filter(i => i.id !== id))
+    // Защита: базовую позицию визита (isBase) никогда не удаляем из корзины —
+    // это сам визит. UI тоже скрывает кнопку ×, но здесь дубль на всякий случай.
+    setItems(prev => prev.filter(i => i.id !== id || i.isBase))
     setPriceOverride(null)
   }, [])
 
@@ -633,7 +707,15 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
 
     try {
       if (isEditMode && safeData.visit) {
-        // ── EDIT: PUT /api/visits/:id ──────────────────────────────────────────
+        // ── EDIT ───────────────────────────────────────────────────────────────
+        // 1) PUT /api/visits/[id]  — сохраняем основную услугу, дату, длительность, notes
+        // 2) DELETE /api/visits/[id]/services/[serviceId] — для удалённых позиций
+        // 3) POST   /api/visits/[id]/services или /products — для новых позиций
+        //
+        // Фундаментальное правило: visits.price = базовая цена (первая позиция).
+        // visit_services[] хранит только ДОП. позиции. Итог = visits.price + sum(vs.price).
+        // DELETE/POST эндпоинты visits.price не трогают (специально).
+
         // Build ISO with explicit Israel offset to avoid browser-timezone ambiguity
         const _noonUTC = new Date(`${form.date}T12:00:00.000Z`)
         const _tzParts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', timeZoneName: 'shortOffset' }).formatToParts(_noonUTC)
@@ -649,16 +731,80 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
           return
         }
 
-        await apiFetch(`/api/visits/${safeData.visit.id}`, {
-          method: 'PUT',
-          json: {
-            scheduled_at,
-            service_id:       form.serviceId || null,
-            duration_minutes: isAppt ? null : Number(form.duration),
-            notes:            form.notes,
-            price:            form.price ? Number(form.price) : null,
-          },
-        })
+        const visitId: string = safeData.visit.id
+
+        // ── Для визитов с корзиной: берём значения базовой позиции
+        // для PUT /api/visits/[id], и diff'аем остальные.
+        // Для встреч — fallback на старую логику (form.serviceId/price/duration).
+        const useMultiCart = hasMultiMode && items.length > 0
+        const base = useMultiCart ? items.find(i => i.isBase) : null
+        const extrasNow = useMultiCart ? items.filter(i => !i.isBase) : []
+
+        // ── PUT визита ───────────────────────────────────────────────────────
+        const putJson: Record<string, unknown> = {
+          scheduled_at,
+          notes: form.notes,
+        }
+        if (useMultiCart && base) {
+          // Корзинный edit: base управляет service/price/duration
+          putJson.service_id       = base.service_id || null
+          putJson.duration_minutes = isAppt ? null : (Number(base.duration_minutes) || 0)
+          putJson.price            = Number(base.unit_price) || 0
+        } else {
+          // Встреча или fallback на legacy поля формы
+          putJson.service_id       = form.serviceId || null
+          putJson.duration_minutes = isAppt ? null : Number(form.duration)
+          putJson.price            = form.price ? Number(form.price) : null
+        }
+
+        await apiFetch(`/api/visits/${visitId}`, { method: 'PUT', json: putJson })
+
+        // ── DIFF и синхронизация visit_services (только для корзинного edit) ──
+        if (useMultiCart) {
+          const prevExtras = initialItemsRef.current // snapshot из useEffect(open)
+          const nowDbIds   = new Set(extrasNow.filter(i => i.dbId).map(i => i.dbId!))
+
+          // DELETE: были в БД, сейчас нет в корзине
+          const toDelete = prevExtras.filter(p => p.dbId && !nowDbIds.has(p.dbId))
+          // POST: новые позиции без dbId
+          const toInsert = extrasNow.filter(i => !i.dbId)
+
+          const results = await Promise.allSettled([
+            ...toDelete.map(p =>
+              apiFetch(`/api/visits/${visitId}/services/${p.dbId}`, { method: 'DELETE' })
+            ),
+            ...toInsert.map(item => {
+              if (item.type === 'product' && item.product_id) {
+                return apiFetch(`/api/visits/${visitId}/products`, {
+                  method: 'POST',
+                  json: { product_id: item.product_id },
+                })
+              }
+              return apiFetch(`/api/visits/${visitId}/services`, {
+                method: 'POST',
+                json: {
+                  visit_id:         visitId,
+                  service_id:       item.type === 'service' ? item.service_id : undefined,
+                  service_name:     item.name,
+                  service_name_ru:  item.name,
+                  price:            item.unit_price * item.quantity,
+                  duration_minutes: item.duration_minutes * item.quantity,
+                },
+              })
+            }),
+          ])
+
+          const failed = results.filter(r => r.status === 'rejected').length
+          if (failed > 0) {
+            console.error('[UnifiedVisitDialog] EDIT: some item ops failed:', results)
+            toast.warning(
+              isHe
+                ? `נשמר, אך ${failed} פעולות על פריטים נכשלו`
+                : `Сохранено, но ${failed} операций с позициями не удалось`
+            )
+          }
+        }
+
         toast.success(isHe ? 'נשמר בהצלחה' : 'Сохранено')
       } else {
         // ── CREATE: POST /api/visits ───────────────────────────────────────────
@@ -899,11 +1045,18 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
                       }
                       const Icon = item.type === 'service' ? Wrench : item.type === 'product' ? Package : Plus
                       return (
-                        <div key={item.id} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800/60 rounded-xl px-3 py-2.5">
+                        <div key={item.id} className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${item.isBase ? 'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800' : 'bg-gray-50 dark:bg-gray-800/60'}`}>
                           <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0 ${TYPE_BADGE[item.type]}`}>
                             <Icon size={9} className="inline me-0.5 -mt-0.5" />{TYPE_LABEL[item.type]}
                           </span>
-                          <span className="flex-1 text-sm font-medium truncate">{item.name}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{item.name}</div>
+                            {item.isBase && (
+                              <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold uppercase tracking-wide">
+                                {isHe ? 'שירות ראשי' : 'Основная услуга'}
+                              </div>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <button type="button" onClick={() => updateItemQty(item.id, -1)}
                               className="w-6 h-6 rounded-md bg-gray-200 text-gray-500 text-xs font-bold flex items-center justify-center hover:bg-gray-300">−</button>
@@ -917,8 +1070,15 @@ export function UnifiedVisitDialog({ open, onOpenChange, initialData }: UnifiedV
                               onChange={e => updateItemPrice(item.id, Number(e.target.value))}
                               className="w-full ps-5 py-1 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-400/40" />
                           </div>
-                          <button type="button" onClick={() => removeItem(item.id)}
-                            className="text-gray-300 hover:text-red-400 flex-shrink-0"><X size={13}/></button>
+                          {item.isBase ? (
+                            // Базовую позицию нельзя удалить (это и есть сам визит).
+                            // Чтобы заменить основную услугу — используйте /api/visits PUT.
+                            <span className="w-[13px] flex-shrink-0" aria-hidden />
+                          ) : (
+                            <button type="button" onClick={() => removeItem(item.id)}
+                              className="text-gray-300 hover:text-red-400 flex-shrink-0"
+                              title={isHe ? 'הסר' : 'Удалить'}><X size={13}/></button>
+                          )}
                         </div>
                       )
                     })}

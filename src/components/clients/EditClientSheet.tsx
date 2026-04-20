@@ -98,6 +98,15 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
   const [shaking, setShaking] = useState<Record<string, boolean>>({})
   const [saving, setSaving]   = useState(false)
 
+  // Язык общения клиента (для WhatsApp-триггеров multilanguage).
+  // Массив ['he'], ['ru'], или ['he','ru']. Default — то что пришло из БД,
+  // иначе ['he'] (соответствует дефолту колонки).
+  const [preferredLanguages, setPreferredLanguages] = useState<string[]>(
+    Array.isArray(client?.preferred_languages) && client.preferred_languages.length > 0
+      ? client.preferred_languages
+      : ['he']
+  )
+
   useEffect(() => {
     if (!client) return
     setForm({
@@ -113,6 +122,11 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
     })
     setShowDescription(!!(client.description))
     setHasPaintCode(!!(client.paint_code))
+    setPreferredLanguages(
+      Array.isArray(client.preferred_languages) && client.preferred_languages.length > 0
+        ? client.preferred_languages
+        : ['he']
+    )
     setErrors({})
   }, [client?.id])
 
@@ -174,6 +188,7 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
         id: client.id,
         ...form,
         paint_code: hasPaintCode ? form.paint_code : null,
+        preferred_languages: preferredLanguages.length > 0 ? preferredLanguages : ['he'],
       })
       toast.success(locale === 'he' ? 'נשמר בהצלחה ✓' : 'Сохранено ✓')
       onSaved(data)
@@ -318,6 +333,53 @@ export function EditClientSheet({ client, isOpen, onClose, onSaved, locale }: Ed
             )}
           </div>
           )}
+
+          {/* Язык общения (для WhatsApp-триггеров) */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">
+              {locale === 'he' ? 'שפת תקשורת' : 'Язык общения'}
+            </label>
+            <div className="flex gap-2">
+              {(['he', 'ru'] as const).map(lang => {
+                const checked = preferredLanguages.includes(lang)
+                const label = lang === 'he' ? 'עברית' : 'Русский'
+                const flag = lang === 'he' ? '🇮🇱' : '🇷🇺'
+                return (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => {
+                      setPreferredLanguages(prev => {
+                        const next = checked
+                          ? prev.filter(l => l !== lang)
+                          : [...prev, lang]
+                        // минимум один язык должен быть выбран
+                        return next.length > 0 ? next : [lang]
+                      })
+                    }}
+                    className={`flex-1 px-3 py-2 rounded-xl border-2 transition-all flex items-center justify-center gap-2 text-sm font-medium ${
+                      checked
+                        ? 'border-indigo-400 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-600 dark:text-indigo-300'
+                        : 'border-border bg-background text-muted-foreground hover:border-gray-300'
+                    }`}
+                  >
+                    <span>{flag}</span>
+                    <span>{label}</span>
+                    {checked && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {locale === 'he'
+                ? 'נבחר לשליחת WhatsApp אוטומטית בשפה המועדפת'
+                : 'Используется для WhatsApp-сообщений на нужном языке'}
+            </p>
+          </div>
 
           <Field field="notes" label={l.notes} multiline
             value={form.notes} error={errors.notes} shaking={shaking.notes} onChange={handleChange} />

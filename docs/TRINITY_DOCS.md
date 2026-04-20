@@ -3747,3 +3747,54 @@ CHECK (trigger_type = ANY (ARRAY[
 - Массовое обновление preferred_languages клиентов (bulk-update из CSV) — пока не требуется.
 
 **Коммит:** будет проставлен после push.
+
+
+---
+
+### 20.04.2026 — fix(clients): preferred_languages в EditClientSheet + PUT endpoint
+
+**Контекст:**
+После деплоя `51c1864` Влад открыл карточку существующего клиента (Анета, Beautymania) для редактирования — **поле языка общения там не было**. Это было в прошлом TODO, но на продакшене отсутствие поля сразу видно. Фикс — добавить блок чекбоксов в `EditClientSheet` и пропустить `preferred_languages` через PUT endpoint.
+
+**Где проблема:**
+- `AddClientDialog` (создание нового клиента) — поле было добавлено в `51c1864`
+- `EditClientSheet` (редактирование существующего) — **не было**, владелец не мог изменить язык для существующих клиентов
+- `PUT /api/clients/[id]` — в деструктуризации body не было `preferred_languages`, и в update-объекте тоже. Даже если UI передавал — поле отбрасывалось.
+
+**Исправление:**
+
+*Frontend (`EditClientSheet.tsx`):*
+- Новый state `preferredLanguages: string[]` — инициализируется из `client.preferred_languages` с fallback `['he']`
+- `useEffect` при смене `client?.id` синхронизирует state из свежего client-объекта
+- UI-блок с двумя toggle-кнопками 🇮🇱 עברית / 🇷🇺 Русский, идентичен `AddClientDialog` — перед полем «Заметки»
+- Защита от пустого массива: клик по единственному выбранному языку не снимает галочку
+- Передача в `updateClient.mutateAsync` через spread
+
+*Backend (`/api/clients/[id]/route.ts`):*
+- В `GET` добавлено `preferred_languages` в SELECT-маску — чтобы при открытии модалки было что отображать
+- В `PUT` новая блок-валидация:
+  - Если `preferred_languages` передан — должен быть непустым массивом
+  - Все элементы должны быть `'he'` или `'ru'` (subset check, mirrors DB CHECK)
+  - Уникализация через `Array.from(new Set(...))` — защита от `['he','he']`
+  - Если не передан — поле не трогается в `update` (backward compatibility со старыми вызовами)
+
+**Затронутые файлы:**
+- `src/components/clients/EditClientSheet.tsx` — +54 строки (state, sync, UI)
+- `src/app/api/clients/[id]/route.ts` — валидация + опциональное поле в update
+
+**Безопасность:**
+- Валидация на уровне API + CHECK constraint на уровне БД — двойная защита от мусорных значений
+- `getAuthContext + eq org_id` — паттерн не менялся, невозможно менять язык клиента чужой org
+- `preferred_languages` не раскрывает никаких privacy-sensitive данных
+
+**Регрессия:**
+- Старые вызовы PUT без нового поля работают как раньше (поле не обновляется — undefined branch в коде)
+- Старые клиенты без `preferred_languages` отображаются с дефолтом `['he']` (fallback в инициализации state)
+- GET-endpoint добавил одно поле в SELECT — размер ответа вырос на ~15 байт, некритично
+
+**Проверено:**
+- `npm run build` — чистый, exit 0, 237 страниц.
+- Все точки использования `EditClientSheet` (`EditClientModal`, `ClientBottomSheet`) передают client-объект, который уже содержит `preferred_languages` через `useClient.*` SELECT.
+- Валидация тестирована мысленно: пустой массив → 400, `['fr']` → 400, `['he','ru']` → OK, `['he','he','ru']` → дедуплируется до `['he','ru']`.
+
+**Коммит:** будет проставлен после push.

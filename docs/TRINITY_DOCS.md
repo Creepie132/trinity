@@ -4026,4 +4026,4 @@ Legacy-вызовы `dispatchNotification({ payload: { title, body, url } })` п
 - Визуальная проверка: Prompt на ru показывает «Включить уведомления / Разрешить», на he — «הפעל התראות / אפשר»
 
 ### Commit
-TBD (будет подставлен после push)
+`02eef5d` — push i18n v2 + JWT role-based auth (Apr 20, 2026)

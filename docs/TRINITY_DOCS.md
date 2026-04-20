@@ -4097,4 +4097,14 @@ Push-уведомления **никогда не приходили** в про
 - `pg_cron` job `push-dispatch` использует `Authorization: Bearer <CRON_SECRET>` — эндпоинт проверяет этот заголовок
 
 ### Commit
-Будет проставлен после push в main.
+`4724723` — fix(push): switch swSrc to customWorkerSrc for @ducanh2912/next-pwa (Apr 20, 2026)
+
+### Верификация в продакшене
+```
+GET https://www.ambersol.co.il/sw.js             → 200, 61934 bytes, importScripts("/worker-b140e5290fbf8181.js") ✓
+GET https://www.ambersol.co.il/worker-b140e5290fbf8181.js → 200, 1398 bytes
+  addEventListener("push")                       → ✓
+  addEventListener("notificationclick")          → ✓
+  addEventListener("pushsubscriptionchange")     → ✓
+```
+Vercel deployment: `dpl_4bDFbTahShtv36JibedASeN9QJFi` (state: READY, production)

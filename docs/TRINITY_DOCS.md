@@ -782,6 +782,54 @@ chore: конфиг, зависимости
 
 ---
 
+### 20.04.2026 — fix(visits): кнопки «Услуга/Товар/Произвольно» в создании визита не реагировали на клик
+
+**Что:** При создании визита (web + PWA) нажатие на «+ Добавить позицию» открывало шит `ItemPickerSheet`, но кнопки «Услуга», «Товар», «Произвольно» выглядели мёртвыми — клик не открывал следующий шаг. Баг регрессии: сломано мульти-корзинное добавление услуг/товаров в визит.
+
+**Корень проблемы:**
+- В `src/components/shared/ItemPickerSheet.tsx` дефолт параметра объявлен как inline-литерал:
+  ```tsx
+  allowedTypes = ['service', 'product', 'custom']
+  ```
+  Этот массив пересоздаётся на каждом рендере родителя (`UnifiedVisitDialog`) — новая ссылка.
+- Эффект синхронизации шага держал `allowedTypes` в зависимостях:
+  ```tsx
+  useEffect(() => {
+    if (isOpen) {
+      if (allowedTypes.length === 1) setStep(allowedTypes[0])
+      else setStep('choose')
+      ...
+    }
+  }, [isOpen, allowedTypes])
+  ```
+- Итог: пользователь нажимал «Услуга» → `setStep('service')` → любой следующий ререндер `UnifiedVisitDialog` (а их каскад при изменении state корзины/поиска/клиента) → новая ссылка `allowedTypes` → эффект срабатывал → `setStep('choose')` откатывал step обратно. Визуально — кнопка «не реагирует».
+
+**Почему не проявлялся в `UnifiedSalesDialog`:** там `ItemPickerSheet` — локальная одноимённая функция внутри файла, не импорт из `shared/`. Баг был только в визитах.
+
+**Фикс:**
+1. Вынесен стабильный дефолт в модульную константу `DEFAULT_ALLOWED_TYPES`:
+   ```tsx
+   const DEFAULT_ALLOWED_TYPES: Array<'service' | 'product' | 'custom'> = [
+     'service', 'product', 'custom',
+   ]
+   ```
+2. Эффект теперь зависит от стабильного primitive-ключа `allowedKey = allowedTypes.join(',')` — двойная защита от будущих вызовов с inline-литералами:
+   ```tsx
+   const allowedKey = allowedTypes.join(',')
+   useEffect(() => { ... }, [isOpen, allowedKey])
+   ```
+
+**Затронутые файлы:**
+- `src/components/shared/ItemPickerSheet.tsx` (props-default + useEffect deps)
+
+**Регрессия:** проверено все использование — `ItemPickerSheet` из `shared/` импортируется только в `UnifiedVisitDialog.tsx`. Single-type кейсы (`allowedTypes.length === 1`) продолжают работать.
+
+**Безопасность:** правка чисто клиентская, не затрагивает API/RLS.
+
+**Коммит:** см. следующий push в main.
+
+---
+
 ### 20.04.2026 — fix(sales): sale со ссылкой на оплату показывалась как «Наличные» + refactor: PaymentLinkActions в shared
 
 **Что:** В `SaleDetailModal` (детали сделки на /sales) для sale со «Ссылка на оплату» (`payment_method=null`, `status=unpaid`, связанный `payment.payment_link` не пуст) в поле «Оплата» показывалось **«Наличные»** — это финансовая ложь и риск путаницы в учёте. А также не было кнопок для копирования/открытия/отправки ссылки клиенту.

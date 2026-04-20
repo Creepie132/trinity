@@ -44,12 +44,19 @@ export interface ItemPickerSheetProps {
 
 type PickerStep = 'choose' | 'service' | 'product' | 'custom'
 
+// Стабильная ссылка для default-параметра — inline-литерал в сигнатуре
+// пересоздаётся на каждом рендере родителя и роняет useEffect ниже,
+// сбрасывая step обратно в 'choose' сразу после клика.
+const DEFAULT_ALLOWED_TYPES: Array<'service' | 'product' | 'custom'> = [
+  'service', 'product', 'custom',
+]
+
 export function ItemPickerSheet({
   isOpen,
   onClose,
   isHe,
   onAdd,
-  allowedTypes = ['service', 'product', 'custom'],
+  allowedTypes = DEFAULT_ALLOWED_TYPES,
 }: ItemPickerSheetProps) {
   const [step, setStep] = useState<PickerStep>('choose')
   const [search, setSearch] = useState('')
@@ -70,6 +77,10 @@ export function ItemPickerSheet({
 
   useEffect(() => { setMounted(true) }, [])
 
+  // Стабильный primitive-ключ: защита от нестабильных ссылок у внешних вызовов,
+  // которые могут передавать inline-массивы вроде allowedTypes={['service']}.
+  const allowedKey = allowedTypes.join(',')
+
   useEffect(() => {
     if (isOpen) {
       if (allowedTypes.length === 1) {
@@ -79,7 +90,10 @@ export function ItemPickerSheet({
       }
       setSearch(''); setCustomName(''); setCustomPrice('')
     }
-  }, [isOpen, allowedTypes])
+    // allowedTypes сознательно не в deps — читаем через замыкание,
+    // сравниваем через стабильный allowedKey.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, allowedKey])
 
   if (!isOpen || !mounted) return null
 

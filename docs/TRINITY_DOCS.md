@@ -782,7 +782,34 @@ chore: конфиг, зависимости
 
 ---
 
-### 20.04.2026 — fix(services): создание услуги в Настройки→Бизнес падало на `משהו השתבש`
+### 20.04.2026 — fix(payments): в деталях pending-платежа не было действий со ссылкой на оплату; квитанция WA показывалась для pending
+
+**Что:** В `PaymentDetailsDrawer` (детали платежа на страницах /payments, /visits, /debts) для платежа в статусе `pending` с уже созданной Tranzila-ссылкой (`payment_link`) отсутствовали действия: скопировать, открыть, отправить клиенту в WhatsApp. Одновременно кнопка «Отправить квитанцию WA» показывалась для pending — квитанция это документ о **совершённом** платеже, для pending её отправлять нельзя.
+
+**Корень проблемы:**
+- В drawer'е не было логики под `payment_link` — только под `transaction_id` (tranzila PDF для completed)
+- Условие показа «Квитанция WA»: `clientPhone && ...` — без фильтра по статусу. Для pending клиенту отправлялась квитанция, которой ещё не существует (API `send-receipt` создаёт документ в Tranzila Invoice — для pending это бессмысленно и потенциально ломает учёт)
+- Готовая логика копирования/открытия/отправки в WA уже существовала в `PaymentLinkResultModal.tsx` (показывается сразу после создания ссылки), но в drawer не переиспользовалась
+
+**Фикс:** `src/components/payments/PaymentDetailsDrawer.tsx`
+- Добавлены 3 новых хендлера: `handleCopyLink` (Clipboard API + fallback на `execCommand`), `handleOpenLink` (`window.open`), `handleSendLinkWhatsApp` (`wa.me/972...` deep-link с текстом на языке UI, логика 1:1 из `PaymentLinkResultModal`)
+- Введены `isPendingWithLink = status === 'pending' && !!payment_link` и `isCompletedStatus = status === 'completed' || status === 'paid'`
+- 3 новые кнопки в sidebar (desktop) и 3 новых action в `mobActions` (mobile) — показываются только для `isPendingWithLink`
+- Кнопка «Квитанция WA» теперь требует `isCompletedStatus` — для pending скрыта
+- Кнопки «PDF» и «Refund» мигрированы с `payment.status === 'completed'` на `isCompletedStatus` (теперь работают и для `paid`, и для `completed` — раньше `paid` игнорировался)
+- Локали пополнены: `copyLink / openLink / sendLinkWa / linkCopied / noLink` (HE + RU)
+
+**Почему не вынес в общий компонент `PaymentLinkActions`:** у `PaymentLinkResultModal` и `PaymentDetailsDrawer` разные визуальные контейнеры (модалка с Tailwind vs sidebar с inline-стилями), кнопки должны выглядеть нативно в каждом. Вынос — отдельный рефакторинг на будущее. Сейчас приоритет — закрыть баг без лишнего скоупа.
+
+**Файлы:**
+- `src/components/payments/PaymentDetailsDrawer.tsx` — +1 import (Copy, ExternalLink), +10 строк локалей, +46 строк хендлеров, +3 мобильных action, +3 desktop-кнопки, гард `isCompletedStatus` на старые кнопки
+
+**Build:** `npm run build` — `✓ Compiled successfully in 25.4s`, 237/237 страниц, 0 TS-ошибок.
+
+**Регрессия:** нулевая для completed-платежей — `isCompletedStatus` охватывает старое `status === 'completed'` и доп. `status === 'paid'` (это расширение, не сужение). API `/api/payments/[id]` и `/api/payments/[id]/send-receipt` не менялись.
+
+**Безопасность:** защищено — `payment_link` читается из уже существующего `richPayment` (SELECT * через `/api/payments/[id]` с `getAuthContext` + `eq('org_id', orgId)`). RLS/auth слой не менялся.
+
 
 **Что:** Кнопка "Добавить услугу" (`Настройки → Бизнес → Услуги → הוסף שירות`) падала с toast-ом "משהו השתבש" ещё до отправки запроса. POST на `/api/services` вообще не уходил — в Vercel runtime logs за 2ч только GET-запросы, ни одного POST.
 

@@ -254,3 +254,101 @@ npx supabase functions deploy send-notification \
 2. **Edge Function деплой**: требует `SUPABASE_ACCESS_TOKEN` или ручной деплой через Dashboard.
 3. **Email канал**: флаг в JSONB есть, обработчик в Edge Function не реализован — TODO.
 4. **FCM/APNS**: `user_devices` таблица готова, но отправка через FCM не реализована — TODO.
+
+
+---
+
+## 🌍 I18N v2 — Локализация push (April 2026)
+
+### Новый API (предпочтительно)
+
+API routes передают **ключ шаблона + переменные**, не готовые title/body. Edge Function рендерит per-user в языке пользователя.
+
+```typescript
+void dispatchNotification({
+  event_type: 'new_visit',
+  org_id,
+  template: {
+    key: 'new_visit',
+    vars: { time: '14:30', service: 'Маникюр' },
+  },
+  payload: { url: '/diary' }, // только url/icon, без title/body
+})
+```
+
+### Legacy API (обратная совместимость)
+
+Если `template` не передан — используется готовый `payload.title/body` на одном языке (для старых вызовов, не мигрированных на шаблоны):
+
+```typescript
+void dispatchNotification({
+  event_type: 'custom_event',
+  org_id,
+  payload: {
+    title: 'Custom title',
+    body:  'Custom body',
+    url:   '/somewhere',
+  },
+})
+```
+
+### Словарь TEMPLATES (в Edge Function)
+
+```typescript
+const TEMPLATES = {
+  new_visit: {
+    ru: { title: '📅 Новый визит', body: '{time} — {service}', url: '/diary' },
+    he: { title: '📅 ביקור נוצר',  body: '{time} — {service}', url: '/diary' },
+  },
+  // ... 10 событий всего
+}
+```
+
+### Как выбирается язык получателя
+
+```
+1. Читаем org_users.preferred_language для user_id (батчем .in())
+2. Если NULL или нет записи → organizations.primary_language для org
+3. Если всё ещё NULL → 'ru' (DEFAULT_LOCALE)
+```
+
+Язык **всегда актуальный** — берётся live из БД, не из push_subscriptions. Пользователь сменил язык через `/settings/language` → следующий push уже в новом языке (без переподписки).
+
+### Добавить новое событие
+
+**1. В Edge Function (`supabase/functions/send-notification/index.ts`)** — добавить ключ в `TEMPLATES`:
+```typescript
+my_event: {
+  ru: { title: 'Русский', body: 'Сообщение с {var}', url: '/path' },
+  he: { title: 'עברית',   body: 'הודעה עם {var}',   url: '/path' },
+},
+```
+
+**2. В API route** — вызвать `dispatchNotification` с `template`:
+```typescript
+void dispatchNotification({
+  event_type: 'my_event',
+  org_id: orgId,
+  template: { key: 'my_event', vars: { var: 'value' } },
+  payload: { url: '/path' },
+})
+```
+
+**3. В UI (`/settings/notifications`)** — добавить в `EVENTS` массив с `labelHe/labelRu` как раньше.
+
+### Добавить 3-й язык (en)
+
+1. В `Locale` type Edge Function: `type Locale = 'ru' | 'he' | 'en'`
+2. В каждый шаблон `TEMPLATES[key]` добавить ключ `en: { title, body, url }`
+3. В `toLocale()` добавить `value === 'en' ? 'en'`
+4. В `LanguageContext.tsx` расширить `Language` type (если нужно в UI)
+
+### Telegram
+
+Пока org-level (один `chat_id` на всю организацию). Рендерится в `organizations.primary_language`. Кнопка «Открыть в Trinity» тоже локализована (`'פתח ב-Trinity' / 'Открыть в Trinity'`).
+
+**Будущее:** per-user `telegram_chat_id` в `profiles` → отдельный `chat_id` на каждого пользователя → рендер в `preferred_language` пользователя как у push.
+
+### Компонент PushNotificationPrompt
+
+Локализация через `useLanguage()` — `dir` и тексты берутся из контекста. Локальный словарь `I18N = { he, ru }` в компоненте (5 строк для prompt + 5 для toggle, не смысла тащить в глобальный словарь).

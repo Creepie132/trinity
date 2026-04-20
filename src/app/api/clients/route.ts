@@ -140,15 +140,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: String(insertError) }, { status: 500 })
     }
 
-    // Dispatch Telegram notification (fire-and-forget)
+    // Dispatch localized notification (fire-and-forget)
+    const clientName = `${clientData.first_name ?? ''} ${clientData.last_name ?? ''}`.trim()
     void dispatchNotification({
       event_type: 'new_client',
       org_id: orgId,
-      payload: {
-        title: '👤 לקוח חדש',
-        body: `${clientData.first_name ?? ''} ${clientData.last_name ?? ''}`.trim() || 'לקוח חדש',
-        url: '/clients',
+      template: {
+        key: 'new_client',
+        vars: { name: clientName },
       },
+      payload: { url: '/clients' },
     })
 
     // WhatsApp триггер client_added (fire-and-forget)

@@ -3949,3 +3949,81 @@ TBD (будет подставлен после push)
 
 ### Commit
 `764ad90e8ba40b73c3b280979a26f9a3a2c76cc5` — deployment `dpl_5EriEVm1cujs6TNX7pN1qUEFku52`
+
+
+
+---
+
+## 🔔 2026-04-20 — Push Notifications I18N v2
+
+### Контекст
+Push-уведомления приходили всегда на иврите, независимо от выбранного пользователем языка интерфейса. Задача: язык push должен соответствовать `preferred_language` пользователя в `org_users`.
+
+### Архитектурное решение
+**Серверная шаблонизация per-user.** API routes не передают готовые `title/body`, а передают `template: { key, vars }`. Edge Function `send-notification` для каждого получателя читает `org_users.preferred_language` и рендерит локализованный payload в его языке.
+
+**Почему так:**
+1. Язык всегда актуальный — сменил язык → следующий push уже на новом (не зависит от момента подписки)
+2. Один шаблон для всех языков — нет дублирования, нет рассинхрона
+3. 3-й язык (en) добавится одной правкой словаря `TEMPLATES`
+4. Fallback: `org_users.preferred_language` → `organizations.primary_language` → `'ru'`
+
+### Поток данных
+```
+API route (visits/payments/clients/beautymania)
+  └─► dispatchNotification({ event_type, org_id, template: { key, vars } })
+        └─► Edge Function send-notification
+              ├─► notification_preferences (кто в какой канал)
+              ├─► organizations.primary_language (fallback locale)
+              ├─► org_users.preferred_language (per-user locale, батчем)
+              ├─► TEMPLATES[key][locale] → interpolate(vars)
+              ├─► Telegram (org-level, orgDefaultLocale)
+              └─► Web Push (per-user, своя локаль)
+```
+
+### Файлы
+| Файл | Что изменено |
+|---|---|
+| `supabase/functions/send-notification/index.ts` | Полностью переписан: словарь `TEMPLATES` (10 событий × ru/he), per-user рендер title/body, локализованная ссылка Telegram. 461 строк. |
+| `src/lib/dispatch-notification.ts` | Новый API `template: { key, vars }` + обратная совместимость с legacy `payload: { title, body }` |
+| `src/app/api/visits/route.ts` | Убран хардкод `'📅 ביקור נוצר'`, передаёт `template: { key: 'new_visit', vars: { time, service } }`. Время форматируется нейтрально `HH:mm` в tz `Asia/Jerusalem`. |
+| `src/app/api/payments/route.ts` | `template: { key: 'new_payment', vars: { amount, method } }` |
+| `src/app/api/clients/route.ts` | `template: { key: 'new_client', vars: { name } }` |
+| `src/app/api/beautymania/order/route.ts` | `template: { key: 'new_order', vars: { product, qty, total } }` |
+| `src/components/PushNotificationPrompt.tsx` | Локализован через `useLanguage()`, убран хардкод `dir="rtl"` и ивритских строк. Локальный словарь `I18N = { he, ru }` для 10 строк компонента. |
+
+### Словарь шаблонов (`TEMPLATES` в Edge Function)
+Поддерживаемые события с ru+he переводами:
+- `new_visit` — Новый визит / ביקור נוצר
+- `visit_reminder` — Напоминание о визите / תזכורת לביקור
+- `new_payment` — Новый платёж / תשלום חדש
+- `new_client` — Новый клиент / לקוח חדש
+- `new_order` — Новый заказ с сайта / הזמנה חדשה מהאתר
+- `stock_alerts` — Низкий остаток / מלאי נמוך
+- `task_mentions` — Вас упомянули / הוזכרת במשימה
+- `birthday` — День рождения / יום הולדת
+- `ai_fallback` — Кира просит помощи / קירה מבקשת עזרה
+- `security_login` — Новый вход / כניסה חדשה
+
+Все title/body поддерживают подстановку переменных вида `{name}` через `interpolate()`.
+
+### Обратная совместимость
+Legacy-вызовы `dispatchNotification({ payload: { title, body, url } })` продолжают работать — Edge Function использует готовые строки если `template` не передан. Это нужно для `cron/push-events`, `cron/reminders`, `cron/birthdays`, `cron/push-dispatch`, `ai_fallback` и прочих мест, которые ещё не мигрированы на шаблоны.
+
+### Источник истины языка
+`org_users.preferred_language` (`'he' | 'ru'`, дефолт `'ru'`) — синхронизируется с cookie `trinity_locale` и localStorage через `setLanguage()` в `LanguageContext.tsx`. Пользователь сменил язык в UI → `updateUserPreferences()` server action → следующий push приходит в новом языке.
+
+### Service Worker
+`src/sw.ts` не менялся — уже принимает `{title, body, data.url}` и рендерит нативное уведомление. Вся локализация живёт на сервере.
+
+### Safety / Regression
+- Перед деплоем на prod: **сначала** задеплоить Edge Function (`npx supabase functions deploy send-notification --project-ref tjryzcqvsavtllahjyrj`), **потом** `git push`. Иначе новые API routes будут слать `template` в старую функцию, и push перестанут доходить до задеплоя новой версии.
+- RLS не тронута, auth не менялась, `org_id` берётся из `getAuthContext()` как раньше
+- `push_subscriptions` схема не менялась — локаль берётся live из `org_users`
+
+### Verification
+- `npm run build` — чистый, 0 ошибок TS, 237 страниц
+- Визуальная проверка: Prompt на ru показывает «Включить уведомления / Разрешить», на he — «הפעל התראות / אפשר»
+
+### Commit
+TBD (будет подставлен после push)

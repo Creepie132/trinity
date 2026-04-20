@@ -285,15 +285,19 @@ export async function POST(request: NextRequest) {
 
     console.log('[Beautymania Order] Order placed:', product_name, 'qty:', quantity, 'by:', name, '| stock left:', product.quantity - quantity)
 
-    // Dispatch Telegram + Push notification to Aneta (fire-and-forget)
+    // Dispatch localized notification to Aneta (fire-and-forget)
     void dispatchNotification({
       event_type: 'new_order',
       org_id: BM_ORG_ID,
-      payload: {
-        title: '🛒 הזמנה חדשה מהאתר!',
-        body: `${product_name} ×${quantity} — ₪${totalPrice}`,
-        url: '/site-orders',
+      template: {
+        key: 'new_order',
+        vars: {
+          product: product_name,
+          qty: quantity,
+          total: totalPrice,
+        },
       },
+      payload: { url: '/site-orders' },
     })
 
     return NextResponse.json({ success: true, order_id: siteOrder?.id }, { headers })

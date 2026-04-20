@@ -245,15 +245,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Dispatch Telegram notification (fire-and-forget)
+    // Dispatch localized notification (fire-and-forget)
     void dispatchNotification({
       event_type: 'new_payment',
       org_id: orgId,
-      payload: {
-        title: '💳 תשלום חדש',
-        body: `₪${roundedAmount} — ${payment_method}`,
-        url: '/payments',
+      template: {
+        key: 'new_payment',
+        vars: {
+          amount: roundedAmount,
+          method: payment_method,
+        },
       },
+      payload: { url: '/payments' },
     })
 
     return NextResponse.json({ payment }, { status: 201 })

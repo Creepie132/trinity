@@ -227,16 +227,23 @@ export async function POST(request: NextRequest) {
     }
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Queue push + dispatch Telegram via Edge Function (non-critical, fire-and-forget)
-    const visitTimeStr = new Date(scheduled_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+    // Queue push + dispatch notifications via Edge Function (non-critical, fire-and-forget)
+    // Время форматируем в израильском tz, формат HH:mm — подходит для любого языка.
+    // Локализация title/body делается per-user в Edge Function по org_users.preferred_language.
+    const visitTimeStr = new Date(scheduled_at).toLocaleTimeString('en-GB', {
+      hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Jerusalem',
+    })
     void dispatchNotification({
       event_type: 'new_visit',
       org_id: org_id,
-      payload: {
-        title: '📅 ביקור נוצר',
-        body: `${visitTimeStr} — ${insertData.service_type || 'ביקור'}`,
-        url: '/diary',
+      template: {
+        key: 'new_visit',
+        vars: {
+          time: visitTimeStr,
+          service: insertData.service_type || '',
+        },
       },
+      payload: { url: '/diary' },
     })
 
     // WA триггер visit_created (fire-and-forget)

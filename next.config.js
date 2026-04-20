@@ -3,9 +3,13 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   // ── Куда генерировать sw.js и workbox-*.js ───────────────────────────────
   dest: 'public',
 
-  // ── Кастомный SW-шаблон с нашей бизнес-логикой ──────────────────────────
-  // next-pwa скомпилирует src/sw.ts → public/sw.js, инжектирует __WB_MANIFEST
-  swSrc: 'src/sw.ts',
+  // ── Кастомный worker (push-обработчики) ─────────────────────────────────
+  // @ducanh2912/next-pwa НЕ поддерживает swSrc (это API старого next-pwa).
+  // customWorkerSrc указывает папку, содержимое которой плагин собирает
+  // в отдельный worker-файл и инжектирует в основной /sw.js через
+  // importScripts. Путь резолвится относительно КОРНЯ проекта, не от src/.
+  // Плагин ищет {src/,}index.{ts,js} внутри этой папки (dist/index.cjs:869).
+  customWorkerSrc: 'src/worker',
 
   // ── Отключить в дев-режиме: SW + кэш = боль при разработке ─────────────
   disable: process.env.NODE_ENV === 'development',

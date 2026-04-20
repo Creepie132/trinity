@@ -4027,3 +4027,74 @@ Legacy-вызовы `dispatchNotification({ payload: { title, body, url } })` п
 
 ### Commit
 `02eef5d` — push i18n v2 + JWT role-based auth (Apr 20, 2026)
+
+---
+
+## 🚨 2026-04-20 — КРИТИЧНЫЙ ФИКС: Push-уведомления не работали (неправильная опция next-pwa)
+
+### Симптом
+Push-уведомления **никогда не приходили** в продакшене, несмотря на полностью настроенный backend (cron `push-dispatch` работал, `sent_last_24h = 3` уведомления проходили через очередь как «отправленные»).
+
+В БД: `push_subscriptions.count = 0` — **ни одной активной подписки за всё время**.
+
+### Root cause
+В `next.config.js` использовалась опция **`swSrc: 'src/sw.ts'`**. Это API **старого** `next-pwa` (от shadowwalker). В Trinity стоит **`@ducanh2912/next-pwa@10.2.9`** — форк с другим API.
+
+Плагин **молча игнорировал** `swSrc` (свойство даже не читается из конфига) и каждый раз генерировал **дефолтный Workbox SW без push-обработчиков**. Любая подписка через `pushManager.subscribe()` создавалась в браузере, POST `/api/push/subscribe` мог даже отработать — но при приходе push Chrome не находил хендлер в SW и просто игнорировал событие. Уведомления никогда не всплывали.
+
+Дополнительно: поскольку пользователь не видел ни одного уведомления после «разрешить», баннер отписывался (либо пользователь блокировал permissions) — и подписки не сохранялись.
+
+### Как найдено
+1. Проверил `public/sw.js` — в сгенерированном SW не оказалось `addEventListener('push')`
+2. Посмотрел `package.json` → `@ducanh2912/next-pwa` ≠ `next-pwa`
+3. Прочитал `node_modules/@ducanh2912/next-pwa/dist/index.d.ts` → нет опции `swSrc`, есть только `customWorkerSrc`
+4. Прочитал `dist/index.cjs:868-882` (`buildCustomWorker`) → логика: ищет `{src/,}index.{ts,js}` внутри `customWorkerSrc`, резолвит относительно корня проекта
+
+### Решение
+1. **Создан `src/worker/index.ts`** (141 строка) — кастомный worker с тремя обработчиками:
+   - `push` — показ уведомления (title, body, icon, badge, tag, url, actions, requireInteraction, silent)
+   - `notificationclick` — фокус существующей вкладки по pathname или открытие новой через `clients.openWindow`
+   - `pushsubscriptionchange` — при ротации endpoint браузером автоматически переподписывается и шлёт `postMessage({type: 'TRINITY_PUSH_RESUBSCRIBED', subscription})` в клиенты
+
+2. **`next.config.js`**: удалена `swSrc`, добавлена `customWorkerSrc: 'src/worker'`. Путь — от корня проекта (плагин сам это резолвит: `path.join(p.dir, E)`).
+
+3. **Удалён** неиспользуемый `src/sw.ts` (он был проигнорирован плагином и никогда не попадал в билд)
+
+### Как работает теперь (архитектура)
+- **`public/sw.js`** ← GenerateSW от workbox (precache `_next/static/*`, runtime caching для API/pages)
+- **`public/worker-<hash>.js`** ← наш `src/worker/index.ts`, скомпилированный через ChildCompilation
+- В `public/sw.js` автоматически инжектится `importScripts("/worker-<hash>.js")` — поэтому обработчики загружаются **внутри основного SW-контекста** (это важно: Chrome ищет listener в том SW, который зарегистрирован на scope `/`)
+
+### Верификация билда
+```
+✓ (pwa) Found a custom worker implementation at F:\...\src\worker\index.ts.
+✓ (pwa) Building the custom worker to F:\...\public\worker-b140e5290fbf8181.js...
+✓ Compiled successfully in 73s
+```
+- `public/sw.js` содержит `importScripts("/worker-b140e5290fbf8181.js")`
+- `public/worker-b140e5290fbf8181.js` (1398 байт) содержит все три `addEventListener`
+- Precache-манифест в `sw.js` включает `{url:"/worker-b140e5290fbf8181.js"...}` — файл доступен офлайн
+
+### Что дальше (после деплоя)
+1. Старый SW уже у всех в браузерах — при следующем визите `useServiceWorker` обнаружит `updatefound`, поставит новый в waiting, переключит при смене вкладки/через 60 сек (страховка)
+2. После активации нового SW: `controllerchange` → reload страницы → `PushNotificationPrompt` пересчитает состояние → пользователь заново увидит баннер «Включить уведомления»
+3. После «Разрешить» → `pushManager.subscribe()` → POST `/api/push/subscribe` → запись в `push_subscriptions`
+4. Cron `push-dispatch` (каждую минуту) при следующем уведомлении найдёт подписку и отправит push **который теперь реально дойдёт и всплывёт**
+
+### Затронутые файлы
+- `src/worker/index.ts` — **создан** (141 строка)
+- `next.config.js` — `swSrc` → `customWorkerSrc: 'src/worker'`
+- `src/sw.ts` — **удалён** (был неактивным кодом)
+- `public/sw.js` + `public/worker-b140e5290fbf8181.js` — пересобраны в билде
+
+### Регрессия
+Нет. Вся остальная часть SW (workbox precache, runtime caching для fonts/images/API/pages) генерируется тем же `GenerateSW` плагином и не изменилась — сравнение `sw.js` до/после показало только добавление одной строки `importScripts("/worker-...")` и добавление worker-файла в precache-манифест.
+
+### Безопасность
+- VAPID ключи не менялись (`NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` из `.env.local`, сгенерированы 2025-03-16)
+- RLS на `push_subscriptions` не менялся
+- `getAuthContext(request)` защищает `/api/push/subscribe` и `/api/push/send` — подписка привязывается к `auth.uid` + `org_id` из активной сессии
+- `pg_cron` job `push-dispatch` использует `Authorization: Bearer <CRON_SECRET>` — эндпоинт проверяет этот заголовок
+
+### Commit
+Будет проставлен после push в main.

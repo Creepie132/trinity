@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
           orgId,
           triggerType: 'payment_link_created',
           clientPhone: clientRow.phone,
+          clientId:    client_id,
           vars: {
             client_name:  clientRow.first_name ?? '',
             org_name:     orgRow?.name ?? '',

@@ -13,7 +13,8 @@ import { toast } from 'sonner'
 interface Trigger {
   trigger_type: string
   is_enabled: boolean
-  message_template: string
+  message_template: string       // HE (основной, legacy-поле)
+  message_template_ru: string    // RU (опциональный)
   hours_before?: number | null
   delay_hours?: number | null
   win_back_days?: number | null
@@ -193,30 +194,112 @@ function TriggerCard({
             </div>
           )}
 
-          {/* Message template */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-              {isHe ? 'תבנית הודעה' : 'Шаблон сообщения'}
-            </label>
-            <textarea
-              rows={4}
-              value={trigger.message_template}
-              onChange={e => onChange({ ...trigger, message_template: e.target.value })}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-400 resize-none font-mono"
-              dir="auto"
-            />
-            {/* Variables hint */}
-            <div className="flex flex-wrap gap-1 mt-1.5">
-              {meta.vars.map(v => (
-                <button key={v}
-                  onClick={() => onChange({ ...trigger, message_template: trigger.message_template + v })}
-                  className="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-xs text-gray-500 dark:text-gray-400 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900/30 dark:hover:text-green-400 transition-colors font-mono"
-                >{v}</button>
-              ))}
-            </div>
-          </div>
+          {/* Message template — two languages (HE + RU) */}
+          <TemplateEditor
+            trigger={trigger}
+            meta={meta}
+            isHe={isHe}
+            onChange={onChange}
+          />
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── TemplateEditor ──────────────────────────────────────────────────────────
+
+function TemplateEditor({
+  trigger, meta, isHe, onChange,
+}: {
+  trigger: Trigger
+  meta: typeof TRIGGER_META[string]
+  isHe: boolean
+  onChange: (t: Trigger) => void
+}) {
+  const [activeLang, setActiveLang] = useState<'he' | 'ru'>('he')
+
+  const value = activeLang === 'he' ? trigger.message_template : trigger.message_template_ru
+  const setValue = (v: string) =>
+    onChange(
+      activeLang === 'he'
+        ? { ...trigger, message_template: v }
+        : { ...trigger, message_template_ru: v }
+    )
+
+  const heFilled = (trigger.message_template ?? '').trim().length > 0
+  const ruFilled = (trigger.message_template_ru ?? '').trim().length > 0
+
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+        {isHe ? 'תבנית הודעה' : 'Шаблон сообщения'}
+      </label>
+
+      {/* Language tabs */}
+      <div className="flex gap-1 mb-2 bg-gray-100 dark:bg-slate-800 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setActiveLang('he')}
+          className={`px-3 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+            activeLang === 'he'
+              ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          עברית
+          {heFilled && <span className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+        </button>
+        <button
+          onClick={() => setActiveLang('ru')}
+          className={`px-3 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
+            activeLang === 'ru'
+              ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          Русский
+          {ruFilled && <span className="w-1.5 h-1.5 rounded-full bg-green-500" />}
+        </button>
+      </div>
+
+      <textarea
+        rows={4}
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        placeholder={
+          activeLang === 'he'
+            ? 'שלום {{client_name}}, ...'
+            : 'Здравствуйте, {{client_name}}...'
+        }
+        className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-400 resize-none font-mono"
+        dir={activeLang === 'he' ? 'rtl' : 'ltr'}
+      />
+
+      {/* Hint about fallback */}
+      {!ruFilled && activeLang === 'ru' && heFilled && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {isHe
+            ? 'ללא תבנית בעברית — הודעה תישלח בתבנית הרוסית'
+            : 'Если не заполнить — будет использован ивритский шаблон как fallback'}
+        </p>
+      )}
+      {!heFilled && activeLang === 'he' && ruFilled && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {isHe
+            ? 'ללא תבנית ברוסית — הודעה תישלח בעברית'
+            : 'Без русского шаблона — клиенту с RU-языком придёт HE'}
+        </p>
+      )}
+
+      {/* Variables hint */}
+      <div className="flex flex-wrap gap-1 mt-1.5">
+        {meta.vars.map(v => (
+          <button key={v}
+            onClick={() => setValue(value + v)}
+            className="px-2 py-0.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-xs text-gray-500 dark:text-gray-400 hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900/30 dark:hover:text-green-400 transition-colors font-mono"
+          >{v}</button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -248,7 +331,8 @@ export default function WATriggerSettingsPage() {
           const found = existing.find(t => t.trigger_type === type)
           return found ?? {
             trigger_type: type, is_enabled: false,
-            message_template: '', hours_before: null,
+            message_template: '', message_template_ru: '',
+            hours_before: null,
             delay_hours: 1, win_back_days: 60,
           }
         })

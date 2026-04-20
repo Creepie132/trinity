@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       delay_hours:         t.delay_hours  != null ? parseInt(t.delay_hours)  : null,
       win_back_days:       t.win_back_days != null ? parseInt(t.win_back_days) : null,
       message_template:    String(t.message_template || '').slice(0, 1000),
+      message_template_ru: String(t.message_template_ru || '').slice(0, 1000),
       attach_payment_link: Boolean(t.attach_payment_link),
     }))
 

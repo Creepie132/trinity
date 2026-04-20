@@ -250,6 +250,7 @@ export async function POST(request: NextRequest) {
           orgId: org_id,
           triggerType: 'visit_created',
           clientPhone: client.phone,
+          clientId: clientId,
           vars: {
             client_name: client.first_name ?? '',
             org_name:    org?.name ?? '',

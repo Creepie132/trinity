@@ -38,6 +38,9 @@ const L = {
     sending:     'שולח...',
     testOk:      'הודעת הבדיקה נשלחה בהצלחה!',
     testFail:    'שליחת בדיקה נכשלה',
+    primaryLangTitle: 'שפה ראשית של העסק',
+    primaryLangDesc:  'משמש כברירת מחדל ללקוחות ללא שפה או עם שני השפות',
+    primaryLangSaved: 'שפה נשמרה',
   },
   ru: {
     title:       'Персональный WhatsApp',
@@ -67,6 +70,9 @@ const L = {
     sending:     'Отправка...',
     testOk:      'Тестовое сообщение отправлено!',
     testFail:    'Тест не прошёл',
+    primaryLangTitle: 'Основной язык бизнеса',
+    primaryLangDesc:  'Используется по умолчанию для клиентов без указанного языка или с обоими языками',
+    primaryLangSaved: 'Язык сохранён',
   },
 }
 
@@ -90,20 +96,46 @@ export default function WhatsAppSettingsPage() {
   const [testPhone, setTestPhone] = useState('')
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
 
+  // Primary language of organization (для WhatsApp-триггеров multilanguage)
+  const [primaryLang, setPrimaryLang] = useState<'he' | 'ru'>('he')
+  const [savingLang, setSavingLang]   = useState(false)
+
   // ── Load current settings ──────────────────────────────────────────────────
   useEffect(() => {
-    apiFetch<{
-      useCustomWa: boolean; customApiUrl: string; hasToken: boolean; updatedAt: string | null
-    }>('/api/settings/wa-custom')
-      .then(data => {
-        setUseCustom(data.useCustomWa)
-        setApiUrl(data.customApiUrl || '')
-        setHasToken(data.hasToken)
-        setUpdatedAt(data.updatedAt)
+    Promise.all([
+      apiFetch<{
+        useCustomWa: boolean; customApiUrl: string; hasToken: boolean; updatedAt: string | null
+      }>('/api/settings/wa-custom'),
+      apiFetch<{ primary_language: 'he' | 'ru' }>('/api/organizations/primary-language')
+        .catch(() => ({ primary_language: 'he' as const })),
+    ])
+      .then(([waData, langData]) => {
+        setUseCustom(waData.useCustomWa)
+        setApiUrl(waData.customApiUrl || '')
+        setHasToken(waData.hasToken)
+        setUpdatedAt(waData.updatedAt)
+        setPrimaryLang(langData.primary_language === 'ru' ? 'ru' : 'he')
       })
       .catch(() => toast.error(t.errorSave))
       .finally(() => setLoading(false))
   }, [])
+
+  // ── Save primary_language (срабатывает сразу при выборе) ──────────────────
+  const handleSaveLang = async (lang: 'he' | 'ru') => {
+    setPrimaryLang(lang)
+    setSavingLang(true)
+    try {
+      await apiFetch('/api/organizations/primary-language', {
+        method: 'POST',
+        json: { primary_language: lang },
+      })
+      toast.success(t.primaryLangSaved)
+    } catch (err: any) {
+      toast.error(`${t.errorSave}: ${err.message}`)
+    } finally {
+      setSavingLang(false)
+    }
+  }
 
   // ── Save ───────────────────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -324,6 +356,48 @@ export default function WhatsAppSettingsPage() {
           </p>
         </div>
         <ArrowRight size={16} className={`text-gray-400 group-hover:text-green-500 transition-colors ${dir === 'rtl' ? 'rotate-180' : ''}`} />
+      </div>
+
+      {/* Primary language — для WhatsApp-триггеров multilanguage */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">
+              {t.primaryLangTitle}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {t.primaryLangDesc}
+            </p>
+          </div>
+          {savingLang && (
+            <span className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+          )}
+        </div>
+        <div className="flex gap-2">
+          {(['he', 'ru'] as const).map(lang => {
+            const active = primaryLang === lang
+            const label  = lang === 'he' ? 'עברית' : 'Русский'
+            const flag   = lang === 'he' ? '🇮🇱' : '🇷🇺'
+            return (
+              <button
+                key={lang}
+                onClick={() => { if (primaryLang !== lang) handleSaveLang(lang) }}
+                disabled={savingLang}
+                className={`flex-1 px-4 py-3 rounded-xl border-2 transition-all flex items-center justify-center gap-2 text-sm font-medium disabled:opacity-50 ${
+                  active
+                    ? 'border-green-400 bg-green-50 text-green-700 dark:bg-green-900/30 dark:border-green-600 dark:text-green-300'
+                    : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 dark:bg-slate-800 dark:border-slate-700'
+                }`}
+              >
+                <span className="text-base">{flag}</span>
+                <span>{label}</span>
+                {active && (
+                  <CheckCircle2 size={14} className="text-green-600 dark:text-green-400" />
+                )}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Test send — показываем только если custom активен и токен есть */}

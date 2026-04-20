@@ -101,6 +101,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
     notes: '',
     description: '',
     paint_code: '',
+    preferred_languages: ['he'] as string[],
   })
   const [showDescription, setShowDescription] = useState(false)
   const [hasPaintCode, setHasPaintCode] = useState(false)
@@ -134,6 +135,9 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
         notes: formData.notes || null,
         description: formData.description || null,
         paint_code: hasPaintCode ? (formData.paint_code || null) : null,
+        preferred_languages: formData.preferred_languages.length > 0
+          ? formData.preferred_languages
+          : ['he'],
       })
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
@@ -163,6 +167,7 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
       notes: '',
       description: '',
       paint_code: '',
+      preferred_languages: ['he'],
     })
     setShowDescription(false)
     setHasPaintCode(false)
@@ -420,6 +425,53 @@ export function AddClientDialog({ open, onOpenChange, onSuccess }: AddClientDial
           )}
         </div>
         )}
+
+        {/* Язык общения (для WhatsApp-триггеров) */}
+        <div>
+          <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+            {language === 'he' ? 'שפת תקשורת' : 'Язык общения'}
+          </Label>
+          <div className="flex gap-2 mt-1.5">
+            {(['he', 'ru'] as const).map(lang => {
+              const checked = formData.preferred_languages.includes(lang)
+              const label = lang === 'he' ? 'עברית' : 'Русский'
+              const flag = lang === 'he' ? '🇮🇱' : '🇷🇺'
+              return (
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => {
+                    setFormData(f => {
+                      const next = checked
+                        ? f.preferred_languages.filter(l => l !== lang)
+                        : [...f.preferred_languages, lang]
+                      // не разрешаем пустой массив — минимум один язык
+                      return { ...f, preferred_languages: next.length > 0 ? next : [lang] }
+                    })
+                  }}
+                  className={`flex-1 px-3 py-2 rounded-xl border-2 transition-all flex items-center justify-center gap-2 text-sm font-medium ${
+                    checked
+                      ? 'border-indigo-400 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-600 dark:text-indigo-300'
+                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 dark:bg-slate-800 dark:border-slate-700'
+                  }`}
+                >
+                  <span>{flag}</span>
+                  <span>{label}</span>
+                  {checked && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            {language === 'he'
+              ? 'נבחר לשליחת WhatsApp אוטומטית בשפה המועדפת'
+              : 'Используется для WhatsApp-сообщений на нужном языке'}
+          </p>
+        </div>
 
         {/* Заметки */}
         <div>

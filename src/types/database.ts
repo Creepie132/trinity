@@ -2478,7 +2478,11 @@ export type CallStatus    = 'completed' | 'missed' | 'busy' | 'failed'
 export type CommType = 'call' | 'whatsapp' | 'email' | 'sms' | 'meeting' | 'note'
 
 // Client base type
-export type Client = Tables<'clients'>
+// NOTE: preferred_languages was added by migration after DB types were last regenerated.
+// Merged manually here until `supabase gen types typescript` is re-run.
+export type Client = Tables<'clients'> & {
+  preferred_languages?: string[]
+}
 
 // Client summary — shape returned by GET /api/clients/summary
 // Includes a subset of client fields + aggregated visit/payment stats

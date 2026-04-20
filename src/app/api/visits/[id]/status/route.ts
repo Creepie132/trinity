@@ -62,6 +62,7 @@ export async function PATCH(
           orgId,
           triggerType: 'visit_completed',
           clientPhone: client.phone,
+          clientId: client.id,
           vars: {
             client_name: client.first_name ?? '',
             org_name:    org?.name ?? '',

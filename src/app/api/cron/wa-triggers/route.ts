@@ -58,6 +58,29 @@ function applyTemplate(template: string, vars: Record<string, string>): string {
   return fixed
 }
 
+/**
+ * Выбор шаблона по языку клиента + языку орга.
+ * Если у клиента один язык — используем его. Если оба — primary_language орга.
+ * Пустой RU-шаблон → fallback на HE и наоборот.
+ */
+type Lang = 'he' | 'ru'
+function pickTemplate(
+  templateHe: string,
+  templateRu: string,
+  clientLangs: string[] | null | undefined,
+  orgPrimary: Lang,
+): string {
+  const langs = (clientLangs ?? []).filter(l => l === 'he' || l === 'ru') as Lang[]
+  let lang: Lang
+  if (langs.length === 0) lang = orgPrimary
+  else if (langs.length === 1) lang = langs[0]
+  else lang = langs.includes(orgPrimary) ? orgPrimary : langs[0]
+
+  return lang === 'ru'
+    ? (templateRu?.trim() || templateHe || '')
+    : (templateHe?.trim() || templateRu || '')
+}
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -75,14 +98,25 @@ export async function GET(request: NextRequest) {
   // ── Загружаем все активные триггеры ────────────────────────────────────────
   const { data: allTriggers } = await supabase
     .from('wa_trigger_settings')
-    .select('org_id, trigger_type, message_template, delay_hours, win_back_days')
+    .select('org_id, trigger_type, message_template, message_template_ru, delay_hours, win_back_days')
     .in('trigger_type', ['after_visit', 'after_sale', 'win_back', 'debt_reminder'])
     .eq('is_enabled', true)
 
   if (!allTriggers?.length) return NextResponse.json({ success: true, stats })
 
+  // Кэш primary_language по org_id (несколько триггеров могут быть у одной org)
+  const orgLangCache = new Map<string, Lang>()
+  async function getOrgLang(orgId: string): Promise<Lang> {
+    if (orgLangCache.has(orgId)) return orgLangCache.get(orgId)!
+    const { data } = await supabase
+      .from('organizations').select('primary_language').eq('id', orgId).single()
+    const lang: Lang = data?.primary_language === 'ru' ? 'ru' : 'he'
+    orgLangCache.set(orgId, lang)
+    return lang
+  }
+
   // Группируем по типу
-  type TRow = { org_id: string; trigger_type: string; message_template: string; delay_hours?: number | null; win_back_days?: number | null }
+  type TRow = { org_id: string; trigger_type: string; message_template: string; message_template_ru: string; delay_hours?: number | null; win_back_days?: number | null }
   const byType = (type: string) => (allTriggers as TRow[]).filter(t => t.trigger_type === type)
 
   // ── after_visit ────────────────────────────────────────────────────────────
@@ -90,10 +124,11 @@ export async function GET(request: NextRequest) {
     const delayH = trigger.delay_hours ?? 1
     const windowEnd   = new Date(now.getTime() - delayH * 3600_000)
     const windowStart = new Date(windowEnd.getTime() - 3600_000) // 1-часовое окно
+    const orgLang = await getOrgLang(trigger.org_id)
 
     const { data: visits } = await supabase
       .from('visits')
-      .select('id, org_id, service_type, clients!inner(id, first_name, phone), organizations!inner(name), services(name, name_ru)')
+      .select('id, org_id, service_type, clients!inner(id, first_name, phone, preferred_languages), organizations!inner(name), services(name, name_ru)')
       .eq('org_id', trigger.org_id)
       .eq('status', 'completed')
       .gte('updated_at', windowStart.toISOString())
@@ -105,7 +140,13 @@ export async function GET(request: NextRequest) {
       const service = (visit.services as any)
       const serviceName = service?.name_ru || service?.name || visit.service_type || ''
 
-      const message = applyTemplate(trigger.message_template, {
+      const template = pickTemplate(
+        trigger.message_template, trigger.message_template_ru,
+        client.preferred_languages, orgLang,
+      )
+      if (!template) continue
+
+      const message = applyTemplate(template, {
         client_name: client.first_name, service: serviceName, org_name: org.name,
       })
 
@@ -124,10 +165,11 @@ export async function GET(request: NextRequest) {
     const delayH = trigger.delay_hours ?? 1
     const windowEnd   = new Date(now.getTime() - delayH * 3600_000)
     const windowStart = new Date(windowEnd.getTime() - 3600_000)
+    const orgLang = await getOrgLang(trigger.org_id)
 
     const { data: payments } = await supabase
       .from('payments')
-      .select('id, org_id, amount, clients!inner(id, first_name, phone), organizations!inner(name)')
+      .select('id, org_id, amount, clients!inner(id, first_name, phone, preferred_languages), organizations!inner(name)')
       .eq('org_id', trigger.org_id)
       .eq('status', 'paid')
       .gte('paid_at', windowStart.toISOString())
@@ -137,7 +179,13 @@ export async function GET(request: NextRequest) {
       const client = (payment.clients as any)
       const org    = (payment.organizations as any)
 
-      const message = applyTemplate(trigger.message_template, {
+      const template = pickTemplate(
+        trigger.message_template, trigger.message_template_ru,
+        client.preferred_languages, orgLang,
+      )
+      if (!template) continue
+
+      const message = applyTemplate(template, {
         client_name: client.first_name,
         amount: String(payment.amount ?? ''),
         org_name: org.name,
@@ -157,11 +205,12 @@ export async function GET(request: NextRequest) {
   for (const trigger of byType('win_back')) {
     const days = trigger.win_back_days ?? 60
     const cutoff = new Date(now.getTime() - days * 86_400_000)
+    const orgLang = await getOrgLang(trigger.org_id)
 
     // Клиенты у которых последний ЗАВЕРШЁННЫЙ визит был до cutoff
     const { data: oldVisitRows } = await supabase
       .from('visits')
-      .select('client_id, clients!inner(id, first_name, phone, org_id), organizations!inner(name)')
+      .select('client_id, clients!inner(id, first_name, phone, org_id, preferred_languages), organizations!inner(name)')
       .eq('org_id', trigger.org_id)
       .eq('status', 'completed')
       .lt('scheduled_at', cutoff.toISOString())
@@ -191,7 +240,13 @@ export async function GET(request: NextRequest) {
       if ((recentCount ?? 0) > 0) continue
 
       const org = (row.organizations as any)
-      const message = applyTemplate(trigger.message_template, {
+      const template = pickTemplate(
+        trigger.message_template, trigger.message_template_ru,
+        client.preferred_languages, orgLang,
+      )
+      if (!template) continue
+
+      const message = applyTemplate(template, {
         client_name: client.first_name, org_name: org.name,
       })
 
@@ -207,10 +262,12 @@ export async function GET(request: NextRequest) {
 
   // ── debt_reminder ──────────────────────────────────────────────────────────
   for (const trigger of byType('debt_reminder')) {
+    const orgLang = await getOrgLang(trigger.org_id)
+
     // Клиенты у которых есть платёж в статусе partial или unpaid
     const { data: debtPayments } = await supabase
       .from('payments')
-      .select('id, client_id, amount, paid_amount, clients!inner(id, first_name, phone), organizations!inner(name)')
+      .select('id, client_id, amount, paid_amount, clients!inner(id, first_name, phone, preferred_languages), organizations!inner(name)')
       .eq('org_id', trigger.org_id)
       .in('status', ['partial', 'unpaid'])
       .not('client_id', 'is', null)
@@ -230,7 +287,13 @@ export async function GET(request: NextRequest) {
     }
 
     for (const { client, org, total } of Array.from(debtMap.values())) {
-      const message = applyTemplate(trigger.message_template, {
+      const template = pickTemplate(
+        trigger.message_template, trigger.message_template_ru,
+        client.preferred_languages, orgLang,
+      )
+      if (!template) continue
+
+      const message = applyTemplate(template, {
         client_name: client.first_name,
         amount: total.toFixed(0),
         org_name: org.name,

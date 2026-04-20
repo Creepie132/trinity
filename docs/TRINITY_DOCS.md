@@ -3672,3 +3672,78 @@ CHECK (trigger_type = ANY (ARRAY[
 - Страница `/pay/[id]` уже в билде (видна в списке 237 страниц).
 
 **Коммит:** будет проставлен после push.
+
+
+---
+
+### 20.04.2026 — feat(whatsapp): многоязычность клиентов (HE+RU) + приоритетный язык организации
+
+**Контекст:**
+После фикса BiDi + сокращения ссылок (`ee0dd67`) Влад попросил развернуть многоязычность правильно: язык у клиента, шаблоны HE+RU у каждого триггера, приоритетный язык орга как tie-breaker. Реальная проблема — у Ксении (Hair Rehab) смешанная база: русскоговорящие и ивритоязычные клиенты, одним шаблоном не обойтись.
+
+**Архитектура:**
+- `clients.preferred_languages text[] DEFAULT ['he']` — массив предпочитаемых языков клиента. Клиент может отметить оба, один, или оба одновременно.
+- `organizations.primary_language text DEFAULT 'he'` — основной язык орга. Используется как tie-breaker когда клиент отметил оба языка, и как fallback когда клиент не указал ничего.
+- `wa_trigger_settings.message_template_ru text DEFAULT ''` — русская версия шаблона. Основной `message_template` остался как HE. Пустой RU → fallback на HE (позволяет постепенно добавлять переводы, не обязательно сразу).
+
+**Логика выбора языка (в `fireWaTrigger` и cron):**
+```
+один preferred_language у клиента     → он
+оба языка у клиента                   → primary_language орга
+клиент без языка                      → primary_language орга
+выбран язык, но шаблон пустой         → fallback на второй язык
+```
+
+**Затронутые файлы:**
+
+*Schema:*
+- Миграция `multilang_clients_orgs_triggers` — 3 колонки + 2 CHECK constraint (subset `['he','ru']` для массива, enum для orga).
+
+*API / backend:*
+- `src/lib/wa/fire-trigger.ts` — полный рефакторинг: загружает `clients.preferred_languages` по `clientId`, загружает `organizations.primary_language`, вызывает `pickLanguage()` + `pickTemplate()`, BiDi-фикс через RLM. `WaTriggerType` расширен до 4 типов (+payment_link_created).
+- `src/lib/wa/fire-trigger.ts` — новый необязательный параметр `clientId` в `FireWaTriggerOpts`. Если не передан — используется `primary_language` орга.
+- `src/app/api/wa-triggers/route.ts` — upsert сохраняет `message_template_ru`.
+- `src/app/api/cron/wa-triggers/route.ts` — все 4 cron-триггера (after_visit, after_sale, win_back, debt_reminder) выбирают язык. `pickTemplate()` импортируется из того же файла. Кэш `orgLangCache` по `org_id` — один SELECT на organization вместо N.
+- `src/app/api/organizations/primary-language/route.ts` — **новый** endpoint, GET/POST, аутентификация через `getAuthContext`, валидация `lang in ('he','ru')`.
+
+*Вызовы `fireWaTrigger` — все 5 точек теперь передают `clientId`:*
+- `src/app/api/visits/route.ts` — web POST визита → `clientId: clientId`
+- `src/app/api/mobile/visits/route.ts` — mobile POST визита → `clientId: client_id`
+- `src/app/api/visits/[id]/status/route.ts` — PATCH completed → `clientId: client.id`
+- `src/app/api/payments/create-link/route.ts` → `clientId: data.client_id`
+- `src/app/api/mobile/payments/create-link/route.ts` → `clientId: client_id`
+- `src/app/api/clients/route.ts` — POST нового клиента (client_added) → `clientId: client.id`
+
+*UI:*
+- `src/app/(dashboard)/settings/whatsapp/triggers/page.tsx` — двуязычные шаблоны: компонент `TemplateEditor` с табами «עברית / Русский», индикаторы заполненности (зелёная точка), fallback-hints, RTL `dir` для HE textarea. Fallback: если один из языков пустой — используется другой.
+- `src/app/(dashboard)/settings/whatsapp/page.tsx` — селектор «Основной язык» с флагами 🇮🇱 🇷🇺, сохраняется сразу при клике (без кнопки Save), лоадер во время запроса, toast-подтверждение.
+- `src/components/clients/AddClientDialog.tsx` — стилизованные toggle-buttons для `preferred_languages`, default `['he']`, защита от пустого массива (минимум один язык), подпись «Используется для WhatsApp на нужном языке».
+
+*Types:*
+- `src/types/database.ts` — `Client` расширен через intersection `& { preferred_languages?: string[] }` без правки автогенерированной секции. Когда `supabase gen types typescript` будет перегенерирован — поле попадёт в Row type автоматически, intersection можно будет убрать.
+
+**Безопасность:**
+- CHECK `clients.preferred_languages SUBSET OF ['he','ru']` — никто не может вставить мусорный язык.
+- CHECK `organizations.primary_language IN ('he','ru')` — enum-валидация.
+- `/api/organizations/primary-language` POST требует валидный `getAuthContext`, обновляет только `orgId` текущего auth-контекста. Невозможно изменить язык чужой организации.
+- `AddClientDialog` — UI защищён от пустого массива (клик по выбранному языку когда он единственный не снимает галочку).
+
+**Регрессия:**
+- Все существующие клиенты получили `preferred_languages = ['he']` по дефолту → всем продолжают уходить ивритские шаблоны как раньше.
+- Все организации получили `primary_language = 'he'` → нейтрально для всех.
+- `message_template_ru` пустой → все триггеры продолжают работать на HE как до миграции.
+- `fireWaTrigger` без `clientId` (если какая-то старая точка вызова забудет передать) → fallback на primary_language орга, не падает.
+- Автогенерированный тип `Database` не тронут. Следующий `supabase gen types typescript` не перезапишет наши правки, потому что они вне автогенерированной секции.
+- `ClientSummary` тип не менялся — в GET `/api/clients/summary` preferred_languages не выдаётся (не требуется в списке для отображения).
+
+**Проверено:**
+- `npm run build` — чистый, exit 0, 237 страниц.
+- `/api/organizations/primary-language` присутствует в `.next/server/app/api/organizations/primary-language/route.js`.
+- Миграция подтверждена через `information_schema` — все 3 колонки на месте.
+
+**Что ещё можно сделать (TODO, оставлено на потом):**
+- UI чекбоксов в `EditClientDialog` / карточке просмотра клиента — пока только при создании (через `AddClientDialog`). Существующим клиентам можно будет редактировать язык после отдельного ревью UI. Все существующие клиенты работают на дефолте `['he']`.
+- Mobile Flutter UI — чекбоксы в мобильной форме создания клиента. Правило: Flutter-изменения — отдельной задачей.
+- Массовое обновление preferred_languages клиентов (bulk-update из CSV) — пока не требуется.
+
+**Коммит:** будет проставлен после push.

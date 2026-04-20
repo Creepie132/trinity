@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     // ── Build clients query ───────────────────────────────────────────────────
     let clientsQ = service
       .from('clients')
-      .select('id, first_name, last_name, phone, email, address, city, date_of_birth, notes, description, paint_code, loyalty_balance, created_at, org_id, assigned_to', { count: 'exact' })
+      .select('id, first_name, last_name, phone, email, address, city, date_of_birth, notes, description, paint_code, preferred_languages, loyalty_balance, created_at, org_id, assigned_to', { count: 'exact' })
       .in('org_id', orgIds)
       .order(sqlSortField, { ascending: sqlAscending })
       .range(from, to)

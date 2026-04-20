@@ -103,9 +103,9 @@ export function ClientDetailsModal() {
   const totalPaid   = client.total_paid   || 0
 
   const T = {
-    he: { information:'מידע', visits:'תורים', totalPaid:'שולם', gallery:'גלריה', documents:'מסמכים', notes:'הערות', description:'תיאור', createdAt:'תאריך יצירה', edit:'ערוך', sale:'עסקה', newVisit:'ביקור חדש', delete:'מחק', active:'פעיל', call:'התקשר', address:'כתובת', birthday:'יום הולדת', paintCode:'מספר צבע', quickAccess:'גישה מהירה' },
-    ru: { information:'Информация', visits:'Визитов', totalPaid:'Оплачено', gallery:'Галерея', documents:'Документы', notes:'Заметки', description:'Описание', createdAt:'Дата создания', edit:'Редактировать', sale:'Продажа', newVisit:'Новый визит', delete:'Удалить', active:'Активен', call:'Позвонить', address:'Адрес', birthday:'День рождения', paintCode:'Код краски', quickAccess:'Быстрый доступ' },
-    en:  { information:'Information', visits:'Visits', totalPaid:'Paid', gallery:'Gallery', documents:'Documents', notes:'Notes', description:'Description', createdAt:'Created', edit:'Edit', sale:'Sale', newVisit:'New visit', delete:'Delete', active:'Active', call:'Call', address:'Address', birthday:'Birthday', paintCode:'Paint code', quickAccess:'Quick access' },
+    he: { information:'מידע', visits:'תורים', totalPaid:'שולם', gallery:'גלריה', documents:'מסמכים', notes:'הערות', description:'תיאור', createdAt:'תאריך יצירה', edit:'ערוך', sale:'עסקה', newVisit:'ביקור חדש', delete:'מחק', active:'פעיל', call:'התקשר', address:'כתובת', birthday:'יום הולדת', paintCode:'מספר צבע', quickAccess:'גישה מהירה', language:'שפת תקשורת' },
+    ru: { information:'Информация', visits:'Визитов', totalPaid:'Оплачено', gallery:'Галерея', documents:'Документы', notes:'Заметки', description:'Описание', createdAt:'Дата создания', edit:'Редактировать', sale:'Продажа', newVisit:'Новый визит', delete:'Удалить', active:'Активен', call:'Позвонить', address:'Адрес', birthday:'День рождения', paintCode:'Код краски', quickAccess:'Быстрый доступ', language:'Язык общения' },
+    en:  { information:'Information', visits:'Visits', totalPaid:'Paid', gallery:'Gallery', documents:'Documents', notes:'Notes', description:'Description', createdAt:'Created', edit:'Edit', sale:'Sale', newVisit:'New visit', delete:'Delete', active:'Active', call:'Call', address:'Address', birthday:'Birthday', paintCode:'Paint code', quickAccess:'Quick access', language:'Language' },
   }
   const t = T[locale as keyof typeof T] || T.he
 
@@ -328,11 +328,28 @@ export function ClientDetailsModal() {
           </div>
           <div className="space-y-4" style={{ padding:'16px 16px 20px' }}>
             {quickAccessBlock}
-            {(client.email || client.address || client.date_of_birth || client.created_at) && (
+            {(client.email || client.address || client.date_of_birth || client.created_at || (Array.isArray(client.preferred_languages) && client.preferred_languages.length > 0)) && (
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">{t.information}</p>
                 <div className="space-y-1.5">
                   {client.email && <div className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl"><span className="text-xs text-gray-400 font-medium">Email</span><span className="text-xs font-semibold text-gray-800 truncate ms-2">{client.email}</span></div>}
+                  {Array.isArray(client.preferred_languages) && client.preferred_languages.length > 0 && (
+                    <div className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl">
+                      <span className="text-xs text-gray-400 font-medium">{t.language}</span>
+                      <span className="flex items-center gap-1.5 ms-2">
+                        {client.preferred_languages.includes('he') && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-gray-200 text-xs font-semibold text-gray-700">
+                            <span>🇮🇱</span><span>עברית</span>
+                          </span>
+                        )}
+                        {client.preferred_languages.includes('ru') && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-gray-200 text-xs font-semibold text-gray-700">
+                            <span>🇷🇺</span><span>Рус</span>
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
                   {(client.address || client.city) && <div className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl"><span className="text-xs text-gray-400 font-medium">{t.address}</span><span className="text-xs font-semibold text-gray-800 truncate ms-2">{[client.address, client.city].filter(Boolean).join(', ')}</span></div>}
                   {client.date_of_birth && <div className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl"><span className="text-xs text-gray-400 font-medium">{t.birthday}</span><span className="text-xs font-semibold text-gray-800">{new Date(client.date_of_birth).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU')}</span></div>}
                   {client.created_at && <div className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl"><span className="text-xs text-gray-400 font-medium">{t.createdAt}</span><span className="text-xs font-semibold text-gray-800">{new Date(client.created_at).toLocaleDateString(isHe ? 'he-IL' : 'ru-RU')}</span></div>}

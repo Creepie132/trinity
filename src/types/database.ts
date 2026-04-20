@@ -2498,6 +2498,7 @@ export type ClientSummary = {
   notes:          string | null
   description:    string | null
   paint_code:     string | null
+  preferred_languages: string[] | null
   loyalty_balance: number
   created_at:     string
   org_id:         string

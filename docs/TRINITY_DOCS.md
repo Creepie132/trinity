@@ -3849,3 +3849,60 @@ CHECK (trigger_type = ANY (ARRAY[
 - Условие показа блока «Информация» корректно обрабатывает отсутствие `preferred_languages`
 
 **Коммит:** будет проставлен после push.
+
+
+---
+
+### 20.04.2026 — feat(clients): preferred_languages в PWA-карточке клиента (TrinityMob)
+
+**Контекст:**
+После деплоя `5df8dd8` я добавил отображение языка в `ClientDetailsModal` — но это **десктоп**. На PWA (мобильная версия в браузере / добавленное на главный экран приложение) карточка клиента рендерится другим компонентом — `TrinityMob` через `ClientBottomSheet`. Туда поле я не добавил, хотя обещал сегодня довести многоязычность везде.
+
+**Где проблема:**
+- `ClientDetailsModal` — используется только на десктопе (там `isMobile` → `return null` на первом `useEffect`)
+- На мобильном (`window.innerWidth < 768`) `ClientBottomSheet` рендерит `TrinityMob` (свайп-шторка с drag-to-close)
+- `TrinityMob` имеет свой блок «Info» со строками phone/email/address/status/created — язык там не показывался
+- Без этого Владу пришлось бы открывать редактирование чтобы посмотреть какой язык у клиента. Неудобно.
+
+**Исправление:**
+
+*`TrinityMob.tsx`:*
+- Тип `TrinityMobClient` расширен полем `preferred_languages?: string[] | null`
+- В объекте локали `T` добавлен ключ `language` для HE/RU/EN (קороткая форма «שפה / Язык / Language»)
+- Блок «Info» — после существующих строк (phone/email/address/status/created) добавлен отдельный JSX-блок языка со стилизованными бэджами 🇮🇱 עברית и/или 🇷🇺 Рус
+- Блок условный: показывается только если `Array.isArray(preferred_languages) && length > 0` — для клиентов с пустым/null значением ничего не рендерится
+- Стили согласованы с окружающей разметкой TrinityMob: `padding: '5px 0'`, `borderBottom: '1px solid rgba(255,255,255,0.05)'`, `fontSize: 11`
+- Сами бэджи — `padding: '2px 7px'`, `borderRadius: 5`, `rgba(255,255,255,0.08)` фон — чтобы читалось на тёмном сайдбаре темы
+
+*`ClientBottomSheet.tsx`:*
+- Локальный `ClientBottomSheetProps.client` расширен полем `preferred_languages?: string[] | null`
+- Без этой правки TypeScript ругался бы: `TrinityMob` ждёт поле в типе, а `ClientBottomSheet` передаёт свой `client` через spread
+
+**Затронутые файлы:**
+- `src/components/ui/TrinityMob.tsx` — тип + i18n (3 locale) + JSX-блок языка
+- `src/components/clients/ClientBottomSheet.tsx` — тип client в props
+
+**Безопасность:**
+- `preferred_languages` уже приходит в `client`-объекте из `/api/clients/summary` (добавлено в `5df8dd8`)
+- RLS не тронута, новые endpoint-ы не добавлены, SELECT не расширен
+
+**Регрессия:**
+- На старых клиентах поле отсутствует → блок не рендерится (guard `Array.isArray && length > 0`)
+- На новых клиентах с дефолтом `['he']` → виден бэдж 🇮🇱 עברית
+- Свайп-шторка действий (`drawerOpen`) не затронута — изменения только в левой «main panel»
+- Темизация (Command Center / Editorial Luxury / Neon Industrial / Warm Organic) — использованы те же `rgba(255,255,255,X)` что и окружающие строки, темы работают без изменений
+
+**Проверено:**
+- `npm run build` — чистый, exit 0, 237 страниц
+- Блок условный → не ломает отображение клиентов без языка
+- Мобильная локаль `he` и `ru` — оба ключа `language` добавлены корректно
+
+**Итог по многоязычности (вся серия коммитов):**
+Теперь язык виден во ВСЕХ точках взаимодействия с клиентом:
+- ✅ Создание (AddClientDialog) — чекбоксы
+- ✅ Редактирование (EditClientSheet) — чекбоксы, используется на desktop + mobile edit
+- ✅ Просмотр на desktop (ClientDetailsModal) — бэджи в блоке «Информация»
+- ✅ Просмотр на PWA/mobile (TrinityMob) — бэджи в блоке «Info»
+- ✅ Автоматический выбор языка в WhatsApp-триггерах (fireWaTrigger + cron)
+
+**Коммит:** будет проставлен после push.

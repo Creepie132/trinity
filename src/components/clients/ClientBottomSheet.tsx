@@ -39,6 +39,7 @@ interface ClientBottomSheetProps {
     paint_code?: string
     card_token?: string
     card_last4?: string
+    preferred_languages?: string[] | null
   }
   isOpen: boolean
   onClose: () => void

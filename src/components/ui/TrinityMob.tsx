@@ -50,6 +50,7 @@ export interface TrinityMobClient {
   paint_code?: string
   card_token?: string
   card_last4?: string
+  preferred_languages?: string[] | null
 }
 
 export interface TrinityMobProps {
@@ -95,6 +96,7 @@ const T = {
     galleryLbl: 'גלריה', docsLbl: 'מסמכים', paintLbl: 'קוד צבע',
     swipeHint: 'החלק ימינה — פעולות',
     address: 'כתובת', city: 'עיר', email: 'אימייל', navigate: 'נווט',
+    language: 'שפה',
   },
   ru: {
     sub: 'Данные клиента', paid: 'Оплачено', visits: 'Визитов', info: 'Информация',
@@ -107,6 +109,7 @@ const T = {
     galleryLbl: 'Галерея', docsLbl: 'Документы', paintLbl: 'Код краски',
     swipeHint: '← Свайп влево — действия →',
     address: 'Адрес', city: 'Город', email: 'Email', navigate: 'Навигатор',
+    language: 'Язык',
   },
   en: {
     sub: 'Client info', paid: 'Paid', visits: 'Visits', info: 'Information',
@@ -119,6 +122,7 @@ const T = {
     galleryLbl: 'Gallery', docsLbl: 'Documents', paintLbl: 'Paint code',
     swipeHint: '← Swipe left — actions →',
     address: 'Address', city: 'City', email: 'Email', navigate: 'Navigate',
+    language: 'Language',
   },
 } as const
 
@@ -490,6 +494,25 @@ export function TrinityMob({
                       <span dir={row!.dir} style={{ color: 'white', fontWeight: 500 }}>{row!.val}</span>
                     </div>
                   ))}
+
+                  {/* Язык общения — для WhatsApp-триггеров multilanguage */}
+                  {Array.isArray(client.preferred_languages) && client.preferred_languages.length > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: 11 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.38)' }}>{t.language}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        {client.preferred_languages.includes('he') && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 5, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: 10, fontWeight: 500 }}>
+                            <span>🇮🇱</span><span>עברית</span>
+                          </span>
+                        )}
+                        {client.preferred_languages.includes('ru') && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 5, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: 10, fontWeight: 500 }}>
+                            <span>🇷🇺</span><span>Рус</span>
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Notes */}

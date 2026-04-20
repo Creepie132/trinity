@@ -33,6 +33,8 @@ export interface Sale {
   clients?: { id: string; first_name: string; last_name: string; phone: string | null } | null
   sale_items?: SaleItem[]
   staff_name?: string | null
+  /** Связанные платежи (джойн из API /api/sales). Используется для отображения pending-ссылок. */
+  payments?: Array<{ payment_link?: string | null; status?: string | null }> | null
 }
 
 export interface SalesFilters {

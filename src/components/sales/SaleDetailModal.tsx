@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react'
 import {
   Package, Wrench, Receipt, CheckCircle2, Clock,
   AlertCircle, Ban, TrendingUp, Hash, ShoppingBag, CreditCard, Trash2, Wallet,
+  ExternalLink,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { TrinityMobDetailShell } from '@/components/ui/TrinityMobDetailShell'
 import { UnifiedPaymentDialog } from '@/components/payments/UnifiedPaymentDialog'
+import { PaymentLinkActions, buildPaymentLinkMobileActions } from '@/components/payments/PaymentLinkActions'
 import { Sale } from '@/hooks/useSales'
 import { useQueryClient } from '@tanstack/react-query'
 import { AdminDeleteButton } from '@/components/admin/AdminDeleteButton'
@@ -29,6 +31,8 @@ const T = {
     receipt_sent: 'חשבונית נשלחה', receipt_not_sent: 'חשבונית לא נשלחה',
     goToPayments: 'עבור לתשלומים', delete: 'מחק', actions: 'פעולות',
     payBalance: 'שלם יתרה', payNow: 'שלם עכשיו',
+    awaitingLinkPayment: 'ממתין לתשלום בקישור',
+    methodNotSet: 'לא צוין',
   },
   ru: {
     title: 'Детали сделки', method: 'Оплата', items: 'Позиции',
@@ -44,6 +48,8 @@ const T = {
     receipt_sent: 'Чек отправлен', receipt_not_sent: 'Чек не выбит',
     goToPayments: 'Перейти в Платежи', delete: 'Удалить', actions: 'Действия',
     payBalance: 'Оплатить остаток', payNow: 'Оплатить сейчас',
+    awaitingLinkPayment: 'Ожидает оплаты по ссылке',
+    methodNotSet: 'Не указан',
   },
 }
 
@@ -111,8 +117,35 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
 
   const st          = STATUS_CONFIG[sale.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.new
   const statusLabel = t[`${sale.status}_status` as keyof typeof t] || sale.status
-  const methodLabel = t[sale.payment_method as keyof typeof t] || sale.payment_method || t.cash
-  const methodIcon  = METHOD_ICON[sale.payment_method || 'cash'] || '💵'
+
+  // ── Payment link detection — для sale со ссылкой на оплату (pending Tranzila) ─
+  // Триггер ошибки, который мы чиним: `t[null] || null || t.cash` = «Наличные»
+  // для sale, у которой реально ещё нет оплаты и висит pending-ссылка.
+  // Ищем именно pending-платёж со ссылкой — completed-платежи со ссылкой
+  // (уже оплаченные через Tranzila) сюда не попадают.
+  const pendingLink = sale.payments?.find(p => !!p.payment_link && p.status === 'pending')?.payment_link || null
+  const isAwaitingLink = (sale.status === 'unpaid' || sale.status === 'new') && !!pendingLink
+
+  // Честное отображение метода:
+  //   1. Если sale ждёт оплаты по ссылке → «Ожидает оплаты по ссылке» (не "Наличные")
+  //   2. Если есть реальный payment_method в БД → локаль (cash/card/bit/transfer/credit_card)
+  //   3. Если payment_method пуст/неизвестен → «Не указан» (не "Наличные")
+  let methodLabel: string
+  let methodIcon: React.ReactNode
+  if (isAwaitingLink) {
+    methodLabel = t.awaitingLinkPayment
+    methodIcon = <ExternalLink size={16} />
+  } else if (sale.payment_method && t[sale.payment_method as keyof typeof t]) {
+    methodLabel = String(t[sale.payment_method as keyof typeof t])
+    methodIcon = <span style={{ fontSize: 18 }}>{METHOD_ICON[sale.payment_method] || '💵'}</span>
+  } else if (sale.payment_method) {
+    // Неизвестный метод — показываем как есть, без лжи про «Наличные»
+    methodLabel = sale.payment_method
+    methodIcon = <span style={{ fontSize: 18 }}>💳</span>
+  } else {
+    methodLabel = t.methodNotSet
+    methodIcon = <span style={{ fontSize: 18, opacity: 0.5 }}>—</span>
+  }
   const total       = Number(sale.total_amount)
   const paid        = Number(sale.paid_amount)
   const balance     = Math.max(0, total - paid)
@@ -162,7 +195,7 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
         <div style={{ borderRadius: 12, padding: '10px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 6 }}>{t.method}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 18 }}>{methodIcon}</span>
+            {methodIcon}
             <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>{String(methodLabel)}</span>
           </div>
         </div>
@@ -236,7 +269,11 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
 
   // ── МОБИЛЬ ────────────────────────────────────────────────────────────────
   if (mounted && isMobile) {
+    const linkActions = isAwaitingLink && pendingLink
+      ? buildPaymentLinkMobileActions({ paymentLink: pendingLink, clientPhone: sale.clients?.phone ?? null, amount: total, locale })
+      : []
     const mobActions = [
+      ...linkActions,
       {
         icon: <Wallet size={13} />,
         label: sale.status === 'partial'
@@ -306,9 +343,16 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 10, marginBottom: 8 }}>
-        <span style={{ fontSize: 18, lineHeight: 1 }}>{methodIcon}</span>
+        {methodIcon}
         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>{String(methodLabel)}</span>
       </div>
+      {/* Payment link actions — только для sale со ссылкой на оплату в pending */}
+      {isAwaitingLink && pendingLink && (
+        <>
+          <PaymentLinkActions paymentLink={pendingLink} clientPhone={sale.clients?.phone ?? null} amount={total} locale={locale} />
+          <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.07)', margin: '6px 0 8px' }} />
+        </>
+      )}
       {/* Кнопка "Оплатить" — только для unpaid/partial */}
       {needsPayment && (
         <button onClick={() => setPayDialogOpen(true)}
@@ -342,7 +386,7 @@ export function SaleDetailModal({ sale, locale, onClose }: Props) {
         <div style={{ background: 'linear-gradient(135deg,#f8faff,#eff2ff)', border: '0.5px solid #e0e7ff', borderRadius: 14, padding: '12px 14px' }}>
           <p style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{t.method}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20 }}>{methodIcon}</span>
+            {methodIcon}
             <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{String(methodLabel)}</span>
           </div>
         </div>

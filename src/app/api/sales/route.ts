@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       *,
       clients(id, first_name, last_name, phone),
       sale_items(id, product_id, product_name, quantity, unit_price, total_price),
-      payments!payments_sale_id_fkey(payment_link)
+      payments!payments_sale_id_fkey(payment_link, status)
     `)
     .eq('org_id', activeOrgId)
     .order('created_at', { ascending: false })

@@ -782,7 +782,62 @@ chore: конфиг, зависимости
 
 ---
 
-### 20.04.2026 — fix(payments): в деталях pending-платежа не было действий со ссылкой на оплату; квитанция WA показывалась для pending
+### 20.04.2026 — fix(sales): sale со ссылкой на оплату показывалась как «Наличные» + refactor: PaymentLinkActions в shared
+
+**Что:** В `SaleDetailModal` (детали сделки на /sales) для sale со «Ссылка на оплату» (`payment_method=null`, `status=unpaid`, связанный `payment.payment_link` не пуст) в поле «Оплата» показывалось **«Наличные»** — это финансовая ложь и риск путаницы в учёте. А также не было кнопок для копирования/открытия/отправки ссылки клиенту.
+
+**Корень проблемы:**
+- Архитектура Trinity (по дизайну): sale создаётся чистой (`payment_method=null`, `status=unpaid`, `paid_amount=0`). `payment_method` заполняется только когда реально прошла оплата — это правильно для учёта.
+- Но UI в `SaleDetailModal.tsx:114` ложно дефолтил на «Наличные»:
+  ```ts
+  const methodLabel = t[sale.payment_method as keyof typeof t] || sale.payment_method || t.cash
+  ```
+  Для `payment_method=null`: `t[null] → undefined || null || t.cash` → **«Наличные»**.
+- Данные о pending-ссылке уже были доступны — API `/api/sales` джойнил `payments!payments_sale_id_fkey(payment_link)`, но UI их игнорировал.
+
+**Фикс:**
+
+1. **Новый shared-компонент `src/components/payments/PaymentLinkActions.tsx`** (149 строк). Экспортирует:
+   - `<PaymentLinkActions />` — три кнопки (copy/open/send WA) для тёмного sidebar
+   - `buildPaymentLinkMobileActions(...)` — массив actions для `TrinityMobDetailShell`
+   - Clipboard API с fallback на `execCommand`, wa.me deep-link с нормализацией телефона в `972xxx`, встроенная локаль HE+RU
+   - Иконки: `Copy`, `ExternalLink`, `MessageCircle`
+
+2. **Рефакторинг `PaymentDetailsDrawer.tsx`:** удалил 46 строк inline-логики + 10 строк локалей — заменил на вызовы shared-компонента. Поведение 1:1 с предыдущим коммитом `294b25c`.
+
+3. **`SaleDetailModal.tsx` — главный фикс:**
+   - Добавлена детекция: `pendingLink = sale.payments?.find(p => p.payment_link && p.status === 'pending')?.payment_link`
+   - `isAwaitingLink = (status === 'unpaid' || status === 'new') && !!pendingLink`
+   - Переписана логика `methodLabel` / `methodIcon` — больше **нет лжи про «Наличные»**:
+     - `isAwaitingLink` → «Ожидает оплаты по ссылке» / `ממתין לתשלום בקישור` + иконка `ExternalLink`
+     - Известный `payment_method` (`cash/card/bit/transfer/credit_card`) → локаль + emoji
+     - Неизвестный `payment_method` → показываем как есть (не дефолтим)
+     - `null` без ссылки → «Не указан» / `לא צוין` (не «Наличные»)
+   - Встроен `<PaymentLinkActions />` в desktop sidebar (когда `isAwaitingLink`)
+   - Встроен `buildPaymentLinkMobileActions(...)` в mobile actions (в начало массива)
+
+4. **`api/sales/route.ts`:** джойн расширен — `payments!payments_sale_id_fkey(payment_link, status)`. Нужен `status` чтобы отличать pending-ссылку от completed-платежа (completed-оплата через Tranzila тоже хранит link, но его показывать уже не нужно).
+
+5. **`hooks/useSales.ts`:** тип `Sale` пополнен полем `payments?: Array<{ payment_link?: string | null; status?: string | null }>` — соответствует расширенному джойну.
+
+**Почему выбран рефакторинг в shared, а не inline-копия:** Inline-копия логики из `PaymentDetailsDrawer` в `SaleDetailModal` означала бы ~50 строк дубликата (3 хендлера × 2 файла). При следующем изменении (новый метод, изменение текста, другая обработка ошибок) пришлось бы править оба места — типичный источник расхождений. Shared-компонент + `buildPaymentLinkMobileActions` даёт единую точку правды для 2+ мест использования.
+
+**Файлы:**
+- `src/components/payments/PaymentLinkActions.tsx` — новый (149 строк)
+- `src/components/payments/PaymentDetailsDrawer.tsx` — рефакторинг (−56 строк)
+- `src/components/sales/SaleDetailModal.tsx` — фикс + интеграция shared
+- `src/app/api/sales/route.ts` — джойн расширен (+ `status`)
+- `src/hooks/useSales.ts` — тип `Sale.payments` расширен
+
+**Build:** `npm run build` — `✓ Compiled successfully in 27.7s`, 237/237 страниц, 0 TS-ошибок (после исправления generic-типизации `buildHandlers` — сигнатура теперь `LinkMessages` interface вместо `typeof LOCALES['ru']` literal).
+
+**Регрессия:**
+- `PaymentDetailsDrawer` — визуально идентичен коммиту `294b25c`. Функциональность `PaymentLinkActions` протестирована через код-пафс и TS.
+- `SaleDetailModal` — старое поведение (эмодзи `💵💳📱🏦` + локаль из `t`) сохраняется для sale с **известным** `payment_method`. Расширение: теперь также корректно показываются неизвестные методы (вместо молчаливого fallback на «Наличные») и `null`-методы (вместо лживого «Наличные»).
+- JOIN `payments.status` — существующие клиенты не затронуты: API возвращает больше данных, старый код их просто игнорирует.
+
+**Безопасность:** защищено. `PaymentLinkActions` — чистый клиентский компонент без API-вызовов (только `navigator.clipboard` и `window.open`). API `/api/sales` — RLS по `org_id`, джойн `payments` имеет FK-constraint `payments_sale_id_fkey`, SELECT-политики на `payments` проверяют `get_user_org_ids()`.
+
 
 **Что:** В `PaymentDetailsDrawer` (детали платежа на страницах /payments, /visits, /debts) для платежа в статусе `pending` с уже созданной Tranzila-ссылкой (`payment_link`) отсутствовали действия: скопировать, открыть, отправить клиенту в WhatsApp. Одновременно кнопка «Отправить квитанцию WA» показывалась для pending — квитанция это документ о **совершённом** платеже, для pending её отправлять нельзя.
 

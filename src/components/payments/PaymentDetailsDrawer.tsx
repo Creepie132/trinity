@@ -8,12 +8,12 @@ import {
   CreditCard, Banknote, Smartphone, Building2, CheckCircle2,
   Clock, AlertCircle, Ban, TrendingUp, Loader2,
   Package, Wrench, Hash, CalendarDays, Phone, Trash2,
-  Copy, ExternalLink,
 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { TrinityModalShell } from '@/components/ui/TrinityModalShell'
 import { TrinityMobDetailShell } from '@/components/ui/TrinityMobDetailShell'
 import { AdminDeletePaymentButton } from './AdminDeletePaymentButton'
+import { PaymentLinkActions, buildPaymentLinkMobileActions } from './PaymentLinkActions'
 
 interface PaymentDetailsDrawerProps {
   payment: any | null
@@ -97,11 +97,6 @@ export function PaymentDetailsDrawer({
       items: 'פריטים', total: 'סה״כ', saleId: 'מספר עסקה',
       notes: 'הערות', purchaseDate: 'תאריך רכישה', actions: 'פעולות',
       delete: 'מחק תשלום',
-      copyLink: 'העתק קישור תשלום',
-      openLink: 'פתח קישור תשלום',
-      sendLinkWa: 'שלח קישור ב-WhatsApp',
-      linkCopied: 'הקישור הועתק',
-      noLink: 'אין קישור לתשלום',
     },
     ru: {
       method: 'Способ оплаты', type: 'Тип', tranzilaId: 'Tranzila ID',
@@ -116,11 +111,6 @@ export function PaymentDetailsDrawer({
       items: 'Позиции', total: 'Итого', saleId: 'Номер сделки',
       notes: 'Примечания', purchaseDate: 'Дата покупки', actions: 'Действия',
       delete: 'Удалить платёж',
-      copyLink: 'Скопировать ссылку',
-      openLink: 'Открыть ссылку',
-      sendLinkWa: 'Отправить ссылку в WA',
-      linkCopied: 'Ссылка скопирована',
-      noLink: 'Ссылка отсутствует',
     },
   }
   const l = L[locale]
@@ -190,40 +180,6 @@ export function PaymentDetailsDrawer({
   const paymentLink: string | null = payment.payment_link || null
   const isPendingWithLink = payment.status === 'pending' && !!paymentLink
   const isCompletedStatus = payment.status === 'completed' || payment.status === 'paid'
-
-  const handleCopyLink = async () => {
-    if (!paymentLink) { toast.error(l.noLink); return }
-    try {
-      await navigator.clipboard.writeText(paymentLink)
-      toast.success(l.linkCopied)
-    } catch {
-      // Fallback for environments without Clipboard API
-      const ta = document.createElement('textarea')
-      ta.value = paymentLink; ta.style.position = 'fixed'; ta.style.opacity = '0'
-      document.body.appendChild(ta); ta.select()
-      try { document.execCommand('copy'); toast.success(l.linkCopied) }
-      catch { toast.error(l.receiptError) }
-      finally { document.body.removeChild(ta) }
-    }
-  }
-
-  const handleOpenLink = () => {
-    if (!paymentLink) { toast.error(l.noLink); return }
-    window.open(paymentLink, '_blank', 'noopener,noreferrer')
-  }
-
-  const handleSendLinkWhatsApp = () => {
-    if (!paymentLink) { toast.error(l.noLink); return }
-    if (!clientPhone) { toast.error(l.noPhone); return }
-    let cleanPhone = clientPhone.replace(/\D/g, '')
-    if (cleanPhone.startsWith('0')) cleanPhone = cleanPhone.substring(1)
-    if (!cleanPhone.startsWith('972')) cleanPhone = `972${cleanPhone}`
-    const msg = isHe
-      ? `קישור לתשלום ₪${Number(payment.amount).toFixed(2)}: ${paymentLink}`
-      : `Ссылка для оплаты ₪${Number(payment.amount).toFixed(2)}: ${paymentLink}`
-    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
 
   // Общий контент (Info Panel) — используется и на мобиле и на ПК
   const statusDotColor = sc.dot
@@ -346,11 +302,11 @@ export function PaymentDetailsDrawer({
 
   // ── Мобиль: TrinityMobDetailShell со свайп-шторкой действий ─────────────────
   if (mounted && isMobile) {
+    const linkActions = isPendingWithLink
+      ? buildPaymentLinkMobileActions({ paymentLink: paymentLink!, clientPhone, amount: Number(payment.amount), locale })
+      : []
     const mobActions = [
-      // Pending + link: copy / open / send to WA
-      { icon: <Copy size={13} />, label: l.copyLink, onClick: handleCopyLink, variant: 'blue' as const, hidden: !isPendingWithLink },
-      { icon: <ExternalLink size={13} />, label: l.openLink, onClick: handleOpenLink, variant: 'blue' as const, hidden: !isPendingWithLink },
-      { icon: <MessageCircle size={13} />, label: l.sendLinkWa, onClick: handleSendLinkWhatsApp, variant: 'green' as const, hidden: !isPendingWithLink || !clientPhone },
+      ...linkActions,
       // Completed: send receipt WA / download PDF / refund
       { icon: <MessageCircle size={13} />, label: l.sendWhatsapp, onClick: handleWhatsApp, variant: 'green' as const, disabled: sendingReceipt, loading: sendingReceipt, hidden: !clientPhone || !isCompletedStatus },
       { icon: <FileText size={13} />, label: l.downloadPdf, onClick: handleDownloadPdf, variant: 'blue' as const, disabled: downloadingPdf, loading: downloadingPdf, hidden: !isCompletedStatus },
@@ -397,9 +353,9 @@ export function PaymentDetailsDrawer({
         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>{methodLabel[method] || method}</span>
       </div>
       <div style={{ height: '0.5px', background: 'rgba(255,255,255,0.07)', marginBottom: 10 }} />
-      {isPendingWithLink && <button onClick={handleCopyLink} style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(129,140,248,0.3)', background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><Copy size={13} />{l.copyLink}</button>}
-      {isPendingWithLink && <button onClick={handleOpenLink} style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(168,85,247,0.3)', background: 'rgba(168,85,247,0.12)', color: '#c4b5fd', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><ExternalLink size={13} />{l.openLink}</button>}
-      {isPendingWithLink && clientPhone && <button onClick={handleSendLinkWhatsApp} style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.15)', color: '#34d399', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><MessageCircle size={13} />{l.sendLinkWa}</button>}
+      {isPendingWithLink && (
+        <PaymentLinkActions paymentLink={paymentLink!} clientPhone={clientPhone} amount={Number(payment.amount)} locale={locale} />
+      )}
       {clientPhone && isCompletedStatus && <button onClick={handleWhatsApp} disabled={sendingReceipt} style={{ padding: '9px 10px', borderRadius: 9, border: 'none', background: 'rgba(34,197,94,0.15)', color: '#34d399', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: sendingReceipt ? 0.6 : 1 }}>{sendingReceipt ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <MessageCircle size={13} />}{l.sendWhatsapp}</button>}
       {isCompletedStatus && <button onClick={handleDownloadPdf} disabled={downloadingPdf} style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(96,165,250,0.3)', background: 'rgba(96,165,250,0.1)', color: '#60a5fa', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: downloadingPdf ? 0.6 : 1 }}>{downloadingPdf ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <FileText size={13} />}{l.downloadPdf}</button>}
       {isOwner && isCompletedStatus && <button onClick={handleRefund} disabled={refunding} style={{ padding: '9px 10px', borderRadius: 9, border: '0.5px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', color: 'rgba(239,68,68,0.7)', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginBottom: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>{refunding ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <RotateCcw size={13} />}{l.refund}</button>}

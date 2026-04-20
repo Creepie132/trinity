@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  MessageCircle, ArrowRight, ArrowLeft, Save,
-  Bell, ShoppingBag, Gift, UserX, CreditCard, CheckCircle2, Zap,
+  MessageCircle, ArrowRight, ArrowLeft, Save, CreditCard,
+  Bell, ShoppingBag, Gift, UserX, CheckCircle2, Zap,
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { apiFetch } from '@/lib/api-fetch'
@@ -17,6 +17,7 @@ interface Trigger {
   hours_before?: number | null
   delay_hours?: number | null
   win_back_days?: number | null
+  attach_payment_link?: boolean
 }
 
 const TRIGGER_META: Record<string, {
@@ -24,6 +25,7 @@ const TRIGGER_META: Record<string, {
   label_he: string; label_ru: string
   desc_he: string; desc_ru: string
   showHoursBefore?: boolean; showDelayHours?: boolean; showWinBackDays?: boolean
+  showPaymentLinkToggle?: boolean
   vars: string[]
 }> = {
   visit_reminder:  { icon: Bell,          color: 'blue',
@@ -33,7 +35,8 @@ const TRIGGER_META: Record<string, {
   visit_created:   { icon: Bell,          color: 'indigo',
     label_he: 'אישור תור חדש',         label_ru: 'Подтверждение визита',
     desc_he:  'נשלח כשנוצר תור חדש',  desc_ru:  'Отправляется при создании визита',
-    vars: ['{{client_name}}','{{date}}','{{time}}','{{service}}','{{org_name}}'] },
+    showPaymentLinkToggle: true,
+    vars: ['{{client_name}}','{{date}}','{{time}}','{{service}}','{{org_name}}','{{payment_link}}'] },
   visit_completed: { icon: CheckCircle2, color: 'green',
     label_he: 'אחרי סיום תור',         label_ru: 'После завершения визита',
     desc_he:  'נשלח כשהתור הושלם',    desc_ru:  'Отправляется когда визит завершён',
@@ -187,6 +190,36 @@ function TriggerCard({
             </div>
           )}
 
+          {/* attach_payment_link — только для visit_created */}
+          {meta.showPaymentLinkToggle && (
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800">
+              <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center flex-shrink-0">
+                <CreditCard size={14} className="text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {isHe ? 'צרף קישור לתשלום' : 'Прикрепить ссылку на оплату'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {isHe
+                    ? 'יצירת קישור Tranzila אוטומטי עבור הביקור. השתמש במשתנה {{payment_link}} בתבנית.'
+                    : 'Создаёт ссылку Tranzila для визита. Используйте переменную {{payment_link}} в шаблоне.'
+                  }
+                </p>
+              </div>
+              <button
+                onClick={() => onChange({ ...trigger, attach_payment_link: !trigger.attach_payment_link })}
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 mt-0.5 ${
+                  trigger.attach_payment_link ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-slate-600'
+                }`}
+              >
+                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${
+                  trigger.attach_payment_link ? 'left-6' : 'left-1'
+                }`} />
+              </button>
+            </div>
+          )}
+
           {/* Message template */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
@@ -243,6 +276,7 @@ export default function WATriggerSettingsPage() {
             trigger_type: type, is_enabled: false,
             message_template: '', hours_before: null,
             delay_hours: 1, win_back_days: 60,
+            attach_payment_link: false,
           }
         })
         setTriggers(merged)

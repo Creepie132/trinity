@@ -3462,3 +3462,54 @@ PWA manifest не пропускает пользователя через `/cal
 **Безопасность:** не затронута.
 
 **Коммит:** будет проставлен после push.
+
+
+---
+
+### 20.04.2026 — feat(whatsapp): ссылка на оплату в подтверждении визита
+
+**Контекст:**
+В настройках WhatsApp-автоматизации (`/settings/whatsapp/triggers`) для триггера «Подтверждение визита» (`visit_created`) добавлена возможность автоматически прикреплять ссылку на оплату Tranzila к сообщению, которое отправляется клиенту сразу после создания визита. Клиент получает в WhatsApp подтверждение записи с готовой ссылкой для онлайн-оплаты — не нужно отправлять её отдельным сообщением.
+
+**Как работает:**
+1. В карточке триггера «Подтверждение визита» появился новый тумблер «Прикрепить ссылку на оплату».
+2. Когда включён — в список доступных переменных шаблона добавляется `{{payment_link}}`. Владелец ставит её туда, где хочет видеть ссылку в тексте.
+3. При создании визита (если у него есть цена > 0 и у org настроен Tranzila-терминал) система:
+   - создаёт запись в `payments` со статусом `pending`, привязанную к `visit_id`;
+   - генерирует iFrame-ссылку Tranzila через тот же `createTranzilaPaymentLink`, что и `/api/payments/create-link`;
+   - сохраняет ссылку в `payments.payment_link`;
+   - подставляет её в `{{payment_link}}` шаблона и отправляет через `fireWaTrigger`.
+4. Когда клиент оплачивает — существующий webhook `/api/payments/tranzila-success` корректно переводит `payments.status = 'paid'`, и триггер `recalculate_sale_status` (если визит связан со сделкой) автоматически обновляет статус.
+
+**Архитектурное решение:**
+Вся инфраструктура оплаты уже была в системе (`lib/tranzila.ts`, `/api/payments/create-link`, webhook). Вместо дублирования логики выделен общий хелпер `createVisitPaymentLink`, который используется и в web-роуте, и в mobile-роуте создания визита. Никакие существующие эндпоинты не тронуты.
+
+**Миграция БД:**
+- Таблица `public.wa_trigger_settings`: добавлена колонка `attach_payment_link boolean NOT NULL DEFAULT false` (migration `wa_trigger_settings_add_attach_payment_link`). Все существующие триггеры продолжают работать — по умолчанию опция выключена.
+
+**Затронутые файлы:**
+- `src/lib/wa/create-visit-payment-link.ts` — **новый** хелпер, инкапсулирует создание pending-payment + Tranzila-ссылки per-org. Не бросает исключений (возвращает `null` при любой ошибке).
+- `src/lib/wa/fire-trigger.ts` — в интерфейс `vars` добавлено поле `payment_link?: string`; подстановка в шаблон через `{{payment_link}}`.
+- `src/app/api/wa-triggers/route.ts` — POST upsert теперь сохраняет `attach_payment_link` в БД.
+- `src/app/(dashboard)/settings/whatsapp/triggers/page.tsx` — в `TRIGGER_META.visit_created` добавлен флаг `showPaymentLinkToggle`, новое поле в `Trigger`, рендер тумблера внутри карточки (видно только для `visit_created`), `{{payment_link}}` в списке переменных.
+- `src/app/api/visits/route.ts` — перед `fireWaTrigger` проверяет `wa_trigger_settings.attach_payment_link`, генерит ссылку через хелпер и передаёт её в vars.
+- `src/app/api/mobile/visits/route.ts` — то же самое для создания визита с мобильного приложения.
+
+**Безопасность:**
+- Использует только per-org Tranzila-credentials из `organizations.tranzila_terminal/password`. Если терминал не настроен у org — ссылка просто не прикрепляется, сообщение уходит с пустой `{{payment_link}}` (graceful fallback). Никогда не используются платформенные ключи Amber Solutions как fallback.
+- `paymentId` передаётся в Tranzila через `cField1` → webhook `/api/payments/tranzila-success` валидирует запись и статус по `payment_id` и `org_id`.
+- Все вызовы fire-and-forget через `void` / `try-catch`: любая ошибка генерации ссылки не ломает создание визита.
+- Запись в `payments` создаётся через `createSupabaseServiceClient` после того как `orgId` уже провалидирован вызывающим контекстом (`getAuthContext`).
+
+**Регрессия:** нет.
+- Существующие триггеры работают как раньше (дефолт `attach_payment_link = false`).
+- Визиты без цены (`visitPrice <= 0`) → ссылка не создаётся.
+- Визиты у org без настроенного Tranzila → ссылка не создаётся, сообщение отправляется без неё.
+- Mobile-роут: встречи без `client_id` не затронуты, логика `if (client_id)` сохранена.
+- Компонент `WaTriggerWizard` в `/admin/whatsapp` (старый suberadmin-мастер) не тронут.
+
+**Проверено:**
+- `npm run build` — чистый, 37.6s, 237 страниц, 0 TypeScript-ошибок.
+- Миграция применена в Supabase, колонка подтверждена через `information_schema`.
+
+**Коммит:** будет проставлен после push.

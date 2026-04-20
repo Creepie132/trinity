@@ -21,12 +21,13 @@ interface FireWaTriggerOpts {
   triggerType: WaTriggerType
   clientPhone: string
   vars: {
-    client_name: string
-    org_name:    string
-    date?:       string
-    time?:       string
-    service?:    string
-    amount?:     string
+    client_name:   string
+    org_name:      string
+    date?:         string
+    time?:         string
+    service?:      string
+    amount?:       string
+    payment_link?: string
   }
   entityId?: string
 }
@@ -56,12 +57,13 @@ export async function fireWaTrigger(opts: FireWaTriggerOpts): Promise<void> {
 
     // Подставляем переменные
     const allVars: Record<string, string> = {
-      client_name: vars.client_name,
-      org_name:    vars.org_name,
-      date:        vars.date   ?? '',
-      time:        vars.time   ?? '',
-      service:     vars.service ?? '',
-      amount:      vars.amount  ?? '',
+      client_name:  vars.client_name,
+      org_name:     vars.org_name,
+      date:         vars.date         ?? '',
+      time:         vars.time         ?? '',
+      service:      vars.service      ?? '',
+      amount:       vars.amount       ?? '',
+      payment_link: vars.payment_link ?? '',
     }
     const message = applyTemplate(trigger.message_template, allVars)
 

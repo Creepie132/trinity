@@ -39,15 +39,16 @@ export async function POST(req: NextRequest) {
   const rows = triggers
     .filter((t: any) => TRIGGER_TYPES.includes(t.trigger_type))
     .map((t: any) => ({
-      org_id:           orgId,
-      trigger_type:     t.trigger_type,
-      is_enabled:       Boolean(t.is_enabled),
-      delay_min_sec:    Math.max(1, Math.min(600, parseInt(t.delay_min_sec) || 20)),
-      delay_max_sec:    Math.max(1, Math.min(600, parseInt(t.delay_max_sec) || 60)),
-      hours_before:     t.hours_before != null ? parseInt(t.hours_before) : null,
-      delay_hours:      t.delay_hours  != null ? parseInt(t.delay_hours)  : null,
-      win_back_days:    t.win_back_days != null ? parseInt(t.win_back_days) : null,
-      message_template: String(t.message_template || '').slice(0, 1000),
+      org_id:              orgId,
+      trigger_type:        t.trigger_type,
+      is_enabled:          Boolean(t.is_enabled),
+      delay_min_sec:       Math.max(1, Math.min(600, parseInt(t.delay_min_sec) || 20)),
+      delay_max_sec:       Math.max(1, Math.min(600, parseInt(t.delay_max_sec) || 60)),
+      hours_before:        t.hours_before != null ? parseInt(t.hours_before) : null,
+      delay_hours:         t.delay_hours  != null ? parseInt(t.delay_hours)  : null,
+      win_back_days:       t.win_back_days != null ? parseInt(t.win_back_days) : null,
+      message_template:    String(t.message_template || '').slice(0, 1000),
+      attach_payment_link: Boolean(t.attach_payment_link),
     }))
 
   const { error } = await supabase

@@ -160,6 +160,18 @@ export function buildPaymentReportHTML(d: PaymentReportData): string {
   <!-- SPACER -->
   <div style="flex:1;min-height:20px"></div>
 
+  <!-- FOOTER -->
+  <div style="background:#1B2A4A;padding:10px 36px;display:flex;justify-content:space-between;align-items:center;direction:ltr;flex-shrink:0">
+    <div>
+      <div style="font-size:10px;font-weight:700;color:#D4AA50;font-family:'Heebo',Arial,sans-serif">${d.orgName}</div>
+      <div style="font-size:9px;color:rgba(180,190,210,0.8);margin-top:2px;font-family:'Heebo',Arial,sans-serif">${footerContacts}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:9px;color:rgba(120,140,170,0.9);font-family:'Heebo',Arial,sans-serif">סיכום תשלומים #${d.docNumber}</div>
+      <div style="font-size:9px;color:rgba(180,190,210,0.7);margin-top:2px;font-family:'Heebo',Arial,sans-serif">Trinity CRM</div>
+    </div>
+  </div>
+
 </div>
 </body>
 </html>`

@@ -115,10 +115,12 @@ export function useGeneratePDF() {
 
   // Скачать PDF из готового HTML-строки (для Payment Report и других шаблонов)
   // footerData: { orgName, contacts, docNumber, label } — рисуется на каждой странице через jsPDF
+  // hasHTMLFooter: если true — футер встроен в HTML, jsPDF-футер НЕ рисуется, высота страницы полная
   const downloadRaw = useCallback(async (
     html: string,
     filename: string,
-    footerData?: { orgName: string; contacts: string; docNumber: string; label: string }
+    footerData?: { orgName: string; contacts: string; docNumber: string; label: string },
+    hasHTMLFooter?: boolean
   ) => {
     setLoading(true)
     try {
@@ -127,11 +129,12 @@ export function useGeneratePDF() {
         import('html2canvas'),
       ])
 
-      // A4: 210x297mm. Футер = 14mm снизу. Контент занимает 283mm на страницу.
+      // A4: 210x297mm. Если hasHTMLFooter=true — используем полную высоту (футер уже в HTML).
+      // Иначе отводим 14mm снизу под jsPDF-футер.
       const PAGE_W_MM = 210
       const PAGE_H_MM = 297
-      const FOOTER_H_MM = 14
-      const CONTENT_H_MM = PAGE_H_MM - FOOTER_H_MM // 283mm контента на страницу
+      const FOOTER_H_MM = hasHTMLFooter ? 0 : 14
+      const CONTENT_H_MM = PAGE_H_MM - FOOTER_H_MM
 
       // px на странице = 794px → 210mm; 1mm = 794/210 px
       const MM_TO_PX = 794 / PAGE_W_MM
@@ -194,8 +197,8 @@ export function useGeneratePDF() {
         const sliceH_mm = (srcH / (canvas.width)) * PAGE_W_MM
         pdf.addImage(sliceData, 'JPEG', 0, 0, PAGE_W_MM, Math.min(sliceH_mm, CONTENT_H_MM))
 
-        // Футер — рисуем напрямую через jsPDF на каждой странице
-        if (footerData) {
+        // Футер — рисуем напрямую через jsPDF только если футер НЕ встроен в HTML
+        if (footerData && !hasHTMLFooter) {
           // Тёмный прямоугольник
           pdf.setFillColor(27, 42, 74) // #1B2A4A
           pdf.rect(0, PAGE_H_MM - FOOTER_H_MM, PAGE_W_MM, FOOTER_H_MM, 'F')

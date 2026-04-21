@@ -4108,3 +4108,30 @@ GET https://www.ambersol.co.il/worker-b140e5290fbf8181.js → 200, 1398 bytes
   addEventListener("pushsubscriptionchange")     → ✓
 ```
 Vercel deployment: `dpl_4bDFbTahShtv36JibedASeN9QJFi` (state: READY, production)
+
+---
+
+## fix: PDF-сводка платежей — футер и фильтрация (21 Apr 2026)
+
+### Что изменено
+**Проблема 1 — Футер обрезал текст в PDF.**
+jsPDF не поддерживает иврит/кириллицу без встроенных шрифтов. Текст `orgName`, `contacts` в нижней полосе рендерился как пустота или обрезался.
+
+**Решение:** Футер перенесён прямо в HTML-шаблон (`payment-report-html.ts`) — рендерится через `html2canvas` с font-family Heebo, все символы корректны. Параметр `hasHTMLFooter: true` передаётся в `downloadRaw` → jsPDF-футер для этого отчёта не рисуется, высота контента = полная страница A4.
+
+**Проблема 2 — Проверка фильтрации.**
+API `/api/payments` принимает `startDate`/`endDate` → фильтрует по `paid_at`. Способы оплаты фильтруются на клиенте через `normalizePaymentMethod`. Логика верная — данные корректно соответствуют выбранным датам и методам.
+
+### Затронутые файлы
+- `src/lib/pdf/payment-report-html.ts` — добавлен HTML-блок футера с `orgName`, контактами, номером документа
+- `src/lib/pdf/use-generate-pdf.ts` — добавлен параметр `hasHTMLFooter?: boolean` в `downloadRaw`, при `true` — jsPDF-футер пропускается, `CONTENT_H_MM = PAGE_H_MM`
+- `src/components/payments/PaymentReportModal.tsx` — вызов `downloadRaw` передаёт `hasHTMLFooter = true`
+
+### Регрессия
+Нет. `downloadRaw` с `hasHTMLFooter = false` (по умолчанию) работает как прежде — jsPDF-футер рисуется для других отчётов.
+
+### Безопасность
+Защищено — `getAuthContext()`, `org_id` из БД, RLS включён.
+
+### Commit
+`fef4d50` — fix: payment report footer in HTML correct fonts for Hebrew/Cyrillic (Apr 21, 2026)

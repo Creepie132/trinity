@@ -208,15 +208,27 @@ export function VisitCard({ visit, locale, isMeetingMode, onStart, onComplete, o
           ref={cardRef}
           onClick={() => { if (Math.abs(curX.current) < 8) onClick?.(visit) }}
           style={{ borderRadius: 12, overflow: 'hidden', willChange: 'transform' }}
-          className={`bg-card border cursor-pointer ${isCancelled ? 'opacity-50' : ''} ${visit.status === 'in_progress' ? 'border-amber-300 dark:border-amber-700' : ''}`}
+          className={`border cursor-pointer transition-all ${
+            visit.status === 'completed'
+              ? 'bg-gray-50 dark:bg-gray-800/50 opacity-70 grayscale-[40%]'
+              : isCancelled
+              ? 'bg-card opacity-50'
+              : 'bg-card'
+          } ${visit.status === 'in_progress' ? 'border-amber-300 dark:border-amber-700' : ''}`}
         >
-          <div style={{ borderLeftWidth: 4, borderLeftColor: accentColor, borderLeftStyle: 'solid', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{
+            borderLeftWidth: 4,
+            borderLeftColor: visit.status === 'completed' ? '#9ca3af' : accentColor,
+            borderLeftStyle: 'solid',
+            borderRadius: 12,
+            overflow: 'hidden',
+          }}>
             <div className="flex items-stretch">
 
               {/* Time column */}
               <div className={`flex flex-col items-center justify-center px-3 py-3 border-e min-w-[64px] ${
                 visit.status === 'in_progress' ? 'bg-amber-50 dark:bg-amber-900/20'
-                : visit.status === 'completed' ? 'bg-green-50 dark:bg-green-900/20'
+                : visit.status === 'completed' ? 'bg-gray-50 dark:bg-gray-800/40'
                 : 'bg-muted/30'
               }`}>
                 <span className="text-base font-bold leading-tight">{time}</span>

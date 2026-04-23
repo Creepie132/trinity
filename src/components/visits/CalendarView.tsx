@@ -739,7 +739,8 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors,
 
                       {/* Visit blocks — wider, more detail */}
                       {dayVisits.map((visit, vi) => {
-                        const color = getEventAccent(visit)
+                        const isCompleted = visit.status === 'completed'
+                        const color = isCompleted ? '#9ca3af' : getEventAccent(visit)
                         const top = getVisitTopOffset(visit)
                         const height = getVisitHeight(visit)
                         const clientName = getClientName(visit)
@@ -756,7 +757,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors,
                           <div
                             key={visit.id}
                             onClick={(e) => { e.stopPropagation(); onVisitClick(visit) }}
-                            className="absolute rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all hover:z-30 active:scale-[0.99]"
+                            className={`absolute rounded-xl overflow-hidden cursor-pointer shadow-sm hover:shadow-md transition-all hover:z-30 active:scale-[0.99] ${isCompleted ? 'opacity-60' : ''}`}
                             style={{
                               top: top + 1,
                               height: height - 2,
@@ -869,7 +870,8 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors,
 
                     <div className="space-y-0.5">
                       {dayVisits.slice(0, 3).map((visit) => {
-                        const color = getEventAccent(visit)
+                        const isCompleted = visit.status === 'completed'
+                        const color = isCompleted ? '#9ca3af' : getEventAccent(visit)
                         const name = getClientName(visit)
                         const time = format(new Date(visit.scheduled_at), 'HH:mm')
                         const firstName = name.split(' ')[0]
@@ -878,7 +880,7 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors,
                           <div
                             key={visit.id}
                             onClick={(e) => { e.stopPropagation(); onVisitClick(visit) }}
-                            className="rounded-md text-white leading-none px-1.5 py-0.5 truncate flex items-center gap-1 hover:opacity-90 transition"
+                            className={`rounded-md text-white leading-none px-1.5 py-0.5 truncate flex items-center gap-1 hover:opacity-90 transition ${isCompleted ? 'opacity-60' : ''}`}
                             style={{ backgroundColor: color, fontSize: '10px' }}
                           >
                             {isMeeting ? <Video size={8} className="flex-shrink-0" /> : <MapPin size={8} className="flex-shrink-0" />}

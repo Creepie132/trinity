@@ -900,21 +900,21 @@ export default function VisitsPage() {
                         <tr
                           key={visit.id}
                           onClick={() => setSelectedVisit(visit)}
-                          className="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer transition"
+                          className="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer transition opacity-55 grayscale-[20%]"
                         >
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${avatarColor(visit.status)}`}>
+                              <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-medium flex-shrink-0 text-gray-500">
                                 {getInitials(name)}
                               </div>
                               <div>
-                                <p className="font-medium text-gray-900 dark:text-gray-100">{name || '—'}</p>
+                                <p className="font-medium text-gray-500 dark:text-gray-400">{name || '—'}</p>
                                 {getClientPhone(visit) && <p className="text-xs text-gray-400">{getClientPhone(visit)}</p>}
                               </div>
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <p className="text-gray-700 dark:text-gray-300">{new Date(visit.scheduled_at).toLocaleDateString(loc)}</p>
+                            <p className="text-gray-500 dark:text-gray-400">{new Date(visit.scheduled_at).toLocaleDateString(loc)}</p>
                             <p className="text-xs text-gray-400">{new Date(visit.scheduled_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })}</p>
                           </td>
                           <td className="py-3 px-4">
@@ -951,7 +951,7 @@ export default function VisitsPage() {
                               )}
                             </div>
                           </td>
-                          <td className="py-3 px-4 text-end font-medium text-gray-900 dark:text-gray-100">
+                          <td className="py-3 px-4 text-end font-medium text-gray-400 dark:text-gray-500">
                             {getVisitTotal(visit) > 0 ? `₪${getVisitTotal(visit).toLocaleString()}` : '—'}
                           </td>
                           <td className="py-3 px-4" />

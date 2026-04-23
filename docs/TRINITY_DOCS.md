@@ -4135,3 +4135,32 @@ API `/api/payments` принимает `startDate`/`endDate` → фильтру�
 
 ### Commit
 `fef4d50` — fix: payment report footer in HTML correct fonts for Hebrew/Cyrillic (Apr 21, 2026)
+
+---
+
+## feat: Завершённые визиты — показываются по умолчанию + тумблер в Settings (23 Apr 2026)
+
+### Что изменено
+
+**Проблема:** Завершённые визиты не отображались в календаре (CalendarView жёстко фильтровал только `scheduled` и `in_progress`). В списке секция завершённых рендерилась всегда, но тумблер на странице визитов сохранялся в два разных localStorage ключа (user-specific и общий) — Settings не синхронизировался.
+
+**Решение:**
+1. `CalendarView.tsx` — добавлен prop `showCompleted?: boolean` (default `true`). Фильтр `activeVisits` теперь включает `completed` визиты при `showCompleted=true`.
+2. `visits/page.tsx` — prop `showCompleted` передаётся в `CalendarView`. Desktop таблица и mobile карточки секции "Завершённые" обёрнуты в `{showCompleted && ...}`. localStorage унифицирован: единственный ключ `trinity_visits_show_completed`. Старый user-specific ключ мигрируется автоматически при первом входе.
+3. `settings/display/page.tsx` — добавлен блок "Отображение завершённых визитов" с toggle-pill кнопкой. Иконки `Eye`/`EyeOff` из lucide-react. Сохраняет в общий ключ `trinity_visits_show_completed`.
+
+**По умолчанию:** `true` — завершённые всегда видны пока пользователь не отключит.
+
+### Затронутые файлы
+- `src/components/visits/CalendarView.tsx` — prop `showCompleted`, обновлён фильтр `activeVisits`
+- `src/app/(dashboard)/visits/page.tsx` — передача prop, унификация localStorage, условный рендер секций
+- `src/app/(dashboard)/settings/display/page.tsx` — новый блок тумблера с Eye/EyeOff
+
+### Регрессия
+Нет. CalendarView обратно совместим (prop optional, default true).
+
+### Безопасность
+Настройка хранится только в localStorage (клиентская UI-преференция, не серверные данные).
+
+### Commit
+`54916bf` — feat: show completed visits by default, add toggle in Settings > Display (Apr 23, 2026)

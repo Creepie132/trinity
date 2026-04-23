@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, ArrowLeft, Palette, List, CalendarDays } from 'lucide-react'
+import { Check, ArrowLeft, Palette, List, CalendarDays, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useTheme, THEMES, ThemeId, ThemeDefinition } from '@/contexts/ThemeContext'
@@ -217,6 +217,17 @@ export default function DisplayPage() {
     return (localStorage.getItem('trinity_visits_view') as 'list' | 'calendar') || 'list'
   })
 
+  const [showCompleted, setShowCompleted] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    return (localStorage.getItem('trinity_visits_show_completed') ?? 'true') === 'true'
+  })
+
+  const handleToggleCompleted = () => {
+    const next = !showCompleted
+    setShowCompleted(next)
+    localStorage.setItem('trinity_visits_show_completed', String(next))
+  }
+
   const handleVisitsView = (v: 'list' | 'calendar') => {
     setVisitsView(v)
     localStorage.setItem('trinity_visits_view', v)
@@ -318,6 +329,61 @@ export default function DisplayPage() {
             )
           })}
         </div>
+      </div>
+
+      {/* ── Show completed visits toggle ──────────────────────────── */}
+      <div className="pt-2">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2.5 rounded-xl" style={{ background: `${activeTheme.accent}15` }}>
+            <Eye className="w-5 h-5" style={{ color: activeTheme.accent }}/>
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+              {isHe ? 'הצגת ביקורים שהושלמו' : 'Отображение завершённых визитов'}
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {isHe ? 'האם להציג ביקורים שהושלמו ביומן וברשימה' : 'Показывать завершённые визиты в календаре и списке'}
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleToggleCompleted}
+          className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl border-2 transition-all"
+          style={{
+            borderColor: showCompleted ? activeTheme.accent : '#e5e7eb',
+            background: showCompleted ? `${activeTheme.accent}0d` : 'white',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            {showCompleted
+              ? <Eye className="w-5 h-5" style={{ color: activeTheme.accent }} />
+              : <EyeOff className="w-5 h-5 text-gray-400" />
+            }
+            <div className="text-left">
+              <p className="text-sm font-semibold" style={{ color: showCompleted ? activeTheme.accent : '#6b7280' }}>
+                {showCompleted
+                  ? (isHe ? 'מוצגים' : 'Показываются')
+                  : (isHe ? 'מוסתרים' : 'Скрыты')}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {showCompleted
+                  ? (isHe ? 'ביקורים שהושלמו מופיעים ברשימה וביומן' : 'Завершённые видны в списке и календаре')
+                  : (isHe ? 'רק ביקורים פעילים ומתוכננים מוצגים' : 'Только активные и запланированные')}
+              </p>
+            </div>
+          </div>
+          {/* Toggle pill */}
+          <div
+            className="relative w-12 h-6 rounded-full transition-all flex-shrink-0"
+            style={{ background: showCompleted ? activeTheme.accent : '#d1d5db' }}
+          >
+            <div
+              className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
+              style={{ left: showCompleted ? '26px' : '2px' }}
+            />
+          </div>
+        </button>
       </div>
 
       {/* Preview modal */}

@@ -291,16 +291,19 @@ export default function VisitsPage() {
 
   useEffect(() => {
     if (!user?.id) return
-    const key = `trinity_visits_show_completed_${user.id}`
-    const saved = localStorage.getItem(key)
-    if (saved !== null) setShowCompleted(saved === 'true')
+    // Migrate old user-specific key to shared key if needed
+    const userKey = `trinity_visits_show_completed_${user.id}`
+    const userVal = localStorage.getItem(userKey)
+    if (userVal !== null) {
+      localStorage.setItem('trinity_visits_show_completed', userVal)
+      localStorage.removeItem(userKey)
+      setShowCompleted(userVal === 'true')
+    }
   }, [user?.id])
 
   function toggleShowCompleted() {
     const next = !showCompleted
     setShowCompleted(next)
-    const key = user?.id ? `trinity_visits_show_completed_${user.id}` : 'trinity_visits_show_completed'
-    localStorage.setItem(key, String(next))
     localStorage.setItem('trinity_visits_show_completed', String(next))
   }
 
@@ -576,6 +579,7 @@ export default function VisitsPage() {
       {viewMode === 'calendar' && (
         <CalendarView
           visits={visits || []}
+          showCompleted={showCompleted}
           onVisitClick={(visit) => setSelectedVisit(visit)}
           onDateClick={(date) => {
             setSelectedVisit(null)
@@ -878,7 +882,7 @@ export default function VisitsPage() {
             )}
 
             {/* Completed */}
-            {completedVisits.length > 0 && (
+            {showCompleted && completedVisits.length > 0 && (
               <>
                 <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 border-y border-gray-100 dark:border-gray-700 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />
@@ -1062,7 +1066,7 @@ export default function VisitsPage() {
                 ))}
               </>
             )}
-            {completedVisits.length > 0 && (
+            {showCompleted && completedVisits.length > 0 && (
               <>
                 <div className="flex items-center gap-2 px-1 mt-4">
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />

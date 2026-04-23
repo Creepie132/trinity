@@ -31,6 +31,7 @@ interface CalendarViewProps {
   onVisitClick: (visit: any) => void
   onDateClick: (date: Date) => void
   serviceColors: Record<string, string>
+  showCompleted?: boolean
 }
 
 const defaultColors: Record<string, string> = {
@@ -50,7 +51,7 @@ const defaultColors: Record<string, string> = {
 const HOURS = Array.from({ length: 24 }, (_, i) => i) // 0:00 — 23:00
 const HOUR_HEIGHT = 64 // px per hour
 
-export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors }: CalendarViewProps) {
+export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors, showCompleted = true }: CalendarViewProps) {
   const { t, language } = useLanguage()
   const isRTL = language === 'he'
   const isHe = language === 'he'
@@ -80,9 +81,11 @@ export function CalendarView({ visits, onVisitClick, onDateClick, serviceColors 
     )
   }
 
-  const activeVisits = visits.filter(
-    (v: any) => v.status === 'scheduled' || v.status === 'in_progress'
-  )
+  const activeVisits = visits.filter((v: any) => {
+    if (v.status === 'scheduled' || v.status === 'in_progress' || v.status === 'open') return true
+    if (showCompleted && v.status === 'completed') return true
+    return false
+  })
 
   const getVisitsForDay = (day: Date) =>
     activeVisits

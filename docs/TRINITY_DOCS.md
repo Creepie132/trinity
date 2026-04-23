@@ -4164,3 +4164,23 @@ API `/api/payments` принимает `startDate`/`endDate` → фильтру�
 
 ### Commit
 `54916bf` — feat: show completed visits by default, add toggle in Settings > Display (Apr 23, 2026)
+
+---
+
+## [Apr 24, 2026] Убрано приветствие с дашборда
+
+### Задача
+Влад попросил убрать блок приветствия ("Добрый вечер, Владислав 👋" + дата) с экрана дашборда.
+
+### Что изменено
+- `src/components/dashboard/DashboardContent.tsx` — удалён вызов `<GreetingHeader .../>` из JSX рендера. Компонент `GreetingHeader` остался в файле (локальный, не экспортируется), но больше не монтируется.
+- `ActivityStrip` (три мини-карточки: визиты/задачи/доход) сохранён — убрано только приветствие.
+
+### Регрессия
+Нет. Компонент нигде не используется кроме этого вызова.
+
+### Безопасность
+Без изменений.
+
+### Commit
+`c5bddd1` — fix: remove greeting header from dashboard (Apr 24, 2026)

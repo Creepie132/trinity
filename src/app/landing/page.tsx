@@ -866,7 +866,8 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 40px;
+  padding: 80px 40px 100px;
+  overflow: visible;
 }
 
 .pricing-scroll {
@@ -875,9 +876,11 @@ body {
   max-width: 1100px;
   width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 8px;
+  padding-bottom: 24px;
+  padding-top: 12px;
 }
 
 .pricing-scroll::-webkit-scrollbar { height: 4px; }
@@ -894,15 +897,19 @@ body {
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
-  transition: transform .25s;
+  transition: transform .25s, box-shadow .25s;
   position: relative;
+  margin: 4px 0;
 }
 
-.pricing-card:hover { transform: translateY(-3px); }
+.pricing-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 48px rgba(0,0,0,.5);
+}
 
 .pricing-card.featured {
   border-color: var(--gold);
-  box-shadow: 0 0 40px rgba(200,136,26,.12);
+  box-shadow: 0 0 40px rgba(200,136,26,.15), 0 8px 32px rgba(200,136,26,.1);
 }
 
 .pricing-badge {

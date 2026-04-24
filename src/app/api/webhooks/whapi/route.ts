@@ -86,6 +86,9 @@ const WHAPI_BASE   = 'https://gate.whapi.cloud'
 const BOT_OWNER    = process.env.PERSONAL_BOT_OWNER_PHONE ?? '972524024447'
 const HELP_TEXT    = '📋 Команды:\n/pause [мин] — выключить\n/resume — включить\n/status — статус\n/silence [мин] — тишина в этом чате'
 
+// Сколько последних сообщений подгружать как контекст разговора
+const HISTORY_LIMIT = 15
+
 async function handlePersonalMessage(msg: any) {
   const chatId   = msg.chat_id ?? msg.from ?? ''
   const isFromMe = msg.from_me === true
@@ -140,14 +143,22 @@ async function handlePersonalMessage(msg: any) {
     return
   }
 
-  const responseText = await generateBotResponse(body, classification, isNight, supabase)
+  // Сохраняем входящее сообщение в историю
+  await saveHistory(supabase, chatId, 'user', body)
+
+  // Подгружаем историю разговора
+  const history = await loadHistory(supabase, chatId)
+
+  const responseText = await generateBotResponse(body, history, classification, isNight, supabase)
+
+  // Сохраняем ответ бота в историю
+  await saveHistory(supabase, chatId, 'assistant', responseText)
 
   await setTyping(chatId)
   await sleep(4000 + Math.random() * 11000)
   await sendWhatsapp(chatId, responseText)
   await botLog(supabase, chatId, 'outbound', null, body, classification.language, classification.intent, responseText)
 }
-
 
 async function handleOwnerReply(supabase: any, chatId: string, body: string) {
   if (body.startsWith('/')) {
@@ -172,6 +183,11 @@ async function handleOwnerReply(supabase: any, chatId: string, body: string) {
       await sendWhatsapp(BOT_OWNER, `🤫 Тишина ${arg} мин.`)
     } else if (cmd === '/help') {
       await sendWhatsapp(BOT_OWNER, HELP_TEXT)
+    } else if (cmd === '/clear') {
+      // Очистить историю разговора для конкретного чата
+      const targetChat = parts[1] ?? chatId
+      await supabase.from('personal_bot_history').delete().eq('chat_id', targetChat)
+      await sendWhatsapp(BOT_OWNER, `🗑 История чата очищена.`)
     }
     return
   }
@@ -186,6 +202,24 @@ async function handleOwnerReply(supabase: any, chatId: string, body: string) {
   )
 }
 
+// ── История разговора ────────────────────────────────────────────────────
+
+async function saveHistory(supabase: any, chatId: string, role: 'user' | 'assistant', content: string) {
+  await supabase.from('personal_bot_history').insert({ chat_id: chatId, role, content })
+}
+
+async function loadHistory(supabase: any, chatId: string): Promise<Array<{ role: string; content: string }>> {
+  const { data } = await supabase
+    .from('personal_bot_history')
+    .select('role, content')
+    .eq('chat_id', chatId)
+    .order('created_at', { ascending: false })
+    .limit(HISTORY_LIMIT)
+  if (!data || data.length === 0) return []
+  // Разворачиваем обратно в хронологический порядок
+  return data.reverse()
+}
+
 async function classifyMessage(body: string): Promise<{ language: string; intent: string }> {
   try {
     const { text } = await generateText({
@@ -194,7 +228,7 @@ async function classifyMessage(body: string): Promise<{ language: string; intent
       maxOutputTokens: 50,
       system: `Классификатор. Ответь ТОЛЬКО валидным JSON без markdown.
 Формат: {"language":"ru|he|en","intent":"business|personal"}
-business = CRM, разработка, сайты, цены, технологии, сотрудничество.
+business = CRM, разработка, сайты, цены, технологии, сотрудничество, товары, самокаты, любые рабочие вопросы.
 personal = семья, друзья, праздники, эмоции, small-talk.`,
       prompt: body,
     })
@@ -216,6 +250,7 @@ async function loadKnowledge(supabase: any): Promise<string> {
 
 async function generateBotResponse(
   body: string,
+  history: Array<{ role: string; content: string }>,
   cls: { language: string; intent: string },
   isNight: boolean,
   supabase: any
@@ -237,24 +272,41 @@ async function generateBotResponse(
 
   const knowledge = await loadKnowledge(supabase)
 
-  const system = `Ты ИИ-ассистент Влада (CEO Amber Solutions, Израиль).
+  const systemPrompt = `Ты ИИ-ассистент Влада (CEO Amber Solutions, Израиль).
 Отвечай на ${lang}. Кратко и профессионально. Не притворяйся человеком.
+Помни контекст всего разговора — используй историю сообщений чтобы отвечать точно и связно.
 Если вопрос выходит за рамки базы знаний — скажи что Влад уточнит лично.
 
 БАЗА ЗНАНИЙ:
 ${knowledge}`
 
+  // Формируем messages с историей для GPT
+  const gptMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    { role: 'system', content: systemPrompt },
+    ...history.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content })),
+  ]
+
   try {
-    const { text } = await generateText({
-      model: openai('gpt-4o-mini'), temperature: 0.7, maxOutputTokens: 400,
-      system, prompt: body,
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.7,
+        max_tokens: 400,
+        messages: gptMessages,
+      }),
     })
-    return text
+    if (!response.ok) throw new Error(`OpenAI error: ${response.status}`)
+    const data = await response.json()
+    return data.choices?.[0]?.message?.content?.trim() ?? 'Получил ваше сообщение, Влад ответит в ближайшее время.'
   } catch {
     return 'Получил ваше сообщение, Влад ответит в ближайшее время.'
   }
 }
-
 
 async function setTyping(chatId: string) {
   try {

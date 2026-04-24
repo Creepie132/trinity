@@ -316,6 +316,7 @@ body {
   scroll-snap-align: start;
   min-height: 100vh;
   position: relative;
+  overflow: visible;
 }
 
 .no-snap {
@@ -866,8 +867,10 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 40px 100px;
+  padding: 80px 40px 120px;
   overflow: visible;
+  isolation: auto;
+  clip-path: none !important;
 }
 
 .pricing-scroll {
@@ -897,19 +900,46 @@ body {
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
-  transition: transform .25s, box-shadow .25s;
+  transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s;
   position: relative;
-  margin: 4px 0;
+  margin: 8px 0 16px;
+}
+
+.pricing-card::after {
+  content: '';
+  position: absolute;
+  bottom: -30px;
+  left: 10%;
+  right: 10%;
+  height: 60px;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,.06) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+  filter: blur(8px);
 }
 
 .pricing-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 48px rgba(0,0,0,.5);
+  transform: translateY(-8px);
+  box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 8px 24px rgba(0,0,0,.4);
+}
+
+.pricing-card:hover::after {
+  opacity: 1;
 }
 
 .pricing-card.featured {
   border-color: var(--gold);
-  box-shadow: 0 0 40px rgba(200,136,26,.15), 0 8px 32px rgba(200,136,26,.1);
+  box-shadow: 0 0 32px rgba(200,136,26,.12), 0 4px 16px rgba(200,136,26,.08);
+}
+
+.pricing-card.featured::after {
+  background: radial-gradient(ellipse at center, rgba(200,136,26,.2) 0%, transparent 70%);
+}
+
+.pricing-card.featured:hover {
+  box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 8px 32px rgba(200,136,26,.2);
 }
 
 .pricing-badge {

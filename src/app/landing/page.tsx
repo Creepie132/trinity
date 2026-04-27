@@ -1470,7 +1470,7 @@ body {
             <p className="hero-subtitle reveal reveal-delay-2">Trinity — нервная система вашего бизнеса. Клиенты, записи, аналитика и WhatsApp-напоминания в одном месте. Запуск за один день.</p>
 
             <div className="hero-buttons reveal reveal-delay-3">
-              <a href="#contacts" className="btn-gold">Попробовать бесплатно →</a>
+              <a href="/demo/register" className="btn-gold">Попробовать бесплатно →</a>
               <a href="#features" className="btn-ghost">Посмотреть возможности</a>
             </div>
             <div className="hero-stats reveal reveal-delay-4">

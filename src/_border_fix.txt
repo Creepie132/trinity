@@ -1,1 +1,0 @@
-          <div style={{ background: accentBg, border: '1px solid #a5f3fc', borderRadius: 14, padding: '14px 16px' }}>

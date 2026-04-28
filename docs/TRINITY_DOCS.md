@@ -997,7 +997,6 @@ chore: конфиг, зависимости
 - `src/app/demo/register/page.tsx` → `יומן פגישות` (коллизия с `diary: יומן`)
 - `src/app/demo/callback/google/page.tsx`, `src/app/onboarding/trial/page.tsx`
 - `src/app/api/mobile/preferences/route.ts` — mobile navbar label
-
 **Build:** `npm run build` чистый, 0 ошибок.
 
 **Регрессия:** нет — все функциональные фразы (кнопки действий, filter by event type) намеренно сохранены. Tab filter в `/visits` (`all/visit/meeting`) оставлен без изменений как категория события.
@@ -4224,3 +4223,39 @@ API `/api/payments` принимает `startDate`/`endDate` → фильтру�
 
 ### Commit
 `3df1867` — feat(recurring): add recurring-plans settings page, charge-recurring API, fix params Promise type, fix useFeatures fallback crash (Apr 28, 2026)
+
+
+---
+
+## Рассрочка платежей (Installment Plans) — 28 апреля 2026
+
+### Что добавлено
+Новый модуль разбивки оплаты на N платежей с автоматическим списанием по токену карты Tranzila.
+
+**Логика:**
+1. Ксения выбирает "Рассрочка" в диалоге оплаты (после визита или при создании продажи)
+2. Выбирает кол-во платежей (2–36) и периодичность (weekly / biweekly / monthly)
+3. Первый платёж списывается немедленно по токену сохранённой карты клиента
+4. Vercel Cron в 10:00 Israel time (07:00 UTC) ежедневно списывает следующие платежи по расписанию
+5. После N успешных списаний план переходит в `completed`
+
+### Файлы
+- `src/lib/installments.ts` — общие helpers: `computeNextDate`, `chargeInstallment` (Tranzila CGI)
+- `src/app/api/installments/route.ts` — GET (список планов) + POST (создать план + первое списание)
+- `src/app/api/installments/[id]/route.ts` — PATCH (статус) + DELETE (отмена)
+- `src/app/api/cron/charge-installments/route.ts` — Vercel Cron ежедневного списания
+- `src/components/payments/InstallmentForm.tsx` — UI выбора кол-ва платежей и периодичности
+- `src/components/payments/UnifiedPaymentDialog.tsx` — добавлен метод `installment` + step `installment-form`
+- `src/app/api/clients/[id]/route.ts` — GET теперь возвращает `tranzila_token`, `tranzila_expdate`, `card_last4`
+- `vercel.json` — добавлен cron `0 7 * * *` для `/api/cron/charge-installments`
+- `supabase/migrations/20260428_installment_plans.sql` — таблицы `payment_installments` + `installment_charges` с RLS
+
+### Схема БД
+- `payment_installments` — план рассрочки (org_id, client_id, visit_id?, sale_id?, total_amount, installment_amount, installments_count, installments_paid, frequency, next_due_date, status, tranzila_token, tranzila_expdate)
+- `installment_charges` — лог каждого списания (installment_plan_id, installment_number, status, tranzila_doc_id, error_message)
+
+### Безопасность
+`org_id` из `getAuthContext()`, ownership check клиента и визита/продажи, RLS на обеих таблицах. Tranzila токен передаётся только server-to-server.
+
+### Commit
+`9cc8cea` — feat:installment-plans (Apr 28, 2026)

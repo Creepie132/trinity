@@ -1,4 +1,4 @@
-import crypto from 'crypto'
+﻿import crypto from 'crypto'
 
 // ============================================================
 // HMAC АУТЕНТИФИКАЦИЯ — для Tranzila REST API (если понадобится)
@@ -121,6 +121,7 @@ export async function createTranzilaPaymentLink({
   failUrl,
   terminal: terminalOverride,
   password: passwordOverride,
+  installments,
 }: {
   amount: number
   description: string
@@ -129,6 +130,7 @@ export async function createTranzilaPaymentLink({
   failUrl: string
   terminal?: string
   password?: string
+  installments?: number
 }) {
   const terminalId = terminalOverride || process.env.TRANZILA_TERMINAL_ID || ''
   const terminalPassword = passwordOverride || process.env.TRANZILA_TERMINAL_PASSWORD || ''
@@ -147,6 +149,7 @@ export async function createTranzilaPaymentLink({
     fail_url_address: failUrl,
     cField1: paymentId,
     lang: 'il',
+    ...(installments && installments > 1 ? { tashloumim: String(installments) } : {}),
   })
 
   const url = `https://directng.tranzila.com/${terminalId}/iframenew.php?${params.toString()}`

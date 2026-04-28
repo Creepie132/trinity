@@ -10,7 +10,7 @@
  ○ (pwa)   Scope: /
  ✓ (pwa) Found a custom worker implementation at F:\Amber_solutions_Kira\Trinity\src\worker\index.ts.
  ✓ (pwa) Building the custom worker to F:\Amber_solutions_Kira\Trinity\public\worker-b140e5290fbf8181.js...
-✓ Compiled successfully in 35.0s
+✓ Compiled successfully in 29.3s
   Running TypeScript ...
   Collecting page data using 11 workers ...
 ⚠ Using edge runtime on a page currently disables static generation for that page
@@ -18,7 +18,7 @@
   Generating static pages using 11 workers (59/238) 
   Generating static pages using 11 workers (118/238) 
   Generating static pages using 11 workers (178/238) 
-✓ Generating static pages using 11 workers (238/238) in 5.1s
+✓ Generating static pages using 11 workers (238/238) in 4.4s
   Finalizing page optimization ...
   Collecting build traces ...
 

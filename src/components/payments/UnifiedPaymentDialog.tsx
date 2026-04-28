@@ -229,6 +229,7 @@ export function UnifiedPaymentDialog({
   const [cashValid, setCashValid] = useState(true)
   const [installmentConfig, setInstallmentConfig] = useState<InstallmentConfig | null>(null)
   const [clientToken, setClientToken] = useState<ClientCardToken | null>(null)
+  const [linkInstallments, setLinkInstallments] = useState<number>(1)
 
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -251,6 +252,7 @@ export function UnifiedPaymentDialog({
     setBankDetails(null); setBankValid(false)
     setCashData(null); setCashValid(true)
     setInstallmentConfig(null); setClientToken(null)
+    setLinkInstallments(1)
     setAmount(sd.prefillAmount != null ? String(sd.prefillAmount) : '')
     if (sd.clientId && sd.clientName) {
       const parts = sd.clientName.trim().split(' ')
@@ -297,6 +299,7 @@ export function UnifiedPaymentDialog({
     setBankDetails(null); setBankValid(false)
     setCashData(null); setCashValid(true)
     setInstallmentConfig(null); setClientToken(null)
+    setLinkInstallments(1)
     setStep('method-select')
     onOpenChange(false)
   }, [onOpenChange])
@@ -321,6 +324,7 @@ export function UnifiedPaymentDialog({
     setBankDetails(null); setBankValid(false)
     setCashData(null); setCashValid(true)
     setInstallmentConfig(null); setClientToken(null)
+    setLinkInstallments(1)
     setStep('method-select')
   }, [])
 
@@ -812,6 +816,29 @@ export function UnifiedPaymentDialog({
               style={{ paddingInlineStart: 36, fontSize: 18, fontWeight: 700, height: 48, border: '1.5px solid #e2e8f0', borderRadius: 10, background: '#fff' }} />
           </div>
         </div>
+        {isAmountValid && selectedClient && hasTerminal && (
+          <div style={{ background: 'linear-gradient(135deg,#ecfeff,#cffafe)', border: '1px solid #a5f3fc', borderRadius: 14, padding: '14px 16px' }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: '#0e7490', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 10 }}>
+              {isHe ? 'תשלומים (אופציונלי)' : 'Рассрочка (необязательно)'}
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {[1,2,3,4,5,6,10,12].map(n => (
+                <button key={n} onClick={() => setLinkInstallments(n)} disabled={isLoading}
+                  style={{ padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    background: linkInstallments === n ? '#0891b2' : 'rgba(8,145,178,0.12)',
+                    color: linkInstallments === n ? '#fff' : '#0e7490',
+                    fontSize: 13, fontWeight: 700, transition: 'all 0.15s' }}>
+                  {n === 1 ? (isHe ? 'ללא' : 'Без') : n}
+                </button>
+              ))}
+            </div>
+            {linkInstallments > 1 && amountNum > 0 && (
+              <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(8,145,178,0.1)', borderRadius: 9, fontSize: 12, color: '#0e7490', fontWeight: 600 }}>
+                {isHe ? '' : ''} {linkInstallments} x &#8362;{(amountNum / linkInstallments).toFixed(2)}
+              </div>
+            )}
+          </div>
+        )}
         <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '14px 16px' }}>
           <label style={{ fontSize: 10, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>{t.description}</label>
           <Textarea value={description} onChange={e => setDescription(e.target.value)}

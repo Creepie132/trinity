@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createTranzilaPaymentLink } from '@/lib/tranzila'
 import { checkAuthAndFeature } from '@/lib/api-auth'
 import { ratelimitStrict } from '@/lib/ratelimit'
@@ -42,6 +42,8 @@ export async function POST(request: NextRequest) {
     }
 
     const { client_id, amount, description, visit_id, sale_id } = data
+    const installments = typeof body.installments === 'number' && body.installments >= 2 && body.installments <= 36
+      ? body.installments : undefined
 
     // SECURITY: Verify client belongs to user's organization
     const { data: client, error: clientError } = await supabase
@@ -107,8 +109,9 @@ export async function POST(request: NextRequest) {
       paymentId:   payment.id,
       successUrl:  `${origin}/api/payments/tranzila-success`,
       failUrl:     `${origin}/api/payments/tranzila-failed`,
-      terminal:    org.tranzila_terminal,
-      password:    org.tranzila_password || undefined,
+      terminal:     org.tranzila_terminal,
+      password:     org.tranzila_password || undefined,
+      installments: installments,
     })
 
     const paymentLink = tranzilaResult.url

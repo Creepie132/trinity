@@ -17,10 +17,10 @@ export async function POST(request: NextRequest) {
     const { org_id } = authResult.data
     const supabase = await getSupabaseServerClient()
 
-    const { subscription_id, client_id, amount, card_token } = await request.json()
+    const { subscription_id, client_id, amount, card_token, expdate } = await request.json()
 
-    if (!subscription_id || !client_id || !amount || !card_token) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    if (!subscription_id || !client_id || !amount || !card_token || !expdate) {
+      return NextResponse.json({ error: 'Missing required fields: subscription_id, client_id, amount, card_token, expdate' }, { status: 400 })
     }
 
     // Verify subscription belongs to org
@@ -57,10 +57,10 @@ export async function POST(request: NextRequest) {
       supplier: terminal,
       TranzilaPW: password,
       TranzilaTK: card_token,
+      expdate,          // MMYY — обязательно для токен-чарджа
       sum: amount.toString(),
-      currency: '1', // ILS
-      // tranmode=A — обычное списание по токену (не J5/верификация)
-      tranmode: 'A',
+      currency: '1',   // ILS
+      tranmode: 'A',   // обычное списание по токену
       response_return_format: 'json',
     })
 

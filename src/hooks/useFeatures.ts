@@ -112,7 +112,7 @@ export function useFeatures(): Features {
       hasReports:    modules.analytics ?? false,
       hasLoyalty:    false,
       paymentsEnabled:  modules.payments ?? organization.payments_enabled ?? true,
-      recurringEnabled: organization.recurring_enabled === true,
+      recurringEnabled: modules.subscriptions === true,
       isActive,
       category: organization.category ?? 'other',
       isLoading: false,
@@ -120,6 +120,7 @@ export function useFeatures(): Features {
   }
 
   // Fallback для org без modules — для demo/trial показываем всё
+  // modules здесь undefined, поэтому recurringEnabled = false
   return {
     hasClients:       true,
     hasVisits:        true,
@@ -137,7 +138,7 @@ export function useFeatures(): Features {
     hasReports:       isDemo,
     hasLoyalty:       false,
     paymentsEnabled:  organization.payments_enabled ?? true,
-    recurringEnabled: organization.recurring_enabled === true,
+    recurringEnabled: false,
     isActive,
     category: organization.category ?? 'other',
     isLoading: false,

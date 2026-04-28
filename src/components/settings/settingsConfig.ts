@@ -1,7 +1,7 @@
 ﻿import {
   Globe, Palette, Bell, Package, Building2, Users,
   Calendar, CreditCard, MessageSquare, FileText,
-  ShieldAlert, MessageCircle, ShoppingBag, Home,
+  ShieldAlert, MessageCircle, ShoppingBag, Home, RefreshCw,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -173,6 +173,17 @@ export const SETTINGS_CATEGORIES: SettingsCategory[] = [
         title_he: 'תבניות WhatsApp',
         desc_ru: 'Шаблоны по умолчанию для SMS и WhatsApp',
         desc_he: 'הגדר הודעות ברירת מחדל ל-SMS ו-WhatsApp',
+      },
+      {
+        id: 'recurring-plans',
+        href: '/settings/recurring-plans',
+        icon: RefreshCw,
+        colorTint: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
+        title_ru: 'Планы подписок',
+        title_he: 'תוכניות מנוי',
+        desc_ru: 'Управляйте планами автоматических платежей',
+        desc_he: 'נהל תוכניות חיוב חוזר ללקוחות',
+        featureFlag: 'recurringEnabled',
       },
       {
         id: 'whatsapp',
